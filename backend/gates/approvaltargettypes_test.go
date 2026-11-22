@@ -5,283 +5,63 @@
 
 package gates
 
-// An approval's target type is the closed list approvals.TargetType declares, and
-// enumsync_test.go holds the CHECK on approval.target_entity_type equal to it.
-// Neither says whether a writer stages a type the list leaves out; that writer
-// would fail its insert. This gate holds the entity vocabulary and the agent
-// policy's record types inside the list, and names the discriminator columns
-// that stay free text.
+// enumsync_test.go holds the CHECK on approval.target_entity_type equal to
+// targettype.Type. That does not say whether a writer names a type the list
+// leaves out. These gates hold every writer of an approval target, a notice
+// target and a metric source inside its list. An unreadable site is waived by
+// name. They also name the discriminator columns that stay free text.
 
 import (
 	"bufio"
 	"bytes"
-	"go/ast"
-	"go/token"
-	"io/fs"
-	"maps"
-	"path"
 	"regexp"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
-const approvalTargetTypes = "internal/modules/approvals.TargetType"
+const (
+	approvalTargetTypes  = "internal/shared/kernel/targettype.Type"
+	noticeOwnTargetTypes = "internal/modules/notices.OwnTargetType"
+	reportingSourceTypes = "internal/modules/reporting.SourceType"
+	noticeTargetColumn   = "notice.target_type"
+)
 
-// stagerTypes are the struct types a staging is written through, whose
-// TargetType and CoTargetType fields reach approval.target_entity_type.
-var stagerTypes = map[string]bool{"StageInput": true, "StageInfo": true, "StageRequest": true}
+// Floors on writer sites, resolved or not. A scan that reads fewer has stopped
+// reading the tree. Each sits just under the count measured when it was written.
+const (
+	stagerSiteFloor = 65
+	noticeSiteFloor = 25
+	factSiteFloor   = 24
+)
 
-// stagerCensusFloor sits just under the 16 distinct types the scan resolves. A
-// scan that resolves fewer has stopped reading the tree.
-const stagerCensusFloor = 12
+var extensionTable = regexp.MustCompile(`^ext_[a-z0-9]+(_[a-z0-9]+)*$`)
 
-// stringScan says where a vocabulary is written: the struct literals that carry
-// it under a key, and the calls that take it as an argument.
-type stringScan struct {
-	literals map[string]bool
-	keys     map[string]bool
-	// calls maps a callee name to the position of the argument that holds the value.
-	calls map[string]int
-	// stageCalls also reads a target type constant passed to any call that stages.
-	stageCalls bool
+// stagerScan reads the structs a staging is written through, which carry the
+// target type under TargetType and CoTargetType.
+var stagerScan = stringScan{
+	literals:   map[string]bool{"approvals.StageInput": true, "agents.StageInfo": true, "automation.StageRequest": true},
+	keys:       map[string]bool{"TargetType": true, "CoTargetType": true},
+	stageCalls: true,
 }
 
-var stagerScan = stringScan{literals: stagerTypes, keys: map[string]bool{"TargetType": true, "CoTargetType": true}, stageCalls: true}
-
-// stagedTypeValues reads every TargetType and CoTargetType set in a stager.
-func stagedTypeValues(t *testing.T) (resolved map[string]string, unresolved int) {
-	t.Helper()
-	return scanStrings(t, stagerScan)
+// noticeTargetScan is where a notice's target type is written, and the privacy
+// review source whose kind becomes one.
+var noticeTargetScan = stringScan{
+	literals: map[string]bool{"notices.Target": true, "privacy.ErasureReviewSource": true},
+	keys:     map[string]bool{"Type": true, "Kind": true},
 }
 
-// scanStrings reads the values a scan's literals and calls hold: a string
-// literal, a constant of the same package, or string(constant). A value held in
-// a variable is counted apart.
-func scanStrings(t *testing.T, scan stringScan) (resolved map[string]string, unresolved int) {
-	t.Helper()
-	byDir := map[string]map[string]map[string]bool{}
-	global := map[string]map[string]bool{}
-	type source struct {
-		file    *ast.File
-		path    string
-		imports map[string]bool
-	}
-	var sources []source
-	var pending []constConversion
-	err := gatekit.WalkDir("internal", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".go") || strings.HasSuffix(p, "_test.go") ||
-			strings.Contains(p, "internal/contracts/") {
-			return err
-		}
-		file, err := gatekit.ParseFile(p, 0)
-		if err != nil {
-			return err
-		}
-		dir := path.Dir(p)
-		if byDir[dir] == nil {
-			byDir[dir] = map[string]map[string]bool{}
-		}
-		recordStringConsts(byDir[dir], file)
-		recordStringConsts(global, file)
-		pending = append(pending, constConversions(dir, file)...)
-		sources = append(sources, source{file, p, scanImportNames(file)})
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, c := range pending {
-		if values := global[c.from]; len(values) == 1 {
-			byDir[c.dir][c.name] = values
-			global[c.name] = values
-		}
-	}
-	resolved = map[string]string{}
-	for _, src := range sources {
-		dir := path.Dir(src.path)
-		ast.Inspect(src.file, func(n ast.Node) bool {
-			if call, ok := n.(*ast.CallExpr); ok {
-				if scan.stageCalls {
-					for _, value := range stagedCallArguments(call, byDir[dir]) {
-						resolved[value] = src.path
-					}
-				}
-				if at, ok := scan.calls[stagerLiteralTypeName(call.Fun)]; ok && at < len(call.Args) {
-					values := resolveStringValue(call.Args[at], byDir[dir], global, src.imports)
-					if len(values) == 0 {
-						unresolved++
-					}
-					for _, value := range values {
-						resolved[value] = src.path
-					}
-				}
-				return true
-			}
-			lit, ok := n.(*ast.CompositeLit)
-			if !ok || !scan.literals[stagerLiteralTypeName(lit.Type)] {
-				return true
-			}
-			for _, elt := range lit.Elts {
-				kv, ok := elt.(*ast.KeyValueExpr)
-				if !ok {
-					continue
-				}
-				key, _ := kv.Key.(*ast.Ident)
-				if key == nil || !scan.keys[key.Name] {
-					continue
-				}
-				values := resolveStringValue(kv.Value, byDir[dir], global, src.imports)
-				if len(values) == 0 {
-					unresolved++
-				}
-				for _, value := range values {
-					resolved[value] = src.path
-				}
-			}
-			return true
-		})
-	}
-	return resolved, unresolved
-}
-
-func stagedCallArguments(call *ast.CallExpr, local map[string]map[string]bool) []string {
-	callee := ""
-	switch fn := call.Fun.(type) {
-	case *ast.Ident:
-		callee = fn.Name
-	case *ast.SelectorExpr:
-		callee = fn.Sel.Name
-	}
-	if !strings.Contains(strings.ToLower(callee), "stage") {
-		return nil
-	}
-	var values []string
-	for _, arg := range call.Args {
-		id, ok := arg.(*ast.Ident)
-		if !ok {
-			continue
-		}
-		name := strings.ToLower(id.Name)
-		if strings.HasSuffix(name, "targettype") || strings.HasSuffix(name, "recordtype") {
-			values = append(values, slices.Sorted(maps.Keys(local[id.Name]))...)
-		}
-	}
-	return values
-}
-
-func stagerLiteralTypeName(expr ast.Expr) string {
-	switch e := expr.(type) {
-	case *ast.Ident:
-		return e.Name
-	case *ast.SelectorExpr:
-		return e.Sel.Name
-	}
-	return ""
-}
-
-// constConversion is a constant declared as string(pkg.Const): its value is that
-// of the named constant, which can sit in a file read later.
-type constConversion struct{ dir, name, from string }
-
-func constConversions(dir string, file *ast.File) []constConversion {
-	var out []constConversion
-	for _, decl := range file.Decls {
-		gd, ok := decl.(*ast.GenDecl)
-		if !ok || gd.Tok != token.CONST {
-			continue
-		}
-		for _, spec := range gd.Specs {
-			vs, ok := spec.(*ast.ValueSpec)
-			if !ok {
-				continue
-			}
-			for i, name := range vs.Names {
-				if i >= len(vs.Values) {
-					continue
-				}
-				call, ok := vs.Values[i].(*ast.CallExpr)
-				if !ok || len(call.Args) != 1 {
-					continue
-				}
-				if fn, ok := call.Fun.(*ast.Ident); !ok || fn.Name != "string" {
-					continue
-				}
-				if sel, ok := call.Args[0].(*ast.SelectorExpr); ok {
-					out = append(out, constConversion{dir, name.Name, sel.Sel.Name})
-				}
-			}
-		}
-	}
-	return out
-}
-
-// recordStringConsts maps each constant name in file to the string literals it
-// is declared with. One name may mean two values in one map.
-func recordStringConsts(out map[string]map[string]bool, file *ast.File) {
-	for _, decl := range file.Decls {
-		gd, ok := decl.(*ast.GenDecl)
-		if !ok || gd.Tok != token.CONST {
-			continue
-		}
-		for _, spec := range gd.Specs {
-			vs, ok := spec.(*ast.ValueSpec)
-			if !ok {
-				continue
-			}
-			for i, name := range vs.Names {
-				if i >= len(vs.Values) {
-					continue
-				}
-				if value, ok := gatekit.StringExpr(vs.Values[i], nil, gatekit.FoldStrict); ok {
-					if out[name.Name] == nil {
-						out[name.Name] = map[string]bool{}
-					}
-					out[name.Name][value] = true
-				}
-			}
-		}
-	}
-}
-
-// scanImportNames are the package names a file can qualify an identifier with.
-func scanImportNames(file *ast.File) map[string]bool {
-	names := map[string]bool{}
-	for _, spec := range file.Imports {
-		if spec.Name != nil {
-			names[spec.Name.Name] = true
-			continue
-		}
-		names[path.Base(strings.Trim(spec.Path.Value, `"`))] = true
-	}
-	return names
-}
-
-// resolveStringValue reads an Ident from its own package. It reads a selector
-// from the constant of that name, only when one package declares it.
-func resolveStringValue(expr ast.Expr, local, global map[string]map[string]bool, imports map[string]bool) []string {
-	switch e := expr.(type) {
-	case *ast.BasicLit:
-		if value, ok := gatekit.StringExpr(e, nil, gatekit.FoldStrict); ok {
-			return []string{value}
-		}
-	case *ast.Ident:
-		return slices.Sorted(maps.Keys(local[e.Name]))
-	case *ast.SelectorExpr:
-		if pkg, qualified := e.X.(*ast.Ident); !qualified || !imports[pkg.Name] {
-			return nil
-		}
-		if values := global[e.Sel.Name]; len(values) == 1 {
-			return slices.Sorted(maps.Keys(values))
-		}
-	case *ast.CallExpr:
-		if fn, ok := e.Fun.(*ast.Ident); ok && fn.Name == "string" && len(e.Args) == 1 {
-			return resolveStringValue(e.Args[0], local, global, imports)
-		}
-	}
-	return nil
+// factSourceScan is where a metric names its source: the fact literal, and the
+// readers every metric reads its rows through.
+var factSourceScan = stringScan{
+	literals: map[string]bool{"reporting.Fact": true},
+	keys:     map[string]bool{"SourceType": true},
+	calls: map[string]int{
+		"readGroupedFacts": 4, "readGroupedFactsVia": 4, "readOutcomeFacts": 4, "scanOutcomeFacts": 3, "readColleagueWork": 4,
+	},
 }
 
 func TestEveryApprovalStagerNamesAnApprovalTargetType(t *testing.T) {
@@ -297,25 +77,23 @@ func TestEveryApprovalStagerNamesAnApprovalTargetType(t *testing.T) {
 		}
 		for _, value := range typed[source] {
 			if !slices.Contains(declared, value) {
-				t.Errorf("%s holds %q, which approvals.TargetType does not. Staging it would fail the approval "+
-					"CHECK. Add it to TargetType and to the CHECK together", source, value)
+				t.Errorf("%s holds %q, which targettype.Type does not. Staging it would fail the approval "+
+					"CHECK. Add it to targettype.Type and to the CHECK together", source, value)
 			}
 		}
 	}
-	resolved, unresolved := stagedTypeValues(t)
-	if len(resolved) < stagerCensusFloor {
-		t.Fatalf("the scan resolved %d distinct staged types, floor %d: it has stopped reading the tree",
-			len(resolved), stagerCensusFloor)
+	sites := scanSites(t, stagerScan)
+	if len(sites) < stagerSiteFloor {
+		t.Fatalf("the scan read %d staging sites, floor %d: it has stopped reading the tree", len(sites), stagerSiteFloor)
 	}
-	t.Logf("%d distinct staged types resolved, %d values held in variables", len(resolved), unresolved)
+	resolved, unresolved := scanValues(sites)
+	t.Logf("%d staging sites, %d distinct types, %d sites hold a value read at run time", len(sites), len(resolved), len(unresolved))
 	for value, file := range resolved {
 		if !slices.Contains(declared, value) && !extensionTable.MatchString(value) {
-			t.Errorf("%s stages target type %q, which approvals.TargetType does not hold", file, value)
+			t.Errorf("%s stages target type %q, which targettype.Type does not hold", file, value)
 		}
 	}
 }
-
-var extensionTable = regexp.MustCompile(`^ext_[a-z0-9]+(_[a-z0-9]+)*$`)
 
 // freeTextDiscriminators are the polymorphic type columns that keep no CHECK.
 // Each is a log of what a thing was about when it happened. A closed list would
@@ -360,49 +138,103 @@ func TestAFreeTextDiscriminatorHasNoVocabularyCheck(t *testing.T) {
 	freeTextDiscriminators.AssertAllMatched(t)
 }
 
-// noticeTargetScan is where a notice's target type is written: the Target
-// literal every notice carries.
-var noticeTargetScan = stringScan{literals: map[string]bool{"Target": true}, keys: map[string]bool{"Type": true}}
-
-// factSourceScan is where a metric names its source: the fact literal, and the
-// readers every metric reads its rows through, which take the source fifth.
-var factSourceScan = stringScan{
-	literals: map[string]bool{"Fact": true},
-	keys:     map[string]bool{"SourceType": true},
-	calls:    map[string]int{"readGroupedFacts": 4, "readGroupedFactsVia": 4, "readOutcomeFacts": 4, "scanOutcomeFacts": 4, "readColleagueWork": 4},
-}
-
+// privacyReviewSQL is the SQL that names the kinds of retained content a privacy
+// review flags. Each kind becomes a notice's target type.
 const (
-	noticeOwnTargetTypes  = "internal/modules/notices.OwnTargetType"
-	reportingSourceTypes  = "internal/modules/reporting.SourceType"
-	noticeCensusFloor     = 4
-	factSourceCensusFloor = 6
-	noticeTargetColumn    = "notice.target_type"
+	privacyReviewFile  = "internal/modules/privacy/erasure_manualreview.go"
+	privacyReviewConst = "manualMentionSourcesSQL"
 )
 
-// A notice points at anything an approval can name, or at one of the three things
-// only a notice has. The CHECK is held to that union, so neither list is typed a
-// second time and a value dropped from either fails here.
+var selectedLiteral = regexp.MustCompile(`SELECT '([a-z_]+)'`)
+
+// sqlSelectedKinds reads the kinds a SQL constant selects as string literals.
+func sqlSelectedKinds(t *testing.T, file, constName string) []string {
+	t.Helper()
+	parsed, err := gatekit.ParseFile(file, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recorded := map[string]map[string]bool{}
+	recordStringConsts(recorded, parsed)
+	var kinds []string
+	for text := range recorded[constName] {
+		for _, m := range selectedLiteral.FindAllStringSubmatch(text, -1) {
+			kinds = append(kinds, m[1])
+		}
+	}
+	return kinds
+}
+
+// noticeSiteWaivers are the notice target sites that hold a value the scan cannot
+// read, with where the value comes from.
+var noticeSiteWaivers = gatekit.Waive(map[string]string{
+	"internal/compose/approvalnotify.go: staged.TargetEntityType":      "an approval's own target type, which the approval staging refuses unless targettype.Type holds it",
+	"internal/compose/dealownernotify.go: request.TargetType":          "an approval's own target type, which the approval staging refuses unless targettype.Type holds it",
+	"internal/compose/editaccess/effect.go: ask.RecordType":            "the record type of an edit-access request, one of the contract's five record types, all of them in targettype.Type",
+	"internal/compose/extnotice.go: in.Record.Type":                    "a record type an extension sends a notice about; the test below reads extension.NoticeRecordTypes, and notices.requireKnownTarget refuses anything else",
+	"internal/compose/noticesseam.go: string(target.Type)":             "a datasource.EntityType, every value of which TestEveryApprovalStagerNamesAnApprovalTargetType holds inside targettype.Type",
+	"internal/compose/notificationdigestrender.go: targetType":         "a key of a lookup built from a stored notice's own target type; it writes no notice",
+	"internal/compose/ownershiptransfernotice.go: transfer.RecordType": "company or contact, the two record types an ownership transfer moves",
+	"internal/compose/privacyreview/review.go: source.Kind":            "the kind of a privacy.ErasureReviewSource, read by the scan of that literal and by the SQL kinds this test reads",
+	"internal/compose/receiptalarm.go: missed.SubjectType":             "contact or lead, the subject types a missed opt-out receipt names",
+	"internal/modules/notices/centre.go: *targetType":                  "reads a stored notice target; it writes no notice",
+	"internal/modules/notices/digestclaim.go: *targetType":             "reads a stored notice target; it writes no notice",
+	"internal/modules/notices/emailclaim.go: *targetType":              "reads a stored notice target; it writes no notice",
+	"internal/modules/notices/replay.go: *storedType":                  "reads a stored notice target; it writes no notice",
+	"internal/modules/notices/store.go: *targetType":                   "reads a stored notice target; the insert above it is refused by requireKnownTarget",
+})
+
+// factSiteWaivers are the metric source sites that hold a value the scan cannot read.
+var factSiteWaivers = gatekit.Waive(map[string]string{
+	"internal/compose/metriccolleaguework.go: source": "a parameter of readColleagueWork; each caller's argument is a site of this scan",
+	"internal/compose/metricevents.go: source":        "a parameter of the outcome readers; each caller's argument is a site of this scan",
+	"internal/compose/metricleads.go: source":         "a parameter of the grouped readers; each caller's argument is a site of this scan",
+})
+
+// A notice points at anything an approval can name, or at one of the things only
+// a notice has. The CHECK is held to that union, so neither list is typed a second
+// time and a value dropped from either fails here. Every site that writes a target
+// type is read; one the scan cannot read is waived with where its value comes from.
 func TestNoticeTargetTypeIsTheApprovalListAndTheNoticeOwn(t *testing.T) {
 	t.Parallel()
 	vocabularies, typed := vocabularyCensusInputs(t)
-	want := asSet(append(slices.Clone(typed[approvalTargetTypes]), typed[noticeOwnTargetTypes]...))
 	if len(typed[approvalTargetTypes]) == 0 || len(typed[noticeOwnTargetTypes]) == 0 {
 		t.Fatalf("a source list is empty (%d approval, %d notice own): the derivation broke",
 			len(typed[approvalTargetTypes]), len(typed[noticeOwnTargetTypes]))
 	}
+	want := asSet(append(slices.Clone(typed[approvalTargetTypes]), typed[noticeOwnTargetTypes]...))
 	got, ok := vocabularies[noticeTargetColumn]
 	if !ok {
 		t.Fatalf("no CHECK vocabulary found for %s", noticeTargetColumn)
 	}
 	if setKey(asSet(got)) != setKey(want) {
-		t.Errorf("%s: the CHECK admits %v but approvals.TargetType plus notices.OwnTargetType hold %v. Change both together",
+		t.Errorf("%s: the CHECK admits %v but targettype.Type plus notices.OwnTargetType hold %v. Change both together",
 			noticeTargetColumn, got, want)
 	}
-	resolved, _ := scanStrings(t, noticeTargetScan)
-	if len(resolved) < noticeCensusFloor {
-		t.Fatalf("the scan resolved %d distinct notice target types, floor %d: it has stopped reading the tree",
-			len(resolved), noticeCensusFloor)
+
+	sites := scanSites(t, noticeTargetScan)
+	if len(sites) < noticeSiteFloor {
+		t.Fatalf("the scan read %d notice target sites, floor %d: it has stopped reading the tree", len(sites), noticeSiteFloor)
+	}
+	resolved, unresolved := scanValues(sites)
+	for _, site := range unresolved {
+		if !noticeSiteWaivers.Waived(t, site.key()) {
+			t.Errorf("%s holds a notice target type the scan cannot read. Resolve it to a constant, or waive it "+
+				"in noticeSiteWaivers with where its value comes from", site.key())
+		}
+	}
+	noticeSiteWaivers.AssertAllMatched(t)
+
+	// Values no Go literal holds: the SQL that names a privacy review's kinds, and
+	// the record types an extension may send a notice about.
+	for _, kind := range sqlSelectedKinds(t, privacyReviewFile, privacyReviewConst) {
+		resolved[kind] = privacyReviewFile
+	}
+	if len(sqlSelectedKinds(t, privacyReviewFile, privacyReviewConst)) == 0 {
+		t.Fatalf("no kinds read from %s in %s: the SQL moved", privacyReviewConst, privacyReviewFile)
+	}
+	for _, recordType := range extension.NoticeRecordTypes() {
+		resolved[recordType] = "pkg/extension (NoticeRecordTypes)"
 	}
 	for value, file := range resolved {
 		if !slices.Contains(want, value) && !extensionTable.MatchString(value) {
@@ -418,11 +250,18 @@ func TestEveryMetricSourceNamesAReportingSourceType(t *testing.T) {
 	if len(declared) == 0 {
 		t.Fatalf("no %s constants found: the derivation broke", reportingSourceTypes)
 	}
-	resolved, _ := scanStrings(t, factSourceScan)
-	if len(resolved) < factSourceCensusFloor {
-		t.Fatalf("the scan resolved %d distinct metric sources, floor %d: it has stopped reading the tree",
-			len(resolved), factSourceCensusFloor)
+	sites := scanSites(t, factSourceScan)
+	if len(sites) < factSiteFloor {
+		t.Fatalf("the scan read %d metric source sites, floor %d: it has stopped reading the tree", len(sites), factSiteFloor)
 	}
+	resolved, unresolved := scanValues(sites)
+	for _, site := range unresolved {
+		if !factSiteWaivers.Waived(t, site.key()) {
+			t.Errorf("%s holds a metric source the scan cannot read. Resolve it to a constant, or waive it "+
+				"in factSiteWaivers with where its value comes from", site.key())
+		}
+	}
+	factSiteWaivers.AssertAllMatched(t)
 	for value, file := range resolved {
 		if !slices.Contains(declared, value) {
 			t.Errorf("%s names metric source %q, which reporting.SourceType does not hold", file, value)

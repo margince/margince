@@ -10,6 +10,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -21,6 +22,7 @@ const (
 	coTargetCheck    = "approval_co_target_entity_type_check"
 	acquisitionCheck = "contact_acquisition_evidence_source_entity_type_check"
 	validateFile     = "core/1795351214_the_target_type_checks_are_validated.up.sql"
+	dropFile         = "core/1795359601_an_approval_with_an_old_type_stays_updatable.up.sql"
 
 	// An expired approval needs no decider, and a complete co-target carries an id and a version.
 	insertApproval = `INSERT INTO approval (kind, status, proposed_by, proposed_change, diff_hash, expires_at,
@@ -186,5 +188,59 @@ func TestAnOldRowWithAnUnknownTypeKeepsItsCheckNotValidAndTheUpgradeGoesOn(t *te
 	}
 	if got := violated(ctx, t, conn, insertApproval, "widget", nil); got != targetCheck {
 		t.Errorf("a new bad write met constraint %q, want %q", got, targetCheck)
+	}
+}
+
+func TestAnOldApprovalWithAnUnknownTypeLosesTheCheckAndStaysUpdatable(t *testing.T) {
+	conn := connect(t, ownerDSNOf(t))
+	headSchema(t, conn)
+	ctx := context.Background()
+	var def string
+	if err := conn.QueryRow(ctx, `SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = $1`, targetCheck).Scan(&def); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `ALTER TABLE approval DROP CONSTRAINT `+targetCheck); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `INSERT INTO approval (kind, status, proposed_by, proposed_change, diff_hash, expires_at, target_entity_type)
+		VALUES ('k', 'expired', 'agent:x', '{}', 'h', now(), 'legacy_thing')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `ALTER TABLE approval ADD CONSTRAINT `+targetCheck+` `+def+` NOT VALID`); err != nil {
+		t.Fatal(err)
+	}
+	runValidation(ctx, t, conn)
+	if _, err := conn.Exec(ctx, `UPDATE approval SET summary = 'x' WHERE target_entity_type = 'legacy_thing'`); err == nil {
+		t.Fatal("a NOT VALID constraint should have refused the update: the premise of the next migration is gone")
+	}
+	raised := runMigration(ctx, t, dropFile)
+	if present(ctx, t, conn, targetCheck) {
+		t.Errorf("%s was kept over a row that breaks it", targetCheck)
+	}
+	if len(raised) != 1 || !strings.Contains(raised[0], targetCheck) {
+		t.Errorf("want one notice naming %s, got %q", targetCheck, raised)
+	}
+	for _, name := range []string{coTargetCheck, acquisitionCheck} {
+		if !validated(ctx, t, conn, name) {
+			t.Errorf("%s was left NOT VALID though no row breaks it", name)
+		}
+	}
+	if _, err := conn.Exec(ctx, `UPDATE approval SET summary = 'x' WHERE target_entity_type = 'legacy_thing'`); err != nil {
+		t.Errorf("the legacy approval can no longer change: %v", err)
+	}
+}
+
+func TestTheApprovalChecksAreValidatedWhenNoRowBreaksThem(t *testing.T) {
+	conn := connect(t, ownerDSNOf(t))
+	headSchema(t, conn)
+	ctx := context.Background()
+	reopen(ctx, t, conn)
+	if raised := runMigration(ctx, t, dropFile); len(raised) != 0 {
+		t.Errorf("a clean table raised %q", raised)
+	}
+	for _, name := range []string{targetCheck, coTargetCheck, acquisitionCheck} {
+		if !validated(ctx, t, conn, name) {
+			t.Errorf("%s stayed NOT VALID on a clean table", name)
+		}
 	}
 }

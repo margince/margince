@@ -95,6 +95,14 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    `1787968162_a_brief_names_the_currency_it_normalized_against.up.sql` and
    `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair. The second one explains
    why it is a file of its own.
+
+   A `CHECK` that older rows might break needs a conditional `VALIDATE`. PostgreSQL checks a
+   `NOT VALID` constraint again on every update of a row, so a row that breaks it can no longer change.
+   The validating file counts the rows that break each constraint. It validates the ones with none.
+   For the others it drops the constraint and raises a notice naming it and the count, and it
+   touches no data. On such an installation the code holds the list until the rows are fixed:
+   the approval staging, the notice insert and the edition write each refuse a value outside it.
+   `1795359601_an_approval_with_an_old_type_stays_updatable.up.sql` is the worked example.
 5. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
 6. **Record the schema the migrations build.** Run `make db-up`, then run this from `backend/`:
 

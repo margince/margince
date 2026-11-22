@@ -12,14 +12,18 @@ import (
 )
 
 func writeEditionContributions(ctx context.Context, tx pgx.Tx, edition openapi_types.UUID, facts []Fact) error {
+	// Every fact is judged before the first statement. An edition with one unknown
+	// source is refused whole, not after its first chunk was written.
+	for _, fact := range facts {
+		if err := requireKnownSourceType(fact.SourceType); err != nil {
+			return err
+		}
+	}
 	// Bound both parameter count and encoded payload per database round trip.
 	for start := 0; start < len(facts); start += 250 {
 		var b bindings
 		tuples := []string{}
 		for _, fact := range facts[start:min(start+250, len(facts))] {
-			if err := requireKnownSourceType(fact.SourceType); err != nil {
-				return err
-			}
 			raw, err := encode(fact)
 			if err != nil {
 				return err

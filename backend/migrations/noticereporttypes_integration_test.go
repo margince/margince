@@ -9,9 +9,11 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 const (
@@ -81,22 +83,55 @@ func reopenChecks(ctx context.Context, t *testing.T, conn *pgx.Conn) {
 	}
 }
 
-func runNoticeValidation(ctx context.Context, t *testing.T, conn *pgx.Conn) {
+// runMigration runs a migration file in a transaction of its own and returns the
+// notices the database raised while it ran.
+func runMigration(ctx context.Context, t *testing.T, file string) []string {
 	t.Helper()
-	sql, err := os.ReadFile(filepath.Clean(noticeValidate))
+	sql, err := os.ReadFile(filepath.Clean(file))
 	if err != nil {
 		t.Fatal(err)
 	}
+	cfg, err := pgx.ParseConfig(ownerDSNOf(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raised []string
+	cfg.OnNotice = func(_ *pgconn.PgConn, n *pgconn.Notice) { raised = append(raised, n.Message) }
+	conn, err := pgx.ConnectConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := conn.Close(ctx); err != nil {
+			t.Errorf("closing the migration connection: %v", err)
+		}
+	}()
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := tx.Exec(ctx, string(sql)); err != nil {
-		t.Fatalf("running the validating migration: %v", err)
+		t.Fatalf("running %s: %v", file, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatal(err)
 	}
+	return raised
+}
+
+func runNoticeValidation(ctx context.Context, t *testing.T, conn *pgx.Conn) []string {
+	t.Helper()
+	return runMigration(ctx, t, noticeValidate)
+}
+
+// present reports whether a constraint of that name exists.
+func present(ctx context.Context, t *testing.T, conn *pgx.Conn, name string) bool {
+	t.Helper()
+	var n int
+	if err := conn.QueryRow(ctx, `SELECT count(*) FROM pg_constraint WHERE conname = $1`, name).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n > 0
 }
 
 func TestTheNoticeAndContributionChecksValidateWhenNoRowBreaksThem(t *testing.T) {
@@ -112,7 +147,7 @@ func TestTheNoticeAndContributionChecksValidateWhenNoRowBreaksThem(t *testing.T)
 	}
 }
 
-func TestAnOldNoticeWithAnUnknownTargetKeepsItsCheckNotValid(t *testing.T) {
+func TestAnOldNoticeWithAnUnknownTargetLosesTheCheckAndStaysUpdatable(t *testing.T) {
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	ctx := context.Background()
@@ -134,14 +169,17 @@ func TestAnOldNoticeWithAnUnknownTargetKeepsItsCheckNotValid(t *testing.T) {
 	if _, err := conn.Exec(ctx, `ALTER TABLE notice ADD CONSTRAINT `+noticeCheck+` `+def+` NOT VALID`); err != nil {
 		t.Fatal(err)
 	}
-	runNoticeValidation(ctx, t, conn)
-	if validated(ctx, t, conn, noticeCheck) {
-		t.Errorf("%s was validated over a row that breaks it", noticeCheck)
+	raised := runNoticeValidation(ctx, t, conn)
+	if present(ctx, t, conn, noticeCheck) {
+		t.Errorf("%s was kept over a row that breaks it", noticeCheck)
+	}
+	if len(raised) != 1 || !strings.Contains(raised[0], noticeCheck) || !strings.Contains(raised[0], "1 existing") {
+		t.Errorf("want one notice naming %s and the count, got %q", noticeCheck, raised)
 	}
 	if !validated(ctx, t, conn, contributionCheck) {
 		t.Errorf("%s was left NOT VALID though no row breaks it", contributionCheck)
 	}
-	if got := violated(ctx, t, conn, insertNotice, "widget"); got != noticeCheck {
-		t.Errorf("a new bad write met constraint %q, want %q", got, noticeCheck)
+	if _, err := conn.Exec(ctx, `UPDATE notice SET read_at = now() WHERE target_type = 'legacy_thing'`); err != nil {
+		t.Errorf("the legacy notice can no longer be marked read: %v", err)
 	}
 }

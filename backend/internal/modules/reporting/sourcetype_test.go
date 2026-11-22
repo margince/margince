@@ -92,6 +92,20 @@ func TestAnEditionKeepsNoContributionWhenOneFactNamesAnUnknownSource(t *testing.
 		t.Errorf("%d statements ran before the unknown source was refused, want none", tx.execs)
 	}
 
+	// A bad fact after more than one chunk of good ones still writes nothing.
+	long := make([]Fact, 0, 251)
+	for range 250 {
+		long = append(long, good)
+	}
+	long = append(long, bad)
+	late := &countingTx{}
+	if err := writeEditionContributions(context.Background(), late, edition, long); !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Fatalf("want ErrInvalidArgument for the late bad fact, got %v", err)
+	}
+	if late.execs != 0 {
+		t.Errorf("%d statements ran before the late unknown source was refused, want none", late.execs)
+	}
+
 	clean := &countingTx{}
 	if err := writeEditionContributions(context.Background(), clean, edition, []Fact{good}); err != nil {
 		t.Fatalf("a known source was refused: %v", err)

@@ -84,8 +84,8 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// An approval's CHECK also admits a unit's own table, which extensionArm sets
 	// aside; the closed list is what Go declares.
 	"report_edition_contribution.source_type":         {"internal/modules/reporting", "SourceType"},
-	"approval.target_entity_type":                     {"internal/modules/approvals", "TargetType"},
-	"approval.co_target_entity_type":                  {"internal/modules/approvals", "TargetType"},
+	"approval.target_entity_type":                     {"internal/shared/kernel/targettype", "Type"},
+	"approval.co_target_entity_type":                  {"internal/shared/kernel/targettype", "Type"},
 	"contact_acquisition_evidence.source_entity_type": {"internal/modules/contacts", "AcquisitionSource"},
 	"consent_qualifying_event.source_entity_type":     {"internal/modules/contacts", "AcquisitionSource"},
 
