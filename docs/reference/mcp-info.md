@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 276.3 KB |
+| Tool catalog | 276.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 72145 |
+| Approx. wire tokens | 72288 |
 | Largest tool | `read_details` (17.6 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 54.0 KB | 19% | Yes, every step |
-| Input schemas | 158.8 KB | 57% | Yes, every step |
+| Descriptions (incl. governance clause) | 54.2 KB | 19% | Yes, every step |
+| Input schemas | 159.1 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **212.8 KB** | **77%** | **the recurring cost** |
+| **Description + input schema** | **213.3 KB** | **77%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -66,11 +66,11 @@ descriptions and input schemas are what each step pays for.
 |---|---|:-:|---|---:|
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 798 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 892 |
 | [`change_access`](#change_access) | Share records and set up members and teams |  |  | 1152 |
 | [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 2918 |
 | [`change_attention`](#change_attention) | Act on proposals, notices and the weekly plan |  |  | 1775 |
-| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1870 |
+| [`change_capture`](#change_capture) | Decide what comes into the CRM |  |  | 1891 |
 | [`change_compliance`](#change_compliance) | Record consent, stops, holds and privacy work |  |  | 1274 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
@@ -763,18 +763,19 @@ themselves; requires passport scope "write".)
 
 ```text
 Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add them to or take
-them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; or
-mark up to 500 of the user's Worklist tasks done (record_type worklist_item, verb complete) — or
-undo such a change. Call mode preview first and show the user what it says: how many records change,
-which are left alone and why, and the sample rows. Execute only after they agree. Each record is
-changed only if it still has the version you sent and you may change it. To undo, pass the batch_id
-to undo_preview, show the user the answer, and call undo after they agree; a change is undone once,
-and records changed since are left alone. Ask in words even when the host also shows a form.
-update_record and archive_record change one record. Above 10 records, execute and undo need the
-confirm_token their preview answered; it is good once. Keep batch_id from the answer: undo names the
-change by it. (Runs immediately; the user's yes is needed for it, so tell them what the call will
-change and get it before calling, unless they asked for this call themselves; requires passport
-scope "write".)
+them off a Shortlist, put a tag on or take it off, or file one task under each, in one change; move
+up to 500 deals to one open stage (verb move_stage); or mark up to 500 of the user's Worklist tasks
+done (record_type worklist_item, verb complete) — or undo such a change. Call mode preview first
+and show the user what it says: how many records change, which are left alone and why, and the
+sample rows. Execute only after they agree. Each record is changed only if it still has the version
+you sent and you may change it. To undo, pass the batch_id to undo_preview, show the user the
+answer, and call undo after they agree; a change is undone once, and records changed since are left
+alone. A stage move skips a deal that is won or lost, and its undo moves each deal back as a new
+move. Ask in words even when the host also shows a form. update_record and archive_record change one
+record. Above 10 records, execute and undo need the confirm_token their preview answered; it is good
+once. Keep batch_id from the answer: undo names the change by it. (Runs immediately; the user's yes
+is needed for it, so tell them what the call will change and get it before calling, unless they
+asked for this call themselves; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -870,6 +871,11 @@ scope "write".)
       ],
       "type": "string"
     },
+    "stage_id": {
+      "description": "The open stage to move deals to, for move_stage. Choose one from the workspace's pipeline list with read_workspace with topic=pipelines. A won or lost deal is left alone",
+      "format": "uuid",
+      "type": "string"
+    },
     "tag_id": {
       "description": "The tag, for add_tag and remove_tag",
       "format": "uuid",
@@ -909,6 +915,7 @@ scope "write".)
         "add_tag",
         "remove_tag",
         "create_task",
+        "move_stage",
         "complete"
       ],
       "type": "string"
@@ -1031,6 +1038,10 @@ scope "write".)
                     "format": "uuid",
                     "type": "string"
                   },
+                  "stage_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
                   "tagged": {
                     "type": "boolean"
                   },
@@ -1056,6 +1067,10 @@ scope "write".)
                     "type": "boolean"
                   },
                   "owner_id": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "stage_id": {
                     "format": "uuid",
                     "type": "string"
                   },
@@ -1863,6 +1878,11 @@ they asked for this call themselves; requires passport scope "write".)
     },
     "address": {
       "description": "set_sender_decision, withdraw_sender_decision only",
+      "type": "string"
+    },
+    "company_id": {
+      "description": "import_vcards only",
+      "format": "uuid",
       "type": "string"
     },
     "connection_id": {

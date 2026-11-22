@@ -27,6 +27,7 @@ const (
 	bulkParamNote  = "note"
 	bulkParamTag   = "tag_id"
 	bulkParamTask  = "task"
+	bulkParamStage = "stage_id"
 )
 
 // bulkVerbNeeds is, per verb, the one parameter it requires and what that
@@ -39,6 +40,7 @@ var bulkVerbNeeds = map[crmcontracts.BulkVerb]struct{ param, why string }{
 	crmcontracts.BulkVerbAddTag:         {bulkParamTag, "the tag to put on"},
 	crmcontracts.BulkVerbRemoveTag:      {bulkParamTag, "the tag to take off"},
 	crmcontracts.BulkVerbCreateTask:     {bulkParamTask, "the task to file under each record"},
+	crmcontracts.BulkVerbMoveStage:      {bulkParamStage, "the open stage to move the deals to"},
 	crmcontracts.BulkVerbComplete:       {},
 }
 
@@ -49,7 +51,7 @@ func validateBulkChange(change bulkChange) error {
 	need, known := bulkVerbNeeds[change.verb]
 	if !known {
 		return httperr.Validation("verb", "unknown_verb", fmt.Sprintf(
-			"verb %q is none of reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task or complete", change.verb))
+			"verb %q is none of reassign_owner, archive, add_to_list, remove_from_list, add_tag, remove_tag, create_task, move_stage or complete", change.verb))
 	}
 	if err := validateBulkParams(change, need.param, need.why); err != nil {
 		return err
@@ -80,6 +82,7 @@ func validateBulkParams(change bulkChange, need, why string) error {
 		{bulkParamNote, change.note != nil},
 		{bulkParamTag, change.tagID != nil},
 		{bulkParamTask, change.task != nil},
+		{bulkParamStage, change.stageID != nil},
 	}
 	for _, p := range named {
 		switch {
@@ -121,7 +124,11 @@ func checkBulkTextLimits(change bulkChange) error {
 func admitKind(target bulkTarget, change bulkChange) error {
 	_, archives := target.(bulkArchiver)
 	_, worklist := target.(worklistBulkTarget)
+	_, movesStage := target.(bulkStageMover)
 	switch {
+	case change.verb == crmcontracts.BulkVerbMoveStage && !movesStage:
+		return httperr.Validation("verb", "verb_not_for_record_type",
+			fmt.Sprintf("only a deal has a stage to move; move_stage is none of a %s's verbs", change.recordType))
 	case change.verb == crmcontracts.BulkVerbArchive && !archives:
 		return httperr.Validation("verb", "verb_not_for_record_type",
 			fmt.Sprintf("a %s has no archive; archive is none of its verbs", change.recordType))
