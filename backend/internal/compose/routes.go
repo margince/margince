@@ -89,6 +89,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		// which is what lets chiRoutePattern answer.
 		coreFeatureGate(srv.coreFeatures),
 		srv.httpMetrics.Measure(chiRoutePattern),
+		httpserver.NoteRoute(chiRoutePattern),
 	)
 }
 

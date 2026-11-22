@@ -30,10 +30,10 @@ func TestResponseTraceNamesTheServerScopeAndAccessLog(t *testing.T) {
 	for range 2 {
 		output.Reset()
 		request := httptest.NewRequest(http.MethodGet, "/v1/brief", nil)
-		request.Header.Set("X-Correlation-ID", "untrusted-client-trace")
+		request.Header.Set("X-Request-Id", "untrusted-client-trace")
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, request)
-		trace := response.Header().Get("X-Correlation-ID")
+		trace := response.Header().Get("X-Request-Id")
 		if trace == "" || trace != scoped || trace == previous || trace == "untrusted-client-trace" {
 			t.Fatalf("response trace %q does not name this server request's fresh scope %q", trace, scoped)
 		}

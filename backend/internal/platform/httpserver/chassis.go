@@ -176,14 +176,15 @@ func BearerToken(header string) string {
 }
 
 // Correlate opens the per-request trace scope: one freshly minted
-// correlation_id groups every event the request's writes emit (events.md
-// §2). Minted server-side, never taken from a request header — a client
-// that could set it could stitch itself into another tenant's story.
+// correlation_id groups every event the request's writes emit. It is minted server-side and never taken from a request header. A
+// client that could set it could stitch itself into another tenant's story.
+// The response names it in X-Request-Id. That joins a HAR row, or an error
+// shown in the app, to the access log line and the events of the request.
 func Correlate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := ids.NewV7()
 		ctx := principal.WithCorrelationID(r.Context(), id)
-		w.Header().Set("X-Correlation-ID", id.String())
+		w.Header().Set("X-Request-Id", id.String())
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

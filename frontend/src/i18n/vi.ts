@@ -3379,6 +3379,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "common.error": "Không thể tải màn hình này. Tải lại trang.",
   "common.errorNoCause": "Yêu cầu không thành công. Không rõ nguyên nhân.",
+  "common.errorReference": "Mã tham chiếu",
   "common.assistantUnavailable":
     "AI không phản hồi. Hãy thử lại, hoặc liên hệ quản trị viên để kiểm tra Cài đặt, mục AI.",
   "common.providerOutOfCredit":

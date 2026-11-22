@@ -3480,6 +3480,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Inhalt konnte nicht geladen werden. Bitte lade die Seite neu.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Es wurde keine Ursache gemeldet.",
+  "common.errorReference": "Referenz",
   "common.assistantUnavailable":
     "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
   "common.providerOutOfCredit":

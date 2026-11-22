@@ -344,7 +344,7 @@ group with no list gets every type on its streams.
 The `Trace` on every envelope lets you build one request or run back up as a single story:
 
 - **`correlation_id`** groups every event that one request or run starts. The HTTP middleware makes it
-  **once** per HTTP request (`internal/platform/httpserver/chassis.go`) and returns it in `X-Correlation-ID`.
+  **once** per HTTP request (`internal/platform/httpserver/chassis.go`) and returns it in `X-Request-Id`.
   It ignores a client-supplied value. Each agent run binds one too (`compose/runnerservice.go`).
   A background job that emits events must bind its own, since `Emit` fails without one.
   It binds it together with the actor, through
