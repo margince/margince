@@ -6,7 +6,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-47 columns · primary key `(id)` · referenced by 51 foreign keys
+46 columns · primary key `(id)` · referenced by 51 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -42,7 +42,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `parent_company_id` | `uuid` |  | Single-level hierarchy FK; no cycles. |
 | `phone` | `text` |  | The company's main number, in E.164 form (for example +49301234567). |
-| `quarantined_at` | `timestamp with time zone` |  |  |
 | `size_band` | `text` |  | One of `1-10`, `11-50`, `51-200`, `201-500`, `501-1000`, `1001-5000` and 1 more. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
@@ -716,7 +715,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `request_retracted_at` | `timestamp with time zone` |  |  |
 | `request_retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |
-| `source_entity_type` | `text` |  |  |
+| `source_entity_type` | `text` |  | One of `activity`, `deal`. |
 | `stated_source` | `text` |  | One of `met_in_person`, `business_card`, `referral`, `website`, `other`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 
@@ -730,6 +729,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `contact_acquisition_evidence_kind`: `CHECK ((kind = ANY (ARRAY['subject_initiated', 'customer_contract', 'requested_quote_or_meeting', 'in_person_permission', 'referral', 'event_or_form', 'public_or_business_source', 'purchased_or_imported', 'unknown_legacy', 'crm_migration', 'mailbox_history'])))`
+- `contact_acquisition_evidence_source_entity_type_check`: `CHECK ((source_entity_type = ANY (ARRAY['activity', 'deal'])))`
 - `contact_acquisition_evidence_source_shape`: `CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))`
 - `contact_acquisition_evidence_stated_source_check`: `CHECK ((stated_source = ANY (ARRAY['met_in_person', 'business_card', 'referral', 'website', 'other'])))`
 
