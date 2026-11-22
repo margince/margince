@@ -247,16 +247,22 @@ func TestAKeyHeldForDifferentArgumentsSaysWhenAndHowItWasFirstUsed(t *testing.T)
 		settle func(ctx context.Context, claims agentClaims, attempt string) error
 		want   agents.ClaimState
 	}{
-		{name: "the first call succeeded", want: agents.ClaimReplay,
+		{
+			name: "the first call succeeded", want: agents.ClaimReplay,
 			settle: func(ctx context.Context, claims agentClaims, attempt string) error {
 				return claims.Settle(ctx, "update_record", "k-7", attempt, json.RawMessage(`{"data":{}}`), 1)
-			}},
-		{name: "the first call failed", want: agents.ClaimFailed,
+			},
+		},
+		{
+			name: "the first call failed", want: agents.ClaimFailed,
 			settle: func(ctx context.Context, claims agentClaims, attempt string) error {
 				return claims.Fail(ctx, "update_record", "k-7", attempt, "the record had changed")
-			}},
-		{name: "the first call is still running", want: agents.ClaimInFlight,
-			settle: func(context.Context, agentClaims, string) error { return nil }},
+			},
+		},
+		{
+			name: "the first call is still running", want: agents.ClaimInFlight,
+			settle: func(context.Context, agentClaims, string) error { return nil },
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
