@@ -12,11 +12,13 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -164,6 +166,9 @@ func TestReceivingAnAddressLetsTheNextSweepJudgeItsMail(t *testing.T) {
 	if seatImportCount(t, e, other, e.Rep1) != 0 {
 		t.Error("mail at an address that was not claimed was imported")
 	}
+	if seatImportCount(t, e, theirs, e.Rep1) != 0 {
+		t.Error("the claim imported mail that sits in another member's mailbox")
+	}
 	if seatImportCount(t, e, theirs, e.Rep2) != 0 || len(unroutedFor(t, e, e.Rep2).Addresses) != 1 {
 		t.Error("a claim by one member changed the other member's mail")
 	}
@@ -214,4 +219,124 @@ func TestNotMineHidesTheAddressAndKeepsItsMailUnjudged(t *testing.T) {
 	if got := unroutedCounts(unroutedFor(t, e, e.Rep1)); got[unroutedInfo] != 1 {
 		t.Errorf("after the undo the list is %v, want %s counted again", got, unroutedInfo)
 	}
+}
+
+// refusedAdoption claims address as Rep1, sweeps, and reports whether Rep1 or
+// Rep2 has an import row for the mail Rep1's mailbox holds at that address.
+func refusedAdoption(t *testing.T, e *integration.Env, address string) (mail ids.UUID, imported bool) {
+	t.Helper()
+	mail = captureUnrouted(t, e, e.Rep1, "u-held-"+ids.NewV7().String(), address)
+	// The claim itself may be refused, as a colleague's login is. Either way
+	// nothing may be imported for it.
+	_, _ = unroutedStore(e).AddConfirmed(purgeCtx(e, e.Rep1), capture.IdentityKindAddress, address, true)
+	sweepStrandedMail(t, e)
+	return mail, seatImportCount(t, e, mail, e.Rep1)+seatImportCount(t, e, mail, e.Rep2) != 0
+}
+
+func TestAnAddressAnotherMemberClaimsIsNeverAdopted(t *testing.T) {
+	e := integration.Setup(t)
+	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
+	unroutedMailbox(t, e, e.Rep2, "own2@authz.test")
+	if _, err := unroutedStore(e).AddConfirmed(purgeCtx(e, e.Rep2), capture.IdentityKindAddress, unroutedInfo, false); err != nil {
+		t.Fatalf("the colleague claiming %s: %v", unroutedInfo, err)
+	}
+	if _, imported := refusedAdoption(t, e, unroutedInfo); imported {
+		t.Error("mail was imported at an address a second member also claims")
+	}
+}
+
+func TestAColleaguesLoginIsNeverAdopted(t *testing.T) {
+	e := integration.Setup(t)
+	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
+	login := e.WsScalar(t, `SELECT lower(email) FROM app_user WHERE id = $1`, e.Rep2)
+	if _, imported := refusedAdoption(t, e, login); imported {
+		t.Error("mail was imported at a colleague's login address")
+	}
+}
+
+func TestAColleaguesMailboxAddressIsNeverAdopted(t *testing.T) {
+	e := integration.Setup(t)
+	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
+	unroutedMailbox(t, e, e.Rep2, "own2@authz.test")
+	if _, imported := refusedAdoption(t, e, "own2@authz.test"); imported {
+		t.Error("mail was imported at the address a colleague's mailbox is connected as")
+	}
+}
+
+func TestAnAddressOnAContactAsksBeforeItIsClaimed(t *testing.T) {
+	e := integration.Setup(t)
+	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
+	const customer = "kunde@customer.example"
+	contact := e.SeedContact(t, "Kunde", nil)
+	e.WsExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
+		VALUES ($1, $2, 'manual', 'human:x')`, contact, customer)
+	mail := captureUnrouted(t, e, e.Rep1, "u-customer", customer)
+
+	_, err := unroutedStore(e).AddConfirmed(purgeCtx(e, e.Rep1), capture.IdentityKindAddress, customer, false)
+	var question *httperr.DetailedError
+	if !errors.As(err, &question) || question.Code != capture.CodeNeedsConfirmation {
+		t.Fatalf("claiming a contact's address answered %v, want the confirmation question", err)
+	}
+	sweepStrandedMail(t, e)
+	if seatImportCount(t, e, mail, e.Rep1) != 0 {
+		t.Error("mail was imported for an address that was never confirmed")
+	}
+	if _, err := unroutedStore(e).AddConfirmed(purgeCtx(e, e.Rep1), capture.IdentityKindAddress, customer, true); err != nil {
+		t.Fatalf("confirming %s: %v", customer, err)
+	}
+	sweepStrandedMail(t, e)
+	if seatImportCount(t, e, mail, e.Rep1) != 1 {
+		t.Error("a confirmed claim of a mail in the member's own mailbox was not imported")
+	}
+}
+
+func TestTheListIsCutAtTheAddressCapAndSaysSo(t *testing.T) {
+	e := integration.Setup(t)
+	unroutedMailbox(t, e, e.Rep1, "own1@authz.test")
+	message := ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, audience)
+		VALUES ($1, 'email', 'Rundmail', now(), 'gmail', $2, 'participants')`, message, "connector:gmail:"+e.Rep1.String())
+	for i := range capture.UnroutedAddressCap + 1 {
+		seedParty(t, e, message, nil, nil, fmt.Sprintf("list-%03d@cap.example", i), "to")
+	}
+
+	mail := unroutedFor(t, e, e.Rep1)
+	if len(mail.Addresses) != capture.UnroutedAddressCap || !mail.More || mail.Messages != 1 {
+		t.Errorf("got %d addresses, more=%v, messages=%d; want %d, true, 1",
+			len(mail.Addresses), mail.More, mail.Messages, capture.UnroutedAddressCap)
+	}
+	if short := unroutedFor(t, e, e.Rep2); short.More {
+		t.Error("an empty list claims it was cut")
+	}
+}
+
+func refusalTrail(t *testing.T, e *integration.Env) (events, audits int) {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'capture_settings.updated'`),
+		e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'capture_settings'`)
+}
+
+func TestARefusalWritesItsAuditRowAndEventOnlyWhenItChangesSomething(t *testing.T) {
+	e := integration.Setup(t)
+	store := unroutedStore(e)
+	ctx := purgeCtx(e, e.Rep1)
+	events, audits := refusalTrail(t, e)
+	step := func(name string, run func() error, wantEvents, wantAudits int) {
+		t.Helper()
+		if err := run(); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		gotEvents, gotAudits := refusalTrail(t, e)
+		if gotEvents-events != wantEvents || gotAudits-audits != wantAudits {
+			t.Errorf("%s wrote %d events and %d audit rows, want %d and %d",
+				name, gotEvents-events, gotAudits-audits, wantEvents, wantAudits)
+		}
+		events, audits = gotEvents, gotAudits
+	}
+	refuse := func() error { return store.RefuseUnroutedAddress(ctx, unroutedInfo) }
+	restore := func() error { return store.RestoreUnroutedAddress(ctx, unroutedInfo) }
+	step("the first refusal", refuse, 1, 1)
+	step("the same refusal again", refuse, 0, 0)
+	step("taking it back", restore, 1, 1)
+	step("taking it back again", restore, 0, 0)
 }

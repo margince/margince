@@ -54,6 +54,7 @@ function showing(routes: RouteMap = {}) {
     "GET /capture/unrouted-mail": () =>
       jsonResponse({
         messages: 3,
+        more: false,
         data: [
           { address: INFO, messages: 2 },
           { address: "security@colleague.example", messages: 1 },
@@ -158,17 +159,33 @@ it("records not mine for the address and takes it back on undo", async () => {
   await waitFor(() => expect(restored).toHaveBeenCalledOnce());
 });
 
-it("tells the reader to confirm an address that is already on file", async () => {
+it("asks in place about an address on file and claims it once confirmed", async () => {
+  const bodies: unknown[] = [];
   showing({
-    "POST /capture/owner-identities": () =>
-      jsonResponse(
+    "POST /capture/owner-identities": (body) => {
+      bodies.push(body);
+      if ((body as { confirm?: boolean }).confirm) {
+        return jsonResponse(
+          {
+            id: "oi-9",
+            kind: "address",
+            value: INFO,
+            source: "user",
+            created_at: "2026-11-22T09:00:00Z",
+          },
+          201,
+        );
+      }
+      return jsonResponse(
         {
           code: "domain_needs_confirmation",
           title: "Needs confirmation",
           status: 409,
+          details: { role: "contact_address", domain: INFO },
         },
         409,
-      ),
+      );
+    },
   });
 
   await userEvent.click(
@@ -176,7 +193,25 @@ it("tells the reader to confirm an address that is already on file", async () =>
       name: `${en["unroutedMail.receive"]}: ${INFO}`,
     }),
   );
-  expect(
-    await screen.findByText(en["unroutedMail.needsConfirmation"]),
-  ).toBeTruthy();
+  const confirm = await screen.findByRole("button", {
+    name: en["captureValue.addAnyway"],
+  });
+  await userEvent.click(confirm);
+  await waitFor(() => expect(bodies).toHaveLength(2));
+  expect(bodies[1]).toEqual({ kind: "address", value: INFO, confirm: true });
+});
+
+it("says when the list is cut", async () => {
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /capture/unrouted-mail": () =>
+      jsonResponse({
+        messages: 1,
+        more: true,
+        data: [{ address: INFO, messages: 1 }],
+      }),
+  });
+  render(<UnroutedMailCard />);
+
+  expect(await screen.findByTestId("unrouted-mail-more")).toBeTruthy();
 });

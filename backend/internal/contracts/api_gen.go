@@ -70299,6 +70299,9 @@ type UnroutedMailResponse struct {
 
 	// Messages Messages counted once each, however many listed addresses they name.
 	Messages int `json:"messages"`
+
+	// More True when the list is cut: at most 50 addresses are listed, from the newest 5000 messages.
+	More bool `json:"more"`
 }
 
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.

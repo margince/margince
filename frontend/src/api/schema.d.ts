@@ -13951,7 +13951,8 @@ export interface paths {
          * The mail in your mailbox that was sent to addresses that are not yours.
          * @description Mail your own connected mailbox brought in that names none of your addresses, so no seat
          *     imported it and nothing judges it. Listed per address, most mail first, with the number of
-         *     messages. `messages` counts each message once.
+         *     messages. `messages` counts each message once. At most 50 addresses are listed, from the
+         *     newest 5000 messages, and `more` says when the list was cut.
          *
          *     Answer one address with `POST /capture/owner-identities` (it is yours: the mail is then
          *     checked like the rest) or `PUT /capture/unrouted-mail/{address}/refusal` (it is not: the
@@ -31317,6 +31318,8 @@ export interface components {
         UnroutedMailResponse: {
             /** @description Messages counted once each, however many listed addresses they name. */
             messages: number;
+            /** @description True when the list is cut: at most 50 addresses are listed, from the newest 5000 messages. */
+            more: boolean;
             data: components["schemas"]["UnroutedMailAddress"][];
         };
         UnroutedMailAddress: {

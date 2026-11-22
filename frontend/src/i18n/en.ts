@@ -18196,8 +18196,8 @@ export const en = {
   "unroutedMail.refused": "Hidden. This address is no longer counted.",
   "unroutedMail.restored": "Counted again.",
   "unroutedMail.removedClaim": "Address removed.",
-  "unroutedMail.needsConfirmation":
-    "This address belongs to a contact or company on file. Add it under Your other email addresses to confirm it.",
+  "unroutedMail.more":
+    "The list is cut. Answer these addresses and the next ones appear.",
   "unroutedMail.loading": "Mail sent to other addresses",
   "captureValue.refusedAddress":
     "Enter one email address, for example name@example.com.",

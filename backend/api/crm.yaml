@@ -21366,7 +21366,8 @@ paths:
       description: |
         Mail your own connected mailbox brought in that names none of your addresses, so no seat
         imported it and nothing judges it. Listed per address, most mail first, with the number of
-        messages. `messages` counts each message once.
+        messages. `messages` counts each message once. At most 50 addresses are listed, from the
+        newest 5000 messages, and `more` says when the list was cut.
 
         Answer one address with `POST /capture/owner-identities` (it is yours: the mail is then
         checked like the rest) or `PUT /capture/unrouted-mail/{address}/refusal` (it is not: the
@@ -45444,9 +45445,10 @@ components:
           items: { $ref: '#/components/schemas/CaptureOwnerIdentity' }
     UnroutedMailResponse:
       type: object
-      required: [messages, data]
+      required: [messages, more, data]
       properties:
         messages: { type: integer, description: 'Messages counted once each, however many listed addresses they name.' }
+        more: { type: boolean, description: 'True when the list is cut: at most 50 addresses are listed, from the newest 5000 messages.' }
         data:
           type: array
           items: { $ref: '#/components/schemas/UnroutedMailAddress' }

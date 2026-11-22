@@ -17877,8 +17877,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "unroutedMail.refused": "Đã ẩn. Địa chỉ này không còn được đếm.",
   "unroutedMail.restored": "Đã đếm lại.",
   "unroutedMail.removedClaim": "Đã gỡ địa chỉ.",
-  "unroutedMail.needsConfirmation":
-    "Địa chỉ này thuộc về một liên hệ hoặc công ty đã có. Hãy thêm nó trong Các địa chỉ email khác của bạn để xác nhận.",
+  "unroutedMail.more":
+    "Danh sách đã bị cắt bớt. Hãy trả lời các địa chỉ này để thấy những địa chỉ tiếp theo.",
   "unroutedMail.loading": "Thư gửi đến địa chỉ khác",
   "captureValue.refusedAddress": "Nhập một địa chỉ email, ví dụ ten@vidu.com.",
   "captureValue.refusedDomain":

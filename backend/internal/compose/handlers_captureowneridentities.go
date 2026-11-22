@@ -87,6 +87,7 @@ func (h captureOwnerIdentityHandlers) ListUnroutedMail(w http.ResponseWriter, r 
 	}
 	out := crmcontracts.UnroutedMailResponse{
 		Messages: mail.Messages,
+		More:     mail.More,
 		Data:     make([]crmcontracts.UnroutedMailAddress, 0, len(mail.Addresses)),
 	}
 	for _, row := range mail.Addresses {

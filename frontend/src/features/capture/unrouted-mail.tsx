@@ -10,12 +10,8 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { undoAction, useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import {
-  problemCodeOf,
-  problemMessageOf,
-  throwProblem,
-  unwrap,
-} from "../../lib/problem";
+import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { DomainQuestionCallout, domainQuestionOf } from "./domainquestion";
 
 // Mail in the reader's own mailbox that was sent to addresses that are not
 // theirs. Nothing judges it until the reader says, per address, whether they
@@ -66,19 +62,21 @@ function useReceive() {
     },
   });
   return useMutation({
-    mutationFn: async (value: string) =>
+    mutationFn: async (claim: { value: string; confirm?: boolean }) =>
       unwrap(
         await api.POST("/capture/owner-identities", {
-          body: { kind: "address", value },
+          body: { kind: "address", ...claim },
         }),
       ),
-    onError: (error) =>
-      toast.show(
-        problemCodeOf(error) === "domain_needs_confirmation"
-          ? t("unroutedMail.needsConfirmation")
-          : problemMessageOf(error, t),
-        { tone: "danger", sticky: true },
-      ),
+    // The address-on-file question is asked in place, under the list.
+    onError: (error) => {
+      if (domainQuestionOf(error) === null) {
+        toast.show(problemMessageOf(error, t), {
+          tone: "danger",
+          sticky: true,
+        });
+      }
+    },
     onSuccess: (identity) => {
       refresh();
       toast.show(t("unroutedMail.received"), {
@@ -162,7 +160,7 @@ export function UnroutedMailCard() {
                   aria-label={t("unroutedMail.receiveLabel", {
                     value: row.address,
                   })}
-                  onClick={() => receive.mutate(row.address)}
+                  onClick={() => receive.mutate({ value: row.address })}
                 >
                   {t("unroutedMail.receive")}
                 </Button>
@@ -181,6 +179,27 @@ export function UnroutedMailCard() {
           />
         ))}
       </SettingList>
+      {receive.isError && receive.variables && (
+        <PanelBody>
+          <DomainQuestionCallout
+            error={receive.error}
+            value={receive.variables.value}
+            scope="ownAddress"
+            pending={receive.isPending}
+            t={t}
+            onConfirm={() =>
+              receive.mutate({ value: receive.variables.value, confirm: true })
+            }
+          />
+        </PanelBody>
+      )}
+      {mail.more && (
+        <PanelBody>
+          <p className="t-caption" data-testid="unrouted-mail-more">
+            {t("unroutedMail.more")}
+          </p>
+        </PanelBody>
+      )}
     </Panel>
   );
 }

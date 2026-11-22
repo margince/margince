@@ -18363,8 +18363,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ausgeblendet. Diese Adresse wird nicht mehr gezählt.",
   "unroutedMail.restored": "Wieder gezählt.",
   "unroutedMail.removedClaim": "Adresse entfernt.",
-  "unroutedMail.needsConfirmation":
-    "Diese Adresse gehört zu einem Kontakt oder Unternehmen, das schon erfasst ist. Füge sie unter Deine weiteren E-Mail-Adressen hinzu, um sie zu bestätigen.",
+  "unroutedMail.more":
+    "Die Liste ist gekürzt. Beantworte diese Adressen, dann erscheinen die nächsten.",
   "unroutedMail.loading": "Mails an andere Adressen",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
