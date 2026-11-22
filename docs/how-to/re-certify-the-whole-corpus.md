@@ -90,8 +90,11 @@ The judge rules and the default judge are in
 A sweep takes longer than one window of the judge's Claude plan. When the window ends, the lane
 stops with `You've hit your 5-hour limit`. To have the sweep wait and go on, run it through
 `scripts/aicert-sweep.sh`. It runs `make -C backend e2e-ai` with your arguments from the repository
-root. After a judge limit or an unreachable provider it waits (`AICERT_SWEEP_WAIT`, 900 seconds by
-default) and runs the same command again, and the journal replays every run already scored. It
+root.
+
+When the judge reaches its limit or a provider does not answer, the script waits
+(`AICERT_SWEEP_WAIT`, 900 seconds by default). Then it runs the same command again, and the journal
+replays every run already scored. It
 refuses to start without `RESUME=`, and any other failure ends it with the lane's exit code:
 
 ```bash

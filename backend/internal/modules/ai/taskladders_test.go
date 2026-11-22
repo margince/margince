@@ -89,8 +89,11 @@ func TestAStockBindingAdoptsItsPresetsTaskOrderAndACustomOneDoesNot(t *testing.T
 	installed := stock
 	installed.TaskLadders = nil
 	adopted, ok := installed.WithStockTaskLadders()
-	if !ok || !slices.Equal(adopted.Ladder(TaskAgentLoop), stock.Ladder(TaskAgentLoop)) {
-		t.Errorf("a stock Gemini install adopted %v (%v), want %v", adopted.TaskLadders, ok, stock.TaskLadders)
+	premiumFirst := []Tier{TierPremium, TierCheapCloud}
+	for _, task := range []Task{TaskAgentLoop, TaskDraftReply} {
+		if !ok || !slices.Equal(adopted.Ladder(task), premiumFirst) {
+			t.Errorf("a stock Gemini install walks %s %v after adopting (%v), want %v", task, adopted.Ladder(task), ok, premiumFirst)
+		}
 	}
 
 	vertex, err := ParsePreset([]byte(stockPresets["gemini_vertex_eu.yaml"]))
@@ -118,7 +121,8 @@ func TestAStockBindingAdoptsItsPresetsTaskOrderAndACustomOneDoesNot(t *testing.T
 
 	ordered := stock
 	ordered.TaskLadders = map[Task][]Tier{TaskAgentLoop: TaskLadder(TaskAgentLoop)}
-	if got, ok := ordered.WithStockTaskLadders(); ok || !slices.Equal(got.Ladder(TaskAgentLoop), TaskLadder(TaskAgentLoop)) {
-		t.Errorf("an install ordering its own tasks was given %v", got.TaskLadders)
+	got, ok := ordered.WithStockTaskLadders()
+	if ok || !slices.Equal(got.Ladder(TaskAgentLoop), TaskLadder(TaskAgentLoop)) || !slices.Equal(got.Ladder(TaskDraftReply), TaskLadder(TaskDraftReply)) {
+		t.Errorf("an install ordering one task itself was given %v; it adopts no part of the stock order", got.TaskLadders)
 	}
 }

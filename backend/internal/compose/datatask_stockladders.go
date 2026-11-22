@@ -12,14 +12,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-const stockLaddersTaskID = "core/1795328664_stock_task_ladders"
-
 // stockLaddersDataTask gives an installation bound to a committed preset the
 // task order that preset now declares, as a save in Settings would. A binding
 // the operator chose for themselves is left as it is. It is handed the
 // routing store's write and not the ai package, where model clients live.
 func stockLaddersDataTask(adopt func(context.Context, pgx.Tx) (bool, error)) datatask.Task {
-	return datatask.Task{ID: stockLaddersTaskID, Version: 1, Title: systemtext.Literal(dataTaskTitleCode(stockLaddersTaskID)), Steps: []datatask.Step{{
+	task := datatask.Task{ID: "core/1795328664_stock_task_ladders", Version: 1, Steps: []datatask.Step{{
 		Name: "adopt_stock_task_ladders", Limit: 1, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
 		Estimate: func(context.Context, datatask.Querier, int64) (int64, bool, error) { return 1, false, nil },
 		Batch: func(ctx context.Context, tx pgx.Tx, _ datatask.BatchIn) (datatask.BatchOut, error) {
@@ -34,4 +32,6 @@ func stockLaddersDataTask(adopt func(context.Context, pgx.Tx) (bool, error)) dat
 			return datatask.BatchOut{Scanned: 1, Changed: changed, Done: true}, nil
 		},
 	}}}
+	task.Title = systemtext.Literal(dataTaskTitleCode(task.ID))
+	return task
 }

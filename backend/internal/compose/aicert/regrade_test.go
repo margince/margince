@@ -9,7 +9,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 )
 
-// A record is JSON a person commits, and every page prints its stored verdict.
+// A record is JSON a developer commits, and every page prints its stored verdict.
 // So each record graded under today's rule must say what that rule says of its
 // rows: a hand-edited verdict or count fails here. A record whose grader third
 // moved was graded by an older rule, reads stale, and is not held to this one.

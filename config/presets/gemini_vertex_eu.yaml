@@ -43,9 +43,13 @@ seeds:
       frontier:    { provider: gemini_vertex, model: gemini-3.8-flash, thinking_level: low }
     # The scheduled agents answer on premium first: on Flash-Lite a line
     # planted in a CRM record reached the morning brief's saved findings, and
-    # on Flash it mostly did not. Every agent step pays premium tokens.
+    # on Flash it mostly did not. Reply drafts answer on premium first too: on
+    # Flash-Lite a reply or first touch claimed a conversation that never
+    # happened or a benefit nobody stated, and on Flash it certified. Every
+    # agent step and every reply draft pays premium tokens.
     task_ladders:
       agent_loop: [premium, cheap_cloud]
+      draft_reply: [premium, cheap_cloud]
     # The width is asked of the model as outputDimensionality, as on gemini.
     # The embedder keeps a location of its own, which overrides the provider's
     # for this lane alone.

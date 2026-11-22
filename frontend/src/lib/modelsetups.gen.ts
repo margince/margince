@@ -87,6 +87,7 @@ export const MODEL_SETUPS = {
       profile: "cloud_frontier",
       task_ladders: {
         agent_loop: ["premium", "cheap_cloud"],
+        draft_reply: ["premium", "cheap_cloud"],
       },
       tiers: {
         cheap_cloud: {
@@ -127,6 +128,7 @@ export const MODEL_SETUPS = {
       },
       task_ladders: {
         agent_loop: ["premium", "cheap_cloud"],
+        draft_reply: ["premium", "cheap_cloud"],
       },
       tiers: {
         cheap_cloud: {

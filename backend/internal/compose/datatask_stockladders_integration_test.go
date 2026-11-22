@@ -43,7 +43,7 @@ func storeGeminiRouting(t *testing.T, e *integration.Env, routing *ai.RoutingSto
 
 func routingAuditsByTheTask(t *testing.T, e *integration.Env) int {
 	t.Helper()
-	return e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='ai_routing' AND actor_id=$1`, datatask.ActorID(stockLaddersTaskID))
+	return e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='ai_routing' AND actor_id=$1`, datatask.ActorID(stockLaddersDataTask(nil).ID))
 }
 
 // A stock Gemini install takes the order its preset now declares, audited as a
@@ -60,8 +60,10 @@ func TestTheStockLaddersTaskGivesAStockInstallItsPresetsOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := stored.Ladder(ai.TaskAgentLoop); !slices.Equal(got, []ai.Tier{ai.TierPremium, ai.TierCheapCloud}) {
-		t.Errorf("agent_loop walks %v after the task, want premium first", got)
+	for _, task := range []ai.Task{ai.TaskAgentLoop, ai.TaskDraftReply} {
+		if got := stored.Ladder(task); !slices.Equal(got, []ai.Tier{ai.TierPremium, ai.TierCheapCloud}) {
+			t.Errorf("%s walks %v after the task, want premium first", task, got)
+		}
 	}
 	if got := routingAuditsByTheTask(t, e); got != 1 {
 		t.Errorf("the task audited %d routing writes over two runs, want one", got)
@@ -80,8 +82,10 @@ func TestTheStockLaddersTaskLeavesACustomisedInstallAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := stored.Ladder(ai.TaskAgentLoop); !slices.Equal(got, ai.TaskLadder(ai.TaskAgentLoop)) {
-		t.Errorf("a customised install walks agent_loop %v, want its contract order", got)
+	for _, task := range []ai.Task{ai.TaskAgentLoop, ai.TaskDraftReply} {
+		if got := stored.Ladder(task); !slices.Equal(got, ai.TaskLadder(task)) {
+			t.Errorf("a customised install walks %s %v, want its contract order", task, got)
+		}
 	}
 	if got := routingAuditsByTheTask(t, e); got != 0 {
 		t.Errorf("the task wrote a customised install's routing %d time(s)", got)

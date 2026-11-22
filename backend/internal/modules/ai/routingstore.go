@@ -434,6 +434,9 @@ func canonicalEndpoint(raw string) string {
 // under the routing lock, and the settings store audits the write. A binding an
 // operator chose for themselves is left as it is, and so is one with no tiers.
 func (s *RoutingStore) AdoptStockTaskLaddersTx(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if err := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); err != nil {
+		return false, err
+	}
 	if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {
 		return false, err
 	}
