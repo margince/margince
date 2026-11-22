@@ -147,7 +147,7 @@ deal_id="$(jq -r '.data[] | select(.name == "Expansion — Phase 2") | .id' "$wo
 if [[ -z "$deal_id" ]]; then
   status="$(api POST /deals "$(jq -n --arg p "$pipeline_id" --arg s "$stage_proposal" --arg o "$company_id" --arg c "$close_date" \
     '{name:"Expansion — Phase 2",pipeline_id:$p,stage_id:$s,company_id:$o,
-      amount_minor:9500000,currency:"EUR",expected_close_date:$c,source:"seed"}')")"
+      amount_minor:9500000,currency:"EUR",expected_close_date:$c,source:"api"}')")"
   [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "create deal returned HTTP $status"; }
   deal_id="$(jq -r .id "$workdir/body")"
   echo "  OK: created Expansion — Phase 2 (€95k, Proposal, closes $close_date)"

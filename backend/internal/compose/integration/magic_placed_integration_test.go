@@ -61,7 +61,8 @@ func newPlacedFixture(t *testing.T) placedFixture {
 	company := e.SeedCompany(t, "Placed Co", &e.Rep1)
 	companyID, owner := ids.From[ids.CompanyKind](company), ids.From[ids.UserKind](e.Rep1)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Placed rollout", PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Placed rollout", PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: &owner,
 	})
 	if err != nil {
 		t.Fatal(err)

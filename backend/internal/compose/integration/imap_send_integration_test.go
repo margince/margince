@@ -57,8 +57,8 @@ func (p *preflightEnv) connectIMAP(t *testing.T, bundle connector.Auth) {
 	}
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes)
-			VALUES ('imap', $1, '{}', 'connected', $2, $3)
+			INSERT INTO capture_connection (provider, user_id, status, auth, provider_scopes)
+			VALUES ('imap', $1, 'connected', $2, $3)
 			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL
 			DO UPDATE SET status = 'connected', provider_scopes = EXCLUDED.provider_scopes`,
 			p.user, []byte(bundle), scopes)

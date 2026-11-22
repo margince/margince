@@ -6,7 +6,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## ai_call
 
-41 columns · primary key `(id)` · referenced by 1 foreign key
+33 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -15,20 +15,16 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `attempt` | `integer`, default `1` | yes |  |
 | `attempt_reason` | `text`, default `''::text` | yes |  |
 | `cache_hit` | `boolean`, default `false` | yes |  |
-| `cache_off` | `boolean`, default `false` | yes |  |
 | `cache_write_tokens` | `bigint`, default `0` | yes |  |
 | `cached_tokens` | `bigint`, default `0` | yes |  |
 | `config_hash` | `text` |  | Points at `ai_call_config.hash`. |
-| `context_bytes` | `bigint`, default `0` | yes |  |
 | `context_fingerprint` | `text`, default `''::text` | yes |  |
 | `context_scopes` | `text[]`, default `'{}'::text[]` | yes |  |
-| `context_tokens_estimate` | `bigint`, default `0` | yes |  |
 | `decision_choice` | `text` |  |  |
 | `decision_confidence` | `numeric(4,3)` |  |  |
 | `degraded` | `boolean`, default `false` | yes |  |
 | `error_sentinel` | `text` |  |  |
 | `extension` | `text`, default `''::text` | yes |  |
-| `finish_reason` | `text`, default `''::text` | yes |  |
 | `is_terminal` | `boolean`, default `true` | yes |  |
 | `kind` | `text`, default `'completion'::text` | yes | One of `completion`, `embedding`, `decision`. |
 | `latency_ms` | `bigint`, default `0` | yes |  |
@@ -37,10 +33,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `provider` | `text`, default `''::text` | yes |  |
 | `reasoning_tokens` | `bigint`, default `0` | yes |  |
-| `request_fingerprint` | `text` | yes |  |
-| `schema_downgrade` | `text`, default `''::text` | yes | One of ``, `relaxed`, `unenforced`, `dropped`. |
-| `secret_kinds` | `text[]`, default `'{}'::text[]` | yes |  |
-| `secrets_removed` | `bigint`, default `0` | yes |  |
 | `served_identity_source` | `text`, default `'configured'::text` | yes | One of `response`, `echo`, `configured`. |
 | `served_model` | `text`, default `''::text` | yes |  |
 | `served_provider` | `text`, default `''::text` | yes |  |
@@ -62,18 +54,14 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 - `ai_call_cache_write_tokens_js_safe`: `CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))`
 - `ai_call_cached_tokens_js_safe`: `CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))`
-- `ai_call_context_bytes_check`: `CHECK ((context_bytes >= 0))`
 - `ai_call_context_fingerprint_check`: `CHECK (((context_fingerprint = '') OR (context_fingerprint ~ '^[0-9a-f]{64}$')))`
 - `ai_call_context_scopes_check`: `CHECK ((context_scopes <@ ARRAY['identity', 'positioning', 'sales', 'offer', 'market', 'proof', 'administrative']))`
-- `ai_call_context_tokens_estimate_check`: `CHECK ((context_tokens_estimate >= 0))`
 - `ai_call_decision_answer_kind`: `CHECK (((decision_choice IS NULL) OR (kind = 'decision')))`
 - `ai_call_decision_answer_shape`: `CHECK (((decision_choice IS NULL) = (decision_confidence IS NULL)))`
 - `ai_call_decision_confidence_range`: `CHECK (((decision_confidence IS NULL) OR ((decision_confidence >= (0)::numeric) AND (decision_confidence <= (1)::numeric))))`
 - `ai_call_kind_check`: `CHECK ((kind = ANY (ARRAY['completion', 'embedding', 'decision'])))`
 - `ai_call_latency_ms_js_safe`: `CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))`
 - `ai_call_reasoning_tokens_js_safe`: `CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))`
-- `ai_call_schema_downgrade_check`: `CHECK ((schema_downgrade = ANY (ARRAY['', 'relaxed', 'unenforced', 'dropped'])))`
-- `ai_call_secrets_removed_check`: `CHECK ((secrets_removed >= 0))`
 - `ai_call_source_check`: `CHECK ((served_identity_source = ANY (ARRAY['response', 'echo', 'configured'])))`
 - `ai_call_subject_shape`: `CHECK (((subject_type IS NULL) = (subject_id IS NULL)))`
 - `ai_call_tokens_in_js_safe`: `CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))`
@@ -91,8 +79,8 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "extension": 500, "config_hash": 20000, "secret_kinds": 20000, "served_model": 20000, "subject_type": 20000, "finish_reason": 2000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "schema_downgrade": 20000, "context_fingerprint": 20000, "request_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"extension":500,"finish_reason":2000,"kind":20000,"model_id":20000,"provider":20000,"request_fingerprint":20000,"schema_downgrade":20000,"secret_kinds":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "extension": 500, "config_hash": 20000, "secret_kinds": 20000, "served_model": 20000, "subject_type": 20000, "finish_reason": 2000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "schema_downgrade": 20000, "context_fingerprint": 20000, "request_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"extension":500,"finish_reason":2000,"kind":20000,"model_id":20000,"provider":20000,"request_fingerprint":20000,"schema_downgrade":20000,"secret_kinds":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "extension": 500, "config_hash": 20000, "served_model": 20000, "subject_type": 20000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "context_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"extension":500,"kind":20000,"model_id":20000,"provider":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "extension": 500, "config_hash": 20000, "served_model": 20000, "subject_type": 20000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "context_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"extension":500,"kind":20000,"model_id":20000,"provider":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
 
 ## ai_call_config
 
@@ -142,7 +130,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## ai_feedback
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -158,7 +146,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `verdict` | `text` | yes | One of `corrected`, `suppressed`, `confirmed`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -178,8 +165,8 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "source": 20000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"source":20000,"subject_type":20000,"value_shown":20000,"verdict":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "source": 20000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"source":20000,"subject_type":20000,"value_shown":20000,"verdict":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"note": 2000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"subject_type":20000,"value_shown":20000,"verdict":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"note": 2000, "verdict": 20000, "claim_key": 20000, "claim_kind": 20000, "captured_by": 20000, "value_shown": 20000, "subject_type": 20000, "corrected_value": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"claim_kind":20000,"corrected_value":20000,"note":2000,"subject_type":20000,"value_shown":20000,"verdict":20000}')`
 
 ## ai_model_rate
 
@@ -416,6 +403,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Rules**
 
 - `uq_voice_learning_signal_draft`: `UNIQUE (draft_ref_hash)`
+- `voice_learning_signal_draft_ref_hash_check`: `CHECK ((octet_length(draft_ref_hash) = 32))`
 - `voice_learning_signal_outcome_check`: `CHECK ((outcome = ANY (ARRAY['drafted', 'accepted', 'edited_sent', 'rejected'])))`
 - `voice_learning_signal_profile_version_check`: `CHECK ((profile_version >= 1))`
 - `voice_learning_signal_qualifies_check`: `CHECK (((NOT qualifies_as_source) OR ((outcome = 'edited_sent') AND (final_text IS NOT NULL) AND (final_captured_by ~~ 'human:%'))))`

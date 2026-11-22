@@ -321,10 +321,9 @@ func admitVerdict(ctx context.Context, in RecordInput) error {
 			Message: "a corrected verdict carries the human's value, and no other verdict does",
 		}
 	}
-	// Human-only, because the whole point of the row is that a HUMAN decided:
-	// the column is hard-coded source = 'human', and a verdict an agent could
-	// write would let a model launder its own claim into the ledger that is
-	// supposed to overrule it.
+	// Human-only, because the point of the row is that a human decided. A
+	// verdict an agent could write would put a model's own claim into the
+	// ledger that is supposed to overrule it.
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
@@ -344,8 +343,8 @@ func upsertVerdict(ctx context.Context, tx pgx.Tx, in RecordInput, key, captured
 		ctx, `
 		INSERT INTO ai_feedback
 		  (subject_type, subject_id, claim_kind, claim_key,
-		   verdict, corrected_value, note, source, captured_by, value_captured_at, value_shown)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, 'human', $8, $9, $10)
+		   verdict, corrected_value, note, captured_by, value_captured_at, value_shown)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		ON CONFLICT (subject_type, subject_id, claim_kind, claim_key)
 		DO UPDATE SET verdict = EXCLUDED.verdict,
 		              corrected_value = EXCLUDED.corrected_value,

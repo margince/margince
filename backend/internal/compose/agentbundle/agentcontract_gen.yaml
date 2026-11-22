@@ -4661,12 +4661,13 @@ paths:
       operationId: advanceDeal
       summary: Advance a deal to a new stage (audit-logged with prior + next stage).
       description: |-
-        The `advance_deal` MCP verb. A move with a closed-won/closed-lost stage at EITHER end is confirm-first
-        (irreversible / touches money) — for an agent caller this requires an approval
-        token. Closing a deal is the obvious half; REOPENING one is the other, and it is
-        the same money: moving a won deal back to an open stage clears its close date,
-        its lost reason and the FX rate frozen at close, and takes revenue out of a
-        quarter that has already been reported.
+        The `advance_deal` MCP verb. An agent on a user's passport moves the deal at once, closing or reopening it
+        included: it may do unaided what its user may do. A move with a closed-won/closed-lost
+        stage at EITHER end is confirm-first only for automatic work with no passport and
+        no user behind it, which needs an approval token. Closing a deal is the obvious half;
+        REOPENING one is the other, and it is the same money: moving a won deal back to an
+        open stage clears its close date, its lost reason and the FX rate frozen at close,
+        and takes revenue out of a quarter that has already been reported.
 
         Needs the passport permission Change records.
 
@@ -4685,7 +4686,7 @@ paths:
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c2
               closeWon:
-                summary: Closing won (requires approval token for agents)
+                summary: Closing won (runs at once for a passport agent; approval token for passportless automatic work)
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c9
                   status: won
@@ -4697,7 +4698,7 @@ paths:
               schema: {$ref: '#/components/schemas/DealAdvanced'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403':
-          description: RBAC denied, or a transition attempted without an approval token.
+          description: RBAC denied, or passportless automatic work attempted a transition without an approval token.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -10946,6 +10947,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -11123,6 +11126,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -11282,6 +11287,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -20570,7 +20577,8 @@ paths:
       summary: List workspace teams — cursor-paginated. Read-only.
       description: |-
         Teams available as record-share subjects, with a member count. Any authenticated member may read.
-        Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
+        Excludes archived teams unless `include_archived` is true, which needs `team_admin.read`.
+        Bounded by authenticated membership, like the member roster beside it.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -20578,6 +20586,11 @@ paths:
           in: query
           schema: {type: string}
           description: Case-insensitive match over team name that ignores diacritics on both sides.
+        - name: include_archived
+          in: query
+          required: false
+          schema: {type: boolean, default: false}
+          description: True also lists archived teams, each carrying `archived_at`, so an admin can restore one.
       responses:
         '200':
           description: A page of teams.
@@ -20585,6 +20598,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/TeamListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
     post:
       tags: [Identity]
@@ -23813,7 +23827,7 @@ paths:
           description: The team or owner named by `scope_kind`.
         - name: period
           in: query
-          schema: {type: string, enum: [this_week, last_week, this_month, last_month], default: this_week}
+          schema: {type: string, enum: [this_week, last_week, this_month, last_month, last_quarter, last_year], default: this_week}
           description: The period, in the installation's reporting zone.
       responses:
         '200':
@@ -32612,6 +32626,11 @@ components:
           enum: [formal, familiar, null]
           description: >-
             How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+        impersonation_warning:
+          allOf: [{$ref: '#/components/schemas/ContactImpersonationWarning'}]
+          readOnly: true
+          description: >-
+            Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`).
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -38806,7 +38825,7 @@ components:
         country: {$ref: '#/components/schemas/ReportingCountry'}
         period:
           type: string
-          enum: [this_week, this_month, last_month, last_week, this_quarter]
+          enum: [this_week, this_month, last_month, last_week, this_quarter, last_quarter, last_year]
         metrics:
           type: array
           maxItems: 8
@@ -39312,7 +39331,7 @@ components:
           readOnly: true
           description: >-
             The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
-        source: {type: string}
+        source: {type: string, description: 'The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         created_by:
           allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
@@ -39380,7 +39399,7 @@ components:
         project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this deal belongs to; must name the same company as the deal.'}
         owner_id: {type: [string, 'null'], format: uuid}
         expected_close_date: {type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422.'}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
@@ -39840,7 +39859,7 @@ components:
           format: date-time
           readOnly: true
           description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
-        source: {type: string}
+        source: {type: string, description: 'The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
@@ -40137,7 +40156,7 @@ components:
         description: {type: [string, 'null']}
         started_at: {type: [string, 'null'], format: date}
         target_end_date: {type: [string, 'null'], format: date}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409.'}
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
@@ -46003,12 +46022,16 @@ components:
             - last_month
             - last_week
             - this_quarter
+            - last_quarter
+            - last_year
             - custom
           description: |-
             `this_week` runs from Monday 00:00 in the installation zone to the
             evaluation time. Read at that exact moment, the week holds no time
             yet and the context's interval starts where it ends. A month target
             beside it still counts the whole month up to the evaluation time.
+            `last_quarter` and `last_year` are the last completed fiscal quarter
+            and fiscal year, in the installation's fiscal calendar.
         interval:
           $ref: '#/components/schemas/ReportingWindow'
         target_basis:
@@ -55455,7 +55478,7 @@ components:
           items: {$ref: '#/components/schemas/OfferLineItem'}
         money_withheld: {type: boolean, readOnly: true, description: 'True for a reader the deal''s amount is masked from. Such a reader gets zero totals, no lines, no exchange rate and no PDF: the offer states the deal''s amount by another name.'}
         source_commercial_revision: {type: [integer, 'null'], format: int64, readOnly: true, description: 'The deal''s `commercial_revision` the lines were copied from. Such an offer''s lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.'}
-        source: {type: string}
+        source: {type: string, description: 'The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied.}
         version: {$ref: '#/components/schemas/RowVersion'}
         created_at: {type: string, format: date-time}
@@ -55532,7 +55555,7 @@ components:
             Copy the deal's lines at this `commercial_revision` into the offer. Required for a deal in
             `lines` mode, which refuses `line_items`, and refused for any other deal. Another revision
             answers 409 `version_skew`. The currency must be the deal's.
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
       additionalProperties: false
     UpdateOfferRequest:
       type: object
@@ -55566,6 +55589,21 @@ components:
       type: object
       properties:
         reason: {type: [string, 'null'], description: Optional buyer-given decline reason (rides offer.rejected).}
+    ContactImpersonationWarning:
+      type: object
+      description: >-
+        The sign of impersonation the sender check saw when capture made this contact from a mail.
+      required: [detected_at]
+      properties:
+        reason:
+          type: string
+          enum: [punycode_domain, display_name_other_domain]
+          description: >-
+            Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+        detected_at:
+          type: string
+          format: date-time
+          description: When the sender check recorded it.
     ContactAcquisitionRequest:
       type: object
       description: A request to hear from us that the contact's acquisition records.

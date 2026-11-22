@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // assuranceJobEnv is one workspace holding an open deal for the pass to examine.
@@ -134,47 +133,6 @@ func TestTheNightlySweepChecksAWorkspaceSomebodyStarted(t *testing.T) {
 			"would quietly stop checking an installation that was working, and the " +
 			"panel would keep showing the last run as though it were current")
 	}
-}
-
-// A pass somebody asked for names them on the run; the nightly one names nobody.
-func TestTheRequestedPassRecordsWhoAskedAndTheSweepDoesNot(t *testing.T) {
-	e := setupAssuranceJob(t)
-
-	if err := e.run(t); err != nil {
-		t.Fatalf("the requested pass: %v", err)
-	}
-	requested, err := e.latestRun(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := e.requesterOf(t, requested.ID); got != e.Rep1.String() {
-		t.Errorf("the requested run says %q asked for it, want %q", got, e.Rep1)
-	}
-
-	if err := e.sweep(t); err != nil {
-		t.Fatalf("the nightly sweep: %v", err)
-	}
-	nightly, err := e.latestRun(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := e.requesterOf(t, nightly.ID); got != "" {
-		t.Errorf("the nightly run says %q asked for it; nobody did", got)
-	}
-}
-
-// requesterOf reads who asked for one run, empty for the nightly cadence.
-func (e *assuranceJobEnv) requesterOf(t *testing.T, run ids.UUID) string {
-	t.Helper()
-	var out *string
-	if err := integration.OwnerConn(t).QueryRow(context.Background(),
-		`SELECT requested_by FROM assurance_run WHERE id = $1`, run).Scan(&out); err != nil {
-		t.Fatalf("reading the run's requester: %v", err)
-	}
-	if out == nil {
-		return ""
-	}
-	return *out
 }
 
 // latestRun is the read the Forecast tab opens on, taken as an ordinary seat

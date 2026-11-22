@@ -128,7 +128,7 @@ func TestABookingNeedsAnInvitee(t *testing.T) {
 	}{
 		{`INSERT INTO pipeline (id, name) VALUES ($1, 'Booking pipeline')`, []any{pipeline}},
 		{`INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, []any{stage, pipeline}},
-		{`INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by) VALUES ($1, 'Renewal', 'open', $2, $3, $4, 'seed', 'system')`, []any{dealID, f.e.rep, pipeline, stage}},
+		{`INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by) VALUES ($1, 'Renewal', 'open', $2, $3, $4, 'manual', 'system')`, []any{dealID, f.e.rep, pipeline, stage}},
 	} {
 		if _, err := f.e.owner.Exec(f.ctx, seed.sql, seed.args...); err != nil {
 			t.Fatal(err)

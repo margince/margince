@@ -1205,7 +1205,7 @@ export const en = {
   "reporting.questionBoundPeriod":
     "This question has filters. Its periods keep the dates they had when it was placed: a fiscal year starting in {month}, in {zone}.",
   "reporting.fiscalQuarterNote":
-    "This quarter follows the fiscal year that starts in {month}.",
+    "Quarters and years here follow the fiscal year that starts in {month}.",
   "reporting.previewChart": "Preview",
   "reporting.previewLoading": "Loading the preview…",
   "reporting.previewEmpty":
@@ -1515,9 +1515,11 @@ export const en = {
     "It was set in a currency that is no longer the base currency. Set the goal again to compare.",
   "reporting.this_week": "This week",
   "reporting.this_month": "This month",
-  "reporting.last_month": "Last month",
+  "reporting.last_month": "Last completed month",
   "reporting.last_week": "Last completed week",
   "reporting.this_quarter": "This fiscal quarter",
+  "reporting.last_quarter": "Last completed quarter",
+  "reporting.last_year": "Last completed year",
   "reporting.custom": "Custom interval",
   "reporting.bookings_trend": "Sales won over time",
   "reporting.stage_distribution": "Open pipeline by stage",
@@ -2304,6 +2306,7 @@ export const en = {
   "systemJob.sign_in_policy_read": "Sign-in policy read",
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
+  "systemJob.stage_evidence_reread": "Deal stage evidence reread",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
@@ -2641,6 +2644,10 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_cleared":
+    "Impersonation warning cleared",
+  "history.field.impersonation_warning_carried":
+    "Impersonation warning kept from merged contact",
   "history.field.reason": "Reason",
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
@@ -2681,6 +2688,10 @@ export const en = {
   "history.value.meeting_status.no_show": "No-show",
   "history.value.meeting_status.canceled": "Canceled",
   "history.value.relationship_mark.vendor_marketing": "Vendor marketing",
+  "history.value.impersonation.punycode_domain": "Coded mail domain",
+  "history.value.impersonation.display_name_other_domain":
+    "Other domain in sender name",
+  "history.value.impersonation.unrecorded": "Sign not recorded",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -2713,6 +2724,7 @@ export const en = {
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
+  "shell.backToSetup": "Back to setup",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
@@ -3915,6 +3927,7 @@ export const en = {
   "co.overview.for": "for {name}",
   "co.overview.noDate": "No date",
   "co.overview.allDeals": "All deals",
+  "co.overview.allContacts": "All contacts",
   "co.overview.noWork": "No open deal or project",
   "co.overview.project": "Project",
   "co.overview.ends": "ends {date}",
@@ -4933,7 +4946,6 @@ export const en = {
   "co.deals.col.close": "Close",
   "co.deals.col.status": "Status",
   "co.rail.contacts.empty": "No contacts yet.",
-  "co.rail.contacts.add": "Add contact",
 
   "co.commercial.title": "Commercial",
   "linkedinImport.title": "LinkedIn connections",
@@ -5231,6 +5243,7 @@ export const en = {
   "email.thread.details": "Details",
   "email.thread.textForwarded":
     "The text below is the forwarded mail, not words the sender wrote.",
+  "email.thread.noText": "This message has no text.",
   "email.thread.textPartial":
     "Part of the text of this mail could not be read.",
   "email.thread.textUnassessed": "Email text not verified",
@@ -5832,6 +5845,9 @@ export const en = {
   "lead.source.referral": "Referral",
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
+  "lead.source.api": "Integration",
+  "lead.source.automation": "Automation",
+  "lead.source.capture": "Captured from a conversation",
   "lead.source.siteread": "From company website",
   "lead.source.unknown": "Unknown source",
   "leadSources.removeOnlyTitle":
@@ -8738,6 +8754,22 @@ export const en = {
   "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
+  "tasks.remind.menu": "Remind me",
+  "tasks.remind.inAnHour": "In 1 hour",
+  "tasks.remind.tomorrowMorning": "Tomorrow morning",
+  "tasks.remind.beforeDue": "1 hour before it is due",
+  "tasks.remind.pick": "Pick a time",
+  "tasks.remind.remove": "Remove reminder",
+  "tasks.remind.current": "Reminder set for {when}",
+  "tasks.remind.set": "Reminder set for {when}.",
+  "tasks.remind.removed": "Reminder removed.",
+  "tasks.remind.failed": "The reminder was not saved. Try again.",
+  "tasks.remind.pickTitle": "Remind me at",
+  "tasks.remind.day": "Day",
+  "tasks.remind.time": "Time",
+  "tasks.remind.save": "Set reminder",
+  "tasks.remind.needsTime": "Enter a day and a time.",
+  "tasks.remind.past": "Pick a time that is still ahead.",
   "tasks.log.action": "Log what happened",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
@@ -8889,7 +8921,7 @@ export const en = {
   "analytics.prospect.upcomingTitle": "Meetings coming up",
   "analytics.prospect.cohortTitle": "What happened to your handoffs",
   "analytics.prospect.cohortPeriods":
-    "Shown for a week or a month. Choose one of those periods to see it.",
+    "Not shown for this fiscal quarter or a custom interval. Choose another period to see it.",
   "analytics.prospect.cohortCaption_one":
     "{count} handoff you submitted {period}, as it stands now",
   "analytics.prospect.cohortCaption_other":
@@ -9566,6 +9598,7 @@ export const en = {
   "explain.col.stage": "Stage",
   "explain.col.owner": "Owner",
   "explain.col.pipeline": "Pipeline",
+  "explain.col.inCurrency": "{label} ({currency})",
 
   "settings.profileTitle": "Profile",
   "unsaved.title": "Discard unsaved changes?",
@@ -10487,7 +10520,6 @@ export const en = {
   "settings.tierWait": "Enrichment from the web: waits in Approvals.",
   "settings.tierAdvance":
     "Advance or close a deal, or file activities under a project: runs immediately if the agent has that permission.",
-  "settings.locked": "Locked",
   "settings.purposes": "Consent purposes",
   "settings.purposesSub":
     "What this installation asks consent for, and which purposes need double opt-in.",
@@ -16249,6 +16281,16 @@ export const en = {
   "users.teamParent": "Part of {name}",
   "users.teamRename": "Rename",
   "users.teamArchive": "Archive",
+  "users.teamRestore": "Restore",
+  "users.teamArchivedBadge": "Archived",
+  "users.showArchivedTeams": "Show archived teams",
+  "users.showArchivedTeamsSub":
+    "An archived team gives its members no access until you restore it.",
+  "users.archiveTeamTitle": "Archive “{name}”?",
+  "users.archiveTeamBody_one":
+    "The team has {count} member. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
+  "users.archiveTeamBody_other":
+    "The team has {count} members. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
   "users.teamRenameTitle": "Rename team",
   "users.teamRenameSave": "Save name",
   "users.teamRenamed": "Team renamed to “{name}”",
@@ -16500,9 +16542,14 @@ export const en = {
   "settings.companyManualSub":
     "Website reading is not enabled for this installation. These 3 answers create usable company context without a model call or external request.",
   "settings.companyCreateWorkspace": "Create company context",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Any action",
+  "settings.auditAnyActor": "Anyone",
+  "settings.auditActorDelegated":
+    "Includes what an AI assistant did on their behalf.",
+  "settings.auditAnyEntity": "Any type",
+  "settings.auditEntityIdHint":
+    "Paste the full record ID. Use Copy record ID on a row.",
+  "settings.auditRangeReversed": "Pick a To date on or after the From date.",
   "product.title": "Products",
   "product.settingsSub": "Price list entries that offer lines copy from.",
   "product.readOnly": "Read-only. Your role cannot change products.",
@@ -16889,9 +16936,9 @@ export const en = {
   "installationSettings.fiscalImpactKept_other":
     "{count} reports have a card that filters on a period. They keep their dates.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} report reads this quarter, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
+    "{count} report reads this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} reports read this quarter, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
+    "{count} reports read this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
   "installationSettings.fiscalImpactLoading":
     "Counting the saved work this change concerns…",
   "installationSettings.forwardMeasure": "Projection basis",
@@ -22039,6 +22086,15 @@ export const en = {
   "contact.follow.stopped": "You stopped following this contact.",
   "contact.follow.setAside": "You set this contact aside until {date}.",
   "contact.follow.resume": "Resume following",
+  "contact.impersonation.title":
+    "This sender may be pretending to be someone else",
+  "contact.impersonation.clear": "Looks fine",
+  "contact.impersonation.reason.punycodeDomain":
+    "The mail domain uses a coded spelling that can look like another domain.",
+  "contact.impersonation.reason.displayNameOtherDomain":
+    "The sender name holds an address on a domain other than the one the mail came from.",
+  "contact.impersonation.reason.unrecorded":
+    "The check did not record which sign it found.",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "Task was not reopened. Retry.",
   // The frame states the fact and the source follows it, rather than the

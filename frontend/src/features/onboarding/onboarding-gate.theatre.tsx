@@ -11,6 +11,7 @@ import { formatNumber } from "../../format/format";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { CORE_LABELS } from "../../lib/onboarding-core-label";
+import { OnboardingAccount } from "./onboarding-account";
 import type {
   AiRunSummary,
   CompanySiteRead,
@@ -24,7 +25,6 @@ import {
   ScanTickerEntry,
   useLatestArrivedPage,
 } from "./onboarding-gate.ticker";
-import { OnboardingSignOut } from "./onboarding-signout";
 
 /**
  * What the stage says above the column, for both faces of this screen.
@@ -153,7 +153,7 @@ export function GateColumn({
       // minutes). The name only, with no marks: this surface is prop-driven and
       // cannot see the flow around it. So it says what it is and does not invent
       // how many stops the passage has.
-      account={<OnboardingSignOut />}
+      account={<OnboardingAccount />}
       step={t("ob.stop.read")}
       where={scan === undefined ? undefined : head.where}
       title={head.title}

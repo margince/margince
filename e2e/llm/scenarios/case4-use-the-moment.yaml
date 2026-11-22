@@ -66,7 +66,7 @@ must_not_mention:
   # "No address field" is the defect when it is said of the workspace, and true
   # when it is said of LEADS, which carry none: a sentence that names leads is
   # an aside about what was searched, not a claim that nearby cannot be found.
-  - "(?:^|[.!?\n])(?![^.!?\n]*\bleads?\b)[^.!?\n]*no address field|cannot determine location|unable to search by distance"
+  - "(?:^|[.!?\n])(?![^.!?\n]*\bleads?\b)[^.!?\n]*no address field|(?:cannot|can['’]?t) determine location|unable to search by distance"
 
 runs: 3
 pass_at: 2

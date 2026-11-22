@@ -6,7 +6,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-90 columns · primary key `(id)` · referenced by 49 foreign keys
+90 columns · primary key `(id)` · referenced by 48 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -195,7 +195,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_unjudged`: `btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_unjudged_reply`: `btree (occurred_at) WHERE ((reply_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_unlabeled`: `btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%') AND (kind = ANY (ARRAY['email', 'message'])))`
-- `uq_activity_domain_evidence_version`: `unique, btree (id, domain_evidence_version)`
 - `uq_activity_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
 **Triggers**
@@ -212,6 +211,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_strength_dates`: `AFTER UPDATE REFERENCING OLD TABLE AS changed_from NEW TABLE AS changed_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_strength_dates()`
 - `activity_system_text_retire`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION retire_changed_system_text()`
 - `advance_activity_domain_evidence_version`: `BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at FOR EACH ROW EXECUTE FUNCTION advance_activity_domain_evidence_version()`
+- `copy_activity_domain_evidence`: `AFTER UPDATE FOR EACH ROW WHEN ((new.domain_evidence_version IS DISTINCT FROM old.domain_evidence_version)) EXECUTE FUNCTION copy_activity_domain_evidence()`
 - `deleted_mail_clears_reply_settled`: `AFTER DELETE REFERENCING OLD TABLE AS written_mail FOR EACH STATEMENT EXECUTE FUNCTION written_mail_clears_reply_settled()`
 - `home_read_fence_activity_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.audience IS DISTINCT FROM new.audience) OR ((old.restricted_at IS NULL) AND (new.restricted_at IS NOT NULL)) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)) OR (old.assignee_id IS DISTINCT FROM new.assignee_id) OR ((old.sent_by_colleague IS NOT NULL) AND (old.sent_by_colleague IS DISTINCT FROM new.sent_by_colleague)) OR (old.captured_by IS DISTINCT FROM new.captured_by) OR (old.source_system IS DISTINCT FROM new.source_system) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `inserted_mail_clears_reply_settled`: `AFTER INSERT REFERENCING NEW TABLE AS written_mail FOR EACH STATEMENT EXECUTE FUNCTION written_mail_clears_reply_settled()`
@@ -222,6 +222,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (((char_length(new.agenda_fingerprint) > 20000) OR (char_length(new.audience) > 20000) OR (char_length(new.audience_reason) > 2000) OR (char_length(new.body_completeness) > 20000) OR (char_length(new.calendar_method) > 20000) OR (char_length(new.calendar_uid) > 20000) OR (char_length(new.call_outcome) > 20000) OR (char_length(new.capture_label) > 120) OR (char_length(new.capture_label_declined_ruleset) > 20000) OR (char_length(new.captured_by) > 20000) OR (char_length(new.channel_provider) > 20000) OR (char_length(new.counterparty_email) > 20000) OR (char_length(new.deal_topic_digest) > 20000) OR (char_length(new.direction) > 20000) OR (char_length(new.due_zone) > 20000) OR (char_length(new.kind) > 20000) OR (char_length(new.language) > 20000) OR (char_length(new.meeting_status) > 20000) OR (char_length(new.meeting_zone) > 20000) OR (char_length(new.occurred_precision) > 20000) OR (char_length(new.origin) > 20000) OR (char_length(new.owed_ask) > 2000) OR (char_length(new.owed_verdict) > 20000) OR (char_length(new.owed_verdict_declined_ruleset) > 20000) OR (char_length(new.owed_verdict_ruleset) > 20000) OR text_values_exceed_bound(new.redacted_fields, NULL[], 20000) OR (char_length(new.remind_zone) > 20000) OR (char_length(new.reply_verdict) > 20000) OR (char_length(new.reply_verdict_by) > 20000) OR (char_length(new.restricted_reason) > 2000) OR (char_length(new.retention_class) > 20000) OR (char_length(new.source) > 20000) OR (char_length(new.source_id) > 20000) OR (char_length(new.source_system) > 20000) OR (char_length(new.subject) > 20000) OR (char_length(new.task_type) > 20000) OR (char_length(new.thread_key) > 20000))) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"audience":20000,"audience_reason":2000,"body_completeness":20000,"calendar_method":20000,"calendar_uid":20000,"call_outcome":20000,"capture_label":120,"capture_label_declined_ruleset":20000,"captured_by":20000,"channel_provider":20000,"counterparty_email":20000,"deal_topic_digest":20000,"direction":20000,"due_zone":20000,"kind":20000,"language":20000,"meeting_status":20000,"meeting_zone":20000,"occurred_precision":20000,"origin":20000,"owed_ask":2000,"owed_verdict":20000,"owed_verdict_declined_ruleset":20000,"owed_verdict_ruleset":20000,"redacted_fields":20000,"remind_zone":20000,"reply_verdict":20000,"reply_verdict_by":20000,"restricted_reason":2000,"retention_class":20000,"source":20000,"source_id":20000,"source_system":20000,"subject":20000,"task_type":20000,"thread_key":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN ((((char_length(new.agenda_fingerprint) > 20000) AND ((new.agenda_fingerprint COLLATE "C") IS DISTINCT FROM (old.agenda_fingerprint COLLATE "C"))) OR ((char_length(new.audience) > 20000) AND ((new.audience COLLATE "C") IS DISTINCT FROM (old.audience COLLATE "C"))) OR ((char_length(new.audience_reason) > 2000) AND ((new.audience_reason COLLATE "C") IS DISTINCT FROM (old.audience_reason COLLATE "C"))) OR ((char_length(new.body_completeness) > 20000) AND ((new.body_completeness COLLATE "C") IS DISTINCT FROM (old.body_completeness COLLATE "C"))) OR ((char_length(new.calendar_method) > 20000) AND ((new.calendar_method COLLATE "C") IS DISTINCT FROM (old.calendar_method COLLATE "C"))) OR ((char_length(new.calendar_uid) > 20000) AND ((new.calendar_uid COLLATE "C") IS DISTINCT FROM (old.calendar_uid COLLATE "C"))) OR ((char_length(new.call_outcome) > 20000) AND ((new.call_outcome COLLATE "C") IS DISTINCT FROM (old.call_outcome COLLATE "C"))) OR ((char_length(new.capture_label) > 120) AND ((new.capture_label COLLATE "C") IS DISTINCT FROM (old.capture_label COLLATE "C"))) OR ((char_length(new.capture_label_declined_ruleset) > 20000) AND ((new.capture_label_declined_ruleset COLLATE "C") IS DISTINCT FROM (old.capture_label_declined_ruleset COLLATE "C"))) OR ((char_length(new.captured_by) > 20000) AND ((new.captured_by COLLATE "C") IS DISTINCT FROM (old.captured_by COLLATE "C"))) OR ((char_length(new.channel_provider) > 20000) AND ((new.channel_provider COLLATE "C") IS DISTINCT FROM (old.channel_provider COLLATE "C"))) OR ((char_length(new.counterparty_email) > 20000) AND ((new.counterparty_email COLLATE "C") IS DISTINCT FROM (old.counterparty_email COLLATE "C"))) OR ((char_length(new.deal_topic_digest) > 20000) AND ((new.deal_topic_digest COLLATE "C") IS DISTINCT FROM (old.deal_topic_digest COLLATE "C"))) OR ((char_length(new.direction) > 20000) AND ((new.direction COLLATE "C") IS DISTINCT FROM (old.direction COLLATE "C"))) OR ((char_length(new.due_zone) > 20000) AND ((new.due_zone COLLATE "C") IS DISTINCT FROM (old.due_zone COLLATE "C"))) OR ((char_length(new.kind) > 20000) AND ((new.kind COLLATE "C") IS DISTINCT FROM (old.kind COLLATE "C"))) OR ((char_length(new.language) > 20000) AND ((new.language COLLATE "C") IS DISTINCT FROM (old.language COLLATE "C"))) OR ((char_length(new.meeting_status) > 20000) AND ((new.meeting_status COLLATE "C") IS DISTINCT FROM (old.meeting_status COLLATE "C"))) OR ((char_length(new.meeting_zone) > 20000) AND ((new.meeting_zone COLLATE "C") IS DISTINCT FROM (old.meeting_zone COLLATE "C"))) OR ((char_length(new.occurred_precision) > 20000) AND ((new.occurred_precision COLLATE "C") IS DISTINCT FROM (old.occurred_precision COLLATE "C"))) OR ((char_length(new.origin) > 20000) AND ((new.origin COLLATE "C") IS DISTINCT FROM (old.origin COLLATE "C"))) OR ((char_length(new.owed_ask) > 2000) AND ((new.owed_ask COLLATE "C") IS DISTINCT FROM (old.owed_ask COLLATE "C"))) OR ((char_length(new.owed_verdict) > 20000) AND ((new.owed_verdict COLLATE "C") IS DISTINCT FROM (old.owed_verdict COLLATE "C"))) OR ((char_length(new.owed_verdict_declined_ruleset) > 20000) AND ((new.owed_verdict_declined_ruleset COLLATE "C") IS DISTINCT FROM (old.owed_verdict_declined_ruleset COLLATE "C"))) OR ((char_length(new.owed_verdict_ruleset) > 20000) AND ((new.owed_verdict_ruleset COLLATE "C") IS DISTINCT FROM (old.owed_verdict_ruleset COLLATE "C"))) OR ((new.redacted_fields IS DISTINCT FROM old.redacted_fields) AND text_values_exceed_bound(new.redacted_fields, old.redacted_fields, 20000)) OR ((char_length(new.remind_zone) > 20000) AND ((new.remind_zone COLLATE "C") IS DISTINCT FROM (old.remind_zone COLLATE "C"))) OR ((char_length(new.reply_verdict) > 20000) AND ((new.reply_verdict COLLATE "C") IS DISTINCT FROM (old.reply_verdict COLLATE "C"))) OR ((char_length(new.reply_verdict_by) > 20000) AND ((new.reply_verdict_by COLLATE "C") IS DISTINCT FROM (old.reply_verdict_by COLLATE "C"))) OR ((char_length(new.restricted_reason) > 2000) AND ((new.restricted_reason COLLATE "C") IS DISTINCT FROM (old.restricted_reason COLLATE "C"))) OR ((char_length(new.retention_class) > 20000) AND ((new.retention_class COLLATE "C") IS DISTINCT FROM (old.retention_class COLLATE "C"))) OR ((char_length(new.source) > 20000) AND ((new.source COLLATE "C") IS DISTINCT FROM (old.source COLLATE "C"))) OR ((char_length(new.source_id) > 20000) AND ((new.source_id COLLATE "C") IS DISTINCT FROM (old.source_id COLLATE "C"))) OR ((char_length(new.source_system) > 20000) AND ((new.source_system COLLATE "C") IS DISTINCT FROM (old.source_system COLLATE "C"))) OR ((char_length(new.subject) > 20000) AND ((new.subject COLLATE "C") IS DISTINCT FROM (old.subject COLLATE "C"))) OR ((char_length(new.task_type) > 20000) AND ((new.task_type COLLATE "C") IS DISTINCT FROM (old.task_type COLLATE "C"))) OR ((char_length(new.thread_key) > 20000) AND ((new.thread_key COLLATE "C") IS DISTINCT FROM (old.thread_key COLLATE "C"))))) EXECUTE FUNCTION refuse_oversized_text('{"agenda_fingerprint":20000,"audience":20000,"audience_reason":2000,"body_completeness":20000,"calendar_method":20000,"calendar_uid":20000,"call_outcome":20000,"capture_label":120,"capture_label_declined_ruleset":20000,"captured_by":20000,"channel_provider":20000,"counterparty_email":20000,"deal_topic_digest":20000,"direction":20000,"due_zone":20000,"kind":20000,"language":20000,"meeting_status":20000,"meeting_zone":20000,"occurred_precision":20000,"origin":20000,"owed_ask":2000,"owed_verdict":20000,"owed_verdict_declined_ruleset":20000,"owed_verdict_ruleset":20000,"redacted_fields":20000,"remind_zone":20000,"reply_verdict":20000,"reply_verdict_by":20000,"restricted_reason":2000,"retention_class":20000,"source":20000,"source_id":20000,"source_system":20000,"subject":20000,"task_type":20000,"thread_key":20000}')`
 - `trg_activity_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
+- `wait_for_participant_stamps`: `BEFORE UPDATE FOR EACH ROW WHEN ((new.domain_evidence_version IS DISTINCT FROM old.domain_evidence_version)) EXECUTE FUNCTION wait_for_participant_stamps()`
 
 ## activity_audience_member
 
@@ -547,7 +548,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_participant
 
-18 columns · primary key `(id)` · referenced by 0 foreign keys
+19 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -567,6 +568,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `response` | `text` |  | One of `accepted`, `declined`, `tentative`, `needs_action`. |
 | `role` | `text` | yes | One of `from`, `to`, `cc`, `bcc`, `attendee`, `organizer`. |
 | `roster_seat` | `uuid` |  | Points at `app_user.id`. |
+| `roster_seats` | `uuid[]` |  |  |
 | `user_id` | `uuid` |  | Points at `app_user.id`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -578,7 +580,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `roster_seat` | `app_user` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
-| `activity_id, domain_evidence_parent_version` | `activity` | deleting the parent deletes this row |
 
 **Rules**
 
@@ -592,13 +593,13 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_participant_pkey`: `unique, btree (id)`
 - `idx_aparticipant_address`: `btree (lower(address)) WHERE (address IS NOT NULL)`
 - `idx_aparticipant_contact`: `btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)`
+- `idx_aparticipant_one_roster_seat`: `btree (id) WHERE (roster_seat IS NOT NULL)`
 - `idx_aparticipant_sender_domain_reversed`: `btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from') AND (address_domain_folded IS NOT NULL))`
 - `idx_aparticipant_user`: `btree (user_id, activity_id) WHERE (user_id IS NOT NULL)`
 - `idx_aparticipant_waiting_address_time`: `btree (lower(address), domain_evidence_at DESC) WHERE ((role = 'to') AND (address IS NOT NULL))`
 - `idx_participant_domain_evidence_incomplete`: `btree (id) WHERE ((domain_evidence_parent_version IS NULL) OR (domain_evidence_at IS NULL) OR (domain_evidence_precision IS NULL) OR (domain_evidence_visible IS NULL))`
 - `idx_participant_domain_evidence_latest`: `gist (reverse(address_domain_folded) COLLATE "C", domain_evidence_precision, domain_evidence_at) WHERE (domain_evidence_visible AND (NOT past_party_cap) AND (address_domain_folded IS NOT NULL))`
-- `idx_participant_domain_evidence_parent`: `btree (activity_id, domain_evidence_parent_version)`
-- `uq_activity_participant`: `unique, btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT`
+- `uq_activity_participant_identity`: `unique, btree (activity_id, role, ((md5(((((((COALESCE((user_id), '') || '|') || COALESCE((contact_id), '')) || '|') || COALESCE((((length(address)) || ':') || address), '')) || '|') || COALESCE((((length(channel_user_id)) || ':') || channel_user_id), ''))))::uuid))`
 
 **Triggers**
 
@@ -1319,6 +1320,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 **Rules**
 
 - `meeting_proposal_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `meeting_proposal_token_hash_check`: `CHECK (((token_hash ~ '^[0-9a-f]{64}$') OR (token_hash ~ '^erased:[0-9a-f-]{36}$')))`
 - `meeting_proposal_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**

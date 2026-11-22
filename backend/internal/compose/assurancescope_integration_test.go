@@ -91,7 +91,7 @@ func TestAFindingIsVisibleExactlyWhereItsDealIs(t *testing.T) {
 	} {
 		if _, err := owner.Exec(ctx,
 			`INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-			 VALUES ($1, 'Deal', 'open', $2, $3, $4, 'seed', 'test')`,
+			 VALUES ($1, 'Deal', 'open', $2, $3, $4, 'manual', 'test')`,
 			deal, dealOwner, pipeline, stage); err != nil {
 			t.Fatal(err)
 		}

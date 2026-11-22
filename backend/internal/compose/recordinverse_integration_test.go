@@ -316,7 +316,7 @@ func TestACreateAColleagueCorrectedIsNotUndone(t *testing.T) {
 func TestUndoingAMachineDealCreateAndItsArchive(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
-	created, err := e.Deals.CreateDeal(machineCtx(e), deals.CreateDealInput{Name: "Imported Fleet", PipelineID: pipeline, StageID: open})
+	created, err := e.Deals.CreateDeal(machineCtx(e), deals.CreateDealInput{Source: "manual", Name: "Imported Fleet", PipelineID: pipeline, StageID: open})
 	if err != nil {
 		t.Fatalf("a machine creating the deal: %v", err)
 	}

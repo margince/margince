@@ -114,7 +114,7 @@ func mintBulkConfirmation(
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO bulk_confirmation (token_hash, requested_by, binding, affected, expires_at, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		tokenHash(token), requestedBy, binding, affected, expires, now); err != nil {
+		storekit.TokenHashBytes(token), requestedBy, binding, affected, expires, now); err != nil {
 		return "", time.Time{}, fmt.Errorf("store the confirmation: %w", err)
 	}
 	return token, expires, nil
@@ -140,7 +140,7 @@ func spendBulkConfirmation(
 		  WHERE token_hash = $1 AND requested_by = $2 AND binding = $3
 		    AND consumed_at IS NULL AND expires_at > $4
 		 RETURNING affected`,
-		tokenHash(token), requestedBy, binding, now).Scan(&affected)
+		storekit.TokenHashBytes(token), requestedBy, binding, now).Scan(&affected)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, errConfirmTokenRefused
 	}
@@ -163,9 +163,4 @@ func purgeLapsedBulkConfirmations(ctx context.Context, tx pgx.Tx) (int64, error)
 		return 0, fmt.Errorf("compose: purging lapsed bulk confirmations: %w", err)
 	}
 	return tag.RowsAffected(), nil
-}
-
-func tokenHash(token string) []byte {
-	sum := sha256.Sum256([]byte(token))
-	return sum[:]
 }

@@ -34,15 +34,16 @@ func TestTheInputCheckReadsAPastCloseInTheInstallationZone(t *testing.T) {
 	asOf := closes.Add(18 * time.Hour)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Closes today in UTC", PipelineID: pipeline, StageID: open, OwnerID: &owner, ExpectedClose: &closes,
+		Source: "manual",
+		Name:   "Closes today in UTC", PipelineID: pipeline, StageID: open, OwnerID: &owner, ExpectedClose: &closes,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	scanner := assurance.NewScanner(assurance.NewStore(compose.InstallationDB(e.Pool)),
-		compose.AssuranceSubjects, compose.AssuranceCoverage, compose.AssuranceConfig())
-	if _, err := scanner.Scan(e.Admin(), asOf, nil); err != nil {
+		compose.AssuranceSubjects, compose.AssuranceCoverage, assurance.DefaultConfig())
+	if _, err := scanner.Scan(e.Admin(), asOf); err != nil {
 		t.Fatalf("running the check: %v", err)
 	}
 	var raised int

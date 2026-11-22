@@ -10,6 +10,7 @@ import {
   type ReportingEvidenceRef,
 } from "./reporting.model";
 import { ReaderPreview } from "./reporting.readerpreview";
+import { followsFiscalYear } from "./reporting.selection";
 
 /**
  * What the report page draws under its header: one frozen edition, the report
@@ -97,7 +98,7 @@ function FiscalQuarterNote({
   const { locale } = useLocale();
   const { selection, context } = evaluation;
   const fiscal =
-    selection.period === "this_quarter" ||
+    followsFiscalYear(selection.period) ||
     selection.target_basis === "fiscal_quarter" ||
     selection.close_window === "fiscal_quarter";
   if (!fiscal || context.fiscal_year_start_month == null) return null;

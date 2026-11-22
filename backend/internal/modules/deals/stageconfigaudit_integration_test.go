@@ -282,7 +282,8 @@ func twoStagePipeline(t *testing.T, e *configEnv) (ids.DealID, ids.StageID, ids.
 	fromID := ids.From[ids.StageKind](ids.UUID(first.Id))
 	owner := ids.From[ids.UserKind](e.admin)
 	deal, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Warehouse rollout", PipelineID: pipelineID, StageID: fromID,
+		Source: "manual",
+		Name:   "Warehouse rollout", PipelineID: pipelineID, StageID: fromID,
 		OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {

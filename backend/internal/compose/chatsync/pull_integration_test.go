@@ -245,7 +245,7 @@ func TestTalkFromBeforeTheLinkIsJudgedOnlyWhenAskedAndAtMostFiveTimes(t *testing
 func TestEachLinkReadsAndFilesOnlyItsOwnChannel(t *testing.T) {
 	e := setupPull(t)
 	project := ids.NewV7()
-	e.exec(t, `INSERT INTO project (id, name, source, captured_by) VALUES ($1, 'Other rollout', 'seed', 'system')`, project)
+	e.exec(t, `INSERT INTO project (id, name, source, captured_by) VALUES ($1, 'Other rollout', 'manual', 'system')`, project)
 	e.exec(t, `INSERT INTO chat_link (connection_id, provider, channel_slug, channel_name, project_id, linked_by, created_at)
 		VALUES ($1, 'dispact', 'other', 'Other', $2, $3, $4)`, e.conn, project, e.rep, linkedAt)
 	e.say("other", 1, 60, "The rollout slips a week")
@@ -475,7 +475,7 @@ func setupParties(t *testing.T) *partyEnv {
 	e.stakeholder(t, e.deal, "Eddie Ended", "workspace", true)
 	foreign := ids.NewV7()
 	e.exec(t, `INSERT INTO deal (id, name, status, pipeline_id, stage_id, source, captured_by)
-		SELECT $2, 'Other deal', 'open', pipeline_id, stage_id, 'seed', 'system' FROM deal WHERE id = $1`, e.deal, foreign)
+		SELECT $2, 'Other deal', 'open', pipeline_id, stage_id, 'manual', 'system' FROM deal WHERE id = $1`, e.deal, foreign)
 	e.stakeholder(t, foreign, "Olga Other", "workspace", false)
 	return e
 }

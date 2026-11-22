@@ -16,6 +16,7 @@ import {
   matchingColumns,
   scrollColumnIn,
   useOffScreenMatches,
+  useUnfoldIntoView,
 } from "./pipelinereveal";
 import { useTruncationTooltip } from "./tooltip";
 
@@ -269,17 +270,25 @@ function BoardLayout<Record extends BoardRecord>({
   // The head's interactive half, or nothing at all. Written as a function so
   // the column's JSX stays one line of props rather than a spread conditional
   // the reader has to unpick.
+  const unfolding = useUnfoldIntoView(
+    sections,
+    columns.filter((column) => !column.collapsed).map((column) => column.stage),
+  );
   function foldProps(column: BoardColumn<Record>) {
     if (!onToggleColumn || column.collapsed === undefined) return {};
+    const toggle = () => {
+      if (column.collapsed) unfolding(column.stage);
+      onToggleColumn(column);
+    };
     return {
       role: "button",
       tabIndex: 0,
       "aria-expanded": !column.collapsed,
-      onClick: () => onToggleColumn(column),
+      onClick: toggle,
       onKeyDown: (event: React.KeyboardEvent) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onToggleColumn(column);
+          toggle();
         }
       },
     };

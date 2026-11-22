@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -29,7 +30,7 @@ func (e *Env) SeedPassportFor(t *testing.T, owner *pgx.Conn, label string, human
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
 		VALUES ($1, $2, $2, $3, ARRAY['read','write'], $4, now() + interval '1 day')`,
-		id, human, label, "hash-"+id.String()); err != nil {
+		id, human, label, storekit.TokenHash(id.String())); err != nil {
 		t.Fatalf("seeding passport %s: %v", label, err)
 	}
 	return id

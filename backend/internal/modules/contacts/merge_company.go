@@ -258,11 +258,6 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		`UPDATE project SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE deal SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE deal SET partner_company_id = $2 WHERE partner_company_id = $1`,
-		// The document library's account pointer. It is a denormalized READ
-		// path, so nothing else moves it — and a file left pointing at the
-		// dissolved company is filed under a record that no longer exists,
-		// which reads to a user as the contract having vanished.
-		`UPDATE attachment SET company_id = $2 WHERE company_id = $1`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID); err != nil {
 			return false, fmt.Errorf("repoint project and deal attributions: %w", err)

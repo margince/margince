@@ -243,6 +243,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 - `analytics_share_scope_kind_check`: `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`
 - `analytics_share_scope_shape`: `CHECK (((scope_id IS NULL) OR (num_nonnulls(scope_team_id, scope_user_id) = 1)))`
 - `analytics_share_snapshot_matches_kind`: `CHECK (((kind = 'snapshot') = (snapshot_id IS NOT NULL)))`
+- `analytics_share_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `analytics_share_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_analytics_share_token`: `UNIQUE (token_hash)`
 
@@ -389,6 +390,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `bulk_confirmation_expiry_after_creation`: `CHECK ((expires_at > created_at))`
+- `bulk_confirmation_token_hash_check`: `CHECK ((octet_length(token_hash) = 32))`
 
 **Indexes**
 
@@ -402,14 +404,13 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## bulk_operation
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `changed_count` | `integer` | yes |  |
 | `params` | `jsonb`, default `'{}'::jsonb` | yes |  |
-| `passport_id` | `uuid` |  |  |
 | `record_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `worklist_item`. |
 | `requested_by` | `text` | yes |  |
 | `requested_for` | `uuid` |  |  |
@@ -925,7 +926,7 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## report_run
 
-11 columns · primary key `(id)` · referenced by 0 foreign keys
+6 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -933,11 +934,6 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 | `asked_by` | `uuid` | yes | Whose answer the run originally was. |
 | `group_floor` | `integer` | yes |  |
 | `query` | `jsonb` | yes | The question as it was saved, with one addition: `limit` is always present and is the bound this read applied, including the default when the asker named none. |
-| `result_columns` | `jsonb` | yes |  |
-| `result_rows` | `jsonb` | yes |  |
-| `schema_version` | `text` | yes |  |
-| `total_safe` | `boolean` | yes |  |
-| `withheld` | `boolean` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
@@ -950,8 +946,6 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `report_run_floor_is_not_negative`: `CHECK ((group_floor >= 0))`
-- `report_run_result_columns_is_a_list`: `CHECK ((jsonb_typeof(result_columns) = 'array'))`
-- `report_run_result_rows_is_a_list`: `CHECK ((jsonb_typeof(result_rows) = 'array'))`
 
 **Indexes**
 
@@ -960,8 +954,8 @@ The 47 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"captured_by": 20000, "schema_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"schema_version":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "schema_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"schema_version":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000}')`
 
 ## signal_thread_scan
 

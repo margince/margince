@@ -4628,12 +4628,13 @@ export interface paths {
          * Advance a deal to a new stage (audit-logged with prior + next stage).
          * @description The `advance_deal` MCP verb. Writes one `deal_stage_history` row + one audit row
          *     (action `advance_stage`) recording prior + next stage; closed-won emits `deal.stage_changed` (to_status=won).
-         *     A move with a closed-won/closed-lost stage at EITHER end is 🟡 confirm-first
-         *     (irreversible / touches money) — for an agent caller this requires an approval
-         *     token. Closing a deal is the obvious half; REOPENING one is the other, and it is
-         *     the same money: moving a won deal back to an open stage clears its close date,
-         *     its lost reason and the FX rate frozen at close, and takes revenue out of a
-         *     quarter that has already been reported.
+         *     An agent on a user's passport moves the deal at once, closing or reopening it
+         *     included: it may do unaided what its user may do. A move with a closed-won/closed-lost
+         *     stage at EITHER end is 🟡 confirm-first only for automatic work with no passport and
+         *     no user behind it, which needs an approval token. Closing a deal is the obvious half;
+         *     REOPENING one is the other, and it is the same money: moving a won deal back to an
+         *     open stage clears its close date, its lost reason and the FX rate frozen at close,
+         *     and takes revenue out of a quarter that has already been reported.
          *
          *     A move to the stage the deal already holds changes nothing and answers 200 with the
          *     deal as it stands: a retried call must not close a closed deal again and move its
@@ -4762,10 +4763,12 @@ export interface paths {
          *     the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
          *     timeline. The answer is the deal as it now stands and the note's activity id.
          *
-         *     The tier is the advance's. A move to or from a won or lost stage is confirm-first for
-         *     an agent: the call stages one approval and answers 403 `approval_required` naming it.
-         *     Repeat the same call with that id as `approval_id`, or as the `X-Approval-Token`
-         *     header, once a human has approved it. A human's own call is its approval.
+         *     The tier is the advance's. An agent on a user's passport moves the deal at once, to or
+         *     from a won or lost stage included. For automatic work with no passport and no user
+         *     behind it, such a move is confirm-first: the call stages one approval and answers 403
+         *     `approval_required` naming it. Repeat the same call with that id as `approval_id`, or as
+         *     the `X-Approval-Token` header, once a human has approved it. A human's own call is its
+         *     approval.
          *
          *     A retry with the same `idempotency_key` answers the first call's result and moves
          *     nothing. An `Idempotency-Key` header is taken as that key.
@@ -19890,6 +19893,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/impersonation-warning/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a contact's impersonation warning as fine.
+         * @description Clears the warning `impersonation_warning` serves on the contact. The verdict stays on the
+         *     record with the moment and the user who cleared it, as the record of what was answered.
+         *     Requires permission to update the contact. A contact the caller cannot see answers `404`.
+         *
+         *     The body names the warning the caller read by its `detected_at`. A contact that now carries
+         *     a different open warning answers `409`, so nobody clears a warning they were not shown.
+         *     A contact with no open warning answers `204` and writes nothing.
+         *     One transaction: the row, its audit row and its `contact.updated` event.
+         */
+        post: operations["clearContactImpersonationWarning"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -21141,7 +21174,8 @@ export interface paths {
         /**
          * List workspace teams — cursor-paginated. Read-only.
          * @description Teams available as record-share subjects, with a member count. Any authenticated member may read.
-         *     Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
+         *     Excludes archived teams unless `include_archived` is true, which needs `team_admin.read`.
+         *     Bounded by authenticated membership, like the member roster beside it.
          */
         get: operations["listTeams"];
         put?: never;
@@ -33230,7 +33264,7 @@ export interface components {
             provider: "telegram" | "dispact";
             /** @description The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
-            /** @description The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram. */
+            /** @description The chat's web address, such as `https://chat.example.com`; a bare host means https. Required for Dispact, which every team hosts itself; refused for Telegram. */
             address?: string;
             /** @description The Dispact app's events secret, `whsec_…`, which signs each notice of a new message. Optional; without it Margince reads the channels every minute. Refused for Telegram. Sealed into the vault on arrival and never echoed back. */
             eventsSecret?: string;
@@ -34944,6 +34978,8 @@ export interface components {
              * @enum {string|null}
              */
             greeting_register?: "formal" | "familiar" | null;
+            /** @description Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`). */
+            readonly impersonation_warning?: components["schemas"]["ContactImpersonationWarning"];
             /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
@@ -41033,7 +41069,7 @@ export interface components {
             industry?: components["schemas"]["ReportingIndustry"];
             country?: components["schemas"]["ReportingCountry"];
             /** @enum {string} */
-            period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter";
+            period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year";
             metrics?: components["schemas"]["ReportingMetricID"][];
             blocks?: components["schemas"]["ReportingBlockKind"][];
         };
@@ -41709,6 +41745,7 @@ export interface components {
             readonly stalled?: boolean;
             /** @description The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant. */
             readonly last_email?: components["schemas"]["DealLastEmail"] | null;
+            /** @description The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -41796,7 +41833,11 @@ export interface components {
              * @description Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).
              */
             expected_close_date?: string | null;
-            source: string;
+            /**
+             * @description The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
             /** @description The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`. */
@@ -42341,6 +42382,7 @@ export interface components {
              * @description The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
+            /** @description The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -42623,7 +42665,11 @@ export interface components {
             started_at?: string | null;
             /** Format: date */
             target_end_date?: string | null;
-            source: string;
+            /**
+             * @description The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409. */
             source_id?: string | null;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
@@ -49346,9 +49392,11 @@ export interface components {
              *     evaluation time. Read at that exact moment, the week holds no time
              *     yet and the context's interval starts where it ends. A month target
              *     beside it still counts the whole month up to the evaluation time.
+             *     `last_quarter` and `last_year` are the last completed fiscal quarter
+             *     and fiscal year, in the installation's fiscal calendar.
              * @enum {string}
              */
-            period: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+            period: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
             interval?: components["schemas"]["ReportingWindow"];
             /**
              * @description Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.
@@ -49449,7 +49497,7 @@ export interface components {
             saved_questions: number;
             /** @description Live reports with a card whose saved question filters on a period. */
             reports_with_kept_periods: number;
-            /** @description Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window. */
+            /** @description Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window. */
             reports_with_relative_periods: number;
         };
         ReportingCard: {
@@ -50889,6 +50937,10 @@ export interface components {
             confirm_requests_sendable?: boolean;
             /** @description Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact. */
             roles: string[];
+            /** @description The name an admin gave each live role in `roles`, keyed by role key. A member may not read the role directory, so this is how a screen shows a custom role by its name. A client may still show a seeded role in its own translation. Absent from an older server; a key it does not name is shown as the key. */
+            role_names?: {
+                [key: string]: string;
+            };
             teams: string[];
             team_week?: components["schemas"]["TeamWeekReach"];
             authorization?: components["schemas"]["Authorization"];
@@ -59373,6 +59425,7 @@ export interface components {
              * @description The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.
              */
             readonly source_commercial_revision?: number | null;
+            /** @description The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
             readonly captured_by: string;
@@ -59501,7 +59554,11 @@ export interface components {
              *     answers 409 `version_skew`. The currency must be the deal's.
              */
             from_deal_revision?: number | null;
-            source: string;
+            /**
+             * @description The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
         };
         /** @description Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422). */
         UpdateOfferRequest: {
@@ -59557,6 +59614,19 @@ export interface components {
             on_behalf_of: string;
             /** Format: date-time */
             expires_at: string;
+        };
+        /** @description The sign of impersonation the sender check saw when capture made this contact from a mail. */
+        ContactImpersonationWarning: {
+            /**
+             * @description Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+             * @enum {string}
+             */
+            reason?: "punycode_domain" | "display_name_other_domain";
+            /**
+             * Format: date-time
+             * @description When the sender check recorded it.
+             */
+            detected_at: string;
         };
         /** @description A request to hear from us that the contact's acquisition records. */
         ContactAcquisitionRequest: {
@@ -72164,7 +72234,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or a 🟡 transition attempted without an approval token. */
+            /** @description RBAC denied, or passportless automatic work attempted a 🟡 transition without an approval token. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -82665,7 +82735,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -82766,7 +82836,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -82814,7 +82884,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -95670,6 +95740,42 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    clearContactImpersonationWarning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description The `detected_at` of the `impersonation_warning` the caller read.
+                     */
+                    detected_at: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The contact carries no open warning. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     claimRecord: {
         parameters: {
             query?: never;
@@ -97736,6 +97842,8 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Case-insensitive match over team name that ignores diacritics on both sides. */
                 q?: string;
+                /** @description True also lists archived teams, each carrying `archived_at`, so an admin can restore one. */
+                include_archived?: boolean;
             };
             header?: never;
             path?: never;
@@ -97753,6 +97861,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -102224,7 +102333,7 @@ export interface operations {
                 /** @description The team or owner named by `scope_kind`. */
                 scope_id?: string;
                 /** @description The period, in the installation's reporting zone. */
-                period?: "this_week" | "last_week" | "this_month" | "last_month";
+                period?: "this_week" | "last_week" | "this_month" | "last_month" | "last_quarter" | "last_year";
             };
             header?: never;
             path?: never;

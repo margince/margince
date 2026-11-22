@@ -227,6 +227,9 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 		sourceID, targetID, counts, prefer.wonBy(sourceID)); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
+	if err := carryImpersonationWarningTx(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
 	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, fmt.Errorf("read surviving contact: %w", err)

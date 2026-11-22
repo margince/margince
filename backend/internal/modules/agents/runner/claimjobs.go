@@ -25,7 +25,7 @@ func (s *Store) ClaimDueJobs(ctx context.Context, limit int) ([]QueuedJob, error
 			  ORDER BY due_at
 			  LIMIT $1
 			  FOR UPDATE SKIP LOCKED)
-			UPDATE runner_job SET status = 'running', attempts = attempts + 1
+			UPDATE runner_job SET status = 'running'
 			WHERE id IN (SELECT id FROM picked)
 			RETURNING id, agent_spec, trigger_ref, passport_id`, limit)
 		if err != nil {

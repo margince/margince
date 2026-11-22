@@ -420,6 +420,20 @@ func (h Handlers) RetractAcquisitionRequest(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ClearContactImpersonationWarning serves POST /contacts/{id}/impersonation-warning/clear.
+// Wire-only; the store owns the rules.
+func (h Handlers) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.ClearContactImpersonationWarningJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := h.store.ClearImpersonationWarning(r.Context(), pathID[ids.ContactKind](id), req.DetectedAt); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // DismissRelationshipNudges sets every listed contact aside for the calling
 // reader, all or none: the Worklist band's "Dismiss all".
 func (h Handlers) DismissRelationshipNudges(w http.ResponseWriter, r *http.Request) {

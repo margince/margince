@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 281.7 KB |
+| Tool catalog | 281.8 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 73521 |
+| Approx. wire tokens | 73550 |
 | Largest tool | `read_details` (17.6 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.2 KB | 19% | Yes, every step |
-| Input schemas | 163.9 KB | 58% | Yes, every step |
+| Input schemas | 164.0 KB | 58% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **218.1 KB** | **77%** | **the recurring cost** |
+| **Description + input schema** | **218.2 KB** | **77%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -77,7 +77,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1096 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
-| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2008 |
+| [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 2014 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3209 |
 | [`change_state`](#change_state) | Move a lead, deal, project or partner |  |  | 2301 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 652 |
@@ -91,7 +91,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1366 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1373 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
@@ -102,9 +102,9 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 318 |
 | [`read_record`](#read_record) | Read a record | yes |  | 284 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 3289 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 3303 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1920 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1921 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
@@ -3142,6 +3142,8 @@ asked for this call themselves; requires passport scope "write".)
             "last_month",
             "last_week",
             "this_quarter",
+            "last_quarter",
+            "last_year",
             "custom"
           ],
           "type": "string"
@@ -6794,6 +6796,8 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                             "last_month",
                             "last_week",
                             "this_quarter",
+                            "last_quarter",
+                            "last_year",
                             "custom"
                           ],
                           "type": "string"
@@ -11119,7 +11123,9 @@ evidence, and quote coverage with each number.
         "this_week",
         "last_week",
         "this_month",
-        "last_month"
+        "last_month",
+        "last_quarter",
+        "last_year"
       ],
       "type": "string"
     },
@@ -11432,6 +11438,8 @@ evidence, and quote coverage with each number.
             "last_month",
             "last_week",
             "this_quarter",
+            "last_quarter",
+            "last_year",
             "custom"
           ],
           "type": "string"
@@ -11754,7 +11762,7 @@ find_records to find or list records, and read_reports for the standard metrics 
       "type": "string"
     },
     "include_archived": {
-      "description": "views: lists, relationships, signals, stage_exit_criteria, stages",
+      "description": "views: lists, relationships, signals, stage_exit_criteria, stages, teams",
       "type": "boolean"
     },
     "include_hidden": {

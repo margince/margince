@@ -28,7 +28,7 @@ var (
 	// uniqueIndexLine reads a unique index: its table and what it indexes.
 	// A partial index's predicate is cut off first (indexedPart), so a column
 	// named only there does not count as indexed.
-	uniqueIndexLine = regexp.MustCompile(`^public\.\w+ CREATE UNIQUE INDEX \w+ ON public\.(\w+) USING \w+ \((.*)\)$`)
+	uniqueIndexLine = regexp.MustCompile(`^public\.\w+ CREATE UNIQUE INDEX \w+ ON public\.(\w+) USING \w+ \((.*)\)(?: NULLS NOT DISTINCT)?$`)
 	// textColumnLine reads a text column: its table and its name.
 	textColumnLine = regexp.MustCompile(`^public\.(\w+)\.(\w+) text\b`)
 	// checkLine reads a CHECK constraint: its table and its definition.
@@ -40,6 +40,7 @@ var (
 // notAnAddress records each such column that needs no canonical-form CHECK,
 // with why. An unlisted column must carry the CHECK.
 var notAnAddress = gatekit.Waive(map[string]string{
+	"activity_participant.address":             "the party as its writer named it. Capture folds it and the table holds no writer to that, so readers compare lower(address), which idx_aparticipant_address serves. The key keeps one row per stored identity and no reader takes it for one row per mailbox",
 	"communication_decision.recipient_address": "a recipient key of two shapes: a folded address, or a channel id whose case its provider may tell apart. decisionRecipientKey folds the address shape at the write",
 })
 
@@ -136,6 +137,9 @@ func TestTheCanonicalFormReaderSeesEachShape(t *testing.T) {
 	}
 	if m := uniqueIndexLine.FindStringSubmatch(indexedPart("public.x CREATE UNIQUE INDEX x ON public.t USING btree (email) WHERE (status = 'live'::text)")); m == nil || m[2] != "email" {
 		t.Errorf("the reader read a partial index as %v", m)
+	}
+	if m := uniqueIndexLine.FindStringSubmatch("public.x CREATE UNIQUE INDEX x ON public.t USING btree (seat, email) NULLS NOT DISTINCT"); m == nil || m[2] != "seat, email" {
+		t.Errorf("the reader read a key whose nulls are equal as %v", m)
 	}
 	if uniqueIndexLine.MatchString("public.x CREATE INDEX x ON public.t USING btree (email)") {
 		t.Error("the reader took a plain index for a unique one")

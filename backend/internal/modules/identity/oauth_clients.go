@@ -21,7 +21,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/bearer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -208,7 +207,7 @@ func (s *Service) RegisterAgentClient(ctx context.Context, actor Identity, in Re
 	if err != nil {
 		return AgentClient{}, "", err
 	}
-	secret, hash, err := bearer.Mint()
+	secret, hash, err := storekit.MintToken()
 	if err != nil {
 		return AgentClient{}, "", err
 	}
@@ -277,7 +276,7 @@ func (s *Service) RotateAgentClientSecret(ctx context.Context, actor Identity, i
 	if err != nil {
 		return "", err
 	}
-	raw, digest, err := bearer.Mint()
+	raw, digest, err := storekit.MintToken()
 	if err != nil {
 		return "", err
 	}

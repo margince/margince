@@ -74,11 +74,11 @@ func recordBulkOperation(ctx context.Context, tx pgx.Tx, batchID ids.UUID, chang
 		undoOf = &change.undo.batchID
 	}
 	_, err = tx.Exec(ctx,
-		`INSERT INTO bulk_operation (id, record_type, verb, params, requested_by, passport_id, changed_count, skipped_count,
+		`INSERT INTO bulk_operation (id, record_type, verb, params, requested_by, changed_count, skipped_count,
 		                             result, undo_of, requested_for)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		batchID, string(change.recordType), string(change.verb), params, actor.ID,
-		storekit.UUIDOrNil(actor.PassportID), len(run.changed), len(run.skipped), result, undoOf,
+		len(run.changed), len(run.skipped), result, undoOf,
 		storekit.UUIDOrNil(humanBehind(actor)))
 	if storekit.IsUniqueViolation(err) {
 		return errBulkAlreadyUndone

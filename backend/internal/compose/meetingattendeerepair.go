@@ -193,16 +193,9 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate, payload
 	if err := capture.StampFurtherParticipants(ctx, tx, c.activityID, c.kind, "", true, parties.Participants); err != nil {
 		return "", err
 	}
-	// The superseded rows, retired now that a resolved one stands beside them.
-	//
-	// StampFurtherParticipants inserts ON CONFLICT DO NOTHING against
-	// uq_activity_participant, and that index keys on (activity_id, role,
-	// user_id, contact_id, address) — so a row naming the SAME address with a
-	// resolved user_id is a different key, not a conflict. Without this the
-	// repair leaves two rows describing one attendee: the old unresolved one and
-	// the new bound one. The graph then still reports the colleague as an
-	// unresolved external party, which is the very state this pass exists to
-	// clear, while the marker says the meeting was repaired.
+	// The stamp inserts ON CONFLICT DO NOTHING against uq_activity_participant_identity.
+	// That key digests user_id beside the address, so a resolved row never conflicts
+	// with the unresolved row for one address. This retires the unresolved one.
 	if err := activities.RetireSupersededAttendeesTx(ctx, tx, c.activityID); err != nil {
 		return "", err
 	}

@@ -96,8 +96,8 @@ func TestTheNightlyPassRemovesAnswerTracesPastTheirYear(t *testing.T) {
 	e := Setup(t)
 	trace := func(kind string, days int) ids.UUID {
 		id := ids.NewV7()
-		e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, tier, kind, request_fingerprint, occurred_at)
-			VALUES ($1, $1, 'chat', 'fast', $2, 'fp', now() - make_interval(days => $3))`, id, kind, days)
+		e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, tier, kind, occurred_at)
+			VALUES ($1, $1, 'chat', 'fast', $2, now() - make_interval(days => $3))`, id, kind, days)
 		return id
 	}
 	gone := []ids.UUID{trace("completion", 401), trace("decision", 401)}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -55,7 +56,7 @@ func newSetterRig(t *testing.T) *setterRig {
 	}})
 	passport := ids.NewV7()
 	fx.exec(t, `INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
-		VALUES ($1, $2, $2, 'rule setter', ARRAY['read','write'], $3, now() + interval '1 day')`, passport, fx.rep1, "hash-"+passport.String())
+		VALUES ($1, $2, $2, 'rule setter', ARRAY['read','write'], $3, now() + interval '1 day')`, passport, fx.rep1, storekit.TokenHash(passport.String()))
 	// Enabled before the fixture's events, which a reviewed rule acts on only from its enabling.
 	store := NewAutomationStore(db).SetClock(func() time.Time { return activityEventFor(ids.Nil).OccurredAt.Add(-time.Hour) })
 	return &setterRig{fx: fx, store: store, engine: engine, notices: notices, passport: passport, applied: &applied}

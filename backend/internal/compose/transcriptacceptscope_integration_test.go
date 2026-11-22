@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -187,7 +188,7 @@ func TestAnAgentAcceptingForItsHumanWritesTheTask(t *testing.T) {
 	if _, err := s.owner.Exec(context.Background(), `
 		INSERT INTO passport (id, on_behalf_of, granted_by, token_hash, scopes, expires_at)
 		VALUES ($1, $2, $2, $3, ARRAY['read','write'], now() + interval '30 days')`,
-		passport, s.Rep1, "hash-"+passport.String()); err != nil {
+		passport, s.Rep1, storekit.TokenHash(passport.String())); err != nil {
 		t.Fatalf("seeding the passport: %v", err)
 	}
 	agent := principal.WithActor(principal.WithCorrelationID(

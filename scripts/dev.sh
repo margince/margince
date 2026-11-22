@@ -1196,7 +1196,7 @@ up)
       fi
       psql_owner postgres -c "DROP DATABASE IF EXISTS \"${db}\" WITH (FORCE)" </dev/null
       psql_owner postgres -c "CREATE DATABASE \"${db}\"" </dev/null
-      psql_owner "$db" -v ON_ERROR_STOP=1 <scripts/db-init.sql
+      psql_owner postgres -v ON_ERROR_STOP=1 <scripts/db-init.sql
       [[ -z "$slug" ]] || flush_slug_redis "$redis_db"
     fi
     # The base `margince` db already exists (db-up + db-init); only a slugged

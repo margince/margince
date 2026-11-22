@@ -18,8 +18,7 @@ start.
 **Do you design something a user can see?** [DESIGN.md](../DESIGN.md) holds the look of the app, and
 the research behind it. The plan to add it to the app, one pull request per step, is [how-to/adopt-the-design.md](how-to/adopt-the-design.md). It goes on in
 [how-to/adopt-the-design-records.md](how-to/adopt-the-design-records.md) for the record pages and
-[how-to/adopt-the-design-surfaces.md](how-to/adopt-the-design-surfaces.md) for the rest. The list of
-web app parts is in
+[how-to/adopt-the-design-surfaces.md](how-to/adopt-the-design-surfaces.md) for the rest. The list of web app parts is in
 [frontend/src/design-system/README.md](../frontend/src/design-system/README.md).
 
 **AI in Margince?** Start at [reference/which-ai-you-can-use.md](reference/which-ai-you-can-use.md): which AI to use, and its grade. How we test it: [explanation/ai-certification.md](explanation/ai-certification.md) and [explanation/how-we-test-your-ai-assistant.md](explanation/how-we-test-your-ai-assistant.md).

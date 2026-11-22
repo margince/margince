@@ -15,6 +15,7 @@ import { formatAnalyticsNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
+import { TEAM_PERIODS } from "./analytics.overview.context";
 import { UPCOMING_LIST_ID } from "./analytics.overview.prospectinghero";
 import {
   type ReportingEvaluation,
@@ -25,14 +26,8 @@ type SdrSummary = components["schemas"]["SdrSummary"];
 type Meeting = components["schemas"]["SdrUpcomingMeeting"];
 type TeamReview = components["schemas"]["SdrTeamReview"];
 
-// The periods the handoff review reads; any other period has no cohort here.
-const COHORT_PERIODS = [
-  "this_week",
-  "last_week",
-  "this_month",
-  "last_month",
-] as const;
-type CohortPeriod = (typeof COHORT_PERIODS)[number];
+// The handoff cohort reads the team review's periods; any other has none.
+type CohortPeriod = (typeof TEAM_PERIODS)[number];
 
 /**
  * The meetings booked ahead, in the window the summary counts them in, so the
@@ -182,7 +177,7 @@ export function HandoffCohort({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const period = COHORT_PERIODS.find(
+  const period = TEAM_PERIODS.find(
     (each) => each === evaluation.context.period_kind,
   );
   const review = useOwnReview(self, period);

@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 53115,
+    "tokens": 53143,
     "median_tool_tokens": 806,
     "mean_tool_tokens": 1106
   },
@@ -89,7 +89,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 3289
+      "tokens": 3303
     },
     {
       "name": "change_settings",
@@ -113,11 +113,11 @@
     },
     {
       "name": "change_reports",
-      "tokens": 2008
+      "tokens": 2014
     },
     {
       "name": "read_view",
-      "tokens": 1920
+      "tokens": 1921
     },
     {
       "name": "change_capture",
@@ -133,7 +133,7 @@
     },
     {
       "name": "read_analytics",
-      "tokens": 1366
+      "tokens": 1373
     },
     {
       "name": "run_research",

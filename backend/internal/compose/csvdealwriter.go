@@ -61,7 +61,7 @@ func (w *csvWriters) createDeal(ctx context.Context, row migration.Row, typed ma
 // dealBirthOf is what a row asks the deals store to birth. The commit and the
 // dry run share it so both put the same question.
 func (w *csvWriters) dealBirthOf(row migration.Row, typed map[string]any) (dealCreate, *deals.ImportTerminal) {
-	made := dealCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
+	made := dealCreateFrom(textFields(row.Fields), typed, w.sourceSystem)
 	return made, w.terminalOf(textFields(row.Fields), made)
 }
 

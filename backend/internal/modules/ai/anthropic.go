@@ -96,23 +96,13 @@ func anthropicOutputConfigFor(effort string, schema json.RawMessage) *anthropicO
 // simple wire.
 const streamedCompleteThreshold = 8192
 
-// Complete fits the response schema once, before either wire is chosen, and
-// reports the downgrade that fit cost on whatever the call returns — the
-// Response, or the error of a call that failed after its request was sent,
-// whose record still says what was sent.
+// Complete fits the response schema once, before either wire is chosen.
 func (c *anthropicClient) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	schema, downgrade := anthropicOutputSchema(req.ResponseSchema)
-	ctx, attempt := trackHTTPAttempt(ctx)
-	var (
-		resp model.Response
-		err  error
-	)
+	schema := anthropicOutputSchema(req.ResponseSchema)
 	if req.MaxTokens > streamedCompleteThreshold {
-		resp, err = c.completeStreamed(ctx, req, schema)
-	} else {
-		resp, err = c.completePlain(ctx, req, schema)
+		return c.completeStreamed(ctx, req, schema)
 	}
-	return reportSchemaDowngrade(resp, err, downgrade, attempt)
+	return c.completePlain(ctx, req, schema)
 }
 
 func (c *anthropicClient) completePlain(ctx context.Context, req model.Request, schema json.RawMessage) (model.Response, error) {
@@ -264,10 +254,7 @@ func (c *anthropicClient) completeStreamed(ctx context.Context, req model.Reques
 }
 
 func (c *anthropicClient) Stream(ctx context.Context, req model.Request) (model.TokenStream, error) {
-	// A stream has no Response to report a schema downgrade on, and no caller
-	// that sends a schema down it.
-	schema, _ := anthropicOutputSchema(req.ResponseSchema)
-	body, err := c.postStream(ctx, req, schema)
+	body, err := c.postStream(ctx, req, anthropicOutputSchema(req.ResponseSchema))
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +337,7 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-Api-Key", c.apiKey)
 	httpReq.Header.Set("Anthropic-Version", anthropicAPIVersion)
-	resp, err := sendModelRequest(c.http, httpReq)
+	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: anthropic: %w", err)
 	}

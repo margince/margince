@@ -32,6 +32,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/chatsync"
+	"github.com/margince/margince/backend/internal/compose/evidencereread"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -266,6 +267,11 @@ func idBearingRefusalDrivers() map[string]func(context.Context) error {
 		StageEvidenceReadArgs{}.Kind(): func(ctx context.Context) error {
 			return (&stageEvidenceReadWorker{log: slog.New(slog.DiscardHandler)}).Work(
 				ctx, &river.Job[StageEvidenceReadArgs]{Args: StageEvidenceReadArgs{}})
+		},
+
+		StageEvidenceRereadArgs{}.Kind(): func(ctx context.Context) error {
+			return (&evidencereread.Worker[StageEvidenceRereadArgs]{Bind: workspaceJobCtx}).Work(
+				ctx, &river.Job[StageEvidenceRereadArgs]{Args: StageEvidenceRereadArgs{}})
 		},
 
 		DocumentExtractArgs{}.Kind(): func(ctx context.Context) error {

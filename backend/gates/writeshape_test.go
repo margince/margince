@@ -33,6 +33,7 @@ import (
 // events.md gains the missing event types, wiring storekit.Emit into
 // these mutations removes the entries.
 var auditOnlyWrites = gatekit.Waive(map[string]string{
+	"internal/modules/deals:CorrectOfferSourcesTx":          "a data task moving an offer's source onto the fixed list of channels. The catalog's offer.updated says a draft offer was edited, and this edits no draft and reaches sent offers too, so the event would misstate it. The audit row keeps the source it replaced",
 	"internal/modules/privacy:correctLinkedHistoricalEntry": "records payload removal on one immutable audit-row ID. No domain record or erasure boundary changes, and its old event copies are cancelled; publishing a new domain erasure would misstate later work",
 	"internal/modules/consent:queueRestrictionLiftTx":       "an admin asking to lift a restriction of processing, which changes no stop yet. The notice it queues emits its own events in this same transaction (the activity and the queued delivery), and the lift itself emits consent.suppression_lifted once the notice is sent. The audit row keeps who asked and why",
 	"internal/modules/consent:finalizeErasureFulfil":        "anonymizes the fulfilled rights case after the contact erasure committed. The contact erasure already emits retention.applied. This certificate clears the case audit payloads; the closed event catalog has no rights-case event and publishing another contact erasure would duplicate that domain action",

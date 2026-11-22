@@ -39,7 +39,7 @@ func NameBirthRosterTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID
 		return 0, err
 	}
 	tag, err := tx.Exec(ctx, `
-		UPDATE activity_participant ap SET roster_seat = $2
+		UPDATE activity_participant ap SET `+storekit.StoreRosterSeatsSQL("ARRAY[$2::uuid]")+`
 		  FROM activity a
 		 WHERE a.id = ap.activity_id AND ap.activity_id = $1 AND a.kind = 'meeting'
 		   AND a.archived_at IS NULL AND a.restricted_at IS NULL
@@ -57,6 +57,6 @@ func NameBirthRosterTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID
 // BirthRosterRowSQL selects a guest row written with its meeting that names no
 // roster and that no member relinked.
 func BirthRosterRowSQL(participant, activity string) string {
-	return fmt.Sprintf(`(%[1]s.roster_seat IS NULL AND %[1]s.relinked_at IS NULL
+	return fmt.Sprintf(`(NOT `+storekit.OnACalendarRosterSQL(participant)+` AND %[1]s.relinked_at IS NULL
 		AND %[1]s.address IS NOT NULL AND %[1]s.created_at = %[2]s.created_at)`, participant, activity)
 }

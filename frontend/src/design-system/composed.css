@@ -104,12 +104,23 @@
   min-width: 0;
   min-height: 120px;
 }
-/* A folded column is as wide as its head, and the head's bleed leaves that
- * untouched: the negative inline margin comes straight back as the head's own
- * inline padding, so the name and the count still decide the width. */
-.board-col-collapsed .board-col-head {
-  writing-mode: horizontal-tb;
+/* A FOLDED COLUMN READS SIDEWAYS, one line wide. Written across, a name and
+ * its count make a fold about 150px, and the lead board's three stages and two
+ * folds would need 1258px of the 1116px a 1440px window leaves them. Turned, a
+ * fold is about 40px and the whole board fits.
+ *
+ * The head and the line below it turn; the column does not, so its border,
+ * height and drop target stay what an open stage has. The margins are
+ * PHYSICAL here because a turned head's inline axis is the vertical one, and
+ * the bleed has to stay on the left and right. */
+.board-col-collapsed .board-col-head,
+.board-col-collapsed .board-col-sub {
+  writing-mode: vertical-rl;
   white-space: nowrap;
+}
+.board-col-collapsed .board-col-head {
+  margin: 0 calc(-1 * var(--space-3));
+  padding: var(--space-3) var(--space-2) 4px;
 }
 /* STUCK TO THE TOP OF ITS COLUMN, AND IT SEALS IT. A stage is the only thing
  * that says which pile a card belongs to, and a reader scrolled halfway down a
@@ -255,10 +266,10 @@
   color: var(--textSecondary);
   font: var(--fontBodySmall);
 }
-/* A folded column is as wide as its head, and the reason wraps inside that
-   width rather than widening the fold to one line of prose. */
+/* In a turned fold the reason runs down the column, and wraps into a second
+   line only when the column is shorter than the sentence. */
 .board-col-collapsed .board-col-refusal {
-  contain: inline-size;
+  white-space: normal;
 }
 
 /* A phone SWIPES between stages rather than showing them all at once. One stage

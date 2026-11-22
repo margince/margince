@@ -16,7 +16,7 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate, formatMoney } from "../../format/format";
+import { formatDateAbbrev, formatMoneyWhole } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -214,7 +214,7 @@ export function CompanyContractsCard({
 // A renewal starts with its predecessor's title. So a row's menu also names
 // its number or first day, then the lowest "(n)" no other name holds.
 function menuNames(contracts: Contract[], locale: Locale, zone: string) {
-  const day = (on?: string | null) => on && formatDate(on, locale, zone);
+  const day = (on?: string | null) => on && formatDateAbbrev(on, locale, zone);
   const names = contracts.map((row) =>
     [row.title, row.contract_number ?? day(row.starts_on)]
       .filter(Boolean)
@@ -415,7 +415,7 @@ function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
-  const on = (date: string) => formatDate(date, locale, readerZone);
+  const on = (date: string) => formatDateAbbrev(date, locale, readerZone);
   if (!contract.starts_on && !contract.ends_on) {
     return <span>{t("contracts.noTerm")}</span>;
   }
@@ -454,7 +454,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
     return (
       <Badge tone="warning">
         {t("contracts.endsOn", {
-          when: formatDate(
+          when: formatDateAbbrev(
             contract.cancellation_effective_on,
             locale,
             readerZone,
@@ -467,7 +467,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
     return (
       <span className="t-caption">
         {t("contracts.renewsOn", {
-          when: formatDate(contract.renewal_on, locale, readerZone),
+          when: formatDateAbbrev(contract.renewal_on, locale, readerZone),
         })}
       </span>
     );
@@ -487,7 +487,7 @@ export function contractAmount(contract: Contract, locale: Locale): string {
   if (contract.value_minor == null || !contract.currency) {
     return "";
   }
-  return formatMoney(contract.value_minor, contract.currency, locale);
+  return formatMoneyWhole(contract.value_minor, contract.currency, locale);
 }
 
 export function basisLabel(contract: Contract): MessageKey | "" {

@@ -8,6 +8,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
@@ -30,7 +31,12 @@ type TaskPatch = {
   // through this one mutation, so pinning it here pins all four at once.
   // Unpinned, two contacts could each complete one task and be told it worked.
   version: number | undefined;
-  body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
+  body: {
+    is_done?: boolean;
+    due_at?: string;
+    remind_at?: string | null;
+    remind_intent?: components["schemas"]["IntentTime"];
+  };
 };
 
 // Every task write carries this key, so any control can see a write in flight.

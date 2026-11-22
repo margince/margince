@@ -138,8 +138,8 @@ func (e *estEnv) seedConnection(t *testing.T, user ids.UserID, provider string) 
 	t.Helper()
 	connID := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO capture_connection (id, provider, user_id, scopes, status)
-		VALUES ($1, $2, $3, '{}', 'connected')`,
+		INSERT INTO capture_connection (id, provider, user_id, status)
+		VALUES ($1, $2, $3, 'connected')`,
 		connID, provider, user.UUID); err != nil {
 		t.Fatal(err)
 	}
@@ -173,10 +173,10 @@ type callRow struct {
 func (e *estEnv) insertCall(t *testing.T, c callRow) {
 	t.Helper()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint,
+		INSERT INTO ai_call (task, tier, provider, model_id,
 		  tokens_in, tokens_out, cached_tokens, cache_write_tokens, cache_hit, occurred_at, logical_call_id, error_sentinel)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,false,$10,$11,NULLIF($12,''))`,
-		string(c.task), string(c.tier), c.provider, c.model, "fp-"+ids.NewV7().String(),
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,false,$9,$10,NULLIF($11,''))`,
+		string(c.task), string(c.tier), c.provider, c.model,
 		c.tokensIn, c.tokensOut, c.cachedTokens, c.cacheWriteTokens, inWindow, ids.NewV7(), c.errorSentinel); err != nil {
 		t.Fatalf("insert call %+v: %v", c, err)
 	}

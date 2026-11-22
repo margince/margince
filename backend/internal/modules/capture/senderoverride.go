@@ -138,8 +138,7 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 			ON CONFLICT (user_id, address) DO UPDATE
 			   SET decision = EXCLUDED.decision,
 			       overruled_kind = COALESCE(EXCLUDED.overruled_kind, capture_sender_override.overruled_kind),
-			       captured_by = EXCLUDED.captured_by,
-			       updated_at = now()
+			       captured_by = EXCLUDED.captured_by
 			RETURNING id, address, decision, coalesce(overruled_kind, '')`,
 			actor.UserID, folded, decision, kind, capturedBy).
 			Scan(&out.ID, &out.Address, &out.Decision, &out.OverruledKind); err != nil {

@@ -23,10 +23,8 @@ type Assembly struct {
 	// Limited says deals the caller cannot read were left out. A boolean: a
 	// count of what a caller may not read says how much of it there is.
 	Limited bool
-	// SelfCorrecting is whether the chances moved with recorded outcomes, and
-	// EvidenceCutoff the instant no later outcome counted.
+	// SelfCorrecting is whether the chances moved with recorded outcomes.
 	SelfCorrecting bool
-	EvidenceCutoff time.Time
 	// RiskSignalsVersion names the signal rules on the rows; empty while
 	// self-correction is off and no signal was assessed.
 	RiskSignalsVersion string

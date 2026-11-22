@@ -40,6 +40,7 @@ import { useConsentGuard } from "./contactconsentpanel";
 import { ContactResearchDrawer } from "./contactdrawers";
 import { useContactEdit } from "./contactedit";
 import { ContactFollowState } from "./contactfollowstate";
+import { ContactImpersonationWarning } from "./contactimpersonation";
 import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
 import { ContactRail } from "./contactrail";
@@ -330,6 +331,10 @@ export function ContactPageV2({
               />
             }
           >
+            <ContactImpersonationWarning
+              contact={contact}
+              refusedReasonId={refusedReasonId}
+            />
             {tab === "overview" && (
               <>
                 <ContactFollowState contactId={id} />

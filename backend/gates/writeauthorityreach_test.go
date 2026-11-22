@@ -48,6 +48,8 @@ const wantMinimumShareableWriters = 15
 // merely inconvenient: where the probe is simply a no-op today it was added
 // instead, because a no-op costs nothing and closes the drift.
 var writesWithoutARowProbe = gatekit.Waive(map[string]string{
+	"internal/modules/deals:CorrectDealSourcesTx":                   "the source data task runs on the system principal, which storekit.CorrectRecordSources requires, and selects deals by an unlisted source, not by caller identity; a row probe would leave deals outside one identity's scope uncorrected",
+	"internal/modules/projects:CorrectProjectSourcesTx":             "the source data task for projects, decided the same way as CorrectDealSourcesTx",
 	"internal/modules/contacts:touchWhenAddressFilled":              "moves the version after a bought address or number was filled; ApplyProviderClaims holds the contact through auth.HoldWritableLive before any fill, so this adds no access of its own",
 	"internal/modules/contacts:revivePhoneTx":                       "brings a replaced number back for the signature retraction and the profile-field restore, which probe write authority on the contact before calling it; the version move only follows that write",
 	"internal/modules/contacts:touchChildSetParent":                 "moves the version of a record whose child rows its caller has just written. The caller owns the write-authority decision, so this statement adds no access of its own",

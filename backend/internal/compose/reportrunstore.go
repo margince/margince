@@ -16,13 +16,12 @@ package compose
 //   - A saved run is IMMUTABLE. Nothing updates a row; a re-run is a new run
 //     with a new id. A block whose numbers moved underneath it would be a
 //     sentence that changed meaning after somebody approved it.
-//   - A saved run is NOT a cache. The rows were narrowed and floored for the
-//     contact who asked, so they are never replayed for a second reader. Read
-//     re-asks the stored question under the caller's own grants and serves
-//     THAT answer.
+//   - A saved run is NOT a cache. It keeps the question and not the rows,
+//     which were narrowed and floored for the contact who asked. Read re-asks
+//     the stored question under the caller's own grants.
 //
-// The second rule is what keeps the first one safe. Storing an answer is only
-// tolerable because storing it grants nobody anything.
+// The second rule is what keeps the first one safe: a stored question grants
+// nobody anything.
 
 import (
 	"context"
@@ -43,12 +42,8 @@ import (
 // tableReportRun is the audited entity type for a saved run.
 const tableReportRun = "report_run"
 
-// ReportRun is one saved answer, as the table holds it.
-//
-// Answer carries the rows as they were served TO THE ASKER. A reader who is
-// not the asker never receives this field's stored contents — Read replaces it
-// with an answer computed under their own grants — so treat a populated
-// Answer as belonging to AskedBy and to nobody else.
+// ReportRun is one saved run. Answer is computed for the caller that read the
+// run, under that caller's own grants, and is never a stored one.
 type ReportRun struct {
 	ID      ids.UUID
 	Query   analyticsquery.Query
@@ -59,12 +54,8 @@ type ReportRun struct {
 	Floor analyticsquery.Floor
 }
 
-// SaveReportRun stores one answer and returns its id.
-//
-// It takes the query AND the answer rather than running the query itself: the
-// caller has just served the answer, and re-running it here would be a second
-// execution that could differ from the one the caller returned. The id would
-// then name a result nobody ever saw.
+// SaveReportRun stores the question of one served answer and returns its id.
+// The answer supplies only what the audit row says about it.
 //
 // There is no read gate on this function and that is not an omission. The
 // answer was produced by RunAnalyticsQuery, which gates the population before
@@ -89,27 +80,14 @@ func SaveReportRun(
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: encoding a report run's question: %w", err)
 	}
-	// Marshalled separately rather than as one struct, because the columns are
-	// separate: a reader that wants the row count does not have to parse the
-	// rows, and the CHECK constraints can see that each is a list.
-	columnsJSON, err := json.Marshal(answer.Columns)
-	if err != nil {
-		return ids.UUID{}, fmt.Errorf("compose: encoding a report run's columns: %w", err)
-	}
-	rowsJSON, err := json.Marshal(answer.Rows)
-	if err != nil {
-		return ids.UUID{}, fmt.Errorf("compose: encoding a report run's rows: %w", err)
-	}
 
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO report_run
-		    (query, result_columns, result_rows, withheld, total_safe,
-		     schema_version, asked_by, group_floor, captured_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		    (query, asked_by, group_floor, captured_by)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id`,
-		queryJSON, columnsJSON, rowsJSON, answer.Withheld, answer.TotalSafe,
-		answer.SchemaVersion, actor.UserID, int(floor), capturedBy,
+		queryJSON, actor.UserID, int(floor), capturedBy,
 	).Scan(&id); err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: saving a report run: %w", err)
 	}
@@ -130,10 +108,9 @@ func SaveReportRun(
 
 // ReadReportRun returns a saved run's answer, recomputed for THIS caller.
 //
-// The stored rows are not served. They were narrowed and floored for whoever
-// asked, and a second reader's grants narrow a different population — so what
-// comes back is the stored QUESTION, re-asked under the caller's own grants
-// through the same gate any other query goes through.
+// No rows are stored, because an answer is narrowed and floored for whoever
+// asked. What comes back is the stored question, asked again under the
+// caller's own grants through the gate every query goes through.
 //
 // That makes a pointer stable without making it a permission. Two readers
 // dereferencing one cell can legitimately see different numbers, and one of

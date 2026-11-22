@@ -6,16 +6,14 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_cycle
 
-6 columns · primary key `(id)` · referenced by 1 foreign key
+4 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `closed_at` | `timestamp with time zone` |  |  |
 | `opened_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `opened_by` | `text` | yes |  |
 | `scope` | `text` | yes |  |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
 
@@ -29,32 +27,25 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scope": 20000, "opened_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"opened_by":20000,"scope":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "opened_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"opened_by":20000,"scope":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scope": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"scope":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"scope":20000}')`
 
 ## assurance_deal_receipt
 
-18 columns · primary key `(deal_id)` · referenced by 0 foreign keys
+11 columns · primary key `(deal_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `assessed_at` | `timestamp with time zone` | yes |  |
 | `deal_id` | `uuid` | yes |  |
 | `input_fingerprint` | `text` | yes |  |
 | `outcome` | `text` | yes | One of `eligible`, `review_required`, `unsupported`, `waiting`, `unknown`. |
 | `policy_version` | `text` | yes |  |
-| `reasons` | `text[]`, default `'{}'::text[]` | yes |  |
 | `run_id` | `uuid` |  | Points at `assurance_run.id`. |
-| `silent_days` | `integer` | yes |  |
-| `valid_until` | `timestamp with time zone` | yes |  |
 | `verdict_actions` | `jsonb` |  |  |
 | `verdict_assessed_at` | `timestamp with time zone` |  |  |
 | `verdict_basis_digest` | `text` |  |  |
 | `verdict_input_checksum` | `text` |  |  |
 | `verdict_next_due_at` | `timestamp with time zone` |  |  |
-| `verdict_prompt_version` | `text` |  |  |
-| `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
@@ -66,7 +57,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 **Rules**
 
 - `assurance_deal_receipt_outcome_check`: `CHECK ((outcome = ANY (ARRAY['eligible', 'review_required', 'unsupported', 'waiting', 'unknown'])))`
-- `assurance_deal_receipt_valid_after_assessed`: `CHECK ((valid_until >= assessed_at))`
 
 **Indexes**
 
@@ -75,12 +65,12 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000, "reasons": 2000, "captured_by": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000, "verdict_prompt_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"reasons":2000,"verdict_basis_digest":20000,"verdict_input_checksum":20000,"verdict_prompt_version":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "reasons": 2000, "captured_by": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000, "verdict_prompt_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"reasons":2000,"verdict_basis_digest":20000,"verdict_input_checksum":20000,"verdict_prompt_version":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"verdict_basis_digest":20000,"verdict_input_checksum":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "policy_version": 20000, "input_fingerprint": 20000, "verdict_basis_digest": 20000, "verdict_input_checksum": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"input_fingerprint":20000,"outcome":20000,"policy_version":20000,"verdict_basis_digest":20000,"verdict_input_checksum":20000}')`
 
 ## assurance_exception
 
-22 columns · primary key `(id)` · referenced by 3 foreign keys
+20 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -91,7 +81,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `delivered_assignee_id` | `uuid` |  |  |
 | `delivery_attempts` | `integer`, default `0` | yes |  |
 | `delivery_state` | `text` |  | One of `pending`, `failed`, `delivered`. |
-| `episode` | `integer`, default `1` | yes |  |
 | `first_seen_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `last_seen_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `logical_key` | `text` | yes |  |
@@ -104,7 +93,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `task_activity_id` | `uuid` |  | Points at `activity.id`. |
 | `type` | `text` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
@@ -138,7 +126,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_input_change
 
-6 columns · primary key `(subject_kind, subject_id)` · referenced by 0 foreign keys
+4 columns · primary key `(subject_kind, subject_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -146,8 +134,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `generation` | `bigint` | yes |  |
 | `subject_id` | `uuid` | yes |  |
 | `subject_kind` | `text` | yes | One of `deal`, `signal`, `workspace`. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Rules**
 
@@ -209,7 +195,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_run
 
-17 columns · primary key `(id)` · referenced by 3 foreign keys
+14 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -223,12 +209,9 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `outbox_inputs_tracked` | `boolean`, default `false` | yes |  |
 | `read_through_generation` | `bigint` |  |  |
 | `readiness` | `text` |  | One of `ready`, `ready_with_exceptions`, `needs_review`, `checks_incomplete`. |
-| `requested_by` | `text` |  |  |
-| `rule_versions` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `status` | `text`, default `'running'::text` | yes | One of `running`, `complete`, `incomplete`. |
 | `subject_deal_id` | `uuid` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Rules**
@@ -236,7 +219,6 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 - `assurance_run_counts_are_tallies`: `CHECK (((eligible_deals >= 0) AND (eligible_signals >= 0)))`
 - `assurance_run_readiness_check`: `CHECK (((readiness IS NULL) OR (readiness = ANY (ARRAY['ready', 'ready_with_exceptions', 'needs_review', 'checks_incomplete']))))`
 - `assurance_run_readiness_matches_status`: `CHECK (((status = 'running') = (readiness IS NULL)))`
-- `assurance_run_requester_is_named`: `CHECK (((requested_by IS NULL) OR (length(btrim(requested_by)) > 0)))`
 - `assurance_run_status_check`: `CHECK ((status = ANY (ARRAY['running', 'complete', 'incomplete'])))`
 
 **Indexes**
@@ -246,19 +228,18 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000, "requested_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"requested_by":20000,"status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"digest": 20000, "status": 20000, "readiness": 20000, "captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"digest":20000,"readiness":20000,"status":20000}')`
 
 ## assurance_run_finding
 
-4 columns · primary key `(run_id, exception_id)` · referenced by 0 foreign keys
+3 columns · primary key `(run_id, exception_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `exception_id` | `uuid` | yes | Points at `assurance_exception.id`. |
 | `observed_at` | `timestamp with time zone` | yes |  |
 | `run_id` | `uuid` | yes | Points at `assurance_run.id`. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
 
@@ -274,7 +255,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_source_coverage
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+6 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -283,9 +264,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `run_id` | `uuid` | yes | Points at `assurance_run.id`. |
 | `state` | `text` | yes | One of `checked`, `stale`, `unavailable`, `permission_limited`, `not_connected`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | One of `mail`, `calendar`, `documents`, `contracts`, `offers`, `incumbent`. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 

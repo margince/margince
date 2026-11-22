@@ -47,6 +47,9 @@ func (h Handlers) me(ctx context.Context, id Identity) (crmcontracts.MeResponse,
 	resp := h.meResponse(ctx, id)
 	asCaller := actorCtx(ctx, id)
 	var err error
+	if resp.RoleNames, err = h.svc.heldRoleNames(asCaller, id.Roles); err != nil {
+		return crmcontracts.MeResponse{}, err
+	}
 	if resp.Authorization.RefusedDealFilters, err = refusedFilters(asCaller, h.refusedDealFilters); err != nil {
 		return crmcontracts.MeResponse{}, err
 	}

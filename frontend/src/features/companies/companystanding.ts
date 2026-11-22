@@ -28,10 +28,14 @@ export type CompanyVerdict = Readonly<{
   sentence?: string;
 }>;
 
+// One rating alone is that dimension's word, not the account's.
+const RATED_FOR_A_CALL = 2;
+
 /**
  * The account's call: the worst rated dimension's word, never an average, and
- * that dimension's reason as the sentence. The Next bar above already says
- * what is owed, so the moment is the sentence only when nothing is rated.
+ * that dimension's reason as the sentence. Below RATED_FOR_A_CALL ratings it
+ * reads as unrated; the rows still show the one rating. The Next bar above
+ * already says what is owed, so the moment is the sentence only when unrated.
  */
 export function companyVerdict({
   dimensions,
@@ -47,7 +51,8 @@ export function companyVerdict({
   // The account's activity, read when nobody has rated it.
   unrated?: CompanyVerdict;
 }>): CompanyVerdict {
-  const { overall } = worstOf(dimensions);
+  const worst = worstOf(dimensions);
+  const overall = worst.rated >= RATED_FOR_A_CALL ? worst.overall : undefined;
   const owed =
     moment && moment.rule !== "nothing_needed" ? moment.why_now : undefined;
   if (!overall && !withheld && unrated) {
@@ -60,11 +65,11 @@ export function companyVerdict({
       sentence: owed,
     };
   }
-  const worst = dimensions.find((dimension) => dimension.rating === overall);
+  const named = dimensions.find((dimension) => dimension.rating === overall);
   return {
     word: labelFor(HEALTH_RATING_LABEL, overall),
     tone: ratingTone(overall),
-    sentence: worst?.reason ?? owed,
+    sentence: named?.reason ?? owed,
   };
 }
 

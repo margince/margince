@@ -39,8 +39,8 @@ func TestMergingACompanyMovesDraftsVerdictsAndNotices(t *testing.T) {
 		subject ids.CompanyID
 		key     string
 	}{{source, "a"}, {source, "b"}, {survivor, "a"}} {
-		e.execAs(ctx, t, `INSERT INTO ai_feedback (subject_type, subject_id, claim_kind, claim_key, verdict, source, captured_by)
-			VALUES ('company', $1, 'signal', $2, 'confirmed', 'human', 'human:x')`, row.subject, row.key)
+		e.execAs(ctx, t, `INSERT INTO ai_feedback (subject_type, subject_id, claim_kind, claim_key, verdict, captured_by)
+			VALUES ('company', $1, 'signal', $2, 'confirmed', 'human:x')`, row.subject, row.key)
 	}
 	e.execAs(ctx, t, `INSERT INTO notice (kind, subject, recipient_user_id, captured_by, target_type, target_id)
 		VALUES ('automation', 'look', $1, 'human:x', 'company', $2)`, e.rep, source)

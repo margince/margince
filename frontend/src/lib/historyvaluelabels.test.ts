@@ -163,6 +163,8 @@ describe("history value labels", () => {
     const extra = historyValueFields()
       .filter((field) => !closed.has(field))
       .filter((field) => !field.startsWith("qualifying_event"))
+      // Audit images' own keys: their codes are the warning's contract reasons.
+      .filter((field) => !field.startsWith("impersonation_warning_"))
       .filter(
         (field) => !["occurred_precision", "call_outcome"].includes(field),
       )

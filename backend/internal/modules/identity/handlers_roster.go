@@ -58,9 +58,10 @@ func (h Handlers) ListUsers(w http.ResponseWriter, r *http.Request, params crmco
 // active member count.
 func (h Handlers) ListTeams(w http.ResponseWriter, r *http.Request, params crmcontracts.ListTeamsParams) {
 	rows, page, err := h.svc.ListTeams(r.Context(), ListTeamsInput{
-		Q:      params.Q,
-		Cursor: params.Cursor,
-		Limit:  params.Limit,
+		Q:               params.Q,
+		Cursor:          params.Cursor,
+		Limit:           params.Limit,
+		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -163,6 +164,7 @@ func wireTeam(tm teamRow) crmcontracts.Team {
 		Name:        tm.Name,
 		MemberCount: &count,
 		CreatedAt:   &created,
+		ArchivedAt:  tm.ArchivedAt,
 	}
 }
 

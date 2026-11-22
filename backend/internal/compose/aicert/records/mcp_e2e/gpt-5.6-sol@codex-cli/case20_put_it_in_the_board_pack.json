@@ -13,21 +13,21 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "ad14160c97b2ad8e",
+    "scenario": "e64b1e840f9a659d",
     "tools": "3e7244bead932e3a",
     "instructions": "c5c644eee9719be0",
     "judge": "",
     "harness": "024566e70b0c3db3",
-    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
-    "ran_at": "2026-11-21T22:12:43Z",
-    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
-    "graded_at": "2026-11-21T23:35:18Z"
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:17:17Z",
+    "graded_commit": "c7d8c959b7e859b9765ae0637afffe55d0de36a2",
+    "graded_at": "2026-11-22T14:05:56Z"
   },
   "usage": {
-    "input_tokens": 106071,
-    "output_tokens": 7290,
+    "input_tokens": 92995,
+    "output_tokens": 6897,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 846080,
+    "cache_read_input_tokens": 908928,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -38,57 +38,56 @@
       "tools": [
         "compose_analytics_report",
         "describe_analytics_vocabulary",
-        "describe_report_vocabulary",
-        "list_pipelines",
-        "list_report_runs",
+        "describe_report_blocks",
         "read_analytics",
         "read_reporting",
         "read_reports",
         "read_workspace",
-        "run_analytics_query",
-        "whoami"
+        "run_analytics_query"
       ]
     },
     {
       "passed": true,
       "tools": [
+        "change_reports",
         "compose_analytics_report",
+        "create_reporting_report",
         "describe_analytics_vocabulary",
         "describe_report_blocks",
         "describe_report_vocabulary",
         "describe_router_actions",
-        "explain_report_run_cell",
-        "get_report_run",
-        "list_pipelines",
-        "list_report_runs",
         "read_analytics",
+        "read_attention",
+        "read_reporting",
         "read_reports",
         "read_workspace",
-        "run_analytics_query"
+        "run_analytics_query",
+        "whats_slipping_this_week",
+        "whoami"
       ]
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 16,
-      "min": 15,
+      "median": 12.5,
+      "min": 8,
       "max": 17
     },
     "refused": {
-      "median": 4,
-      "min": 4,
-      "max": 4
+      "median": 2.5,
+      "min": 2,
+      "max": 3
     },
     "prompt_tokens": {
-      "median": 476075.5,
-      "min": 461401,
-      "max": 490750
+      "median": 500961.5,
+      "min": 244891,
+      "max": 757032
     },
     "output_tokens": {
-      "median": 3645,
-      "min": 3468,
-      "max": 3822
+      "median": 3448.5,
+      "min": 2159,
+      "max": 4738
     }
   }
 }
