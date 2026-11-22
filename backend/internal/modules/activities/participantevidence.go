@@ -43,6 +43,7 @@ func CountParticipantEvidence(ctx context.Context, q datatask.Querier, maximum i
 	return count, err
 }
 
+// A sweep by row id takes no meeting's attendee lock; the hourly evidence pass corrects it.
 func storeParticipantEvidenceRows(ctx context.Context, tx pgx.Tx, rows pgx.Rows) ([]ids.UUID, int, error) {
 	keys, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {

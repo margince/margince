@@ -72,6 +72,9 @@ func (g LaterGuests) Changed() bool {
 // stampBirthParties writes a new activity's further parties. A calendar's
 // rows carry the seat whose roster listed them, so a later sync can settle them.
 func stampBirthParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, id.UUID); err != nil {
+		return err
+	}
 	attested := ParticipantListAttested(rec)
 	var roster *ids.UUID
 	if seat := actorUserID(ctx); fields.Kind == meetingKind && attested && seat != ids.Nil {
@@ -112,6 +115,9 @@ func SettleMeetingRosterTx(
 	listed := append(append([]connector.MessageParticipant{}, roster.Parties.Participants...), roster.Parties.Withheld...)
 	if roster.Seat == ids.Nil || (len(listed) == 0 && !roster.Left && (roster.OwnerAnswer == nil || roster.OwnerAnswer.Response == "")) {
 		return LaterGuests{}, nil
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return LaterGuests{}, err
 	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {

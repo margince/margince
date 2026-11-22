@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -30,6 +31,26 @@ func Page[T any](
 	originalOf func(*T) (ids.UUID, *[]byte),
 	fix func(context.Context, pgx.Tx, T) (bool, error),
 ) (datatask.BatchOut, error) {
+	return readPage(ctx, tx, in, columns, scope, " FOR UPDATE OF a", originalOf, fix)
+}
+
+// AttendeePage is Page for a step whose fix writes the meetings' attendee rows.
+// It takes their attendee locks before their row locks, as a judge needs.
+func AttendeePage[T any](
+	ctx context.Context, tx pgx.Tx, in datatask.BatchIn, columns, scope string,
+	originalOf func(*T) (ids.UUID, *[]byte),
+	fix func(context.Context, pgx.Tx, T) (bool, error),
+) (datatask.BatchOut, error) {
+	return readPage(ctx, tx, in, columns, scope, "", originalOf, fix)
+}
+
+// readPage reads with lock as its row lock. Without one it takes
+// storekit.LockMeetingAttendeePage over the rows it read.
+func readPage[T any](
+	ctx context.Context, tx pgx.Tx, in datatask.BatchIn, columns, scope, lock string,
+	originalOf func(*T) (ids.UUID, *[]byte),
+	fix func(context.Context, pgx.Tx, T) (bool, error),
+) (datatask.BatchOut, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return datatask.BatchOut{}, err
 	}
@@ -38,7 +59,7 @@ func Page[T any](
 		return datatask.BatchOut{}, err
 	}
 	rows, err := tx.Query(ctx, "SELECT "+columns+" "+scope+
-		" AND a.id > @stored_mail_after ORDER BY a.id LIMIT @stored_mail_limit FOR UPDATE OF a",
+		" AND a.id > @stored_mail_after ORDER BY a.id LIMIT @stored_mail_limit"+lock,
 		pgx.NamedArgs{"stored_mail_after": after, "stored_mail_limit": in.Limit})
 	if err != nil {
 		return datatask.BatchOut{}, err
@@ -48,10 +69,18 @@ func Page[T any](
 		return datatask.BatchOut{}, err
 	}
 	scanned := make([]ids.UUID, 0, len(candidates))
+	for i := range candidates {
+		id, _ := originalOf(&candidates[i])
+		scanned = append(scanned, id)
+	}
+	if lock == "" {
+		if err := storekit.LockMeetingAttendeePage(ctx, tx, scanned); err != nil {
+			return datatask.BatchOut{}, err
+		}
+	}
 	changed := 0
 	for _, candidate := range candidates {
-		id, payload := originalOf(&candidate)
-		scanned = append(scanned, id)
+		_, payload := originalOf(&candidate)
 		*payload, err = originalstore.RepairPayload(ctx, *payload)
 		if err != nil {
 			return datatask.BatchOut{}, err

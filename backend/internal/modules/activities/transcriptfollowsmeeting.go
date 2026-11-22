@@ -45,6 +45,9 @@ var transcriptReadersDriftSQL = `(t.audience IS DISTINCT FROM m.audience OR t.au
 
 // copyMeetingReadersTx gives transcript the readers of meeting.
 func copyMeetingReadersTx(ctx context.Context, tx pgx.Tx, transcript, meeting ids.ActivityID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, transcript.UUID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE activity t SET audience = f.audience, audience_reason = f.audience_reason
 		  FROM activity f WHERE t.id = $1 AND t.archived_at IS NULL AND f.id = $2`, transcript, meeting); err != nil {
@@ -83,16 +86,19 @@ func copyMeetingReadersTx(ctx context.Context, tx pgx.Tx, transcript, meeting id
 // readers as they are now.
 func followRecordedMeetingTx(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) error {
 	rows, err := tx.Query(ctx, `SELECT t.id FROM activity t JOIN activity m ON m.id = $1
-		 WHERE `+recordingTranscriptSQL+` AND `+transcriptReadersDriftSQL+` ORDER BY t.id FOR UPDATE OF t`, meeting)
+		 WHERE `+recordingTranscriptSQL+` AND `+transcriptReadersDriftSQL+` ORDER BY t.id`, meeting)
 	if err != nil {
 		return fmt.Errorf("activities: reading the transcripts of a meeting: %w", err)
 	}
-	transcripts, err := pgx.CollectRows(rows, pgx.RowTo[ids.ActivityID])
+	transcripts, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
 		return fmt.Errorf("activities: reading the transcripts of a meeting: %w", err)
+	}
+	if err := storekit.LockMeetingAttendeePage(ctx, tx, transcripts); err != nil {
+		return err
 	}
 	for _, transcript := range transcripts {
-		if err := followMeetingReadersTx(ctx, tx, transcript, meeting); err != nil {
+		if err := followMeetingReadersTx(ctx, tx, ids.From[ids.ActivityKind](transcript), meeting); err != nil {
 			return err
 		}
 	}
@@ -131,6 +137,13 @@ func FollowDriftedTranscriptsTx(ctx context.Context, tx pgx.Tx, after ids.Activi
 	var page DriftedPage
 	if len(drifted) == limit {
 		page.Next = drifted[len(drifted)-1].transcript
+	}
+	transcripts := make([]ids.UUID, 0, len(drifted))
+	for _, p := range drifted {
+		transcripts = append(transcripts, p.transcript.UUID)
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, transcripts...); err != nil {
+		return DriftedPage{}, err
 	}
 	for _, p := range drifted {
 		locked, err := lockRecordedPairTx(ctx, tx, p)
