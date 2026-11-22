@@ -1677,6 +1677,7 @@ rls-store-path:
 ## judge that agreed with everything fails every defect fixture, and a judge that
 ## cannot be reached is a stop rather than a pass.
 test-e2e-llm-check:
+	@./scripts/test-e2e-llm-sweep.sh
 	@./scripts/test-e2e-llm-check.sh
 
 ## test-dev-postgres-container — prove the dev tooling names ONE database: the

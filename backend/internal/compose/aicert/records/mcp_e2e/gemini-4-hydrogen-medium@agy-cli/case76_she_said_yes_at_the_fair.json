@@ -11,13 +11,94 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "22fad93ffe20de9f",
+    "tools": "45943c69262917af",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T19:13:04Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:28Z"
+  },
   "usage": {
-    "input_tokens": 55079,
-    "output_tokens": 12391,
+    "input_tokens": 58818,
+    "output_tokens": 13897,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 139773,
+    "cache_read_input_tokens": 164150,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "get_record_tags",
+        "list_contact_stops",
+        "list_tags",
+        "read_context",
+        "read_details",
+        "read_installation_jurisdiction",
+        "read_lists",
+        "read_tags",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "list_contact_stops",
+        "list_tags",
+        "read_context",
+        "read_details",
+        "read_lists",
+        "read_tags",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 12.5,
+      "min": 12,
+      "max": 13
+    },
+    "turns": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 111484,
+      "min": 111009,
+      "max": 111959
+    },
+    "output_tokens": {
+      "median": 6948.5,
+      "min": 6742,
+      "max": 7155
+    }
   }
 }

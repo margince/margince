@@ -1,0 +1,92 @@
+{
+  "scenario": "case128_is_she_here_twice",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "5e50de10116de62e",
+    "tools": "888deb9293370bf9",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "3113e9fb6f350addda368cedeb5865ef5276dc41",
+    "ran_at": "2026-11-21T22:05:28Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:35:51Z"
+  },
+  "usage": {
+    "input_tokens": 71585,
+    "output_tokens": 3767,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 539904,
+    "runs_measured": 3,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_context",
+        "read_record",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "review_commitments",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "list_records",
+        "read_context",
+        "read_record",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 9,
+      "min": 7,
+      "max": 9
+    },
+    "refused": {
+      "median": 2,
+      "min": 2,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 221719,
+      "min": 118721,
+      "max": 271049
+    },
+    "output_tokens": {
+      "median": 1367,
+      "min": 1007,
+      "max": 1393
+    }
+  }
+}

@@ -15,22 +15,22 @@
   "stamp": {
     "scenario": "d47f8a817c6ab591",
     "tools": "8b653e7a3d01b493",
-    "instructions": "933a67b45ed0a6ae",
+    "instructions": "a0e5174113e30161",
     "judge": "claude-haiku-5-5",
-    "harness": "d904305f3d25fa7b",
-    "commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
-    "ran_at": "2026-11-21T15:14:55Z",
-    "graded_commit": "bfebed49f34f2d9f341c22a0e31b08eac13fd316",
-    "graded_at": "2026-11-21T15:14:55Z"
+    "harness": "024566e70b0c3db3",
+    "commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
+    "ran_at": "2026-11-21T23:00:45Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:36:57Z"
   },
   "usage": {
-    "input_tokens": 34,
-    "output_tokens": 2603,
-    "cache_creation_input_tokens": 17566,
-    "cache_read_input_tokens": 121533,
+    "input_tokens": 32,
+    "output_tokens": 2490,
+    "cache_creation_input_tokens": 18691,
+    "cache_read_input_tokens": 111872,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1085
+    "cost_usd": 0.1109
   },
   "tools_by_run": [
     {
@@ -53,34 +53,34 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 8.5,
-      "min": 7,
-      "max": 10
+      "median": 9,
+      "min": 9,
+      "max": 9
     },
     "turns": {
-      "median": 9.5,
-      "min": 8,
-      "max": 11
+      "median": 10,
+      "min": 10,
+      "max": 10
     },
     "refused": {
-      "median": 0.5,
+      "median": 0,
       "min": 0,
-      "max": 1
+      "max": 0
     },
     "prompt_tokens": {
-      "median": 69566.5,
-      "min": 51523,
-      "max": 87610
+      "median": 65297.5,
+      "min": 65083,
+      "max": 65512
     },
     "output_tokens": {
-      "median": 1301.5,
-      "min": 1100,
-      "max": 1503
+      "median": 1245,
+      "min": 1224,
+      "max": 1266
     },
     "duration_ms": {
-      "median": 16179.5,
-      "min": 13970,
-      "max": 18389
+      "median": 15390.5,
+      "min": 15383,
+      "max": 15398
     }
   }
 }
