@@ -35,6 +35,11 @@ import (
 // means something.
 const sweepTickBudget = 25
 
+// sweepFixedShare is how many of a tick's places go first to contacts a user
+// just fixed. It divides the budget and never adds to it, so a daily run limit
+// still caps the total.
+const sweepFixedShare = 5
+
 // BackfillSweep queues free lookups for contacts no run has covered, and
 // applies purchases that are stored but never reached a record.
 //

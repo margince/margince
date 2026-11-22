@@ -63,32 +63,75 @@ const coveredByARun = `
 	OR (r.state IN ('skipped', 'failed', 'cancelled', 'submission_unknown')
 	    AND r.created_at > now() - interval '` + sweepRetryAfter + `'
 	    AND NOT (r.skip_reason = 'no_identifiers'
-	             AND (p.updated_at > r.created_at
-	                  OR EXISTS (
-	                      SELECT 1 FROM relationship employer
-	                       WHERE employer.contact_id = p.id
-	                         AND employer.kind = 'employment'
-	                         AND employer.archived_at IS NULL
-	                         AND employer.updated_at > r.created_at))))`
+	             AND ` + contactChangedAt + ` > r.created_at))`
 
-// uncoveredSubjects names the contacts this tick should queue.
+// contactChangedAt is the later of the contact's own stamp and its newest
+// employment edge. GREATEST skips the NULL of a contact with no edge.
+const contactChangedAt = `GREATEST(p.updated_at,
+	(SELECT max(employer.updated_at) FROM relationship employer
+	  WHERE employer.contact_id = p.id
+	    AND employer.kind = 'employment'
+	    AND employer.archived_at IS NULL))`
+
+// owedLookupFilter holds the contacts a sweep may look at and that no run
+// covers. `p` is the contact; $1 is the provider name.
+var owedLookupFilter = `
+	p.archived_at IS NULL
+	AND p.merged_into_id IS NULL
+	AND NOT ` + auth.ContactRestrictedSQL("p.id") + `
+	AND NOT EXISTS (
+	    SELECT 1 FROM provider_run r
+	     WHERE r.contact_id = p.id AND r.provider = $1
+	       AND (` + coveredByARun + `))`
+
+// uncoveredSubjects names the contacts this tick should queue, at most limit.
 //
-// Ordered oldest-first so the sweep converges: a contact passed over stays at
-// the front of the queue rather than being overtaken by everything created
+// Up to sweepFixedShare places go first to contacts a user just fixed, newest
+// change first. Places that lane leaves empty go to the backlog.
+//
+// The backlog is ordered oldest-first so the sweep converges. A contact passed
+// over stays at the front rather than being overtaken by everything created
 // since.
 func (s *Store) uncoveredSubjects(ctx context.Context, tx pgx.Tx, name string, limit int) ([]string, error) {
-	rows, err := tx.Query(ctx, `
+	fixed, err := s.justFixedSubjects(ctx, tx, name, min(limit, sweepFixedShare))
+	if err != nil {
+		return nil, err
+	}
+	rest, err := s.querySubjects(ctx, tx, `
 		SELECT p.id::text
 		  FROM contact p
-		 WHERE p.archived_at IS NULL
-		   AND p.merged_into_id IS NULL
-		   AND NOT `+auth.ContactRestrictedSQL("p.id")+`
-		   AND NOT EXISTS (
-		       SELECT 1 FROM provider_run r
-		        WHERE r.contact_id = p.id AND r.provider = $1
-		          AND (`+coveredByARun+`))
+		 WHERE `+owedLookupFilter+`
+		   AND p.id::text <> ALL($3::text[])
 		 ORDER BY p.created_at
+		 LIMIT $2`, name, limit-len(fixed), append([]string{}, fixed...))
+	if err != nil {
+		return nil, err
+	}
+	return append(fixed, rest...), nil
+}
+
+// justFixedSubjects picks the contacts whose newest run was skipped for lack
+// of identifiers and whose record changed after it.
+func (s *Store) justFixedSubjects(ctx context.Context, tx pgx.Tx, name string, limit int) ([]string, error) {
+	return s.querySubjects(ctx, tx, `
+		SELECT p.id::text
+		  FROM contact p
+		  JOIN LATERAL (
+		       SELECT r.state, r.skip_reason, r.created_at
+		         FROM provider_run r
+		        WHERE r.contact_id = p.id AND r.provider = $1
+		        ORDER BY r.created_at DESC
+		        LIMIT 1) newest ON true
+		 WHERE newest.state = 'skipped' AND newest.skip_reason = 'no_identifiers'
+		   AND `+contactChangedAt+` > newest.created_at
+		   AND `+owedLookupFilter+`
+		 ORDER BY `+contactChangedAt+` DESC
 		 LIMIT $2`, name, limit)
+}
+
+// querySubjects runs one of the two selections above and collects the ids.
+func (s *Store) querySubjects(ctx context.Context, tx pgx.Tx, sql string, args ...any) ([]string, error) {
+	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, fmt.Errorf("integrations: reading the contacts still owed a lookup: %w", err)
 	}
