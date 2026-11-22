@@ -179,9 +179,8 @@ export function CreateAction<Created extends { id: string }>({
   // a dependent picker whose options only the server can narrow. See
   // usePublishedValues.
   onValuesChange?: (values: Record<string, string>) => void;
-  // The key is one per open dialog and per record. A repeat of the same save
-  // carries it, so a double press answers the first record. A POST that takes
-  // no Idempotency-Key ignores it.
+  // The key is one per request body: a double press answers the first record,
+  // and a resend with new fields takes a new key. A POST without one ignores it.
   create: CreateTransport<Created>;
   // A refusal this screen answers with its own verbs, or null for the
   // ordinary error line. `resend` sends the last submit again with `extra`.
