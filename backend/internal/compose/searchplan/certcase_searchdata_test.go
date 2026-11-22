@@ -3,7 +3,11 @@
 
 package searchplan
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+)
 
 const datedVocabulary = `{"record_vocabulary":{"targets":[{"target":"deal","fields":[
 {"name":"expected_close_date","kind":"date"},{"name":"created_at","kind":"timestamp"}]}]}}`
@@ -34,5 +38,27 @@ func TestAClosedDateBoundIsTheHalfOpenPlanItEquals(t *testing.T) {
 	}
 	if same, err := sameSearchPlanArguments(instant("lt", "2026-12-01"), instant("lte", "2026-11-30"), datedVocabulary); err != nil || same {
 		t.Errorf("a closed bound on an instant read as the half-open one: %v", err)
+	}
+}
+
+// A case may accept several plans that read the same rows; a plan that is none
+// of them is still wrong.
+func TestACaseAcceptsEachPlanItLists(t *testing.T) {
+	plan := func(entity string) string {
+		return `{"engine":"analytics","count":false,"arguments":"{\"entity\":\"` + entity + `\",\"measures\":[{\"fn\":\"count\"}],\"scope_kind\":\"workspace\"}"}`
+	}
+	prepared, err := Cases{}.Prepare([]byte(`{"question":"How many open deals?","vocabulary":"{\"context\":{\"base_currency\":\"EUR\"}}"}`),
+		[]byte(`[`+plan("open-deals-per-company")+`,`+plan("deals-by-stage")+`]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for entity, want := range map[string]string{
+		"open-deals-per-company": aitasks.OutcomeAccepted,
+		"deals-by-stage":         aitasks.OutcomeAccepted,
+		"loss-events":            aitasks.OutcomeWrongAnswer,
+	} {
+		if got := prepared.Evaluate(aitasks.Trace{Output: plan(entity)}); got.Result != want {
+			t.Errorf("%s: %v, want %v", entity, got, want)
+		}
 	}
 }

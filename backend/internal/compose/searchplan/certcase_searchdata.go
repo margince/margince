@@ -35,7 +35,7 @@ type Fixture struct {
 	Context    crmcontracts.AnalyticsContext `json:"context"`
 	SelfUserID string                        `json:"self_user_id"`
 	Objects    []string                      `json:"objects"`
-	want       Plan
+	wants      []Plan
 }
 
 // Prepare checks that the expected plan passes production admission.
@@ -59,11 +59,11 @@ func (factory Cases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepare
 	if c.Question == "" || c.Vocabulary == "" {
 		return nil, errors.New("a search case needs a question and vocabulary")
 	}
-	want, err := Decode(string(expected))
+	wants, err := decodeExpected(expected)
 	if err != nil {
 		return nil, err
 	}
-	c.want = want
+	c.wants = wants
 	return &c, nil
 }
 
@@ -79,21 +79,42 @@ func (c *Fixture) Run(ctx context.Context, lane aitasks.Completer) (aitasks.Trac
 	return trace, nil
 }
 
-// Evaluate compares the full typed plan, including its scope and filters.
+// Evaluate compares the full typed plan, including its scope and filters, with
+// each plan the case accepts.
 func (c *Fixture) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	got, err := Read(trace.Output, c.Question, c.Vocabulary)
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: err.Error()}
 	}
-	same, err := sameSearchPlanArguments(c.want, got, c.Vocabulary)
-	if err != nil {
-		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
+	for _, want := range c.wants {
+		same, err := sameSearchPlanArguments(want, got, c.Vocabulary)
+		if err != nil {
+			return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
+		}
+		if got.Engine == want.Engine && got.Count == want.Count && same {
+			return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+		}
 	}
+	return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: "the read plan differs from the expected source, period or filters"}
+}
 
-	if got.Engine != c.want.Engine || got.Count != c.want.Count || !same {
-		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: "the read plan differs from the expected source, period or filters"}
+// decodeExpected reads a case's answer: one plan, or a list of plans that each
+// read the same rows, as a count of open deals is one over either population
+// that holds them.
+func decodeExpected(expected json.RawMessage) ([]Plan, error) {
+	var answers []json.RawMessage
+	if json.Unmarshal(expected, &answers) != nil {
+		answers = []json.RawMessage{expected}
 	}
-	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
+	wants := make([]Plan, 0, len(answers))
+	for _, answer := range answers {
+		want, err := Decode(string(answer))
+		if err != nil {
+			return nil, err
+		}
+		wants = append(wants, want)
+	}
+	return wants, nil
 }
 
 func sameSearchPlanArguments(want, got Plan, vocabulary string) (bool, error) {
