@@ -196,7 +196,7 @@ func TestAQuietDealMovesByTheEffectLearnedFromSettledForecasts(t *testing.T) {
 }
 
 // freezeAt takes a daily workspace snapshot of a fixed quarter at a fixed
-// instant, so a test places a freeze on either side of a quarter's end.
+// instant. A test uses it to place freezes on either side of the quarter's end.
 func (f *stageCohortFixture) freezeAt(t *testing.T, takenAt time.Time, readings forecasting.Readings) {
 	t.Helper()
 	quarter, err := forecasting.ResolvePeriod(forecasting.PeriodQuarter, time.Date(2025, 5, 15, 0, 0, 0, 0, time.UTC), 1, time.UTC)
