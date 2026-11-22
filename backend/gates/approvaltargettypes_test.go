@@ -22,7 +22,6 @@ import (
 	"path"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -163,7 +162,7 @@ func recordStringConsts(out map[string]map[string]bool, file *ast.File) {
 				if i >= len(vs.Values) {
 					continue
 				}
-				if value, ok := stringConstValue(vs.Values[i]); ok {
+				if value, ok := gatekit.StringExpr(vs.Values[i], nil, gatekit.FoldStrict); ok {
 					if out[name.Name] == nil {
 						out[name.Name] = map[string]bool{}
 					}
@@ -174,26 +173,12 @@ func recordStringConsts(out map[string]map[string]bool, file *ast.File) {
 	}
 }
 
-// stringConstValue reads a literal or string(literal) constant value.
-func stringConstValue(expr ast.Expr) (string, bool) {
-	switch e := expr.(type) {
-	case *ast.BasicLit:
-		value, err := strconv.Unquote(e.Value)
-		return value, e.Kind == token.STRING && err == nil
-	case *ast.CallExpr:
-		if fn, ok := e.Fun.(*ast.Ident); ok && fn.Name == "string" && len(e.Args) == 1 {
-			return stringConstValue(e.Args[0])
-		}
-	}
-	return "", false
-}
-
 // resolveStringValue reads an Ident from its own package. It reads a selector
 // from the constant of that name, only when one package declares it.
 func resolveStringValue(expr ast.Expr, local, global map[string]map[string]bool) []string {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
-		if value, ok := stringConstValue(e); ok {
+		if value, ok := gatekit.StringExpr(e, nil, gatekit.FoldStrict); ok {
 			return []string{value}
 		}
 	case *ast.Ident:
