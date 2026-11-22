@@ -24,6 +24,7 @@ import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { STAGE_CHANCES_KEY } from "../../lib/activitykeys";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import {
   isVersionSkew,
   isVersionSkewOf,
@@ -119,7 +120,7 @@ export function onlyClosingStages(ladder: readonly Stage[]): Set<string> {
 }
 
 export function ladderOf(pipeline: Pipeline): Stage[] {
-  return [...(pipeline.stages ?? [])].sort((a, b) => a.position - b.position);
+  return inPositionOrder(pipeline.stages ?? []);
 }
 
 // A new stage is created at the end of the ladder. The server moves an open

@@ -4624,12 +4624,13 @@ export interface paths {
          * Advance a deal to a new stage (audit-logged with prior + next stage).
          * @description The `advance_deal` MCP verb. Writes one `deal_stage_history` row + one audit row
          *     (action `advance_stage`) recording prior + next stage; closed-won emits `deal.stage_changed` (to_status=won).
-         *     A move with a closed-won/closed-lost stage at EITHER end is 🟡 confirm-first
-         *     (irreversible / touches money) — for an agent caller this requires an approval
-         *     token. Closing a deal is the obvious half; REOPENING one is the other, and it is
-         *     the same money: moving a won deal back to an open stage clears its close date,
-         *     its lost reason and the FX rate frozen at close, and takes revenue out of a
-         *     quarter that has already been reported.
+         *     An agent on a user's passport moves the deal at once, closing or reopening it
+         *     included: it may do unaided what its user may do. A move with a closed-won/closed-lost
+         *     stage at EITHER end is 🟡 confirm-first only for automatic work with no passport and
+         *     no user behind it, which needs an approval token. Closing a deal is the obvious half;
+         *     REOPENING one is the other, and it is the same money: moving a won deal back to an
+         *     open stage clears its close date, its lost reason and the FX rate frozen at close,
+         *     and takes revenue out of a quarter that has already been reported.
          *
          *     A move to the stage the deal already holds changes nothing and answers 200 with the
          *     deal as it stands: a retried call must not close a closed deal again and move its
@@ -4758,10 +4759,12 @@ export interface paths {
          *     the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
          *     timeline. The answer is the deal as it now stands and the note's activity id.
          *
-         *     The tier is the advance's. A move to or from a won or lost stage is confirm-first for
-         *     an agent: the call stages one approval and answers 403 `approval_required` naming it.
-         *     Repeat the same call with that id as `approval_id`, or as the `X-Approval-Token`
-         *     header, once a human has approved it. A human's own call is its approval.
+         *     The tier is the advance's. An agent on a user's passport moves the deal at once, to or
+         *     from a won or lost stage included. For automatic work with no passport and no user
+         *     behind it, such a move is confirm-first: the call stages one approval and answers 403
+         *     `approval_required` naming it. Repeat the same call with that id as `approval_id`, or as
+         *     the `X-Approval-Token` header, once a human has approved it. A human's own call is its
+         *     approval.
          *
          *     A retry with the same `idempotency_key` answers the first call's result and moves
          *     nothing. An `Idempotency-Key` header is taken as that key.
@@ -21075,7 +21078,8 @@ export interface paths {
         /**
          * List workspace teams — cursor-paginated. Read-only.
          * @description Teams available as record-share subjects, with a member count. Any authenticated member may read.
-         *     Excludes archived teams. Bounded by authenticated membership, like the member roster beside it.
+         *     Excludes archived teams unless `include_archived` is true, which needs `team_admin.read`.
+         *     Bounded by authenticated membership, like the member roster beside it.
          */
         get: operations["listTeams"];
         put?: never;
@@ -50680,6 +50684,10 @@ export interface components {
             confirm_requests_sendable?: boolean;
             /** @description Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact. */
             roles: string[];
+            /** @description The name an admin gave each live role in `roles`, keyed by role key. A member may not read the role directory, so this is how a screen shows a custom role by its name. A client may still show a seeded role in its own translation. Absent from an older server; a key it does not name is shown as the key. */
+            role_names?: {
+                [key: string]: string;
+            };
             teams: string[];
             team_week?: components["schemas"]["TeamWeekReach"];
             authorization?: components["schemas"]["Authorization"];
@@ -71855,7 +71863,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            /** @description RBAC denied, or a 🟡 transition attempted without an approval token. */
+            /** @description RBAC denied, or passportless automatic work attempted a 🟡 transition without an approval token. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -97357,6 +97365,8 @@ export interface operations {
                 limit?: components["parameters"]["Limit"];
                 /** @description Case-insensitive match over team name that ignores diacritics on both sides. */
                 q?: string;
+                /** @description True also lists archived teams, each carrying `archived_at`, so an admin can restore one. */
+                include_archived?: boolean;
             };
             header?: never;
             path?: never;
@@ -97374,6 +97384,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

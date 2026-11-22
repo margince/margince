@@ -142,8 +142,8 @@ func seedGmailConnection(ctx context.Context, t *testing.T, e *SearchEnv) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
-			INSERT INTO capture_connection (provider, user_id, scopes, status, auth)
-			VALUES ('gmail', $1, '{}', 'connected', $2)`,
+			INSERT INTO capture_connection (provider, user_id, status, auth)
+			VALUES ('gmail', $1, 'connected', $2)`,
 			e.Rep1, []byte(`{"refresh_token":"r","granted":[]}`))
 		return err
 	}); err != nil {

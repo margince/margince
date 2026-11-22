@@ -52,7 +52,7 @@ type CommitmentItem struct {
 	// vocabulary in tools_commitments.go.
 	State string `json:"state"`
 	// DaysOverdue is present only for an overdue promise, and zero is a real
-	// value there — hours late is late by no whole days.
+	// value there: late earlier today is late by no days.
 	DaysOverdue *int `json:"days_overdue,omitempty"`
 	// AssigneeID and AssigneeName are absent together for a promise nobody
 	// owns, which is the state this answer exists to make visible.

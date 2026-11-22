@@ -12,13 +12,12 @@ package deals
 // the same 200 re-qualified each pass. Deal 201 was never reached, and nothing
 // recorded that it had not been.
 //
-// So membership is frozen at the start of a pass and walked by keyset from a
-// durable cursor. The freeze is what makes the counts mean something: eligible
-// is a set that was decided once, checked is how much of THAT set reached a
-// terminal outcome, and a deal that closes mid-pass is recorded as skipped
-// rather than quietly leaving the denominator. The durable cursor is what makes
-// the 5-minute worker timeout survivable — a pass that runs out of time resumes
-// where it stopped instead of starting again at the first row.
+// So membership is frozen at the start of a pass and walked in frozen order
+// over the members still pending. The freeze gives the counts their meaning.
+// Eligible is a set decided once, and checked is how much of it reached a
+// terminal outcome. A deal that closes mid-pass is recorded as skipped and
+// stays in the denominator. A pass that runs out of the worker's time resumes
+// at its first pending member.
 
 import (
 	"context"
@@ -197,18 +196,16 @@ func (c *CloseDateCorrector) nextMembers(
 		return nil, nil, err
 	}
 	// PENDING IS THE CURSOR. The walk asks for unsettled members in frozen
-	// order and nothing else — no keyset predicate against the run's recorded
-	// position.
+	// order and nothing else, and the run records no position.
 	//
 	// A keyset would be a second answer to "where are we", and the two can
 	// disagree: a member reopened behind the cursor (a retry, a repair) is
 	// pending but sorts before the recorded position, so a keyset walk would
 	// step over it and the pass would finish with work still owed. Settling a
 	// member is what advances the walk, because settling is what removes it
-	// from this result. The stored cursor stays as the run's reported progress
-	// — a number for a reader, not a predicate for the query.
+	// from this result.
 	rows, err := tx.Query(ctx, `
-		SELECT m.deal_id, m.deal_created_at,
+		SELECT m.deal_id,
 		       d.id, d.name, d.created_at, d.last_activity_at, `+PauseEndsSQL("d")+`, `+MeetingAheadSQL("d")+`,
 		       d.expected_close_date, d.close_date_provisional, d.win_probability_override, d.win_probability_set_by,
 		       d.pipeline_id, d.owner_id, s.win_probability, d.stage_id,
@@ -239,7 +236,7 @@ func (c *CloseDateCorrector) nextMembers(
 		var pipelineID *ids.PipelineID
 		var winProbability, remainingOpen *int
 		var stageID *ids.UUID
-		if err := rows.Scan(&m.dealID, &m.createdAt,
+		if err := rows.Scan(&m.dealID,
 			&dealID, &name, &createdAt, &cand.lastActivityAt, &cand.waitUntil, &cand.meetingAhead,
 			&cand.expectedClose, &provisional, &cand.override, &cand.overrideBy,
 			&pipelineID, &cand.ownerID, &winProbability, &stageID, &remainingOpen); err != nil {
@@ -263,18 +260,15 @@ func (c *CloseDateCorrector) nextMembers(
 
 // closeDateMember is one frozen row's identity, enough to settle it.
 type closeDateMember struct {
-	dealID    ids.DealID
-	createdAt time.Time
-	gone      bool
+	dealID ids.DealID
+	gone   bool
 }
 
-// settle records one member's terminal outcome and advances the run's cursor to
-// it, in a single statement pair so a crash cannot leave the cursor ahead of the
-// work.
+// settle records one member's terminal outcome and counts it on the run. The
+// two statements share a transaction, so the counts never run ahead of the work.
 //
-// The cursor moves only over SETTLED members, which is what makes a resumed
-// pass neither skip a deal nor correct one twice: everything before the cursor
-// has an outcome, everything after it is still pending.
+// A settled member leaves the pending walk, which is what makes a resumed pass
+// neither skip a deal nor correct one twice.
 func (c *CloseDateCorrector) settle(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID, m closeDateMember, outcome string,
 ) error {
@@ -294,16 +288,15 @@ func (c *CloseDateCorrector) settle(
 		// than a second count.
 		return nil
 	}
-	// A failed member is settled but NOT checked: it advances the cursor so the
-	// pass moves past it, and stays out of the coverage numerator so "checked N
-	// of M" never counts a deal the sweep could not assess.
+	// A failed member is settled but not checked, so the pass moves past it.
+	// It stays out of "checked N of M", which counts only assessed deals.
 	_, err = tx.Exec(ctx, `
 		UPDATE close_date_run
-		   SET checked = checked + CASE WHEN $3 = 'failed' THEN 0 ELSE 1 END,
-		       corrected = corrected + CASE WHEN $3 = 'changed' THEN 1 ELSE 0 END,
-		       staged = staged + CASE WHEN $3 = 'staged' THEN 1 ELSE 0 END,
-		       cursor_created_at = $4, cursor_id = $2, updated_at = now()
-		 WHERE id = $1`, runID, m.dealID, outcome, m.createdAt)
+		   SET checked = checked + CASE WHEN $2 = 'failed' THEN 0 ELSE 1 END,
+		       corrected = corrected + CASE WHEN $2 = 'changed' THEN 1 ELSE 0 END,
+		       staged = staged + CASE WHEN $2 = 'staged' THEN 1 ELSE 0 END,
+		       updated_at = now()
+		 WHERE id = $1`, runID, outcome)
 	if err != nil {
 		return fmt.Errorf("close-date: advancing the pass over %s: %w", m.dealID, err)
 	}

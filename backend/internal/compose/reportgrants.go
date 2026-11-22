@@ -50,9 +50,10 @@ func vocabularyObjects(spec reportSpec, name string) []string {
 		func(object string) bool { return object == "" })
 }
 
-// referencedTables is the table a dimension's or filter's column references.
+// referencedTables is the table a dimension's, filter's or drill column's
+// column references.
 func referencedTables(spec reportSpec, name string) (out []string) {
-	for _, expr := range []string{spec.dimensions[name], spec.filters[name]} {
+	for _, expr := range []string{spec.dimensions[name], spec.filters[name], spec.drillColumns[name]} {
 		if table, scoped := spec.referenceScopes[expr]; scoped && expr != "" {
 			out = append(out, table)
 		}

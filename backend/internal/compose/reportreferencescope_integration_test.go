@@ -20,6 +20,8 @@ package compose
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
@@ -376,6 +378,45 @@ func TestTheOwnerOfACapturedPartnerStillSeesItNamed(t *testing.T) {
 	}
 	if !sawHidden {
 		t.Error("the capturing user's own partner was blanked from them; capture privacy is theirs, not a mask on everyone")
+	}
+}
+
+// The pipeline groups by stage and names a deal's partner, never its own
+// company. The drill-through rows carry that company beside the partner,
+// blanked where the reader cannot open it and named where they can.
+func TestThePipelineDrillThroughNamesEachDealsOwnCompany(t *testing.T) {
+	e := setupForecast(t)
+	hidden := e.seedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
+		VALUES ($1, $2, 'Hidden Account', 'owner', 'manual', 'human:x')`, e.Rep3)
+	open := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by)
+		VALUES ($1, 'Open Account', 'manual', 'human:x')`)
+	want := map[string]any{}
+	for company, shown := range map[ids.UUID]any{hidden: nil, open: open.String()} {
+		deal := e.seedID(t, `INSERT INTO deal (id, name, owner_id, pipeline_id, stage_id, company_id, amount_minor, currency, expected_close_date, source, captured_by)
+			VALUES ($1, 'Account deal', $2, $3, $4, $5, 10000, 'EUR', (now() + interval '30 days')::date, 'manual', 'human:x')`,
+			e.Rep1, e.pipeline, e.stages[60], company)
+		want[deal.String()] = shown
+	}
+	reader := e.dealReadCtx(e.Rep1, nil, principal.RowScopeAll)
+
+	result := e.runReport(reader, t, "pipeline-current", `{}`)
+	detail := e.explainReport(reader, t, "pipeline-current", result.DerivationURL)
+	if !slices.Contains(detail.Columns, "company_id") {
+		t.Fatalf("the drill-through columns %v carry no company_id", detail.Columns)
+	}
+	seen := 0
+	for _, row := range detail.Rows {
+		shown, seeded := want[fmt.Sprint(row["id"])]
+		if !seeded {
+			continue
+		}
+		seen++
+		if row["company_id"] != shown {
+			t.Errorf("deal %v shows company %v, want %v", row["id"], row["company_id"], shown)
+		}
+	}
+	if seen != len(want) {
+		t.Fatalf("the drill-through opened %d of the reader's %d deals; a hidden company blanks its id, not its row", seen, len(want))
 	}
 }
 

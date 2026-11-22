@@ -347,11 +347,11 @@ func (s *PendingStore) ResolveAs(
 		   SET status = $2, disposition_reason = NULLIF($3, ''),
 		       kind = COALESCE(NULLIF($5, ''), kind),
 		       resolved_by_owner = $6,
-		       confidence = $7, served_model = NULLIF($8, ''),
+		       confidence = $7,
 		       resolved_at = now(), next_attempt_at = NULL,
 		       claimed_until = NULL, claimed_by = NULL, updated_at = now()
 		 WHERE id = $1 AND status = 'pending' AND claimed_by = $4`,
-		p.ID, status, reason, p.Claim, kind, byOwner, measured.confidence(), measured.Model)
+		p.ID, status, reason, p.Claim, kind, byOwner, measured.confidence())
 	if err != nil {
 		return false, fmt.Errorf("capture: resolving disposition %s: %w", p.ID, err)
 	}

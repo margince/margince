@@ -42,36 +42,6 @@ func DayPassed(due, now time.Time, loc *time.Location) bool {
 	return due.In(loc).Format(time.DateOnly) < now.In(loc).Format(time.DateOnly)
 }
 
-// DaysPast is how many WHOLE days a due moment is behind now, and whether it is
-// behind at all.
-//
-// Whole days ELAPSED, not calendar days crossed. The two differ: a promise made
-// at 23:00 and judged at 01:00 has crossed a calendar day and elapsed two hours,
-// and calling that "a day late" overstates it.
-//
-// Calendar counting needs a timezone to say where a day begins. The
-// installation stores one, but it is not an argument here and this package is
-// stdlib-only by tier — so a caller that means calendar days must count them
-// where that setting is in scope, as the close-date sweep does.
-//
-// NOT `kernel/elapsed`, which counts calendar days in UTC and is the right
-// answer for ITS question. That one measures silence between two moments and is
-// deliberately calendar-based, so its wording can only change when the UTC-day
-// cache key it rides does. This one measures how far past a promise we are,
-// where elapsed time is what a reader means — 23:00 to 01:00 has crossed a
-// calendar day and is not "a day late". Reaching for the wrong one produces a
-// count that is off by one for most of every day.
-//
-// Zero is a real answer: something hours past its date is late by no whole
-// days, which is not the same as not being late. Callers read the bool, never
-// the count, to decide.
-func DaysPast(due *time.Time, now time.Time) (int, bool) {
-	if !Passed(due, now) {
-		return 0, false
-	}
-	return int(now.Sub(*due) / (24 * time.Hour)), true
-}
-
 // WallDayOffset is how many calendar days the chosen date of a task lies from
 // today in loc: negative once it is behind us, 0 on it. The date is read from
 // the wall clock text, not from the instant it resolves to. A reader in another
