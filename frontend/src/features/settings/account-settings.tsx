@@ -103,7 +103,11 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
                     {me.user.display_name || me.user.email}
                   </Heading>
                   {me.roles.map((role) => (
-                    <RoleBadge key={role} roleKey={role} />
+                    <RoleBadge
+                      key={role}
+                      roleKey={role}
+                      name={me.role_names?.[role]}
+                    />
                   ))}
                 </div>
                 <IdentityLine>

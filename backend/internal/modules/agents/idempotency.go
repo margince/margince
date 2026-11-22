@@ -43,6 +43,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -85,6 +86,9 @@ type Claim struct {
 	// Records is how many records the answer handed over when it was produced.
 	Records int
 	Reason  string
+	// Set on a mismatch only: when the key was first spent, and how that call stands.
+	FirstUsedAt time.Time
+	Earlier     ClaimState
 }
 
 // Idempotency is the claim store, implemented by the composition layer over the
@@ -174,8 +178,8 @@ func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved
 				"repeating it: %w", spec.Name, apperrors.ErrConflict)
 	case ClaimMismatch:
 		return false, "", nil, 0, fmt.Errorf(
-			"this idempotency_key was already used for a DIFFERENT %s call; send a new key to make this "+
-				"call, or repeat the original arguments to read its result: %w", spec.Name, apperrors.ErrConflict)
+			"this idempotency_key was already used for a DIFFERENT %s call%s; send a new key to make this "+
+				"call, or repeat the original arguments to read its result: %w", spec.Name, firstUse(claim), apperrors.ErrConflict)
 	case ClaimFailed:
 		// Honest about the one thing the caller needs to decide. The earlier
 		// attempt reached the tool, so whether it took effect is exactly what
@@ -192,6 +196,18 @@ func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved
 			"an earlier call with this idempotency_key is in a state this server cannot read, so it is not run "+
 				"again; check the record before retrying under a NEW key: %w", apperrors.ErrConflict)
 	}
+}
+
+// firstUse says when the key was first spent and how that call ended, so the
+// caller can check the record instead of guessing. Never its arguments or result.
+func firstUse(claim Claim) string {
+	if claim.FirstUsedAt.IsZero() {
+		return ""
+	}
+	outcome := map[ClaimState]string{
+		ClaimReplay: "; that call succeeded", ClaimFailed: "; that call failed", ClaimInFlight: "; that call is still running",
+	}[claim.Earlier]
+	return " (first used at " + claim.FirstUsedAt.UTC().Format(time.RFC3339) + outcome + ")"
 }
 
 // refuseUnkeyableCall refuses a key the surface would not honour: one on a tool
@@ -340,11 +356,6 @@ func (r *Registry) releaseUnrunKey(ctx context.Context, spec mcp.ToolSpec, res r
 // re-checking, against the caller AS THEY ARE NOW, every record the recorded
 // answer rests on.
 //
-// The evidence list is what makes this generic. Every sealed envelope carries
-// one, collected where records become tool output, so the question "which
-// records is this document about to hand over" is answered by the document
-// itself rather than by a table of tools someone keeps current.
-//
 // ALL OR NOTHING. One unreadable record refuses the whole replay: the recorded
 // bytes are a single document and there is no honest way to serve part of it.
 // The refusal is ErrNotFound, the same existence-hiding answer a live read of
@@ -357,16 +368,6 @@ func (r *Registry) replay(ctx context.Context, spec mcp.ToolSpec, claim Claim) (
 // ServeRecorded answers a stored envelope to the caller AS THEY ARE NOW: it
 // re-proves every record the document names, then hands the bytes back
 // unchanged.
-//
-// It exists because there are now TWO surfaces holding a recorded answer — the
-// idempotency claim, and an MCP task whose completed result a client may poll
-// for the life of its handle — and both are receipts that outlive the authority
-// they were produced under. One gate, called twice: a second implementation
-// would be a second answer to "may this caller still see this", and the two
-// would drift the first time either moved.
-//
-// The refusal is ErrNotFound, the existence-hiding answer a live read would
-// give.
 func (r *Registry) ServeRecorded(ctx context.Context, tool string, recorded json.RawMessage) (json.RawMessage, error) {
 	spec, ok := r.Spec(tool)
 	if !ok {
