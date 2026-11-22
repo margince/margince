@@ -7,11 +7,13 @@ package compose
 
 import (
 	"context"
+	"maps"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -70,12 +72,14 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 			field.Domain = filterDomain(spec, field.Expr)
 			field.Currency = granted.perRowCurrency(name)
 			field.Unpriced = granted.sumCoverage[name]
+			field.PartialSum = granted.partialSums && field.Unpriced != ""
 			field.Period = periodFieldOf(name, field.Expr)
 			if custom, ok := spec.customFields[field.Expr]; ok {
 				field = custom.describe(field)
 			}
 			entity.Fields[name] = field
 		}
+		entity.Coverage = partialSumCoverage(granted, entity.Fields)
 		// An entity with nothing left to name is not offered. A population a
 		// caller can see the existence of but ask nothing about is a name that
 		// only tells them a report exists.
@@ -85,6 +89,20 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 		entities[key] = entity
 	}
 	return analyticsquery.Schema{Entities: entities, Version: schemaVersion(entities)}
+}
+
+// partialSumCoverage is how a population's partial sums state what they leave
+// out, or nil when none is offered. A reader not granted the currency gets none listed.
+// Rows with a masked amount or currency never reach the counts, because the mask narrows the statement.
+func partialSumCoverage(granted reportSpec, fields map[string]analyticsquery.Field) *analyticsquery.MoneyCoverage {
+	if !granted.partialSums || !slices.ContainsFunc(slices.Collect(maps.Values(fields)), func(f analyticsquery.Field) bool { return f.PartialSum }) {
+		return nil
+	}
+	currency, ok := granted.dimensions[fieldCurrency]
+	if !ok {
+		currency = "NULL::text"
+	}
+	return &analyticsquery.MoneyCoverage{Value: pipelineBaseValueExpr, Amount: dealcoverage.AmountSQL, Currency: currency}
 }
 
 func addFields(into map[string]analyticsquery.Field, from map[string]string, kind analyticsquery.FieldKind) {

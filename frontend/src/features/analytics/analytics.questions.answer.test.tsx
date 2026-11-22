@@ -124,6 +124,39 @@ describe("the answer table", () => {
     expect(screen.getByText("Open")).toBeTruthy();
   });
 
+  it("marks a converted sum that leaves deals out and says why", async () => {
+    stubServer();
+    const coverage = (partial: boolean) => ({
+      aggregates: ["base"],
+      partial,
+      no_value_deals: partial ? 2 : 0,
+      no_rate_deals: partial ? 1 : 0,
+      missing_currencies: partial ? ["JPY"] : [],
+    });
+    renderAnswer(
+      {
+        ...ANSWER,
+        columns: ["stage_id", "base"],
+        rows: [
+          { stage_id: null, base: 528_000, _coverage: coverage(true) },
+          { stage_id: "s-2", base: null, _coverage: coverage(true) },
+          { stage_id: "s-3", base: 1_000, _coverage: coverage(false) },
+        ],
+      },
+      {
+        ...QUERY,
+        group_by: ["stage_id"],
+        measures: [{ fn: "sum", field: "amount_base_minor", as: "base" }],
+      },
+    );
+    const rows = bodyRows();
+    expect(rows[0].textContent).toContain("Partial");
+    expect(rows[0].textContent).toContain("1 deal has no exchange rate (JPY)");
+    expect(rows[0].textContent).toContain("2 deals have no value");
+    expect(rows[1].textContent).toContain("Partial");
+    expect(rows[2].textContent).not.toContain("Partial");
+  });
+
   it("gives no figure for native amounts summed across currencies", async () => {
     stubServer();
     renderAnswer(

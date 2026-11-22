@@ -270,6 +270,9 @@ func recordInvitationAnswerTx(
 	response crmcontracts.AnswerCalendarInvitationRequestResponse,
 ) error {
 	if invitation.meeting != nil {
+		if err := storekit.LockMeetingAttendeeWrites(ctx, tx, *invitation.meeting); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `UPDATE activity_participant SET response = $3
 			 WHERE activity_id = $1 AND user_id = $2`, *invitation.meeting, reader, string(response)); err != nil {
 			return fmt.Errorf("activities: recording the reader's answer on the meeting: %w", err)
