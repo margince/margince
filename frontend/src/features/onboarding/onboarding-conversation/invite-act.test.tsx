@@ -23,7 +23,7 @@ const asking: ConversationState = {
   phase: "in.ask",
 };
 
-function renderInvite() {
+function renderInvite(state: ConversationState = asking) {
   installFetchStub({ "GET /me": meRoute({}) });
   const dispatch = vi.fn();
   render(
@@ -33,7 +33,7 @@ function renderInvite() {
       }
     >
       <LocaleProvider initial="en">
-        <InviteAct state={asking} dispatch={dispatch} />
+        <InviteAct state={state} dispatch={dispatch} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -93,5 +93,18 @@ describe("InviteAct", () => {
 
     expect(dispatch).toHaveBeenCalledWith({ type: "INVITE_DECLINED" });
     expect(dispatch).not.toHaveBeenCalledWith({ type: "INVITE_ACCEPTED" });
+  });
+
+  // Yes leads straight to connect for a seat that may not train a voice, so
+  // the question promises that one step and no other.
+  it("names only the connect step to a creator who may not train a voice", async () => {
+    renderInvite({ ...asking, voiceStep: false });
+    expect(
+      await screen.findByRole("radio", {
+        name: /Connect your mailbox and calendar: 1 short step/,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/The next step is about you/)).toBeInTheDocument();
+    expect(document.body).not.toHaveTextContent(/voice|2 (short )?steps/i);
   });
 });

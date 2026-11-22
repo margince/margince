@@ -12391,7 +12391,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Trợ lý AI không thể đọc hay thêm ghi chú vào Bản tin sáng. Các hồ sơ, Danh sách công việc và tổng kết tuần theo lịch vẫn sử dụng được.",
   "overnightGrant.saveFailedTitle": "Không thể lưu câu trả lời",
   "overnightGrant.saveFailed":
-    "Mọi thứ khác đã kết nối. Sau khi đăng nhập, thiết lập tùy chọn này trong Cài đặt, mục Kết nối.",
+    "Mọi thứ khác đã kết nối. Sau khi đăng nhập, thiết lập tùy chọn này trong Cài đặt, mục Tài khoản.",
   "overnightGrant.renewTitle": "Quyền qua đêm đã hết hạn",
   "overnightGrant.renew":
     "Tắt rồi bật lại tùy chọn này để gia hạn. Cho đến lúc đó, Margince sẽ không chuẩn bị Bản tin sáng.",
@@ -13070,22 +13070,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.company.confirmed":
     "Đã xác nhận hồ sơ công ty. Mỗi giá trị đã lưu đều ghi lại nguồn.",
   "ob.conv.manual.chosen": "Tôi sẽ tự nhập.",
-  "ob.conv.voice.skipped": "Tạm bỏ qua giọng văn.",
+  "ob.conv.voice.skipped": "Tạm bỏ qua",
   "ob.conv.voice.uploadAdded": "Đã thêm {name}.",
   "ob.conv.voice.speakerQuestion":
-    "Bản chép lời này có nhiều người nói. Bạn là người nào? Chỉ lời của chính bạn được tính.",
+    "“{name}” có nhiều người nói. Bạn là người nào? Chỉ lời của chính bạn được tính.",
+  "ob.conv.voice.speakerSkip": "Bỏ qua tệp này",
   "ob.conv.voice.speakerOptionDetail": "số từ: {words} · lượt nói: {turns}",
   "ob.conv.voice.speakerFoot": "Lựa chọn này chỉ áp dụng cho tệp này.",
   "ob.conv.voice.speakerContinue": "Dùng người nói này",
-  "ob.conv.voice.continueSkippedStatus":
-    "Đã bỏ qua. Bổ sung sau trong Cài đặt.",
   "ob.conv.voice.continueFailedStatus":
     "Nội dung đã thêm vẫn được giữ. Thử lại ngay, hoặc tiếp tục và hoàn tất phần này sau.",
   "ob.conv.voice.continueDeferredStatus":
     "Không cần làm gì. Có thể tiếp tục; hồ sơ giọng văn sẽ tự dựng xong.",
   "ob.conv.voice.composer": "Dán văn bản bạn đã viết vào đây",
   "ob.conv.voice.dropHint":
-    "Cũng có thể thả tệp vào bất cứ đâu trong cuộc trò chuyện này: .txt, .md, .pdf, .docx hoặc bản chép lời .vtt, .srt hay .json.",
+    "Cũng có thể thả tệp vào bất cứ đâu trong cuộc trò chuyện này: .txt, .md, .pdf, .docx hoặc bản chép lời .vtt, .srt hay .json. Mỗi tệp khi gửi phải dưới {limit} một chút. Văn bản có nhiều dấu ngoặc kép hoặc ngắt dòng sẽ chạm giới hạn này sớm hơn.",
   "ob.conv.voice.fileSkipped":
     "Tôi không thể đọc {name}. Định dạng hỗ trợ: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "ob.conv.voice.fileUnreadable":
@@ -13097,12 +13096,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.reactionDocument":
     "Số từ đã tính: {words}. Mọi từ trong tệp này đều là của bạn.",
   "ob.conv.voice.refusalUnattributed":
-    "Đây có vẻ là một cuộc hội thoại, nhưng tôi không thể xác định lời nào là của bạn, nên không tính từ nào.",
+    "{name} có vẻ là một cuộc hội thoại, nhưng tôi không thể xác định lời nào là của bạn, nên không tính từ nào.",
   "ob.conv.voice.refusalSpeaker":
-    "Tôi không tìm thấy người nói đó trong bản chép lời. Không có gì được tính.",
+    "Tôi không tìm thấy người nói đó trong {name}. Không có gì được tính.",
   "ob.conv.voice.refusalUnsupported":
-    "Tôi không thể đọc tệp đó dưới dạng văn bản hoặc bản chép lời. Không có gì được tính.",
-  "ob.conv.voice.ingestFailed": "Tôi không thể thêm nguồn đó: {detail}",
+    "Tôi không thể đọc {name} dưới dạng văn bản hoặc bản chép lời. Không có gì được tính.",
+  "ob.conv.voice.refusalTooLarge":
+    "{name} quá lớn để thêm. Mỗi tệp khi gửi phải dưới {limit} một chút, và dấu ngoặc kép cùng ngắt dòng chiếm thêm chỗ. Hãy chia thành các tệp nhỏ hơn.",
+  "ob.conv.voice.ingestFailed": "Tôi không thể thêm {name}: {detail}",
   "ob.conv.voice.ingestUnexpected":
     "Tôi không thể thêm nguồn đó. Thử lại sau ít phút.",
   "ob.conv.voice.pasteAdd": "Thêm vào kho văn mẫu",
@@ -13126,8 +13127,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa thu thập được gì. Đính kèm một bản chép lời hoặc văn bản bạn đã viết.",
   "ob.conv.voice.meterWords": "Số từ của bạn: {words} trên {target}",
   "ob.conv.voice.meterBand": "Chất lượng: {band}",
-  "ob.conv.voice.manifestKept": "Đã giữ {kept} trên {total} từ",
-  "ob.conv.voice.manifestWords": "{words} từ",
+  "ob.conv.voice.manifestKept_one": "Đã giữ {kept} trên {total} từ",
+  "ob.conv.voice.manifestKept_other": "Đã giữ {kept} trên {total} từ",
+  "ob.conv.voice.manifestWords_one": "{words} từ",
+  "ob.conv.voice.manifestWords_other": "{words} từ",
+  "ob.conv.voice.floorShort_one": "Thêm {words} từ nữa để dựng.",
+  "ob.conv.voice.floorShort_other": "Thêm {words} từ nữa để dựng.",
+  "ob.conv.voice.waitForSamples": "Hãy đợi văn mẫu được thêm xong.",
   "ob.conv.voice.registerMix": "Văn phong: {mix}",
   "ob.conv.voice.stageTitle": "Tiến độ dựng",
   "ob.conv.corpus.words":
@@ -13229,6 +13235,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.voice.browse": "Chọn tệp",
   "ob.conv.voice.pasteInstead": "Dán văn bản thay vì tải tệp",
   "ob.conv.voice.sourcesTitle": "Nguồn",
+  "ob.conv.voice.removeSource": "Gỡ",
+  "ob.conv.voice.removeSourceNamed": "Gỡ {name}",
+  "ob.conv.voice.removeFailed": "Tôi không thể gỡ {name}: {detail}",
   "ob.conv.voice.printLabel": "Dấu giọng của bạn",
   "voice.kinds.label": "Nguồn phù hợp nhất",
   "voice.kinds.best": "Nên bắt đầu",
@@ -13240,6 +13249,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "voice.kinds.docBody": "Bất kỳ văn bản nào bạn tự viết",
   "ob.conv.voice.meterLabel": "Tiến độ tới mức tối thiểu {min} từ",
   "ob.conv.voice.meterProgress": "{words} trên {min} từ",
+  "ob.conv.voice.meterUnknown":
+    "Không có số từ. Số từ sẽ cập nhật khi bạn thêm mẫu tiếp theo.",
   "ob.conv.voice.meterReady":
     "{words} từ: đủ để dựng. Thêm từ sẽ giúp kết quả tốt hơn.",
   "ob.conv.voice.footReady":
@@ -13346,6 +13357,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thay vào đó, mời người đầu tiên sẽ làm việc ở đây để hoàn tất thiết lập.",
   "ob.conv.invite.foot":
     "Giọng văn và tài khoản cũng có thể thiết lập sau trong Cài đặt.",
+  "ob.conv.invite.bodyConnect":
+    "Đã thiết lập xong công ty. Bước tiếp theo dành cho bạn và chỉ áp dụng nếu bạn sẽ dùng Margince.",
+  "ob.conv.invite.yesBodyConnect": "Kết nối hộp thư, lịch: 1 bước ngắn.",
+  "ob.conv.invite.footConnect":
+    "Tài khoản cũng có thể kết nối sau trong Cài đặt.",
   "ob.conv.invite.continue": "Tiếp tục",
   "ob.conv.invite.accepted": "Có, tôi sẽ làm việc trong Margince.",
   "ob.conv.invite.declined": "Không, tôi chỉ thiết lập thôi.",
@@ -15644,7 +15660,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.addSource": "Thêm văn mẫu",
   "settings.voice.addFirstLabel": "Văn mẫu đầu tiên",
   "settings.voice.dropHint":
-    "Thả hoặc chọn tệp (.txt, .md, .pdf, .docx, .vtt, .srt hoặc .json), nhiều tệp cùng lúc.",
+    "Thả hoặc chọn tệp (.txt, .md, .pdf, .docx, .vtt, .srt hoặc .json), nhiều tệp cùng lúc. Mỗi tệp khi gửi phải dưới {limit} một chút. Văn bản có nhiều dấu ngoặc kép hoặc ngắt dòng sẽ chạm giới hạn này sớm hơn.",
   "settings.voice.dropLabel": "Tải tệp lên",
   "settings.voice.dropEmpty": "Thả tệp vào đây, hoặc bấm để chọn",
   "settings.voice.pasteLabel": "Dán văn bản",
@@ -15690,6 +15706,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.refusalSpeaker":
     "Không tìm thấy người nói đó trong {name}, nên chưa thêm gì.",
   "settings.voice.refusalUnsupported": "{name} có định dạng không được hỗ trợ.",
+  "settings.voice.refusalTooLarge":
+    "{name} quá lớn để thêm. Mỗi tệp khi gửi phải dưới {limit} một chút, và dấu ngoặc kép cùng ngắt dòng chiếm thêm chỗ. Hãy chia thành các tệp nhỏ hơn.",
   "settings.voice.buildsTitle": "Bản dựng",
   "settings.voice.buildRowLabel": "Dựng từ văn mẫu",
   "settings.voice.building": "Đang dựng…",
@@ -17097,6 +17115,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.connect.useImap": "Dùng nhà cung cấp thư khác",
   "ob.conv.connect.skipCaptionWaiting":
     "Danh sách thiết lập sẽ nhắc bạn kết nối khi {vendor} sẵn sàng.",
+  "ob.conv.connect.skipCaptionNotConfigured":
+    "Bản cài đặt này không kết nối được hộp thư, nên hãy tiếp tục mà không cần hộp thư.",
   "ob.conv.connect.connectedTitle": "{vendor} đã được kết nối",
   "ob.conv.connect.calendarNotConnected":
     "Chưa kết nối. Kết nối ngay, hoặc sau đó từ danh sách thiết lập.",
@@ -17116,6 +17136,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không bắt buộc. Tất cả có thể đổi sau trong Cài đặt.",
   "ob.conv.connect.linkedinRow": "Hồ sơ LinkedIn của bạn",
   "ob.conv.connect.linkedinAdd": "Thêm hồ sơ",
+  "ob.conv.connect.linkedinChange": "Thay đổi",
   "setup.reminder.trigger": "Hoàn tất thiết lập",
   "setup.reminder.count": "{done}/{total}",
   "setup.reminder.title": "Hoàn tất thiết lập",

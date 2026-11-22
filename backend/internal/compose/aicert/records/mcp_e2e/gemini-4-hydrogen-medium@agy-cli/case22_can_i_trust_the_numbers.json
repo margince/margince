@@ -12,13 +12,114 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "686d502bc3ebe44b",
+    "tools": "8d4c157d93581d9f",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:54:02Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:32:44Z"
+  },
   "usage": {
-    "input_tokens": 112707,
-    "output_tokens": 20723,
+    "input_tokens": 98677,
+    "output_tokens": 18507,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 327428,
+    "cache_read_input_tokens": 282749,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "forecast_readings",
+        "get_company_coverage",
+        "get_finance_source",
+        "list_channel_connections",
+        "list_colleagues",
+        "list_connectors",
+        "list_held_threads",
+        "list_import_runs",
+        "list_input_checks",
+        "list_workspace_capture_activity",
+        "read_automatic_work_health",
+        "read_capture_health",
+        "read_data_tasks",
+        "read_extension_ingest_health",
+        "read_forecast",
+        "read_job_health",
+        "read_recovery_health",
+        "read_reports",
+        "read_system_health",
+        "read_workspace",
+        "run_report",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "forecast_readings",
+        "get_company_coverage",
+        "get_finance_source",
+        "list_capture_contacts_awaiting_decision",
+        "list_capture_counterparty_holds",
+        "list_channel_connections",
+        "list_colleagues",
+        "list_connectors",
+        "list_held_threads",
+        "list_import_runs",
+        "list_input_checks",
+        "list_web_forms",
+        "list_workspace_capture_activity",
+        "read_attention",
+        "read_automatic_work_health",
+        "read_capture_health",
+        "read_data_tasks",
+        "read_extension_ingest_health",
+        "read_forecast",
+        "read_job_health",
+        "read_recovery_health",
+        "read_reports",
+        "read_system_health",
+        "read_workspace",
+        "run_report",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 27.5,
+      "min": 26,
+      "max": 29
+    },
+    "turns": {
+      "median": 7,
+      "min": 7,
+      "max": 7
+    },
+    "refused": {
+      "median": 2,
+      "min": 2,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 190713,
+      "min": 184394,
+      "max": 197032
+    },
+    "output_tokens": {
+      "median": 9253.5,
+      "min": 7911,
+      "max": 10596
+    }
   }
 }

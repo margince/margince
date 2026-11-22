@@ -11,6 +11,7 @@ import type {
   ConversationState,
 } from "./conversation-machine";
 import { presenceFor } from "./presence";
+import { landingFor } from "./resume-landing";
 import { WayOnward } from "./way-onward";
 import { ConversationWorkbench } from "./workbench";
 
@@ -37,11 +38,17 @@ export function InviteAct({
 }>) {
   const t = useT();
   const [answer, setAnswer] = useState<Answer | "">("");
+  // Yes lands where INVITE_ACCEPTED does, so the copy promises those steps.
+  const trainsVoice = landingFor(state, "vo.collecting").act === "voice";
   const choices: readonly Choice<Answer>[] = [
     {
       value: "yes",
       label: t("ob.conv.invite.yes"),
-      description: t("ob.conv.invite.yesBody"),
+      description: t(
+        trainsVoice
+          ? "ob.conv.invite.yesBody"
+          : "ob.conv.invite.yesBodyConnect",
+      ),
       mark: <User aria-hidden />,
     },
     {
@@ -58,7 +65,9 @@ export function InviteAct({
       railState={state}
       status={t("ob.ai.ready")}
       title={t("ob.conv.invite.title")}
-      sub={t("ob.conv.invite.body")}
+      sub={t(
+        trainsVoice ? "ob.conv.invite.body" : "ob.conv.invite.bodyConnect",
+      )}
     >
       <div className="ob-scene ob-invite-scene">
         <ChoiceList
@@ -70,7 +79,13 @@ export function InviteAct({
           onChange={setAnswer}
         />
         <div className="ob-scene-foot">
-          <p>{t("ob.conv.invite.foot")}</p>
+          <p>
+            {t(
+              trainsVoice
+                ? "ob.conv.invite.foot"
+                : "ob.conv.invite.footConnect",
+            )}
+          </p>
         </div>
         <WayOnward
           label={t("ob.conv.invite.continue")}

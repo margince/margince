@@ -19,7 +19,7 @@ import {
 
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
-type CorpusManifestEntry = import("./use-voice-corpus").CorpusManifestEntry;
+type CorpusManifestEntry = import("./voice-manifest").CorpusManifestEntry;
 
 // A minimal but contract-complete VoiceProfileVersion; profileJSON carries
 // only what the result board actually reads, `sample_drafts` swapped per
@@ -141,9 +141,12 @@ function collectScene(overrides: {
     <VoiceCollectScene
       summary={overrides.summary ?? null}
       manifest={overrides.manifest ?? []}
+      failures={[]}
       fileRef={overrides.fileRef ?? createRef<HTMLInputElement>()}
       onFiles={() => undefined}
       onAddPaste={overrides.onAddPaste ?? (() => undefined)}
+      onRemove={() => undefined}
+      removing={null}
       onBuild={overrides.onBuild ?? (() => undefined)}
       onSkip={() => undefined}
       canBuild={overrides.canBuild ?? false}
@@ -195,6 +198,33 @@ describe("VoiceCollectScene", () => {
     expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
   });
 
+  it("puts the cursor in the paste box when it opens, and Escape hands focus back", async () => {
+    const user = userEvent.setup();
+    collectScene({});
+    const opener = screen.getByRole("button", { name: "Paste text instead" });
+
+    await user.click(opener);
+    const field = screen.getByLabelText("Paste the text you wrote here");
+    expect(document.activeElement).toBe(field);
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("hands focus back to the opener once a paste is added", async () => {
+    const user = userEvent.setup();
+    collectScene({});
+    const opener = screen.getByRole("button", { name: "Paste text instead" });
+
+    await user.click(opener);
+    await user.keyboard("A paragraph I wrote.");
+    await user.click(
+      screen.getByRole("button", { name: "Add to writing samples" }),
+    );
+    expect(document.activeElement).toBe(opener);
+  });
+
   // Why the step is worth doing is available on the scene, behind its own
   // control rather than above the drop target. The control has to name what it
   // opens, and what it opens has to be the rationale — a disclosure whose body
@@ -219,6 +249,48 @@ describe("VoiceCollectScene", () => {
   });
 });
 
+describe("the collect scene's copy", () => {
+  it("answers an early Build with the words still missing, not the floor sentence again", async () => {
+    collectScene({ summary: summaryOf(799) });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Add 1 more word to build.",
+    );
+    expect(
+      screen.getAllByText(/800 words minimum/, { exact: false }),
+    ).toHaveLength(1);
+  });
+
+  it("counts a one-word sample as one word", () => {
+    collectScene({
+      manifest: [
+        {
+          ref: "p1",
+          id: "p1",
+          version: 1,
+          label: "Pasted text – extra",
+          keptWords: 1,
+          inputWords: 1,
+          transcript: false,
+          lines: [],
+        },
+      ],
+    });
+
+    expect(screen.getByText("1 word")).toBeTruthy();
+  });
+
+  it("offers the skip as a short button with no period", () => {
+    collectScene({});
+
+    expect(screen.getByRole("button", { name: "Skip for now" })).toBeTruthy();
+  });
+});
+
 describe("the collect scene's distilling panel", () => {
   it("reads the reader's own lines back beside the intake, with the server's readings between them", () => {
     collectScene({
@@ -226,6 +298,8 @@ describe("the collect scene's distilling panel", () => {
       manifest: [
         {
           ref: "u1",
+          id: "u1",
+          version: 1,
           label: "notes.md",
           keptWords: 1200,
           inputWords: 1200,
@@ -269,17 +343,16 @@ describe("the collect scene's corpus floor meter", () => {
   });
 
   it("shows the same floor the Build action gates on, below and at it", async () => {
-    // Below the floor: Build presses, and the press names the floor the
-    // scene's own canBuild (computed from the same VOICE_MIN_WORDS) is read
-    // against, while the meter still reads "not yet".
+    // Below the floor: Build presses and names how far the corpus is from
+    // VOICE_MIN_WORDS. The meter reads the same floor and still says "not yet".
     const onBuild = vi.fn();
     collectScene({ summary: summaryOf(200), canBuild: false, onBuild });
     await userEvent.click(
       screen.getByRole("button", { name: "Build my voice profile" }),
     );
     expect(onBuild).not.toHaveBeenCalled();
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      `${VOICE_MIN_WORDS}`,
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      `Add ${VOICE_MIN_WORDS - 200} more words to build.`,
     );
     expect(
       document.querySelector(".ob-voice-meter-line")?.textContent,
@@ -310,9 +383,12 @@ describe("the collect scene's corpus floor meter", () => {
         <VoiceCollectScene
           summary={summaryOf(VOICE_MIN_WORDS)}
           manifest={[]}
+          failures={[]}
           fileRef={createRef<HTMLInputElement>()}
           onFiles={() => undefined}
           onAddPaste={() => undefined}
+          onRemove={() => undefined}
+          removing={null}
           onBuild={() => undefined}
           onSkip={() => undefined}
           canBuild

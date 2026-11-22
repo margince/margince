@@ -39,12 +39,11 @@ function renderConnectAct(
   };
   const dispatch = vi.fn();
   const persist = vi.fn(async () => true);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   const view = render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ConnectAct
           state={state}
@@ -56,7 +55,7 @@ function renderConnectAct(
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  return { ...view, dispatch, persist };
+  return { ...view, dispatch, persist, client };
 }
 
 // A row carries the grant its service needs (sending for the mailbox, writing
@@ -495,6 +494,140 @@ describe("the LinkedIn row", () => {
     expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
   });
 
+  // Add can be pressed before the account read answers. The dialog then takes
+  // the stored profile, unless the reader has typed one of their own.
+  it("fills an open dialog with the profile the account read brings back late", async () => {
+    let answer = (_: Response) => {};
+    stub({
+      "GET /connectors": roster(),
+      "GET /me/linkedin-account": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    const user = userEvent.setup();
+    renderConnectAct();
+    await user.click(screen.getByRole("button", { name: "Add profile" }));
+    const field = screen.getByLabelText("Your LinkedIn profile URL");
+    expect(field).toHaveValue("");
+
+    answer(
+      jsonResponse({
+        profile_url: "https://www.linkedin.com/in/qa-late",
+        connected: false,
+        connections: 0,
+      }),
+    );
+    await waitFor(() =>
+      expect(field).toHaveValue("https://www.linkedin.com/in/qa-late"),
+    );
+  });
+
+  // A read already on its way when the save landed describes the time before
+  // it. It must not replace the saved profile.
+  it("keeps a saved profile when an older account read answers after it", async () => {
+    let answer = (_: Response) => {};
+    stub({
+      "GET /connectors": roster(),
+      "GET /me/linkedin-account": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+      "PUT /me/linkedin-account": saveRoute(() =>
+        jsonResponse({
+          profile_url: "https://www.linkedin.com/in/qa-new",
+          connected: false,
+          connections: 0,
+        }),
+      ),
+    });
+    const user = userEvent.setup();
+    const { client } = renderConnectAct();
+    await user.click(screen.getByRole("button", { name: "Add profile" }));
+    await user.type(
+      screen.getByLabelText("Your LinkedIn profile URL"),
+      "https://www.linkedin.com/in/qa-new",
+    );
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
+    expect(
+      await screen.findByText("linkedin.com/in/qa-new"),
+    ).toBeInTheDocument();
+
+    answer(jsonResponse({ profile_url: "", connected: false, connections: 0 }));
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(screen.getByText("linkedin.com/in/qa-new")).toBeInTheDocument();
+  });
+
+  // The stored profile is the server's, not this tab's: a reload shows it, and
+  // the member can still correct it on the step.
+  it("shows a profile saved before a reload and opens Change on it", async () => {
+    stub({
+      "GET /connectors": roster(),
+      "GET /me/linkedin-account": () =>
+        jsonResponse({
+          profile_url: "https://www.linkedin.com/in/qa-onboarding",
+          connected: false,
+          connections: 0,
+        }),
+      "PUT /me/linkedin-account": saveRoute(() =>
+        jsonResponse({
+          profile_url: "https://www.linkedin.com/in/qa-fixed",
+          connected: false,
+          connections: 0,
+        }),
+      ),
+    });
+    const user = userEvent.setup();
+    const { dispatch } = renderConnectAct();
+    expect(
+      await screen.findByText("linkedin.com/in/qa-onboarding"),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Change" }));
+    const field = screen.getByLabelText("Your LinkedIn profile URL");
+    expect(field).toHaveValue("https://www.linkedin.com/in/qa-onboarding");
+    expect(
+      screen.queryByRole("button", { name: "Skip LinkedIn for now" }),
+    ).toBeNull();
+    await user.clear(field);
+    await user.type(field, "https://www.linkedin.com/in/qa-fixed");
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(saves).toEqual([
+      { profile_url: "https://www.linkedin.com/in/qa-fixed", connected: false },
+    ]);
+    expect(screen.getByText("linkedin.com/in/qa-fixed")).toBeInTheDocument();
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "LINKEDIN_SAVED",
+      profile: "https://www.linkedin.com/in/qa-fixed",
+    });
+  });
+
+  it("changes a profile saved on this step without answering twice", async () => {
+    const account = (profile_url: string) => () =>
+      jsonResponse({ profile_url, connected: false, connections: 0 });
+    stub({
+      "GET /connectors": roster(),
+      "GET /me/linkedin-account": account("https://www.linkedin.com/in/lars"),
+      "PUT /me/linkedin-account": saveRoute(
+        account("https://www.linkedin.com/in/lars-j"),
+      ),
+    });
+    const user = userEvent.setup();
+    const { dispatch } = renderConnectAct("saved");
+    await user.click(await screen.findByRole("button", { name: "Change" }));
+    const field = screen.getByLabelText("Your LinkedIn profile URL");
+    await user.clear(field);
+    await user.type(field, "https://www.linkedin.com/in/lars-j");
+    await user.click(screen.getByRole("button", { name: "Save profile" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(saves).toHaveLength(1);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
   it("keeps the dialog open and shows the failure when the save fails", async () => {
     stub({
       "GET /connectors": roster(),
@@ -591,11 +724,20 @@ describe("the LinkedIn row", () => {
   });
 });
 
-// The overnight question rides with this step: preselected, and written when
-// the step COMPLETES rather than when the switch flips.
+// The overnight question is preselected, written when the step COMPLETES, and
+// asked only once a mailbox is connected, since the brief is built from it.
 describe("the overnight question", () => {
-  it("is asked preselected, and grants nothing yet", async () => {
+  const mailbox = () => roster(row("gmail", { backfill: { state: "done" } }));
+
+  it("is not offered while no mailbox is connected", async () => {
     stub({ "GET /connectors": roster() });
+    renderConnectAct();
+    await screen.findByRole("button", { name: "Skip for now" });
+    expect(screen.queryByTestId("overnight-grant-choice")).toBeNull();
+  });
+
+  it("is asked preselected, and grants nothing yet", async () => {
+    stub({ "GET /connectors": mailbox() });
     renderConnectAct();
     expect(await screen.findByTestId("overnight-grant-choice")).toHaveAttribute(
       "aria-checked",
@@ -608,9 +750,9 @@ describe("the overnight question", () => {
   // Without the remembered answer it would return at its default and grant
   // against an explicit opt-out.
   it("keeps an opt-out across the OAuth round trip", async () => {
-    stub({ "GET /connectors": roster() });
+    stub({ "GET /connectors": mailbox() });
     const first = renderConnectAct();
-    await userEvent.click(screen.getByTestId("overnight-grant-choice"));
+    await userEvent.click(await screen.findByTestId("overnight-grant-choice"));
     first.unmount();
 
     renderConnectAct();

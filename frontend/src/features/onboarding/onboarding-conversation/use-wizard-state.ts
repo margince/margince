@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
 import type { components } from "../../../api/schema";
+import { useAddressWriters } from "../../../lib/urlstate";
 import type { CompanyForm } from "../onboarding";
 import { wizardStateBody, writeWizardState } from "../onboarding";
 import { onboardingProgressOptions } from "../onboarding-progress";
@@ -25,6 +26,8 @@ type SavedState = {
   voiceSkipped: boolean;
   connectSkipped: boolean;
   draft: OnboardingState["company_draft"] | null;
+  /** The server's row once the journey is complete, which no write changes. */
+  finished: OnboardingState | null;
 };
 
 export type WizardPersistInput = Readonly<{
@@ -48,6 +51,7 @@ const FRESH_STATE: SavedState = {
   voiceSkipped: false,
   connectSkipped: false,
   draft: null,
+  finished: null,
 };
 
 function fromServerState(data: OnboardingState | null): SavedState {
@@ -66,6 +70,7 @@ function fromServerState(data: OnboardingState | null): SavedState {
     voiceSkipped: Boolean(data.voice_skipped),
     connectSkipped: Boolean(data.connect_skipped),
     draft: data.company_draft ?? null,
+    finished: data.step === "complete" ? data : null,
   };
 }
 
@@ -121,6 +126,7 @@ export function useWizardStatePersist() {
   const saved = useRef<SavedState | null>(null);
   const queue = useRef<Promise<boolean>>(Promise.resolve(true));
   const client = useQueryClient();
+  const { navigateReplacing } = useAddressWriters();
 
   const persist = useCallback(
     (input: WizardPersistInput): Promise<boolean> => {
@@ -132,11 +138,33 @@ export function useWizardStatePersist() {
               staleTime: Number.POSITIVE_INFINITY,
             }),
           );
-          const written = await writeMerged(saved.current, input);
+          let written: OnboardingState;
+          try {
+            written =
+              saved.current.finished ??
+              (await writeMerged(saved.current, input));
+          } catch {
+            // A refused write reads the row again: another tab may have
+            // finished the journey, and the next write needs its version.
+            const fresh = await client.fetchQuery({
+              ...onboardingProgressOptions,
+              staleTime: 0,
+            });
+            saved.current = fromServerState(fresh);
+            if (fresh?.step !== "complete") {
+              return false;
+            }
+            written = fresh;
+          }
           saved.current = fromServerState(written);
           // The app shell gates on this same entry: a completion it never
           // learned of would send the finished journey straight back here.
           client.setQueryData(onboardingProgressOptions.queryKey, written);
+          if (written.step === "complete" && input.step !== "complete") {
+            // Another tab finished the journey, so this one goes Home too.
+            navigateReplacing({ screen: "home" });
+            return false;
+          }
           return true;
         } catch {
           // Best-effort by design: the act must never stall on state
@@ -153,7 +181,7 @@ export function useWizardStatePersist() {
       });
       return queue.current;
     },
-    [client],
+    [client, navigateReplacing],
   );
 
   return { persist };

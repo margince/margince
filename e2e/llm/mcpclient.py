@@ -14,7 +14,17 @@ PROTOCOL = "2025-06-18"
 
 class McpFault(Exception):
     """The server could not be reached or answered outside the protocol: a
-    harness fault, never something the model did."""
+    harness fault, never something the model did. `status` is the HTTP status
+    it answered, or None when no HTTP answer came."""
+
+    def __init__(self, message, status=None):
+        super().__init__(message)
+        self.status = status
+
+    @property
+    def refused(self):
+        """Whether the server refused the credential, which no retry changes."""
+        return self.status in (401, 403)
 
 
 class Session:
@@ -44,7 +54,7 @@ class Session:
         except urllib.error.HTTPError as err:
             detail = err.read().decode("utf-8", "replace")[:300]
             raise McpFault(
-                f"the MCP server answered HTTP {err.code} to {message.get('method')}: {detail}"
+                f"the MCP server answered HTTP {err.code} to {message.get('method')}: {detail}", err.code
             ) from err
         except (urllib.error.URLError, TimeoutError, ConnectionError) as err:
             raise McpFault(f"the MCP server could not be reached: {err}") from err
