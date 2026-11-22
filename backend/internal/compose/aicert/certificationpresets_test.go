@@ -689,11 +689,15 @@ func assertAICertPresetsMatchTheReport(t *testing.T, presets []aiCertPreset,
 // The gate fails a page row whose grade the report would not print, on the
 // answering rung and on the fallback alike.
 func TestThePresetGateFailsARowTheReportGradesOtherwise(t *testing.T) {
-	row := aiCertPresetTask{Task: "summarize", Tier: "cheap_cloud", Band: aicert.VerdictCertified, State: aicert.StatusCurrent,
-		Fallback: &aiCertFallback{Band: aicert.VerdictCertified, State: aicert.StatusCurrent}}
+	row := aiCertPresetTask{
+		Task: "summarize", Tier: "cheap_cloud", Band: aicert.VerdictCertified, State: aicert.StatusCurrent,
+		Fallback: &aiCertFallback{Band: aicert.VerdictCertified, State: aicert.StatusCurrent},
+	}
 	preset := aiCertPreset{File: "p.yaml", Tasks: []aiCertPresetTask{row}}
-	agree := aicert.PresetRungState{Task: "summarize", FirstState: aicert.StatusCurrent, FirstVerdict: aicert.VerdictCertified,
-		FallbackState: aicert.StatusCurrent, FallbackVerdict: aicert.VerdictCertified}
+	agree := aicert.PresetRungState{
+		Task: "summarize", FirstState: aicert.StatusCurrent, FirstVerdict: aicert.VerdictCertified,
+		FallbackState: aicert.StatusCurrent, FallbackVerdict: aicert.VerdictCertified,
+	}
 	if problems := presetReportDisagreements(preset, []aicert.PresetRungState{agree}); len(problems) != 0 {
 		t.Fatalf("a row the report grades the same failed: %q", problems)
 	}

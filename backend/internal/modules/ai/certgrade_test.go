@@ -26,20 +26,48 @@ func TestCertificationForReadsTheGradeOfTheBindingThatAnswers(t *testing.T) {
 		profile Profile
 		want    Certification
 	}{
-		{"a current certified record", CertGrade{Verdict: "certified", State: "current"}, flashLite, ProfileCloudFrontier,
-			Certification{Grade: CertGradeReady}},
-		{"a stale degraded record", CertGrade{Verdict: "supported_degraded", State: "stale"}, flashLite, ProfileCloudFrontier,
-			Certification{Grade: CertGradeWithCare, RecheckPending: true}},
-		{"a partial record waits on its new cases", CertGrade{Verdict: "not_supported", State: "partial"}, flashLite, ProfileCloudFrontier,
-			Certification{Grade: CertGradeNotReliable, RecheckPending: true}},
-		{"a site of the task no record measured", CertGrade{Verdict: "not_supported", State: "absent"}, flashLite, ProfileCloudFrontier,
-			Certification{Grade: CertGradeNotMeasured}},
-		{"a Vertex binding graded by the AI Studio record", CertGrade{Verdict: "certified", State: "current"}, vertex, ProfileEUHosted,
-			Certification{Grade: CertGradeReady}},
-		{"another thinking level is another measurement", CertGrade{Verdict: "certified", State: "current"}, atLow, ProfileCloudFrontier,
-			Certification{Grade: CertGradeNotMeasured}},
-		{"another profile is another measurement", CertGrade{Verdict: "certified", State: "current"}, flashLite, ProfileEUHosted,
-			Certification{Grade: CertGradeNotMeasured}},
+		{
+			"a current certified record",
+			CertGrade{Verdict: "certified", State: "current"},
+			flashLite, ProfileCloudFrontier,
+			Certification{Grade: CertGradeReady},
+		},
+		{
+			"a stale degraded record",
+			CertGrade{Verdict: "supported_degraded", State: "stale"},
+			flashLite, ProfileCloudFrontier,
+			Certification{Grade: CertGradeWithCare, RecheckPending: true},
+		},
+		{
+			"a partial record waits on its new cases",
+			CertGrade{Verdict: "not_supported", State: "partial"},
+			flashLite, ProfileCloudFrontier,
+			Certification{Grade: CertGradeNotReliable, RecheckPending: true},
+		},
+		{
+			"a site of the task no record measured",
+			CertGrade{Verdict: "not_supported", State: "absent"},
+			flashLite, ProfileCloudFrontier,
+			Certification{Grade: CertGradeNotMeasured},
+		},
+		{
+			"a Vertex binding graded by the AI Studio record",
+			CertGrade{Verdict: "certified", State: "current"},
+			vertex, ProfileEUHosted,
+			Certification{Grade: CertGradeReady},
+		},
+		{
+			"another thinking level is another measurement",
+			CertGrade{Verdict: "certified", State: "current"},
+			atLow, ProfileCloudFrontier,
+			Certification{Grade: CertGradeNotMeasured},
+		},
+		{
+			"another profile is another measurement",
+			CertGrade{Verdict: "certified", State: "current"},
+			flashLite, ProfileEUHosted,
+			Certification{Grade: CertGradeNotMeasured},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

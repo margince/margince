@@ -298,7 +298,7 @@ func loggedDeals(args json.RawMessage, _ agentLoopWorklist) ([]string, error) {
 	}
 	var deals []string
 	for _, link := range note.Links {
-		if link.EntityType == "deal" {
+		if link.EntityType == string(recordTypeDeal) {
 			deals = append(deals, link.EntityID)
 		}
 	}

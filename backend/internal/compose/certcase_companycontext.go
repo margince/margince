@@ -33,7 +33,7 @@ var certCompany = contacts.Company{
 	CompanySource: contacts.CompanySourceHuman,
 	Website:       &certCompanyWebsite,
 	ProfileFields: []contacts.CompanyProfileField{
-		{Field: "industry", Value: "B2B software", Source: contacts.CompanySourceHuman},
+		{Field: fieldIndustry, Value: "B2B software", Source: contacts.CompanySourceHuman},
 		{Field: "icp", Value: "Mid-sized manufacturers and distributors that sell to other businesses", Source: contacts.CompanySourceHuman},
 		{Field: "value_proposition", Value: "One place for a sales team to see every account, deal and promise", Source: contacts.CompanySourceHuman},
 		{Field: "customer_pains", Value: "Follow-ups lost between inboxes and spreadsheets", Source: contacts.CompanySourceHuman},

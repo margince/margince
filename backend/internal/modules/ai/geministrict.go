@@ -146,6 +146,8 @@ func geminiDropPaddedNulls(callerSchema json.RawMessage, reply string) string {
 // dropPaddedNulls walks value as node describes it. An object under anyOf or
 // oneOf is read by the branch it matches. That is how a step's tool call is read
 // by its own tool's arguments.
+//
+//nolint:cyclop // one walk over value's three shapes (branch, array, object) and an object's three member cases; split, the walk reads in four places
 func dropPaddedNulls(node schemaObject, value json.RawMessage) json.RawMessage {
 	if branch, found := matchingBranch(node, value); found {
 		return dropPaddedNulls(branch, value)
