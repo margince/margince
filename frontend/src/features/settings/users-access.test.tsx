@@ -114,6 +114,7 @@ describe("AccessPreviewPanel", () => {
 });
 
 // Archiving sits in the row's menu; the menu is named for the team it acts on.
+// Every team these cases archive has members, so the confirmation asks first.
 async function archiveVia(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
     await screen.findByRole("button", {
@@ -122,6 +123,11 @@ async function archiveVia(user: ReturnType<typeof userEvent.setup>) {
   );
   await user.click(
     await screen.findByRole("button", { name: en["users.teamArchive"] }),
+  );
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: en["users.teamArchive"],
+    }),
   );
 }
 
@@ -255,6 +261,141 @@ describe("TeamsCard", () => {
     );
 
     expect(await screen.findByText("the team was merged")).toBeTruthy();
+  });
+
+  it("asks before archiving a team with members, and says how many lose it", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, calls } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 2 }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["table.rowActions"].replace("{name}", "Nord"),
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["users.teamArchive"] }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent(
+      en["users.archiveTeamTitle"].replace("{name}", "Nord"),
+    );
+    expect(dialog).toHaveTextContent(
+      en["users.archiveTeamBody_other"].replace("{count}", "2"),
+    );
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(calls.some((call) => call.method === "PATCH")).toBe(false);
+  });
+
+  it("archives a team with no members at once, with Undo", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, calls } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 0 }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: en["table.rowActions"].replace("{name}", "Nord"),
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["users.teamArchive"] }),
+    );
+
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "PATCH")).toBe(true),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      within(await screen.findByRole("status")).getByRole("button", {
+        name: en["common.undo"],
+      }),
+    ).toBeTruthy();
+  });
+
+  it("lists archived teams when asked and restores one from its row", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, calls } = backend({
+      teams: [
+        { id: "t-1", name: "Nord", member_count: 2 },
+        {
+          id: "t-2",
+          name: "Süd",
+          member_count: 3,
+          archived_at: "2026-11-20T09:00:00Z",
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+
+    await screen.findByText("Nord");
+    expect(screen.queryByText("Süd")).toBeNull();
+    await user.click(
+      screen.getByRole("switch", { name: en["users.showArchivedTeams"] }),
+    );
+
+    const row = (await screen.findByText("Süd")).closest("tr");
+    if (!row) throw new Error("the archived team has no row");
+    expect(within(row).getByText(en["users.teamArchivedBadge"])).toBeTruthy();
+    expect(
+      calls.some(
+        (call) =>
+          call.path.endsWith("/teams") &&
+          call.query.include_archived === "true",
+      ),
+    ).toBe(true);
+    await user.click(
+      within(row).getByRole("button", { name: en["users.teamRestore"] }),
+    );
+
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "PATCH")).toBe(true),
+    );
+    const patch = calls.find((call) => call.method === "PATCH");
+    expect(patch?.path).toBe("/v1/teams/t-2");
+    expect(patch?.body).toEqual({ archived: false });
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      en["users.teamRestored"].replace("{name}", "Süd"),
+    );
+  });
+
+  it("offers archived teams only to an admin, who alone may restore one", async () => {
+    const { fetchMock, calls } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 2 }],
+      me: ["ops"],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+
+    await screen.findByText("Nord");
+    expect(
+      screen.queryByRole("switch", { name: en["users.showArchivedTeams"] }),
+    ).toBeNull();
+    expect(calls.some((call) => call.query.include_archived)).toBe(false);
   });
 
   it("renames a team through the dialog its menu opens, starting from the current name", async () => {

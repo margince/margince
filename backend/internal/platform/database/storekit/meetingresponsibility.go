@@ -151,6 +151,6 @@ func knownHostExpressionSQL(meeting, host string) string {
 // calendar-owner fallback when deciding whose time a meeting blocks.
 func MeetingHasCalendarRosterSQL(meeting string) string {
 	return fmt.Sprintf(`EXISTS (SELECT 1 FROM activity_participant roster
- WHERE roster.activity_id=%s.id AND roster.roster_seat IS NOT NULL
+ WHERE roster.activity_id=%s.id AND `+OnACalendarRosterSQL("roster")+`
  AND roster.role IN (`+MeetingAttendingRolesSQL+`))`, meeting)
 }

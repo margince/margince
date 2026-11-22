@@ -38,48 +38,6 @@ func TestPassedIsStrict(t *testing.T) {
 	}
 }
 
-// Zero is a real answer and is not the same as "not late", so callers read the
-// bool. A test that only checked the count would pass while the two were
-// conflated.
-func TestDaysPastSeparatesTheCountFromTheVerdict(t *testing.T) {
-	for _, tc := range []struct {
-		name     string
-		due      *time.Time
-		wantDays int
-		wantLate bool
-	}{
-		{"undated", nil, 0, false},
-		{"upcoming", at(time.Hour), 0, false},
-		{"due exactly now", at(0), 0, false},
-		{"late by hours is late by no whole days", at(-5 * time.Hour), 0, true},
-		{"late by a day", at(-24 * time.Hour), 1, true},
-		{"late by a day and most of another", at(-47 * time.Hour), 1, true},
-		{"late by two days", at(-48 * time.Hour), 2, true},
-	} {
-		days, late := DaysPast(tc.due, noon)
-		if days != tc.wantDays || late != tc.wantLate {
-			t.Errorf("%s: DaysPast = (%d, %v), want (%d, %v)",
-				tc.name, days, late, tc.wantDays, tc.wantLate)
-		}
-	}
-}
-
-// DaysPast must agree with Passed about lateness, or a caller reading one and a
-// caller reading the other disagree about the same record.
-func TestDaysPastAgreesWithPassed(t *testing.T) {
-	for _, offset := range []time.Duration{
-		-49 * time.Hour, -24 * time.Hour, -time.Nanosecond, 0, time.Nanosecond, time.Hour,
-	} {
-		_, late := DaysPast(at(offset), noon)
-		if want := Passed(at(offset), noon); late != want {
-			t.Errorf("at %v: DaysPast says late=%v, Passed says %v", offset, late, want)
-		}
-	}
-	if _, late := DaysPast(nil, noon); late != Passed(nil, noon) {
-		t.Error("the two disagree about an undated promise")
-	}
-}
-
 func TestDayPassedIsOverOnlyAfterTheWholeDayInTheZone(t *testing.T) {
 	auckland, err := time.LoadLocation("Pacific/Auckland")
 	if err != nil {

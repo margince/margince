@@ -6,7 +6,7 @@ import { ifMatch, requireVersion } from "../../api/version";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useFieldFaults } from "../../design-system/savepage";
-import { formatDateTime } from "../../format/format";
+import { formatDateTimeAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
@@ -213,7 +213,7 @@ export function EvidenceVerdict({
       <span className="evidence-verdict t-caption">
         {claim.verifiedAt
           ? t("evidence.confirmedAt", {
-              when: formatDateTime(claim.verifiedAt, locale, readerZone),
+              when: formatDateTimeAbbrev(claim.verifiedAt, locale, readerZone),
             })
           : t("evidence.humanSet")}
       </span>

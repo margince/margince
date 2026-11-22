@@ -75,7 +75,7 @@ describe("HierarchyRollupPanel periods", () => {
     const asked = stubRollup();
     renderWithQueryClient(<HierarchyRollupPanel companyId="o-1" />);
 
-    await waitFor(() => expect(screen.getByText("€1,200.00")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("€1,200")).toBeTruthy());
     expect(screen.getByText("Won this quarter")).toBeTruthy();
     expect(screen.getByText("Weighted deal value today")).toBeTruthy();
     expect(
@@ -90,7 +90,7 @@ describe("HierarchyRollupPanel periods", () => {
     const asked = stubRollup();
     const user = userEvent.setup();
     renderWithQueryClient(<HierarchyRollupPanel companyId="o-1" />);
-    await waitFor(() => expect(screen.getByText("€1,200.00")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("€1,200")).toBeTruthy());
 
     await user.click(
       screen.getByRole("combobox", { name: "Period for won deals" }),
@@ -98,8 +98,8 @@ describe("HierarchyRollupPanel periods", () => {
     await user.click(screen.getByRole("option", { name: "Year" }));
 
     await waitFor(() => expect(screen.getByText("Won in 2026")).toBeTruthy());
-    expect(screen.getByText("€90,000.00")).toBeTruthy();
-    expect(screen.getByText("€4,800.00")).toBeTruthy();
+    expect(screen.getByText("€90,000")).toBeTruthy();
+    expect(screen.getByText("€4,800")).toBeTruthy();
     expect(asked.at(-1)?.get("period_year")).toBe("2026");
   });
 
@@ -107,7 +107,7 @@ describe("HierarchyRollupPanel periods", () => {
     const asked = stubRollup();
     const user = userEvent.setup();
     renderWithQueryClient(<HierarchyRollupPanel companyId="o-1" />);
-    await waitFor(() => expect(screen.getByText("€1,200.00")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("€1,200")).toBeTruthy());
     const forward = screen.getByRole("button", {
       name: "The next period has not begun",
     });
@@ -176,7 +176,7 @@ describe("HierarchyRollupPanel while a new grain loads", () => {
     );
     const user = userEvent.setup();
     renderWithQueryClient(<HierarchyRollupPanel companyId="o-1" />);
-    await waitFor(() => expect(screen.getByText("€1,200.00")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("€1,200")).toBeTruthy());
 
     await user.click(
       screen.getByRole("combobox", { name: "Period for won deals" }),

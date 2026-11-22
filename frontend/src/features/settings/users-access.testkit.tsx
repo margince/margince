@@ -20,6 +20,7 @@ export type Team = {
   name: string;
   member_count?: number;
   parent_team_id?: string;
+  archived_at?: string;
 };
 // The roster row the membership editor reads. Only an admin read carries
 // `team_ids`, so a fixture without it models a reader who is not an admin.
@@ -147,7 +148,12 @@ export function backend(
                     url.searchParams.get("include_inactive") === "true" ||
                     user.status === "active",
                 )
-              : (opts.teams ?? []),
+              : // Archived teams only when an admin asks for them.
+                (opts.teams ?? []).filter(
+                  (team) =>
+                    url.searchParams.get("include_archived") === "true" ||
+                    !team.archived_at,
+                ),
             page: { next_cursor: null, has_more: false },
           };
       return new Response(JSON.stringify(body), {

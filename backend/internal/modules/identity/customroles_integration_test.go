@@ -12,11 +12,15 @@ package identity
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -396,4 +400,42 @@ func waitForALockWaiter(t *testing.T, e *revocationEnv) {
 		}
 	}
 	t.Fatal("the assignment never waited on the authorization lock — it read past the archive")
+}
+
+// A member may not read the role directory, so /me names the roles they hold.
+func TestMeNamesACustomRoleItsHolderCannotLookUp(t *testing.T) {
+	e := setupRevocationEnv(t, "me-role-names")
+	key := e.customRole(t, "Sales assistant", "rep", nil)
+	member := e.seat(t, "assistant", key)
+	member.Email = "assistant@" + e.slug + ".test"
+
+	if names := e.meRoleNames(t, member); names[key] != "Sales assistant" {
+		t.Fatalf("/me names %s %q, want %q", key, names[key], "Sales assistant")
+	}
+	renamed := "Inside sales"
+	if _, err := e.svc.UpdateRole(e.wsCtx(e.admin), e.admin, key, RoleChange{Name: &renamed}, nil); err != nil {
+		t.Fatalf("renaming %s: %v", key, err)
+	}
+	if names := e.meRoleNames(t, member); names[key] != renamed {
+		t.Errorf("/me after a rename names %s %q, want %q", key, names[key], renamed)
+	}
+}
+
+// meRoleNames asks /me as member, through the handler a browser reaches.
+func (e *revocationEnv) meRoleNames(t *testing.T, member Identity) map[string]string {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/me", nil).WithContext(withIdentity(e.wsCtx(member), member))
+	rec := httptest.NewRecorder()
+	NewHandlers(e.svc).GetCurrentPrincipal(rec, req, crmcontracts.GetCurrentPrincipalParams{})
+	if rec.Code != http.StatusOK {
+		t.Fatalf("/me answered %d: %s", rec.Code, rec.Body)
+	}
+	var body crmcontracts.MeResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decoding /me: %v", err)
+	}
+	if body.RoleNames == nil {
+		t.Fatal("/me named none of the caller's roles")
+	}
+	return *body.RoleNames
 }

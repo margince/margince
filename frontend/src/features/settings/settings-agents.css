@@ -91,13 +91,6 @@
   overflow: hidden;
 }
 
-.agents-tier {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 /* An allowance's figures over its bar. The figures never wrap, so a column of
    meters lines its bars up. */
 .agent-usage-meter {

@@ -620,7 +620,7 @@ func (c *closeLostEnv) acceptsAMeetingAhead(t *testing.T, writer pgx.Tx) {
 		t.Fatal(err)
 	}
 	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
-	c.WsExec(t, `UPDATE activity_participant SET address = $3, roster_seat = $4
+	c.WsExec(t, `UPDATE activity_participant SET address = $3, roster_seats = ARRAY[$4::uuid]
 		WHERE activity_id = $1 AND contact_id = $2`, id, c.buyer, guest, c.Rep1)
 	roster := capture.MeetingRoster{Seat: c.Rep1, Current: true, Parties: connector.Parties{
 		Participants: []connector.MessageParticipant{{Email: guest, Response: connector.ResponseAccepted}},

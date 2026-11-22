@@ -180,6 +180,18 @@ describe("the Overview's Contacts card", () => {
       /function|toString|constructor|gatekeeper/,
     );
   });
+
+  it("opens the Contacts tab from a link that promises no add", async () => {
+    stub();
+    const onTab = vi.fn();
+    renderCards({ onTab });
+    const contacts = within(card("Contacts"));
+    expect(contacts.queryByRole("button", { name: /add/i })).toBeNull();
+    await userEvent.click(
+      contacts.getByRole("button", { name: "All contacts" }),
+    );
+    expect(onTab).toHaveBeenCalledWith("contacts");
+  });
 });
 
 describe("the Overview's Deals and projects card", () => {

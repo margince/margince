@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { AutonomyDot } from "../../design-system/trust";
 import { useT } from "../../i18n";
 import "./settings-agents.css";
 
-// Reference for the tiers the tools are marked with. Advancing a stage is locked
-// at its floor, waiting only when the move closes the deal.
+// Reference for the tiers the tools are marked with. An agent may do unaided what
+// its user may, so advancing or closing a deal runs at once on a passport.
 export function AutonomyTiersCard() {
   const t = useT();
   return (
@@ -33,12 +32,7 @@ export function AutonomyTiersCard() {
         />
         <SettingRow
           label={t("settings.tierAdvance")}
-          control={
-            <span className="agents-tier">
-              <AutonomyDot tier="confirm" withLabel />
-              <Badge tone="warning">{t("settings.locked")}</Badge>
-            </span>
-          }
+          control={<AutonomyDot tier="auto" withLabel />}
         />
       </SettingList>
     </Panel>

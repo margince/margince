@@ -255,15 +255,13 @@ test.describe("WCAG 2.2 AA (axe)", () => {
     await expect(
       page.getByRole("dialog", { name: "Befehlspalette" }),
     ).toBeVisible();
-    await page
-      .getByRole("searchbox", { name: "Befehlspalette" })
-      .fill("brandt");
+    await page.getByRole("combobox", { name: "Befehlspalette" }).fill("brandt");
     // Wait on the hits, not on a duration: the live arm is what adds the rows
     // this sweep exists to judge.
     // Anchored: a contact found through the company carries its name too. The
     // avatar's printed initials lead the name (WCAG 2.5.3).
     await expect(
-      page.getByRole("button", { name: /^(BA\s*)?Brandt Automotive$/ }),
+      page.getByRole("option", { name: /^(BA\s*)?Brandt Automotive$/ }),
     ).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "brief — the command palette open");

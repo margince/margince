@@ -89,7 +89,7 @@ const type =
   (query: string) =>
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByRole("searchbox"), query);
+    await userEvent.type(canvas.getByRole("combobox"), query);
   };
 
 // Opened, nothing typed: the whole command list, which is what ⌘K shows first.
@@ -331,7 +331,7 @@ export const IdentifierBestMatch: Story = {
     ),
   play: async ({ canvasElement }) => {
     await userEvent.type(
-      within(canvasElement).getByRole("searchbox"),
+      within(canvasElement).getByRole("combobox"),
       "lena@exam",
     );
     await within(canvasElement).findByText("Best match");
