@@ -70,10 +70,10 @@ type notifyRetryProbe struct {
 
 func (notifyRetryProbe) Spec() workflow.Spec {
 	return workflow.Spec{
-		Name:                         notifyRetryHandler,
-		Trigger:                      workflow.Trigger{EventType: "deal.stage_changed"},
-		Tier:                         mcp.TierAutoExecute,
-		RedrivableWithoutDuplicating: true,
+		Name:                    notifyRetryHandler,
+		Trigger:                 workflow.Trigger{EventType: "deal.stage_changed"},
+		Tier:                    mcp.TierAutoExecute,
+		ReplaysAfterFailedApply: true,
 	}
 }
 
@@ -142,6 +142,9 @@ func TestATransientNoticeFailureIsRetriedOnRedeliveryAndTheNoticeLandsOnce(t *te
 		t.Error("the first delivery must surface the notice failure so the bus redelivers")
 	}
 
+	if notifier.calls != 2 {
+		t.Errorf("notify calls = %d, want 2: the failed one and the retry, and none for the delivery after success", notifier.calls)
+	}
 	status, count := notifyRunAndNoticeCount(t, e, e.Rep1)
 	if status != "applied" {
 		t.Errorf("run status = %q, want applied once the redelivery succeeded", status)
