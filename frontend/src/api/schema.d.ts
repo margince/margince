@@ -19827,6 +19827,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/impersonation-warning/clear": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer a contact's impersonation warning as fine.
+         * @description Clears the warning `impersonation_warning` serves on the contact. The verdict stays on the
+         *     record with the moment and the user who cleared it, as the record of what was answered.
+         *     Requires permission to update the contact. A contact the caller cannot see answers `404`.
+         *
+         *     The body names the warning the caller read by its `detected_at`. A contact that now carries
+         *     a different open warning answers `409`, so nobody clears a warning they were not shown.
+         *     A contact with no open warning answers `204` and writes nothing.
+         *     One transaction: the row, its audit row and its `contact.updated` event.
+         */
+        post: operations["clearContactImpersonationWarning"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -34799,6 +34829,8 @@ export interface components {
              * @enum {string|null}
              */
             greeting_register?: "formal" | "familiar" | null;
+            /** @description Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`). */
+            readonly impersonation_warning?: components["schemas"]["ContactImpersonationWarning"];
             /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
@@ -40873,7 +40905,7 @@ export interface components {
             industry?: components["schemas"]["ReportingIndustry"];
             country?: components["schemas"]["ReportingCountry"];
             /** @enum {string} */
-            period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter";
+            period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year";
             metrics?: components["schemas"]["ReportingMetricID"][];
             blocks?: components["schemas"]["ReportingBlockKind"][];
         };
@@ -49146,9 +49178,11 @@ export interface components {
              *     evaluation time. Read at that exact moment, the week holds no time
              *     yet and the context's interval starts where it ends. A month target
              *     beside it still counts the whole month up to the evaluation time.
+             *     `last_quarter` and `last_year` are the last completed fiscal quarter
+             *     and fiscal year, in the installation's fiscal calendar.
              * @enum {string}
              */
-            period: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+            period: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
             interval?: components["schemas"]["ReportingWindow"];
             /** @enum {string} */
             target_basis: "month" | "fiscal_quarter";
@@ -49246,7 +49280,7 @@ export interface components {
             saved_questions: number;
             /** @description Live reports with a card whose saved question filters on a period. */
             reports_with_kept_periods: number;
-            /** @description Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window. */
+            /** @description Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window. */
             reports_with_relative_periods: number;
         };
         ReportingCard: {
@@ -59275,6 +59309,19 @@ export interface components {
             on_behalf_of: string;
             /** Format: date-time */
             expires_at: string;
+        };
+        /** @description The sign of impersonation the sender check saw when capture made this contact from a mail. */
+        ContactImpersonationWarning: {
+            /**
+             * @description Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+             * @enum {string}
+             */
+            reason?: "punycode_domain" | "display_name_other_domain";
+            /**
+             * Format: date-time
+             * @description When the sender check recorded it.
+             */
+            detected_at: string;
         };
         /** @description A request to hear from us that the contact's acquisition records. */
         ContactAcquisitionRequest: {
@@ -82362,7 +82409,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -82463,7 +82510,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -82511,7 +82558,7 @@ export interface operations {
                 scope_kind?: "owner" | "team" | "workspace";
                 scope_id?: string;
                 pipeline_id?: string;
-                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "custom";
+                period?: "this_week" | "this_month" | "last_month" | "last_week" | "this_quarter" | "last_quarter" | "last_year" | "custom";
                 start_at?: string;
                 end_at?: string;
                 target_basis?: "month" | "fiscal_quarter";
@@ -95297,6 +95344,42 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    clearContactImpersonationWarning: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /**
+                     * Format: date-time
+                     * @description The `detected_at` of the `impersonation_warning` the caller read.
+                     */
+                    detected_at: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The contact carries no open warning. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     claimRecord: {
         parameters: {
             query?: never;
@@ -101854,7 +101937,7 @@ export interface operations {
                 /** @description The team or owner named by `scope_kind`. */
                 scope_id?: string;
                 /** @description The period, in the installation's reporting zone. */
-                period?: "this_week" | "last_week" | "this_month" | "last_month";
+                period?: "this_week" | "last_week" | "this_month" | "last_month" | "last_quarter" | "last_year";
             };
             header?: never;
             path?: never;

@@ -73,6 +73,9 @@ A contact or company in Margince takes no edits when it is archived ("This conta
 Where you cannot edit, a section shows no **Edit**, a field shows no box or mark, and other actions are greyed out. The page states the reason once, at the foot of the **Details** panel, or in the band at the top of an archived contact. Except on an archived record, pointing at a greyed-out **Email** or **Log** button in the header shows the same reason. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 Also called: read-only record, edit greyed out, cannot change.
 
+### What does "This sender may be pretending to be someone else" mean?
+The warning shows on a contact when the first email from one of its addresses carried a sign that the sender is someone else. The warning names the sign when one was recorded, such as a mail domain in a coded spelling that can look like another domain. Check the address, then press **Looks fine** if the sender is right. The warning then goes for all users, and the **History** tab records who cleared it. Only a user who can edit the contact can clear it, and an agent cannot.
+Also called: wrong sender, sender warning.
 ### How do I link a contact to a company?
 New contacts use the same company check from every source. A company name can find or create the employer; a work address can find a company or wait for a site check. Personal email domains create no company.
 To link a contact to a company in Margince, open the contact's **Companies** tab and choose **Add company** under **Work history**. The same list shows the companies they worked at before, with role and dates. When the first page holds the whole list, the number on the tab counts them.
@@ -319,7 +322,6 @@ Every Margince record keeps a history of what changed, who changed it and when. 
 "{count} fields revert to their values before this change:".
 
 Putting a change back is an ordinary edit. It follows the same rules as typing the old value yourself, and shows in the history as its own entry, which you can undo too.
-
 Not every entry can be put back, and the history says which and why before you press anything. The reasons you will see:
 
 - **The field changed again since.** Putting the entry back would lose whatever was written after it, so it is refused. The reason names the field, so you can look at what happened in between and decide.
@@ -328,7 +330,6 @@ Not every entry can be put back, and the history says which and why before you p
 - **The earlier text held a password.** History keeps a password, an access key or a token only masked. A note still holds the text you typed, so putting the masked text back would replace it, and the change is refused. An email is always stored masked, so an email change can still be put back.
 
 If someone else edits the record between your reading the screen and pressing the button, the change is refused and nothing is written. Read the reason, look at the record again, and decide from what is there now.
-
 **An agent cannot put a change back.** Only a human can undo a change.
 
 ### Can two users edit the same record at the same time?
@@ -396,5 +397,4 @@ You see a suggestion only when you may read the record and every item it lists. 
 ## Money
 
 Margince stores every amount as a whole number of the currency's smallest unit, such as cents for euros, together with its currency. Most currencies have two places after the point; some, such as yen, won and dong, have none.
-
 **Two currencies are never added together.** A column that holds more than one currency shows no total at all; it says "several currencies, no single total". Margince does not guess an exchange rate to add euros to dollars.
