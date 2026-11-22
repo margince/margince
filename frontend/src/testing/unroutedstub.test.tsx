@@ -10,6 +10,7 @@ import {
   refuseUnrouted,
 } from "./story-utils";
 import {
+  quietEmptyListAnswers,
   takeEmptyListAnswers,
   takeUnroutedSessionProbes,
   UNROUTED_WARNING,
@@ -25,6 +26,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  quietEmptyListAnswers(true);
   vi.restoreAllMocks();
   takeEmptyListAnswers();
 });
@@ -39,19 +41,24 @@ describe("a stub's unrouted non-session request", () => {
     expect(takeEmptyListAnswers()).toEqual(["GET /worklist"]);
   });
 
-  it("names the route in a console warning a story gate can read", async () => {
-    installFetchStub({}, emptyListFallback);
-    const spoken = vi.fn();
-    consoleWarn.mockImplementation(spoken);
+  it("warns once with the route when warnings are on, as in a story run", async () => {
+    quietEmptyListAnswers(false);
+    installFetchStub({});
 
-    await fetch("/v1/activities/email-1", { method: "GET" });
+    await fetch("/v1/activities/email-1");
 
-    // The setup keeps unit suites quiet; a story run is the one that is told.
-    expect(takeEmptyListAnswers()).toEqual(["GET /activities/email-1"]);
-    expect(spoken.mock.calls.length <= 1).toBe(true);
-    for (const [text] of spoken.mock.calls) {
-      expect(text).toBe(`${UNROUTED_WARNING} GET /activities/email-1`);
-    }
+    expect(consoleWarn).toHaveBeenCalledTimes(1);
+    expect(consoleWarn).toHaveBeenCalledWith(
+      `${UNROUTED_WARNING} GET /activities/email-1`,
+    );
+  });
+
+  it("stays quiet under the unit-test setup", async () => {
+    installFetchStub({});
+
+    await fetch("/v1/activities/email-1");
+
+    expect(consoleWarn).not.toHaveBeenCalled();
   });
 
   it("leaves a routed read alone and records nothing", async () => {

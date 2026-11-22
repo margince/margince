@@ -283,16 +283,24 @@ globalThis.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
 // any suite that imports it, and a guard that skips where it thinks the defect
 // cannot be is how a census stops seeing its subject.
 //
-// Read AFTER the case rather than watched during it, because the probe can fire
-// from a render the case kicked off and never awaited — which is exactly the
-// case that would otherwise pass.
-afterEach(({ task }) => {
-  const answered = takeEmptyListAnswers();
-  if (answered.length > 0 && task.result?.state === "fail") {
+// The routes the stub answered with an empty list are cleared before each case
+// and printed only for a failing one, after every afterEach has run, so a hook
+// that throws cannot leak them into the next case.
+beforeEach(({ onTestFailed }) => {
+  takeEmptyListAnswers();
+  onTestFailed(() => {
+    const answered = takeEmptyListAnswers();
+    if (answered.length === 0) return;
     console.error(
       `the fetch stub answered ${answered.join(", ")} with an empty list because no route was given; if the failure reads a body that is not a list, route it.`,
     );
-  }
+  });
+});
+
+// Read AFTER the case rather than watched during it, because the probe can fire
+// from a render the case kicked off and never awaited — which is exactly the
+// case that would otherwise pass.
+afterEach(() => {
   const unrouted = takeUnroutedSessionProbes();
   if (unrouted > 0) {
     throw new Error(

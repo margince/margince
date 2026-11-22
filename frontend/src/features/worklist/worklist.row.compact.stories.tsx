@@ -6,7 +6,7 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
 import { waitingEmailRow } from "../../testing/brief.fixtures";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import { emptyListAnswer, StoryProviders } from "../../testing/story-utils";
 import { WorklistRow } from "./worklist.row";
 import "./worklist.css";
 
@@ -67,8 +67,8 @@ function dealRow(over: Partial<WorklistItem> = {}): WorklistItem {
 
 /** Nothing this row's frames press reaches a real API. */
 function stubRow() {
-  globalThis.fetch = (async (): Promise<Response> =>
-    jsonResponse({ data: [] })) as typeof fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL): Promise<Response> =>
+    emptyListAnswer(input)) as typeof fetch;
 }
 
 const meta: Meta<typeof WorklistRow> = {

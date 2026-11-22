@@ -60,8 +60,8 @@ export function takeEmptyListAnswers(): string[] {
 }
 
 /** Unit suites read hundreds of unstubbed lists, so they are not told about each one. */
-export function quietEmptyListAnswers(): void {
-  quiet = true;
+export function quietEmptyListAnswers(quieted = true): void {
+  quiet = quieted;
 }
 
 export function emptyListAnswersAreQuiet(): boolean {

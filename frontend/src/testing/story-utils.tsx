@@ -71,6 +71,21 @@ export function emptyListFallback(key: string): Response {
   return jsonResponse(emptyPage);
 }
 
+/** For a hand-rolled `globalThis.fetch` in a story: the same recorded, warned empty list a stub gives. */
+export function emptyListAnswer(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Response {
+  const request = input instanceof Request ? input : null;
+  const url = new URL(
+    request ? request.url : String(input),
+    "https://storybook.local",
+  );
+  return emptyListFallback(
+    routeKey(url, request?.method ?? init?.method ?? "GET"),
+  );
+}
+
 // A story that cannot stand any guess, because a wrong one draws a different
 // screen without failing, passes this as the second argument of
 // installFetchStub: every unrouted request is then refused, naming the route.
