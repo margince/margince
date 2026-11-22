@@ -83,11 +83,11 @@ func ladderForTask(role string, binding ai.ProviderConfig, profile ai.Profile, t
 // only: a chat tier's input, thinking level and sort are refused on that lane.
 func ladderDocument(binding ai.ProviderConfig, profile ai.Profile, tiers map[ai.Tier]ai.ProviderConfig) ai.RoutingConfig {
 	embeddings := ai.ProviderConfig{Provider: binding.Provider, Model: binding.Model, Location: binding.Location}
-	return ai.RoutingConfig{
+	return ai.StoredShape(ai.RoutingConfig{
 		Profile:    profile,
 		Tiers:      tiers,
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: embeddings},
-	}.AsStored()
+	})
 }
 
 // groupByTask buckets scenarios by their Task field, keeping only tasks
