@@ -81,11 +81,12 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   `Verträge`.
 - **Mail search reads the sender's own text.** Each writer of `activity.body` stores
   `body_own_end` beside it: the number of characters before the quoted earlier mail
-  (`mailquote.OwnEnd`). A trigger builds `search_tsv` from the subject and that part of the body, and
-  only when one of them or the language changes. The History tab folds the quoted mail at the same
-  line. A forward keeps the mail it passes on, and a reply written between the quoted lines keeps
-  every line. A mail stored before this rule is found through its quoted text until the data task
-  `core/1795347469_mail_search_text` has passed it.
+  (`mailquote.OwnEnd`). A trigger builds `search_tsv` from the subject and that part of the body. It
+  runs on an insert, and on an update that changes `subject`, `body`, `language`, `body_own_end` or
+  `search_tsv` itself.
+- **The History tab folds at the same line.** A forward keeps the mail it passes on,
+  and a reply written between the quoted lines keeps every line. A mail stored before this rule is
+  found through its quoted text until the data task `core/1795347469_mail_search_text` has passed it.
 - **A mail is one hit.** A mail that several mailboxes captured is one activity hit, the reader's
   own copy where they have one. The timelines group copies the same way
   (`connector.MailCopyGroupFrom`).

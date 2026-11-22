@@ -72,11 +72,17 @@ func sqlListAt(text string, pos int, setClause bool) []string {
 	return append(items, text[start:])
 }
 
-// assignedColumns names the column each assignment of a SET clause writes.
+// assignedColumns names the columns each assignment of a SET clause writes. A
+// target in parentheses, as in (body, subject) = (...), names several.
 func assignedColumns(assignments []string) []string {
 	columns := make([]string, 0, len(assignments))
 	for _, assignment := range assignments {
 		target, _, _ := strings.Cut(assignment, "=")
+		target = strings.TrimSpace(target)
+		if strings.HasPrefix(target, "(") {
+			columns = append(columns, strings.Split(strings.Trim(target, "()"), ",")...)
+			continue
+		}
 		columns = append(columns, target)
 	}
 	return bareColumns(columns)

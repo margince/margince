@@ -220,12 +220,30 @@ function forwardedTextStart(lines: readonly string[], from: number): number {
   return end;
 }
 
+function isBlankFrom(lines: readonly string[], from: number): boolean {
+  for (let i = from; i < lines.length; i += 1) {
+    if (!isBlank(lines[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// The attribution line directly above a quoted block introduces it, so it
+// travels with the quote rather than trailing the message.
+function attributedStart(lines: readonly string[], index: number): number {
+  const above = lines[index - 1]?.trim() ?? "";
+  const marked = lines[index]?.startsWith(">") ?? false;
+  return marked && index > 0 && above.endsWith(":") ? index - 1 : index;
+}
+
 /**
  * ownTextEnd is the index of the first line of quoted earlier mail, or
  * `lines.length` when the sender wrote or forwarded every line.
  *
  * A line a mail program writes above quoted mail ends the text. A quote marked
- * with ">" ends it only when nothing follows, so an inline reply stays whole. The server stores the same boundary for search.
+ * with ">" ends it only when nothing follows, so an inline reply stays whole.
+ * The server stores the same boundary for search.
  */
 function ownTextEnd(lines: readonly string[]): number {
   for (let i = 0; i < lines.length; i += 1) {
@@ -241,11 +259,8 @@ function ownTextEnd(lines: readonly string[]): number {
     if (after < 0) {
       return i;
     }
-    if (lines.slice(after).every(isBlank)) {
-      // The attribution line directly above a quoted block introduces it, so it
-      // travels with the quote rather than trailing the message.
-      const above = lines[i - 1]?.trim() ?? "";
-      return line.startsWith(">") && i > 0 && above.endsWith(":") ? i - 1 : i;
+    if (isBlankFrom(lines, after)) {
+      return attributedStart(lines, i);
     }
     i = after - 1;
   }
