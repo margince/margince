@@ -2826,6 +2826,7 @@ export const en = {
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
+  "shell.backToSetup": "Back to setup",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
