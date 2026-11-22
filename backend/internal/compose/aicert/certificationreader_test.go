@@ -235,10 +235,12 @@ func writeAICertLegend(page *strings.Builder, presets []aiCertPreset) {
 	page.WriteString("The router falls back only when a call fails: an error, a timeout, an answer broken\n")
 	page.WriteString("off midway. It never falls back because an answer was wrong, so a fallback does not\n")
 	page.WriteString("rescue a feature graded below. *no separate fallback* means both tiers bind the same model.\n")
-	page.WriteString("\n*at least N%* after a count is the cautious end of the margin: with that many tries, the\n")
-	page.WriteString("feature is very likely right at least that often. *one model call of it* or *one turn of it*\n")
-	page.WriteString("means the test reaches only that part of the feature, and the grade says nothing about the rest.\n")
-	page.WriteString("*scored by* names the model that judged the answers' quality; grades two judges gave are not on one scale.\n")
+	page.WriteString("\nA count followed by *at least N%* gives the cautious end of the margin. With that many\n")
+	page.WriteString("tries, the feature is very likely right at least that often.\n")
+	page.WriteString("A grade marked *one model call of it* or *one turn of it* comes from a test that reaches only\n")
+	page.WriteString("that part of the feature. It says nothing about the rest.\n")
+	page.WriteString("The name after *scored by* is the model that judged the answers' quality. Grades from two\n")
+	page.WriteString("judges are not on one scale.\n")
 	page.WriteString("\n*re-check pending* after a grade means the product has changed since it was\n")
 	page.WriteString("measured. The grade is the last one we have, and it is shown until the next test replaces it.\n")
 	page.WriteString("[How the scoring works](#how-the-scoring-works) explains how a grade is reached.\n\n")
@@ -537,8 +539,8 @@ func writeAICertExactRule(page *strings.Builder, rule string, selfJudged int) {
 	page.WriteString("From `Verdict` in [`" + aiCertVerdictSource + "`](" + corpusLinkPrefix + aiCertCorpusDocs +
 		aiCertVerdictSource + "), applied to every case of a task at once:\n\n")
 	page.WriteString("```text\n" + rule + "\n```\n\n")
-	page.WriteString("Each case sets its own quality bands (`certified_min`, `degraded_min`, `floor`), so\n")
-	page.WriteString("the pooled judge criterion averages every run's distance from its own case's bar.\n")
+	page.WriteString("Each case sets its own quality bands: `certified_min`, `degraded_min` and `floor`.\n")
+	page.WriteString("So the pooled judge criterion averages every run's distance from its own case's bar.\n")
 	fmt.Fprintf(page, "Every run is graded once, and again when that score is within %d of any of its case's bands.\n"+
 		"It is graded a third time when the two differ by more than %d, at most %d opinions. It scores at the\n"+
 		"median of the opinions that parsed (the mean of two).\n",
@@ -546,9 +548,9 @@ func writeAICertExactRule(page *strings.Builder, rule string, selfJudged int) {
 	fmt.Fprintf(page, "A case runs %d times, then %d more at a time up to %d while it is borderline: its pass\n"+
 		"count k of n satisfies (2k − n)² ≤ n, or its median score is within one standard\n"+
 		"error of `certified_min` or `degraded_min`. Every case extends while the pool is\n"+
-		"undecided: the pooled pass rate is at least %d%% but its Wilson bound is under %d%%, or\n"+
-		"the pooled `certified_min` margin averages at least 0 but its bound is under 0, or the\n"+
-		"pool holds fewer than %d runs while its rate is at least %d%%. The decision reads only\n"+
+		"undecided, in one of three ways. The pooled pass rate is at least %d%% but its Wilson bound\n"+
+		"is under %d%%. The pooled `certified_min` margin averages at least 0 but its bound is under 0.\n"+
+		"Or the pool holds fewer than %d runs while its rate is at least %d%%. The decision reads only\n"+
 		"scored runs, so a resumed run replays the same extensions.\n",
 		aicert.DefaultRepeats, aicert.AdaptiveRound, aicert.AdaptiveMaxRuns,
 		aicert.CertifiedPassPercent, aicert.CertifiedPassBoundPercent, aicert.CertifiedMinRuns, aicert.CertifiedPassPercent)

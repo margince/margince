@@ -87,6 +87,18 @@ Keep one judge for a whole sweep; `judge_served_model` names it on every record.
 The judge rules and the default judge are in
 [certify-an-ai-model.md](certify-an-ai-model.md#prerequisites).
 
+A sweep takes longer than one window of the judge's Claude plan. When the window ends, the lane
+stops with `You've hit your 5-hour limit`. To have the sweep wait and go on, run it through
+`scripts/aicert-sweep.sh`. It runs `make -C backend e2e-ai` with your arguments from the repository
+root. After a judge limit or an unreachable provider it waits (`AICERT_SWEEP_WAIT`, 900 seconds by
+default) and runs the same command again, and the journal replays every run already scored. It
+refuses to start without `RESUME=`, and any other failure ends it with the lane's exit code:
+
+```bash
+AICERT_SWEEP_LOG=run.log scripts/aicert-sweep.sh ROUTING=config/presets/gemini_cloud.yaml \
+  TRACE="$PWD/.tmp/aicert/gemini" RESUME="$PWD/.tmp/aicert/gemini/resume"
+```
+
 The commands above also follow these rules:
 
 - **Use separate folders for each pass.** Give each pass its own `TRACE=` and `RESUME=`. Then they can run
