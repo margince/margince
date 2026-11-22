@@ -6,6 +6,10 @@
 # stop for any other reason ends the sweep with the lane's own exit code.
 #
 #   AICERT_SWEEP_LOG=run.log scripts/aicert-sweep.sh ROUTING=config/presets/gemini_cloud.yaml RESUME=$PWD/.tmp/aicert/resume-gemini
+#
+# AICERT_SWEEP_WRAP names a command each attempt runs under, such as a lock that
+# lets one heavy job run on a shared machine. The wait between attempts runs
+# outside it, so a sweep waiting for the judge holds nothing.
 set -euo pipefail
 
 log="${AICERT_SWEEP_LOG:?set AICERT_SWEEP_LOG to the file the lane output goes to}"
@@ -28,7 +32,9 @@ while :; do
   attempt="$(mktemp)"
   # The log grows as the lane writes, so a long attempt can be read while it runs.
   status=0
-  make -C backend e2e-ai "$@" 2>&1 | tee -a "$log" > "$attempt" || status=${PIPESTATUS[0]}
+  # Word-split on purpose: the wrap is a command and its arguments.
+  # shellcheck disable=SC2086
+  ${AICERT_SWEEP_WRAP:-} make -C backend e2e-ai "$@" 2>&1 | tee -a "$log" > "$attempt" || status=${PIPESTATUS[0]}
   if [[ $status -eq 0 ]]; then
     rm -f "$attempt"
     echo "aicert-sweep: finished after $waits wait(s)"

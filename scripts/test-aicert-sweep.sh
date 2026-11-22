@@ -20,8 +20,7 @@ SH
 chmod +x "$scratch/bin/make"
 
 failures=0
-run() { # name, expected exit, stops...
-  local name="$1" want="$2"; shift 2
+run() { # the stops, one per attempt; prints "<exit> <attempts>"
   printf '%s\n' "$@" > "$scratch/stops"
   : > "$scratch/calls"
   local got=0
@@ -32,22 +31,40 @@ run() { # name, expected exit, stops...
 }
 
 # A judge limit, then a provider outage, then a pass: three attempts, success.
-out="$(run limits 0 "the claude_cli judge failed (success): You've hit your 5-hour limit · resets 4pm" \
+out="$(run "the claude_cli judge failed (success): You've hit your 5-hour limit · resets 4pm" \
   "run 1: every bound tier failed on all 3 attempts — re-run the same command" "")"
 [[ "$out" == "0 3" ]] || { echo "FAIL: a limit then an outage then a pass gave exit/calls $out, want 0 3"; failures=$((failures + 1)); }
 
 # A failure no wait fixes ends at once with the lane's code.
-out="$(run verdict 1 "--- FAIL: TestE2ECertify: a scenario failed its check")"
+out="$(run "--- FAIL: TestE2ECertify: a scenario failed its check")"
 [[ "$out" == "1 1" ]] || { echo "FAIL: an ordinary failure gave exit/calls $out, want 1 1"; failures=$((failures + 1)); }
 
 # A limit that never lifts stops after the allowed waits.
-out="$(run stuck 1 "usage limit" "usage limit" "usage limit" "usage limit")"
+out="$(run "usage limit" "usage limit" "usage limit" "usage limit")"
 [[ "$out" == "1 3" ]] || { echo "FAIL: a lasting limit gave exit/calls $out, want 1 3"; failures=$((failures + 1)); }
 
 # With no journal a retry would pay again, so the sweep refuses to start.
 status=0
 (cd "$scratch" && AICERT_SWEEP_LOG="$scratch/run.log" "$here/scripts/aicert-sweep.sh" TASK=x) > /dev/null 2>&1 || status=$?
 [[ $status -eq 2 ]] || { echo "FAIL: a sweep without RESUME exited $status, want 2"; failures=$((failures + 1)); }
+
+# Each attempt runs under AICERT_SWEEP_WRAP, and the wait between them does not.
+cat > "$scratch/bin/lockrun" <<'SH'
+#!/usr/bin/env bash
+echo "held" >> "$WRAP_FILE"
+"$@"
+status=$?
+echo "released" >> "$WRAP_FILE"
+exit $status
+SH
+chmod +x "$scratch/bin/lockrun"
+printf '%s\n' "usage limit" "" > "$scratch/stops"
+: > "$scratch/calls"; : > "$scratch/wrap"
+(cd "$scratch" && PATH="$scratch/bin:$PATH" STOPS_FILE="$scratch/stops" CALLS_FILE="$scratch/calls" WRAP_FILE="$scratch/wrap" \
+  AICERT_SWEEP_WRAP=lockrun AICERT_SWEEP_LOG="$scratch/run.log" AICERT_SWEEP_WAIT=0 \
+  "$here/scripts/aicert-sweep.sh" TASK=x RESUME="$scratch/resume") > /dev/null 2>&1 || true
+[[ "$(tr '\n' ' ' < "$scratch/wrap")" == "held released held released " ]] || {
+  echo "FAIL: the wrap was not taken and let go around each attempt: $(tr '\n' ' ' < "$scratch/wrap")"; failures=$((failures + 1)); }
 
 [[ $failures -eq 0 ]] && echo "ok: aicert-sweep waits out a judge limit or an outage and stops on anything else"
 exit "$failures"

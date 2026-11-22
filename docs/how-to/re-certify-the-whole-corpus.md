@@ -94,7 +94,8 @@ root.
 
 When the judge reaches its limit or a provider does not answer, the script waits
 (`AICERT_SWEEP_WAIT`, 900 seconds by default). Then it runs the same command again, and the journal
-replays every run already scored. It
+replays every run already scored. On a shared machine, set `AICERT_SWEEP_WRAP` to the lock command
+each attempt runs under, so the wait holds no lock. It
 refuses to start without `RESUME=`, and any other failure ends it with the lane's exit code:
 
 ```bash
