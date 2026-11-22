@@ -145,6 +145,20 @@ func (d *CommitmentDispatcher) takenUnderEarlierAttribution(ctx context.Context,
 	return taken, nil
 }
 
+// settleEarlierUnnamedClaims retires the claims an earlier reading left for
+// this promise while its promiser was unnamed. Once the named reading has a task
+// or a proposal, those claims would offer the same promise to a colleague, whose
+// takeover would write a second task. The takeover refuses a settled claim.
+func (d *CommitmentDispatcher) settleEarlierUnnamedClaims(ctx context.Context, tx pgx.Tx, c Commitment) error {
+	if c.Span == "" || c.Seat == nil || c.Theirs != nil {
+		return nil
+	}
+	if err := lockPromiseSource(ctx, tx, c.SourceActivityID); err != nil {
+		return err
+	}
+	return d.claims.WithdrawUnplacedCopiesTx(extractorContext(ctx, c.Extractor), tx, c.SourceActivityID, earlierUnnamedLocators(c))
+}
+
 // lockPromiseSource serializes a takeover and a reading of one message's
 // promises, so neither writes a task the other cannot see.
 func lockPromiseSource(ctx context.Context, tx pgx.Tx, source ids.UUID) error {

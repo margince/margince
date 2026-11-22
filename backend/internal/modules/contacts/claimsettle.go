@@ -195,3 +195,19 @@ func WithdrawClaimsTx(ctx context.Context, tx pgx.Tx, claimIDs []ids.UUID) error
 	}
 	return nil
 }
+
+// WithdrawUnplacedCopiesTx dismisses the open claims no one holds that one
+// promise was filed under while its promiser was still unnamed. Each locator
+// is one earlier spelling of the same promise on the same source. A claim a
+// task or a taker holds is left alone.
+func (s *Store) WithdrawUnplacedCopiesTx(ctx context.Context, tx pgx.Tx, source ids.UUID, locators []string) error {
+	var claims []ids.UUID
+	for _, locator := range locators {
+		copies, err := s.ownerlessCopies(ctx, tx, PromiseToTake{Source: source, Locator: locator})
+		if err != nil {
+			return err
+		}
+		claims = append(claims, copies...)
+	}
+	return WithdrawClaimsTx(ctx, tx, claims)
+}

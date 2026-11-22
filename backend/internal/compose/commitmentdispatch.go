@@ -316,14 +316,21 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 			Assignee: asked, ClaimID: claimID, ClaimIDs: claimIDs, PrivateTo: c.PrivateTo,
 			Origin: activities.OriginAgent,
 		})
-		return CommitmentTaskWritten, task, err
+		if err != nil {
+			return CommitmentTaskWritten, task, err
+		}
+		return CommitmentTaskWritten, task, d.settleEarlierUnnamedClaims(ctx, tx, c)
 	}
 	proposal := CommitmentTaskProposal{
 		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, SystemText: c.SystemText,
 		SeatID: &asked, PromiserSeatID: &asked, DueDate: c.DueDate, DueZone: c.DueZone, Links: c.Links, Quote: c.Quote,
 		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo, Tentative: c.Tentative, OddDueDate: oddDue,
 	}
-	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
+	outcome, id, err := d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
+	if err != nil || outcome != CommitmentProposed {
+		return outcome, id, err
+	}
+	return outcome, id, d.settleEarlierUnnamedClaims(ctx, tx, c)
 }
 
 // watchCommitment files a customer's promise on them. A new one also asks the

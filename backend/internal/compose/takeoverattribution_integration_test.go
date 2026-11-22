@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -138,5 +140,81 @@ func TestATakenOverPromiseKeepsOneTaskWhenALaterReadingNamesItsPromiser(t *testi
 	r.dispatchOnce(t, r.reading("I will also send the price list.", &r.e.Rep1))
 	if got := r.tasks(t); got != r.e.Rep2.String()+","+r.e.Rep1.String() {
 		t.Errorf("tasks held by %q, want Priya's and a new one for Robin", got)
+	}
+}
+
+// unplacedClaimOf dispatches an unplaced reading of one sentence and returns
+// the claim it leaves open on the contact.
+func (r takeoverReading) unplacedClaimOf(t *testing.T, sentence string) ids.UUID {
+	t.Helper()
+	if got := r.dispatchOnce(t, r.reading(sentence, nil)); got != CommitmentPromiserUnassignable {
+		t.Fatalf("the unplaced promise = %q, want it kept with no promiser", got)
+	}
+	return ids.MustParse(r.e.WsScalar(t, `SELECT id::text FROM conversation_claim
+		WHERE contact_id = $1 AND source_activity_id = $2 AND kind = 'commitment_ours' AND body = $3`,
+		r.contact.UUID, r.source, sentence))
+}
+
+func (r takeoverReading) takeOverError(claim ids.UUID) error {
+	priya := r.e.As(r.e.Rep2, []ids.UUID{r.e.Team1}, integration.AdminPerms)
+	_, err := newPromiseTakeOverHandlers(r.e.Pool).TakeOver(priya, claim)
+	return err
+}
+
+func (r takeoverReading) claimStatus(t *testing.T, claim ids.UUID) string {
+	t.Helper()
+	return r.e.WsScalar(t, `SELECT status FROM conversation_claim WHERE id = $1`, claim)
+}
+
+func TestANamedReadingsTaskSettlesTheEarlierUnplacedClaimSoNobodyTakesItOver(t *testing.T) {
+	r := newTakeoverReading(t)
+	const contract = "I will send the signed contract by Friday."
+	const prices = "I will also send the price list."
+	contractClaim := r.unplacedClaimOf(t, contract)
+	pricesClaim := r.unplacedClaimOf(t, prices)
+
+	for range 2 {
+		r.dispatchOnce(t, r.reading(contract, &r.e.Rep1))
+		if got := r.tasks(t); got != r.e.Rep1.String() {
+			t.Fatalf("tasks held by %q, want only Robin's", got)
+		}
+	}
+	if got := r.claimStatus(t, contractClaim); got != "dismissed" {
+		t.Errorf("the earlier unplaced claim is %q, want dismissed", got)
+	}
+	err := r.takeOverError(contractClaim)
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("taking over the settled promise = %v, want a conflict", err)
+	}
+	if got := r.tasks(t); got != r.e.Rep1.String() {
+		t.Errorf("tasks held by %q after the refused takeover, want only Robin's", got)
+	}
+
+	if got := r.claimStatus(t, pricesClaim); got != "open" {
+		t.Errorf("another sentence's claim is %q, want it still open", got)
+	}
+	if err := r.takeOverError(pricesClaim); err != nil {
+		t.Errorf("taking over the other sentence: %v", err)
+	}
+}
+
+func TestANamedProposalSettlesTheEarlierUnplacedClaimToo(t *testing.T) {
+	r := newTakeoverReading(t)
+	const contract = "I will send the signed contract by Friday."
+	claim := r.unplacedClaimOf(t, contract)
+
+	named := r.reading(contract, &r.e.Rep1)
+	named.NeedsConfirmation = true
+	if got := r.dispatchOnce(t, named); got != CommitmentProposed {
+		t.Fatalf("the named reading = %q, want a proposal", got)
+	}
+	if got := r.claimStatus(t, claim); got != "dismissed" {
+		t.Errorf("the earlier unplaced claim is %q, want dismissed", got)
+	}
+	if err := r.takeOverError(claim); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("taking over beside a pending proposal = %v, want a conflict", err)
+	}
+	if got := r.tasks(t); got != "" {
+		t.Errorf("tasks held by %q before the proposal is accepted, want none", got)
 	}
 }
