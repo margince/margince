@@ -927,7 +927,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_profile_field
 
-17 columns · primary key `(id)` · referenced by 0 foreign keys
+18 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -937,6 +937,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `evidence_snippet` | `text` | yes | The verbatim source text the value was read from, so the reader can check the claim against its own source. |
 | `field` | `text` | yes | One of `title`, `phone`, `role`, `linkedin`, `company_name`, `address` and 4 more. |
 | `observed_at` | `timestamp with time zone`, default `now()` | yes | When the source stated this value: the mail's own date, rather than when the pass read it. |
+| `signature_support` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `source_ref` | `text` | yes | What was read, as `activity:<uuid>` for a signature or `site_read:<url>` for a page. |
 | `superseded_captured_by` | `text` |  |  |
 | `superseded_observed_at` | `timestamp with time zone` |  | When the replaced value was itself stated, so a reader can see which of the two is older. |
