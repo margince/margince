@@ -325,7 +325,7 @@ func (w *notificationMailWorker) recordMailFailure(ctx context.Context, notice i
 }
 
 // notificationSubjectLimit bounds the whole subject, prefix included. The
-// body still carries the notice's full sentence.
+// body carries the notice's full sentence on both the plain and the rich path.
 const notificationSubjectLimit = 100
 
 // notificationMailSubject is what a colleague sees in their list: the prefix
@@ -344,8 +344,8 @@ func notificationMailSubject(notice notices.Notice, words mailcopy.Copy) string 
 // body is the sender's to keep honest, and a notice's subject and body are
 // written by producers that bound their length and not their structure.
 //
-// An approval's facts replace the repeated subject: the record as the heading,
-// when there is one, then one line per fact and the deadline.
+// An approval's body is the record as the heading when there is one, then the
+// sentence, one line per fact and the deadline.
 func notificationMessage(notice notices.Notice, facts approvalMailFacts, base string, words mailcopy.Copy) emailview.Message {
 	notice = notice.InLanguage(textlang.Lang(words.Language))
 	var body emailview.Content
@@ -355,8 +355,8 @@ func notificationMessage(notice notices.Notice, facts approvalMailFacts, base st
 	return body.Message(notificationMailSubject(notice, words), string(words.Language), words.NotificationPreview)
 }
 
-// writeNoticeSection is one notice's part of a message: its facts when it has
-// them, else its subject and body.
+// writeNoticeSection is one notice's part of a message: its subject and facts
+// when it has them, else its subject and body.
 func writeNoticeSection(body *emailview.Content, notice notices.Notice, facts approvalMailFacts) {
 	if !facts.Rich {
 		body.Heading(mailcopy.OneLine(notice.Subject))
@@ -366,6 +366,7 @@ func writeNoticeSection(body *emailview.Content, notice notices.Notice, facts ap
 	if facts.Heading != "" {
 		body.Heading(mailcopy.OneLine(facts.Heading))
 	}
+	body.Paragraph(mailcopy.OneLine(notice.Subject))
 	var labelled []emailview.Fact
 	for _, line := range facts.Lines {
 		value := mailcopy.Snippet(line.Value, 600)
