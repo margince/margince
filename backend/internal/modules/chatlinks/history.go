@@ -45,7 +45,7 @@ func (s *Store) AdvanceHistory(ctx context.Context, linkID ids.UUID, from *int64
 	var moved bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `UPDATE chat_link
-			SET history_cursor = $3, history_synced_at = now(),
+			SET history_cursor = $3,
 			    backfill_requested = backfill_requested AND NOT $4
 			WHERE id = $1 AND archived_at IS NULL AND history_cursor IS NOT DISTINCT FROM $2`,
 			linkID, from, to, backfilled)
