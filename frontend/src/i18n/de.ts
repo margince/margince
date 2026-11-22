@@ -16757,9 +16757,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companyManualSub":
     "Die Website-Analyse ist für diese Installation nicht aktiviert. Diese 3 Antworten ergeben einen nutzbaren Unternehmenskontext, ohne Modellaufruf und ohne externe Anfrage.",
   "settings.companyCreateWorkspace": "Unternehmenskontext erstellen",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Alle Aktionen",
+  "settings.auditAnyActor": "Alle",
+  "settings.auditActorDelegated":
+    "Mit allem, was ein KI-Assistent in ihrem Auftrag getan hat.",
+  "settings.auditAnyEntity": "Alle Typen",
+  "settings.auditEntityIdHint":
+    "Füge die ganze Datensatz-ID ein. Nutze dafür „Datensatz-ID kopieren“ in einer Zeile.",
+  "settings.auditRangeReversed":
+    "Wähle ein Bis-Datum am oder nach dem Von-Datum.",
   "product.title": "Produkte",
   "product.readOnly":
     "Nur Lesezugriff. Deine Rolle darf keine Produkte ändern.",

@@ -24,22 +24,67 @@ export type AuditLogFilters = Readonly<{
   to: string;
 }>;
 
-export const UNFILTERED_AUDIT_LOG: AuditLogFilters = {
-  actor: "",
-  entityType: "",
-  entityId: "",
-  action: "",
-  from: "",
-  to: "",
+// Every dial lives in the address, so a reload or a shared link keeps it. The
+// entity pair keeps the spelling a record's history link writes.
+const FILTER_PARAMS: Readonly<Record<keyof AuditLogFilters, string>> = {
+  actor: "actor",
+  entityType: AUDIT_ENTITY_TYPE_PARAM,
+  entityId: AUDIT_ENTITY_ID_PARAM,
+  action: "action",
+  from: "from",
+  to: "to",
 };
 
-/** The filters a link opens the audit log with; the reader may change them. */
-export function linkedAuditLogFilters(params: UrlParams): AuditLogFilters {
+const FILTER_KEYS: readonly (keyof AuditLogFilters)[] = [
+  "actor",
+  "entityType",
+  "entityId",
+  "action",
+  "from",
+  "to",
+];
+
+export function auditLogFiltersOf(params: UrlParams): AuditLogFilters {
+  const read = (key: keyof AuditLogFilters) =>
+    params.get(FILTER_PARAMS[key]) ?? "";
   return {
-    ...UNFILTERED_AUDIT_LOG,
-    entityType: params.get(AUDIT_ENTITY_TYPE_PARAM) ?? "",
-    entityId: params.get(AUDIT_ENTITY_ID_PARAM) ?? "",
+    actor: read("actor"),
+    entityType: read("entityType"),
+    entityId: read("entityId"),
+    action: read("action"),
+    from: read("from"),
+    to: read("to"),
   };
+}
+
+export function withAuditLogFilters(
+  params: UrlParams,
+  filters: AuditLogFilters,
+): UrlParams {
+  const next = new Map(params);
+  for (const key of FILTER_KEYS) {
+    const value = filters[key].trim();
+    if (value) {
+      next.set(FILTER_PARAMS[key], value);
+    } else {
+      next.delete(FILTER_PARAMS[key]);
+    }
+  }
+  return next;
+}
+
+const FULL_ID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// The server refuses anything but a whole uuid, so a part of one never leaves
+// the field.
+export function isFullId(value: string): boolean {
+  return FULL_ID.test(value.trim());
+}
+
+// Date inputs hold YYYY-MM-DD, which sorts as the days do.
+export function isRangeReversed(filters: AuditLogFilters): boolean {
+  return filters.from !== "" && filters.to !== "" && filters.from > filters.to;
 }
 
 export const AUDIT_LOG_PAGE_SIZE = 20;

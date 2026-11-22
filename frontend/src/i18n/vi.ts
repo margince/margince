@@ -16300,9 +16300,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.companyManualSub":
     "Bản cài đặt này chưa bật đọc trang web. 3 câu trả lời này tạo bối cảnh công ty dùng được mà không gọi mô hình hay gửi yêu cầu ra bên ngoài.",
   "settings.companyCreateWorkspace": "Tạo bối cảnh công ty",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Mọi hành động",
+  "settings.auditAnyActor": "Bất kỳ ai",
+  "settings.auditActorDelegated": "Gồm cả việc trợ lý AI đã làm thay họ.",
+  "settings.auditAnyEntity": "Mọi loại",
+  "settings.auditEntityIdHint":
+    "Dán toàn bộ ID đối tượng. Dùng Sao chép ID đối tượng trên một dòng.",
+  "settings.auditRangeReversed": "Chọn ngày Đến bằng hoặc sau ngày Từ.",
   "product.title": "Sản phẩm",
   "product.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi sản phẩm.",

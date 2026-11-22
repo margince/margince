@@ -70,9 +70,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
-  // Audit filter examples in the stored spelling the filter matches.
-  "settings.auditActorExample",
-  "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
   // The product's own name, as the agent that made a change.

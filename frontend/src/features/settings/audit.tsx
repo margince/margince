@@ -103,6 +103,10 @@ const KIND_LABELS = new Map<string, MessageKey>([
   ["custom_field", "audit.kind.customField"],
 ]);
 
+export const AUDIT_ENTITY_TYPE_VALUES: readonly string[] = [
+  ...KIND_LABELS.keys(),
+];
+
 // A type newer than this client still reads as words rather than as a key.
 export function entityLabel(entityType: string, t: Translator): string {
   const key = KIND_LABELS.get(entityType);

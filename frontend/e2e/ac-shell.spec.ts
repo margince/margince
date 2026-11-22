@@ -466,7 +466,9 @@ test("keyboard shortcuts: keys typed into a field stay in the field", async ({
   page,
 }) => {
   await openForKeys(page, "settings/audit");
-  const field = page.getByRole("textbox", { name: de["settings.auditActor"] });
+  const field = page.getByRole("textbox", {
+    name: de["settings.auditEntityId"],
+  });
   await field.click();
   await field.pressSequentially("gc?");
   await expect(field).toHaveValue("gc?");

@@ -16630,9 +16630,14 @@ export const en = {
   "settings.companyManualSub":
     "Website reading is not enabled for this installation. These 3 answers create usable company context without a model call or external request.",
   "settings.companyCreateWorkspace": "Create company context",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Any action",
+  "settings.auditAnyActor": "Anyone",
+  "settings.auditActorDelegated":
+    "Includes what an AI assistant did on their behalf.",
+  "settings.auditAnyEntity": "Any type",
+  "settings.auditEntityIdHint":
+    "Paste the full record ID. Use Copy record ID on a row.",
+  "settings.auditRangeReversed": "Pick a To date on or after the From date.",
   "product.title": "Products",
   "product.settingsSub": "Price list entries that offer lines copy from.",
   "product.readOnly": "Read-only. Your role cannot change products.",
