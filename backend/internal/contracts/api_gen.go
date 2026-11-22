@@ -1347,6 +1347,7 @@ const (
 	AiActivityKindDocumentExtract               AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                    AiActivityKind = "draft_reply"
 	AiActivityKindEnrich                        AiActivityKind = "enrich"
+	AiActivityKindExtensionTask                 AiActivityKind = "extension_task"
 	AiActivityKindGrowthFit                     AiActivityKind = "growth_fit"
 	AiActivityKindMorningBrief                  AiActivityKind = "morning_brief"
 	AiActivityKindNlSearch                      AiActivityKind = "nl_search"
@@ -1407,6 +1408,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindDraftReply:
 		return true
 	case AiActivityKindEnrich:
+		return true
+	case AiActivityKindExtensionTask:
 		return true
 	case AiActivityKindGrowthFit:
 		return true
@@ -1954,6 +1957,7 @@ const (
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
+	AiTaskExtensionTask                 AiTask = "extension_task"
 	AiTaskGrowthFit                     AiTask = "growth_fit"
 	AiTaskNlSearch                      AiTask = "nl_search"
 	AiTaskOfferDraft                    AiTask = "offer_draft"
@@ -2013,6 +2017,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskDraftReply:
 		return true
 	case AiTaskEnrich:
+		return true
+	case AiTaskExtensionTask:
 		return true
 	case AiTaskGrowthFit:
 		return true
