@@ -195,6 +195,7 @@
     "createTeam": "admin_settings",
     "createVoiceBuild": "business",
     "createVoiceProfile": "business",
+    "createWebForm": "admin_settings",
     "createWorkspaceEmailDomain": "admin_settings",
     "deactivateUser": "admin_settings",
     "decideCommissionEntry": "business",
@@ -2441,6 +2442,9 @@
     "create_voice_profile": [
       "voice"
     ],
+    "create_web_form": [
+      "web_forms"
+    ],
     "data_coverage": [
       "reports"
     ],
@@ -4574,6 +4578,9 @@
     ],
     "create_voice_profile": [
       "business"
+    ],
+    "create_web_form": [
+      "admin_settings"
     ],
     "data_coverage": [
       "business"

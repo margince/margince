@@ -18020,15 +18020,19 @@ paths:
     post:
       tags: [WebForms]
       operationId: createWebForm
-      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
-      x-agent-access: human-only
-      x-human-only-reason: security
-      summary: Create a website form (returns a minted signing secret once).
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: create_web_form, router: change_settings, action: create_web_form, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
+      summary: Create a website form; a human sees its minted signing secret once.
       description: |
         Mints the form's public key, the last segment of its intake address
         `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
         `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
-        sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. Only a
+        human gets that secret: an agent's answer leaves `signing_secret` out, so no secret
+        enters a model transcript. Its user then shows one with Make a new secret on the form in
+        Settings > Website forms (`POST /v1/web-forms/{id}/rotate-secret`). As on an update, an
+        agent sends no `sender_secret` and no websites, consent or privacy notice: `403`, since
+        those stay with its user. A
         `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
         later update; until then it refuses every post. Every signed
         sender needs a secret store on this installation; without one it answers 422 on `sender`.
@@ -41073,7 +41077,7 @@ components:
           properties:
             signing_secret:
               type: string
-              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent.
 
     WebFormListResponse:
       type: object

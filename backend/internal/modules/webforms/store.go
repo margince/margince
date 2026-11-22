@@ -116,12 +116,18 @@ func checkSettings(fieldMap map[string]string, consentRequired bool, wording, re
 }
 
 // CreateForm registers a form. It answers the signing secret it minted, if it
-// minted one; that is the only time the secret leaves the vault.
+// minted one, and never to an agent; that is the only time the secret leaves the vault.
 func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
 		return Form{}, "", err
 	}
 	if err := in.normalize(); err != nil {
+		return Form{}, "", err
+	}
+	if err := refuseAgentSecret(ctx, in.SenderSecret != nil); err != nil {
+		return Form{}, "", err
+	}
+	if err := refuseAgentPromiseChange(ctx, Form{}, in.promises()); err != nil {
 		return Form{}, "", err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -165,7 +171,26 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 		s.dropSecret(ctx, ref, "web form create rolled back")
 		return Form{}, "", err
 	}
-	return out, minted, nil
+	return out, secretForCaller(ctx, minted), nil
+}
+
+// secretForCaller withholds a minted secret from an agent, whose answer would put
+// it in a model transcript. Its user sees a new one through RotateSecret instead.
+func secretForCaller(ctx context.Context, minted string) string {
+	if actingAgent(ctx) {
+		return ""
+	}
+	return minted
+}
+
+// promises is what a new form would promise a visitor and where it would take
+// posts from, the part of a form an agent leaves to its user.
+func (in CreateInput) promises() Form {
+	return Form{
+		AllowedOrigins: in.AllowedOrigins, ConsentRequired: in.ConsentRequired,
+		ConsentWording: in.ConsentWording, ConsentPolicyVersion: in.ConsentPolicyVersion,
+		PrivacyNotice: in.PrivacyNotice, PrivacyNoticeURL: in.PrivacyNoticeURL,
+	}
 }
 
 // checkReferences refuses a lead origin, owner or product the lead writer would
