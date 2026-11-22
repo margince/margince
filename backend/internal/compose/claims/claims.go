@@ -106,6 +106,22 @@ func Grounded(sentence Sentence, known map[Evidence]string) bool {
 // records it cites do not" — because a silent drop is indistinguishable from a
 // model that had nothing to say, and the two want opposite responses.
 func Ungrounded(sentence Sentence, known map[Evidence]string) string {
+	return ungrounded(sentence, known, false)
+}
+
+// UngroundedExactMoney is Ungrounded for a lane whose cited sources carry the
+// totals the product computed. It also refuses a sum that no cited source
+// states. A lane without its totals in the sources must use Ungrounded.
+func UngroundedExactMoney(sentence Sentence, known map[Evidence]string) string {
+	return ungrounded(sentence, known, true)
+}
+
+// KeepExactMoney is Keep over UngroundedExactMoney.
+func KeepExactMoney(sentences []Sentence, known map[Evidence]string, knownNature map[string]bool, fact string) []Sentence {
+	return keep(sentences, knownNature, fact, func(s Sentence) bool { return UngroundedExactMoney(s, known) == "" })
+}
+
+func ungrounded(sentence Sentence, known map[Evidence]string, exactMoney bool) string {
 	if strings.TrimSpace(sentence.Text) == "" || len(sentence.Evidence) == 0 {
 		return "the sentence is empty or cites nothing"
 	}
@@ -132,24 +148,27 @@ func Ungrounded(sentence Sentence, known map[Evidence]string) string {
 	if missing := specifics.Missing(sentence.Text, cited.String()); len(missing) > 0 {
 		return "it names " + specifics.Texts(missing) + ", which the records it cites do not"
 	}
+	if exactMoney {
+		if missing := specifics.MoneyMissing(sentence.Text, cited.String()); len(missing) > 0 {
+			return "it states the sum " + specifics.Texts(missing) + ", which neither the records it cites nor Margince's own totals carry"
+		}
+	}
 	return ""
 }
 
-// Keep filters a batch to the sentences that survive Grounded, normalises any
-// nature the vocabulary does not define down to fact, and collapses repeated
-// citations.
-//
-// An unknown or absent nature reduces to FACT rather than being forwarded: a
-// surface that passed the model's own string through would render a label the
-// contract does not define, and the strictest reading is the safe one.
-//
-// knownNature is passed in rather than fixed here because each surface derives
-// it from its own contract enum — deriving beats re-spelling, and a rename
-// upstream should fail to compile rather than launder a hand-typed string.
+// Keep is keep over Grounded.
 func Keep(sentences []Sentence, known map[Evidence]string, knownNature map[string]bool, fact string) []Sentence {
+	return keep(sentences, knownNature, fact, func(s Sentence) bool { return Grounded(s, known) })
+}
+
+// keep drops ungrounded sentences, normalises a nature the vocabulary does not
+// define down to fact (the strictest reading), and collapses repeated
+// citations. knownNature comes from the caller's contract enum, so a rename
+// there fails to compile.
+func keep(sentences []Sentence, knownNature map[string]bool, fact string, grounded func(Sentence) bool) []Sentence {
 	kept := make([]Sentence, 0, len(sentences))
 	for _, sentence := range sentences {
-		if !Grounded(sentence, known) {
+		if !grounded(sentence) {
 			continue
 		}
 		if !knownNature[sentence.Nature] {

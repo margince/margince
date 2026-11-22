@@ -17,7 +17,8 @@
 // are routinely derived rather than read — three open deals, fourteen days, a
 // pipeline worth the sum of its rows — and the payload holds the parts. See
 // numbers.go, which states the case; the product's own deterministic floor is
-// the proof.
+// the proof. A lane that hands the totals it computed to its sources can still
+// hold the sums: MoneyMissing.
 //
 // The comparison is on canonical VALUES, never on substrings, because the
 // product writes in the reader's language: 2 June, 2. Juni, 2026-06-02 and

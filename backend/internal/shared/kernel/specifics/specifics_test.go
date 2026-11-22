@@ -170,3 +170,22 @@ func TestAnInjectedInstructionsFabricatedFiguresAreDropped(t *testing.T) {
 		t.Errorf("kept an invented discount, amount and date; missing = %v", missing)
 	}
 }
+
+func TestMoneyMissingNamesASumTheSourceDoesNotState(t *testing.T) {
+	source := `{"amount":"50,000.00","currency":"EUR"} open_total 120,000.00 EUR`
+	cases := []struct {
+		claim   string
+		missing int
+	}{
+		{"Worth 120,000 EUR.", 0},
+		{"Worth EUR 50.000,00 here.", 0},
+		{"Worth 95,000 EUR.", 1},
+		{"Worth 120k EUR.", 0},
+		{"Three seats and 14 days.", 0},
+	}
+	for _, c := range cases {
+		if got := MoneyMissing(c.claim, source); len(got) != c.missing {
+			t.Errorf("%q: %d sums missing (%v), want %d", c.claim, len(got), Texts(got), c.missing)
+		}
+	}
+}

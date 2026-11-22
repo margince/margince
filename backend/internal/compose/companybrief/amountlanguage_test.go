@@ -65,3 +65,69 @@ func TestAGermanFigureTheModelCopiesIsGroundedInItsDeal(t *testing.T) {
 		t.Errorf("a figure copied from the deal was dropped: %s", reason)
 	}
 }
+
+const fleetDealID = "44444444-4444-4444-8444-444444444444"
+
+func twoDealAccount() Input {
+	return Input{
+		ID: briefCompanyID, Name: "Acme",
+		OpenDeals: []DealIn{
+			{ID: fleetDealID, Name: "Fleet retrofit", AmountMinor: 5_000_000, Currency: "EUR"},
+			{ID: "55555555-5555-4555-8555-555555555555", Name: "Depot", AmountMinor: 7_000_000, Currency: "EUR"},
+		},
+		WonLifetime: 3_000_000, WonCurrency: "EUR",
+	}
+}
+
+func TestTheTotalsMargincePutsOnTheCardAreGroundedAndNoOtherSumIs(t *testing.T) {
+	in := twoDealAccount()
+	known := knownRecords(in.ID, in)
+	company := []Evidence{{EntityType: citeCompany, EntityID: in.ID}}
+	deal := []Evidence{{EntityType: citeDeal, EntityID: fleetDealID}}
+	cases := []struct {
+		name     string
+		sentence Sentence
+		kept     bool
+	}{
+		{"the open total", Sentence{Text: "Open pipeline is 120,000.00 EUR.", Evidence: company}, true},
+		{"the won total", Sentence{Text: "Won to date is 30,000.00 EUR.", Evidence: company}, true},
+		{"a sum that is no row and no total", Sentence{Text: "Open pipeline is 95,000.00 EUR.", Evidence: company}, false},
+		{"the largest row beside a sum", Sentence{Text: "Fleet retrofit at 50,000.00 EUR makes 120,000.00 EUR.", Evidence: deal}, false},
+		{"one row's own amount", Sentence{Text: "Fleet retrofit is 50,000.00 EUR.", Evidence: deal}, true},
+	}
+	for _, c := range cases {
+		if got := claims.UngroundedExactMoney(c.sentence, known) == ""; got != c.kept {
+			t.Errorf("%s: kept = %v, want %v", c.name, got, c.kept)
+		}
+	}
+}
+
+func TestNoOpenTotalIsGroundedWhenTheDealsMixCurrencies(t *testing.T) {
+	in := twoDealAccount()
+	in.OpenDeals[1].Currency = "USD"
+	sentence := Sentence{Text: "Open pipeline is 120,000.00 EUR.", Evidence: []Evidence{{EntityType: citeCompany, EntityID: in.ID}}}
+	if claims.UngroundedExactMoney(sentence, knownRecords(in.ID, in)) == "" {
+		t.Error("a total the floor would never state was kept")
+	}
+}
+
+func TestBothParsersKeepTheOpenTotalAndRefuseAnyOtherSum(t *testing.T) {
+	in := twoDealAccount().WordedIn("en")
+	sentence := func(text string) string {
+		return `{"text":"` + text + `","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + in.ID + `"}]}`
+	}
+	cases := []struct {
+		text string
+		kept int
+	}{{"Open pipeline is 120,000.00 EUR.", 1}, {"Open pipeline is 95,000.00 EUR.", 0}}
+	for _, c := range cases {
+		flat, err := parseCitedBrief(`{"sentences":[`+sentence(c.text)+`]}`, in)
+		if err != nil || len(flat) != c.kept {
+			t.Errorf("flat parser on %q kept %d (%v), want %d", c.text, len(flat), err, c.kept)
+		}
+		sections, err := parseCitedSections(`{"sections":[{"kind":"health","sentences":[`+sentence(c.text)+`]}]}`, in.ID, in)
+		if err != nil || len(sections) != c.kept {
+			t.Errorf("sectioned parser on %q kept %d sections (%v), want %d", c.text, len(sections), err, c.kept)
+		}
+	}
+}

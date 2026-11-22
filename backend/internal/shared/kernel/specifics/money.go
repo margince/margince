@@ -5,6 +5,7 @@ package specifics
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -94,4 +95,34 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// MoneyMissing returns the sums `claim` states with a currency that no figure
+// in `source` equals. Missing leaves money magnitudes alone, because a total is
+// derived. A caller that puts its own totals into `source` can refuse any other sum.
+func MoneyMissing(claim, source string) []Specific {
+	var available map[string]bool
+	var missing []Specific
+	for _, amount := range MoneyIn(claim) {
+		key := amount.key()
+		if key == "" {
+			continue
+		}
+		if available == nil {
+			available = sourceKeys(source)
+		}
+		if !available["num:"+key] {
+			missing = append(missing, Specific{Text: amount.Major, Keys: []string{"num:" + key}})
+		}
+	}
+	return missing
+}
+
+// key is the amount in major units as the figure scan spells a value.
+func (a Amount) key() string {
+	value, err := strconv.ParseFloat(a.Major, 64)
+	if err != nil {
+		return ""
+	}
+	return strconv.FormatFloat(value*float64(a.Scale), 'f', -1, 64)
 }

@@ -2341,9 +2341,10 @@ paths:
         workspace's AI usage meter and the model-call audit row, exactly as every other
         model-backed read on this page does.
 
-        **Grounded, per viewer.** The draft is written from the caller's own contact 360,
-        assembled inside the normal gates, so it can only mention records that caller could
-        open themselves. What it stands on is what the contact page stands on: who they are
+        **Grounded, per viewer, plus the company profile.** The draft is written from the
+        caller's own contact 360, assembled inside the normal gates, so it can only mention
+        contact records that caller could open themselves. The model also receives the
+        installation's own company profile, which every member may read. What it stands on is what the contact page stands on: who they are
         and where they work, the open deal and the money on it, the claims they have made —
         what they asked for, promised, or objected to — and the recent conversation. A
         section the caller has no grant for is absent from the view and therefore absent from
@@ -5086,9 +5087,12 @@ paths:
         other model-backed read on this page does. A drafting call a workspace cannot see
         in its own budget would be worse than one it can.
 
-        **Grounded, per viewer.** The draft is written from the caller's own 360, assembled
-        inside the normal gates, so it can only mention records that caller could open
-        themselves. Grounding order is A132's: the caller's intent, then the recipient and
+        **Grounded, per viewer, plus the company profile.** The draft is written from the
+        caller's own gated read of the account, assembled inside the normal gates, so it can
+        only mention account records that caller could open themselves. The model also
+        receives the installation's own company profile (what we sell, our positioning and
+        proof), which every member may read, so a first email to a company knows our offer
+        as well as the account. Grounding order is A132's: the caller's intent, then the recipient and
         our relationship with them, then the deal and what we last committed to, then the
         recent conversation, then the dossier, then the writer's voice. Every input but
         the intent is untrusted text and is fenced.
@@ -14125,7 +14129,9 @@ paths:
         rep's unsent message is a separate, explicit act at `PUT /mail-drafts`, which this
         route never performs.
 
-        **Grounded, per viewer.** The draft stands on what the lead page stands on: who they
+        **Grounded, per viewer, plus the company profile.** The model also receives the
+        installation's own company profile, which every member may read. The draft stands on
+        what the lead page stands on: who they
         are, the company they wrote from, where the lead sits on its ladder, and the recent
         correspondence filed against it. A lead has no deal, no project and no claims — those
         belong to a contact that exists, and a lead is by definition the record before one

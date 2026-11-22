@@ -45,10 +45,21 @@ func knownRecords(companyID string, in Input) map[Evidence]string {
 // The whole input would make a citation of the company a skeleton key. Most
 // sentences cite it, and every figure anywhere in the payload would answer
 // for them. A sentence about the account may state what the account row says:
-// its industry, its size, its lifetime won.
+// its industry, its size, its lifetime won and its open total.
 func accountItself(in Input) string {
+	total := openTotalText(in)
 	in.Contacts, in.OpenDeals, in.Recent, in.OpenTasks, in.OpenCommitments = nil, nil, nil, nil, nil
-	return claims.Source(in)
+	return claims.Source(in) + total
+}
+
+// openTotalText is the open total as the prompt renders an amount, or "" when
+// the floor states none.
+func openTotalText(in Input) string {
+	total, currency, ok := oneCurrencyTotal(in.OpenDeals)
+	if !ok || total <= 0 {
+		return ""
+	}
+	return "\nopen_total " + renderedAmount(total, currency, in.lang) + " " + currency
 }
 
 // recordKey is knownRecords' pair without the citation's descriptive Name.

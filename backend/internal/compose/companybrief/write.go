@@ -360,7 +360,7 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 			sentence.Nature = nature
 			// Grounding and refusal decide first: a recommendation the reader never sees
 			// must not spend the budget.
-			if !claims.Grounded(sentence, known) {
+			if claims.UngroundedExactMoney(sentence, known) != "" {
 				continue
 			}
 			if nature == natureRecommendation {
@@ -384,22 +384,14 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 	return out, nil
 }
 
-// keepGroundedSentences drops any sentence whose citations do not point at
-// records this input actually carried.
+// keepGroundedSentences is the one test both parsers apply, so the flat answer
+// and the sectioned brief never disagree about what counts as checkable.
 //
-// The reader's trust in the brief is the citation: a sentence pointing at an
-// id that was never in the input is either invented or points somewhere the
-// reader cannot go, and neither is worth showing. Dropping the sentence is
-// the honest response — the remaining ones still say true things.
-//
-// The ACCOUNT is pinned, not merely allowed by type. Accepting any
-// company citation would let a reply hand back an id this reader never
-// saw — rendered as a link they could click into a record their scope may
-// hide. The one company a brief may cite is the one it is about.
-// groundedSentence is the ONE test both parsers apply, so the flat answer and
-// the sectioned brief can never disagree about what counts as checkable.
+// It drops a sentence whose citations name a record this input did not carry.
+// The account is pinned, not merely allowed by type: the one company a brief
+// may cite is the one it is about. It also drops a sum no cited record states.
 func keepGroundedSentences(sentences []Sentence, companyID string, in Input) []Sentence {
-	return claims.Keep(sentences, knownRecords(companyID, in), knownNature, natureFact)
+	return claims.KeepExactMoney(sentences, knownRecords(companyID, in), knownNature, natureFact)
 }
 
 // The section kinds, DERIVED from the contract's enum rather than re-spelled,
