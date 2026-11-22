@@ -12,10 +12,11 @@ import (
 // TargetType is what an approval's target_entity_type and co_target_entity_type
 // name: the kind of thing the approval decides or is pinned against.
 //
-// This list is the one spelling. TestEveryDomainEnumMatchesItsSchemaCheck holds
-// the CHECK on both columns equal to it. A unit's own table is the open arm, as
-// extensionTableGrammar spells it. TestEveryApprovalWriterVocabularyIsAnApprovalTargetType
-// holds the vocabularies that writers stage from inside it.
+// This list is the one spelling. A unit's own table is the open arm, as
+// extensionTableGrammar spells it.
+//
+// Held by: TestEveryDomainEnumMatchesItsSchemaCheck (backend/gates/enumsync_test.go)
+// Held by: TestEveryApprovalStagerNamesAnApprovalTargetType (backend/gates/approvaltargettypes_test.go)
 type TargetType string
 
 // The staged target types. The first block is the record vocabulary; the rest

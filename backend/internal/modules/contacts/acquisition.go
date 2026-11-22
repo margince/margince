@@ -154,6 +154,7 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 // cites a deal.
 type AcquisitionSource string
 
+// The kinds of record acquisition evidence cites.
 const (
 	AcquisitionSourceActivity AcquisitionSource = "activity"
 	AcquisitionSourceDeal     AcquisitionSource = "deal"
