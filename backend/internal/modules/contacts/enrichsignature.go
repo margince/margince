@@ -41,10 +41,10 @@ const enrichSource = "capture_enrich"
 // enrichCapturedBy is the acting identity on enrichment rows.
 const enrichCapturedBy = "agent:enrich"
 
-// SignatureField is one gated, evidence-carrying extraction. phone may appear
-// once per number the signature lists; every other field appears once.
+// SignatureField is one gated, evidence-carrying extraction. phone and email
+// may appear once per number or address listed; every other field appears once.
 type SignatureField struct {
-	Name       string // title | phone | role | linkedin | company_name | address | website
+	Name       string // title | phone | role | linkedin | company_name | address | website | email
 	Value      string
 	Evidence   string // verbatim snippet — the caller's gate already verified it
 	Confidence float64
@@ -199,6 +199,11 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 		if err != nil {
 			return err
 		}
+		details, err := applySignatureDetailsTx(ctx, tx, contactID, sourceActivity, sourceRef, observedAt, fields, corrected, &res)
+		if err != nil {
+			return err
+		}
+		appliedFields = append(appliedFields, details...)
 		if len(appliedFields) == 0 {
 			return nil
 		}
@@ -305,15 +310,29 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 			res.Skipped++
 			continue
 		}
-		if f.Name == fieldPhone {
-			// A signature lists several numbers, and they are applied as one
-			// set below.
+		// A signature lists several numbers, applied as one set below. Its
+		// further addresses reach past the contact, and applySignatureDetailsTx lands them.
+		switch f.Name {
+		case fieldPhone:
 			numbers = append(numbers, f)
 			continue
+		case fieldEmail:
+			continue
+		case fieldAddress:
+			// A line the snippet does not print is the model's, not the contact's.
+			if !quotesValue(f.Evidence, f.Value) {
+				res.Skipped++
+				continue
+			}
 		}
 		outcome, err := s.applySignatureField(ctx, tx, contactID, sourceRef, observedAt, f)
 		if err != nil {
 			return nil, nil, err
+		}
+		if f.Name == fieldAddress && (outcome.landed() || outcome == observedRestated) {
+			if _, err := addSignatureSupportTx(ctx, tx, contactID, fieldAddress, "", strings.TrimSpace(f.Value), sourceRef, f.Evidence); err != nil {
+				return nil, nil, err
+			}
 		}
 		if !outcome.landed() {
 			res.Skipped++
@@ -336,6 +355,11 @@ func (s *Store) applySignatureStatement(ctx context.Context, tx pgx.Tx, contactI
 	res.Skipped += len(numbers) - landed
 	if landed > 0 {
 		appliedFields = append(appliedFields, fieldPhone)
+	}
+	if slices.Contains(appliedFields, fieldAddress) {
+		if err := fillSignatureAddressTx(ctx, tx, contactID, signatureValue(fields, fieldAddress)); err != nil {
+			return nil, nil, err
+		}
 	}
 	return appliedFields, confirmed, nil
 }

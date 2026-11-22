@@ -115,9 +115,11 @@ type counterpartyDecision struct {
 	// by an address, the other by a provider identity. So the seam a record
 	// belongs to is decided once, here, and not re-derived downstream.
 	channel bool
-	// linkOnly files the mail under existing records and mints none.
+	// linkOnly files the mail under existing records, and mints a record only
+	// for a shared mailbox's backup owner (acting) when the ladder said create.
 	linkOnly   bool
 	readerTeam ids.UUID
+	acting     *principal.Principal
 	// subject is the party this decision is ABOUT, which is the message's
 	// counterparty except where a colleague's message named an external one
 	// (ladderSubjectTx). It is carried, not re-derived, so the create acts on

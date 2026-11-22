@@ -39,7 +39,7 @@ afterEach(cleanup);
 describe("the decisions reading over a short lane", () => {
   it("draws the server's exact decisions total rather than a floor", () => {
     draw(
-      { review: 180, more_available: true },
+      { review: 340, more_available: true },
       [decisionRow("a1", true)],
       [{ ...boundedDecisions(200, 1), total: 340 }],
     );
@@ -53,5 +53,18 @@ describe("the decisions reading over a short lane", () => {
       [boundedDecisions(200, 1)],
     );
     expect(decisionsValue()).toBe("180+");
+  });
+});
+
+// Home draws the review reading, the field the Worklist strip draws, so the
+// two cannot show different decisions figures.
+describe("the decisions figure on Home", () => {
+  it("is the review reading the Worklist strip draws", () => {
+    draw(
+      { review: 7 },
+      [decisionRow("a1", true)],
+      [{ ...boundedDecisions(1, 1), total: 9 }],
+    );
+    expect(decisionsValue()).toBe("7");
   });
 });

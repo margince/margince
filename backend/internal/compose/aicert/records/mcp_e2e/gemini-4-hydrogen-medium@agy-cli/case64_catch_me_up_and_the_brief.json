@@ -11,13 +11,85 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "4bc37129cb146963",
+    "tools": "b5fb28241f1608b1",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T19:02:01Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:19Z"
+  },
   "usage": {
-    "input_tokens": 58271,
-    "output_tokens": 14672,
+    "input_tokens": 56131,
+    "output_tokens": 14644,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 125056,
+    "cache_read_input_tokens": 128575,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_worklist",
+        "read_attention",
+        "read_context",
+        "read_my_brief_delivery",
+        "read_record",
+        "read_workspace",
+        "review_commitments",
+        "search_records",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_worklist",
+        "read_context",
+        "read_my_brief_delivery",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 11.5,
+      "min": 10,
+      "max": 13
+    },
+    "turns": {
+      "median": 5.5,
+      "min": 5,
+      "max": 6
+    },
+    "refused": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 92353,
+      "min": 78481,
+      "max": 106225
+    },
+    "output_tokens": {
+      "median": 7322,
+      "min": 6737,
+      "max": 7907
+    }
   }
 }

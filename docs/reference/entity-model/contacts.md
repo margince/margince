@@ -610,7 +610,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `last_activity_at` | `timestamp with time zone` |  | When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts. |
 | `last_name` | `text` |  |  |
 | `merged_into_id` | `uuid` |  | Set when this row was merged away. |
-| `narrowing_reason` | `text` |  | One of `awaiting_verdict`, `outbound_no_answer`, `confidentiality_hold`, `advisor`, `human_decided`. |
+| `narrowing_reason` | `text` |  | One of `awaiting_verdict`, `outbound_no_answer`, `confidentiality_hold`, `advisor`, `human_decided`, `shared_mailbox`. |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `photo_object_key` | `text` |  |  |
 | `photo_origin` | `text` |  |  |
@@ -652,7 +652,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `contact_greeting_register_check`: `CHECK ((greeting_register = ANY (ARRAY['formal', 'familiar'])))`
-- `contact_narrowing_reason_check`: `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided'])))`
+- `contact_narrowing_reason_check`: `CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict', 'outbound_no_answer', 'confidentiality_hold', 'advisor', 'human_decided', 'shared_mailbox'])))`
 - `contact_narrowing_reason_only_when_owner`: `CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner')))`
 - `contact_owner_private_names_its_owner`: `CHECK (((visibility <> 'owner') OR (owner_id IS NOT NULL)))`
 - `contact_relationship_mark_check`: `CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'])))`
@@ -927,7 +927,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_profile_field
 
-17 columns · primary key `(id)` · referenced by 0 foreign keys
+18 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -935,14 +935,15 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `confidence` | `numeric(4,3)` |  |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
 | `evidence_snippet` | `text` | yes | The verbatim source text the value was read from, so the reader can check the claim against its own source. |
-| `field` | `text` | yes | One of `title`, `phone`, `role`, `linkedin`, `company_name`, `address` and 3 more. |
+| `field` | `text` | yes | One of `title`, `phone`, `role`, `linkedin`, `company_name`, `address` and 4 more. |
 | `observed_at` | `timestamp with time zone`, default `now()` | yes | When the source stated this value: the mail's own date, rather than when the pass read it. |
+| `signature_support` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `source_ref` | `text` | yes | What was read, as `activity:<uuid>` for a signature or `site_read:<url>` for a page. |
 | `superseded_captured_by` | `text` |  |  |
 | `superseded_observed_at` | `timestamp with time zone` |  | When the replaced value was itself stated, so a reader can see which of the two is older. |
 | `superseded_value` | `text` |  | What this field held before a newer statement replaced it. |
 | `value` | `text` | yes |  |
-| `value_key` | `text`, default `''::text` | yes | What tells two rows of one field apart: the E.164 number for a `phone` row, empty for every other field. |
+| `value_key` | `text`, default `''::text` | yes | What tells two rows of one field apart: the E.164 number for a `phone` row, the lowercased address for an `email` row, empty for every other field. |
 | `captured_by` | `text` | yes | `agent:enrich` until a human edits the field, `human:<uuid>` after; this is how the page says "corrected by you". |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | The channel that produced it, e.g. `capture_enrich` or `site_read`. |
@@ -958,8 +959,8 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `contact_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))`
-- `contact_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website', 'first_name', 'last_name'])))`
-- `contact_profile_field_value_key_cardinality`: `CHECK (((field = 'phone') = (value_key <> '')))`
+- `contact_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['title', 'phone', 'role', 'linkedin', 'company_name', 'address', 'website', 'first_name', 'last_name', 'email'])))`
+- `contact_profile_field_value_key_cardinality`: `CHECK (((field = ANY (ARRAY['phone', 'email'])) = (value_key <> '')))`
 - `contact_profile_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `uq_contact_profile_field`: `UNIQUE (contact_id, field, value_key)`
 

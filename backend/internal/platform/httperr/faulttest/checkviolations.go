@@ -16,6 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
+// internalCode is the problem code of a 500, which names nothing inside.
+const internalCode = "internal"
+
 // AssertCheckViolationsReachTheSharedNet asserts that a module's error writer
 // answers a custom picklist with the picklist refusal and leaves every other
 // CHECK to httperr's constraint net. table is a table the module writes.
@@ -30,15 +33,15 @@ func AssertCheckViolationsReachTheSharedNet(t *testing.T, table string, write fu
 		{"an overlong custom text", table, storekit.TextMaxConstraint("cf_briefing", 20000), http.StatusUnprocessableEntity, "validation_error", "cf_briefing"},
 		{"a retired member", table, "member_work_reference_retired", http.StatusConflict, "conflict", ""},
 		{"a retention hold", "activity", "activity_restricted_immutable", http.StatusLocked, "locked", ""},
-		{"an audit row", storekit.TableAudit, "audit_log_action_check", http.StatusInternalServerError, "internal", ""},
-		{"an outbox row", storekit.TableOutbox, "event_outbox_stream_check", http.StatusInternalServerError, "internal", ""},
-		{"a custom picklist name on an outbox row", storekit.TableOutbox, storekit.PicklistConstraint("cf_secret"), http.StatusInternalServerError, "internal", ""},
-		{"a custom text bound name on an outbox row", storekit.TableOutbox, storekit.TextMaxConstraint("cf_secret", 20000), http.StatusInternalServerError, "internal", ""},
+		{"an audit row", storekit.TableAudit, "audit_log_action_check", http.StatusInternalServerError, internalCode, ""},
+		{"an outbox row", storekit.TableOutbox, "event_outbox_stream_check", http.StatusInternalServerError, internalCode, ""},
+		{"a custom picklist name on an outbox row", storekit.TableOutbox, storekit.PicklistConstraint("cf_secret"), http.StatusInternalServerError, internalCode, ""},
+		{"a custom text bound name on an outbox row", storekit.TableOutbox, storekit.TextMaxConstraint("cf_secret", 20000), http.StatusInternalServerError, internalCode, ""},
 		{"an unnamed rule", table, table + "_unnamed_rule", http.StatusUnprocessableEntity, "value_not_allowed", ""},
 	} {
 		rec := httptest.NewRecorder()
 		cause := &pgconn.PgError{Code: storekit.CheckViolationCode, TableName: tc.table, ConstraintName: tc.constraint}
-		write(rec, httptest.NewRequest(http.MethodPatch, "/v1/records/x", nil), fmt.Errorf("writing: %w", cause))
+		write(rec, httptest.NewRequestWithContext(t.Context(), http.MethodPatch, "/v1/records/x", nil), fmt.Errorf("writing: %w", cause))
 		var body struct {
 			Code    string `json:"code"`
 			Details struct {

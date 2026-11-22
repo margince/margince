@@ -11,13 +11,74 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "b1519291c1be3c4c",
+    "tools": "e058307808328b33",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T19:06:25Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:34:28Z"
+  },
   "usage": {
-    "input_tokens": 31299,
-    "output_tokens": 3419,
+    "input_tokens": 34969,
+    "output_tokens": 3426,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 57931,
+    "cache_read_input_tokens": 70578,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_attention",
+        "describe_router_actions",
+        "get_worklist",
+        "mark_all_notices_read",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_attention",
+        "describe_router_actions",
+        "get_worklist",
+        "mark_all_notices_read",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3,
+      "min": 3,
+      "max": 3
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 52773.5,
+      "min": 49414,
+      "max": 56133
+    },
+    "output_tokens": {
+      "median": 1713,
+      "min": 1676,
+      "max": 1750
+    }
   }
 }

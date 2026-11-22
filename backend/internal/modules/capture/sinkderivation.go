@@ -30,16 +30,29 @@ func (s *Sink) derivationStart(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		return dispositionRow{}, counterpartyDecision{}, false, nil
 	}
 	actor, owner := capturePrincipal(ctx)
+	var decision counterpartyDecision
 	// A shared mailbox has no owner by design, not by fault: its mail files
-	// under existing records and mints none, so the ladder is skipped.
+	// under existing records. Only with a backup owner does the ladder run, and
+	// what it mints is the backup owner's, as if the mail had reached them.
 	if box, shared := sharedMailboxOf(ctx); shared {
 		var readers ids.UUID
 		if err := tx.QueryRow(ctx, `SELECT reader_team_id FROM capture_connection WHERE id = $1`, box).Scan(&readers); err != nil {
 			return dispositionRow{}, counterpartyDecision{}, false, fmt.Errorf("capture: reading the shared mailbox's readers: %w", err)
 		}
-		return dispositionRow{}, counterpartyDecision{linkOnly: true, readerTeam: readers, capturedBy: actor.ID, subject: cp}, false, nil
-	}
-	if owner.IsZero() {
+		decision = counterpartyDecision{linkOnly: true, readerTeam: readers, capturedBy: actor.ID, subject: cp}
+		backup, minting := backupActingOf(ctx)
+		if minting {
+			keptOut, err := backupKeepsOutTx(ctx, tx, rec, activityID, backup.UserID)
+			if err != nil {
+				return dispositionRow{}, counterpartyDecision{}, false, err
+			}
+			minting = !keptOut
+		}
+		if !minting {
+			return dispositionRow{}, decision, false, nil
+		}
+		owner, decision.acting = backup.UserID, &backup
+	} else if owner.IsZero() {
 		// A fault, and one that reaches no other fault path: this returns
 		// ok=false with no error, so decideCounterpartyGuarded's arm never sees
 		// it and the message would otherwise trace as an ordinary capture.
@@ -50,5 +63,6 @@ func (s *Sink) derivationStart(ctx context.Context, tx pgx.Tx, rec connector.Nor
 		Email: cp.Email, Domain: cp.Domain, DisplayName: cp.DisplayName,
 		ActivityID: activityID, OwnerID: owner,
 	}
-	return row, counterpartyDecision{owner: owner, capturedBy: actor.ID}, true, nil
+	decision.owner, decision.capturedBy = owner, actor.ID
+	return row, decision, true, nil
 }

@@ -83,11 +83,14 @@ class Transcript:
             self._cost = (self._cost or 0.0) + usage["cost"]
 
     def finish(self, is_error, text, turns):
+        """`turns` is the model's requests, or None when the driver reports no
+        such count; then the key is absent, so efficiency never reads a guess."""
         event = {
             "type": "result", "subtype": "error" if is_error else "success",
-            "is_error": is_error, "result": text, "num_turns": turns,
-            "total_cost_usd": self._cost,
+            "is_error": is_error, "result": text, "total_cost_usd": self._cost,
         }
+        if turns is not None:
+            event["num_turns"] = turns
         if self._measured:
             event["usage"] = dict(self._usage)
         self._emit(event)
@@ -126,7 +129,9 @@ def _codex_result_text(entry):
     text = "\n".join(
         block.get("text", "") for block in result.get("content") or () if block.get("type") == "text"
     )
-    return text, bool(result.get("isError"))
+    # codex drops the server's isError and marks the item failed instead,
+    # keeping the result, so a refused call reads as one only by its status.
+    return text, bool(result.get("isError")) or entry.get("status") == "failed"
 
 
 def _codex_item(out, entry):
@@ -200,7 +205,9 @@ def from_codex(lines, path, model, driver, offered):
         if not finished:
             out.finish(True, "HARNESS: codex stopped before its turn completed", 0)
             return 3
-        out.finish(False, answer, 1)
+        # codex exec counts the whole conversation as one turn and reports no
+        # count of model requests, so the run's turns are left unmeasured.
+        out.finish(False, answer, None)
         return 0
 
 
@@ -290,7 +297,7 @@ def from_agy(lines, path, model, driver, offered, workspace=""):
     agy's init lists its whole tool registry, not what the model was offered, so
     `offered` is the lane's own tools/list over the same passport.
     """
-    texts, conversation, result = {}, "", None
+    texts, conversation, result, responses = {}, "", None, set()
     with Transcript(path) as out:
         out.init(model, driver, "cli-default", "listed-by-lane", offered)
         for line in lines:
@@ -305,6 +312,8 @@ def from_agy(lines, path, model, driver, offered, workspace=""):
             conversation = conversation or event.get("conversation_id") or step.get("conversation_id") or ""
             kind, state = step.get("step_type"), step.get("state")
             if kind == "agent_response":
+                if state == "DONE":
+                    responses.add(step.get("step_index"))
                 texts[step.get("step_index")] = texts.get(step.get("step_index"), "") + (step.get("text_delta") or "")
                 # A step with no text is the model thinking before a tool call;
                 # the call itself is written as its own turn.
@@ -326,5 +335,7 @@ def from_agy(lines, path, model, driver, offered, workspace=""):
             out.finish(True, f"HARNESS: agy: {result.get('error') or result.get('status')}", 0)
             return 3
         out.add_usage(_agy_usage(result.get("usage") or {}))
-        out.finish(False, result.get("response") or "", result.get("num_turns") or 1)
+        # agy's num_turns counts the user's prompts; each finished agent
+        # response is one model request, the measure the other drivers give.
+        out.finish(False, result.get("response") or "", len(responses))
         return 0

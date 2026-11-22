@@ -44,7 +44,8 @@ import (
 // A hand-logged meeting is untouched: nothing captured it, so this function
 // never runs for it and it stays workspace-readable like the note it is.
 func limitLinkLessAudience(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, kind string, decision counterpartyDecision, derivedLinks int) error {
-	if decision.create || len(rec.Links) > 0 || derivedLinks > 0 {
+	// A shared mailbox's mail keeps the audience its reader team reads it under.
+	if decision.create || decision.linkOnly || len(rec.Links) > 0 || derivedLinks > 0 {
 		return nil
 	}
 	if decision.traceOutcome != TraceCaptured && decision.traceOutcome != TraceSuppressed {

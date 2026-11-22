@@ -20,6 +20,10 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 		return
 	}
 	w.links.markPending(w.object, row.ExternalID)
+	if outcome == predictHeldKey {
+		// The record keeps its ref, and the row claims none of its keys.
+		return
+	}
 	w.rememberRow(row, outcome)
 	typed, _, _ := w.landingCells(row)
 	w.claimRow(row, typed)
@@ -44,7 +48,7 @@ func reviewDisposition(outcome predictedOutcome) (string, error) {
 		return "update", nil
 	case predictUnchanged:
 		return "unchanged", nil
-	case predictUnwritable, predictCollidesSkipped:
+	case predictUnwritable, predictHeldKey, predictCollidesSkipped:
 		return importRowSkip, nil
 	default:
 		return "", apperrors.ErrInvalidArgument
@@ -70,7 +74,7 @@ func (w *csvWriters) reviewRow(ctx context.Context, row migration.Row, outcome p
 			return out, err
 		}
 	}
-	if outcome != predictUpdate && outcome != predictUnchanged {
+	if outcome != predictUpdate && outcome != predictUnchanged && outcome != predictHeldKey {
 		return out, nil
 	}
 	target, err := w.reviewTarget(ctx, row)

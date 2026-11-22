@@ -2,6 +2,7 @@ import glob
 import os
 import sys
 import unittest
+import unittest.mock
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
@@ -71,8 +72,6 @@ class QueueProblemsTest(unittest.TestCase):
                       casesetup.queue_problems([self.review("Wiebke Brandstätter"), other], self.NAMES))
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class RecordingAdmin:
@@ -97,3 +96,45 @@ class ContactChannelTest(unittest.TestCase):
         self.assertEqual(len(created), len(casesetup.FAIR_GUESTS))
         for body in created:
             self.assertTrue(body.get("emails"), f"{body['full_name']} is created with no email")
+
+
+class StagedMoveTest(unittest.TestCase):
+    """The case125 setup holds the queue to the tool's word that the move waits."""
+
+    STAGED = "Confirm-first (🟡): a contact answers this before it runs. Nothing was changed yet."
+
+    def staged_with_queue(self, queue):
+        admin = unittest.mock.Mock(app="http://app")
+        admin.call.side_effect = lambda method, path, body=None: (
+            {"token": "passport"} if path == "/passports" else {"data": queue})
+        session = unittest.mock.Mock()
+        session.call.return_value = (self.STAGED, True)
+        with unittest.mock.patch.object(casesetup, "acceptance_mail_on_the_company", return_value=("mail-1", "project-1")), \
+                unittest.mock.patch.object(casesetup.mcpclient, "Session", return_value=session):
+            casesetup.acceptance_mail_staged_for_the_project(admin)
+
+    def test_a_move_the_queue_holds_is_set_up(self):
+        self.staged_with_queue([{"kind": "relink_activity", "preview": {"activity": "mail-1"}}])
+
+    def test_a_staged_answer_with_no_row_in_the_queue_stops_the_case(self):
+        with self.assertRaisesRegex(casesetup.SetupFault, "no pending relink of the mail"):
+            self.staged_with_queue([{"kind": "relink_activity", "preview": {"activity": "another-mail"}}])
+
+
+
+class AdminIdTest(unittest.TestCase):
+    def ids_for(self, users):
+        admin = unittest.mock.Mock()
+        admin.call.return_value = {"data": users}
+        return casesetup._admin_id(admin)
+
+    def test_only_the_exact_address_is_the_admin(self):
+        users = [{"id": "other", "email": "admin@demo.test.example"}, {"id": "me", "email": "Admin@demo.test"}]
+        self.assertEqual(self.ids_for(users), "me")
+
+    def test_no_exact_address_stops_the_setup(self):
+        with self.assertRaisesRegex(casesetup.SetupFault, "0 users have the address"):
+            self.ids_for([{"id": "other", "email": "superadmin@demo.test"}])
+
+if __name__ == "__main__":
+    unittest.main()

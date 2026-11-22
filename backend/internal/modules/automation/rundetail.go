@@ -24,12 +24,20 @@ import (
 type runDetail struct {
 	Reason     string          `json:"reason,omitempty"`
 	ApprovalID *ids.ApprovalID `json:"approval_id,omitempty"`
+	// Retryable marks a failed Apply that was not a refusal, decided once when
+	// the failure was recorded.
+	Retryable bool `json:"retryable,omitempty"`
 }
 
 // reasonDetail encodes a plain failure/skip/block reason with no staging
 // pointer attached.
 func reasonDetail(reason string) ([]byte, error) {
 	return json.Marshal(runDetail{Reason: reason})
+}
+
+// failureDetail encodes a failed Apply's reason with its retry decision.
+func failureDetail(reason string, retryable bool) ([]byte, error) {
+	return json.Marshal(runDetail{Reason: reason, Retryable: retryable})
 }
 
 // stagedApprovalDetail is the ONE spelling of the run-row staging
