@@ -88,10 +88,7 @@ func buildModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (Model, error)
 	if err != nil {
 		return Model{}, err
 	}
-	out := Model{
-		ChanceModel: forecasting.ChanceModel{SelfCorrecting: on, QuietSignal: assurance.SignalQuiet},
-		Cutoff:      cutoff,
-	}
+	out := Model{SelfCorrecting: on, QuietSignal: assurance.SignalQuiet, Cutoff: cutoff}
 	if !on {
 		return out, nil
 	}

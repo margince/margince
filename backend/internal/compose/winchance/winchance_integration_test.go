@@ -6,7 +6,7 @@
 package winchance_test
 
 // A deal has one win chance, the number forecasting.ResolveWinChance gives.
-// Ten readers show or weight it. They are the deal read, list, facts list and
+// Nine readers show or weight it. They are the deal read, list, facts list and
 // write reply, the worklist figures, the Home queue, the forecast, the report
 // table and assurance. The probability filter and a saved list select by it. A
 // quiet deal is halved while too few closed deals show what quiet does. After
@@ -79,6 +79,11 @@ func newFixture(t *testing.T) *fixture {
 	stage := func(name string, position int, semantic string, probability int) ids.UUID {
 		return f.seed(`INSERT INTO stage (id, pipeline_id, name, position, semantic, win_probability) VALUES ($1, $2, $3, $4, $5, $6)`,
 			f.pipeline, name, position, semantic, probability)
+	}
+	// The deals' owner has a synced mailbox, so a silent customer reads as quiet.
+	connection := f.seed(`INSERT INTO capture_connection (id, provider, user_id, status) VALUES ($1, 'gmail', $2, 'connected')`, env.Rep1)
+	if _, err := owner.Exec(context.Background(), `INSERT INTO capture_sync_state (connection_id, last_success_at) VALUES ($1, now() - interval '3 hours')`, connection); err != nil {
+		t.Fatalf("seeding the mailbox checkpoint: %v", err)
 	}
 	f.first, f.won, f.lost = stage("First", 0, "open", 20), stage("Won", 20, "won", 100), stage("Lost", 21, "lost", 0)
 	if _, err := owner.Exec(context.Background(), `INSERT INTO setting (key, value) VALUES ('installation.base_currency', '"EUR"'::jsonb)
@@ -234,8 +239,8 @@ func (f *fixture) chances(deal ids.DealID, today time.Time) map[string]int {
 
 func requireOneChance(t *testing.T, chances map[string]int, want int) {
 	t.Helper()
-	if len(chances) != 10 {
-		t.Fatalf("read the chance through %d surfaces, want 10: %v", len(chances), chances)
+	if len(chances) != 9 {
+		t.Fatalf("read the chance through %d surfaces, want 9: %v", len(chances), chances)
 	}
 	for surface, got := range chances {
 		if got != want {
@@ -249,9 +254,7 @@ func requireOneChance(t *testing.T, chances map[string]int, want int) {
 func (f *fixture) requireFilters(deal ids.DealID, want int) {
 	f.t.Helper()
 	listed := func(low, high int) int {
-		page, _, err := f.store.ListDeals(f.reader, deals.ListDealsInput{
-			RangeFilters: deals.RangeFilters{WinProbabilityMin: &low, WinProbabilityMax: &high},
-		})
+		page, _, err := f.store.ListDeals(f.reader, deals.ListDealsInput{WinProbabilityMin: &low, WinProbabilityMax: &high})
 		if err != nil {
 			f.t.Fatal(err)
 		}
@@ -523,8 +526,7 @@ func TestTheAccuracyViewWithholdsALandingOfOneColleague(t *testing.T) {
 	}
 	f.showIndividualPerformance(false)
 	_, err := f.accuracy(clocktest.Now(t))
-	var off auth.IndividualPerformanceOffError
-	if !errors.As(err, &off) {
+	if _, ok := errors.AsType[auth.IndividualPerformanceOffError](err); !ok {
 		t.Fatalf("a landing of one colleague answered %v, want the individual performance refusal", err)
 	}
 }
