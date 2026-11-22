@@ -17411,10 +17411,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "URL endpoint đầy đủ. Để trống thì dùng API riêng của TypeSafe.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
   "aiRouting.baseUrl.help.azure":
-    "Điểm cuối của tài nguyên, không có đường dẫn. Khóa API chỉ được gửi tới máy chủ có đuôi .openai.azure.com. Bắt buộc.",
+    "Endpoint của tài nguyên, không có đường dẫn. Khóa API chỉ được gửi tới máy chủ có đuôi .openai.azure.com. Bắt buộc.",
   "aiRouting.baseUrl.placeholder.azure":
     "https://tai-nguyen-cua-toi.openai.azure.com",
   "aiRouting.azureRegion.label": "Vùng Azure",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
   "aiRouting.azureRegion.help":
     "Vùng nơi tài nguyên chạy, ví dụ swedencentral. Vùng mà hệ thống không nhận ra sẽ bị chặn, để dữ liệu ở đúng nơi đã thỏa thuận.",
   "aiRouting.model.help.azure":

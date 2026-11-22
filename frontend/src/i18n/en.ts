@@ -17737,6 +17737,7 @@ export const en = {
     "The resource endpoint, with no path. The API key is sent only to a host ending in .openai.azure.com. Required.",
   "aiRouting.baseUrl.placeholder.azure": "https://my-resource.openai.azure.com",
   "aiRouting.azureRegion.label": "Azure region",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
   "aiRouting.azureRegion.help":
     "The region the resource runs in, such as swedencentral. A region this installation does not know is blocked, so data stays where you agreed.",
   "aiRouting.model.help.azure":

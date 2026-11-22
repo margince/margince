@@ -17892,10 +17892,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.placeholder.azure":
     "https://meine-ressource.openai.azure.com",
   "aiRouting.azureRegion.label": "Azure-Region",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
   "aiRouting.azureRegion.help":
-    "Die Region, in der die Ressource läuft, etwa swedencentral. Eine unbekannte Region wird gesperrt, damit die Daten dort bleiben, wo Sie es vereinbart haben.",
+    "Die Region, in der die Ressource läuft, etwa swedencentral. Eine unbekannte Region wird gesperrt, damit deine Daten dort bleiben, wo ihr es vereinbart habt.",
   "aiRouting.model.help.azure":
-    "Geben Sie den Namen ein, den Sie diesem Modell in Azure gegeben haben, nicht den Modellnamen.",
+    "Gib den Namen ein, den du diesem Modell in Azure gegeben hast, nicht den Modellnamen.",
   "aiRouting.baseUrl.help.jevCompatible":
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -22559,7 +22560,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviderSettings.service.otherChat": "Anderer OpenAI-kompatibler Dienst",
   "aiProviderSettings.service.otherDecisions": "Anderer Entscheidungsserver",
   "aiProviderSettings.service.otherAddress": "Andere Adresse",
-  "aiProviderSettings.service.azureResource": "Ihre Azure-OpenAI-Ressource",
+  "aiProviderSettings.service.azureResource": "Deine Azure-OpenAI-Ressource",
   "aiProviderSettings.service.learnMore": "Über OpenRouter EU",
   "aiProviderSettings.host.line": "Host: {host}",
   "aiProviderSettings.host.default": "Nutzt die eigene Adresse des Dienstes.",

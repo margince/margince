@@ -29,7 +29,7 @@ export function AzureRegionField({
           {...control}
           value={value}
           disabled={disabled}
-          placeholder="swedencentral"
+          placeholder={t("aiRouting.azureRegion.placeholder")}
           onChange={(e) => onChange(e.target.value.trim().toLowerCase())}
         />
       )}
