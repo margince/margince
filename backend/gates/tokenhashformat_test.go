@@ -5,9 +5,10 @@
 
 package gates
 
-// A column that stores the hash of a token says what it holds with a CHECK:
-// 64 lower-case hex characters as text, 32 bytes as bytea. Without it a writer
-// can store base64 or a prefixed value, and a lookup by hash never matches.
+// A column that stores the hash of a token states its format with a CHECK, or
+// formatNotHeld names it with what else it holds. The format is 64 lower-case
+// hex characters as text and 32 bytes as bytea. Without it a writer can store
+// base64 or a prefixed value, and a lookup by hash never matches.
 //
 // The corpus derives from the head catalog: each column named token_hash, and
 // the columns hashColumnsByAnotherName lists.
