@@ -17,12 +17,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// bulkSkipFor turns a row's refusal into why it is left alone. A refusal a
-// single-record rule answers carries that rule's own code, so a client can say
-// it in the reader's language; the English message stays beside it for a code
-// the client does not know. An error that is no refusal — a lost connection, a
-// bug — is answered as itself, and aborts the change rather than being
-// reported as one row's fault.
+// bulkSkipFor turns a row's refusal into why it is left alone. A refusal from
+// a single-record rule carries that rule's own code, so a client can say it in
+// the reader's language. The English message stays beside it for a code the
+// client does not know. An error that is no refusal, such as a lost connection
+// or a bug, aborts the change and is not reported as one row's fault.
 func bulkSkipFor(err error) (crmcontracts.BulkSkip, error) {
 	var anchor *contacts.AnchorProtectedError
 	if restore, ok := errors.AsType[*storekit.RestoreRefusal](err); ok {

@@ -12,16 +12,10 @@ func VCardContactName(entry VCardEntry) string {
 }
 
 // ValidateVCardContacts answers whether a reviewed card's addresses and
-// numbers are ones the create will accept, without writing anything.
-//
-// It asks by BUILDING the create's own input and running the create's own
-// parser over it, rather than restating the rules: a second copy of "what is
-// a valid number here" is the thing that drifts, and the whole point of
-// asking early is that the answer matches what the writer will say.
-//
-// Nothing is normalised for the caller. The parse mutates the input it is
-// given, and the input here is built fresh and thrown away — the proposal on
-// the row is left exactly as the reviewer sees it.
+// numbers are ones the create will accept, without writing anything. It builds
+// the create's own input and runs the create's own parser over it, so the
+// answer matches what the writer will say. The input is built fresh and thrown
+// away, so the proposal on the review row is left as the reviewer sees it.
 func ValidateVCardContacts(entry VCardEntry) error {
 	contact := contactFromVCard(entry)
 	return parseContactContacts(contact.Emails, contact.Phones)
@@ -37,23 +31,19 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 	if title := strings.TrimSpace(entry.Title); title != "" {
 		contact.Title = &title
 	}
-	// Only a LinkedIn URL goes in the social slot, whose key IS "linkedin". A
-	// card's URL is usually the company site, and filing that here showed a
-	// company's home page as the contact's LinkedIn profile. The website lands
-	// on the profile-field sidecar instead, by the same split the update path
-	// makes — one rule, so which outcome a card gets cannot change what it
-	// means.
-	// Through the normalizer, like every other writer of this slot. The slot is
-	// compared verbatim — the exact-match dedupe key, the provider resolver's
-	// lookup — so a card that spelt the profile with http, a trailing slash or
-	// a tracking query would file the same contact under a second identity.
+	// Only a LinkedIn URL goes in the social slot, whose key is "linkedin". A
+	// card's URL is usually the company site, which would show as the contact's
+	// LinkedIn profile. The website lands on the profile-field sidecar, as it
+	// does on the update path.
+	// The URL goes through the normalizer because the slot is compared
+	// verbatim: it is the exact-match dedupe key and the resolver's lookup.
+	// An unnormalized spelling would file the same contact under a second identity.
 	if u := strings.TrimSpace(entry.URL); u != "" {
 		if normalized, err := NormalizeContactLinkedInURL(u); err == nil {
 			contact.Social = map[string]any{profileURLField: normalized}
 		}
 	}
-	// Parsing a field and then dropping it is the quieter defect. A reader who
-	// sees an address on the card expects to find it on the record.
+	// A reader who sees an address on the card expects to find it on the record.
 	contact.Employer = EmployerChoice{CompanyName: new(entry.Company), Role: contact.Title, Source: vcardSource}
 	contact.Address = vcardRecordAddress(entry)
 	for i, email := range entry.Emails {
@@ -62,9 +52,8 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 			EmailType: email.Kind,
 			IsPrimary: i == 0,
 			Position:  i,
-			// A card STATES an address; it is not correspondence, and the mail
-			// ladder must not read it as a settled verdict about whether this
-			// contact writes to us.
+			// A card states an address but is not correspondence. The mail ladder
+			// must not read it as a verdict on whether this contact writes to us.
 			VouchedNotCorresponded: true,
 		})
 	}

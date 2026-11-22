@@ -114,6 +114,8 @@ func (s *Store) MoveStageForBulkTx(
 	}
 	moved, err := s.advanceOnTx(ctx, tx, id, AdvanceDealInput{
 		ToStageID: to, IfVersion: &version, ReversalOf: reversalOf,
+		// The target is an open stage, so the move never wins and has no claim to make.
+		WonWithoutContractReason: nil,
 	}, nil)
 	if err != nil {
 		return BulkStageMove{}, err
