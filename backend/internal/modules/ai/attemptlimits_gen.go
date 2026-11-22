@@ -8,6 +8,10 @@ package ai
 import "time"
 
 var certifiedAttemptTimeouts = map[Task]certifiedLimit{
+	// records/chat_task_reading/gemini_gemini-3.1-flash-lite_cloud_frontier.json: p95 2.042s
+	"chat_task_reading": {limit: 30 * time.Second, measured: []boundModel{
+		{provider: "gemini", model: "gemini-3.1-flash-lite"},
+	}},
 	// records/cold_start/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 59.19s
 	"cold_start": {limit: 89 * time.Second, measured: []boundModel{
 		{provider: "gemini", model: "gemini-3.1-flash-lite"},
@@ -63,9 +67,11 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	}},
 	// records/nl_search/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json: p95 19.151s
 	"nl_search": {limit: 30 * time.Second, measured: []boundModel{
+		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
+		{provider: "gemini", model: "gemini-3.8-flash"},
 		{provider: "openai_compatible", model: "google/gemma-4-31b-it"},
 		{provider: "openai_compatible", model: "mistralai/mistral-medium-3-5"},
 		{provider: "openai_compatible", model: "openai/gpt-6-luna"},
@@ -119,7 +125,7 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 		{provider: "openai_compatible", model: "openai/gpt-oss-120b"},
 		{provider: "openai_compatible", model: "qwen/qwen3.8-27b"},
 	}},
-	// records/rewrite/gemini_gemini-3.8-flash_cloud_frontier.json: p95 4.454s
+	// records/rewrite/gemini_gemini-3.8-flash_cloud_frontier.json: p95 4.306s
 	"rewrite": {limit: 30 * time.Second, measured: []boundModel{
 		{provider: "gemini", model: "gemini-3.5-flash-lite"},
 		{provider: "gemini", model: "gemini-3.6-flash"},

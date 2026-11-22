@@ -3,13 +3,9 @@
 
 package compose
 
-// The tool surface a certification run of a scheduled agent calls. Every read
-// is answered from the scenario's fixture. The agent's one write is checked as
-// its store checks it, then acknowledged and never performed.
-//
-// The lane has no database, and what is certified is what the model does with
-// what the tools said. The worklist is decoded into the production result type
-// and re-encoded, so a fixture cannot serve a shape the tool never does.
+// The tool surface a certified scheduled agent calls. Reads are answered from
+// the fixture, decoded into production types so it serves only real shapes; the
+// one write is checked as its store checks it, then acknowledged, never performed.
 
 import (
 	"bytes"
@@ -175,11 +171,6 @@ func (c *agentLoopCase) WalkReplies() []string {
 	}
 	return append(replies, `{"final":{"summary":"walked every answered tool"}}`)
 }
-
-// What each scheduled agent's run is for, in terms a grader can check. That is
-// the list its goal tells it to read first, the subjects that list names, and
-// which of them one write is about. A run is right when its writes cover the
-// list and nothing outside it, the boundary both goals state.
 
 // agentLoopWorklist is the list read as production types: the subjects a run
 // must write about, in the list's order, and the answer the tool serves.
