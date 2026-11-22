@@ -5127,8 +5127,8 @@ export interface paths {
          *     leads, each with the `version` it was shown, and one verb: `reassign_owner` (with
          *     `owner_id`), `archive`, `add_to_list` / `remove_from_list` (with the Shortlist's `list_id`,
          *     while lists are switched on), `add_tag` / `remove_tag` (with `tag_id`), or `create_task`
-         *     (with `task`). Or it names up to 500 Worklist tasks and promises (`worklist_item`) and the
-         *     verb `complete`. The answer says which records the change would alter (`affected`), which it
+         *     (with `task`). Or it names up to 500 deals and the verb `move_stage` (with `stage_id`). Or it
+         *     names up to 500 Worklist tasks and promises (`worklist_item`) and the verb `complete`. The answer says which records the change would alter (`affected`), which it
          *     would leave alone and why (`excluded`), and up to three before/after rows to show the user.
          *
          *     Nothing is written. Every record is tried exactly as `executeBulkChange` would change it,
@@ -5164,8 +5164,8 @@ export interface paths {
          * @description The second half of a bulk change. Each record is changed exactly as the single-record
          *     operation would change it (`updateContact`, `updateCompany`, `updateDeal`, `updateLead` for
          *     an owner; `archiveContact`, `archiveCompany`, `archiveDeal` for an archive; `applyTag` and
-         *     `removeTag` for a tag; `createTask` for a task; `updateActivity` or `settleConversationClaim`
-         *     for a Worklist item marked done), with its own `audit_log` row and its own
+         *     `removeTag` for a tag; `createTask` for a task; `advanceDeal` for a stage move;
+         *     `updateActivity` or `settleConversationClaim` for a Worklist item marked done), with its own `audit_log` row and its own
          *     event. Every audit row the change writes carries the same `batch_id`, which
          *     the answer returns.
          *
@@ -42589,8 +42589,9 @@ export interface components {
         };
         /**
          * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-         *     verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-         *     no bulk verb.
+         *     verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+         *     disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+         *     `complete`.
          *     A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
          *     named by the id its row carries; `complete` is its only verb, and no other kind takes it.
          * @enum {string}
@@ -42603,12 +42604,15 @@ export interface components {
          *     `addListMember` and `removeListMember` do, and change nothing on the record itself.
          *     `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
          *     as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-         *     under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+         *     under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+         *     stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+         *     won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+         *     its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
          *     a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
          *     `settleConversationClaim` with `outcome: done` does.
          * @enum {string}
          */
-        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task" | "complete";
+        BulkVerb: "reassign_owner" | "archive" | "add_to_list" | "remove_from_list" | "add_tag" | "remove_tag" | "create_task" | "move_stage" | "complete";
         /** @description The task `create_task` files under every record of the selection. */
         BulkTask: {
             due_intent?: components["schemas"]["IntentTime"];
@@ -42657,6 +42661,11 @@ export interface components {
              */
             tag_id?: string;
             task?: components["schemas"]["BulkTask"];
+            /**
+             * Format: uuid
+             * @description The open stage to move the deals to. Required for `move_stage` and refused for every other verb.
+             */
+            stage_id?: string;
         };
         BulkChangeExecuteRequest: {
             record_type: components["schemas"]["BulkRecordType"];
@@ -42680,6 +42689,11 @@ export interface components {
              */
             tag_id?: string;
             task?: components["schemas"]["BulkTask"];
+            /**
+             * Format: uuid
+             * @description The open stage to move the deals to. Required for `move_stage` and refused for every other verb.
+             */
+            stage_id?: string;
             /** @description The token a preview of exactly this selection returned. Required above 10 records. */
             confirm_token?: string;
         };
@@ -42698,6 +42712,10 @@ export interface components {
          *     `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
          *     each task the change created, and skips one completed or edited since as `changed_since_batch`.
          *     Undoing `complete` opens each task or promise again, and skips one changed since the same way.
+         *     Undoing `move_stage` moves each deal back to the stage it stood on, as a new move that
+         *     writes its own stage history row (marked as the reversal of the first) and its own
+         *     `deal.stage_changed` event. The first move's row and event stay, and whatever reacted to
+         *     them is not taken back. A deal that changed after the batch is skipped as `changed_since_batch`.
          * @enum {string}
          */
         BulkSkipReason: "not_found" | "not_writable" | "changed_since_preview" | "no_change" | "anchor_company" | "not_previewed" | "refused" | "changed_since_batch" | "merged" | "erased" | "value_taken" | "no_previous_owner";
@@ -42733,6 +42751,11 @@ export interface components {
             task_id?: string;
             /** @description For `complete`, whether the task or promise is done. */
             done?: boolean;
+            /**
+             * Format: uuid
+             * @description For `move_stage`, the stage the deal stands on.
+             */
+            stage_id?: string;
         };
         /** @description One record the change would alter, as it is and as it would be. */
         BulkSampleRow: {
@@ -42822,6 +42845,11 @@ export interface components {
              */
             tag_id?: string;
             task?: components["schemas"]["BulkTask"];
+            /**
+             * Format: uuid
+             * @description The stage a stage move named.
+             */
+            stage_id?: string;
             /** @description The number of records changed. */
             changed: number;
             skipped: components["schemas"]["BulkSkip"][];
@@ -66400,7 +66428,15 @@ export interface operations {
     };
     importVCards: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description The company every contact the import creates works for. Each created contact and its
+                 *     current employment edge to this company land in one transaction, and the company a card
+                 *     names is not used. A card that matches a contact already held updates it and does not
+                 *     move its employer. A company the caller cannot read answers 422 naming `company_id`.
+                 */
+                company_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

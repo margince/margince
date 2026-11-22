@@ -1253,6 +1253,7 @@
       "note",
       "owner_id",
       "record_type",
+      "stage_id",
       "tag_id",
       "task",
       "verb"
@@ -2127,6 +2128,7 @@
       "filename"
     ],
     "import_vcards": [
+      "company_id",
       "content_base64",
       "content_type",
       "filename"

@@ -765,7 +765,7 @@ var Declared = map[string][]string{
 	"POST /v1/contacts":                                                        {},
 	"POST /v1/contacts/card-photos":                                            {},
 	"POST /v1/contacts/quick-capture":                                          {},
-	"POST /v1/contacts/vcard-import":                                           {},
+	"POST /v1/contacts/vcard-import":                                           {"company_id"},
 	"POST /v1/contacts/{id}/acquisition-request/retract":                       {},
 	"POST /v1/contacts/{id}/brief":                                             {},
 	"POST /v1/contacts/{id}/claims":                                            {},

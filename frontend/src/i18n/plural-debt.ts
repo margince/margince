@@ -48,7 +48,6 @@ const STANDALONE: readonly string[] = [
   "contact.intro.evidenceFrom",
   "contact.intro.evidenceFromYou",
   "contracts.state.title",
-  "deals.bulkFailed",
   "embedreindex.workspacePending",
   "extIngest.refusalCount",
   "lead.bulkFailed",

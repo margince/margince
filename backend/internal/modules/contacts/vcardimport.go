@@ -91,7 +91,16 @@ type VCardResult struct {
 // find and fix the one row before any of it lands is a reader who gives up. The
 // per-card outcome list is what makes that legible.
 func (s *Store) ImportVCards(ctx context.Context, entries []VCardEntry) ([]VCardResult, error) {
-	return s.importCardsFrom(ctx, entries, ids.Nil)
+	return s.importCardsFrom(ctx, entries, cardTarget{})
+}
+
+// ImportVCardsToCompany is ImportVCards for the Contacts tab of one company.
+// Every contact a card creates works for company, through the employment edge a
+// contact created with that company gets, in the card's own transaction.
+// The company the card names is not used. A card that matches a contact already
+// held updates it as usual and does not move its employer.
+func (s *Store) ImportVCardsToCompany(ctx context.Context, entries []VCardEntry, company ids.CompanyID) ([]VCardResult, error) {
+	return s.importCardsFrom(ctx, entries, cardTarget{employer: &company})
 }
 
 // ImportVCardsFromMessage imports cards that arrived as an attachment, holding
@@ -116,10 +125,18 @@ func (s *Store) ImportVCardsFromMessage(ctx context.Context, entries []VCardEntr
 	if source.IsZero() {
 		return nil, errors.New("contacts: importing cards from a message that names no message")
 	}
-	return s.importCardsFrom(ctx, entries, source)
+	return s.importCardsFrom(ctx, entries, cardTarget{source: source})
 }
 
-func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, source ids.UUID) ([]VCardResult, error) {
+// cardTarget is what one import writes its cards against. It holds the message
+// the cards were mailed in, if any. It also holds the company every created
+// contact joins, when a company's Contacts tab asked for the import.
+type cardTarget struct {
+	source   ids.UUID
+	employer *ids.CompanyID
+}
+
+func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, target cardTarget) ([]VCardResult, error) {
 	// Both grants, up front. The import CREATES contacts and it UPDATES the ones
 	// a card already matches, and those are two different permissions: the
 	// create grant that lets somebody start an import says nothing about
@@ -134,9 +151,14 @@ func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, sourc
 	if len(entries) > vcardMaxCards {
 		return nil, &TooManyCardsError{Limit: vcardMaxCards}
 	}
+	if target.employer != nil {
+		if err := s.requireImportCompany(ctx, *target.employer); err != nil {
+			return nil, err
+		}
+	}
 	results := make([]VCardResult, 0, len(entries))
 	for i, entry := range entries {
-		result, err := s.importOneVCard(ctx, i, entry, source)
+		result, err := s.importOneVCard(ctx, i, entry, target)
 		if err != nil {
 			return nil, err
 		}
@@ -145,7 +167,8 @@ func (s *Store) importCardsFrom(ctx context.Context, entries []VCardEntry, sourc
 	return results, nil
 }
 
-func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry, source ids.UUID) (VCardResult, error) {
+func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry, target cardTarget) (VCardResult, error) {
+	source := target.source
 	result := VCardResult{Index: index, FullName: strings.TrimSpace(entry.FullName)}
 	if reason := cardRefusal(entry); reason != "" {
 		result.Outcome, result.Reason = VCardSkipped, reason
@@ -219,7 +242,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		case entry.ModelRead:
 			return proposeModelReadCard(ctx, tx, source, &result)
 		default:
-			return s.createFromCard(ctx, tx, entry, source, &result)
+			return s.createFromCard(ctx, tx, entry, target, &result)
 		}
 	})
 	// The create arm signals a refusal by failing its transaction, because the
@@ -267,80 +290,6 @@ func vcardCandidate(entry VCardEntry) ContactCandidate {
 		}
 	}
 	return candidate
-}
-
-// VCardContactName is the name a card's contact is created with. An approval
-// that shows a card shows this, so the decider sees the name that is written.
-func VCardContactName(entry VCardEntry) string {
-	return strings.TrimSpace(entry.FullName)
-}
-
-// ValidateVCardContacts answers whether a reviewed card's addresses and
-// numbers are ones the create will accept, without writing anything.
-//
-// It asks by BUILDING the create's own input and running the create's own
-// parser over it, rather than restating the rules: a second copy of "what is
-// a valid number here" is the thing that drifts, and the whole point of
-// asking early is that the answer matches what the writer will say.
-//
-// Nothing is normalised for the caller. The parse mutates the input it is
-// given, and the input here is built fresh and thrown away — the proposal on
-// the row is left exactly as the reviewer sees it.
-func ValidateVCardContacts(entry VCardEntry) error {
-	contact := contactFromVCard(entry)
-	return parseContactContacts(contact.Emails, contact.Phones)
-}
-
-func contactFromVCard(entry VCardEntry) CreateContactInput {
-	contact := CreateContactInput{
-		FullName:      VCardContactName(entry),
-		sourceNames:   true,
-		Source:        vcardSource,
-		auditEvidence: map[string]any{auditKeySource: vcardSource},
-	}
-	if title := strings.TrimSpace(entry.Title); title != "" {
-		contact.Title = &title
-	}
-	// Only a LinkedIn URL goes in the social slot, whose key IS "linkedin". A
-	// card's URL is usually the company site, and filing that here showed a
-	// company's home page as the contact's LinkedIn profile. The website lands
-	// on the profile-field sidecar instead, by the same split the update path
-	// makes — one rule, so which outcome a card gets cannot change what it
-	// means.
-	// Through the normalizer, like every other writer of this slot. The slot is
-	// compared verbatim — the exact-match dedupe key, the provider resolver's
-	// lookup — so a card that spelt the profile with http, a trailing slash or
-	// a tracking query would file the same contact under a second identity.
-	if u := strings.TrimSpace(entry.URL); u != "" {
-		if normalized, err := NormalizeContactLinkedInURL(u); err == nil {
-			contact.Social = map[string]any{profileURLField: normalized}
-		}
-	}
-	// Parsing a field and then dropping it is the quieter defect. A reader who
-	// sees an address on the card expects to find it on the record.
-	contact.Employer = EmployerChoice{CompanyName: new(entry.Company), Role: contact.Title, Source: vcardSource}
-	contact.Address = vcardRecordAddress(entry)
-	for i, email := range entry.Emails {
-		contact.Emails = append(contact.Emails, ContactEmailInput{
-			Email:     strings.ToLower(strings.TrimSpace(email.Value)),
-			EmailType: email.Kind,
-			IsPrimary: i == 0,
-			Position:  i,
-			// A card STATES an address; it is not correspondence, and the mail
-			// ladder must not read it as a settled verdict about whether this
-			// contact writes to us.
-			VouchedNotCorresponded: true,
-		})
-	}
-	for i, phone := range entry.Phones {
-		contact.Phones = append(contact.Phones, ContactPhoneInput{
-			Phone:     strings.TrimSpace(phone.Value),
-			PhoneType: phone.Kind,
-			IsPrimary: i == 0,
-			Position:  i,
-		})
-	}
-	return contact
 }
 
 // fillFromVCard writes the card's stated fields onto a contact who already

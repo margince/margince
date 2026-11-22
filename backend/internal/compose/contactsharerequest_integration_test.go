@@ -246,7 +246,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/v1/contacts/vcard-import", &body).WithContext(rep2(e))
 			req.Header.Set("Content-Type", form.FormDataContentType())
 			rec := httptest.NewRecorder()
-			newContactsHandlers(e.Pool).ImportVCards(rec, req)
+			newContactsHandlers(e.Pool).ImportVCards(rec, req, crmcontracts.ImportVCardsParams{})
 			if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "a colleague already has this contact") {
 				t.Errorf("the vCard import answered %d %s, want the card skipped as held", rec.Code, rec.Body.String())
 			}

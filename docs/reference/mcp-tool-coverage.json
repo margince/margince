@@ -7950,7 +7950,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1870,
+      "tokens": 1891,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -8253,6 +8253,24 @@
       "measured_by_model": {}
     },
     {
+      "name": "bulk_update_records",
+      "tokens": 892,
+      "agents": [],
+      "required_by_cases": [
+        "case131_no_to_the_hand_over"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case47_tidy_the_fair_list"
+      ],
+      "called_in_held_runs": null,
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
+    },
+    {
       "name": "create_record",
       "tokens": 891,
       "agents": [],
@@ -8332,24 +8350,6 @@
           "cases_below_their_bar": []
         }
       }
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 798,
-      "agents": [],
-      "required_by_cases": [
-        "case131_no_to_the_hand_over"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case47_tidy_the_fair_list"
-      ],
-      "called_in_held_runs": null,
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {}
     },
     {
       "name": "read_lists",

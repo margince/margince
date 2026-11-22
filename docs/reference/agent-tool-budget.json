@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 51732,
-    "median_tool_tokens": 797,
-    "mean_tool_tokens": 1077
+    "tokens": 51847,
+    "median_tool_tokens": 806,
+    "mean_tool_tokens": 1079
   },
   "agents": [
     {
@@ -117,7 +117,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1870
+      "tokens": 1891
     },
     {
       "name": "change_attention",
@@ -164,6 +164,10 @@
       "tokens": 978
     },
     {
+      "name": "bulk_update_records",
+      "tokens": 892
+    },
+    {
       "name": "create_record",
       "tokens": 891
     },
@@ -174,10 +178,6 @@
     {
       "name": "change_relationships",
       "tokens": 816
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 798
     },
     {
       "name": "read_lists",
