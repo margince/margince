@@ -228,10 +228,10 @@ func (f *stageCohortFixture) accuracy(t *testing.T, today time.Time) forecasting
 	return out
 }
 
-// The accuracy view sets the chance each settled deal was frozen at, two weeks
-// or more before it closed, against how it closed. A deal closed within two
-// weeks of its freeze is not counted, because that chance was read too late to
-// be a forecast.
+// The accuracy view sets each settled deal's frozen chance against how it
+// closed. It reads the chance frozen at least two weeks before the close. A
+// deal closed within two weeks of its freeze is not counted. That chance was
+// read too late to be a forecast.
 func TestTheAccuracyViewSetsFrozenChancesAgainstHowDealsClosed(t *testing.T) {
 	f := newStageCohortFixture(t)
 	s0 := f.stage(0)
@@ -269,9 +269,9 @@ func TestTheAccuracyViewSetsFrozenChancesAgainstHowDealsClosed(t *testing.T) {
 	}
 }
 
-// A finished quarter is said to land at the won plus weighted pipeline of the
-// last freeze four weeks or more before its end, and is set against what the
-// first freeze after the end shows as won.
+// A finished quarter is said to land at the won plus weighted pipeline of one
+// freeze. That is the last freeze at least four weeks before the end. It is set
+// against what the first freeze after the end shows as won.
 func TestTheAccuracyViewSetsAQuartersFrozenLandingAgainstWhatWasWon(t *testing.T) {
 	f := newStageCohortFixture(t)
 	day := func(month time.Month, d int) time.Time { return time.Date(2025, month, d, 12, 0, 0, 0, time.UTC) }
