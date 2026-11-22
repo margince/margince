@@ -5,7 +5,9 @@ package httpserver
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -40,6 +42,22 @@ func NoteRoute(routeOf func(*http.Request) string) func(http.Handler) http.Handl
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// TraceContract gives every request under BaseURL a correlation_id and an
+// access line. It wraps the whole server handler, outside the mux and the
+// panic guard. So a ServeMux redirect, a refusal from a layer in front of the
+// routes and the guard's own 500 are answered through the recorder too. Other
+// mounts bring their own Correlate and AccessLog.
+func TraceContract(log *slog.Logger, next http.Handler) http.Handler {
+	traced := Correlate(AccessLog(log, next))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == BaseURL || strings.HasPrefix(r.URL.Path, BaseURL+"/") {
+			traced.ServeHTTP(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // serverTiming is the whole Server-Timing value: one total, in milliseconds,

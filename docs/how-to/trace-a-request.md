@@ -9,6 +9,8 @@ of the same request.
 
 Every response under `/v1` carries `X-Request-Id`. The value is the `correlation_id` the server made for
 that request. It is made on the server, so a header a client sends is ignored.
+The same value is also sent as `X-Correlation-ID`, the older name. That header is deprecated: read
+`X-Request-Id` in new code.
 
 A signed-in response also carries `Server-Timing: total;dur=<ms>`. It is the time the server took to
 start the answer. Responses from public routes and the sign-in routes do not carry it, so those routes
@@ -29,8 +31,8 @@ When a request fails, the app ends the error message with `Reference: <id>`. Tha
 5. A write leaves an `event_outbox` row whose `trace.correlation_id` is the same id, and
    `trace.audit_log_id` names the `audit_log` row.
 
-A request that panicked has its `http request` line with status 500. The panic itself is logged without
-the id, so find the line by the id and then read the lines around it.
+A request that panicked has an `http request` line with status 500, and the `handler panic` line carries the
+same id.
 
 ## Read the timings
 

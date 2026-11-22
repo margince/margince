@@ -41,9 +41,14 @@ func serveTraced(t *testing.T, signedIn bool, route string, inner http.HandlerFu
 		}
 		routed.ServeHTTP(w, r)
 	})
-	handler := RecoverPanics(logger, Correlate(AccessLog(logger, withActor)))
+	return serveLogged(t, &output, TraceContract(logger, RecoverPanics(logger, withActor)), "/v1/brief")
+}
+
+// serveLogged serves one GET and returns the response and its access line.
+func serveLogged(t *testing.T, output *strings.Builder, handler http.Handler, path string) (*httptest.ResponseRecorder, accessLine) {
+	t.Helper()
 	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/brief", nil))
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 
 	var line accessLine
 	for _, raw := range strings.Split(strings.TrimSpace(output.String()), "\n") {
@@ -74,6 +79,9 @@ func TestEveryAnswerNamesItsRequestAndTheAccessLineCarriesTheSameID(t *testing.T
 			id := response.Header().Get("X-Request-Id")
 			if id == "" || line.CorrelationID != id {
 				t.Fatalf("response X-Request-Id %q, access line correlation_id %q: want one id on both", id, line.CorrelationID)
+			}
+			if alias := response.Header().Get("X-Correlation-ID"); alias != id {
+				t.Fatalf("deprecated X-Correlation-ID %q, want the same id %q", alias, id)
 			}
 			if line.Status != response.Code {
 				t.Fatalf("access line status %d, client received %d", line.Status, response.Code)
@@ -115,5 +123,66 @@ func TestAccessLineNamesTheRouteAndTheDatabaseCost(t *testing.T) {
 	_, unrouted := serveTraced(t, true, "", ok)
 	if unrouted.Route != "" {
 		t.Fatalf("a request chi never matched logged route %q", unrouted.Route)
+	}
+}
+
+func TestAFlushCommitsTheStatusAndServerTimingBeforeAnyBody(t *testing.T) {
+	flushOnly := func(w http.ResponseWriter, _ *http.Request) {
+		if err := http.NewResponseController(w).Flush(); err != nil {
+			t.Errorf("flush: %v", err)
+		}
+	}
+	response, line := serveTraced(t, true, testRoute, flushOnly)
+	if got := response.Result().Header.Get("Server-Timing"); !strings.HasPrefix(got, "total;dur=") {
+		t.Fatalf("stream Server-Timing %q, want total;dur=<ms>", got)
+	}
+	if line.Status != http.StatusOK {
+		t.Fatalf("access line status %d, want 200", line.Status)
+	}
+}
+
+func TestAPanicAfterAFlushIsLoggedWithTheStatusTheClientGot(t *testing.T) {
+	_, line := serveTraced(t, true, testRoute, func(w http.ResponseWriter, _ *http.Request) {
+		if err := http.NewResponseController(w).Flush(); err != nil {
+			t.Errorf("flush: %v", err)
+		}
+		panic("after the stream began")
+	})
+	if line.Status != http.StatusOK {
+		t.Fatalf("access line status %d, but the client already received 200", line.Status)
+	}
+}
+
+func TestAPanicBeforeAnyOutputAnswers500WithServerTiming(t *testing.T) {
+	response, line := serveTraced(t, true, testRoute, func(http.ResponseWriter, *http.Request) { panic("early") })
+	if response.Code != http.StatusInternalServerError || line.Status != http.StatusInternalServerError {
+		t.Fatalf("client got %d and the line says %d, want 500 on both", response.Code, line.Status)
+	}
+	if !strings.HasPrefix(response.Result().Header.Get("Server-Timing"), "total;dur=") {
+		t.Fatal("the recovered 500 of a signed-in request carries no Server-Timing")
+	}
+}
+
+func TestTraceContractCoversAMuxRedirectAndSkipsOtherMounts(t *testing.T) {
+	var output strings.Builder
+	logger := slog.New(WithCorrelation(slog.NewJSONHandler(&output, nil)))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/brief", func(http.ResponseWriter, *http.Request) {})
+	mux.HandleFunc("/healthz", func(http.ResponseWriter, *http.Request) {})
+	handler := TraceContract(logger, mux)
+
+	redirect, line := serveLogged(t, &output, handler, "/v1//brief")
+	if redirect.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("status %d, want the mux's 307", redirect.Code)
+	}
+	if id := redirect.Header().Get("X-Request-Id"); id == "" || id != line.CorrelationID || line.Status != redirect.Code {
+		t.Fatalf("redirect X-Request-Id %q, access line %+v", id, line)
+	}
+
+	output.Reset()
+	health := httptest.NewRecorder()
+	handler.ServeHTTP(health, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if health.Header().Get("X-Request-Id") != "" || output.Len() != 0 {
+		t.Fatal("a route outside /v1 was traced")
 	}
 }

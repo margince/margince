@@ -166,13 +166,18 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// decided rather than on whichever proxy the request happened to arrive by.
 	//
 	// instrument.HTTP wraps everything inside the panic guard. A unit's HTTP
-	// hook therefore sees no correlation id or principal on the context.
+	// hook therefore sees no principal on the context.
 	// r.RemoteAddr is still the proxy (before ResolveClientIP). The body is
 	// not yet capped (before LimitBodies).
-	return originalStorageHTTP(pool, srv.blob, httpserver.RecoverPanics(log, instrument.HTTP(
+	//
+	// TraceContract is outside the panic guard, so every /v1 answer, the
+	// guard's own 500 and a mux redirect included, carries X-Request-Id and
+	// has an access line. The unit hook and the guard's log line see the
+	// correlation id for the same reason.
+	return originalStorageHTTP(pool, srv.blob, httpserver.TraceContract(log, httpserver.RecoverPanics(log, instrument.HTTP(
 		httpserver.ResolveClientIP(srv.trustedProxies,
 			httpserver.LimitBodies(ceiling,
-				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux)))))))
+				httpserver.SecureHeaders(noStoreOnCredentialPaths(mux))))))))
 }
 
 // newServer assembles the module handler sets. Every cross-module edge is

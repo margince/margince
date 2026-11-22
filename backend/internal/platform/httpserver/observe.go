@@ -210,6 +210,16 @@ func (r *statusRecorder) Write(body []byte) (int, error) {
 	return r.ResponseWriter.Write(body)
 }
 
+// FlushError commits the status line through WriteHeader before it flushes. A
+// stream that flushes before it writes then still carries Server-Timing and
+// counts as answered. http.NewResponseController finds this before it unwraps.
+func (r *statusRecorder) FlushError() error {
+	if !r.wrote {
+		r.WriteHeader(http.StatusOK)
+	}
+	return http.NewResponseController(r.ResponseWriter).Flush()
+}
+
 // Unwrap exposes the wrapped writer so http.NewResponseController can reach
 // the real connection: SSE streams and long-running tool calls need
 // SetWriteDeadline and Flush, and an embedded-only wrapper silently swallows

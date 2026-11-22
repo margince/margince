@@ -185,6 +185,8 @@ func Correlate(next http.Handler) http.Handler {
 		id := ids.NewV7()
 		ctx := principal.WithCorrelationID(r.Context(), id)
 		w.Header().Set("X-Request-Id", id.String())
+		// Deprecated alias for clients that read the older name.
+		w.Header().Set("X-Correlation-ID", id.String())
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
