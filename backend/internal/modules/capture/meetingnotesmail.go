@@ -84,7 +84,7 @@ func (s *Sink) landNotesMail(
 	}
 	_, landErr := s.meetingNotes.LandMailTx(ctx, sp, MeetingNotesMail{
 		MessageID: rec.NaturalKey.SourceID, Owner: ids.From[ids.UserKind](owner),
-		Subject: fields.Subject, SentAt: fields.OccurredAt, Text: fields.Body,
+		Subject: fields.Subject, SentAt: fields.OccurredAt, Text: notesText(fields.Body),
 	})
 	if landErr == nil {
 		return sp.Commit(ctx)
@@ -120,4 +120,17 @@ func deliveredDirectlyTx(ctx context.Context, tx pgx.Tx, rec connector.Normalize
 		return false, nil
 	}
 	return slices.ContainsFunc(fields.Envelope.DirectRecipients, self.CoversAddressExactly), nil
+}
+
+// notesText is the body of a stored mail without the From and To lines the mail
+// mapper puts above the text. The transcript carries the notes alone.
+func notesText(body string) string {
+	if !strings.HasPrefix(body, "From: ") {
+		return body
+	}
+	_, text, found := strings.Cut(body, "\n\n")
+	if !found {
+		return ""
+	}
+	return text
 }

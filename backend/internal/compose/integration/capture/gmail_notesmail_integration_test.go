@@ -238,3 +238,16 @@ func TestAForwardedNotesMailLandsNoTranscript(t *testing.T) {
 		t.Errorf("%d transcripts from forwarded or copied notes, want none", got)
 	}
 }
+
+// Gemini sends the notes on the day of the call. A meeting with the same title
+// that started days before the mail is another meeting, so nothing lands.
+func TestANotesMailLandsNoTranscriptOnAMeetingOutsideTheDay(t *testing.T) {
+	start := captureNow.Add(-60 * time.Hour)
+	w := syncedMeetings(t, map[string]time.Time{"review": start}, meetingTitle)
+
+	w.env.sync(t, geminiNotesMail("notes11@google.com", captureNow.Add(-2*time.Hour), true))
+
+	if got := notesTranscriptCount(t, w.env.e); got != 0 {
+		t.Errorf("%d transcripts on a meeting that started 58 hours before the mail, want none", got)
+	}
+}

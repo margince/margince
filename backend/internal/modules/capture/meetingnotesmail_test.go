@@ -49,3 +49,15 @@ func TestOnlyAuthenticatedGoogleMeetingNotesMailIsHeld(t *testing.T) {
 		})
 	}
 }
+
+func TestNotesTextDropsTheFromAndToLinesTheMapperAdds(t *testing.T) {
+	for body, want := range map[string]string{
+		"From: gemini-notes@google.com\nTo: me@x.example\n\nSummary\nAda sends it.": "Summary\nAda sends it.",
+		"From: gemini-notes@google.com\nTo: me@x.example":                           "",
+		"Summary only": "Summary only",
+	} {
+		if got := notesText(body); got != want {
+			t.Errorf("notesText(%q) = %q, want %q", body, got, want)
+		}
+	}
+}

@@ -114,6 +114,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/outboundmessage.go:activity":                      {writesNoTask},
 	"modules/activities/meetingnotesrepair.go:connectMeetingNotesTx":      {writesNoTask},
 	"modules/activities/meetingnotes.go:LandMeetingNotesTx":               {writesNoTask},
+	"modules/activities/meetingnotesmail.go:LandMeetingNotesMailTx":       {writesNoTask},
 }
 
 // openTaskReadersElsewhere is each reader of open tasks that does not apply

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
@@ -64,12 +65,12 @@ func notesMailTitle(subject string) (string, bool) {
 // notesMailMeetingSQL lists the live meetings the mailbox owner is on. Each
 // has the title the subject names, compared whole. Each started within
 // notesMailWindow before the mail. A transcript is not a meeting.
-const notesMailMeetingSQL = `
+var notesMailMeetingSQL = `
 	SELECT a.id FROM activity a
 	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND a.restricted_at IS NULL
 	   AND a.source_system IS DISTINCT FROM '` + transcriptSourceSystem + `'
 	   AND lower(regexp_replace(btrim(coalesce(a.subject, '')), '\s+', ' ', 'g')) = @title
-	   AND a.occurred_at <= @sent AND a.occurred_at > @earliest
+	   AND ` + occurredday.WithinSQL("a", "@earliest::timestamptz", "@until::timestamptz") + `
 	   AND EXISTS (SELECT 1 FROM activity_participant o WHERE o.activity_id = a.id AND o.user_id = @owner)
 	 ORDER BY a.occurred_at DESC, a.id
 	 LIMIT 2`
@@ -82,7 +83,7 @@ func notesMailMeetingTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMailInput
 		return ids.ActivityID{}, false, nil
 	}
 	rows, err := tx.Query(ctx, notesMailMeetingSQL, pgx.NamedArgs{
-		"title": title, "sent": in.SentAt, "earliest": in.SentAt.Add(-notesMailWindow), "owner": in.Owner,
+		"title": title, "until": in.SentAt.Add(time.Second), "earliest": in.SentAt.Add(-notesMailWindow), "owner": in.Owner,
 	})
 	if err != nil {
 		return ids.ActivityID{}, false, fmt.Errorf("activities: finding the meeting a notes mail names: %w", err)

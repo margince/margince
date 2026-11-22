@@ -93,9 +93,11 @@ A meeting with notes waiting to be read offers **Connect meeting notes** in its 
 It says when your Google accounts differ. The message leaves once the transcript lands or the reading window ends.
 
 ### What happens to the "Notes by Gemini" email?
-Google emails the notes to the people at the meeting. Margince keeps that email private to the people on it, and files it under no contact, so the contact with your own address does not collect every set of notes.
+Google emails the notes to the guests of the meeting. Margince keeps that email private to those guests. It files the email under no contact, so the contact with your own address does not hold every set of notes.
 
-When the email's subject names one of your meetings that started in the 24 hours before it, Margince puts the notes on that meeting as its transcript, the same way it does for a notes document. The meeting's contacts and readers get it, and Margince suggests the tasks it finds. If two meetings fit, or a transcript is already on the meeting, Margince adds nothing. Margince does this only for email Gmail confirms came from Google. This needs no Meeting notes connection, only your connected mailbox and calendar.
+When the subject names one of your meetings, Margince puts the notes on that meeting as its transcript. The meeting must have started in the 24 hours before the email, and the title must match exactly. The contacts and readers of the meeting get it, and Margince suggests the tasks it finds.
+
+Margince adds nothing if two meetings fit, or if the meeting already has a transcript. It does the same for a forwarded email, or one sent to someone else. It does this only for email Gmail confirms came from Google. This needs no Meeting notes connection, only your connected mailbox and calendar.
 
 Also called: Google Docs, Meet transcripts, Gemini notes, meeting minutes.
 
@@ -117,7 +119,7 @@ If someone set who can see the meeting by hand, a colleague added later is shown
 
 An invitation with more than 50 guests is a mailing list to Margince. It keeps your colleagues on it and names up to 200 outside guests by the name or address on the invitation. Those guests are not linked to a contact, no contact is made for them, and the meeting does not count as contact with anyone. Past 200, the meeting says how many more guests it does not list.
 
-When the organiser hides the guest list, your copy of the invitation names only the organiser and you. Margince files that meeting, and you and the organiser can read it. It shows on a guest's record only once the organiser's own calendar is connected, because that copy names every guest. Margince does not take guests from the attendee list in an invitation email, since a sender types that list.
+When whoever set up the meeting hides the guest list, your copy of the invitation names only that host and you. Margince files that meeting, and only you and the host can read it. It shows on a guest's record once the host's calendar is connected, because that copy names every guest. Margince does not take guests from an invitation email, because the sender types that list.
 
 ## What you can connect
 
