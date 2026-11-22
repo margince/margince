@@ -343,7 +343,8 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 	return verdict, ids.Nil, stored, nil
 }
 
-// settledVerdict answers a retry of the same request from its recorded status.
+// settledVerdict reads a claim's recorded status: in flight, failed or succeeded.
+// It answers a same-request retry and describes the first call on a mismatch.
 func settledVerdict(status *int) claimOutcome {
 	switch {
 	case status == nil:

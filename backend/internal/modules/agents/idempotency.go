@@ -17,9 +17,8 @@ package agents
 // over the `idempotency_key` table for the REST transport, with a 24h replay
 // window, a digest mismatch refusal and a retention sweep — so this module
 // declares the seam and compose adapts its OWN claim transaction to it. One
-// claim, one window, one sweep, two doors. The workspace binding and the RLS
-// that make the claim tenant-safe are properties of that table, not of either
-// caller.
+// claim, one window, one sweep, two doors. The claim runs inside the caller's
+// workspace transaction (`database.WithWorkspaceTx`), which keeps it tenant-safe.
 //
 // AT MOST ONCE IS THE WHOLE PROMISE, so every branch that cannot keep it
 // REFUSES rather than proceeding: no claim store, a claim that errored, a
@@ -198,7 +197,7 @@ func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved
 	}
 }
 
-// firstUse says when the key was first spent and how that call ended, so the
+// firstUse says when the key was first spent and how that call stands, so the
 // caller can check the record instead of guessing. Never its arguments or result.
 func firstUse(claim Claim) string {
 	if claim.FirstUsedAt.IsZero() {
@@ -367,7 +366,8 @@ func (r *Registry) replay(ctx context.Context, spec mcp.ToolSpec, claim Claim) (
 
 // ServeRecorded answers a stored envelope to the caller AS THEY ARE NOW: it
 // re-proves every record the document names, then hands the bytes back
-// unchanged.
+// unchanged. Both recorded-answer surfaces call this gate: the idempotency claim
+// and a polled MCP task result. A second copy would drift from it.
 func (r *Registry) ServeRecorded(ctx context.Context, tool string, recorded json.RawMessage) (json.RawMessage, error) {
 	spec, ok := r.Spec(tool)
 	if !ok {
