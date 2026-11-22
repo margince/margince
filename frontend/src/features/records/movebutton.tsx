@@ -203,12 +203,8 @@ export function MoveButton({
     case "bring_in_manager":
       return (
         <CreateTaskVerb
-          label={
-            move.action === "bring_in_manager"
-              ? t("deal360.bringInManager")
-              : t("deal360.createTask")
-          }
-          why={move.action === "bring_in_manager" ? move.reason : undefined}
+          toManager={move.action === "bring_in_manager"}
+          why={move.reason}
           body={taskBody}
           refused={move.blocked_reason}
           pending={createTask.isPending}
@@ -339,7 +335,7 @@ function FollowUpDraft({
 // A rule wrote the task and pressing this accepts it. No model runs on the
 // press, so it is the plain primary, not indigo.
 function CreateTaskVerb({
-  label,
+  toManager,
   why,
   body,
   refused,
@@ -347,7 +343,7 @@ function CreateTaskVerb({
   error,
   onCreate,
 }: Readonly<{
-  label: string;
+  toManager: boolean;
   why?: string;
   body: Record<string, unknown> | undefined;
   refused?: string;
@@ -355,13 +351,14 @@ function CreateTaskVerb({
   error: unknown;
   onCreate: (body: Record<string, unknown>) => void;
 }>) {
+  const t = useT();
   // No body, no button: a click that sent {} would only be refused.
   if (!body) {
     return null;
   }
   return (
     <>
-      {why && <span>{why}</span>}
+      {toManager && why && <span>{why}</span>}
       <Button
         variant="primary"
         reason={refused}
@@ -369,7 +366,7 @@ function CreateTaskVerb({
         onClick={() => onCreate(body)}
       >
         <ListChecks aria-hidden />
-        {label}
+        {toManager ? t("deal360.bringInManager") : t("deal360.createTask")}
       </Button>
       <ErrorLine error={error} />
     </>
