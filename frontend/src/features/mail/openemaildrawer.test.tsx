@@ -355,6 +355,41 @@ describe("the email drawer's verbs", () => {
   });
 });
 
+it("says a mail without text has none, and offers no translation of it", async () => {
+  drawer({
+    ...PRESENTATION,
+    body: "",
+    summary: { ...PRESENTATION.summary, preview: "" },
+  });
+
+  expect(await screen.findByText("This message has no text.")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Show in my language" }),
+  ).toBeNull();
+});
+
+it("offers a mail with text in the reader's language", async () => {
+  drawer();
+
+  expect(
+    await screen.findByRole("button", { name: "Show in my language" }),
+  ).toBeTruthy();
+  expect(screen.queryByText("This message has no text.")).toBeNull();
+});
+
+it("leaves the To line out of a forwarded header when the mail had no recipient", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  drawer({ ...PRESENTATION, to: [] });
+
+  await user.click(await screen.findByRole("button", { name: "Forward" }));
+
+  await waitFor(() =>
+    expect(messageText("Body")).toContain("Forwarded message"),
+  );
+  expect(messageText("Body")).toContain("From: Ana Sommer");
+  expect(messageText("Body")).not.toContain("To:");
+});
+
 it("books with the sender of an incoming email and carries the message as context", async () => {
   const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   drawer(

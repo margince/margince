@@ -2286,6 +2286,7 @@
   "email.thread.toLine": "to {names}",
   "email.thread.details": "Details",
   "email.thread.textForwarded": "The text below is the forwarded mail, not words the sender wrote.",
+  "email.thread.noText": "This message has no text.",
   "email.thread.textPartial": "Part of the text of this mail could not be read.",
   "email.thread.textUnassessed": "Email text not verified",
   "email.thread.textUnassessedHint": "Margince cannot detect requests or commitments here. Read the original in your mail app if text is missing; add any needed task manually.",
