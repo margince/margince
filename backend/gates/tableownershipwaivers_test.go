@@ -84,7 +84,6 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 		" — the DELETE drops the link the promoted record already holds, so the repoint cannot collide",
 	"internal/modules/contacts:activity_link:promotionactivities.go:carryLeadActivities:UPDATE activity_link …": "merge/promote relink timeline links in the single transaction" +
 		" — the UPDATE repoints what is left onto the promoted record",
-	"internal/modules/contacts:attachment:merge_company.go:absorbCompanyReferences:UPDATE attachment SET company_id = $2 WHERE company_id = $1": "company merge carries the document library's account pointer onto the survivor in the same transaction — company_id is a denormalized READ path nothing else maintains, so a file left on the dissolved company is filed under a record that no longer exists and reads to a user as the contract having vanished",
 
 	// The rest of the company merge's cascade (mergerelink_company.go). Every
 	// one of these tables carries a company_id naming the record the merge is

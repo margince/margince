@@ -154,22 +154,14 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		if err := ensureContractFileable(ctx, tx, in.ContractID); err != nil {
 			return err
 		}
-		rollUp, hasAccount, err := accountRollUp(ctx, tx, in.EntityType, in.EntityID)
-		if err != nil {
-			return err
-		}
-		var account *ids.UUID
-		if hasAccount {
-			account = &rollUp
-		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO attachment (id, entity_type, entity_id, filename,
 				content_type, byte_size, storage_key, checksum, source, captured_by,
-				company_id, contract_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+				contract_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 			id, in.EntityType, in.EntityID, in.Filename,
 			nullIfEmpty(in.ContentType), size, key, checksum, attachmentSource, by,
-			account, in.ContractID); err != nil {
+			in.ContractID); err != nil {
 			return err
 		}
 		if err := announceUploadedAttachment(ctx, tx, id, in, size); err != nil {
