@@ -26,6 +26,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -232,7 +233,7 @@ func (c *owedVerdictCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	}
 	// The engine drops an answer it cannot use and asks again; certification
 	// still counts that answer against the model.
-	if msg := firstFault(payload.Results, owedResult.fault); msg != "" {
+	if msg := usableanswer.FirstFault(payload.Results, owedResult.fault); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
 	if disagreements := c.disagreements(payload); len(disagreements) > 0 {

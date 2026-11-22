@@ -59,28 +59,15 @@ func TierCertTable(ctx context.Context, corpus []Scenario, census *aitasks.Regis
 func taskTierCerts(scenarios []Scenario, readiness []ReadinessRow) []TierCertRow {
 	keys := map[ai.TierCertKey]bool{}
 	for _, row := range readiness {
-		if row.Certified && row.Record.Kind != KindDecision {
+		if isLadderRecord(row) {
 			keys[tierKeyOf(row.Record)] = true
 		}
 	}
-	var rows []TierCertRow
+	rows := make([]TierCertRow, 0, len(keys))
 	for key := range keys {
 		verdict, status := VerdictCertified, StatusCurrent
 		for _, site := range scenarioSites(scenarios) {
-			siteVerdict, siteStatus := VerdictNotSupported, StatusAbsent
-			measured := false
-			for _, row := range readiness {
-				if !row.Certified || row.Record.Kind == KindDecision || row.Site.Variant != site || tierKeyOf(row.Record) != key {
-					continue
-				}
-				if !measured || VerdictRank(row.Record.Verdict) < VerdictRank(siteVerdict) {
-					siteVerdict = row.Record.Verdict
-				}
-				if !measured || statusRank[row.Status()] < statusRank[siteStatus] {
-					siteStatus = row.Status()
-				}
-				measured = true
-			}
+			siteVerdict, siteStatus := siteStanding(readiness, key, site)
 			if VerdictRank(siteVerdict) < VerdictRank(verdict) {
 				verdict = siteVerdict
 			}
@@ -91,6 +78,30 @@ func taskTierCerts(scenarios []Scenario, readiness []ReadinessRow) []TierCertRow
 		rows = append(rows, TierCertRow{Key: key, Cert: ai.TierCert{Verdict: verdict, Current: status == StatusCurrent}})
 	}
 	return rows
+}
+
+func isLadderRecord(row ReadinessRow) bool {
+	return row.Certified && row.Record.Kind != KindDecision
+}
+
+// siteStanding is the worst verdict and state among the records of key on one
+// site. A site no record of key measured counts as not supported and absent.
+func siteStanding(readiness []ReadinessRow, key ai.TierCertKey, site string) (verdict, status string) {
+	verdict, status = VerdictNotSupported, StatusAbsent
+	measured := false
+	for _, row := range readiness {
+		if !isLadderRecord(row) || row.Site.Variant != site || tierKeyOf(row.Record) != key {
+			continue
+		}
+		if !measured || VerdictRank(row.Record.Verdict) < VerdictRank(verdict) {
+			verdict = row.Record.Verdict
+		}
+		if !measured || statusRank[row.Status()] < statusRank[status] {
+			status = row.Status()
+		}
+		measured = true
+	}
+	return verdict, status
 }
 
 func tierKeyOf(rec Record) ai.TierCertKey {

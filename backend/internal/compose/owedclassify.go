@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/owedverdict"
+	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -450,7 +451,7 @@ func (r owedResult) fault() string {
 	switch {
 	case !owedVerdicts[r.Verdict]:
 		return fmt.Sprintf("verdict %q is not asks_us|informs_us", clampToken(r.Verdict))
-	case !confidenceInRange(r.Confidence):
+	case !usableanswer.ConfidenceInRange(r.Confidence):
 		return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
 	}
 	return ""
@@ -459,7 +460,7 @@ func (r owedResult) fault() string {
 // resolveOwedResults reads the payload back to activity ids and drops the
 // results that are not usable.
 func resolveOwedResults(payload owedPayload, batch []owedCandidate) []owedResult {
-	return resolveBatchRefs(keepUsable(payload.Results, owedResult.usable), owedverdict.Refs(batch))
+	return resolveBatchRefs(usableanswer.Keep(payload.Results, owedResult.usable), owedverdict.Refs(batch))
 }
 
 func (r owedResult) answeredID() string { return r.ID }

@@ -85,38 +85,6 @@ func checkBatchFidelity[T batchAnswer](results []T, requestedIDs []string) strin
 	return ""
 }
 
-// confidenceInRange reports whether a model-reported score is a confidence at
-// all. 90 and 9 both appear for "90%", so no rescaling is safe and a value
-// outside [0,1] is read as no answer.
-func confidenceInRange(c schema.Confidence) bool { return c >= 0 && c <= 1 }
-
-// keepUsable drops the answers a site cannot use and keeps the rest of the
-// reply. Unusable means an invalid label or verdict, or a confidence outside
-// [0,1]. Each site sends the dropped message through the solo retry that a
-// below-floor answer takes. Run it after checkBatchFidelity, which counts a
-// dropped answer as given.
-func keepUsable[T any](results []T, usable func(T) bool) []T {
-	kept := make([]T, 0, len(results))
-	for _, r := range results {
-		if usable(r) {
-			kept = append(kept, r)
-		}
-	}
-	return kept
-}
-
-// firstFault names the first answer a site cannot use, or "" when each can be used.
-// Certification grades a model on it: an answer the engine drops still counts
-// against the model that wrote it.
-func firstFault[T any](results []T, fault func(T) string) string {
-	for _, r := range results {
-		if msg := fault(r); msg != "" {
-			return msg
-		}
-	}
-	return ""
-}
-
 // requestedIDNode is the schema node for the id an answer names: a string that
 // must be one of the ids this call sent.
 //

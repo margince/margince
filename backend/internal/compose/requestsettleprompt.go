@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -97,7 +98,7 @@ func (r settleResult) usable() bool { return r.fault() == "" }
 
 // fault says what makes the answer unusable, or "" when it is usable.
 func (r settleResult) fault() string {
-	if !confidenceInRange(r.Confidence) {
+	if !usableanswer.ConfidenceInRange(r.Confidence) {
 		return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
 	}
 	return ""
@@ -261,7 +262,7 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 // resolveSettleResults reads the payload back to request ids and drops the
 // results whose confidence is outside [0,1].
 func resolveSettleResults(payload settlePayload, refs *promptref.Refs) []settleResult {
-	return resolveBatchRefs(keepUsable(payload.Results, settleResult.usable), refs)
+	return resolveBatchRefs(usableanswer.Keep(payload.Results, settleResult.usable), refs)
 }
 
 // settleRemainderGrounded reports whether a still_owed result quotes the

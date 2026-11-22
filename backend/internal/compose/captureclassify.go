@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturelabel"
+	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
@@ -312,7 +313,7 @@ func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) (
 // resolveClassifyRefs rewrites each validated result's ref to its activity id
 // and drops the results that are not usable.
 func resolveClassifyRefs(results []classifyResult, batch []unlabeledMessage) []classifyResult {
-	return resolveBatchRefs(keepUsable(results, classifyResult.usable), capturelabel.Refs(batch))
+	return resolveBatchRefs(usableanswer.Keep(results, classifyResult.usable), capturelabel.Refs(batch))
 }
 
 // judgeOf names what actually answered.
@@ -389,7 +390,7 @@ func (r classifyResult) fault() string {
 	switch {
 	case !classifyLabels[r.Label]:
 		return fmt.Sprintf("label %q is not commitment|meeting|other", clampToken(r.Label))
-	case !confidenceInRange(r.Confidence):
+	case !usableanswer.ConfidenceInRange(r.Confidence):
 		return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
 	}
 	return ""

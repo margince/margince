@@ -49,6 +49,28 @@ func TestOneOutOfRangeConfidenceDropsOnlyThatAnswerAtEveryBatchedSite(t *testing
 		}
 	})
 
+	t.Run("owed_verdict drops an invalid verdict with a good confidence, keeping the rest", func(t *testing.T) {
+		t.Parallel()
+		batch := []owedCandidate{{ID: ids.NewV7()}, {ID: ids.NewV7()}, {ID: ids.NewV7()}}
+		payload := owedPayload{Results: []owedResult{
+			{ID: "m1", Verdict: activities.OwedVerdictAsksUs, Confidence: good},
+			{ID: "m2", Verdict: "maybe", Confidence: good},
+			{ID: "m3", Verdict: activities.OwedVerdictInformsUs, Confidence: good},
+		}}
+		if msg := validateOwedPayload(payload, batch); msg != "" {
+			t.Fatalf("an invalid verdict refused the whole reply: %s", msg)
+		}
+		got := resolveOwedResults(payload, batch)
+		if len(got) != 2 || got[0].ID != batch[0].ID.String() || got[1].ID != batch[2].ID.String() {
+			t.Fatalf("kept %+v, want the first and third answers only", got)
+		}
+		for _, r := range got {
+			if !owedVerdicts[r.Verdict] {
+				t.Fatalf("a kept answer carries the invalid verdict %q", r.Verdict)
+			}
+		}
+	})
+
 	t.Run("owed_verdict drops an invalid verdict together with a bad confidence", func(t *testing.T) {
 		t.Parallel()
 		batch := []owedCandidate{{ID: ids.NewV7()}, {ID: ids.NewV7()}}
