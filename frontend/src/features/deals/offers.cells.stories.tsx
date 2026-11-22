@@ -9,7 +9,7 @@ import { discountFault } from "./offerlinerates";
 import { NumericCell } from "./offers.cells";
 import "./offers.css";
 
-type Args = Readonly<{ onSave: (num: number) => void }>;
+type Args = Readonly<{ onSave: (num: number) => Promise<unknown> }>;
 
 // A line's discount cell, holding the same bounds the add form checks.
 function DiscountCell({ onSave }: Args) {
@@ -32,7 +32,7 @@ function DiscountCell({ onSave }: Args) {
 
 const meta: Meta<Args> = {
   title: "Records/Offers/Line cell",
-  args: { onSave: fn() },
+  args: { onSave: fn(() => Promise.resolve()) },
   parameters: { layout: "padded" },
   render: (args) => (
     <StoryProviders>

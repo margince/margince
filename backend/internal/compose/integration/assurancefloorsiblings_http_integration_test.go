@@ -153,7 +153,7 @@ func TestIndividualPerformanceOffRefusesACheckRunOfOneColleaguesDeals(t *testing
 	openDealOf(t, d.e, colleague)
 	scanner := assurance.NewScanner(assurance.NewStore(compose.InstallationDB(d.e.Pool)),
 		compose.AssuranceSubjects, compose.AssuranceCoverage, compose.AssuranceConfig())
-	if _, err := scanner.Scan(apptest.AdminContext(t, d.e, AdminPerms), clocktest.Now(t), nil); err != nil {
+	if _, err := scanner.Scan(apptest.AdminContext(t, d.e, AdminPerms), clocktest.Now(t)); err != nil {
 		t.Fatalf("running the check: %v", err)
 	}
 	var run struct {

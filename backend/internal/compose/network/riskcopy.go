@@ -33,9 +33,9 @@ type riskSentences struct {
 
 var riskWords = riskSentences{
 	SingleThreaded: phrase{
-		En: "fewer than two engaged contacts — the deal rests on one relationship",
-		De: "weniger als zwei aktive Kontakte — der Deal hängt an einer einzigen Beziehung",
-		Vi: "chưa tới hai người liên hệ đang tương tác — thương vụ chỉ dựa vào một mối quan hệ",
+		En: "too few engaged contacts — the deal rests on too few relationships",
+		De: "zu wenige aktive Kontakte — der Deal hängt an zu wenigen Beziehungen",
+		Vi: "quá ít người liên hệ đang tương tác — thương vụ chỉ dựa vào quá ít mối quan hệ",
 	},
 	CoverageGap: phrase{
 		En: "no engaged champion — nobody inside the company is carrying this",

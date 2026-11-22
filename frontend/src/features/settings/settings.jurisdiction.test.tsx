@@ -160,18 +160,20 @@ describe("the jurisdiction page", () => {
     const dialog = await screen.findByRole("dialog", {
       name: en["jurisdiction.change.label"],
     });
-    expect(
+    await user.click(
       within(dialog).getByRole("button", {
         name: en["jurisdiction.confirm.confirm"],
       }),
-    ).toBeDisabled();
-    await pickOption(
-      user,
-      within(dialog).getByRole("combobox", {
-        name: en["jurisdiction.card.title"],
-      }),
-      "Vietnam",
     );
+    const country = within(dialog).getByRole("combobox", {
+      name: en["jurisdiction.card.title"],
+    });
+    expect(
+      within(dialog).getByText(`${en["jurisdiction.card.title"]} is required.`),
+    ).toBeInTheDocument();
+    expect(document.activeElement).toBe(country);
+    expect(sent.find((s) => s.method === "PATCH")).toBeUndefined();
+    await pickOption(user, country, "Vietnam");
     expect(within(dialog).getByText(/becomes no floor/)).toBeInTheDocument();
     expect(
       within(dialog).getByText(/keeps Commercial correspondence/),

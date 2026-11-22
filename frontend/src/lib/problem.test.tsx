@@ -2,6 +2,7 @@
 import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { ConnectivityError } from "./connectivity";
 import {
   EmptySuccessError,
@@ -406,26 +407,48 @@ describe("problemMessageOf", () => {
     }
   });
 
-  it("says in the reader's language that a stage waits for legal, from the field fault's code", () => {
-    const refusal = new ProblemError({
-      code: "validation_error",
-      status: 422,
-      detail: "validation failed",
-      details: {
-        errors: [
-          {
-            field: "to_stage_id",
-            code: "legal_review_required",
-            message:
-              "this stage needs legal's approval, and the review is still waiting for an answer",
-          },
-        ],
-      },
-    });
-    for (const locale of ["en", "de", "vi"] as const) {
-      const line = problemMessageOf(refusal, (key) => translate(locale, key));
-      expect(line).toBe(translate(locale, "legalReview.advanceRefused"));
-      expect(line).not.toContain("waiting for an answer");
+  it("says in the reader's language the next step the legal review state asks for", () => {
+    const serverSentence =
+      "this stage needs legal's approval, and the review is still waiting for an answer";
+    const refusal = (params?: Record<string, string>) =>
+      new ProblemError({
+        code: "validation_error",
+        status: 422,
+        detail: "validation failed",
+        details: {
+          errors: [
+            {
+              field: "to_stage_id",
+              code: "legal_review_required",
+              message: serverSentence,
+              ...(params ? { params } : null),
+            },
+          ],
+        },
+      });
+    const cases: [Record<string, string> | undefined, MessageKey][] = [
+      [{ review_state: "none" }, "legalReview.advanceRefused"],
+      [{ review_state: "pending" }, "legalReview.advanceRefused.pending"],
+      [
+        { review_state: "changes_needed" },
+        "legalReview.advanceRefused.changesNeeded",
+      ],
+      [
+        { review_state: "terms_changed" },
+        "legalReview.advanceRefused.termsChanged",
+      ],
+      // An older server names no state, and a newer one may name an unknown one.
+      [undefined, "legalReview.advanceRefused"],
+      [{ review_state: "escalated" }, "legalReview.advanceRefused"],
+    ];
+    for (const [params, key] of cases) {
+      for (const locale of ["en", "de", "vi"] as const) {
+        const line = problemMessageOf(refusal(params), (k) =>
+          translate(locale, k),
+        );
+        expect(line).toBe(translate(locale, key));
+        expect(line).not.toBe(serverSentence);
+      }
     }
   });
 

@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // readOnlyCtx is a signed-in member whose role reads but records nothing, as
@@ -75,18 +74,10 @@ func TestTheRosterReportsARoleThatCannotCapture(t *testing.T) {
 	}
 }
 
-// readOnlyAuthority is identity answering for a member whose role was moved to
-// one that cannot capture while their consent was out at the provider.
-type readOnlyAuthority struct{ liveAuthority }
-
-func (readOnlyAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
-	return authz.RBAC{}, nil
-}
-
 func TestCallbackRefusesARoleThatCannotCaptureBeforeExchangingTheCode(t *testing.T) {
 	oauth := &recordingOAuth{}
 	h := wiredHandlers()
-	h.authority, h.oauth, h.gmailAPI = readOnlyAuthority{}, oauth, stubGmailAPI{}
+	h.authority, h.oauth, h.gmailAPI = grantedAuthority{seat: principal.SeatFull}, oauth, stubGmailAPI{}
 	const nonce = "csrf-nonce-value"
 	state := h.signer.sign(connectState{
 		Workspace: ids.MustParse("11111111-1111-1111-1111-111111111111"),
@@ -111,7 +102,7 @@ func TestCallbackRefusesARoleThatCannotCaptureBeforeExchangingTheCode(t *testing
 // A history import is refused before its estimate asks the provider: the
 // nil-pool registry here would fail any read of the connection row.
 func TestABackfillPreviewAndStartRefuseARoleThatCannotCapture(t *testing.T) {
-	h := backfillHandlers{registry: capture.NewRegistry(nil, nil, readOnlyAuthority{}, nil)}
+	h := backfillHandlers{registry: capture.NewRegistry(nil, nil, grantedAuthority{seat: principal.SeatFull}, nil)}
 	var preview crmcontracts.PreviewConnectorBackfillParams
 	var start crmcontracts.StartConnectorBackfillParams
 	for op, invoke := range map[string]func(http.ResponseWriter, *http.Request){

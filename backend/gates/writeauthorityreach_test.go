@@ -48,6 +48,14 @@ const wantMinimumShareableWriters = 15
 // merely inconvenient: where the probe is simply a no-op today it was added
 // instead, because a no-op costs nothing and closes the drift.
 var writesWithoutARowProbe = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:touchWhenAddressFilled":              "moves the version after a bought address or number was filled; ApplyProviderClaims holds the contact through auth.HoldWritableLive before any fill, so this adds no access of its own",
+	"internal/modules/contacts:revivePhoneTx":                       "brings a replaced number back for the signature retraction and the profile-field restore, which probe write authority on the contact before calling it; the version move only follows that write",
+	"internal/modules/contacts:touchChildSetParent":                 "moves the version of a record whose child rows its caller has just written. The caller owns the write-authority decision, so this statement adds no access of its own",
+	"internal/modules/contacts:carryLeadPhone":                      "the promotion probes write authority on the matched contact (auth.WritableBy in promoteTarget) before it merges the lead in, and this adds the lead's number to that same contact",
+	"internal/modules/contacts:archiveSignatureNumber":              "the signature retraction pass runs on the system principal and selects numbers by the signature source, not by caller identity; a row probe would leave numbers outside that identity's scope in place",
+	"internal/modules/contacts:withdrawSignatureNumber":             "a step of the signature retraction pass, decided the same way as archiveSignatureNumber",
+	"internal/modules/contacts:retractUnsupportedPhones":            "a step of the signature retraction pass, decided the same way as archiveSignatureNumber",
+	"internal/modules/contacts:RetractUnsupportedSignaturePhonesTx": "the entry of the signature retraction pass for unsupported numbers, decided the same way as archiveSignatureNumber",
 	"internal/modules/contacts:ClearSiteOfferDuplicatesTx":          "the system-only company profile correction selects rows by stored duplicate values and provenance, not caller identity; a row-scope write probe would leave stale mirrors outside that identity’s scope. Each company is locked and audited through the ordinary company update tail",
 	"internal/modules/contacts:clearSiteOfferDuplicate":             "the locked per-company step of ClearSiteOfferDuplicatesTx, reachable only from that system-only correction; it preserves user-authored fields and writes through the ordinary company audit and event tail",
 	"internal/modules/privacy:purgeAnonymizedContactJudgments":      "the retention contact anonymization clears derived judgments inside the transaction that selected and anonymized the contact; a reader-specific write grant would prevent completing that accepted privacy action",

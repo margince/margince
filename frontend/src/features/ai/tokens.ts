@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { INTL_LOCALE } from "../../format/format";
+import { numberFormat } from "../../format/formatters";
 import type { Locale } from "../../i18n";
 
 // English markers as the product spells them. ICU's en-GB draws "m" and "bn"
@@ -23,7 +23,7 @@ const ENGLISH_COMPACT_MARKER: Record<string, string> = {
  */
 export function formatTokens(value: number, locale: Locale): string {
   const compact = Math.abs(value) >= 10_000;
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     notation: compact ? "compact" : "standard",
     maximumFractionDigits: compact ? 1 : 0,
   })

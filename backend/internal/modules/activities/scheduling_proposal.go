@@ -5,8 +5,6 @@ package activities
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -73,7 +71,7 @@ func (s *Store) CreateProposal(ctx context.Context, in crmcontracts.MeetingPropo
 	if err := proposalLifetimeRefusal(created, expires); err != nil {
 		return proposalLink{}, err
 	}
-	token, hash, err := invitationToken()
+	token, hash, err := storekit.MintToken()
 	if err != nil {
 		return proposalLink{}, err
 	}
@@ -123,12 +121,11 @@ func (s *Store) ResolveProposalToken(ctx context.Context, token string) (ids.UUI
 	if len(token) != 43 {
 		return ids.Nil, ids.UserID{}, apperrors.ErrNotFound
 	}
-	sum := sha256.Sum256([]byte(token))
 	var id ids.UUID
 	var host ids.UserID
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		args := schedulingArgs{}
-		return tx.QueryRow(ctx, `SELECT p.activity_id,p.host_user_id FROM meeting_proposal p JOIN activity a ON a.id=p.activity_id WHERE p.token_hash=`+args.add(hex.EncodeToString(sum[:]))+` AND a.archived_at IS NULL AND p.expires_at>`+args.add(s.now()), args...).Scan(&id, &host)
+		return tx.QueryRow(ctx, `SELECT p.activity_id,p.host_user_id FROM meeting_proposal p JOIN activity a ON a.id=p.activity_id WHERE p.token_hash=`+args.add(storekit.TokenHash(token))+` AND a.archived_at IS NULL AND p.expires_at>`+args.add(s.now()), args...).Scan(&id, &host)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = apperrors.ErrNotFound

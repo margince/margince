@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -891,7 +892,7 @@ func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, 
 		INSERT INTO confirm_token (id, contact_id, token_hash, delivered_to, expires_at, consumed_at, kind,
 		                           issued_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $5::timestamptz - interval '1 hour')`,
-		id, e.contact, "hash-"+id.String(), e.address, expires, consumed, kind); err != nil {
+		id, e.contact, storekit.TokenHash(id.String()), e.address, expires, consumed, kind); err != nil {
 		t.Fatal(err)
 	}
 	return id

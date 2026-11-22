@@ -12,6 +12,7 @@ import (
 	"slices"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/platform/mailwire"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -87,7 +88,9 @@ func (c *Connector) sendWithHandoff(ctx context.Context, auth connector.Auth, ms
 	if !slices.Contains(st.Granted, SendScope) {
 		return connector.SendReceipt{}, ErrSendScopeMissing
 	}
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
+	// A send runs once through its handoff and is never repeated on a 401, so it
+	// takes a token redeemed now rather than a kept one.
+	refreshed, err := c.oauth.Refresh(oauthflow.Renewing(ctx), st.RefreshToken, st.Granted)
 	if err != nil {
 		return connector.SendReceipt{}, err
 	}

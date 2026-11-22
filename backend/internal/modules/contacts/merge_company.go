@@ -44,14 +44,13 @@ func (s *Store) MergeCompany(ctx context.Context, sourceID, targetID ids.Company
 	if sourceID == targetID {
 		return crmcontracts.Company{}, &MergeSelfError{}
 	}
-	active, err := s.activeColumns(ctx, "company")
-	if err != nil {
-		return crmcontracts.Company{}, err
-	}
 
 	var out crmcontracts.Company
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "company")
+		if err != nil {
+			return err
+		}
 		out, err = s.mergeCompanyTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
@@ -156,6 +155,9 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 		sourceID.UUID, targetID.UUID); err != nil {
 		return false, fmt.Errorf("relink domains: %w", err)
 	}
+	if err := storekit.OwnCompanyDomainsChanged(ctx, tx, sourceID.UUID, targetID.UUID); err != nil {
+		return false, err
+	}
 	if err := relinkCompanyEdges(ctx, tx, sourceID, targetID); err != nil {
 		return false, fmt.Errorf("relink relationships: %w", err)
 	}
@@ -180,6 +182,8 @@ func relinkCompanyAssociations(ctx context.Context, tx pgx.Tx, sourceID, targetI
 // A merged-away partner would otherwise leave the survivor holding the
 // extension row with nothing saying it is a partner, which is exactly the
 // half-state the enforced invariant exists to make impossible.
+//
+//gate:parent-version-door
 func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontracts.Company, targetIsPartner bool, tgtLock storekit.RowLock) (map[string]any, error) {
 	p := buildCompanySurvivorshipPatch(tgt, src)
 	if targetIsPartner {
@@ -192,6 +196,8 @@ func fillCompanySurvivorship(ctx context.Context, tx pgx.Tx, src, tgt crmcontrac
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
 			return nil, fmt.Errorf("apply survivorship fill: %w", err)
 		}
+	} else if err := storekit.TouchLocked(ctx, tx, tgtLock); err != nil {
+		return nil, fmt.Errorf("move the survivor's version: %w", err)
 	}
 	// An inherited value arrives with its author still attached. Without this
 	// the survivor holds a sentence that field_provenance says nobody wrote, and
@@ -252,11 +258,6 @@ func absorbCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		`UPDATE project SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE deal SET company_id = $2 WHERE company_id = $1`,
 		`UPDATE deal SET partner_company_id = $2 WHERE partner_company_id = $1`,
-		// The document library's account pointer. It is a denormalized READ
-		// path, so nothing else moves it — and a file left pointing at the
-		// dissolved company is filed under a record that no longer exists,
-		// which reads to a user as the contract having vanished.
-		`UPDATE attachment SET company_id = $2 WHERE company_id = $1`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID); err != nil {
 			return false, fmt.Errorf("repoint project and deal attributions: %w", err)

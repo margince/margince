@@ -11,6 +11,7 @@ import type { MessageKey } from "../../i18n/en";
 import type { AutoKept, LooksKept } from "./claimlookskept";
 import type { TakenOver } from "./claimtakeover";
 import { omitted } from "./contact360";
+import { claimStandsAlone, listedTaskIds } from "./contactpromises";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -75,15 +76,14 @@ function autoKeptOf(claim: Claim): AutoKept | undefined {
 
 /**
  * The promises the record's conversations hold, both ways, with the open
- * questions after them. A claim that became a task is the task's while the
- * task is open, so it is not listed twice. Once the task is kept, the claim
- * stays as the record that it was kept.
+ * questions after them. A claim that became a task is the task's while
+ * next_steps lists the task, so it is not listed twice. An open task past the
+ * cap leaves its claim here. Once the task is kept, the claim stays as the
+ * record that it was kept.
  */
 function openLoops(view: Contact360): readonly OpenLoop[] {
   const claims = view.claims ?? [];
-  const openTasks = new Set(
-    (view.next_steps?.data ?? []).map((task) => task.id),
-  );
+  const listed = listedTaskIds(view);
   return LOOPS.flatMap((loop) =>
     claims
       .filter(
@@ -91,11 +91,11 @@ function openLoops(view: Contact360): readonly OpenLoop[] {
           claim.kind === loop.kind &&
           claim.status !== "dismissed" &&
           !claim.needs_review &&
-          (!claim.task_activity_id ||
+          (claimStandsAlone(claim, listed) ||
             claim.taken_at ||
             claim.auto_kept ||
             (claim.status === "done" &&
-              !openTasks.has(claim.task_activity_id))),
+              !listed.has(claim.task_activity_id ?? ""))),
       )
       .map(
         (claim): OpenLoop => ({

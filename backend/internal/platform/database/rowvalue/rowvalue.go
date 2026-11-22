@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -82,11 +83,12 @@ func CompactJSON(v any) (string, error) {
 	return string(bytes.TrimSuffix(buf.Bytes(), []byte("\n"))), nil
 }
 
-// Reader reads rows like pgx.Rows.Values, except that json and jsonb numbers
-// arrive as json.Number. pgx decodes them as float64, which changes every
+// Reader reads rows like pgx.Rows.Values, except that a SQL date arrives as
+// its calendar day, YYYY-MM-DD, and json and jsonb numbers as json.Number. pgx decodes them as float64, which changes every
 // integer above 2^53. A Reader is for one query; it is not safe to share.
 type Reader struct {
-	types *pgtype.Map
+	types    *pgtype.Map
+	instants bool
 }
 
 // NewReader builds a Reader whose json codecs keep each number's stored digits.
@@ -105,6 +107,14 @@ func NewReader() *Reader {
 	types.RegisterType(&pgtype.Type{Name: "_json", OID: pgtype.JSONArrayOID, Codec: &pgtype.ArrayCodec{ElementType: jsonType}})
 	types.RegisterType(&pgtype.Type{Name: "_jsonb", OID: pgtype.JSONBArrayOID, Codec: &pgtype.ArrayCodec{ElementType: jsonbType}})
 	return &Reader{types: types}
+}
+
+// NewInstantReader is a Reader that leaves a SQL date as pgx decodes it: a
+// time.Time at midnight UTC. It is for a caller whose readers expect that.
+func NewInstantReader() *Reader {
+	reader := NewReader()
+	reader.instants = true
+	return reader
 }
 
 //craft:ignore naked-any the codec's Unmarshal signature is encoding/json's
@@ -126,6 +136,11 @@ func (r *Reader) Values(rows pgx.Rows) ([]any, error) {
 	for i, field := range rows.FieldDescriptions() {
 		switch field.DataTypeOID {
 		case pgtype.JSONOID, pgtype.JSONBOID, pgtype.JSONArrayOID, pgtype.JSONBArrayOID:
+		case pgtype.DateOID:
+			if day, ok := values[i].(time.Time); ok && !r.instants {
+				values[i] = day.Format(time.DateOnly)
+			}
+			continue
 		default:
 			continue
 		}

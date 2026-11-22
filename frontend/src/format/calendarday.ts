@@ -12,7 +12,9 @@
 // All but `today` are pure and take their zone (or the reader's own wall clock)
 // as input, so nothing here has to be tested against the machine's own zone.
 
+import type { components } from "../api/schema";
 import { type ISODate, isISODate } from "./datepattern";
+import { pinnedDateTimeFormat } from "./formatters";
 import {
   DAY_MS,
   endOfDayInZone,
@@ -28,23 +30,13 @@ import {
 // which is the whole reason this string is comparable — a locale's date format is
 // data, it varies with the runtime's ICU, and a bucketing rule that reads
 // "yesterday" because a format changed under it would be invisible.
-// One formatter per zone: constructing an Intl.DateTimeFormat is the expensive
-// part, and a task list asks this question once per row.
-const dayFormatters = new Map<string, Intl.DateTimeFormat>();
-
 function dayFormatter(zone: string): Intl.DateTimeFormat {
-  const cached = dayFormatters.get(zone);
-  if (cached) {
-    return cached;
-  }
-  const made = new Intl.DateTimeFormat("en-CA", {
+  return pinnedDateTimeFormat("en-CA", {
     timeZone: zone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
-  dayFormatters.set(zone, made);
-  return made;
 }
 
 /**
@@ -271,4 +263,38 @@ export function isoWeekBefore(day: string): number {
   return isoWeekOf(
     `${before.getUTCFullYear()}-${pad(before.getUTCMonth() + 1)}-${pad(before.getUTCDate())}`,
   );
+}
+
+/**
+ * The zone whose calendar counts a task's due day. A task with only a date
+ * reads on the company's, the calendar the Worklist groups it by, so every page
+ * calls it overdue together. A task with a time, or one a read does not say,
+ * reads on the reader's own clock.
+ */
+export function taskDueZone(
+  hasTime: boolean | undefined,
+  readerZone: string,
+  companyZone: string,
+): string {
+  return hasTime === false ? companyZone : readerZone;
+}
+
+/**
+ * The instant to read a task's due day from, in `zone`. A task with a date and
+ * no time is due on the date its chosen clock names. It returns that day's end
+ * in `zone`, so every reader prints and counts the chosen date. A timed task,
+ * or one with no chosen clock, keeps its own instant.
+ *
+ * Mirrors the backend's deadline.WallDayOffset; both tests read
+ * deadline/testdata/pickedday.json.
+ */
+export function taskDueOnDay(
+  dueAt: string,
+  hasTime: boolean | undefined,
+  intent: components["schemas"]["IntentTime"] | null | undefined,
+  zone: string,
+): string {
+  if (hasTime === true || !intent) return dueAt;
+  const day = intent.wall_clock.slice(0, 10);
+  return isRealCalendarDay(day) ? dueInstant(day, zone) : dueAt;
 }

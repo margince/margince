@@ -21,13 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A broker's upstream and the stop reason survive the real write path.
-//
-// The pairing matters more than either column: served_provider says which of a
-// gateway's many hosts answered, finish_reason says whether it finished, and a
-// row with the first and not the second can tell you a slow host was involved
-// without telling you the answer was cut off.
-func TestTheCallTraceRecordsWhichUpstreamServedAndHowItStopped(t *testing.T) {
+// A broker's upstream survives the real write path.
+func TestTheCallTraceRecordsWhichUpstreamServed(t *testing.T) {
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)
@@ -38,28 +33,24 @@ func TestTheCallTraceRecordsWhichUpstreamServedAndHowItStopped(t *testing.T) {
 		LogicalCallID: logical, Attempt: 1, IsTerminal: true,
 		Kind: callKindCompletion, Task: TaskSummarize, Tier: TierCheapCloud,
 		Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
-		RequestFingerprint: "fp-upstream",
 		// The echoed model and the named upstream disagree on purpose: that is
 		// the broker case, and the reason these are two columns.
 		ServedModel: "openai/gpt-oss-120b", ServedIdentitySource: servedIdentitySourceEcho,
-		ServedProvider: "BaseTen", FinishReason: "length",
+		ServedProvider: "BaseTen",
 	}}); err != nil {
 		t.Fatalf("recording the call: %v", err)
 	}
 
-	var provider, finish, source string
+	var provider, source string
 	if err := env.owner.QueryRow(
 		ctx, `
-		SELECT served_provider, finish_reason, served_identity_source
+		SELECT served_provider, served_identity_source
 		  FROM ai_call WHERE logical_call_id = $1`, logical,
-	).Scan(&provider, &finish, &source); err != nil {
+	).Scan(&provider, &source); err != nil {
 		t.Fatalf("reading the call back: %v", err)
 	}
 	if provider != "BaseTen" {
 		t.Errorf("served_provider = %q, want BaseTen", provider)
-	}
-	if finish != "length" {
-		t.Errorf("finish_reason = %q, want length", finish)
 	}
 	// Naming the upstream does NOT promote the echoed model to a confirmation.
 	// We learned who served, not what they served, and collapsing the two would
@@ -83,22 +74,21 @@ func TestACallWithNoReportedUpstreamStoresNoUpstream(t *testing.T) {
 		LogicalCallID: logical, Attempt: 1, IsTerminal: true,
 		Kind: callKindCompletion, Task: TaskSummarize, Tier: TierPremium,
 		Provider: providerGemini, ModelID: "gemini-3.5-flash",
-		RequestFingerprint:   "fp-direct",
 		ServedModel:          "gemini-3.5-flash",
 		ServedIdentitySource: servedIdentitySourceResponse,
 	}}); err != nil {
 		t.Fatalf("recording the call: %v", err)
 	}
 
-	var provider, finish string
+	var provider string
 	if err := env.owner.QueryRow(
 		ctx, `
-		SELECT served_provider, finish_reason FROM ai_call WHERE logical_call_id = $1`, logical,
-	).Scan(&provider, &finish); err != nil {
+		SELECT served_provider FROM ai_call WHERE logical_call_id = $1`, logical,
+	).Scan(&provider); err != nil {
 		t.Fatalf("reading the call back: %v", err)
 	}
-	if provider != "" || finish != "" {
-		t.Errorf("served_provider/finish_reason = %q/%q, want both empty", provider, finish)
+	if provider != "" {
+		t.Errorf("served_provider = %q, want it empty", provider)
 	}
 }
 
@@ -127,7 +117,7 @@ func TestACallWithoutAnErrorStoresNullRatherThanEmptyText(t *testing.T) {
 			if err := meter.Record(ctx, []Call{{
 				LogicalCallID: logical, Attempt: 1, IsTerminal: true,
 				Kind: callKindCompletion, Task: TaskSummarize, Tier: TierCheapCloud,
-				Provider: providerGemini, ModelID: "m", RequestFingerprint: "fp-" + tc.name,
+				Provider: providerGemini, ModelID: "m",
 				ErrorSentinel: tc.sentinel,
 			}}); err != nil {
 				t.Fatalf("recording the call: %v", err)

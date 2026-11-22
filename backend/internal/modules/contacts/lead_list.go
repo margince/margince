@@ -139,7 +139,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	}
 	// One instant for this read: the sla_state filter is built once for the
 	// page and once for the total, and they must judge the same leads overdue.
-	ctx = withPinnedSLANow(ctx, leadSLAClock().UTC())
+	ctx = pinSLANow(ctx)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
 		entity:    leadEntity,
 		firstPage: in.Cursor == nil || *in.Cursor == "",

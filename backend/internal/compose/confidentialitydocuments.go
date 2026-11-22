@@ -86,18 +86,27 @@ type attachmentOpener interface {
 	OpenAttachment(ctx context.Context, id ids.UUID) (crmcontracts.Attachment, io.ReadCloser, error)
 }
 
+// pdfEngine is the PDF reader the verdict parses through: processPDFReader,
+// which compiles on its first Read unless Start ran before.
+type pdfEngine interface {
+	Start() error
+	Read(ctx context.Context, raw []byte, maxChars int) (string, error)
+}
+
 // threadDocuments reads the documents of claimed threads for one engine.
 type threadDocuments struct {
-	files attachmentOpener
-	pdf   *pdftext.Reader
-	slots chan struct{}
+	files      attachmentOpener
+	pdf        pdfEngine
+	slots      chan struct{}
+	fileBudget time.Duration
 }
 
 func newThreadDocuments(pool *pgxpool.Pool, blob blobstore.Store) *threadDocuments {
 	return &threadDocuments{
-		files: activities.NewStore(InstallationDB(pool)).WithBlobstore(blob),
-		pdf:   processPDFReader,
-		slots: make(chan struct{}, confidentialityDocumentSlots),
+		files:      activities.NewStore(InstallationDB(pool)).WithBlobstore(blob),
+		pdf:        processPDFReader,
+		slots:      make(chan struct{}, confidentialityDocumentSlots),
+		fileBudget: confidentialityDocumentTimeout,
 	}
 }
 
@@ -238,14 +247,21 @@ func (d *threadDocuments) fetch(ctx context.Context, id ids.UUID) ([]byte, strin
 }
 
 // excerpt parses the bytes under the file's own time bound. A parse failure is
-// the file's and marks it unreadable; the caller's own cancellation is not, and
-// defers the thread.
+// the file's and marks it unreadable. The caller's own cancellation is not, and
+// defers the thread. The PDF engine compiles before the bound starts, because
+// on a busy host the compile alone can outlast it.
 func (d *threadDocuments) excerpt(ctx context.Context, doc *capture.ThreadDocument, raw []byte, mediaType string) error {
 	if capture.IsThreadImage(doc.Filename, mediaType) {
 		doc.Unreadable = true
 		return nil
 	}
-	fileCtx, cancel := context.WithTimeout(ctx, confidentialityDocumentTimeout)
+	if isPDFDocument(raw, mediaType) {
+		if err := d.pdf.Start(); err != nil {
+			doc.Unreadable = true
+			return nil
+		}
+	}
+	fileCtx, cancel := context.WithTimeout(ctx, d.fileBudget)
 	defer cancel()
 	text, truncated, err := d.parse(fileCtx, raw, mediaType, confidentialityCVChars)
 	if ctx.Err() != nil {
@@ -270,9 +286,13 @@ func documentReadsAsPersonnel(read, excerpt string) bool {
 	return capture.DescribesACareer(read) || capture.ListsStaffCosts(excerpt)
 }
 
+func isPDFDocument(raw []byte, mediaType string) bool {
+	return mediaType == documentPDFMIME || bytes.HasPrefix(raw, []byte("%PDF-"))
+}
+
 // parse dispatches a PDF to pdftext and everything else to doctext.
 func (d *threadDocuments) parse(ctx context.Context, raw []byte, mediaType string, maxChars int) (string, bool, error) {
-	if mediaType == documentPDFMIME || bytes.HasPrefix(raw, []byte("%PDF-")) {
+	if isPDFDocument(raw, mediaType) {
 		text, err := d.pdf.Read(ctx, raw, maxChars)
 		if err != nil {
 			return "", false, err

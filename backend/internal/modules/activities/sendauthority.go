@@ -37,7 +37,8 @@ type SendAuthority interface {
 	SendCapable(ctx context.Context, provider string) (bool, error)
 
 	// SendableMailbox names the mailbox this user's next send should go out
-	// through, or "" when none of their mailboxes can transmit.
+	// through, or "" when none of their mailboxes can transmit. It answers
+	// *MailboxNotConnectedError when they hold no mail connection at all.
 	//
 	// It exists because a MAIL send has no `from` argument — the contract takes
 	// recipients and a body, never a mailbox — so something has to choose, and
@@ -72,6 +73,20 @@ func (e *MailboxNotSendCapableError) Error() string {
 // change. Reconnecting the mailbox is the remedy, and a contact has to do it.
 func (e *MailboxNotSendCapableError) MessageFault() (code, message string) {
 	return "mailbox_not_send_capable", e.Error()
+}
+
+// MailboxNotConnectedError refuses a MAIL send by a sender who holds no mail
+// connection at all. It is apart from MailboxNotSendCapableError because the
+// remedy differs: there is nothing to reconnect, a mailbox has to be connected.
+type MailboxNotConnectedError struct{}
+
+func (e *MailboxNotConnectedError) Error() string {
+	return "connect a mailbox to send"
+}
+
+// MessageFault names the condition and no field, like its sibling above.
+func (e *MailboxNotConnectedError) MessageFault() (code, message string) {
+	return "mailbox_not_connected", e.Error()
 }
 
 // NoRecipientsError refuses a mail send whose To: line resolves to nobody —

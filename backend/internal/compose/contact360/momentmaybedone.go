@@ -33,11 +33,11 @@ type doneAsks struct {
 
 // doneAsksFor reads what the page's promise cards may ask. A reader who may
 // not read activity sees no mail to cite, so their cards stay as they are.
-func (s *Service) doneAsksFor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, page *crmcontracts.Contact360) (doneAsks, error) {
+func (s *Service) doneAsksFor(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, page *crmcontracts.Contact360, zone *time.Location) (doneAsks, error) {
 	asks := doneAsks{contact: contactID}
 	var claims []momentaction.DonePromise
 	var tasks []momentaction.PromiseTask
-	for _, item := range owedPromises(page) {
+	for _, item := range owedPromises(page, zone) {
 		switch promise := item.Ref.(type) {
 		case crmcontracts.Activity:
 			tasks = append(tasks, promiseTask(promise))
@@ -77,7 +77,7 @@ func claimPromise(contactID ids.ContactID, claim crmcontracts.ConversationClaim)
 // any other rung has none.
 func itemBehind(moment crmcontracts.ContactMoment, page *crmcontracts.Contact360) (owedwork.Item, bool) {
 	taskCard := (moment.ClaimKey == overdueTaskKey || moment.ClaimKey == openTaskKey) && len(moment.Evidence) > 0 && moment.Evidence[0].Id != nil
-	for _, item := range owedPromises(page) {
+	for _, item := range owedPromises(page, nil) {
 		switch promise := item.Ref.(type) {
 		case crmcontracts.Activity:
 			if taskCard && promise.Id == *moment.Evidence[0].Id {

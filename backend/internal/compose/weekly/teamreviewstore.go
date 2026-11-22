@@ -31,7 +31,8 @@ const teamReviewSelect = `
 	       meetings_held, meetings_with_next_step,
 	       commitments_due, commitments_kept,
 	       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor,
-	       base_currency, reps_unread, numeric_summary,
+	       base_currency, pipeline_gaps,
+	       reps_unread, numeric_summary,
 	       proposals_accepted, proposals_rejected, auto_change_reversals, coalesce(summary, ''), coalesce(summary_language, 'en'), leads_withheld
 	  FROM team_weekly_review`
 
@@ -59,19 +60,21 @@ func memberWeek(
 	var currency *string
 	var numeric *crmcontracts.WeeklyNumericSummary
 	var leadsWithheld bool
+	var gaps []byte
 	err := tx.QueryRow(ctx, `
 		SELECT deals_won, deals_lost, deals_moved,
 		       leads_routed, leads_answered_in_target, leads_breached,
 		       meetings_held, meetings_with_next_step,
 		       commitments_due, commitments_kept,
 		       pipeline_created_minor, pipeline_won_minor, pipeline_lost_minor, base_currency,
+		       pipeline_gaps,
 		       numeric_summary, proposals_accepted, proposals_rejected, leads_withheld
 		  FROM weekly_review WHERE user_id = $1 AND local_week_start = $2`, userID, week).
 		Scan(&c.DealsWon, &c.DealsLost, &c.DealsMoved,
 			&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 			&c.MeetingsHeld, &c.MeetingsWithNextStep,
 			&c.CommitmentsDue, &c.CommitmentsKept,
-			&created, &won, &lost, &currency, &numeric,
+			&created, &won, &lost, &currency, &gaps, &numeric,
 			&c.ProposalsAccepted, &c.ProposalsRejected, &leadsWithheld)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return memberFrozenWeek{}, apperrors.ErrNotFound
@@ -89,6 +92,9 @@ func memberWeek(
 			CreatedMinor: deref(created), WonMinor: deref(won), LostMinor: deref(lost),
 			Currency: *currency, Known: true,
 		}
+	}
+	if err := scanGaps(gaps, &out.money); err != nil {
+		return memberFrozenWeek{}, err
 	}
 	if numeric != nil && numeric.FigureCoverage != nil {
 		out.plans = numeric.FigureCoverage.Commitments
@@ -235,6 +241,7 @@ func (e *Engine) LatestTeamReview(
 func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, error) {
 	var review TeamReview
 	c := &review.Counts
+	var gaps []byte
 	var created, won, lost *int64
 	var currency *string
 	switch err := row.Scan(&review.ID, &review.TeamID, &review.TeamName,
@@ -243,7 +250,8 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 		&c.LeadsRouted, &c.LeadsAnsweredInTarget, &c.LeadsBreached,
 		&c.MeetingsHeld, &c.MeetingsWithNextStep,
 		&c.CommitmentsDue, &c.CommitmentsKept,
-		&created, &won, &lost, &currency, &review.RepsUnread, &review.NumericSummary,
+		&created, &won, &lost, &currency, &gaps,
+		&review.RepsUnread, &review.NumericSummary,
 		&review.Quality.ProposalsAccepted, &review.Quality.ProposalsRejected,
 		&review.Quality.AutoChangeReversals, &review.Summary, &review.Language, &review.LeadsWithheld); {
 	case errors.Is(err, pgx.ErrNoRows):
@@ -256,6 +264,9 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 			CreatedMinor: deref(created), WonMinor: deref(won), LostMinor: deref(lost),
 			Currency: *currency, Known: true,
 		}
+	}
+	if err := scanGaps(gaps, &review.Money); err != nil {
+		return TeamReview{}, err
 	}
 	reps, err := readTeamReps(ctx, tx, review.ID)
 	if err != nil {

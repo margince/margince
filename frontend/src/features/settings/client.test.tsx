@@ -50,11 +50,21 @@ function render() {
 
 async function lookUp(sender: string) {
   const user = userEvent.setup();
-  await user.type(screen.getByLabelText("Sender"), sender);
+  await user.type(screen.getByLabelText(/^Sender/), sender);
   await user.click(screen.getByRole("button", { name: "Look up" }));
 }
 
 describe("ClientSurfaceScreen", () => {
+  it("says the sender is required on Look up, and searches nothing", async () => {
+    stubSearch([]);
+    render();
+    await userEvent.click(screen.getByRole("button", { name: "Look up" }));
+
+    expect(screen.getByText("Sender is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByLabelText(/^Sender/));
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("shows one row per contact hit the lookup returns, and drops other types", async () => {
     stubSearch([
       {

@@ -21,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -425,10 +426,14 @@ func (s *Store) notifyHeld(ctx context.Context, tx pgx.Tx, id ids.UUID, reason s
 // the job runner can retry it.
 func holdReasonFor(err error) (string, bool) {
 	var notSendCapable *MailboxNotSendCapableError
+	var notConnected *MailboxNotConnectedError
+	if reason, ok := heldreason.Of(err); ok {
+		return reason, true
+	}
 	switch {
 	case errors.Is(err, apperrors.ErrConsentNotGranted):
 		return HeldConsentWithdrawn, true
-	case errors.As(err, &notSendCapable):
+	case errors.As(err, &notSendCapable), errors.As(err, &notConnected):
 		return HeldSenderInactive, true
 	case errors.Is(err, apperrors.ErrPermissionDenied), errors.Is(err, apperrors.ErrNotFound):
 		// The scheduler lost the rights they had, or something the message

@@ -326,10 +326,11 @@ export function useListQuery<Row>({
     paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
-    // Read off the LAST page fetched rather than the first: each response
-    // recounts against the same filters, so the newest answer is the one that
-    // has seen the most recent writes.
-    total: infinite.data?.pages.at(-1)?.page.total,
+    // The newest page that counted. A record list counts on its first page
+    // only; a refetch re-reads that page, so a later write still reaches it.
+    total: infinite.data?.pages.findLast(
+      (page) => page.page.total !== undefined,
+    )?.page.total,
     isPending: infinite.isPending,
     isError: infinite.isError,
     error: infinite.error,

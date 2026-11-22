@@ -19,7 +19,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -180,13 +179,9 @@ func (r *Registry) requireCapturingGrantor(ctx context.Context, ws, userID ids.U
 	if r.authority == nil {
 		return errors.New("capture: no authority resolver configured — a connector grant cannot be checked against live authority")
 	}
-	rbac, err := r.authority.EffectiveRBAC(ctx, ws, userID)
+	rbac, seat, err := r.authority.AdmittedAuthority(ctx, ws, userID, ids.Nil)
 	if err != nil {
 		return fmt.Errorf("capture: the granting human's authority does not resolve: %w", err)
-	}
-	seat, err := r.authority.SeatType(ctx, ws, userID)
-	if err != nil {
-		return fmt.Errorf("capture: the granting human's seat does not resolve: %w", err)
 	}
 	for _, object := range captureWriterGrants {
 		create := auth.Check{Object: object, Actions: []principal.Action{principal.ActionCreate}}
@@ -317,7 +312,9 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert, targe
 	if err != nil {
 		return ids.Nil, nil, err
 	}
-	database.Forget(tx, ownerIdentitiesMemo)
+	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+		return ids.Nil, nil, err
+	}
 	if err := auditConnectedAccountTx(ctx, tx, id, in, prior.status, prior.label); err != nil {
 		return ids.Nil, nil, err
 	}

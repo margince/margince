@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -81,7 +82,7 @@ func (re *runnerEnv) mintPassportForColleague(t *testing.T, colleague ids.UserID
 	if err := re.Owner.QueryRow(context.Background(), `
 		INSERT INTO passport (on_behalf_of, granted_by, scopes, token_hash, expires_at)
 		VALUES ($1, $1, ARRAY['read'], $2, now() + interval '30 days')
-		RETURNING id::text`, colleague, "probe-"+ids.NewV7().String()).Scan(&raw); err != nil {
+		RETURNING id::text`, colleague, storekit.TokenHash(ids.NewV7().String())).Scan(&raw); err != nil {
 		t.Fatalf("seed a colleague's passport: %v", err)
 	}
 	id, err := ids.ParseAs[ids.PassportKind](raw)

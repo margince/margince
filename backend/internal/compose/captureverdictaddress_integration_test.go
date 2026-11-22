@@ -33,16 +33,14 @@ import (
 func TestAnAddressNobodyAnswersNeverBecomesAContact(t *testing.T) {
 	e := integration.Setup(t)
 	cases := []struct {
-		name    string
-		email   string
-		domain  string
-		subject string
+		name      string
+		email     string
+		domain    string
+		subject   string
+		noCompany bool
 	}{
-		{
-			name:  "a recruiting relay",
-			email: "group-11111111-2222-4333-8444-555555555555@hire.lever.co", domain: "hire.lever.co",
-			subject: "Interview arrangements",
-		},
+		{name: "a recruiting relay", email: "group-11111111-2222-4333-8444-555555555555@hire.lever.co", domain: "hire.lever.co", subject: "Interview"},
+		{name: "a CRM's deal relay", email: "acme+deal42@pipedrivemail.com", domain: "pipedrivemail.com", subject: "Re: Offer", noCompany: true},
 		{
 			name:  "an expense tool mailing its own user",
 			email: "receipts@expensify.com", domain: "expensify.com",
@@ -87,6 +85,9 @@ func TestAnAddressNobodyAnswersNeverBecomesAContact(t *testing.T) {
 			if n := countIn(t, e, `
 				SELECT count(*) FROM contact_email WHERE email = $1`, tc.email); n != 0 {
 				t.Errorf("%d contacts minted for %s — no human answers it", n, tc.email)
+			}
+			if n := countIn(t, e, `SELECT count(*) FROM company_domain WHERE domain = $1`, tc.domain); tc.noCompany && n != 0 {
+				t.Errorf("%d companies made for the relay domain %s", n, tc.domain)
 			}
 		})
 	}

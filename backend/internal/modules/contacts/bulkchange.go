@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -29,6 +30,8 @@ type BulkRow struct {
 	Label   string
 	Version int64
 	OwnerID *ids.UUID
+	// Archived is set by the Hold…ForBulkTx reads only.
+	Archived bool
 }
 
 // LockContactForBulkTx takes the row lock a bulk change holds for its whole
@@ -71,13 +74,46 @@ func lockForBulk(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, stat
 	return row, nil
 }
 
+// HoldContactForBulkTx is LockContactForBulkTx for the lock a bulk change takes
+// on every row before it changes any. It locks an archived contact too, because
+// an undo restores one.
+func (s *Store) HoldContactForBulkTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) (BulkRow, error) {
+	return holdForBulk(ctx, tx, entityContact, id.UUID, "full_name")
+}
+
+// HoldCompanyForBulkTx is HoldContactForBulkTx for a company.
+func (s *Store) HoldCompanyForBulkTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID) (BulkRow, error) {
+	return holdForBulk(ctx, tx, entityCompany, id.UUID, "display_name")
+}
+
+// HoldLeadForBulkTx is HoldContactForBulkTx for a lead, labelled as
+// LockLeadForBulkTx labels it.
+func (s *Store) HoldLeadForBulkTx(ctx context.Context, tx pgx.Tx, id ids.LeadID) (BulkRow, error) {
+	return holdForBulk(ctx, tx, entityLead, id.UUID, "COALESCE(NULLIF(btrim(full_name), ''), email::text, '')")
+}
+
+// holdForBulk takes the read check and the row lock in that order, as
+// lockForBulk does. label is a compile-time literal of this file.
+func holdForBulk(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, label string) (BulkRow, error) {
+	if err := auth.Require(ctx, table, principal.ActionRead); err != nil {
+		return BulkRow{}, err
+	}
+	if err := auth.EnsureReadable(ctx, tx, table, id); err != nil {
+		return BulkRow{}, err
+	}
+	var row BulkRow
+	_, err := storekit.LockRowReading(ctx, tx, table, id, storekit.IncludeArchived,
+		label+", version, owner_id, archived_at IS NOT NULL", &row.Label, &row.Version, &row.OwnerID, &row.Archived)
+	return row, err
+}
+
 // ReassignContactTx hands one contact to owner, conditioned on ifVersion — the
 // write UpdateContact makes when owner_id is the only field named.
 func (s *Store) ReassignContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, owner ids.UserID, ifVersion *int64) error {
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return err
 	}
-	_, err := s.updateContactInTx(ctx, tx, id, UpdateContactInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
+	_, err := s.writeContactInTx(ctx, tx, id, UpdateContactInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
 	return err
 }
 
@@ -86,7 +122,7 @@ func (s *Store) ReassignCompanyTx(ctx context.Context, tx pgx.Tx, id ids.Company
 	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return err
 	}
-	_, err := s.updateCompanyInTx(ctx, tx, id, UpdateCompanyInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
+	_, err := s.writeCompanyInTx(ctx, tx, id, UpdateCompanyInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
 	return err
 }
 
@@ -110,6 +146,6 @@ func (s *Store) ReassignLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, ow
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return err
 	}
-	_, err := s.updateLeadInTx(ctx, tx, id, UpdateLeadInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
+	_, err := s.lockAndWriteLeadInTx(ctx, tx, id, UpdateLeadInput{OwnerID: &owner, IfVersion: ifVersion}, nil)
 	return err
 }

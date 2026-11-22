@@ -15,3 +15,7 @@ export const ADDRESS_COLUMN_LABELS: ReadonlyArray<
   ["address_region", "create.region"],
   ["address_country", "create.country"],
 ];
+
+export const ADDRESS_KEYS: readonly string[] = ADDRESS_COLUMN_LABELS.map(
+  ([column]) => column,
+);

@@ -62,19 +62,8 @@ type Call struct {
 	// Kind distinguishes a chat-ladder attempt from an embed-lane call and a
 	// decision-lane attempt — callKindCompletion, callKindEmbedding or
 	// callKindDecision.
-	Kind string
-	// SecretsRemoved and SecretKinds are the stripper's report for THIS
-	// attempt's marshalled body — how many matches it replaced and which rule
-	// kinds fired.
-	//
-	// Recorded rather than discarded, which every real adapter used to do.
-	// model.StripReport says in its own doc that it exists "for the audit
-	// trail", and a control that leaves no witness cannot answer the question an
-	// audit asks: what did we remove from that request. Per ATTEMPT, because the
-	// report describes one marshalled body and a retry's body can differ.
-	SecretsRemoved int
-	SecretKinds    []string
-	CorrelationID  *ids.UUID
+	Kind          string
+	CorrelationID *ids.UUID
 	// Subject is the record the call was about, when the site that made it
 	// said so. It travels to the rail's occurrence — what the reader is told
 	// this work is about — and to ai_call's own citation columns, which is what
@@ -85,7 +74,6 @@ type Call struct {
 	Tier                  Tier
 	Provider              string
 	ModelID               string
-	RequestFingerprint    string
 	ContextScopes         []string
 	ContextFingerprint    string
 	ContextBytes          int
@@ -101,10 +89,6 @@ type Call struct {
 	CacheWriteTokens int
 	LatencyMS        int64
 	CacheHit         bool
-	// CacheOff records that the serving Router had the result cache
-	// disabled (ai.WithoutResultCache — the cert lane and scripted tests
-	// that must observe every repeat call, not a collapsed cache hit).
-	CacheOff bool
 	// ServedModel is the provider-reported identity of the model that
 	// actually answered (model.Response.ServedModel), and ServedIdentitySource
 	// names how that identity was obtained: "response" when the adapter reads
@@ -122,18 +106,10 @@ type Call struct {
 	// "echo", so one field cannot carry both.
 	ServedProvider string
 	// FinishReason is the provider's normalized stop reason, empty when none was
-	// reported. Recorded because a truncated answer and a complete one are
-	// otherwise the same row, and the difference decides whether a schema
-	// failure was the model's fault or the output budget's.
-	FinishReason string
-	// SchemaDowngrade is model.Response.SchemaDowngrade: whether generation
-	// held the response schema as written, only its shape, only as far as the
-	// endpoint chose to, or none of it — on a failed call, what its error
-	// carried. Recorded because these produce answers that read alike and fail
-	// the validator for different reasons.
-	SchemaDowngrade string
-	Degraded        bool
-	ErrorSentinel   string
+	// reported. The metrics count it per route; the stored row does not keep it.
+	FinishReason  string
+	Degraded      bool
+	ErrorSentinel string
 	// DecisionAnswer is what a decision attempt was answered, stood or not;
 	// nil on every other kind and on a decision attempt that got no answer.
 	DecisionAnswer *DecisionAnswer
@@ -284,14 +260,6 @@ func aiCallBindings(c Call) []boundColumn {
 	if contextScopes == nil {
 		contextScopes = []string{}
 	}
-	// The stripper's own answer about this attempt's body. Nil becomes the empty
-	// array rather than NULL, for contextScopes' reason and one of its own: a
-	// reader asking "what did we remove" must be able to tell "nothing" from
-	// "nobody recorded it", and the count beside it already says which.
-	secretKinds := c.SecretKinds
-	if secretKinds == nil {
-		secretKinds = []string{}
-	}
 	// error_sentinel is nullable and an absent sentinel is NULL, not ''. The
 	// statement used to spell that as NULLIF on the placeholder; with the
 	// placeholders derived it is decided here instead, where the rest of this
@@ -322,11 +290,8 @@ func aiCallBindings(c Call) []boundColumn {
 		{"tier", string(c.Tier)},
 		{"provider", c.Provider},
 		{"model_id", c.ModelID},
-		{"request_fingerprint", c.RequestFingerprint},
 		{"context_scopes", contextScopes},
 		{"context_fingerprint", c.ContextFingerprint},
-		{"context_bytes", c.ContextBytes},
-		{"context_tokens_estimate", c.ContextTokensEstimate},
 		{"tokens_in", c.TokensIn},
 		{"tokens_out", c.TokensOut},
 		{"reasoning_tokens", c.ReasoningTokens},
@@ -345,12 +310,7 @@ func aiCallBindings(c Call) []boundColumn {
 		{"served_model", c.ServedModel},
 		{"served_identity_source", servedSource},
 		{"served_provider", c.ServedProvider},
-		{"finish_reason", c.FinishReason},
-		{"schema_downgrade", c.SchemaDowngrade},
-		{"cache_off", c.CacheOff},
 		{"config_hash", c.ConfigHash},
-		{"secrets_removed", c.SecretsRemoved},
-		{"secret_kinds", secretKinds},
 		{"subject_type", subjectType},
 		{"subject_id", subjectID},
 		{"decision_choice", decisionChoice},

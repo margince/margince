@@ -32,7 +32,7 @@ import {
   fieldLabel,
   type VocabularyField,
 } from "../../lib/filterdata";
-import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import { hasFieldWord, historyFieldLabel } from "../../lib/historyfieldlabels";
 import { navigate, routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ReferenceCell } from "./filterresultcell";
@@ -154,12 +154,22 @@ export function FilterResults({
   const { locale } = useLocale();
   const zone = useViewerZone();
   const rows: readonly PreviewRow[] = preview?.rows ?? [];
-  const opening = previewColumnNames(preview?.columns ?? [], named);
+  const fieldOf = (name: string) => fields.find((field) => field.name === name);
+  // A record type's preview carries the stored table, so its picker offers a
+  // column only when the product has a word for it. That keeps the audit and
+  // erasure columns out. An extension kind sends only the fields it declared.
+  const offered = (name: string) =>
+    !isEntityKind(resource) ||
+    name === "id" ||
+    fieldOf(name) !== undefined ||
+    columnLabels?.[name] !== undefined ||
+    hasFieldWord(name);
+  const shown = (preview?.columns ?? []).filter(offered);
+  const opening = previewColumnNames(shown, named);
   const names = [
     ...opening,
-    ...(preview?.columns ?? []).filter((name) => !opening.includes(name)),
+    ...shown.filter((name) => !opening.includes(name)),
   ];
-  const fieldOf = (name: string) => fields.find((field) => field.name === name);
   const referenceOf = (name: string) => fieldOf(name)?.references;
   // Every company the page names, read in one batch rather than one request
   // per cell.
@@ -300,17 +310,14 @@ function isDateColumn(name: string, field: VocabularyField | undefined) {
   return field?.type === "date" || /_(at|date|until)$/.test(name);
 }
 
-// A `date` column arrives as midnight UTC. Read as an instant, it would show the
-// day before to a reader west of Greenwich.
-const MIDNIGHT_UTC_DAY = /^(\d{4}-\d{2}-\d{2})(T00:00:00(\.0+)?Z)?$/;
-const INSTANT = /^\d{4}-\d{2}-\d{2}T/;
+// The preview sends a `date` column as its day and a timestamp as an instant,
+// which is read in the reader's zone.
+const DAY_OR_INSTANT = /^\d{4}-\d{2}-\d{2}(T|$)/;
 
 function dateText(text: string, locale: Locale, zone: string): string {
-  const day = MIDNIGHT_UTC_DAY.exec(text)?.[1];
-  if (day) {
-    return formatDateAbbrev(day, locale, zone);
-  }
-  return INSTANT.test(text) ? formatDateAbbrev(text, locale, zone) : text;
+  return DAY_OR_INSTANT.test(text)
+    ? formatDateAbbrev(text, locale, zone)
+    : text;
 }
 
 /**

@@ -15,7 +15,11 @@ import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { catalogOfRecord, customFieldLabel } from "./customfields.logic";
+import {
+  catalogOfRecord,
+  customFieldLabel,
+  customFieldName,
+} from "./customfields.logic";
 import { customFieldsQuery } from "./customfields.query";
 import { previousOfScope, useHealthScope } from "./healthscope";
 import { historyFieldLabelKey } from "./historyfieldlabels";
@@ -257,14 +261,23 @@ export function fieldLabel(
  * A custom column named by its catalog, which still holds a retired field the
  * vocabulary no longer offers. One the catalog lacks reads as its column.
  */
-export function useCustomColumnLabel(recordKey: string, enabled = true) {
+export function useCustomColumnLabel(
+  recordKey: string,
+  enabled = true,
+  plain = false,
+) {
   const { locale } = useLocale();
   const catalog = useQuery(
     customFieldsQuery(catalogOfRecord(recordKey), enabled),
   ).data?.data;
   return (column: string) => {
     const field = catalog?.find((entry) => entry.column_name === column);
-    return field ? customFieldLabel(field, locale) : customColumnLabel(column);
+    if (!field) {
+      return customColumnLabel(column);
+    }
+    return plain
+      ? customFieldName(field, locale)
+      : customFieldLabel(field, locale);
   };
 }
 

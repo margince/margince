@@ -51,7 +51,11 @@ type PacketTouch struct {
 type PacketTask struct {
 	ActivityID ids.UUID   `json:"activity_id"`
 	DueAt      *time.Time `json:"due_at,omitempty"`
-	Subject    *string    `json:"-"`
+	// DueHasTime and DueIntent keep the chosen clock a task was frozen with. A
+	// pack frozen before they were stored carries neither and reads as an instant.
+	DueHasTime bool                     `json:"due_has_time,omitempty"`
+	DueIntent  *crmcontracts.IntentTime `json:"due_intent,omitempty"`
+	Subject    *string                  `json:"-"`
 }
 
 // LegalReviewRecords reads the records around a deal for a pack. Every call
@@ -62,6 +66,9 @@ type LegalReviewRecords interface {
 	// ReviewContracts lists the deal's agreements the caller can open, with
 	// their titles.
 	ReviewContracts(ctx context.Context, dealID ids.UUID) ([]PacketContract, error)
+	// OpenableContracts answers which of these agreements the caller can
+	// open now, with their titles, however many newer ones the deal holds.
+	OpenableContracts(ctx context.Context, dealID ids.UUID, contractIDs []ids.UUID) (map[ids.UUID]string, error)
 	// ReviewActivity lists the deal's latest touches and open tasks the
 	// caller can read.
 	ReviewActivity(ctx context.Context, dealID ids.UUID) ([]PacketTouch, []PacketTask, error)
@@ -132,16 +139,19 @@ func (s *Store) readRecordSight(ctx context.Context, p reviewPacket) (recordSigh
 	if out.documents, err = s.reviewDocs.OpenableDocuments(ctx, packetDocumentIDs(p)); err != nil {
 		return out, err
 	}
-	current, err := s.reviewRecords.ReviewContracts(ctx, p.Deal.ID)
-	if err != nil {
+	if out.contracts, err = s.reviewRecords.OpenableContracts(ctx, p.Deal.ID, packetContractIDs(p)); err != nil {
 		return out, err
-	}
-	out.contracts = make(map[ids.UUID]string, len(current))
-	for _, c := range current {
-		out.contracts[c.ContractID] = c.Title
 	}
 	out.activity, err = s.reviewRecords.OpenableActivity(ctx, p.Deal.ID, packetActivityIDs(p))
 	return out, err
+}
+
+func packetContractIDs(p reviewPacket) []ids.UUID {
+	out := make([]ids.UUID, 0, len(p.Contracts))
+	for _, c := range p.Contracts {
+		out = append(out, c.ContractID)
+	}
+	return out
 }
 
 func packetActivityIDs(p reviewPacket) []ids.UUID {
@@ -188,9 +198,13 @@ func recordsWire(p reviewPacket, sight recordSight, out *crmcontracts.LegalRevie
 	tasks := make([]crmcontracts.LegalReviewPacketTask, 0, len(p.Tasks))
 	for _, t := range p.Tasks {
 		if subject, ok := sight.activity[t.ActivityID]; ok {
-			tasks = append(tasks, crmcontracts.LegalReviewPacketTask{
-				ActivityId: openapiUUID(t.ActivityID), Subject: subject, DueAt: t.DueAt,
-			})
+			task := crmcontracts.LegalReviewPacketTask{
+				ActivityId: openapiUUID(t.ActivityID), Subject: subject, DueAt: t.DueAt, DueIntent: t.DueIntent,
+			}
+			if t.DueAt != nil && (t.DueHasTime || t.DueIntent != nil) {
+				task.DueHasTime = &t.DueHasTime
+			}
+			tasks = append(tasks, task)
 		}
 	}
 	out.Contracts, out.Touches, out.Tasks = &contracts, &touches, &tasks

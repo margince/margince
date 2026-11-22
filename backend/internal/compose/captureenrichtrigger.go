@@ -85,7 +85,7 @@ func (g *CaptureEnrichTrigger) queues(ctx context.Context, env events.Envelope) 
 // first delivery queued, and the nightly pass still reconciles what slips
 // through.
 func (g *CaptureEnrichTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if !g.queues(ctx, env) {
+	if !events.CaptureEnrichTypes.Has(env.Type) || !g.queues(ctx, env) {
 		return nil
 	}
 	if env.Trace.AuditLogID == ids.Nil && g.now().Sub(env.OccurredAt) > captureEnrichFreshWindow {

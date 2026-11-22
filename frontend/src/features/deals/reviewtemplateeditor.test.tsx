@@ -203,26 +203,29 @@ describe("editing a review's questions", () => {
     expect(body.questions[0].label).toBe("Why did we lose?");
   });
 
-  it("holds Save while a question has no label", async () => {
-    const { user } = openEditor(template());
-    const save = screen.getByRole("button", { name: "Save questions" });
-    expect(save.hasAttribute("disabled")).toBe(false);
+  it("says a question with no label is required on Save, and sends nothing", async () => {
+    const onPatch = vi.fn();
+    const { user } = openEditor(template(), onPatch);
     const [first] = screen.getAllByRole("textbox", { name: /Question/ });
     if (!first) throw new Error("the drawer shows no question box");
     await user.clear(first);
-    expect(save.hasAttribute("disabled")).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Save questions" }));
+    expect(screen.getByText("Question is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(first);
+    expect(onPatch).not.toHaveBeenCalled();
   });
 
-  it("holds Save while a pick-from-a-list question has no choice", async () => {
-    const { user } = openEditor(template());
-    await user.clear(
-      screen.getByRole("textbox", { name: /Choices, one per line/ }),
-    );
-    expect(
-      screen
-        .getByRole("button", { name: "Save questions" })
-        .hasAttribute("disabled"),
-    ).toBe(true);
+  it("says a pick-from-a-list question needs a choice on Save", async () => {
+    const onPatch = vi.fn();
+    const { user } = openEditor(template(), onPatch);
+    const choices = screen.getByRole("textbox", {
+      name: /Choices, one per line/,
+    });
+    await user.clear(choices);
+    await user.click(screen.getByRole("button", { name: "Save questions" }));
+    expect(screen.getByText("This field is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(choices);
+    expect(onPatch).not.toHaveBeenCalled();
   });
 
   it("will not remove the last remaining question", () => {
@@ -271,7 +274,9 @@ describe("adding a review template", () => {
       screen.getByRole("heading", { name: "New review template" }),
     ).toBeTruthy();
     const add = screen.getByRole("button", { name: "Add template" });
-    expect(add.hasAttribute("disabled")).toBe(true);
+    await user.click(add);
+    expect(screen.getByText("Name is required.")).toBeTruthy();
+    expect(onPost).not.toHaveBeenCalled();
 
     await user.type(
       screen.getByRole("textbox", { name: /Name/ }),

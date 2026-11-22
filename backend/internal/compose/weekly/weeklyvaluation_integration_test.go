@@ -6,6 +6,7 @@
 package weekly
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -15,9 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T) {
+func TestWeeklyClosedMoneyAddsTheWinsThatConvertAndNamesTheOnesThatCannotBePriced(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	date := time.Date(2020, 1, 1, 12, 0, 0, 0, time.UTC)
@@ -35,6 +37,7 @@ func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T
 	if _, err := e.Deals.AdvanceDeal(ctx, deal, deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: new("other"), WonWithoutContractDetail: new("Existing written agreement outside the system")}); err != nil {
 		t.Fatal(err)
 	}
+	var last Money
 	read := func(wantKnown bool) {
 		t.Helper()
 		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -42,6 +45,7 @@ func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T
 			if err != nil {
 				return err
 			}
+			last = money
 			if money.Known != wantKnown {
 				t.Errorf("weekly money = %+v, want known=%v", money, wantKnown)
 			}
@@ -57,6 +61,23 @@ func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T
 	// A historical close without its freeze and rate cannot be created by the current writer.
 	e.WsExec(t, `UPDATE deal SET amount_minor_base=NULL, currency='GBP' WHERE id=$1`, deal)
 	read(false)
+	if last.NoRateDeals != 1 || last.MissingCurrencies != "GBP" || !last.Assessed {
+		t.Errorf("a week no win converts into = %+v, want no figure and the one deal with no rate stated", last)
+	}
+
+	// A second win that converts brings the figure back, with the gap beside it.
+	usd := "USD"
+	second, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{Name: "Second win", PipelineID: pipeline, StageID: open, AmountMinor: new(int64(20000)), Currency: &usd, OwnerID: new(ids.From[ids.UserKind](e.Rep1)), Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Deals.AdvanceDeal(ctx, ids.From[ids.DealKind](ids.UUID(second.Id)), deals.AdvanceDealInput{ToStageID: won, WonWithoutContractReason: new("other"), WonWithoutContractDetail: new("Existing written agreement outside the system")}); err != nil {
+		t.Fatal(err)
+	}
+	read(true)
+	if last.NoRateDeals != 1 || last.MissingCurrencies != "GBP" {
+		t.Errorf("a week with one win converting = %+v, want the one deal with no rate stated beside the figure", last)
+	}
 }
 
 // A week is valued at its last day. A rate effective on the following Monday
@@ -101,5 +122,42 @@ func TestAWeekIsValuedOneStepBeforeItsExclusiveEnd(t *testing.T) {
 	end := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
 	if got := weekValuedAt(end); !got.Before(end) || end.Sub(got) > time.Millisecond {
 		t.Errorf("valued at %v, want the instant just inside %v", got, end)
+	}
+}
+
+// A reader whose deal currency is masked is told of no currency and no count
+// for the week's opened pipeline. A masked row is never read, so it is never
+// named as one with no rate.
+func TestWeeklyOpenedPipelineNamesNoCurrencyOfAMaskedDeal(t *testing.T) {
+	e := integration.Setup(t)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	jpy := "JPY"
+	row, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Opened", PipelineID: pipeline, StageID: open, AmountMinor: new(int64(20000)), Currency: &jpy, OwnerID: new(ids.From[ids.UserKind](e.Rep1)), Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := time.Date(2026, 3, 4, 10, 0, 0, 0, time.UTC)
+	e.WsExec(t, `UPDATE deal SET created_at = $2 WHERE id = $1`, row.Id, created)
+	week := func(ctx context.Context) Money {
+		var money Money
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			var err error
+			money, err = countWeekMoney(ctx, tx, e.Rep1, created.Add(-time.Hour), created.Add(24*time.Hour))
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return money
+	}
+	if got := week(e.Admin()); got.NoRateDeals != 1 || got.MissingCurrencies != "JPY" {
+		t.Fatalf("an unmasked reader's week = %+v, want one deal with no rate in JPY", got)
+	}
+	masked := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		Objects:    map[string]principal.ObjectGrant{"deal": {Read: true}},
+		RowScope:   principal.RowScopeOwn,
+		FieldMasks: []principal.FieldMask{{Object: "deal", Field: "currency", Condition: principal.MaskAlways}},
+	})
+	if got := week(masked); got.NoRateDeals != 0 || got.MissingCurrencies != "" {
+		t.Errorf("a masked reader's week = %+v, want no count and no currency", got)
 	}
 }

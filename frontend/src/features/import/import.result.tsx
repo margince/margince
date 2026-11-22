@@ -12,7 +12,12 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
-import { UndoConfirm, UndoErrors, UndoRecordName } from "./import.notices";
+import {
+  UndoConfirm,
+  UndoErrors,
+  UndoRecordName,
+  useRunStopSentence,
+} from "./import.notices";
 import {
   hasProgress,
   ImportProgressPanel,
@@ -113,6 +118,7 @@ export function ImportProgress({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const stopped = useRunStopSentence(run, format);
   const failed = run.status === "failed";
   return (
     <div className="import">
@@ -124,7 +130,7 @@ export function ImportProgress({
       {failed ? (
         <>
           <Callout tone="danger" kind="outcome" title={t("import.failedTitle")}>
-            {run.error ??
+            {stopped ??
               t("import.failed", {
                 checkpoint: formatNumber(run.checkpoint, locale),
               })}

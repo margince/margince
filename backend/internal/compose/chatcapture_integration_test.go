@@ -65,7 +65,7 @@ func readChatScreenshot(t *testing.T, modelReply string) chatFixture {
 
 func (f chatFixture) file(t *testing.T, body *string) (ids.UUID, error) {
 	t.Helper()
-	out, err := NewChatCaptureFile(f.env.Pool).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
+	out, err := NewChatCaptureFile(f.env.Pool, nil).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
 		ExtractionId: openapi_types.UUID(f.reading), ChannelProvider: "whatsapp", Body: body,
 	})
 	return ids.UUID(out.ActivityId), err
@@ -139,14 +139,14 @@ func TestAChatScreenshotIsStillFiledWhenTheModelCouldNotReadIt(t *testing.T) {
 func TestAChatConfirmThatCannotBeTrustedWritesNothing(t *testing.T) {
 	f := readChatScreenshot(t, chatReply())
 	body := chatScreenshotText
-	_, err := NewChatCaptureFile(f.env.Pool).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
+	_, err := NewChatCaptureFile(f.env.Pool, nil).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
 		ExtractionId: openapi_types.UUID(f.reading), ChannelProvider: "carrier_pigeon", Body: &body,
 	})
 	var refused *activities.ChatCaptureError
 	if !errors.As(err, &refused) || refused.Field != "channel_provider" {
 		t.Fatalf("an unregistered channel was not refused by name: %v", err)
 	}
-	_, err = NewChatCaptureFile(f.env.Pool).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
+	_, err = NewChatCaptureFile(f.env.Pool, nil).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
 		ExtractionId: openapi_types.UUID(ids.NewV7()), ChannelProvider: "whatsapp", Body: &body,
 	})
 	if err == nil {

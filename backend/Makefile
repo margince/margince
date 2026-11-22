@@ -121,13 +121,12 @@ endif
 GOWORK_ROOT := GOWORK=$(abspath ../go.work)
 
 # The packages whose SUBJECTS live outside the package, so Go's test cache
-# cannot key them: the fitness gates in gates/ walk internal/modules/ and
-# introspect the schema, and the ai module's config gates read
-# ../config/margince*.yaml — one module up, invisible to this module's cache.
-# Both must run uncached or a stale green replays; `test` below both excludes
-# them from the cached wildcard and re-runs them, from this one list, so the
-# two cannot drift apart.
-UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
+# cannot key them: the fitness gates in gates/ walk internal/modules/, run git
+# and introspect the schema. They must run uncached or a stale green replays;
+# `test` below both excludes them from the cached wildcard and re-runs them,
+# from this one list, so the two cannot drift apart. A package that only reads
+# outside its module declares the tree instead (gatekit.DeclareInputs).
+UNCACHED_TEST_PKGS := ./gates
 
 # The packages that get a CI runner to themselves, through the test-solo leg.
 # The compose tests run almost one at a time, about 50 s on a laptop. Beside
@@ -356,10 +355,7 @@ test-uncached: composition
 	$(TEST_SHUFFLE_NOTE)
 	# Uncached, for the reason UNCACHED_TEST_PKGS is declared: their subjects
 	# are files outside the package, so a green here can otherwise be replayed
-	# over a tree that has since changed. Verified once from the other end —
-	# deleting the config schema's provider restriction left the ai gate
-	# reporting `ok (cached)`. CI is cold and never saw it; the engineer who
-	# broke it locally would not either.
+	# over a tree that has since changed.
 	# -timeout, because the default is ten minutes and nobody chose it. The
 	# gates package reached that cold on CI and tipped over intermittently,
 	# which fails a pull request for the lane's own size rather than for

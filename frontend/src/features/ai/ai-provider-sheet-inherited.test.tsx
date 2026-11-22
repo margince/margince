@@ -165,8 +165,11 @@ describe("a provider priced by another", () => {
         name: "Edit gemini-2.5-flash",
       }),
     );
-    await user.clear(within(sheet).getByLabelText("Input $/M"));
-    await user.type(within(sheet).getByLabelText("Input $/M"), "0.33");
+    await user.clear(within(sheet).getByLabelText(/^Input \$\/M( \*)?$/));
+    await user.type(
+      within(sheet).getByLabelText(/^Input \$\/M( \*)?$/),
+      "0.33",
+    );
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
 
     await vi.waitFor(() => expect(posts).toHaveLength(1));

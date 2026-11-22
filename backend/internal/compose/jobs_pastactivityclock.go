@@ -13,6 +13,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/companyclockrefold"
+	"github.com/margince/margince/backend/internal/compose/strengthdates"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -88,6 +89,9 @@ func RefoldPastActivityClocks(ctx context.Context, db *database.DB) (int, error)
 	}
 	refolded, err := refoldDayActivities(ctx, db, mark, asOf, zone)
 	if err != nil {
+		return refolded, err
+	}
+	if _, err := strengthdates.FoldUnfolded(ctx, db); err != nil {
 		return refolded, err
 	}
 	ended, err := companyclockrefold.RefoldEnded(ctx, db, mark.At, asOf)

@@ -108,6 +108,22 @@ type runValue struct {
 	value  any
 }
 
+// refusalInStep adds a cleared refusalColumn to values that write errorColumn
+// and name no refusal, so a new sentence never shows an older one's code.
+func refusalInStep(values []runValue) []runValue {
+	writesError := false
+	for _, v := range values {
+		if v.column == refusalColumn {
+			return values
+		}
+		writesError = writesError || v.column == errorColumn
+	}
+	if !writesError {
+		return values
+	}
+	return append(slices.Clip(values), runValue{refusalColumn, nil})
+}
+
 // runChange is what a move writes beside the status, and what it audits.
 type runChange struct {
 	// version, when not zero, must equal the run's.
@@ -224,7 +240,7 @@ func stageTransition(ctx context.Context, tx pgx.Tx, id RunID, name moveName, ch
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	var set strings.Builder
 	set.WriteString(storekit.SQLf(`status = $%d, updated_at = now()`, arg(to)))
-	for _, v := range change.values {
+	for _, v := range refusalInStep(change.values) {
 		set.WriteString(storekit.SQLf(`, %s = $%d`, v.column, arg(v.value)))
 	}
 	for _, literal := range change.literals {
@@ -285,7 +301,7 @@ func (s *RunStore) QueueValidation(
 			return err
 		}
 		change := runChange{
-			version: version, queue: true, literals: []string{"report = NULL", "error = NULL"},
+			version: version, queue: true, literals: []string{"report = NULL", errorCleared},
 			before: map[string]any{}, after: map[string]any{},
 		}
 		if err := change.fillDefaults(state.mapping, derived); err != nil {

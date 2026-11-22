@@ -215,7 +215,10 @@ func moduleDeclaredFault(err error) (error, bool) {
 		field, code, message := fieldFault.FieldFault()
 		refusal := Validation(boundFaultText(field), boundFaultText(code), boundFaultText(message))
 		if limited, ok := fieldFault.(fieldMaxer); ok {
-			return refusal.WithMax(limited.FieldMax()), true
+			refusal = refusal.WithMax(limited.FieldMax())
+		}
+		if named, ok := fieldFault.(fieldParamser); ok {
+			refusal = refusal.WithParams(named.FieldParams())
 		}
 		return refusal, true
 	}
@@ -267,6 +270,11 @@ type Fault struct {
 
 	// RetryAfterSeconds, when positive, is rendered as a Retry-After header.
 	RetryAfterSeconds int
+}
+
+// CallersToFix says the refusal is a 4xx, so its withheld cause logs as a warning.
+func (f Fault) CallersToFix() bool {
+	return f.Status < http.StatusInternalServerError
 }
 
 // Classify is the ONE decision tree behind the error taxonomy: what err means
@@ -414,8 +422,12 @@ func Write(w http.ResponseWriter, r *http.Request, err error) {
 		// failure, and a constraint the schema enforced — and the line says what
 		// is true of both: the caller got a sentence we wrote, and the operator
 		// gets the one the infrastructure wrote.
-		slog.ErrorContext(r.Context(), "infrastructure cause withheld from the caller",
-			"method", r.Method, "path", loggedPath(r), "err", fault.InfraCause)
+		logWithheld := slog.ErrorContext
+		if fault.CallersToFix() {
+			logWithheld = slog.WarnContext
+		}
+		logWithheld(r.Context(), "infrastructure cause withheld from the caller",
+			"method", r.Method, "path", loggedPath(r), "status", fault.Status, "err", fault.InfraCause)
 	}
 	// A refusal that masked a library's own sentence still owes the operator
 	// that sentence, exactly as the native body decode logs its unnamed shapes.
@@ -461,12 +473,6 @@ type FieldError struct {
 	Max int `json:"max,omitempty"`
 	// Params are the other values the code's sentence names, as text.
 	Params map[string]string `json:"params,omitempty"`
-}
-
-// fieldMaxer is a FieldFault that also states the limit it refused at. It is
-// declared here rather than in apperrors because only this mapping reads it.
-type fieldMaxer interface {
-	FieldMax() int
 }
 
 // DetailedError carries a non-sentinel wire shape: validation errors

@@ -56,7 +56,9 @@ async function submit(problem: unknown, locale: Locale = "en") {
     </QueryClientProvider>,
   );
   await userEvent.click(screen.getByText("New contact"));
-  const fullName = document.querySelector<HTMLInputElement>("input[maxlength]");
+  const fullName = document.querySelector<HTMLInputElement>(
+    "input[data-character-limit]",
+  );
   if (!fullName) throw new Error("New contact has no name input");
   await userEvent.type(fullName, "Probe");
   // A contact needs a way to reach them before Create turns on.

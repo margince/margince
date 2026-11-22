@@ -59,13 +59,13 @@ func (s *Store) CreateContract(ctx context.Context, in CreateContractInput) (crm
 	if err != nil {
 		return crmcontracts.Contract{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Contract{}, err
-	}
 
 	var out crmcontracts.Contract
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err
@@ -155,16 +155,16 @@ func createContractTx(ctx context.Context, tx pgx.Tx, in CreateContractInput, by
 // through ChangeStatus, so a correction to a term can never silently activate
 // an agreement.
 func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcontracts.UpdateContractRequest, cleared []string, ifVersion *int64) (crmcontracts.Contract, error) {
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Contract{}, err
-	}
 	if err := auth.Require(ctx, contractObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Contract{}, err
 	}
 
 	var out crmcontracts.Contract
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		today, err := s.today(ctx, tx)
 		if err != nil {
 			return err

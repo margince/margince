@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { INTL_LOCALE } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 
@@ -52,7 +52,7 @@ export function omittedFactorsText(
   if (unnamed) {
     named.add(t("brief.factor.unknown"));
   }
-  const together = new Intl.ListFormat(INTL_LOCALE[locale], {
+  const together = listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(named);

@@ -309,6 +309,7 @@ export function CompanyRecordBody({
           )}
           <CompanyDocumentsCard
             companyId={company.id}
+            writable={company.writable}
             refusedReasonId={refusedReasonId}
             refusedReason={verbRefusal}
             onOpenEmail={receipt.openEmail}

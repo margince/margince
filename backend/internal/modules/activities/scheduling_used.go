@@ -120,7 +120,7 @@ func (s *Store) BookingPageConcern(ctx context.Context) (BookingPageConcern, boo
 	if err != nil || !profile.Enabled {
 		return BookingPageConcern{}, false, err
 	}
-	blocker, err := s.calendarBlocker(ctx, host, profile)
+	blocker, err := s.pageBlocker(ctx, host, profile)
 	if err != nil || blocker == crmcontracts.SchedulingProfileBlockerNone {
 		return BookingPageConcern{}, false, err
 	}

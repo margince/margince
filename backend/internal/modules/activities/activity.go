@@ -243,9 +243,6 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	if err := s.withCustomColumns(ctx, &in); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
 	var out crmcontracts.Activity
 	created := true
 	isolation := pgx.ReadCommitted
@@ -253,6 +250,9 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 		isolation = pgx.Serializable
 	}
 	err := s.txRetryingLockCycles(ctx, isolation, func(tx pgx.Tx) error {
+		if err := s.withCustomColumns(ctx, tx, &in); err != nil {
+			return err
+		}
 		var err error
 		out, created, err = s.logActivityAndReadTranscript(ctx, tx, in)
 		return err
@@ -271,11 +271,9 @@ func (s *Store) LogActivityTx(ctx context.Context, tx pgx.Tx, in LogActivityInpu
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	if err := s.withCustomColumns(ctx, &in); err != nil {
+	if err := s.withCustomColumns(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	// The columns this call already read, never a second read: the caller holds
-	// its transaction, and the catalog would open another connection under it.
 	out, created, err := s.logActivityAndReadTranscript(ctx, tx, in)
 	if err == nil {
 		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)

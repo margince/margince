@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/erasedmark"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -31,8 +32,12 @@ func TestTheWiredSweepDestroysTheLinkSecretsOfErasedMeetings(t *testing.T) {
 		return string(ref)
 	}
 	proposalRef, invitationRef, liveRef := seal("proposal link"), seal("management link"), seal("live link")
-	seed := func(token, managementRef, status, linkRef string) ids.UUID {
+	seed := func(managementRef, status, linkRef string) ids.UUID {
 		activity := ids.NewV7()
+		token := storekit.TokenHash(activity.String())
+		if status == "erased" {
+			token = erasedmark.Prefix + activity.String()
+		}
 		e.WsExec(t, `INSERT INTO activity (id, kind, occurred_at, source, captured_by)
 			VALUES ($1, 'meeting', now(), 'manual', 'human:test')`, activity)
 		e.WsExec(t, `INSERT INTO meeting_proposal (activity_id, host_user_id, request, token_hash, expires_at, link_ref, created_at)
@@ -43,8 +48,8 @@ func TestTheWiredSweepDestroysTheLinkSecretsOfErasedMeetings(t *testing.T) {
 			activity, e.AdminUser, status, "hash-"+activity.String(), managementRef)
 		return activity
 	}
-	erased := seed(erasedmark.Prefix+"x", invitationRef, "erased", proposalRef)
-	live := seed("live-token", liveRef, "confirmed", liveRef)
+	erased := seed(invitationRef, "erased", proposalRef)
+	live := seed(liveRef, "confirmed", liveRef)
 
 	if err := compose.DriveControllerPayloadSweepForTest(context.Background(), e.Pool, vault, clocktest.Now(t)); err != nil {
 		t.Fatal(err)

@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 358 |
-| Columns | 4457 |
-| Foreign keys | 622 |
+| Columns | 4444 |
+| Foreign keys | 621 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -43,8 +43,8 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 155 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 39 | 50 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 49 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 46 | 50 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 48 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
@@ -139,7 +139,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 90 | 49 |
+| [`activity`](activities.md#activity) | activities | 90 | 48 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
@@ -166,10 +166,10 @@ erDiagram
 | [`agent_run`](agents.md#agent_run) | agents | 17 | 1 |
 | [`agent_standing_grant`](agents.md#agent_standing_grant) | agents | 8 | 0 |
 | [`agent_task`](compose.md#agent_task) | compose | 14 | 0 |
-| [`ai_call`](ai.md#ai_call) | ai | 40 | 1 |
+| [`ai_call`](ai.md#ai_call) | ai | 32 | 1 |
 | [`ai_call_config`](ai.md#ai_call_config) | ai | 6 | 1 |
 | [`ai_call_payload`](ai.md#ai_call_payload) | ai | 5 | 0 |
-| [`ai_feedback`](ai.md#ai_feedback) | ai | 15 | 0 |
+| [`ai_feedback`](ai.md#ai_feedback) | ai | 14 | 0 |
 | [`ai_model_rate`](ai.md#ai_model_rate) | ai | 16 | 0 |
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 22 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 7 | 0 |
@@ -178,14 +178,14 @@ erDiagram
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
-| [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 6 | 1 |
-| [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 18 | 0 |
-| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 22 | 3 |
-| [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 6 | 0 |
+| [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 4 | 1 |
+| [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 13 | 0 |
+| [`assurance_exception`](assurance.md#assurance_exception) | assurance | 20 | 3 |
+| [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 4 | 0 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
-| [`assurance_run`](assurance.md#assurance_run) | assurance | 17 | 3 |
-| [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 4 | 0 |
-| [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 8 | 0 |
+| [`assurance_run`](assurance.md#assurance_run) | assurance | 14 | 3 |
+| [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 3 | 0 |
+| [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 6 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 12 | 0 |
 | [`attachment`](activities.md#attachment) | activities | 28 | 6 |
 | [`attachment_extraction`](activities.md#attachment_extraction) | activities | 13 | 0 |
@@ -257,7 +257,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 8 | 8 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 17 | 2 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 39 | 50 |
+| [`contact`](contacts.md#contact) | contacts | 46 | 50 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 15 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
@@ -277,7 +277,7 @@ erDiagram
 | [`custom_field`](customfields.md#custom_field) | customfields | 19 | 0 |
 | [`data_subject_request`](consent.md#data_subject_request) | consent | 17 | 1 |
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
-| [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
+| [`data_task_run`](platform.md#data_task_run) | platform | 23 | 0 |
 | [`deal`](deals.md#deal) | deals | 49 | 30 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 12 | 1 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 19 | 0 |
@@ -331,13 +331,13 @@ erDiagram
 | [`geocode_country_cache`](contacts.md#geocode_country_cache) | contacts | 4 | 0 |
 | [`graph_contact_edge`](search.md#graph_contact_edge) | search | 10 | 0 |
 | [`graph_interaction_edge`](search.md#graph_interaction_edge) | search | 18 | 0 |
-| [`home_read_cache`](compose.md#home_read_cache) | compose | 8 | 0 |
+| [`home_read_cache`](compose.md#home_read_cache) | compose | 9 | 0 |
 | [`home_read_fence`](compose.md#home_read_fence) | compose | 2 | 0 |
 | [`home_read_fence_pending`](compose.md#home_read_fence_pending) | compose | 2 | 0 |
 | [`home_read_forgotten`](compose.md#home_read_forgotten) | compose | 2 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |
 | [`import_record_map`](migration.md#import_record_map) | migration | 7 | 0 |
-| [`import_run`](migration.md#import_run) | migration | 34 | 1 |
+| [`import_run`](migration.md#import_run) | migration | 35 | 1 |
 | [`installation_state`](platform.md#installation_state) | platform | 3 | 0 |
 | [`intro_request`](introductions.md#intro_request) | introductions | 31 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
@@ -366,7 +366,7 @@ erDiagram
 | [`mail_draft`](activities.md#mail_draft) | activities | 23 | 0 |
 | [`maskable_field`](identity.md#maskable_field) | identity | 2 | 1 |
 | [`meeting_calendar_episode`](activities.md#meeting_calendar_episode) | activities | 5 | 0 |
-| [`meeting_invitation`](activities.md#meeting_invitation) | activities | 21 | 1 |
+| [`meeting_invitation`](activities.md#meeting_invitation) | activities | 22 | 1 |
 | [`meeting_proposal`](activities.md#meeting_proposal) | activities | 9 | 0 |
 | [`meeting_readiness`](activities.md#meeting_readiness) | activities | 9 | 0 |
 | [`mfa_challenge_spent`](identity.md#mfa_challenge_spent) | identity | 2 | 0 |
@@ -459,7 +459,7 @@ erDiagram
 | [`tax_rate`](deals.md#tax_rate) | deals | 7 | 0 |
 | [`team`](identity.md#team) | identity | 6 | 10 |
 | [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |
-| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 29 | 4 |
+| [`team_weekly_review`](compose.md#team_weekly_review) | compose | 30 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 13 | 0 |
 | [`team_weekly_review_member`](compose.md#team_weekly_review_member) | compose | 5 | 0 |
 | [`team_weekly_review_outlook`](compose.md#team_weekly_review_outlook) | compose | 15 | 0 |
@@ -483,7 +483,7 @@ erDiagram
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |
 | [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 12 | 1 |
 | [`weekly_plan_commitment`](weeklyplan.md#weekly_plan_commitment) | weeklyplan | 23 | 0 |
-| [`weekly_review`](compose.md#weekly_review) | compose | 38 | 6 |
+| [`weekly_review`](compose.md#weekly_review) | compose | 39 | 6 |
 | [`weekly_review_deal`](compose.md#weekly_review_deal) | compose | 9 | 0 |
 | [`weekly_review_driver`](compose.md#weekly_review_driver) | compose | 7 | 0 |
 | [`weekly_review_learning`](compose.md#weekly_review_learning) | compose | 6 | 1 |

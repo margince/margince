@@ -1,0 +1,17 @@
+SET LOCAL lock_timeout = '3s';
+
+ALTER TABLE voice_learning_signal DROP CONSTRAINT voice_learning_signal_draft_ref_hash_check;
+ALTER TABLE deal_room_session DROP CONSTRAINT deal_room_session_token_hash_check;
+ALTER TABLE deal_room_invitation DROP CONSTRAINT deal_room_invitation_token_hash_check;
+ALTER TABLE bulk_confirmation DROP CONSTRAINT bulk_confirmation_token_hash_check;
+ALTER TABLE withdrawal_credential DROP CONSTRAINT withdrawal_credential_token_hash_check;
+ALTER TABLE setup_token DROP CONSTRAINT setup_token_token_hash_check;
+ALTER TABLE session DROP CONSTRAINT session_token_hash_check;
+ALTER TABLE preference_token DROP CONSTRAINT preference_token_token_hash_check;
+ALTER TABLE passport DROP CONSTRAINT passport_token_hash_check;
+ALTER TABLE oauth_refresh_token DROP CONSTRAINT oauth_refresh_token_token_hash_check;
+ALTER TABLE oauth_authorization_code DROP CONSTRAINT oauth_authorization_code_code_hash_check;
+ALTER TABLE consent_doi_token DROP CONSTRAINT consent_doi_token_token_hash_check;
+ALTER TABLE confirm_token DROP CONSTRAINT confirm_token_token_hash_check;
+ALTER TABLE auth_token DROP CONSTRAINT auth_token_token_hash_check;
+ALTER TABLE analytics_share DROP CONSTRAINT analytics_share_token_hash_check;

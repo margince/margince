@@ -59,7 +59,9 @@ async function fillRows(fields: FieldSource, add: string, entries: string[]) {
     </QueryClientProvider>,
   );
   await userEvent.click(screen.getByText("Open"));
-  const name = document.querySelector<HTMLInputElement>("input[maxlength]");
+  const name = document.querySelector<HTMLInputElement>(
+    "input[data-character-limit]",
+  );
   if (!name) throw new Error("the form has no name input");
   await userEvent.type(name, "Probe");
   for (const entry of entries) {
@@ -74,7 +76,7 @@ async function fillRows(fields: FieldSource, add: string, entries: string[]) {
 }
 
 describe("repeated rows", () => {
-  it("marks an address typed in two email rows and keeps Create shut", async () => {
+  it("marks an address typed in two email rows and sends nothing on Create", async () => {
     const sent = await fillRows(contactCreateFields, "Add email", [
       "dana@example.com",
       " Dana@Example.com",
@@ -86,10 +88,11 @@ describe("repeated rows", () => {
         ),
       ).toBeTruthy(),
     );
-    const create = screen.getByRole("button", { name: "Create" });
-    expect(create.hasAttribute("disabled")).toBe(true);
-    await userEvent.click(create);
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
     expect(sent).toHaveLength(0);
+    const focused = document.activeElement as HTMLInputElement;
+    expect(focused.getAttribute("aria-invalid")).toBe("true");
+    expect(focused.value).toBe("dana@example.com");
   });
 
   it("points every address box at the line that names the repeat", async () => {

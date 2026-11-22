@@ -13,7 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/bearer"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -34,14 +34,10 @@ func insertSession(ctx context.Context, tx pgx.Tx, userID ids.UserID, tokenHash 
 	return err
 }
 
-// mintSessionToken returns the raw cookie value and the SHA-256 hex the
-// database stores — the raw token never touches the DB (ADR-0043).
-//
-// Through the shared primitive rather than spelled here: every bearer
-// capability in this tree obeys the same rule, and a second spelling of the
-// mint is where two of them come to disagree about what gets stored.
+// mintSessionToken returns the raw cookie value and the hash the database
+// stores. The raw token never reaches the database (ADR-0043).
 func mintSessionToken() (raw, hash string, err error) {
-	return bearer.Mint()
+	return storekit.MintToken()
 }
 
-func hashToken(raw string) string { return bearer.Digest(raw) }
+func hashToken(raw string) string { return storekit.TokenHash(raw) }

@@ -131,6 +131,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `auth_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `auth_token_purpose_check`: `CHECK ((purpose = ANY (ARRAY['password_reset', 'email_verify', 'invite'])))`
+- `auth_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 
 **Indexes**
 
@@ -313,6 +314,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `oauth_authorization_code_code_hash_check`: `CHECK ((code_hash ~ '^[0-9a-f]{64}$'))`
 - `oauth_authorization_code_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `oauth_code_unique`: `UNIQUE (code_hash)`
 
@@ -424,6 +426,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Rules**
 
 - `oauth_refresh_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `oauth_refresh_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `oauth_refresh_unique`: `UNIQUE (token_hash)`
 
 **Indexes**
@@ -519,6 +522,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `passport_app_caller_pair`: `CHECK (((app_issuer IS NULL) = (app_subject IS NULL)))`
 - `passport_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `passport_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `passport_token_hash_key`: `UNIQUE (token_hash)`
 - `uq_passport_id_owner`: `UNIQUE (id, on_behalf_of)`
 
@@ -690,6 +694,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Rules**
 
 - `session_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `session_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `session_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**
@@ -716,6 +721,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `setup_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `setup_token_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**

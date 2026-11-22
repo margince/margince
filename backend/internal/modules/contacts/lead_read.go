@@ -64,7 +64,7 @@ func leadNextTaskDueSQL(work string) string {
 	return `(SELECT ` + storekit.TaskDueSQL("a") + ` FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     ` + auth.AudienceWorkspaceOnly("a") + `
-	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1)`
+	   ORDER BY ` + storekit.TaskDueOrderSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1)`
 }
 
 // leadLastActivitySQL is the last-touch clock. Like last_activity_of_contact, it
@@ -126,11 +126,12 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	--
 	-- The descriptor rides with the subject so a task Margince wrote is named
 	-- in the reader's language, as History names it.
-	(SELECT jsonb_build_object('subject', a.subject, 'system_text', a.system_text)
+	(SELECT jsonb_build_object('subject', a.subject, 'system_text', a.system_text,
+	          'due_has_time', a.due_has_time, 'due_intent', ` + storekit.IntentWireSQL("a", "due") + `)
 	   FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.kind = 'task' AND NOT a.is_done ` + work + `
 	     ` + auth.AudienceWorkspaceOnly("a") + `
-	   ORDER BY ` + storekit.TaskDueSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
+	   ORDER BY ` + storekit.TaskDueOrderSQL("a") + ` NULLS LAST, a.created_at, a.id LIMIT 1),
 	` + leadNextTaskDueSQL(work) + `,
 	(SELECT factor.value->>'factor'
 	   FROM LATERAL (

@@ -334,7 +334,7 @@ Moving to another view asks you to save a draft first. **Search settings** opens
 
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, leads, deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the AI finds.
-- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
+- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it. A step marked **Done, action needed** finished but left records for someone. It says why, what to do and how many records are left. Once that is done, choose **Retry** on the step to handle the records again.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
 - **AI provider status**: recorded provider problems. An empty list does not prove that a provider recently answered. See [AI providers](ai-providers.md).
 - **Mail capture checks**: connections that need attention, with the member, mailbox, condition and last good sync. Admin and Ops see no messages here.
@@ -344,10 +344,10 @@ Moving to another view asks you to save a draft first. **Search settings** opens
 - **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
   **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.
 - **Restore drills**: when a restore was tested, if it passed, and how long it took against the targets. Whoever runs the installation records each test. Margince does not see backups; the card says "Not observed by Margince". The same readers as Background jobs see it.
+- **Table space**: below **Restore drills**. It lists each table where at least 20% of the file, and at least 100 MB, holds no live row. It shows the command to run and the role that must run it. Margince never runs the command: it holds a lock on the table until it ends, so run it in a set window.
 - **Reset data**: takes an installation back to how it was on its first start.
-  It deletes every record and setting, but keeps the company and its users, so
-  everyone can still sign in. It appears only where whoever runs the
-  installation has turned it on.
+  It deletes every record and setting, but keeps the company and its users, so everyone can still sign in.
+  It appears only where whoever runs the installation has turned it on.
 
 ### Review automatic Home work
 

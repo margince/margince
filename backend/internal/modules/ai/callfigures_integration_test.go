@@ -42,13 +42,13 @@ func seedFigures(t *testing.T) figuresFixture {
 	decision := func(sentinel string, terminal bool) Call {
 		return Call{
 			Kind: callKindDecision, Task: task, Tier: TierDecideLane, Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13",
-			RequestFingerprint: "fp-" + ids.NewV7().String(), ErrorSentinel: sentinel, IsTerminal: terminal, LatencyMS: 900,
+			ErrorSentinel: sentinel, IsTerminal: terminal, LatencyMS: 900,
 		}
 	}
 	ladder := func(sentinel, reason string) Call {
 		c := Call{
 			Kind: callKindCompletion, Task: task, Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b",
-			RequestFingerprint: "fp-" + ids.NewV7().String(), ErrorSentinel: sentinel, AttemptReason: reason, Attempt: 2, IsTerminal: true, LatencyMS: 4000,
+			ErrorSentinel: sentinel, AttemptReason: reason, Attempt: 2, IsTerminal: true, LatencyMS: 4000,
 		}
 		if sentinel == "" {
 			c.TokensIn, c.TokensOut = 1000, 500
@@ -78,7 +78,7 @@ func seedFigures(t *testing.T) figuresFixture {
 	}
 	if err := meter.Record(ctx, []Call{{
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: task,
-		Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b", RequestFingerprint: "fp-cached", CacheHit: true,
+		Tier: TierCheapCloud, Provider: providerOpenAICompatible, ModelID: "openai/gpt-oss-120b", CacheHit: true,
 	}}); err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestARefusedLadderIsUnansweredInTheFlowButNoProviderFailure(t *testing.T) {
 	attempt := func(n int, tier Tier, reason, sentinel string) Call {
 		return Call{
 			LogicalCallID: logical, Attempt: n, IsTerminal: n == 3, Kind: callKindCompletion, Task: task,
-			Tier: tier, Provider: "test", ModelID: "test-" + string(tier), RequestFingerprint: "fp-" + ids.NewV7().String(),
+			Tier: tier, Provider: "test", ModelID: "test-" + string(tier),
 			AttemptReason: reason, ErrorSentinel: sentinel,
 		}
 	}
@@ -228,7 +228,7 @@ func TestCallStatsLeaveACanceledCallOutOfTheFailures(t *testing.T) {
 	for _, sentinel := range []string{sentinelCanceled, sentinelProviderError} {
 		if err := NewCallMeter(db).Record(ctx, []Call{{
 			Kind: callKindCompletion, Task: task, Tier: TierCheapCloud, Provider: providerOpenAICompatible,
-			ModelID: "openai/gpt-oss-120b", RequestFingerprint: "fp-" + ids.NewV7().String(),
+			ModelID:       "openai/gpt-oss-120b",
 			ErrorSentinel: sentinel, IsTerminal: true, LogicalCallID: ids.NewV7(),
 		}}); err != nil {
 			t.Fatal(err)

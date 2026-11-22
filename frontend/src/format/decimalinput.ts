@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Locale, Translator } from "../i18n";
-import { INTL_LOCALE } from "./intllocale";
+import { numberFormat } from "./formatters";
 
 /** Why a typed number could not be read. */
 export type DecimalRefusal = "ambiguousGrouping" | "grouping" | "notNumber";
@@ -56,7 +56,7 @@ export function decimalSign(locale: Locale): "," | "." {
 
 function signOf(locale: Locale, part: "group" | "decimal"): string {
   return (
-    new Intl.NumberFormat(INTL_LOCALE[locale])
+    numberFormat(locale)
       .formatToParts(1_000_000.5)
       .find((candidate) => candidate.type === part)?.value ?? ""
   );

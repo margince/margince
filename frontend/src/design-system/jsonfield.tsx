@@ -38,14 +38,18 @@ export function JsonField({
   invalid = false,
   ...rest
 }: Readonly<
-  Omit<ComponentPropsWithoutRef<"textarea">, "value" | "onChange"> & {
+  // No `maxLength`: the native one counts UTF-16 units, and the server checks
+  // the value.
+  Omit<
+    ComponentPropsWithoutRef<"textarea">,
+    "value" | "onChange" | "maxLength"
+  > & {
     value: string;
     onChange: (next: string) => void;
     /** 1-based lines the gutter marks. */
     problemLines?: readonly number[];
     invalid?: boolean;
-  }
->) {
+  }>) {
   const gutter = useRef<HTMLDivElement>(null);
   const lines = Math.max(value.split("\n").length, 1);
   const marked = new Set(problemLines);

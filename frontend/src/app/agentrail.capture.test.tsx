@@ -152,6 +152,18 @@ describe("a mailbox import", () => {
     );
   });
 
+  it("says why the share fell after a restart, and draws no ring", async () => {
+    const { container } = mount({
+      connectors: [mailbox({ ...IMPORTING, window_restarts: 1 })],
+    });
+    await waitFor(() =>
+      expect(container.querySelector(".arline")?.textContent).toBe(
+        `${en["shell.capture.importing"]} · ${en["backfill.restartedNote"]}`,
+      ),
+    );
+    expect(ringShare(container)).toBeNull();
+  });
+
   it("names the import without a share when the run has no estimate", async () => {
     const { container } = mount({
       connectors: [

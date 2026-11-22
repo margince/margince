@@ -43,7 +43,7 @@ function Harness({
     cursor: string | null,
   ) => Promise<ListPage<Row>>;
 }>) {
-  const { rows, hasMore, loadMore } = useListQuery<Row>({
+  const { rows, hasMore, loadMore, total } = useListQuery<Row>({
     key: "harness",
     fetchPage,
   });
@@ -55,6 +55,7 @@ function Harness({
         ))}
       </ul>
       <span data-testid="has-more">{String(hasMore)}</span>
+      <span data-testid="total">{String(total)}</span>
       <button type="button" onClick={loadMore}>
         more
       </button>
@@ -142,6 +143,33 @@ describe("useListQuery", () => {
     await screen.findByText("b");
     expect(screen.getByText("a")).toBeTruthy();
     expect(screen.getByTestId("has-more").textContent).toBe("false");
+  });
+
+  it("keeps the first page's total while a later page sends none", async () => {
+    const user = userEvent.setup();
+    const fetchPage = vi.fn(
+      async (_query: ListQuery, cursor: string | null) => {
+        if (cursor === null) {
+          return {
+            data: [{ id: "a", name: "Anna" }],
+            page: { next_cursor: "c1", has_more: true, total: 2 },
+          };
+        }
+        return {
+          data: [{ id: "b", name: "Bob" }],
+          page: { next_cursor: null, has_more: false },
+        };
+      },
+    );
+    render(<Harness fetchPage={fetchPage} />);
+
+    await screen.findByText("a");
+    expect(screen.getByTestId("total").textContent).toBe("2");
+
+    await user.click(screen.getByRole("button", { name: "more" }));
+
+    await screen.findByText("b");
+    expect(screen.getByTestId("total").textContent).toBe("2");
   });
 });
 

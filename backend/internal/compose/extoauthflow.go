@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -159,8 +160,7 @@ func (h connectorHandlers) liveAdminContext(ctx context.Context, st connectState
 		return nil, fmt.Errorf("extension oauth callback: a read seat cannot connect an integration: %w", apperrors.ErrPermissionDenied)
 	}
 	actor, _ := principal.Actor(ctx)
-	actor.Permissions, actor.SeatType = rbac.Permissions, seat
-	ctx = principal.WithActor(ctx, actor)
+	ctx = principal.WithActor(ctx, authz.WithAuthority(actor, rbac, seat))
 	if err := auth.Require(ctx, objectIntegrations, principal.ActionCreate); err != nil {
 		return nil, err
 	}

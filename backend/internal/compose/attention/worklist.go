@@ -408,7 +408,7 @@ func (s *Service) worklistFrom(
 	// moment the day moves between pages, and a running total would push the
 	// offset past the work still owed.
 	if (more && len(shown) > 0) || (!more && rest != nil) {
-		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk.id, rest)
+		token := encodeCursor(reached, scope, askedFor(s.view, filter), s.taskOwner, walk, rest)
 		out.NextCursor = &token
 	}
 	out.SourcesUnavailable = append(out.SourcesUnavailable, s.stampSources(tailFailed)...)

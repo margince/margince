@@ -50,13 +50,12 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 	if err := auth.Require(ctx, projectObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.Project{}, err
 	}
-	active, err := s.catalogColumns(ctx)
-	if err != nil {
-		return crmcontracts.Project{}, err
-	}
 	var out crmcontracts.Project
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.catalogColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		out, err = s.updateProjectInTx(ctx, tx, id, in, active)
 		return err
 	})

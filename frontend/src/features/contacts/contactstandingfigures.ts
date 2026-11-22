@@ -28,6 +28,7 @@ export type StandingWords = Readonly<{
   t: Translator;
   locale: Locale;
   zone: string;
+  companyZone?: string;
 }>;
 
 /** One cell of the figures strip, and where pressing it leads. */
@@ -255,13 +256,13 @@ function datedPromises(
 ): TimelineEvent[] {
   const { t, locale, zone } = words;
   const asOf = Date.parse(view.as_of);
-  return (owedPromises(view, t) ?? []).flatMap(
-    ({ key, due }): TimelineEvent[] => {
+  return (owedPromises(view, t, words) ?? []).flatMap(
+    ({ key, due, zone: dueZone }): TimelineEvent[] => {
       if (!due) {
         return [];
       }
       const late = daysPast(Date.parse(due), asOf).late;
-      const day = formatDayMonth(due, locale, zone);
+      const day = formatDayMonth(due, locale, dueZone ?? zone);
       return [
         {
           key: `promise-${key}`,

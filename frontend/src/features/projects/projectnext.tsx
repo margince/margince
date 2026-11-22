@@ -4,9 +4,10 @@ import type { NextBar } from "../../design-system/nextbar";
 import { formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { reveal } from "../../lib/reveal";
 import { useMe } from "../../lib/session";
-import { tasksPeek } from "../../lib/standingpeeks";
+import { dueOnDay, tasksPeek } from "../../lib/standingpeeks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { PROJECT_COMMITMENTS_ANCHOR } from "./projectreadings";
 import type { Project360 } from "./projectsections";
@@ -30,16 +31,25 @@ export function ProjectNext({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const me = useMe();
-  const next = nextCommitment(view);
+  const next = nextCommitment(view, { zone, companyZone });
   if (!next) {
     return <RecordNextBar />;
   }
   const mine = next.assigneeId !== null && next.assigneeId === me.data?.user.id;
-  const sub = [
+  const due =
     next.dueAt &&
+    dueOnDay(
+      { zone, companyZone },
+      next.dueAt,
+      next.dueHasTime,
+      next.dueIntent,
+    );
+  const sub = [
+    due &&
       t("project.standing.nextDue", {
-        date: formatDayMonth(next.dueAt, locale, zone),
+        date: formatDayMonth(due.at, locale, due.zone),
       }),
     mine
       ? t("project.standing.assignedYou")
@@ -81,9 +91,11 @@ export function ProjectNext({
             id: row.activity_id,
             subject: row.subject,
             dueAt: row.due_at,
+            dueHasTime: row.due_has_time,
+            dueIntent: row.due_intent,
             overdue: row.overdue,
           })),
-          { t, plural, locale, zone },
+          { t, plural, locale, zone, companyZone },
           next.more,
           onOpenTask,
         ),

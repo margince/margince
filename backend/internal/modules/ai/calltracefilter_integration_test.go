@@ -28,7 +28,7 @@ func traceCall(sentinel string, tokensIn, tokensOut int, model string) Call {
 	return Call{
 		Attempt: 1, IsTerminal: true, Kind: callKindCompletion,
 		Task: TaskSummarize, Tier: TierCheapCloud, Provider: providerOpenAICompatible,
-		ModelID: model, RequestFingerprint: "fp-" + ids.NewV7().String(),
+		ModelID:  model,
 		TokensIn: tokensIn, TokensOut: tokensOut, ErrorSentinel: sentinel,
 	}
 }

@@ -40,13 +40,13 @@ func recordDecisionThenLadder(ctx context.Context, t *testing.T, meter *CallMete
 	if err := meter.Record(ctx, []Call{
 		{
 			LogicalCallID: logical, Attempt: 1, Kind: callKindDecision, Task: TaskSiteTriage, Tier: TierDecideLane,
-			Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13", RequestFingerprint: "",
+			Provider: providerJevCompatible, ModelID: "typesafe/jev-1.13",
 			TokensIn: 425, ServedModel: "typesafe/jev-1.13-20260917", ServedIdentitySource: servedIdentitySourceResponse,
 			ServedProvider: "TypeSafe",
 		},
 		{
 			LogicalCallID: logical, Attempt: 2, IsTerminal: true, Kind: callKindCompletion, Task: TaskSiteTriage,
-			Tier: TierCheapCloud, Provider: providerGemini, ModelID: "gemini-3.1-flash-lite", RequestFingerprint: "fp-triage",
+			Tier: TierCheapCloud, Provider: providerGemini, ModelID: "gemini-3.1-flash-lite",
 			AttemptReason: attemptReasonDecisionBelowFloor, TokensIn: 900, TokensOut: 40,
 			ServedModel: "gemini-3.1-flash-lite", ServedIdentitySource: servedIdentitySourceResponse,
 		},
@@ -129,7 +129,7 @@ func TestTheTraceListSaysWhichCallsAskedADecisionModel(t *testing.T) {
 	recordDecisionThenLadder(ctx, t, meter)
 	if err := meter.Record(ctx, []Call{{
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: TaskEnrich,
-		Tier: TierCheapCloud, Provider: providerGemini, ModelID: "gemini-3.1-flash-lite", RequestFingerprint: "fp-enrich",
+		Tier: TierCheapCloud, Provider: providerGemini, ModelID: "gemini-3.1-flash-lite",
 		TokensIn: 300, TokensOut: 20, ServedModel: "gemini-3.1-flash-lite", ServedIdentitySource: servedIdentitySourceResponse,
 	}}); err != nil {
 		t.Fatalf("recording the ordinary call: %v", err)

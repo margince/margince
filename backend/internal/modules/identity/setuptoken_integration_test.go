@@ -241,7 +241,7 @@ func TestTheDatabaseRefusesASecondOutstandingToken(t *testing.T) {
 	// race between two booting replicas. The partial unique index is the
 	// guarantee; this proves the guarantee, not the check in front of it.
 	err := database.WithInfraTx(ctx, svc.db.Pool(), func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `INSERT INTO setup_token (token_hash) VALUES ('a-second-outstanding-token')`)
+		_, err := tx.Exec(ctx, `INSERT INTO setup_token (token_hash) VALUES (encode(sha256('a-second-outstanding-token'), 'hex'))`)
 		return err
 	})
 	if !storekit.IsUniqueViolation(err) {
