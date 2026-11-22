@@ -14353,8 +14353,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "buyer.eyebrow": "Deal Room",
   "buyer.closed":
     "Dieser Raum ist geschlossen. Die Inhalte bleiben als Aufzeichnung erhalten.",
-  "buyer.previewBannerTitle": "Du siehst eine Vorschau dieses Raums",
-  "buyer.previewBanner":
+  "room.previewBannerTitle": "Du siehst eine Vorschau dieses Raums",
+  "room.previewBanner":
     "Das ist die Ansicht der Käuferseite. Du kannst alles lesen, aber nichts ändern.",
   "buyer.previewReadOnly":
     "Eine Vorschau ist schreibgeschützt. Schließe diesen Tab, um zur Seite des Deal Rooms zurückzukehren.",

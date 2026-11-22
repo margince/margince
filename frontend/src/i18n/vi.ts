@@ -13971,8 +13971,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quyền truy cập Deal Room này đã hết hạn. Vui lòng liên hệ {steward} nếu quý khách cần truy cập lại.",
   "buyer.eyebrow": "Deal Room",
   "buyer.closed": "Deal Room này đã đóng. Nội dung vẫn được lưu lại làm hồ sơ.",
-  "buyer.previewBannerTitle": "Đang xem trước Deal Room này",
-  "buyer.previewBanner":
+  "room.previewBannerTitle": "Đang xem trước Deal Room này",
+  "room.previewBanner":
     "Đây là giao diện phía người mua. Có thể đọc mọi nội dung nhưng không thể thay đổi.",
   "buyer.previewReadOnly":
     "Bản xem trước chỉ đọc. Đóng tab này để quay lại trang Deal Room.",

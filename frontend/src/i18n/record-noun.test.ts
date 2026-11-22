@@ -610,7 +610,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "buyer.contactEyebrow",
     "buyer.deadAskContact",
     "buyer.docs.downloadFailed",
-    "buyer.previewBanner",
+    "room.previewBanner",
     "buyer.stewardUnknown",
     "captureNotice.yourControl",
     "captureSettings.signatureEnrich.help",

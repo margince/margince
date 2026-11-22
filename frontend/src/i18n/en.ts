@@ -14300,8 +14300,8 @@ export const en = {
     "Access to this room has expired. Contact {steward} if you need it again.",
   "buyer.eyebrow": "Deal Room",
   "buyer.closed": "This room is closed. Its content is kept as a record.",
-  "buyer.previewBannerTitle": "You are previewing this room",
-  "buyer.previewBanner":
+  "room.previewBannerTitle": "You are previewing this room",
+  "room.previewBanner":
     "This is the buyer’s view. You can read everything but change nothing.",
   "buyer.previewReadOnly":
     "A preview is read-only. Close this tab to return to the Deal Room page.",
