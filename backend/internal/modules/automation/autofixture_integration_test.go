@@ -180,6 +180,8 @@ type scriptedWorkflow struct {
 	// a case that wants a retry to proceed has to say so, exactly as a real
 	// handler does.
 	redrivable bool
+	// replays is the spec's ReplaysAfterFailedApply.
+	replays bool
 }
 
 const scriptedTrigger = "history.test_event"
@@ -190,6 +192,7 @@ func (s scriptedWorkflow) Spec() workflow.Spec {
 		Trigger:                      workflow.Trigger{EventType: scriptedTrigger},
 		Tier:                         mcp.TierAutoExecute,
 		RedrivableWithoutDuplicating: s.redrivable,
+		ReplaysAfterFailedApply:      s.replays,
 	}
 }
 
