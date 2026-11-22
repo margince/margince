@@ -34,13 +34,14 @@ type ColleagueStamp struct {
 const colleagueStampScope = `FROM activity a JOIN app_user u ON u.id = a.sent_by_colleague
 	 WHERE a.sent_by_colleague IS NOT NULL AND NOT a.counterparty_outbound_attested AND a.restricted_at IS NULL`
 
-// ColleagueStampsTx locks the next limit stamped copies after the cursor, in id order.
+// ColleagueStampsTx locks the next limit stamped copies after the cursor, in id
+// order, through LockMeetingAttendeePage.
 func ColleagueStampsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ColleagueStamp, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `SELECT a.id, a.sent_by_colleague, u.email `+colleagueStampScope+`
-		   AND a.id > $1 ORDER BY a.id LIMIT $2 FOR UPDATE OF a`, after, limit)
+		   AND a.id > $1 ORDER BY a.id LIMIT $2`, after, limit)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading copies read as a colleague's mail: %w", err)
 	}
@@ -48,7 +49,11 @@ func ColleagueStampsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading copies read as a colleague's mail: %w", err)
 	}
-	return stamps, nil
+	page := make([]ids.UUID, 0, len(stamps))
+	for _, stamp := range stamps {
+		page = append(page, stamp.ID)
+	}
+	return stamps, storekit.LockMeetingAttendeePage(ctx, tx, page)
 }
 
 // CountColleagueStamps counts the stamped copies, reading at most maximum+1.

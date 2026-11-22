@@ -100,13 +100,13 @@ func provenLinkSQL() string {
 }
 
 // ProvenSenderActivitiesTx locks the next limit activities after the cursor,
-// in id order, whose sender a linked contact is proven to be.
+// in id order, whose sender a linked contact is proven to be, through LockMeetingAttendeePage.
 func ProvenSenderActivitiesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE a.id > $1 AND a.restricted_at IS NULL AND `+provenLinkSQL()+`
-		 ORDER BY a.id LIMIT $2 FOR UPDATE OF a`, after, limit)
+		 ORDER BY a.id LIMIT $2`, after, limit)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading received messages with a proven sender: %w", err)
 	}
@@ -114,7 +114,7 @@ func ProvenSenderActivitiesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, li
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading received messages with a proven sender: %w", err)
 	}
-	return found, nil
+	return found, storekit.LockMeetingAttendeePage(ctx, tx, found)
 }
 
 // CountProvenSenderActivities counts the activities the sender repair would

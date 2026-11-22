@@ -172,6 +172,9 @@ func admitRelink(ctx context.Context, in RelinkActivityInput) (string, error) {
 // readable, so the write arm (auth.EnsureActivityWritable) is what keeps a
 // colleague's correspondence theirs — and in a batch every row is somebody's.
 func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (wrote, held bool, err error) {
+	if err := lockRelinkedAttendees(ctx, tx, in, id.UUID); err != nil {
+		return false, false, err
+	}
 	// THE LOCK COMES FIRST, before the authority check and before the version
 	// compare, because both are answers about the row and both are only true
 	// while it holds still. Checked first and locked after, an ownership change
@@ -402,6 +405,13 @@ func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in Reli
 		if err != nil {
 			return err
 		}
+		conversation := make([]ids.UUID, 0, len(members))
+		for _, id := range members {
+			conversation = append(conversation, id.UUID)
+		}
+		if err := lockRelinkedAttendees(ctx, tx, in, conversation...); err != nil {
+			return err
+		}
 		for _, id := range members {
 			written, _, err := relinkActivityRow(ctx, tx, id, in, column)
 			switch {
@@ -466,6 +476,9 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 		if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
 			return err
 		}
+		if err := lockRelinkedAttendees(ctx, tx, in, activityIDs...); err != nil {
+			return err
+		}
 		seen := make(map[ids.UUID]struct{}, len(activityIDs))
 		for _, raw := range activityIDs {
 			// A repeated id is one row, not two audit rows for one move.
@@ -495,4 +508,14 @@ func validateRelinkCount(count int) error {
 			fmt.Sprintf("activity_ids names between 1 and %d activities; this request names %d", maxBulkRelink, count))
 	}
 	return nil
+}
+
+// lockRelinkedAttendees takes the attendee locks a contact relink needs, since
+// it moves participant rows and may stamp the sender. A batch takes them all,
+// sorted, before its first row lock.
+func lockRelinkedAttendees(ctx context.Context, tx pgx.Tx, in RelinkActivityInput, activityIDs ...ids.UUID) error {
+	if in.EntityType != linkEntityContact {
+		return nil
+	}
+	return storekit.LockMeetingAttendeeWrites(ctx, tx, activityIDs...)
 }

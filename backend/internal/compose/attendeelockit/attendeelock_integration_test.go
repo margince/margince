@@ -5,11 +5,13 @@
 
 // Package attendeelockit_test proves that a judge of a meeting's attendees waits
 // for capture's insert of an attendee on the same meeting, then counts them. A
-// row lock cannot hold off an inserted row; the attendee lock does.
+// row lock cannot hold off an inserted row; the attendee lock does. A writer
+// takes that lock before its row locks, so a waiting judge cannot deadlock it.
 package attendeelockit_test
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -17,10 +19,12 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -157,5 +161,49 @@ func TestTheMeetingProofPassWaitsForAnAttendeeJoiningTheMeeting(t *testing.T) {
 	})
 	if got := f.WsScalar(t, `SELECT met::text FROM deal_stage_evidence WHERE id = $1`, f.claim); got != "true" {
 		t.Errorf("the claim is met = %s after the pass, want true for the buyer who joined while it waited", got)
+	}
+}
+
+// A contact relink moves the meeting's attendee rows. It waits for a judge's
+// shared lock before it locks the meeting row, so the judge can still take the
+// row lock it reads under. Locked the other way round, the two deadlock.
+func TestARelinkWaitsForTheJudgeBeforeItLocksTheMeeting(t *testing.T) {
+	f := newMeetingFixture(t)
+	contact := f.SeedContact(t, "Ines Buyer", &f.AdminUser)
+	ctx := context.Background()
+	judge, err := f.Pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := judge.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	}()
+	var judgePID int32
+	if err := judge.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&judgePID); err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.LockMeetingAttendeeChecks(ctx, judge, f.meeting); err != nil {
+		t.Fatal(err)
+	}
+	relinked, returned := make(chan error, 1), make(chan struct{})
+	go func() {
+		defer close(returned)
+		_, err := f.Activities.RelinkActivity(f.Admin(), ids.From[ids.ActivityKind](f.meeting),
+			activities.RelinkActivityInput{EntityType: "contact", EntityID: contact})
+		relinked <- err
+	}()
+	testdb.AwaitQueuedBehind(t, integration.OwnerConn(t), judgePID, 1, returned, "the contact relink")
+	// The row lock the meeting proof pass takes next. NOWAIT asks whether the
+	// relink holds the meeting while it waits for the judge.
+	if _, err := judge.Exec(ctx, `SELECT 1 FROM activity WHERE id = $1 FOR SHARE NOWAIT`, f.meeting); err != nil {
+		t.Fatalf("the relink holds the meeting row while it waits for the judge: %v", err)
+	}
+	if err := judge.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-relinked; err != nil {
+		t.Fatalf("relinking the meeting: %v", err)
 	}
 }

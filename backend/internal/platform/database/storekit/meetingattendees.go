@@ -30,18 +30,38 @@ func LockMeetingAttendeeWrites(ctx context.Context, tx pgx.Tx, activityIDs ...id
 	return lockMeetingAttendees(ctx, tx, `pg_advisory_xact_lock`, activityIDs)
 }
 
-// lockMeetingAttendees takes one lock per distinct activity, sorted, so two
-// holders of overlapping sets queue in one order.
-func lockMeetingAttendees(ctx context.Context, tx pgx.Tx, lock string, activityIDs []ids.UUID) error {
-	keys := make([]string, 0, len(activityIDs))
-	for _, id := range activityIDs {
-		if !id.IsZero() {
-			keys = append(keys, id.String())
-		}
+// LockMeetingAttendeePage takes a batch page's attendee locks and then its
+// activity row locks, in that order. The page is read unlocked first, so each
+// per-row writer checks its rule again under the row lock.
+func LockMeetingAttendeePage(ctx context.Context, tx pgx.Tx, page []ids.UUID) error {
+	if err := LockMeetingAttendeeWrites(ctx, tx, page...); err != nil {
+		return err
 	}
-	slices.Sort(keys)
-	for _, key := range slices.Compact(keys) {
-		if _, err := tx.Exec(ctx, `SELECT `+lock+`(hashtext('margince:meeting-attendees:' || $1)::bigint)`, key); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT id FROM activity WHERE id = ANY($1) ORDER BY id FOR UPDATE`, page); err != nil {
+		return fmt.Errorf("locking a page of activities: %w", err)
+	}
+	return nil
+}
+
+// lockMeetingAttendees takes one lock per distinct key, in key order, so two
+// holders of overlapping sets queue in one order. Two activities whose keys
+// collide share one lock, which costs a wait and never reverses the order.
+func lockMeetingAttendees(ctx context.Context, tx pgx.Tx, lock string, activityIDs []ids.UUID) error {
+	present := slices.DeleteFunc(slices.Clone(activityIDs), ids.UUID.IsZero)
+	if len(present) == 0 {
+		return nil
+	}
+	rows, err := tx.Query(ctx, `SELECT DISTINCT hashtextextended('margince:meeting-attendees:' || id::text, 0) AS k
+		FROM unnest($1::uuid[]) id ORDER BY k`, present)
+	if err != nil {
+		return fmt.Errorf("keying a meeting's attendee locks: %w", err)
+	}
+	keys, err := pgx.CollectRows(rows, pgx.RowTo[int64])
+	if err != nil {
+		return fmt.Errorf("keying a meeting's attendee locks: %w", err)
+	}
+	for _, key := range keys {
+		if _, err := tx.Exec(ctx, `SELECT `+lock+`($1)`, key); err != nil {
 			return fmt.Errorf("locking a meeting's attendees: %w", err)
 		}
 	}
