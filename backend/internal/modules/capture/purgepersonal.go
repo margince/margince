@@ -186,6 +186,7 @@ func SelectPersonalPurgeTx(
 		  JOIN capture_pending_counterparty p
 		    ON p.email = a.counterparty_email AND p.owner_id = $3
 		 WHERE `+personalPurgeDue("$3")+`
+		   AND a.restricted_at IS NULL
 		   AND NOT `+personalKeptByShield(shielded)+selected+`
 		 ORDER BY a.id
 		 LIMIT `+limitAt, args...)

@@ -11,6 +11,8 @@ package capture
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
@@ -44,5 +46,7 @@ var ConfidentialityPassCap = config.DefineStored(config.Spec[int]{
 // PassCap is the cap in force for the pass about to start. It is read per pass
 // and never held on the engine, so an admin's change is the next pass's cap.
 func (s *ThreadVerdictStore) PassCap(ctx context.Context) (int, error) {
-	return readPassCap(ctx, s.db, ConfidentialityPassCap)
+	return readPassCap(ctx, s.db, ConfidentialityPassCap.Key(), func(tx pgx.Tx) (int, error) {
+		return config.StoredApplyTx(ctx, tx, config.Bound(), ConfidentialityPassCap)
+	})
 }

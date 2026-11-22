@@ -35,34 +35,48 @@ const (
 
 // VerdictPassCap is how many unresolved senders one counterparty verdict run
 // asks the model about per workspace. The rest stay claimable for the next run.
-var VerdictPassCap = definePassCap("capture.verdict_pass_cap",
-	"MARGINCE_CAPTURE_VERDICT_PASS_CAP", DefaultVerdictPassCap, MaxVerdictPassCap,
-	"Unresolved senders one counterparty review run may judge; the rest wait for the next run.")
+var VerdictPassCap = config.DefineStored(config.Spec[int]{
+	Key:     "capture.verdict_pass_cap",
+	Env:     "MARGINCE_CAPTURE_VERDICT_PASS_CAP",
+	Type:    config.Int,
+	Default: config.Some(DefaultVerdictPassCap),
+	Min:     config.Some(1),
+	Max:     config.Some(MaxVerdictPassCap),
+	Doc:     "Unresolved senders one counterparty review run may judge; the rest wait for the next run.",
+}, config.Store{
+	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
+	MachineryApplied: true, Changed: emitSettingChanged("capture.verdict_pass_cap"),
+})
 
 // ClassifyPassCap is how many captured messages one label run settles per
-// workspace. An unlabelled message stays in the backlog for the next run.
-var ClassifyPassCap = definePassCap("capture.classify_pass_cap",
-	"MARGINCE_CAPTURE_CLASSIFY_PASS_CAP", DefaultClassifyPassCap, MaxClassifyPassCap,
-	"Captured messages one labelling run may settle; the rest wait for the next run.")
+// workspace. An unlabeled message stays in the backlog for the next run.
+var ClassifyPassCap = config.DefineStored(config.Spec[int]{
+	Key:     "capture.classify_pass_cap",
+	Env:     "MARGINCE_CAPTURE_CLASSIFY_PASS_CAP",
+	Type:    config.Int,
+	Default: config.Some(DefaultClassifyPassCap),
+	Min:     config.Some(1),
+	Max:     config.Some(MaxClassifyPassCap),
+	Doc:     "Captured messages one labeling run may settle; the rest wait for the next run.",
+}, config.Store{
+	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
+	MachineryApplied: true, Changed: emitSettingChanged("capture.classify_pass_cap"),
+})
 
 // OwedClassifyPassCap is how many new messages one owed-reply run judges per
 // workspace. The re-judge of older mail has its own budget.
-var OwedClassifyPassCap = definePassCap("capture.owed_classify_pass_cap",
-	"MARGINCE_CAPTURE_OWED_CLASSIFY_PASS_CAP", DefaultOwedClassifyPassCap, MaxOwedClassifyPassCap,
-	"New messages one owed-reply run may judge; the rest wait for the next run.")
-
-// definePassCap declares one pass cap. MachineryApplied because the passes run
-// as system principals that hold no `capture_settings` grant.
-func definePassCap(key, env string, def, maxCap int, doc string) *config.Setting[int] {
-	return config.DefineStored(config.Spec[int]{
-		Key: key, Env: env, Type: config.Int,
-		Default: config.Some(def), Min: config.Some(1), Max: config.Some(maxCap),
-		Doc: doc,
-	}, config.Store{
-		RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
-		MachineryApplied: true, Changed: emitSettingChanged(key),
-	})
-}
+var OwedClassifyPassCap = config.DefineStored(config.Spec[int]{
+	Key:     "capture.owed_classify_pass_cap",
+	Env:     "MARGINCE_CAPTURE_OWED_CLASSIFY_PASS_CAP",
+	Type:    config.Int,
+	Default: config.Some(DefaultOwedClassifyPassCap),
+	Min:     config.Some(1),
+	Max:     config.Some(MaxOwedClassifyPassCap),
+	Doc:     "New messages one owed-reply run may judge; the rest wait for the next run.",
+}, config.Store{
+	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
+	MachineryApplied: true, Changed: emitSettingChanged("capture.owed_classify_pass_cap"),
+})
 
 // emitSettingChanged is the capture_settings.updated event for one key, in the
 // transaction of the write that changed it.
@@ -81,30 +95,36 @@ func NewPassCaps(db *database.DB) *PassCaps { return &PassCaps{db: db} }
 
 // Verdict is the cap of the counterparty verdict run.
 func (p *PassCaps) Verdict(ctx context.Context) (int, error) {
-	return readPassCap(ctx, p.db, VerdictPassCap)
+	return readPassCap(ctx, p.db, VerdictPassCap.Key(), func(tx pgx.Tx) (int, error) {
+		return config.StoredApplyTx(ctx, tx, config.Bound(), VerdictPassCap)
+	})
 }
 
 // Classify is the cap of the capture label run.
 func (p *PassCaps) Classify(ctx context.Context) (int, error) {
-	return readPassCap(ctx, p.db, ClassifyPassCap)
+	return readPassCap(ctx, p.db, ClassifyPassCap.Key(), func(tx pgx.Tx) (int, error) {
+		return config.StoredApplyTx(ctx, tx, config.Bound(), ClassifyPassCap)
+	})
 }
 
 // OwedClassify is the cap of the owed-reply run.
 func (p *PassCaps) OwedClassify(ctx context.Context) (int, error) {
-	return readPassCap(ctx, p.db, OwedClassifyPassCap)
+	return readPassCap(ctx, p.db, OwedClassifyPassCap.Key(), func(tx pgx.Tx) (int, error) {
+		return config.StoredApplyTx(ctx, tx, config.Bound(), OwedClassifyPassCap)
+	})
 }
 
-// readPassCap reads one cap inside its own transaction. A boot source that sets
+// readPassCap runs one cap read in its own transaction. A boot source that sets
 // the key wins here as it does in the app.
-func readPassCap(ctx context.Context, db *database.DB, entry *config.Setting[int]) (int, error) {
+func readPassCap(ctx context.Context, db *database.DB, key string, read func(tx pgx.Tx) (int, error)) (int, error) {
 	var passCap int
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		passCap, err = config.StoredApplyTx(ctx, tx, config.Bound(), entry)
+		passCap, err = read(tx)
 		return err
 	})
 	if err != nil {
-		return 0, fmt.Errorf("capture: reading the %s setting: %w", entry.Key(), err)
+		return 0, fmt.Errorf("capture: reading the %s setting: %w", key, err)
 	}
 	return passCap, nil
 }

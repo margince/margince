@@ -564,7 +564,7 @@
           "default": 500
         },
         "classify_pass_cap": {
-          "description": "Captured messages one labelling run may settle; the rest wait for the next run.",
+          "description": "Captured messages one labeling run may settle; the rest wait for the next run.",
           "type": [
             "integer",
             "null"

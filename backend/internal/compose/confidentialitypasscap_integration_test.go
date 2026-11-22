@@ -306,8 +306,7 @@ func assertPassCapRead(t *testing.T, e *integration.Env, want int) {
 // savePassCaps saves caps the way an admin does, through the settings store.
 func savePassCaps(t *testing.T, e *integration.Env, patch capture.SettingsPatch) {
 	t.Helper()
-	store := capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool))
-	if _, err := store.Update(e.Admin(), patch); err != nil {
+	if _, err := capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool)).Update(e.Admin(), patch); err != nil {
 		t.Fatalf("saving the pass cap: %v", err)
 	}
 }
@@ -340,9 +339,7 @@ func TestTheLabelRunSettlesNoMoreMessagesThanTheSavedCap(t *testing.T) {
 	}
 	classifyCap := 3
 	savePassCaps(t, e, capture.SettingsPatch{ClassifyPassCap: &classifyCap})
-	brain := &scriptedClassifyBrain{}
-
-	if err := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler)).RunWorkspace(asClassifyPass(e), 0); err != nil {
+	if err := NewCaptureClassifier(e.Pool, &scriptedClassifyBrain{}, slog.New(slog.DiscardHandler)).RunWorkspace(asClassifyPass(e), 0); err != nil {
 		t.Fatalf("label run: %v", err)
 	}
 
@@ -358,9 +355,7 @@ func TestTheOwedReplyRunJudgesNoMoreNewMailThanTheSavedCap(t *testing.T) {
 	}
 	owedCap := 3
 	savePassCaps(t, e, capture.SettingsPatch{OwedClassifyPassCap: &owedCap})
-	brain := &owedBrainStub{verdict: activities.OwedVerdictInformsUs, confidence: 0.95}
-
-	runOwedWorker(t, e, brain)
+	runOwedWorker(t, e, &owedBrainStub{verdict: activities.OwedVerdictInformsUs, confidence: 0.95})
 
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE owed_verdict IS NOT NULL`); n != owedCap {
 		t.Fatalf("a run under a saved cap of %d judged %d messages, want exactly %d", owedCap, n, owedCap)

@@ -219,3 +219,35 @@ func TestEligibleMailBehindAFullBatchUnderTheStatutoryFloorIsDestroyedInOnePass(
 	}
 	assertReceipt(t, e, "kept_under_statute", heldCount)
 }
+
+func TestAHeldMessageIsKeptWhileTheMailBehindItIsDestroyed(t *testing.T) {
+	e := integration.Setup(t)
+	const held = "gegner@kanzlei.example"
+	heldMail := seedDueMail(t, e, held, 1)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_retention_evidence
+			  (activity_id, basis, decided_by_name, reason, qualified_at)
+			VALUES ($1, 'controller_pin', 'Test Controller', 'statutory retention under test', now())`,
+			heldMail); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			UPDATE activity
+			   SET retention_class = 'commercial_correspondence', retention_class_at = now(),
+			       archived_at = coalesce(archived_at, now()), restricted_at = now(),
+			       restricted_reason = 'statutory retention', restricted_until = now() + interval '6 years'
+			 WHERE id = $1`, heldMail)
+		return err
+	}); err != nil {
+		t.Fatalf("holding the message: %v", err)
+	}
+	seedDueMail(t, e, "mama@familie.example", 1)
+
+	if n := sweepOnce(t, e); n != 1 {
+		t.Fatalf("destroyed %d messages, want only the one that is not held", n)
+	}
+	if kept := keepsItsBody(t, e, held); kept != 1 {
+		t.Fatal("the held message lost its body to the sweep")
+	}
+}
