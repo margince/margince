@@ -3,16 +3,12 @@
 
 import { CalendarDays } from "lucide-react";
 import { useId, useState } from "react";
-import { Button, Modal } from "../../design-system/atoms";
+import { Button, Modal, SegmentedControl } from "../../design-system/atoms";
 import { Calendar, dateOf, type ISODay } from "../../design-system/calendar";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { calendarDay, localDateTimeValue } from "../../format/calendarday";
-import {
-  formatDateAbbrev,
-  formatDateTime,
-  INTL_LOCALE,
-} from "../../format/format";
+import { formatDateAbbrev, formatDateTime } from "../../format/format";
 import { useNow } from "../../format/now";
 import {
   instantAtWallClock,
@@ -27,6 +23,17 @@ import { momentLabel, momentOf, schedulePresets } from "./composeschedule";
 // The hours a business message is scheduled for. Four, not a clock: start of
 // the day, mid-morning, after lunch, end of the day.
 const SCHEDULE_HOURS = [8, 9, 13, 17] as const;
+
+// A clock face reads the same in every language, so it needs no message key.
+// It is also the hour's option key in the strip.
+function clockFace(hour: number): string {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+const HOUR_FACES = SCHEDULE_HOURS.map(clockFace);
+const HOUR_LABELS = Object.fromEntries(HOUR_FACES.map((face) => [face, face]));
+const HOUR_OF_FACE = new Map(
+  SCHEDULE_HOURS.map((hour) => [clockFace(hour), hour]),
+);
 
 // A moment as `datetime-local` spells it: the wall clock, no offset. Built
 // field by field rather than sliced out of an ISO string, because
@@ -114,12 +121,11 @@ function ScheduleSteps({
       ) : (
         <div className="schedule-presets">
           <p className="t-caption">
-            {zoneNameAndOffset(INTL_LOCALE[locale], current, zone)}
+            {zoneNameAndOffset(locale, current, zone)}
           </p>
           {schedulePresets(current, zone).map((preset) => (
-            <button
+            <Button
               key={preset.key}
-              type="button"
               className="schedule-preset"
               onClick={() => {
                 onChoose(localMoment(preset.at, zone));
@@ -130,7 +136,7 @@ function ScheduleSteps({
               <span className="t-caption">
                 {formatDateTime(preset.at.toISOString(), locale, zone)}
               </span>
-            </button>
+            </Button>
           ))}
           <Button variant="ghost" onClick={() => setPicking(true)}>
             <CalendarDays aria-hidden="true" />
@@ -269,21 +275,23 @@ function SchedulePick({
               {formatDateAbbrev(picked.toISOString(), locale, zone)}
             </p>
             <Eyebrow>{t("compose.scheduleTime")}</Eyebrow>
-            <div className="schedule-hours">
-              {SCHEDULE_HOURS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className="schedule-hour t-num"
-                  aria-pressed={option === hour}
-                  disabled={passed(option)}
-                  aria-describedby={passed(option) ? hoursReasonId : undefined}
-                  onClick={() => setHour(option)}
-                >
-                  {`${String(option).padStart(2, "0")}:00`}
-                </button>
-              ))}
-            </div>
+            <SegmentedControl
+              label={t("compose.scheduleTime")}
+              options={HOUR_FACES}
+              value={clockFace(hour)}
+              onChange={(face) => {
+                const next = HOUR_OF_FACE.get(face);
+                if (next !== undefined) setHour(next);
+              }}
+              labels={HOUR_LABELS}
+              refused={Object.fromEntries(
+                SCHEDULE_HOURS.map((option) => [
+                  clockFace(option),
+                  passed(option),
+                ]),
+              )}
+              reasonId={hoursReasonId}
+            />
             {anyPassed && (
               <p id={hoursReasonId} className="t-caption">
                 {t("compose.scheduleHoursPast")}

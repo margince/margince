@@ -27,11 +27,12 @@ import {
   PanelIntro,
 } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { blankRequired, throwProblem, unwrap } from "../../lib/problem";
 import {
   type MutationOutcome,
   useRowHandoff,
@@ -332,6 +333,8 @@ function ConfirmCandidate({
 // next time they open it rather than waiting there as a half-typed domain.
 function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
   const add = useAddOwnDomain();
   const headingId = useId();
   const formId = useId();
@@ -344,26 +347,35 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
       </Heading>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (domain === "") {
+          // The label is a verb phrase, so the sentence names no field.
+          if (
+            faults.show(blankRequired(locale, { domain: [undefined, domain] }))
+          )
             return;
-          }
           add.mutate(domain, { onSuccess: onClose });
         }}
       >
         <Field
           label={t("ownDomains.addLabel")}
           labelHidden
+          required
           hint={t("ownDomains.irreversible")}
+          error={faults.of("domain")}
         >
           {(control) => (
             <TextInput
               {...control}
               value={draft}
               placeholder={t("ownDomains.placeholder")}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value);
+                faults.edited("domain");
+              }}
             />
           )}
         </Field>
@@ -385,7 +397,7 @@ function AddOwnDomainDialog({ onClose }: Readonly<{ onClose: () => void }>) {
           type="submit"
           form={formId}
           variant="primary"
-          disabled={add.isPending || domain === ""}
+          pending={add.isPending}
         >
           {t("ownDomains.add")}
         </Button>

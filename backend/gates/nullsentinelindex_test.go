@@ -86,6 +86,10 @@ var sentinelsThatAreNotNullMarkers = gatekit.Waive(map[string]string{
 		"its two literals default a jsonb payload INSIDE md5(), and md5 of anything is never null, so " +
 		"NULLS NOT DISTINCT has nothing to do for those columns — the default belongs in the expression " +
 		"whose digest the key compares. The three plain sentinels it used to carry are gone",
+	"uq_activity_participant_identity": "" +
+		"its four literals stand inside md5(), whose digest the key compares. Each is the empty text, and " +
+		"no stored value yields it: a uuid never prints empty, and a text prints its length first. " +
+		"TestAParticipantKeyTellsEveryIdentityApart holds a null apart from an empty text",
 })
 
 // uniqueIndexFloor is what the catalog held when this gate was written. A census

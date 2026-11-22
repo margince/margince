@@ -187,11 +187,8 @@ func (r *Router) decisionAttempt(ctx context.Context, lc *logicalCall, b *bindin
 	dreq decision.Request, gate DecisionGate,
 ) (decisionTry, error) {
 	// The state is data a site assembled from mail and pages, bound for a
-	// vendor like any prompt, so it passes the same stripper a prompt does —
-	// through the recorder a completion attempt uses, so the row says what was
-	// removed.
-	strips := newStripRecorder(r.stripper)
-	state, _, err := strips.Strip(ctx, dreq.State)
+	// vendor like any prompt. So it passes the same stripper a prompt does.
+	state, _, err := r.stripper.Strip(ctx, dreq.State)
 	if err != nil {
 		r.log.WarnContext(ctx, "ai: decision state could not be stripped; asking the ladder", "task", string(task), "err", err)
 		return decisionTry{reason: attemptReasonDecisionError}, nil
@@ -200,12 +197,12 @@ func (r *Router) decisionAttempt(ctx context.Context, lc *logicalCall, b *bindin
 		return decisionTry{reason: attemptReasonDecisionStateTooLarge}, nil
 	}
 	dreq.State, dreq.Model = state, b.decisions.meta.model
-	return r.callDecider(ctx, lc, b, task, dreq, gate, strips)
+	return r.callDecider(ctx, lc, b, task, dreq, gate)
 }
 
 // callDecider makes the one decision call: rail, trace, meter, answer.
 func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, task Task,
-	dreq decision.Request, gate DecisionGate, strips *stripRecorder,
+	dreq decision.Request, gate DecisionGate,
 ) (decisionTry, error) {
 	// The rail opens here, past every refusal above, for the reason
 	// announceRailStartOnce gives: a trace is always appended after it.
@@ -226,8 +223,6 @@ func (r *Router) callDecider(ctx context.Context, lc *logicalCall, b *binding, t
 		answer, verdict = readDecision(dreq, resp, gate)
 		trace.DecisionAnswer = answerTrace(answer)
 	}
-	// Before finalize, which buffers the row, as on a completion attempt.
-	trace.SecretsRemoved, trace.SecretKinds = strips.report()
 	r.finalizeDecisionAttempt(ctx, lc, &trace, dreq, resp, errors.Join(callErr, meterErr), start)
 	if meterErr != nil {
 		return decisionTry{}, meterErr

@@ -25,6 +25,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -38,7 +39,7 @@ func (e *stagingEnv) lentPassport(t *testing.T, human ids.UUID) context.Context 
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO passport (id, on_behalf_of, granted_by, token_hash, scopes, expires_at)
 		VALUES ($1, $2, $2, $3, ARRAY['read','write'], now() + interval '30 days')`,
-		passport, human, "hash-"+passport.String()); err != nil {
+		passport, human, storekit.TokenHash(passport.String())); err != nil {
 		t.Fatalf("seeding the lent passport: %v", err)
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)

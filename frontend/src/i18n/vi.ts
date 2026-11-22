@@ -552,6 +552,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "dataTasks.status.running": "Đang chạy",
   "dataTasks.status.paused": "Đã tạm dừng",
   "dataTasks.status.done": "Đã hoàn tất",
+  "dataTasks.status.doneWithAction": "Đã hoàn tất, cần xử lý",
   "dataTasks.status.failed": "Có lỗi",
   "dataTasks.action.pause": "Tạm dừng",
   "dataTasks.action.resume": "Tiếp tục",
@@ -568,6 +569,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "dataTasks.blocked.missing_prerequisite":
     "Cần hoàn tất các bản cập nhật bắt buộc trước.",
 
+  "dataTasks.actionRecords_one": "Còn {count} bản ghi cần xử lý",
+  "dataTasks.actionRecords_other": "Còn {count} bản ghi cần xử lý",
   "approval.preview.createEmployer":
     "Tạo công ty còn thiếu và liên kết liên hệ này làm nhân viên.",
   "approval.preview.reuseEmployer": "Liên kết liên hệ này với công ty hiện có.",
@@ -951,7 +954,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Ngày đến",
   "reporting.enteredOn": "Ngày vào giai đoạn",
   "reporting.accruedOn": "Ngày ghi nhận",
-  "reporting.introducedOn": "Ngày giới thiệu",
+  "reporting.introductionCountedOn": "Ngày giới thiệu hoặc ghi nhận",
   "reporting.bookedOn": "Ngày đặt",
   "reporting.commissionAmount": "Hoa hồng",
   "reporting.hoursUnit": "Giờ",
@@ -2419,6 +2422,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.rbac_defaults": "Quyền khởi đầu của tiện ích mở rộng",
   "systemJob.release_version": "Kiểm tra bản phát hành",
   "systemJob.report_schedule": "Báo cáo theo lịch",
+  "systemJob.chat_task_reader": "Cuộc trò chuyện và việc cần làm đang mở",
   "systemJob.request_settlement": "Hoàn tất yêu cầu",
   "systemJob.restore_drill": "Bản ghi diễn tập khôi phục",
   "systemJob.risk_verdict": "Kiểm tra rủi ro deal",
@@ -2429,6 +2433,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.sign_in_policy_read": "Đọc chính sách đăng nhập",
   "systemJob.stage_evidence": "Bằng chứng giai đoạn deal",
   "systemJob.stage_evidence_read": "Đọc bằng chứng giai đoạn deal",
+  "systemJob.stage_evidence_reread": "Đọc lại bằng chứng giai đoạn deal",
   "systemJob.suppression_journal_worker": "Xuất sổ ghi xóa dữ liệu",
   "systemJob.stored_object_reap_worker": "Dọn dẹp kho tệp",
   "systemJob.technical_backfill": "Tra cứu kỹ thuật còn tồn đọng",
@@ -2558,6 +2563,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.reversal.undoneBy": "{undoer} đã hoàn tác",
   "history.reversal.unpaired": "Hoàn tác một thay đổi trước đó",
   "history.edge.marker": "Liên kết",
+  "history.edge.linked": "{subject} đã liên kết {name} với vai trò {role}",
+  "history.edge.roleChanged":
+    "{subject} đã đổi vai trò tại {name} từ {previous} thành {role}",
+  "history.edge.roleSet": "{subject} đã đổi vai trò tại {name} thành {role}",
+  "history.edge.changed": "{subject} đã thay đổi liên kết với {name}: {fields}",
+  "history.edge.unlinked": "{subject} đã hủy liên kết với {name}",
+  "history.edge.roleRemoved": "{subject} đã xóa vai trò {previous} tại {name}",
+  "history.edge.alsoChanged": "cũng đã đổi: {fields}",
   "history.subject.viaClient": "{name} (qua {client})",
   "history.subject.viaAgent": "{name} (qua trợ lý AI)",
   "history.subject.viaConnector": "{name} (qua trình kết nối)",
@@ -2695,6 +2708,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.stage_id": "Giai đoạn",
   "history.field.disqualify_reason_id": "Lý do loại",
   "history.field.trigger": "Xác nhận bởi",
+  "history.field.role": "Vai trò",
+  "history.field.is_current_primary": "Nơi làm việc chính",
+  "history.field.employment_status": "Tình trạng việc làm",
+  "history.field.started_precision": "Độ chính xác ngày bắt đầu",
+  "history.field.ended_precision": "Độ chính xác ngày kết thúc",
   "history.field.win_probability_override": "Xác suất đặt cho deal",
   "history.field.win_probability_set_by": "Xác suất do ai đặt",
   "history.field.fx_rate_date": "Ngày tỷ giá",
@@ -3068,14 +3086,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "board.count_other": "{count} deal",
   "board.weightedLabel": "có trọng số",
   "board.ratesOn": "Tỷ giá {date}",
-  "board.unpriced_one": "{count} chưa định giá",
-  "board.unpriced_other": "{count} chưa định giá",
+  "coverage.noRate_one": "{count} deal chưa có tỷ giá{currencies}",
+  "coverage.noRate_other": "{count} deal chưa có tỷ giá{currencies}",
+  "coverage.noValue_one": "{count} deal chưa có giá trị",
+  "coverage.noValue_other": "{count} deal chưa có giá trị",
+  "coverage.partial": "Một phần",
+  "coverage.partialTip": "Tổng một phần: không gồm các deal này.",
   "board.totalsTip":
     "{total} đang mở, {weighted} có trọng số theo xác suất của từng deal.",
-  "board.unpricedTip_one":
-    "{count} deal chưa có giá và không được tính vào hai tổng.",
-  "board.unpricedTip_other":
-    "{count} deal chưa có giá và không được tính vào hai tổng.",
   "board.convertedTip": "Đã quy đổi theo tỷ giá ngày {date}.",
   "board.matchesIn_one": "{count} kết quả ở cột {columns}",
   "board.matchesIn_other": "{count} kết quả ở cột {columns}",
@@ -3500,6 +3518,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Máy chủ xử lý quá lâu nên đã dừng yêu cầu này. Hãy thử lại sau giây lát.",
   "common.individualPerformanceOff":
     "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên. Toàn bộ dự báo bị ẩn nếu một nhóm trong đó có thể cho thấy số liệu của riêng một đồng nghiệp.",
+  "common.ownerNotMeasurable":
+    "Bạn không được xem số liệu của người chịu trách nhiệm này. Hãy bỏ bộ lọc theo người chịu trách nhiệm, hoặc liên hệ quản trị viên để mở rộng phạm vi của bạn.",
   "common.permissionDenied":
     "Bạn không có quyền thực hiện thao tác này. Liên hệ quản trị viên hoặc người đã chia sẻ hồ sơ này để được cấp thêm quyền.",
   "common.seatReadOnly":
@@ -4091,8 +4111,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.lastMetToday": "Đã họp hôm nay.",
   "co.health.reason.lastMet_one": "Lần họp gần nhất cách đây {days} ngày.",
   "co.health.reason.lastMet_other": "Lần họp gần nhất cách đây {days} ngày.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "Vẫn có liên lạc, nhưng toàn bộ quan hệ với công ty chỉ dựa vào một liên hệ.",
+  "co.health.reason.singleThreaded_other":
+    "Vẫn có liên lạc, nhưng toàn bộ quan hệ với công ty chỉ dựa vào {count} liên hệ.",
   "co.health.reason.severalContacts_one":
     "{count} liên hệ ở đây đang giữ liên lạc.",
   "co.health.reason.severalContacts_other":
@@ -4803,6 +4825,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
+  "approval.kind.edit_access": "Cấp quyền chỉnh sửa",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.legal_review_request": "Yêu cầu rà soát pháp lý",
   "approval.kind.task_due_date": "Kiểm tra hạn",
@@ -5398,6 +5421,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.domainContacts.changed":
     "Danh sách đã thay đổi khi đang mở. Kiểm tra lại lựa chọn rồi gắn lại.",
   "co.domainContacts.dismiss": "Để sau",
+  "company.duplicates.entry_one": "Có thể trùng ({count})",
+  "company.duplicates.entry_other": "Có thể trùng ({count})",
+  "company.duplicates.title": "Công ty có thể trùng",
+  "company.duplicates.lead":
+    "Các công ty này giống công ty này. Mở một công ty để so sánh.",
+  "company.duplicates.created": "Đã có một công ty trùng tên này.",
   "co.domainContacts.link_one": "Gắn {count} liên hệ",
   "co.domainContacts.link_other": "Gắn {count} liên hệ",
   "co.domainContacts.linkNone": "Gắn liên hệ",
@@ -5913,6 +5942,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.bulkAssignedDone_other": "Đã giao {count} lead cho {owner}.",
   "lead.bulkDisqualifiedDone_one": "Đã loại {count} lead.",
   "lead.bulkDisqualifiedDone_other": "Đã loại {count} lead.",
+  "lead.bulkAssignTitle_one": "Giao lead này cho {owner}?",
+  "lead.bulkAssignTitle_other": "Giao {count} lead cho {owner}?",
   "lead.bulkFailed": "Không thể áp dụng cho {count} lead:",
   "lead.bulkFailedRow": "không thể lưu",
   "lead.bulkOutcomeConflict": "người khác đã thay đổi trong lúc đó",
@@ -6700,6 +6731,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.bulkStage": "Chuyển sang giai đoạn",
   "deals.bulkStagePick": "Chọn giai đoạn",
   "deals.bulkMove": "Chuyển",
+  "deals.bulkMoveTitle_one": "Chuyển {count} deal sang {stage}?",
+  "deals.bulkMoveTitle_other": "Chuyển {count} deal sang {stage}?",
+  "deals.bulkMoveWill_one": "{count} deal sẽ chuyển sang {stage}.",
+  "deals.bulkMoveWill_other": "{count} deal sẽ chuyển sang {stage}.",
   "deals.bulkMoved_one": "Đã chuyển {count} deal sang {stage}.",
   "deals.bulkMoved_other": "Đã chuyển {count} deal sang {stage}.",
   "deals.bulkAlreadyThere_one": "{count} deal đã ở {stage} từ trước.",
@@ -7542,7 +7577,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.city": "Thành phố",
   "create.region": "Tỉnh hoặc vùng",
   "create.postalCode": "Mã bưu chính",
-  "create.country": "Mã quốc gia (ISO 3166)",
+  "create.country": "Quốc gia",
   "create.companyName": "Công ty",
   "create.companyPicked": "Thêm liên hệ vào công ty có sẵn này.",
   "create.companyNew":
@@ -7564,8 +7599,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hãy nhập đường liên kết tới hồ sơ cá nhân, ví dụ linkedin.com/in/ten.",
   "create.dateRangeReversed":
     "Ngày kết thúc đứng trước ngày bắt đầu. Hãy chọn ngày kết thúc muộn hơn.",
-  "create.countryCodeInvalid":
-    "Hãy nhập quốc gia bằng mã hai chữ cái, ví dụ DE hoặc US.",
   "create.referenceNotFound":
     "Bản ghi này không còn tồn tại hoặc bạn không thể xem.",
   "create.currency": "Loại tiền",
@@ -7741,6 +7774,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "chatCapture.readBadge": "AI sao chép từ ảnh chụp màn hình",
   "chatCapture.channel": "Ứng dụng chat",
   "chatCapture.file": "Lưu vào liên hệ này",
+  "chatCapture.fileOnLead": "Lưu vào lead này",
+  "chatCapture.fileOnDeal": "Lưu vào deal này",
   "chatCapture.fileFailed": "Không lưu được cuộc trò chuyện",
 
   // Thêm một tài liệu. Câu hỏi "Thuộc về đâu" mới là quyết định thật: chỉ tài
@@ -7867,6 +7902,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
     "Tệp sẽ bị gỡ khỏi deal này và bên mua sẽ không còn thấy tệp trong bất kỳ Deal Room nào. Mục trong Deal Room vẫn còn cho đến khi bạn gỡ nó.",
+  "files.edit": "Chỉnh sửa",
+  "files.editTitle": "Chỉnh sửa {name}",
+  "files.editState": "Trạng thái",
+  "files.save": "Lưu",
+  "files.deleteBodyRecord": "Tệp sẽ bị gỡ khỏi tài liệu của hồ sơ này.",
   "files.showHidden": "Hiển thị tệp đã ẩn",
   "files.hideHidden": "Thôi hiển thị tệp đã ẩn",
   "dealfiles.origin.from": "Từ {who}",
@@ -8002,6 +8042,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "handover.withdraw": "Rút lại đề nghị",
   "handover.sent": "Đã gửi đề nghị tới {owner}",
   "handover.withdrawn": "Đã rút lại đề nghị",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "Xin {owner} quyền chỉnh sửa",
+  "editAccess.requested":
+    "Bạn đã xin {owner} quyền chỉnh sửa. Yêu cầu còn hiệu lực đến {date}.",
+  "editAccess.withdraw": "Rút yêu cầu quyền chỉnh sửa",
+  "editAccess.sent": "Đã xin {owner} quyền chỉnh sửa",
+  "editAccess.withdrawn": "Đã rút yêu cầu quyền chỉnh sửa",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Chuyển giao cho…",
   "handover.offerTo": "Giao cho",
@@ -8560,6 +8607,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapable":
     "Hộp thư chỉ được kết nối để thu thập, không có quyền gửi. Kết nối lại và cho phép gửi; hộp thư kết nối từ trước khi có tính năng gửi không thể nâng cấp trực tiếp.",
   "compose.mailboxNotSendCapableGoto": "Kết nối lại hộp thư",
+  "compose.mailboxNotConnected":
+    "Chưa kết nối hộp thư nào. Hãy kết nối một hộp thư để gửi từ Margince.",
+  "compose.mailboxNotConnectedGoto": "Kết nối hộp thư",
   "compose.sharedUnsubscribeToken":
     "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",
@@ -8644,7 +8694,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.count": "Deal đang mở",
   "analytics.unweighted": "Giá trị deal",
   "analytics.weighted": "Giá trị điều chỉnh theo xác suất",
-  "analytics.priced": "{priced}/{total} có giá",
   "analytics.planNote":
     "Kế hoạch đã chạy và các dòng dùng để đối chiếu con số này",
   "analytics.reportDeals": "Deal đang mở theo giai đoạn",
@@ -9194,7 +9243,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.forecastDeals_other": "{count} deal",
   "analytics.forecastNoAmount": "Không có số tiền",
   "analytics.forecastWeighted": "{amount} có trọng số",
-  "analytics.forecastPriced": "{priced}/{count} có giá",
   "analytics.readingNone": "Không có",
   "analytics.readingLoading": "Đang tải",
   "analytics.readingUnavailable": "Không khả dụng",
@@ -9214,7 +9262,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.share.linkWarning":
     "Liên kết chỉ hiển thị một lần. Sao chép ngay; sau này không thể lấy lại.",
   "analytics.share.leaveWarning":
-    "Rời đi mà không sao chép sẽ hủy liên kết, và phải tạo liên kết mới.",
+    "Nếu rời đi mà không sao chép, liên kết sẽ không thể hiển thị lại. Liên kết vẫn mở cho đến khi hết hạn, bạn đóng nó trong Liên kết đã chia sẻ, hoặc bạn mất quyền truy cập dự báo.",
   "analytics.share.copy": "Sao chép liên kết",
   "analytics.share.copied": "Đã sao chép",
   "analytics.share.copyFailed": "Chọn liên kết ở trên và sao chép thủ công.",
@@ -10716,10 +10764,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể ghi “{value}”: trường này không còn hoạt động.",
   "import.reason.id_not_a_company_id":
     "“{value}” không phải mã công ty. Hãy xuất danh sách công ty để lấy mã, hoặc để trống cột để nhập hàng này làm công ty mới.",
+  "import.reason.id_not_a_record_id":
+    "“{value}” không phải mã bản ghi. Hãy xuất danh sách để lấy mã, hoặc để trống cột để nhập hàng này làm bản ghi mới.",
+  "import.reason.id_record_not_visible":
+    "Không có bản ghi nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
+  "import.reason.ref_taken_by_another_record":
+    "Tham chiếu “{ref}” đã đại diện cho một bản ghi khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho hàng này hoặc sửa cột mã.",
   "import.reason.id_not_visible":
     "Không có công ty nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
   "import.reason.id_on_non_company":
-    "Chỉ hàng công ty mới có thể nêu “{column}”; hàng {object} được nhận diện bằng khóa riêng.",
+    "Chỉ hàng công ty, liên hệ, lead hoặc deal mới có thể nêu “{column}”; hàng {object} được nhận diện bằng khóa riêng.",
   "import.reason.link_ambiguous":
     "Có nhiều hơn một công ty tên “{name}” nên cần một thành viên trong nhóm quyết định công ty nào thuê liên hệ này.",
   "import.reason.link_ambiguous_dropped":
@@ -11092,6 +11146,40 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.recoveryHealth": "Diễn tập khôi phục",
   "settings.recoveryHealthSub":
     "Lần gần nhất diễn tập khôi phục từ bản sao lưu và thời gian thực hiện.",
+  "settings.vacuumHealth": "Dung lượng bảng",
+  "settings.vacuumHealthSub":
+    "Các bảng có tệp chứa nhiều chỗ trống không có hàng còn sống. Margince không tự chạy việc dọn dẹp.",
+  "vacuumHealth.adminOnly":
+    "Dung lượng bảng áp dụng cho toàn bộ bản cài đặt và cần một quyền mà vai trò của bạn không có.",
+  "vacuumHealth.scope":
+    "Chỉ tính tệp riêng của bảng. Các chỉ mục và vùng lưu riêng cho giá trị dài (TOAST) không được tính.",
+  "vacuumHealth.thresholds":
+    "Một bảng được liệt kê khi ít nhất {percent} tệp của nó, và ít nhất {size}, không chứa hàng còn sống. Các kích thước là ước tính từ thống kê của cơ sở dữ liệu.",
+  "vacuumHealth.empty":
+    "Không có bảng nào có nhiều chỗ trống như vậy. Không cần chạy gì.",
+  "vacuumHealth.unmeasured_one":
+    "{count} bảng lớn chưa có thống kê nên chưa có ước tính. Cơ sở dữ liệu thu thập thống kê khi phân tích bảng lần tới.",
+  "vacuumHealth.unmeasured_other":
+    "{count} bảng lớn chưa có thống kê nên chưa có ước tính. Cơ sở dữ liệu thu thập thống kê khi phân tích bảng lần tới.",
+  "vacuumHealth.col.table": "Bảng",
+  "vacuumHealth.col.size": "Kích thước",
+  "vacuumHealth.col.waste": "Chỗ trống không có hàng còn sống",
+  "vacuumHealth.col.run": "Lệnh cần chạy",
+  "vacuumHealth.runAs": "Chạy với vai trò {owner}.",
+  "vacuumHealth.copy": "Sao chép lệnh",
+  "vacuumHealth.copied": "Đã sao chép",
+  "vacuumHealth.copyRemedy": "Chọn lệnh và sao chép thủ công.",
+  "vacuumHealth.howTitle": "Cách chạy",
+  "vacuumHealth.step.window":
+    "Lên lịch một khung giờ bảo trì. VACUUM FULL khóa bảng trong khi chạy, nên không ai đọc hoặc sửa được bảng cho đến khi xong.",
+  "vacuumHealth.step.disk":
+    "Kiểm tra dung lượng đĩa còn trống. Việc ghi lại cần chỗ cho một bản sao mới của bảng và các chỉ mục.",
+  "vacuumHealth.step.owner":
+    "Kết nối cơ sở dữ liệu bằng vai trò ghi ở hàng đó. Vai trò này sở hữu bảng; vai trò mà Margince dùng không làm được việc này.",
+  "vacuumHealth.step.run":
+    "Chạy lệnh. Lệnh cũng làm mới thống kê, nên bảng sẽ rời danh sách này ở lần đọc sau.",
+  "vacuumHealth.repack":
+    "Để tránh khóa, công cụ pg_repack ghi lại bảng trong khi bảng vẫn được dùng. Công cụ này phải được cài trên máy chủ cơ sở dữ liệu.",
   "settings.automaticWork": "Việc tự động",
   "settings.automaticWorkSub":
     "Những việc Margince tự giao cho từng đồng nghiệp, và bao nhiêu trong số đó họ nói không thuộc về họ.",
@@ -12349,6 +12437,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "backfill.narrowingNote":
     "Hộp thư này đã lấy thư từ một mốc xa hơn. Chọn khoảng thời gian bằng hoặc dài hơn.",
   "backfill.staleUpdated": "Không có tiến triển trong {duration}.",
+  "backfill.restartedNote":
+    "Đợt nhập đã bắt đầu lại vì hộp thư mất vị trí đang đọc. Số email được đếm lại từ đầu; các liên hệ đã tìm thấy vẫn được giữ.",
+  "backfill.retryNote":
+    "Đợt nhập gặp sự cố kết nối và đang thử lại. Trang cuối được đọc lại nên email của trang đó được đếm lại.",
   "backfill.countScanned_one": "Đã kiểm tra {count} email",
   "backfill.countScanned_other": "Đã kiểm tra {count} email",
   "backfill.errorResumeNote":
@@ -12727,10 +12819,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSecretHint":
     "Dùng mật khẩu riêng cho ứng dụng. Mật khẩu được lưu trong kho khóa và dùng để đọc thư theo lịch cho đến khi ngắt kết nối; ngắt kết nối sẽ xóa mật khẩu.",
   "connectors.imapSubmitCta": "Kết nối",
-  "connectors.imapNeeded": "Trường bắt buộc",
-  "connectors.imapStillNeeded": "Bắt buộc: {fields}",
-  "connectors.imapRange": "Từ {min} đến {max}",
-  "connectors.imapOutOfRange": "Ngoài phạm vi: {fields}",
+  "connectors.imapHostName": "Chỉ nhập tên máy chủ, ví dụ imap.example.com.",
+  "connectors.imapSecretEmptied": "Đã xóa sau lần thử lỗi. Hãy nhập lại.",
   "connectors.imapLoginRejected":
     "Hộp thư từ chối thông tin đăng nhập này. Kiểm tra máy chủ, email và mật khẩu ứng dụng.",
   "connectors.imapUnreachable":
@@ -14038,6 +14128,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã ghi nhận câu trả lời. Nhân viên phụ trách sẽ xử lý yêu cầu của quý khách: chỉnh sửa thông tin trong 10 ngày và xóa thông tin trong 20 ngày. Nếu cần thêm thời gian, quý khách sẽ được báo lý do. Liên kết này đã hết lượt dùng.",
   "confirm.invalidLink":
     "Liên kết này không còn hiệu lực. Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
+  "confirm.deadLinkBody":
+    "Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
   "confirm.questionChanged":
     "Câu hỏi trên trang này đã thay đổi sau khi quý khách mở trang. Vui lòng tải lại trang và trả lời lại.",
   "prefs.lockedWhy": "Cần thiết cho việc quý khách đã yêu cầu, nên vẫn bật.",
@@ -14501,7 +14593,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.customField": "Trường tùy chỉnh",
   "audit.kind.activity_review_template": "Mẫu đánh giá hoạt động",
   "audit.kind.agent_standing_grant": "Quyền thường trực của trợ lý AI",
-  "audit.kind.ai_call": "Lượt gọi AI",
   "audit.kind.ai_feedback": "Phản hồi về AI",
   "audit.kind.ai_model_rate": "Giá mô hình AI",
   "audit.kind.analytics_share": "Báo cáo được chia sẻ",
@@ -14528,7 +14619,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.communication_instruction": "Chỉ dẫn liên lạc",
   "audit.kind.communication_review": "Xem lại liên lạc",
   "audit.kind.communication_suppression": "Chặn liên lạc",
-  "audit.kind.company_domain_question_reader": "Câu hỏi về tên miền công ty",
   "audit.kind.confirm_token": "Liên kết xác nhận",
   "audit.kind.consent_text_version": "Phiên bản nội dung đồng ý",
   "audit.kind.contact_acquisition_evidence": "Bằng chứng nguồn liên hệ",
@@ -14640,6 +14730,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.audit.footer":
     "Mọi lần thêm, sửa và chuyển vào kho lưu trữ đều được ghi vĩnh viễn vào nhật ký hoạt động.",
   "cf.retired": "Đã ngừng dùng",
+  "cf.retiredLabel": "{label} (đã ngừng dùng)",
   "cf.retire.title": "Chuyển “{label}” vào kho lưu trữ?",
   "cf.retire.body":
     "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ. Không thể hoàn tác việc lưu trữ.",
@@ -16657,6 +16748,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.pipelineBasisWhy.manager_call": "Đo theo nhận định của kỳ này.",
   "forecast.pipelineBasisWhy.historical_median":
     "Đo theo trung vị của 4 kỳ tương đương gần nhất.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} deal thắng trong các kỳ đó chưa có số tiền hoặc tỷ giá và không nằm trong trung vị.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} deal thắng trong các kỳ đó chưa có số tiền hoặc tỷ giá và không nằm trong trung vị.",
   "forecast.pipelineAbsentTitle": "Không có số liệu độ bao phủ cho kỳ này",
   "forecast.pipelineAbsent.call_withheld":
     "Nhận định của quản lý không hiển thị ở đây, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
@@ -16960,6 +17055,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cuộc họp xuất hiện trên liên hệ và giao dịch, và liên kết đặt lịch của bạn chỉ đưa ra những giờ bạn rảnh.",
   "connectFlow.calendarImap": "Không khả dụng qua IMAP.",
   "connectFlow.pickService": "Chọn Thư, Lịch hoặc cả hai.",
+  "connectFlow.pickMail": "Chọn Thư.",
   "connectFlow.importLabel": "Nhập email cũ",
   "connectFlow.importNone": "Không nhập",
   "connectFlow.importAfter":
@@ -17581,7 +17677,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm kiếm và truy xuất không có mức suy nghĩ hay thời gian chờ để thiết lập. Đổi nhà cung cấp và mô hình ở dòng Mô hình embedding trong Cấp mô hình.",
   "workingHours.unsetTitle": "Chưa thiết lập",
   "workingHours.unset":
-    "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu, theo múi giờ của bản cài đặt.",
+    "Khách hàng được đề xuất khung 09:00 đến 17:00, thứ Hai đến thứ Sáu.",
   "workingHours.narrowedTitle": "Ít giờ nhận đặt lịch hơn",
   "workingHours.narrowed": "Khách hàng có ít khung giờ để chọn hơn.",
   "workingHours.day.1": "Thứ Hai",
@@ -17921,6 +18017,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "capturePurge.preview": "Kiểm tra trước",
   "capturePurge.confirm": "Xóa vĩnh viễn",
   "capturePurge.done": "Đóng",
+  "capturePurge.recheck": "Kiểm tra lại",
+  "capturePurge.changed":
+    "Thư đã thay đổi kể từ lần kiểm tra. Hãy xem số lượng bên dưới trước khi xóa.",
   "capturePurge.failed":
     "Chưa xóa xong. Một số thư có thể đã bị xóa vĩnh viễn. Kiểm tra lại để xem còn lại những gì.",
   "capturePurge.refused":
@@ -17972,7 +18071,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.containersUnreadableBody":
     "Nhà cung cấp thư không phản hồi, nên danh sách này có thể thiếu thư mục. Thử lại sau giây lát, hoặc loại trừ theo địa chỉ hay tên miền.",
   "captureExclusions.kindLabel": "Loại",
-  "captureExclusions.addLabel": "Loại trừ địa chỉ hoặc tên miền",
+  "captureExclusions.title.address": "Loại trừ một địa chỉ",
+  "captureExclusions.title.domain": "Loại trừ một tên miền",
+  "captureExclusions.title.container": "Loại trừ một thư mục hoặc nhãn",
+  "captureExclusions.field.address": "Địa chỉ",
+  "captureExclusions.field.domain": "Tên miền",
+  "captureExclusions.noMailbox": "Hãy kết nối hộp thư trước.",
   "captureExclusions.placeholder.address": "ten@example.com",
   "captureExclusions.placeholder.domain": "vidu.com",
   "captureExclusions.add": "Loại trừ",
@@ -19530,7 +19634,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Mối quan hệ đang thế nào",
   "contact.standing.dim.promises": "Cam kết của bạn",
   "contact.standing.dim.promisesNone": "Không có cam kết mở",
-  "contact.standing.dim.promisesUncounted": "Quá nhiều việc để đếm",
   "standing.overdue_one": "{count} quá hạn",
   "standing.overdue_other": "{count} quá hạn",
   "standing.ofOpen_one": "trong {count} đang mở",
@@ -20678,6 +20781,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mới có 1 liên hệ. Thêm liên hệ thứ hai.",
   "deal.committee.missing.secondEngaged":
     "Chưa tới 2 liên hệ đang tương tác. Tiếp cận thêm một liên hệ.",
+  "deal.committee.missing.anotherContact":
+    "Còn quá ít liên hệ. Thêm một liên hệ nữa.",
+  "deal.committee.missing.anotherEngaged":
+    "Còn quá ít liên hệ đang tương tác. Tiếp cận thêm một liên hệ.",
   "deal.committee.foot":
     "{named} người được nêu tên · {engaged}/{named} đang tương tác",
   "deal.brief.title": "Deal này là gì",
@@ -22232,6 +22339,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.archive_deal": "Đã chuyển deal vào kho lưu trữ",
   "magic.action.archive_lead": "Đã chuyển lead vào kho lưu trữ",
   "magic.action.archive_project": "Đã chuyển dự án vào kho lưu trữ",
+  "magic.action.create_offer": "Đã tạo báo giá cho",
+  "magic.action.update_offer": "Đã thay đổi báo giá của",
+  "magic.action.archive_offer": "Đã lưu trữ báo giá của",
+  "magic.action.create_contract": "Đã thêm hợp đồng vào",
+  "magic.action.update_contract": "Đã thay đổi hợp đồng của",
+  "magic.action.archive_contract": "Đã lưu trữ hợp đồng của",
+  "magic.action.create_deal_room": "Đã mở deal room cho",
+  "magic.action.update_deal_room": "Đã thay đổi deal room của",
+  "magic.action.archive_deal_room": "Đã lưu trữ deal room của",
+  "magic.action.create_stage_evidence": "Đã ghi nhận bằng chứng giai đoạn cho",
+  "magic.action.update_stage_evidence": "Đã thay đổi bằng chứng giai đoạn của",
+  "magic.action.archive_stage_evidence": "Đã rút bằng chứng giai đoạn của",
+  "magic.action.create_introduction": "Đã đề nghị giới thiệu tới",
+  "magic.action.update_introduction": "Đã thay đổi lượt giới thiệu tới",
+  "magic.action.archive_introduction": "Đã lưu trữ lượt giới thiệu tới",
+  "magic.action.create_assignment": "Đã giao vai trò trong",
+  "magic.action.update_assignment": "Đã thay đổi vai trò trong",
+  "magic.action.archive_assignment": "Đã gỡ vai trò trong",
+  "magic.action.create_attachment": "Đã thêm tệp vào",
+  "magic.action.update_attachment": "Đã thay đổi tệp của",
+  "magic.action.archive_attachment": "Đã lưu trữ tệp của",
   "magic.action.archive_activity":
     "Đã chuyển email hoặc cuộc họp vào kho lưu trữ",
   "magic.action.archive_activity_email": "Đã chuyển email vào kho lưu trữ",
@@ -22429,6 +22557,31 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Địa chỉ ngắn {url} của bạn cũng ngừng hoạt động. Bạn có thể chọn lại sau đó.",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
+  "scheduling.team.title": "Đồng nghiệp trên liên kết này",
+  "scheduling.team.foot":
+    "Khách chỉ thấy những khung giờ mà bạn và mọi đồng nghiệp ở đây đều rảnh, theo giờ làm việc riêng của từng đồng nghiệp. Mỗi lượt đặt lịch đều mời tất cả đồng nghiệp.",
+  "scheduling.team.add": "Thêm đồng nghiệp",
+  "scheduling.team.addHelp":
+    "Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
+  "scheduling.team.full": "Liên kết này đã có năm đồng nghiệp, là số tối đa.",
+  "scheduling.team.choose": "Chọn đồng nghiệp",
+  "scheduling.team.noneToAdd": "Không có đồng nghiệp nào khác đã kết nối lịch",
+  "scheduling.team.remove": "Gỡ",
+  "scheduling.team.pending": "Đang chờ xác nhận",
+  "scheduling.team.confirmed": "Đã xác nhận",
+  "scheduling.team.left": "Đã rời liên kết",
+  "scheduling.team.unavailable":
+    "Không khả dụng: không còn là thành viên hoặc không đọc được lịch",
+  "scheduling.team.requestsTitle": "Liên kết của đồng nghiệp có tên bạn",
+  "scheduling.team.requestLabel": "{title} với {name}",
+  "scheduling.team.requestPending":
+    "Xác nhận để khách đặt được những khung giờ bạn rảnh. Bạn được mời vào mọi cuộc họp đặt qua liên kết này.",
+  "scheduling.team.requestConfirmed":
+    "Khách đặt những khung giờ bạn rảnh. Bạn được mời vào mọi cuộc họp đặt qua liên kết này.",
+  "scheduling.team.confirm": "Xác nhận",
+  "scheduling.team.leave": "Rời",
+  "worklist.untitled.booking_health_team_not_ready":
+    "Trang đặt lịch của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
   "scheduling.personalLinksFoot":
     "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",
   "scheduling.liveNoInvitesTitle":
@@ -22571,6 +22724,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "saveBar.save": "Lưu",
   "saveBar.discard": "Hủy thay đổi",
   "saveBar.unsaved": "Thay đổi chưa lưu",
+  "saveBar.offered": "Lưu để giữ các giá trị này.",
   "saveBar.invalid": "Sửa các ô được đánh dấu để lưu.",
   "privacy.typeErasePrompt": "Nhập từ này để xác nhận:",
   "aiFigures.window.24h": "24 giờ",
@@ -22942,6 +23096,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalReview.docState.final": "Bản cuối",
   "legalReview.advanceRefused":
     "Giai đoạn này cần pháp lý phê duyệt trước. Hãy yêu cầu rà soát pháp lý, rồi chuyển deal.",
+  "legalReview.advanceRefused.pending":
+    "Giai đoạn này cần pháp lý phê duyệt trước. Yêu cầu rà soát vẫn đang chờ pháp lý trả lời.",
+  "legalReview.advanceRefused.changesNeeded":
+    "Giai đoạn này cần pháp lý phê duyệt trước. Pháp lý đã yêu cầu thay đổi: hãy thực hiện, rồi yêu cầu rà soát lại.",
+  "legalReview.advanceRefused.termsChanged":
+    "Số tiền hoặc báo giá đã thay đổi kể từ khi pháp lý phê duyệt. Hãy yêu cầu rà soát lại, rồi chuyển deal.",
   "legalReview.packHistory": "Lịch sử giai đoạn",
   "legalReview.enteredStage": "{stage}, vào lúc {date}",
   "legalReview.settingsTitle": "Rà soát pháp lý",
@@ -23012,6 +23172,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
   "aiTask.name.rewrite": "Viết lại",
   "aiTask.name.chat_summary": "Tóm tắt kênh chat",
+  "aiTask.name.chat_task_reading": "Cuộc trò chuyện và việc cần làm đang mở",
   "aiTask.name.signal_extract": "Trích xuất tín hiệu từ cuộc trao đổi",
   "aiTask.name.site_extract": "Phân tích chuyên sâu trang web",
   "aiTask.name.site_fact_extract": "Trích xuất thông tin từ trang web",
@@ -23450,6 +23611,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm kiếm có thể bỏ sót bản ghi cho đến khi chỉ mục bắt kịp. Bản thân các bản ghi vẫn được lưu.",
   "health.effect.updates":
     "Các thay đổi do bản cập nhật này xử lý vẫn chưa hoàn tất. Thay đổi đã lưu vẫn được giữ; một số bản ghi có thể còn giá trị cũ.",
+  "health.effect.updatesAction":
+    "Bản cập nhật đã hoàn tất. Một số bản ghi tìm thấy vẫn đang chờ được xử lý.",
   "health.effect.recovery":
     "Công việc CRM bình thường vẫn có thể tiếp tục. Khi xảy ra sự cố, khôi phục có thể lâu hơn hoặc mất nhiều dữ liệu mới hơn mức mục tiêu cho phép.",
   "health.effect.automatic":
@@ -23655,6 +23818,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.code.updates_retrying":
     "Bản cập nhật dữ liệu đã ghi nhận lần thử khác",
   "health.code.updates_review": "Bản cập nhật dữ liệu cần quản trị viên duyệt",
+  "health.code.updates_action":
+    "Một bản cập nhật dữ liệu đã hoàn tất nhưng còn để lại bản ghi cần được xử lý",
   "health.code.recovery_missing": "Chưa ghi nhận thử khôi phục",
   "health.code.recovery_verified":
     "Diễn tập khôi phục đã ghi nhận đạt mục tiêu",

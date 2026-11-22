@@ -215,6 +215,8 @@ connected only to read mail, without permission to send. Reconnect it and allow
 sending. A mailbox you connected before Margince could send cannot be changed in
 place. The **Reconnect your mailbox** link opens Settings → Connections.
 
+**No mailbox connected.** The composer says "No mailbox is connected" above the fields. **Connect a mailbox** opens Settings → Connections. Until you connect one, Send is refused with the same line.
+
 **Company footer.** Business mail carries the company name, address and privacy contact. When one is missing, the bar says so. An admin fills them in once under **Settings → Company**, and every later email carries the footer.
 
 Mail to several contacts keeps To, Cc and Bcc as written and leaves out private links. Read and confirm this with your reason. A contact's private link is never shared.
@@ -284,7 +286,7 @@ reason says which, and what to do:
 - **Your seat or mailbox changed**, so it cannot be sent as you.
 - **Its send time passed** while the system was not running, and it is now too late to send. Reschedule or withdraw it.
 - **The send job ran out of attempts.** Reschedule it to try again.
-- **A check blocked it when it was due.** Nothing was sent.
+- **A check blocked it when it was due.** Nothing was sent. This includes a "Send anyway" approval that no longer matches the message because the recipients, the wording or the checks changed. Open the review and approve the message again.
 
 When a check blocked a held message and you may still send it, the row offers **Send with a recorded exception**. The dialog asks when to send. **Send now** sends it at once. **At a later time** records your decision now and keeps the message waiting for the date and time you pick. The checks run again then, and your decision is used once.
 

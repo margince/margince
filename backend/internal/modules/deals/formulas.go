@@ -56,16 +56,24 @@ func IsQuietFor(days int, status string, createdAt time.Time, lastActivityAt, wa
 	if DealStatus(status) != DealOpen {
 		return false // closed deals never stall
 	}
-	if meetingAhead {
-		return false // the next contact is already booked
-	}
 	if now.Sub(idlebase.Since(createdAt, lastActivityAt)) <= time.Duration(days)*24*time.Hour {
 		return false
 	}
-	if waitUntil != nil && now.Before(*waitUntil) {
-		return false // respecting an explicit deferral
-	}
-	return true
+	return !QuietSuppressed(waitUntil, meetingAhead, now)
+}
+
+// QuietSuppressed says a running pause or a meeting booked ahead silences every
+// "gone quiet" rule at now, whatever its window. waitUntil is PauseEndsSQL's
+// instant; meetingAhead is MeetingAheadSQL's answer.
+func QuietSuppressed(waitUntil *time.Time, meetingAhead bool, now time.Time) bool {
+	return meetingAhead || (waitUntil != nil && now.Before(*waitUntil))
+}
+
+// QuietSuppressedSQL is QuietSuppressed judged at the SQL instant named. It is
+// never NULL, so a caller may scan it into a bool.
+func QuietSuppressedSQL(alias, instant string) string {
+	return fmt.Sprintf(`(%[1]s OR (%[2]swait_until IS NOT NULL AND %[3]s < %[4]s))`,
+		MeetingAheadSQL(alias), columnPrefix(alias), instant, PauseEndsSQL(alias))
 }
 
 // StalledSQL is the list-filter spelling of IsStalled (true branch);
@@ -92,10 +100,9 @@ func QuietSQL(alias string, days int) string {
 // quietAtSQL is QuietSQL judged at the instant the SQL expression instant names.
 func quietAtSQL(alias string, days int, instant string) string {
 	return fmt.Sprintf(`(%[1]sstatus = 'open'
-		AND %[3]s < %[5]s - interval '%[2]d days'
-		AND (%[1]swait_until IS NULL OR %[6]s <= %[5]s)
-		AND NOT %[4]s)`,
-		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant, PauseEndsSQL(alias))
+		AND %[3]s < %[4]s - interval '%[2]d days'
+		AND NOT %[5]s)`,
+		columnPrefix(alias), days, idlebase.SQL(alias), instant, QuietSuppressedSQL(alias, instant))
 }
 
 // PauseEndsSQL is the instant a deal's pause ends. That is the start of the

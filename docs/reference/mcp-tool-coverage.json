@@ -8263,7 +8263,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4459,
+      "tokens": 4494,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -8801,7 +8801,7 @@
     },
     {
       "name": "read_view",
-      "tokens": 1915,
+      "tokens": 1920,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -9015,26 +9015,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "change_offers",
-      "tokens": 1096,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case71_record_the_signed_contract"
-      ],
-      "called_in_held_runs": [
-        "case71_record_the_signed_contract"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {}
-    },
-    {
       "name": "change_access",
-      "tokens": 1074,
+      "tokens": 1152,
       "agents": [],
       "required_by_cases": [
         "case114_the_fleet_team"
@@ -9071,6 +9053,24 @@
           "cases_below_their_bar": []
         }
       }
+    },
+    {
+      "name": "change_offers",
+      "tokens": 1096,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case71_record_the_signed_contract"
+      ],
+      "called_in_held_runs": [
+        "case71_record_the_signed_contract"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
     },
     {
       "name": "read_analytics",
@@ -9621,6 +9621,46 @@
       "measured_by_model": {}
     },
     {
+      "name": "check_availability",
+      "tokens": 375,
+      "agents": [],
+      "required_by_cases": [
+        "case23_find_us_a_slot"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case46_get_us_in_a_room"
+      ],
+      "called_in_held_runs": [
+        "case23_find_us_a_slot",
+        "case46_get_us_in_a_room"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-4-hydrogen-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "read_attention",
       "tokens": 365,
       "agents": [
@@ -9729,46 +9769,6 @@
       "graded_by_certification_tasks": [],
       "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
-    },
-    {
-      "name": "check_availability",
-      "tokens": 342,
-      "agents": [],
-      "required_by_cases": [
-        "case23_find_us_a_slot"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case46_get_us_in_a_room"
-      ],
-      "called_in_held_runs": [
-        "case23_find_us_a_slot",
-        "case46_get_us_in_a_room"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
     },
     {
       "name": "list_documents",

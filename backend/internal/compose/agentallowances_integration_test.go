@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/redistest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -250,7 +251,7 @@ func seedConnectionPassport(t *testing.T, e *integration.Env) (passport, grant i
 		{
 			`INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
 		  VALUES ($1, $2, $2, 'oauth:claude', ARRAY['read']::text[], $3, now() + interval '1 day', $4)`,
-			[]any{passport, e.Rep1, "hash-" + passport.String(), grant},
+			[]any{passport, e.Rep1, storekit.TokenHash(passport.String()), grant},
 		},
 	} {
 		if _, err := e.Pool.Exec(ctx, stmt.sql, stmt.args...); err != nil {

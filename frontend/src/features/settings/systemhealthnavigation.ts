@@ -35,6 +35,7 @@ export function healthSourceForSection(
   if (section === "health.history") return "jobs";
   if (section?.startsWith("embedreindex.")) return "search";
   if (section?.startsWith("recoveryHealth.")) return "recovery";
+  if (section === "settings.vacuumHealth") return "recovery";
   return Object.entries(healthSections).find(([, key]) => key === section)?.[0];
 }
 

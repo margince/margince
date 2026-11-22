@@ -96,6 +96,8 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair. The second one explains
    why it is a file of its own.
 5. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
+   A column that stores the hash of a token is `token_hash bytea` with `CHECK (octet_length(token_hash) = 32)`.
+   Its writers and readers hash through `storekit.TokenHashBytes` (`backend/gates/tokenhashformat_test.go`).
 6. **Record the schema the migrations build.** Run `make db-up`, then run this from `backend/`:
 
    ```sh

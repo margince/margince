@@ -21,7 +21,7 @@ import (
 )
 
 // RefoldClocksTx moves the clock of every contact and company a write filed
-// under targets reaches. The caller has taken storekit.LockLastActivityTargets
+// under targets reaches, and the stored strength dates of its contacts. The caller has taken storekit.LockLastActivityTargets
 // for the whole set.
 func RefoldClocksTx(ctx context.Context, tx pgx.Tx, targets storekit.LastActivityTargets) error {
 	if err := auth.RequireSystem(ctx); err != nil {
@@ -35,7 +35,7 @@ func RefoldClocksTx(ctx context.Context, tx pgx.Tx, targets storekit.LastActivit
 		targets.Contacts, targets.Deals, targets.Companies); err != nil {
 		return fmt.Errorf("contacts: refolding last-activity clocks: %w", err)
 	}
-	return nil
+	return RefreshStrengthDatesTx(ctx, tx, targets.Contacts)
 }
 
 // CompaniesWhoseEmploymentEndedTx answers the next limit companies after

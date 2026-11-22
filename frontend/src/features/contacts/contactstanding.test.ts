@@ -359,7 +359,7 @@ describe("contactDims", () => {
     ]);
   });
 
-  it("reads the count as a floor when open tasks run past the section's cap", () => {
+  it("counts a promise whose task is past the cap once, and not one whose task is done or hidden", () => {
     const task = {
       id: "t-1",
       kind: "task" as const,
@@ -376,16 +376,77 @@ describe("contactDims", () => {
     };
     const view: Contact360 = {
       ...VIEW,
-      claims: [],
-      next_steps: { data: [task], page: { has_more: true } },
+      claims: [
+        {
+          ...promise("c-listed", null),
+          task_activity_id: "t-1",
+          task_open: true,
+        },
+        {
+          ...promise("c-past", null),
+          task_activity_id: "t-past",
+          task_open: true,
+        },
+        {
+          ...promise("c-done", null),
+          task_activity_id: "t-done",
+          task_open: false,
+        },
+        {
+          ...promise("c-hidden", null),
+          task_activity_id: "t-hidden",
+          task_open: false,
+        },
+      ],
+      next_steps: {
+        data: [task, { ...task, id: "t-r", captured_by: "system:renewal" }],
+        page: { has_more: true },
+      },
     };
     expect(contactDims(view, t, "en")[0]).toMatchObject({
       key: "promises",
-      value: "1+ open",
+      value: "2 open",
     });
   });
 
-  it("does not read a capped page of reminders alone as nothing owed", () => {
+  it("reads the count as a floor when colleague-filed tasks run past the cap", () => {
+    const task = (id: string, due: string) => ({
+      id,
+      kind: "task" as const,
+      subject: `Task ${id}`,
+      occurred_at: "2026-08-01T09:00:00Z",
+      occurred_precision: "instant" as const,
+      due_at: due,
+      is_done: false,
+      offers_email: false,
+      source: "manual",
+      captured_by: "human:u-1",
+      created_at: "2026-08-01T09:00:00Z",
+      updated_at: "2026-08-01T09:00:00Z",
+    });
+    const capped = (last: string): Contact360 => ({
+      ...VIEW,
+      claims: [],
+      next_steps: {
+        data: [task("t-1", "2026-08-10T09:00:00Z"), task("t-2", last)],
+        page: { has_more: true },
+      },
+    });
+    expect(
+      contactDims(capped("2026-08-20T09:00:00Z"), t, "en")[0],
+    ).toMatchObject({
+      value: "1 overdue",
+      sub: "of 2+ open · Task t-1",
+    });
+    expect(
+      contactDims(capped("2026-08-11T09:00:00Z"), t, "en")[0],
+    ).toMatchObject({
+      value: "2+ overdue",
+      sub: "of 2+ open · Task t-1",
+    });
+  });
+
+  it("reads a capped page of reminders alone as nothing owed", () => {
     const reminder = {
       id: "t-9",
       kind: "task" as const,
@@ -406,7 +467,7 @@ describe("contactDims", () => {
     };
     expect(contactDims(view, t, "en")[0]).toMatchObject({
       key: "promises",
-      value: "Too many tasks to count",
+      value: t("contact.standing.dim.promisesNone"),
     });
   });
 

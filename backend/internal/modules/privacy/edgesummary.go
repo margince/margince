@@ -90,34 +90,41 @@ func edgeOtherName(edge edgeSubject) string {
 // role, and "linked Acme as co_sell_with" still tells a reader which of the
 // seven kinds of link this was.
 func edgeRoleOrKind(edge edgeSubject, after map[string]any) string {
-	if role, ok := after[relationshipRoleImageKey].(string); ok && role != "" {
+	if role := edgeRoleOf(after); role != "" {
 		return role
 	}
 	return edge.kind
 }
 
-// edgeChangedFields names the fields a patch moved, from the row's own after
-// image — which the edge write has already narrowed to what actually changed, so
-// a role edit does not report the dates.
-//
-// The image is the MASKED one, so a field the entity's mask withholds is not
-// named here either. Sorted, because a map's order would make one event render
-// two ways.
+// edgeChangedFields names the fields a patch moved, from the masked after image
+// the edge write already narrowed to what changed.
 func edgeChangedFields(_ edgeSubject, after map[string]any) string {
-	fields := make([]string, 0, len(after))
-	for field := range after {
-		if field == relationshipKindImageKey {
-			continue
-		}
-		fields = append(fields, field)
-	}
-	// A patch that moved nothing the image reports still happened, and "changed
-	// Acme's link" says exactly that much rather than guessing.
+	fields := edgeChangedFieldNames(after)
+	// A patch that moved nothing the image reports still happened.
 	if len(fields) == 0 {
 		return "link"
 	}
-	sort.Strings(fields)
 	return strings.Join(fields, ", ")
+}
+
+// edgeChangedFieldNames is the sorted field list the sentence above and the
+// wire's changed_fields both read, so the two cannot name different fields.
+func edgeChangedFieldNames(after map[string]any) []string {
+	fields := make([]string, 0, len(after))
+	for field := range after {
+		if field != relationshipKindImageKey {
+			fields = append(fields, field)
+		}
+	}
+	sort.Strings(fields)
+	return fields
+}
+
+// edgeRoleOf reads the role from a MASKED image. Empty means the image does not
+// carry one, which a client reads as "not said" rather than "no role".
+func edgeRoleOf(image map[string]any) string {
+	role, _ := image[relationshipRoleImageKey].(string)
+	return role
 }
 
 // The two keys an edge image always carries. Spelled here rather than imported:

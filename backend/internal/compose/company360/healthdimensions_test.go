@@ -130,6 +130,12 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 			reasonHas: "one contact",
 		},
 		{
+			name: "in touch, but a threshold of two calls two contacts too few", activeContacts: 2, lastInbound: healthDaysAgo(3),
+			singleThreaded: true,
+			want:           crmcontracts.HealthDimensionRatingGood, code: crmcontracts.HealthDimensionReasonCodeSingleThreaded,
+			reasonHas: "only 2 contacts",
+		},
+		{
 			name: "several contacts, recently", activeContacts: 3, lastInbound: healthDaysAgo(3),
 			want: crmcontracts.HealthDimensionRatingStrong, code: crmcontracts.HealthDimensionReasonCodeSeveralContacts,
 			reasonHas: "3 contacts",

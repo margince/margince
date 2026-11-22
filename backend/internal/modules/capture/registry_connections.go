@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -400,6 +401,9 @@ func (r *Registry) withdrawConnection(ctx context.Context, match connectionMatch
 			// before- and after-images are identical, once per retry: a trail that
 			// reads as repeated human acts nobody performed is worse than no trail.
 			return nil
+		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
 		}
 		// Withdrawing a connector is a human's deliberate act over their own
 		// mailbox and is attributed like any other record mutation.

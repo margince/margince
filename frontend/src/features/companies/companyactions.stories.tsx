@@ -153,8 +153,8 @@ export const NewDealNoTarget: Story = {
 };
 
 // Open: the stage select carries both open stages, currency defaults to the
-// first option, and the deal name is still blank — Save stays disabled on
-// the one field the form cannot default.
+// first option, and the deal name is still blank. Create stays enabled and
+// says on press that the name is required.
 //
 // The trigger lives in canvasElement, but CreateAction's modal is Modal
 // (design-system/atoms), which portals to document.body rather than

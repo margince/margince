@@ -62,7 +62,7 @@ func (e *WinEvidenceMissingError) Error() string {
 // refusal reaches a client as an opaque 500 — a rule the product enforces and
 // cannot explain, which teaches a caller to retry rather than to answer.
 func (e *WinEvidenceMissingError) FieldFault() (field, code, message string) {
-	return "won_without_contract_reason", "win_evidence_required", e.Error()
+	return wonWithoutContractReasonField, "win_evidence_required", e.Error()
 }
 
 // InvalidWonReasonError reports a reason outside the closed vocabulary.
@@ -73,7 +73,7 @@ func (e *InvalidWonReasonError) Error() string {
 }
 
 func (e *InvalidWonReasonError) FieldFault() (field, code, message string) {
-	return "won_without_contract_reason", "invalid_enum", e.Error()
+	return wonWithoutContractReasonField, "invalid_enum", e.Error()
 }
 
 // WonReasonDetailRequiredError reports "other" with nothing after it.

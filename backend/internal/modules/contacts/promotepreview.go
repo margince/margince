@@ -30,12 +30,12 @@ func (s *Store) PreviewLeadPromotionWithOptions(ctx context.Context, id ids.Lead
 	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
 		return crmcontracts.PromoteLeadPreview{}, err
 	}
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return crmcontracts.PromoteLeadPreview{}, err
-	}
 	out := crmcontracts.PromoteLeadPreview{Outcome: crmcontracts.PromoteLeadPreviewOutcomePromoteLeadPreviewOutcomeCreate}
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureVisible(ctx, tx, leadEntity, id.UUID); err != nil {
 			return err
 		}

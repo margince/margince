@@ -232,8 +232,8 @@ func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
 	for range 2 {
 		if _, err := e.Pool.Exec(context.Background(), `
 			WITH night AS (
-			    INSERT INTO assurance_cycle (id, scope, opened_by, closed_at)
-			    VALUES (gen_random_uuid(), 'seeded:' || gen_random_uuid()::text, 'system:test', now())
+			    INSERT INTO assurance_cycle (id, scope, closed_at)
+			    VALUES (gen_random_uuid(), 'seeded:' || gen_random_uuid()::text, now())
 			    RETURNING id
 			), copy AS (
 			    INSERT INTO activity (kind, subject, source, captured_by, origin)

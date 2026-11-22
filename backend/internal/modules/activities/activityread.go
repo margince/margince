@@ -77,7 +77,7 @@ func (s *Store) GetActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 // subject of the issue behind this.
 var activitySortFields = map[string]storekit.SortField{
 	"occurred_at": storekit.Column(storekit.KindTimestamp),
-	"due_at":      {Kind: storekit.KindTimestamp, CursorField: "task_due_v2", Expr: func(context.Context, func(any) int) (string, error) { return storekit.TaskDueSQL("a"), nil }},
+	"due_at":      {Kind: storekit.KindTimestamp, CursorField: "task_due_v3", Expr: func(context.Context, func(any) int) (string, error) { return storekit.TaskDueOrderSQL("a"), nil }},
 	"created_at":  storekit.Column(storekit.KindTimestamp),
 	"updated_at":  storekit.Column(storekit.KindTimestamp),
 	"remind_at":   storekit.Column(storekit.KindTimestamp),
@@ -172,11 +172,10 @@ func (s *Store) ListActivities(ctx context.Context, in ListActivitiesInput) ([]c
 	asReminderQueue(ctx, &in)
 	var activities []crmcontracts.Activity
 	var page storekit.Page
-	var err error
-	if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		if in.Columns, err = s.activityColumnsIn(ctx, tx); err != nil {
+			return err
+		}
 		activities, page, err = s.ListActivitiesIn(ctx, tx, in)
 		return err
 	})
@@ -449,17 +448,16 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 	}
 	asReminderQueue(ctx, &in)
 	var total int
-	var err error
-	if len(in.CustomFilters) > 0 {
-		if in.Columns, err = s.ActiveActivityColumns(ctx); err != nil {
-			return 0, err
-		}
-	}
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if err := requireActivityListScope(ctx, tx, in); err != nil {
 			return err
 		}
 		var err error
+		if len(in.CustomFilters) > 0 {
+			if in.Columns, err = s.activityColumnsIn(ctx, tx); err != nil {
+				return err
+			}
+		}
 		if in.readerAddresses, err = s.readerAddressList(ctx, tx, readerOrNobody(ctx)); err != nil {
 			return err
 		}

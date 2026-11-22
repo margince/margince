@@ -246,20 +246,14 @@ func (d *Deliverer) canSee(ctx context.Context, eventType, entityType string, en
 	if err != nil {
 		return false, err
 	}
-	rbac, err := d.resolver.EffectiveRBAC(ctx, ws.UUID, ownerID)
+	owner, err := authz.MemberPrincipal(ctx, d.resolver, ws.UUID, ownerID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
 	}
-	ownerCtx := principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + ownerID.String(),
-		UserID:      ownerID,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	})
+	ownerCtx := principal.WithActor(ctx, owner)
 	return d.store.entityVisibleTo(ownerCtx, eventType, entityType, entityID)
 }
 

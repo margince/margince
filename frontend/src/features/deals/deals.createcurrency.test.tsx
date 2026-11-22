@@ -217,9 +217,9 @@ describe("the New deal currency", () => {
     stubApi([]);
     renderDeals();
     const dialog = within(await screen.findByRole("dialog"));
-    expect(dialog.getByLabelText("Deal name *").getAttribute("maxlength")).toBe(
-      "120",
-    );
+    expect(
+      dialog.getByLabelText("Deal name *").getAttribute("data-character-limit"),
+    ).toBe("120");
   });
 
   it("makes the reader the owner when the owner is left alone", async () => {

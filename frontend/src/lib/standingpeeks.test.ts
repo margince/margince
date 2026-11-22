@@ -62,3 +62,35 @@ describe("tasksPeek", () => {
     expect(tasksPeek([], words, 0)).toBeUndefined();
   });
 });
+
+describe("tasksPeek for a task with only a date", () => {
+  const picked = {
+    id: "a",
+    subject: "Send the contract",
+    // Picked for 16 Nov in Los Angeles, which is already the 17th in Tokyo.
+    dueAt: "2026-11-17T07:59:59Z",
+    dueHasTime: false,
+    dueIntent: {
+      wall_clock: "2026-11-16T23:59:59",
+      timezone: "America/Los_Angeles",
+    },
+  };
+
+  it("prints the picked day for a reader far east of the picker", () => {
+    const card = tasksPeek(
+      [picked],
+      { ...words, zone: "Asia/Tokyo", companyZone: "Europe/Berlin" },
+      1,
+    );
+    expect(card?.items[0]?.sub).toBe("16 Nov");
+  });
+
+  it("prints the picked day for a reader far west of it", () => {
+    const card = tasksPeek(
+      [picked],
+      { ...words, zone: "Pacific/Honolulu", companyZone: "Europe/Berlin" },
+      1,
+    );
+    expect(card?.items[0]?.sub).toBe("16 Nov");
+  });
+});

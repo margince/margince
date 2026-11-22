@@ -54,10 +54,10 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-// The detail the store's CHECK-constraint net answers when a render's write
+// The detail the shared CHECK-constraint net answers when a render's write
 // is refused with a 422.
 const VALUE_REFUSED =
-  "a value violates a rule on this record; check the picklist options";
+  "a value in this request is outside what its field accepts. Check each value against this operation's schema; do not retry unchanged.";
 
 const baseOffer = {
   id: "o-1",
@@ -795,10 +795,7 @@ describe("render PDF action (OP-12)", () => {
         body: {
           title: "Unprocessable Entity",
           detail: VALUE_REFUSED,
-          code: "validation_error",
-          details: {
-            errors: [{ field: "body", code: "value_not_allowed" }],
-          },
+          code: "value_not_allowed",
         },
         status: 422,
       },

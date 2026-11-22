@@ -69,11 +69,7 @@ func (c *Connector) SendAsSignature(ctx context.Context, auth connector.Auth) (c
 	if !ok {
 		return connector.SendAsSignature{}, errors.New("gmail: this client cannot read the send-as settings")
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return connector.SendAsSignature{}, err
-	}
-	entries, err := lister.SendAs(ctx, access)
+	entries, err := authorized(ctx, c, st, lister.SendAs)
 	if err != nil {
 		return connector.SendAsSignature{}, err
 	}

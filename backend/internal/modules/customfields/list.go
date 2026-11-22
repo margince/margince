@@ -17,12 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// ListInput narrows the catalog read: Object is required (the admin
-// field table is always per-object); Status of active/retired selects
-// one lifecycle state, empty returns both — this admin view deliberately
-// does NOT default-exclude retired rows (CUSTOM-FIELDS-WIRE-1), because
-// a retired field's slug stays reserved and the admin table is the one
-// surface that still shows it.
+// ListInput narrows the catalog read: Object is required, because the admin
+// field table is always per-object. Status selects one lifecycle state and
+// empty returns both. Retired rows stay in by default, because the admin table
+// is the one surface that still shows a retired field.
 type ListInput struct {
 	Object string
 	Status *string

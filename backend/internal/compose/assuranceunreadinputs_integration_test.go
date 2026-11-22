@@ -50,7 +50,7 @@ func TestAnUndeliveredEditDuringTheCheckCannotBeClearedByIt(t *testing.T) {
 		e.editDeal(t, e.faulted, 3900000)
 		return subjects, err
 	}
-	if _, err := e.scanner(duringRead).Scan(e.passCtx(), e.at, nil); err != nil {
+	if _, err := e.scanner(duringRead).Scan(e.passCtx(), e.at); err != nil {
 		t.Fatal(err)
 	}
 	if f := e.freshness(t); f.Known {
@@ -75,7 +75,7 @@ func TestAnIncompleteCheckLeavesCommittedInputsUnread(t *testing.T) {
 		return []assurance.SourceCoverage{{Source: sourceMail, State: assurance.CoverageUnavailable}, offerCoverage(e.at)}
 	}
 	scanner := assurance.NewScanner(e.store, AssuranceSubjects, unavailable, AssuranceConfig())
-	result, err := scanner.Scan(e.passCtx(), e.at, nil)
+	result, err := scanner.Scan(e.passCtx(), e.at)
 	if err != nil || result.Status != assurance.StatusIncomplete {
 		t.Fatalf("incomplete scan = %+v: %v", result, err)
 	}

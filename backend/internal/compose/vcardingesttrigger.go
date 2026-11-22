@@ -65,7 +65,7 @@ func NewVCardIngestTrigger(pool *pgxpool.Pool, enqueue *jobs.Runner, log *slog.L
 // answers nil, so the group keeps flowing rather than wedging on somebody
 // else's traffic.
 func (t *VCardIngestTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Type != "activity.captured" {
+	if !events.VCardIngestTypes.Has(env.Type) {
 		return nil
 	}
 	var payload crmcontracts.PublicEventActivityCaptured

@@ -204,6 +204,9 @@ function captureLine(
   locale: Locale,
 ): string {
   const said = t("shell.capture.importing");
+  if (capture.course !== null) {
+    return `${said} · ${t(capture.course)}`;
+  }
   return capture.fraction === null
     ? said
     : `${said} · ${formatPercent(capture.fraction, locale)}`;

@@ -164,8 +164,8 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		// folds the message's fields onto that lead. It writes one record and
 		// puts nothing on the wire.
 		"merge_records": true,
-		// Accepting a share request writes one record grant.
-		"contact_share": true,
+		// Accepting a share or edit access request writes one record grant.
+		"contact_share": true, "edit_access": true,
 		// Writes one task's due date.
 		"task_due_date": true,
 		// Moves a record and its open work to a colleague.

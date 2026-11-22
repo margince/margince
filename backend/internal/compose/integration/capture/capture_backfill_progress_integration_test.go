@@ -13,6 +13,7 @@ package capture
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -35,10 +36,16 @@ type reportingConnector struct {
 	*pagedConnector
 	perMessage func(scanned, captured int)
 	failAfter  int
+	// tokenGone makes the provider refuse any saved page token, as it does once
+	// the place it handed out has gone stale.
+	tokenGone bool
 }
 
 func (c *reportingConnector) BackfillPage(ctx context.Context, _ connector.Auth, _ time.Time, pageToken string, _ connector.Sink) (connector.BackfillPageResult, error) {
 	c.pageCalls++
+	if c.tokenGone && pageToken != "" {
+		return connector.BackfillPageResult{}, fmt.Errorf("provider: %w", connector.ErrCursorGone)
+	}
 	progress := connector.BackfillProgressFrom(ctx)
 	res := connector.BackfillPageResult{Scanned: c.pageSize, Captured: c.pageSize}
 	if pageToken == "" && c.pageSize < c.messages {

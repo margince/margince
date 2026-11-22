@@ -9,9 +9,11 @@
 // beside it would be a second answer without the restore.
 
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import { ChatCapture } from "../../components/chatcapture";
 import { type JustIn, JustInScope } from "../../components/latestinbound";
+import { Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
   useRecordTimeline,
@@ -20,6 +22,7 @@ import {
 import { GroupedTimelineList } from "../../design-system/timeline";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
+import { useCanWriteRecord } from "../../lib/capability";
 import { leadKey } from "../../lib/leadkeys";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -108,55 +111,81 @@ export function LeadHistoryTab({
     filters,
     onFilters: setFilters,
   });
+  // A chat with the lead in a messenger outside Margince is filed from a
+  // screenshot, as on a contact's Documents tab.
+  const mayWrite = useCanWriteRecord("lead", lead);
+  const [capturing, setCapturing] = useState(false);
 
   return (
-    <Panel
-      title={t("tab.history")}
-      titleAction={dials.cuts}
-      actions={
-        hasChronologyFooter(filter, chronology) ? (
-          <ChronologyFooter filter={filter} chronology={chronology} />
-        ) : undefined
-      }
-    >
-      <PanelBody>
-        {dials.narrowing}
-        {/* The Changes view IS the record's history: one reading of what
-            changed on this lead, and the one that can put a change back. */}
-        {filter === "changes" ? (
-          <RecordHistoryTab
-            kind="lead"
-            id={lead.id}
-            restore={{
-              version: lead.version,
-              onRestored: () => invalidateRecord(queryClient, "lead", lead.id),
-            }}
-          />
-        ) : (
-          <div className="timeline-card">
-            {chronologyNotice(
-              "lead.timeline.empty",
-              filter,
-              chronology,
-              {
-                loading: timeline.isPending,
-                failed: timeline.isError,
-                assembled: timeline.isSuccess,
-              },
-              t,
-            ) ?? (
-              <GroupedTimelineList
-                groups={groupChronology(
-                  chronology.entries,
-                  timeline.hasNextPage,
-                )}
-                zone={readerZone}
-              />
+    <>
+      {capturing && (
+        <ChatCapture
+          record={{ type: "lead", id: lead.id, name: lead.full_name ?? "" }}
+          onClose={() => setCapturing(false)}
+        />
+      )}
+      <Panel
+        title={t("tab.history")}
+        titleAction={
+          <>
+            {dials.cuts}
+            {mayWrite && (
+              <Button
+                variant="ai"
+                disabled={capturing}
+                onClick={() => setCapturing(true)}
+              >
+                {t("chatCapture.action")}
+              </Button>
             )}
-          </div>
-        )}
-      </PanelBody>
-    </Panel>
+          </>
+        }
+        actions={
+          hasChronologyFooter(filter, chronology) ? (
+            <ChronologyFooter filter={filter} chronology={chronology} />
+          ) : undefined
+        }
+      >
+        <PanelBody>
+          {dials.narrowing}
+          {/* The Changes view is the record's history: one reading of what
+            changed on this lead, and the one that can put a change back. */}
+          {filter === "changes" ? (
+            <RecordHistoryTab
+              kind="lead"
+              id={lead.id}
+              restore={{
+                version: lead.version,
+                onRestored: () =>
+                  invalidateRecord(queryClient, "lead", lead.id),
+              }}
+            />
+          ) : (
+            <div className="timeline-card">
+              {chronologyNotice(
+                "lead.timeline.empty",
+                filter,
+                chronology,
+                {
+                  loading: timeline.isPending,
+                  failed: timeline.isError,
+                  assembled: timeline.isSuccess,
+                },
+                t,
+              ) ?? (
+                <GroupedTimelineList
+                  groups={groupChronology(
+                    chronology.entries,
+                    timeline.hasNextPage,
+                  )}
+                  zone={readerZone}
+                />
+              )}
+            </div>
+          )}
+        </PanelBody>
+      </Panel>
+    </>
   );
 }
 

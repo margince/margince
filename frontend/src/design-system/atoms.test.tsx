@@ -622,6 +622,52 @@ it("draws no mark when no option carries one", () => {
   expect(container.querySelectorAll(".segmented-mark").length).toBe(0);
 });
 
+// A refused option stays in view and points at the one sentence saying why.
+it("refuses only the options told to, each described by the shared reason", () => {
+  render(
+    <>
+      <SegmentedControl
+        options={TABS}
+        value="overview"
+        onChange={() => undefined}
+        labels={TAB_LABELS}
+        refused={{ research: true }}
+        reasonId="why"
+      />
+      <p id="why">Not yet</p>
+    </>,
+  );
+  const refused = screen.getByRole("button", { name: "Data and tools" });
+  const open = screen.getByRole("button", { name: "Overview" });
+  expect(refused).toHaveProperty("disabled", true);
+  expect(refused.getAttribute("aria-describedby")).toBe("why");
+  expect(refused.hasAttribute("data-refused")).toBe(true);
+  expect(open).toHaveProperty("disabled", false);
+  expect(open.hasAttribute("aria-describedby")).toBe(false);
+  expect(open.hasAttribute("data-refused")).toBe(false);
+});
+
+// A busy strip waits as a whole: only the options told to are refused.
+it("keeps the refusal to the refused options on a busy strip", () => {
+  render(
+    <SegmentedControl
+      options={TABS}
+      value="overview"
+      onChange={() => undefined}
+      labels={TAB_LABELS}
+      busy="overview"
+      refused={{ research: true }}
+      reasonId="why"
+    />,
+  );
+  const waiting = screen.getByRole("button", { name: "Overview" });
+  const refused = screen.getByRole("button", { name: "Data and tools" });
+  expect(waiting.hasAttribute("data-refused")).toBe(false);
+  expect(waiting.hasAttribute("aria-describedby")).toBe(false);
+  expect(refused.hasAttribute("data-refused")).toBe(true);
+  expect(refused.getAttribute("aria-describedby")).toBe("why");
+});
+
 // The mark lets a wrapped strip's segments fill each row; a strip on one row
 // keeps its segments at their own widths.
 it.each([

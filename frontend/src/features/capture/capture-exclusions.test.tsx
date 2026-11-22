@@ -187,7 +187,7 @@ describe("CaptureExclusionsCard", () => {
       screen.getByRole("button", { name: en["captureExclusions.kind.domain"] }),
     );
     const box = screen.getByRole("textbox", {
-      name: en["captureExclusions.addLabel"],
+      name: en["captureExclusions.field.domain"],
     });
     // The rule holds from the next message, said on the field it governs.
     expect(box.getAttribute("aria-describedby")).toBeTruthy();
@@ -230,7 +230,7 @@ describe("CaptureExclusionsCard", () => {
     );
     await user.click(openForm());
     const value = screen.getByRole("textbox", {
-      name: en["captureExclusions.addLabel"],
+      name: en["captureExclusions.field.address"],
     }) as HTMLInputElement;
     await user.type(value, "jobs.test");
     await user.click(
@@ -367,7 +367,9 @@ describe("the picker follows the seat's own mailbox", () => {
       screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
     );
     await user.type(
-      screen.getByRole("textbox", { name: en["captureExclusions.addLabel"] }),
+      screen.getByRole("textbox", {
+        name: en["captureExclusions.field.address"],
+      }),
       "someone@example.com",
     );
     await user.click(

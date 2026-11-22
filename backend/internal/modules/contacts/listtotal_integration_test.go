@@ -106,13 +106,16 @@ func TestAListTotalCountsTheWholeSetRatherThanThePage(t *testing.T) {
 	}
 }
 
-func TestAListTotalDoesNotShrinkAsTheReaderPagesForward(t *testing.T) {
+func TestAListCountsOnItsFirstPageOnly(t *testing.T) {
 	e := setupCapturePrivacy(t)
 	const seeded = 30
 	seedContacts(t, e, e.owner, seeded)
 
 	limit := 10
 	ctx := e.as(e.owner, principal.RowScopeAll)
+	if first := totalOf(ctx, t, e, ListContactsInput{Limit: &limit}); first != seeded {
+		t.Fatalf("total on the first page is %d, want %d", first, seeded)
+	}
 	_, first, err := e.store.ListContacts(ctx, ListContactsInput{Limit: &limit})
 	if err != nil {
 		t.Fatalf("listing the first page: %v", err)
@@ -121,13 +124,14 @@ func TestAListTotalDoesNotShrinkAsTheReaderPagesForward(t *testing.T) {
 		t.Fatal("no cursor after the first of three pages")
 	}
 
-	// The second page carries the cursor. Its total must still describe the
-	// whole set: a count that inherited the keyset clause would answer 20
-	// here and 10 on the last page, so the list would appear to empty as the
-	// reader walked it.
-	second := totalOf(ctx, t, e, ListContactsInput{Limit: &limit, Cursor: &first.NextCursor})
-	if second != seeded {
-		t.Fatalf("total on the second page is %d, want %d — the count inherited the cursor", second, seeded)
+	// The client keeps the first page's total, so a later page reads the set
+	// no second time and sends no total at all.
+	_, second, err := e.store.ListContacts(ctx, ListContactsInput{Limit: &limit, Cursor: &first.NextCursor})
+	if err != nil {
+		t.Fatalf("listing the second page: %v", err)
+	}
+	if second.Total != nil {
+		t.Fatalf("the second page sent total %d; only the first page counts", *second.Total)
 	}
 }
 
@@ -197,18 +201,15 @@ func TestTheLeadWorkQueueCountsItsWholeSetToo(t *testing.T) {
 		t.Fatalf("queue total is %d, want %d", *page.Total, seeded)
 	}
 
-	// And it holds still on the second page, for the same reason the record
-	// lists must: the cursor selects the page, never the size of the set.
+	// The client keeps the first page's total, so a continuation page of the
+	// queue reads the set no second time and sends none.
 	second := ListLeadsInput{Limit: &limit, Cursor: &page.NextCursor}
 	_, next, err := e.store.ListLeads(ctx, second)
 	if err != nil {
 		t.Fatalf("listing the second queue page: %v", err)
 	}
-	if next.Total == nil {
-		t.Fatal("no total on the second queue page")
-	}
-	if *next.Total != seeded {
-		t.Fatalf("queue total on page two is %d, want %d — the count took the cursor", *next.Total, seeded)
+	if next.Total != nil {
+		t.Fatalf("the second queue page sent total %d; only the first page counts", *next.Total)
 	}
 }
 

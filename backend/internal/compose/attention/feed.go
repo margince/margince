@@ -473,7 +473,7 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	}
 	duplicates := make([]crmcontracts.AttentionItem, 0, len(pairs))
 	for _, pair := range pairs {
-		duplicates = append(duplicates, s.duplicateItem(pair, named, decidable, settleable))
+		duplicates = append(duplicates, s.duplicateItem(pair, named, decidable, settleable, s.pairRecipient(ctx, pair)))
 	}
 	approvals := make([]crmcontracts.AttentionItem, 0, len(staged))
 	for _, approval := range staged {

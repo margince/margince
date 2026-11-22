@@ -42,7 +42,7 @@ func (s *Store) AnswerDueTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, o
 	if due == nil {
 		return true, nil
 	}
-	if err := s.readPatchColumns(ctx, &in); err != nil {
+	if err := s.readPatchColumns(ctx, tx, &in); err != nil {
 		return false, err
 	}
 	_, err = updateActivityInTx(ctx, tx, id, in)

@@ -348,7 +348,7 @@ describe("the disclosure-duty queue", () => {
     // The whole reason these two states exist beside not_required is that they
     // keep the reason. A blank one would close a compliance record with
     // nothing written on it, and the server refuses it.
-    stubRoutes();
+    const sent = stubRoutes();
     render(<NoticeCasesCard />);
 
     const row = await findDuty("Lena Hoffmann");
@@ -356,9 +356,16 @@ describe("the disclosure-duty queue", () => {
     await pressVerb(user, row, en["notice.excuse"]);
 
     const dialog = await screen.findByRole("dialog");
-    expect(
+    await user.click(
       within(dialog).getByRole("button", { name: en["notice.excuseConfirm"] }),
-    ).toBeDisabled();
+    );
+    expect(
+      within(dialog).getByText(`${en["notice.excuseGround"]} is required.`),
+    ).toBeInTheDocument();
+    expect(document.activeElement).toBe(within(dialog).getByRole("textbox"));
+    expect(sent.some((s) => s.key.startsWith("POST /privacy/notice"))).toBe(
+      false,
+    );
   });
 
   it("asks for every state on the All facet, because the server's default is owed", async () => {

@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -95,11 +96,11 @@ func TestDaysOverdueCountsWholeElapsedDays(t *testing.T) {
 // An overdue item carries the count; an upcoming one carries no count at all
 // rather than a zero a reader would print as "0 days overdue".
 func TestOnlyAnOverduePromiseCarriesADayCount(t *testing.T) {
-	overdue := OpenCommitment{TaskID: newTaskID(), DueAt: at(-25 * time.Hour)}.wire(sweptAt())
+	overdue := OpenCommitment{TaskID: newTaskID(), DueAt: at(-25 * time.Hour)}.wire(sweptAt(), nil)
 	if overdue.DaysOverdue == nil || *overdue.DaysOverdue != 1 {
 		t.Errorf("an overdue promise carries days_overdue = %v, want 1", overdue.DaysOverdue)
 	}
-	upcoming := OpenCommitment{TaskID: newTaskID(), DueAt: at(time.Hour)}.wire(sweptAt())
+	upcoming := OpenCommitment{TaskID: newTaskID(), DueAt: at(time.Hour)}.wire(sweptAt(), nil)
 	if upcoming.DaysOverdue != nil {
 		t.Errorf("an upcoming promise carries days_overdue = %v, want absent", *upcoming.DaysOverdue)
 	}
@@ -109,7 +110,7 @@ func TestOnlyAnOverduePromiseCarriesADayCount(t *testing.T) {
 // assignee members are absent TOGETHER — a name beside no id would be a
 // promise attributed to nobody in particular.
 func TestAnUnownedPromiseCarriesNeitherIdNorName(t *testing.T) {
-	item := OpenCommitment{TaskID: newTaskID(), AssigneeName: "leaked"}.wire(sweptAt())
+	item := OpenCommitment{TaskID: newTaskID(), AssigneeName: "leaked"}.wire(sweptAt(), nil)
 	if item.AssigneeID != nil || item.AssigneeName != "" {
 		t.Errorf("an unassigned promise reports assignee (%v, %q), want both absent",
 			item.AssigneeID, item.AssigneeName)
@@ -119,7 +120,7 @@ func TestAnUnownedPromiseCarriesNeitherIdNorName(t *testing.T) {
 // A promise that names no record answers an empty list, never null: a model
 // handed null reads it as "unknown" where an empty array says "none".
 func TestAPromiseAboutNothingAnswersAnEmptyListNotNull(t *testing.T) {
-	raw, err := json.Marshal(OpenCommitment{TaskID: newTaskID()}.wire(sweptAt()))
+	raw, err := json.Marshal(OpenCommitment{TaskID: newTaskID()}.wire(sweptAt(), nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,4 +211,29 @@ func TestALimitOutsideTheServedRangeIsRefusedByName(t *testing.T) {
 func newTaskID() *ids.UUID {
 	id := ids.NewV7()
 	return &id
+}
+
+// A promise due on a date with no time is late once that date is over in the
+// company's zone. Picked in Los Angeles for the 16th, it resolves to 07:59 UTC
+// on the 17th. The instant alone calls it on time at 08:00 in Berlin.
+func TestADateOnlyPromiseIsRankedAndJudgedByItsPickedDate(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	due := time.Date(2026, 11, 17, 7, 59, 59, 0, time.UTC)
+	promise := OpenCommitment{
+		TaskID: newTaskID(), DueAt: &due,
+		DueIntent: &crmcontracts.IntentTime{WallClock: "2026-11-16T23:59:59", Timezone: "America/Los_Angeles"},
+	}
+	if got := promise.RankedDue(berlin); !got.Equal(time.Date(2026, 11, 17, 0, 0, 0, 0, berlin).Add(-time.Nanosecond)) {
+		t.Errorf("ranked at %v, want the end of the 16th in Berlin", got)
+	}
+	asOf := time.Date(2026, 11, 17, 7, 0, 0, 0, time.UTC)
+	late := true
+	promise.Overdue = &late
+	item := promise.wire(asOf, berlin)
+	if item.State != commitmentOverdue || item.DaysOverdue == nil || *item.DaysOverdue != 1 {
+		t.Errorf("state %q, days %v: want overdue by 1 day", item.State, item.DaysOverdue)
+	}
 }

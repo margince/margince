@@ -4,20 +4,23 @@
 package compose
 
 // Filing a chat screenshot. The user confirms the text a reading copied out of
-// the image. One message activity then lands on the contact, with the image.
+// the image. One message activity then lands on the record, with the image.
 // Whose words the body is rides captured_by, as in the deal accept. The
 // reading's own text is the reader's; a typed or changed body is the user's.
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/chattasks"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -26,11 +29,19 @@ import (
 // ChatCaptureFile executes fileChatCapture.
 type ChatCaptureFile struct {
 	attachments *activities.Store
+	tasks       chattasks.Reader
 }
 
-// NewChatCaptureFile wires the engine over the shared pool.
-func NewChatCaptureFile(pool *pgxpool.Pool) *ChatCaptureFile {
-	return &ChatCaptureFile{attachments: activities.NewStore(InstallationDB(pool))}
+// NewChatCaptureFile wires the engine over the shared pool, reading each filed
+// chat against its record's open tasks on lane; a nil lane changes no task.
+func NewChatCaptureFile(pool *pgxpool.Pool, lane ai.Completer) *ChatCaptureFile {
+	store := activities.NewStore(InstallationDB(pool)).WithRecordZone(installationZoneTx)
+	return &ChatCaptureFile{attachments: store, tasks: chattasks.Reader{Lane: lane, Tasks: store}}
+}
+
+// WithChatTasks binds the chat_task_reading lane to the chat filing.
+func WithChatTasks(lane completer) Option {
+	return func(s *Server, pool *pgxpool.Pool) { s.file = NewChatCaptureFile(pool, lane) }
 }
 
 // File resolves the reading the user was shown, decides whose words the body
@@ -66,7 +77,13 @@ func (c *ChatCaptureFile) File(
 	if err != nil {
 		return crmcontracts.FiledChatCapture{}, err
 	}
-	return crmcontracts.FiledChatCapture{ActivityId: openapi_types.UUID(filed)}, nil
+	// A repeated confirm is read never again; a failed reading changes no task.
+	if !filed.Refiled {
+		if _, err := c.tasks.Settle(ctx, filed.ActivityID); err != nil {
+			slog.WarnContext(ctx, "chat task reading changed no task", "activity_id", filed.ActivityID, "error", err)
+		}
+	}
+	return crmcontracts.FiledChatCapture{ActivityId: openapi_types.UUID(filed.ActivityID)}, nil
 }
 
 // bodyIsTheReading reports whether the body is the text the reading grounded,

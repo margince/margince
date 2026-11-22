@@ -40,7 +40,7 @@ from a ready-made setup instead, go to [Can I use this model setup?](#can-i-use-
 | Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready in 47 of the 60 places we tested; 12 more work if someone looks over the result; 1 not reliable yet. |
 | GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🟡 Mostly | Ready in 37 of the 54 places we tested; 11 more work if someone looks over the result; 6 not reliable yet. |
 | Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🟡 Mostly | Ready in 23 of the 50 places we tested; 17 more work if someone looks over the result; 10 not reliable yet. |
-| Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested in only 6 of the 61 places. Ask before relying on it. |
+| Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested in only 6 of the 62 places. Ask before relying on it. |
 
 A family rated **Yes** is ready in every place we tested. One rated **Mostly** has at least 80 in every 100 tested places ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** when we tested it in under half of the places. A family is judged on its best model for each place, and only on the models a model setup uses, each in the places that setup sends to it.
 
@@ -55,14 +55,14 @@ are waiting to be re-checked; each is marked below.
 
 | Model setup | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
-| [Google Gemini](#google-gemini) | global cloud | 27 | 9 | 1 | 0 | 27 of 37 features ready (1 re-check pending) |
-| [Google Gemini in the EU, through Vertex AI](#google-gemini-in-the-eu-through-vertex-ai) | EU-hosted cloud | 27 | 9 | 1 | 0 | 27 of 37 features ready (1 re-check pending) |
-| [OpenAI GPT-6, through OpenRouter](#openai-gpt-6-through-openrouter) | global cloud | 21 | 3 | 4 | 9 | 21 of 37 features ready (24 re-checks pending) |
-| [Open models from OpenAI and Mistral, through OpenRouter](#open-models-from-openai-and-mistral-through-openrouter) | global cloud | 13 | 12 | 8 | 4 | 13 of 37 features ready (20 re-checks pending) |
-| [Gemma 4 you could run yourself, through OpenRouter](#gemma-4-you-could-run-yourself-through-openrouter) | global cloud | 1 | 1 | 4 | 31 | 1 of 37 features ready (re-check pending) |
-| [Mistral models in the EU, through OpenRouter](#mistral-models-in-the-eu-through-openrouter) | EU-hosted cloud | 12 | 2 | 14 | 9 | 12 of 37 features ready (24 re-checks pending) |
-| [Gemma 4 on your own server, through Ollama](#gemma-4-on-your-own-server-through-ollama) | your own servers | 0 | 0 | 0 | 37 | 0 of 37 features ready |
-| [Qwen3 on your own server, through vLLM](#qwen3-on-your-own-server-through-vllm) | your own servers | 0 | 0 | 0 | 37 | 0 of 37 features ready |
+| [Google Gemini](#google-gemini) | global cloud | 27 | 9 | 1 | 1 | 27 of 38 features ready (1 re-check pending) |
+| [Google Gemini in the EU, through Vertex AI](#google-gemini-in-the-eu-through-vertex-ai) | EU-hosted cloud | 27 | 9 | 1 | 1 | 27 of 38 features ready (1 re-check pending) |
+| [OpenAI GPT-6, through OpenRouter](#openai-gpt-6-through-openrouter) | global cloud | 21 | 3 | 4 | 10 | 21 of 38 features ready (24 re-checks pending) |
+| [Open models from OpenAI and Mistral, through OpenRouter](#open-models-from-openai-and-mistral-through-openrouter) | global cloud | 13 | 12 | 8 | 5 | 13 of 38 features ready (20 re-checks pending) |
+| [Gemma 4 you could run yourself, through OpenRouter](#gemma-4-you-could-run-yourself-through-openrouter) | global cloud | 1 | 1 | 4 | 32 | 1 of 38 features ready (re-check pending) |
+| [Mistral models in the EU, through OpenRouter](#mistral-models-in-the-eu-through-openrouter) | EU-hosted cloud | 12 | 2 | 14 | 10 | 12 of 38 features ready (24 re-checks pending) |
+| [Gemma 4 on your own server, through Ollama](#gemma-4-on-your-own-server-through-ollama) | your own servers | 0 | 0 | 0 | 38 | 0 of 38 features ready |
+| [Qwen3 on your own server, through vLLM](#qwen3-on-your-own-server-through-vllm) | your own servers | 0 | 0 | 0 | 38 | 0 of 38 features ready |
 
 **What the grades mean**
 
@@ -85,7 +85,7 @@ measured. The grade is the last one we have, and it is shown until the next test
 
 ### Google Gemini
 
-Your data goes to: global cloud. 27 of 37 features ready (1 re-check pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
+Your data goes to: global cloud. 27 of 38 features ready (1 re-check pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -93,6 +93,7 @@ Your data goes to: global cloud. 27 of 37 features ready (1 re-check pending). P
 | Assessing a sales report <sub>`report_interpret`</sub> | ⚠️ Usable with care<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ⚠️ Usable with care</sub> | Right every time (30 of 30); answer quality below the bar in one test case |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12) |
+| Chat and open tasks <sub>`chat_task_reading`</sub> | ❔ Not measured<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Not measured yet |
 | Chat channel summary <sub>`chat_summary`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (15 of 15) |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (21 of 21) |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Right every time (27 of 27) |
@@ -150,6 +151,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `cert_judge` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
 | `chat_summary` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current |
+| `chat_task_reading` | `local_small` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
 | `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
 | `corpus_ask` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
 | `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
@@ -184,7 +186,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Google Gemini in the EU, through Vertex AI
 
-Your data goes to: EU-hosted cloud. 27 of 37 features ready (1 re-check pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
+Your data goes to: EU-hosted cloud. 27 of 38 features ready (1 re-check pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -192,6 +194,7 @@ Your data goes to: EU-hosted cloud. 27 of 37 features ready (1 re-check pending)
 | Assessing a sales report <sub>`report_interpret`</sub> | ⚠️ Usable with care<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ⚠️ Usable with care, measured on `gemini`</sub> | Right every time (30 of 30); answer quality below the bar in one test case |
 | Buying-role reading <sub>`propose_roles`</sub> | ⚠️ Usable with care<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (21 of 21); answer quality below the bar in one test case |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12) |
+| Chat and open tasks <sub>`chat_task_reading`</sub> | ❔ Not measured<br><sub>gemini-3.1-flash-lite · local_small · no separate fallback</sub> | Not measured yet |
 | Chat channel summary <sub>`chat_summary`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (15 of 15) |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (21 of 21) |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · local_small, measured on `gemini` · no separate fallback</sub> | Right every time (27 of 27) |
@@ -249,6 +252,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `capture_counterparty_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `cert_judge` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
 | `chat_summary` | `cheap_cloud` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
+| `chat_task_reading` | `local_small` | `gemini-3.1-flash-lite` | ❔ Not measured | not measured |
 | `cold_start` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
 | `corpus_ask` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
 | `deal_health` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
@@ -283,7 +287,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### OpenAI GPT-6, through OpenRouter
 
-Your data goes to: global cloud. 21 of 37 features ready (24 re-checks pending). Preset file: [`openrouter_openai.yaml`](../../config/presets/openrouter_openai.yaml).
+Your data goes to: global cloud. 21 of 38 features ready (24 re-checks pending). Preset file: [`openrouter_openai.yaml`](../../config/presets/openrouter_openai.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -291,6 +295,7 @@ Your data goes to: global cloud. 21 of 37 features ready (24 re-checks pending).
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gpt-6-sol · premium → gpt-6-luna, not measured on this feature</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, ✅ Ready</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gpt-6-sol · premium → gpt-6-luna, ✅ Ready</sub> | Right every time (12 of 12) |
+| Chat and open tasks <sub>`chat_task_reading`</sub> | ❔ Not measured<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Not measured yet |
 | Chat channel summary <sub>`chat_summary`</sub> | ❔ Not measured<br><sub>gpt-6-luna · cheap_cloud → gpt-6-sol, not measured on this feature</sub> | Not measured yet |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>gpt-6-luna · local_small · no separate fallback</sub> | Right every time (18 of 18) · re-check pending |
@@ -348,6 +353,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `capture_counterparty_verdict` | `local_small` | `openai/gpt-6-luna` | ❌ Not reliable yet | re-check pending |
 | `cert_judge` | `premium` | `openai/gpt-6-sol` | ✅ Ready | current |
 | `chat_summary` | `cheap_cloud` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
+| `chat_task_reading` | `local_small` | `openai/gpt-6-luna` | ❔ Not measured | not measured |
 | `cold_start` | `cheap_cloud` | `openai/gpt-6-luna` | ⚠️ Usable with care | re-check pending |
 | `corpus_ask` | `premium` | `openai/gpt-6-sol` | ✅ Ready | re-check pending |
 | `deal_health` | `cheap_cloud` | `openai/gpt-6-luna` | ✅ Ready | re-check pending |
@@ -382,7 +388,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Open models from OpenAI and Mistral, through OpenRouter
 
-Your data goes to: global cloud. 13 of 37 features ready (20 re-checks pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
+Your data goes to: global cloud. 13 of 38 features ready (20 re-checks pending). Preset file: [`openrouter_cloud.yaml`](../../config/presets/openrouter_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -390,6 +396,7 @@ Your data goes to: global cloud. 13 of 37 features ready (20 re-checks pending).
 | Assessing a sales report <sub>`report_interpret`</sub> | ⚠️ Usable with care<br><sub>mistral-medium-3-5 · premium → gpt-oss-120b, ❌ Not reliable yet · re-check pending</sub> | Right in 35 of 36 tries; answer quality below the bar in one test case · re-check pending |
 | Buying-role reading <sub>`propose_roles`</sub> | ❌ Not reliable yet<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right in 20 of 27 tries; one test case wrong too often; answer quality below the bar in 2 test cases |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → gpt-oss-120b, ✅ Ready</sub> | Right every time (12 of 12) |
+| Chat and open tasks <sub>`chat_task_reading`</sub> | ❔ Not measured<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Not measured yet |
 | Chat channel summary <sub>`chat_summary`</sub> | ❔ Not measured<br><sub>gpt-oss-120b · cheap_cloud → mistral-medium-3-5, not measured on this feature</sub> | Not measured yet |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right in 26 of 27 tries; answer quality below the bar in one test case · re-check pending |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ⚠️ Usable with care<br><sub>gpt-oss-120b · local_small · no separate fallback</sub> | Right in 73 of 81 tries; answer quality below the bar in 3 test cases |
@@ -447,6 +454,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `capture_counterparty_verdict` | `local_small` | `openai/gpt-oss-120b` | ❌ Not reliable yet | current |
 | `cert_judge` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | current |
 | `chat_summary` | `cheap_cloud` | `openai/gpt-oss-120b` | ❔ Not measured | not measured |
+| `chat_task_reading` | `local_small` | `openai/gpt-oss-120b` | ❔ Not measured | not measured |
 | `cold_start` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
 | `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | re-check pending |
 | `deal_health` | `cheap_cloud` | `openai/gpt-oss-120b` | ⚠️ Usable with care | re-check pending |
@@ -481,7 +489,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Gemma 4 you could run yourself, through OpenRouter
 
-Your data goes to: global cloud. 1 of 37 features ready (re-check pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
+Your data goes to: global cloud. 1 of 38 features ready (re-check pending). Preset file: [`consumer_class_brokered.yaml`](../../config/presets/consumer_class_brokered.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -489,6 +497,7 @@ Your data goes to: global cloud. 1 of 37 features ready (re-check pending). Pres
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
 | Certification judging <sub>`cert_judge`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · premium · no separate fallback</sub> | Not measured yet |
+| Chat and open tasks <sub>`chat_task_reading`</sub> | ❔ Not measured<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Not measured yet |
 | Chat channel summary <sub>`chat_summary`</sub> | ❔ Not measured<br><sub>gemma-4-31b-it · cheap_cloud · no separate fallback</sub> | Not measured yet |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❌ Not reliable yet<br><sub>gemma-4-26b-a4b-it · local_small → gemma-4-31b-it, not measured on this feature</sub> | Right in 15 of 18 tries; one test case wrong too often · re-check pending |
@@ -546,6 +555,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `capture_counterparty_verdict` | `local_small` | `google/gemma-4-26b-a4b-it` | ❌ Not reliable yet | re-check pending |
 | `cert_judge` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
 | `chat_summary` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
+| `chat_task_reading` | `local_small` | `google/gemma-4-26b-a4b-it` | ❔ Not measured | not measured |
 | `cold_start` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
 | `corpus_ask` | `premium` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
 | `deal_health` | `cheap_cloud` | `google/gemma-4-31b-it` | ❔ Not measured | not measured |
@@ -580,7 +590,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Mistral models in the EU, through OpenRouter
 
-Your data goes to: EU-hosted cloud. 12 of 37 features ready (24 re-checks pending). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
+Your data goes to: EU-hosted cloud. 12 of 38 features ready (24 re-checks pending). Preset file: [`openrouter_cloud_eu.yaml`](../../config/presets/openrouter_cloud_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -588,6 +598,7 @@ Your data goes to: EU-hosted cloud. 12 of 37 features ready (24 re-checks pendin
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>mistral-medium-3-5 · premium → ministral-14b-2512, not measured on this feature</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, ✅ Ready</sub> | Right every time (9 of 9) |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>mistral-medium-3-5 · premium → ministral-14b-2512, ✅ Ready</sub> | Right every time (12 of 12) |
+| Chat and open tasks <sub>`chat_task_reading`</sub> | ❔ Not measured<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, not measured on this feature</sub> | Not measured yet |
 | Chat channel summary <sub>`chat_summary`</sub> | ❔ Not measured<br><sub>ministral-14b-2512 · cheap_cloud → mistral-medium-3-5, not measured on this feature</sub> | Not measured yet |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, not measured on this feature</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ✅ Ready<br><sub>ministral-8b-2512 · local_small → ministral-14b-2512, ✅ Ready · re-check pending</sub> | Right every time (18 of 18) · re-check pending |
@@ -645,6 +656,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `capture_counterparty_verdict` | `local_small` | `mistralai/ministral-8b-2512` | ❌ Not reliable yet | re-check pending |
 | `cert_judge` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | current |
 | `chat_summary` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❔ Not measured | not measured |
+| `chat_task_reading` | `local_small` | `mistralai/ministral-8b-2512` | ❔ Not measured | not measured |
 | `cold_start` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ❌ Not reliable yet | re-check pending |
 | `corpus_ask` | `premium` | `mistralai/mistral-medium-3-5` | ✅ Ready | re-check pending |
 | `deal_health` | `cheap_cloud` | `mistralai/ministral-14b-2512` | ⚠️ Usable with care | re-check pending |
@@ -679,7 +691,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Gemma 4 on your own server, through Ollama
 
-Your data goes to: your own servers. 0 of 37 features ready. Preset file: [`gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
+Your data goes to: your own servers. 0 of 38 features ready. Preset file: [`gemma4_local_ollama.yaml`](../../config/presets/gemma4_local_ollama.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -687,6 +699,7 @@ Your data goes to: your own servers. 0 of 37 features ready. Preset file: [`gemm
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
 | Certification judging <sub>`cert_judge`</sub> | ❔ Not measured<br><sub>gemma4:12b · premium · no separate fallback</sub> | Not measured yet |
+| Chat and open tasks <sub>`chat_task_reading`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
 | Chat channel summary <sub>`chat_summary`</sub> | ❔ Not measured<br><sub>gemma4:12b · cheap_cloud · no separate fallback</sub> | Not measured yet |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❔ Not measured<br><sub>gemma4:12b · local_small · no separate fallback</sub> | Not measured yet |
@@ -744,6 +757,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `capture_counterparty_verdict` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
 | `cert_judge` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
 | `chat_summary` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
+| `chat_task_reading` | `local_small` | `gemma4:12b` | ❔ Not measured | not measured |
 | `cold_start` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
 | `corpus_ask` | `premium` | `gemma4:12b` | ❔ Not measured | not measured |
 | `deal_health` | `cheap_cloud` | `gemma4:12b` | ❔ Not measured | not measured |
@@ -778,7 +792,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Qwen3 on your own server, through vLLM
 
-Your data goes to: your own servers. 0 of 37 features ready. Preset file: [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml).
+Your data goes to: your own servers. 0 of 38 features ready. Preset file: [`qwen3_local_vllm.yaml`](../../config/presets/qwen3_local_vllm.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
@@ -786,6 +800,7 @@ Your data goes to: your own servers. 0 of 37 features ready. Preset file: [`qwen
 | Assessing a sales report <sub>`report_interpret`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · premium · no separate fallback</sub> | Not measured yet |
 | Buying-role reading <sub>`propose_roles`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Not measured yet |
 | Certification judging <sub>`cert_judge`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · premium · no separate fallback</sub> | Not measured yet |
+| Chat and open tasks <sub>`chat_task_reading`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Not measured yet |
 | Chat channel summary <sub>`chat_summary`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · cheap_cloud · no separate fallback</sub> | Not measured yet |
 | Checking the dates, amount and chances of a deal <sub>`deal_verdict`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Not measured yet |
 | Checking whether the reply answered the request <sub>`request_settlement`</sub> | ❔ Not measured<br><sub>Qwen3-14B-4bit · local_small · no separate fallback</sub> | Not measured yet |
@@ -843,6 +858,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | `capture_counterparty_verdict` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
 | `cert_judge` | `premium` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
 | `chat_summary` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
+| `chat_task_reading` | `local_small` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
 | `cold_start` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
 | `corpus_ask` | `premium` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
 | `deal_health` | `cheap_cloud` | `mlx-community/Qwen3-14B-4bit` | ❔ Not measured | not measured |
@@ -924,7 +940,7 @@ well the others do.
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
 | Quality bar 70 / 50 / 40: 164 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
-| Quality bar 80 / 60 / 50: 36 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
+| Quality bar 80 / 60 / 50: 39 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
 All of these live in [`backend/internal/compose/aicert/thresholds.go`](../../backend/internal/compose/aicert/thresholds.go) (quality bars: in each test case's file); change them there and regenerate this page.
@@ -1207,7 +1223,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Gemma
 
-⚪ Not enough tested yet: Tested in only 6 of the 61 places. Ask before relying on it.
+⚪ Not enough tested yet: Tested in only 6 of the 62 places. Ask before relying on it.
 
 6 of these results were measured on an older version of the product and are re-check pending.
 
@@ -1238,12 +1254,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | | |
 |---|---:|
-| Shipped invocation sites | 61 |
+| Shipped invocation sites | 62 |
 | … best state `current` | 58 |
 | … best state `partial` | 0 |
 | … best state `stale` | 2 |
-| … `absent` on every binding | 1 |
-| Scenarios in the corpus | 339 |
+| … `absent` on every binding | 2 |
+| Scenarios in the corpus | 342 |
 | Committed records | 400 |
 | Bindings measured | 18 |
 
@@ -1307,7 +1323,7 @@ today. It says nothing about how well the model did; that is the band.
 <details>
 <summary>Every site, and the best model tested on it</summary>
 
-### Index of sites (61)
+### Index of sites (62)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -1323,6 +1339,7 @@ Which model to run each site on, and what that choice rests on.
 | [`capture_counterparty_verdict/verdict`](#capture_counterparty_verdictverdict) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.99, 1.00] | `current` | 21 | 8 |
 | [`cert_judge/judge`](#cert_judgejudge) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 2 | 14 |
 | [`chat_summary/episode`](#chat_summaryepisode) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.90, 1.00] | `current` | 3 | 3 |
+| [`chat_task_reading/chat_tasks`](#chat_task_readingchat_tasks) | - | - | - | `absent` | 3 | 0 |
 | [`cold_start/acts`](#cold_startacts) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.93, 1.00] | `current` | 5 | 13 |
 | [`cold_start/company_message`](#cold_startcompany_message) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.85, 1.00] | `current` | 1 | 13 |
 | [`cold_start/field_extract`](#cold_startfield_extract) | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `supported_degraded` | 1.00 [0.65, 1.00] | `current` | 1 | 13 |
@@ -2254,6 +2271,27 @@ Records (3):
 | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 3/3 | `certified` | 15 | 15 | 1.00 [0.90, 1.00] | 1421ms | 1944ms | 15 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/3 | `certified` | 12 | 12 | 1.00 [0.88, 1.00] | 1230ms | 1544ms | 12 | 0 | 0 | 0 |
 | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 3/3 | `certified` | 9 | 9 | 1.00 [0.85, 1.00] | 3364ms | 4445ms | 9 | 0 | 0 | 0 |
+
+</details>
+
+#### `chat_task_reading`
+
+<details>
+<summary><code>chat_task_reading/chat_tasks</code>: 3 scenario(s), 0 record(s), best state absent</summary>
+
+##### `chat_task_reading/chat_tasks`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (3):
+
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `booked_slot_closes_the_task` | `accepted` | judge | [booked_slot_closes_the_task_01.yaml](../../backend/internal/compose/aicert/corpus/chat_task_reading/booked_slot_closes_the_task_01.yaml) |
+| `next_week_moves_the_task` | `accepted` | judge | [next_week_moves_the_task_01.yaml](../../backend/internal/compose/aicert/corpus/chat_task_reading/next_week_moves_the_task_01.yaml) |
+| `unrelated_chat_changes_nothing` | `accepted` | judge | [unrelated_chat_changes_nothing_01.yaml](../../backend/internal/compose/aicert/corpus/chat_task_reading/unrelated_chat_changes_nothing_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 </details>
 

@@ -211,7 +211,7 @@ func (s *Store) retireTechnicalEmails(
 	// No custom columns: the edit replaces only the address set, and the
 	// catalog read would take a second connection inside the caller's
 	// transaction. The audit and event images carry only the addresses.
-	_, err = s.updateContactInTx(ctx, tx, contact.id, UpdateContactInput{Emails: kept, IfVersion: &contact.version}, nil)
+	_, err = s.writeContactInTx(ctx, tx, contact.id, UpdateContactInput{Emails: kept, IfVersion: &contact.version}, nil)
 	if err != nil {
 		return fmt.Errorf("contacts: retiring a contact's technical address: %w", err)
 	}

@@ -21,6 +21,7 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 	}
 	w.links.markPending(w.object, row.ExternalID)
 	if outcome == predictHeldKey {
+		// The record keeps its ref, and the row claims none of its keys.
 		return
 	}
 	w.rememberRow(row, outcome)

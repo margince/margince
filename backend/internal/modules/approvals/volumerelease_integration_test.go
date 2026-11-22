@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -35,7 +36,7 @@ func (e *stagingEnv) asAgent(t *testing.T) context.Context {
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO passport (id, on_behalf_of, granted_by, token_hash, scopes, expires_at)
 		VALUES ($1, $2, $2, $3, ARRAY['read'], now() + interval '30 days')`,
-		passport, e.rep, "hash-"+passport.String()); err != nil {
+		passport, e.rep, storekit.TokenHash(passport.String())); err != nil {
 		t.Fatalf("seeding the lent passport: %v", err)
 	}
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)

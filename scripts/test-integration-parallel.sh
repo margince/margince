@@ -421,6 +421,7 @@ if [[ -n "$QUEUE" ]]; then
   mv "${GROUPED}.ordered" "$GROUPED"
   queue_groups "$GROUPED" "$SHARD_TIMING" 240 > "$PART_GROUPS"
   PARTS_DIGEST="$(cat "$GROUPED" "$PART_GROUPS" | git hash-object --stdin)"
+  [[ -z "$EARLIER_DIR" ]] || newest_attempt_artifacts "$EARLIER_DIR" || exit 1
   [[ -z "$EARLIER_DIR" ]] || queue_done_groups "$EARLIER_DIR" "$SHARD_IDX" "$PARTS_DIGEST" > "$DONE_GROUPS"
   queue_open "$QUEUE" "$SHARD_IDX" "$SHARD_TOTAL" "$PART_GROUPS" "$DONE_GROUPS"
 else

@@ -3,6 +3,8 @@
 // here in isolation.
 
 import type { components } from "../api/schema";
+import { translate } from "../i18n";
+import { DEFAULT_LOCALE, isLocale } from "../i18n/locale";
 import { translatedLabel } from "./labeltranslation";
 
 export type CfObject = components["schemas"]["CustomField"]["object"];
@@ -29,12 +31,33 @@ export function catalogOfRecord(recordKey: string): CfObject | undefined {
   return CF_OBJECTS.find((object) => object === recordKey);
 }
 
-/** A field's label as the reader sees it. */
-export function customFieldLabel(
+/** A field's name in the reader's language, without any retired mark. */
+export function customFieldName(
   field: components["schemas"]["CustomField"],
   locale: string,
 ): string {
   return translatedLabel(field.label, field.label_translations, locale);
+}
+
+/**
+ * A field's label as the reader sees it. A retired field reads "Label (retired)",
+ * because a live field may carry the same name. This is the one place that adds it.
+ */
+export function customFieldLabel(
+  field: components["schemas"]["CustomField"],
+  locale: string,
+): string {
+  const label = customFieldName(field, locale);
+  if (field.status !== "retired") {
+    return label;
+  }
+  return translate(
+    isLocale(locale) ? locale : DEFAULT_LOCALE,
+    "cf.retiredLabel",
+    {
+      label,
+    },
+  );
 }
 
 // The type set mirrors fieldcatalog.Types() in the backend, in its order.

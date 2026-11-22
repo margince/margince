@@ -97,6 +97,8 @@ func (s *Store) RestoreContactTx(
 // RestoreContactLeavingTwinsTx is RestoreContactTx for a caller that restores
 // several contacts in one transaction. It files their twins afterwards with
 // FileRestoredEmployerTwinsTx, once every contact row it changes is locked.
+//
+//gate:parent-version-door
 func (s *Store) RestoreContactLeavingTwinsTx(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
@@ -183,6 +185,8 @@ func refuseRestoreOverLead(ctx context.Context, tx pgx.Tx, id ids.ContactID) err
 }
 
 // RestoreCompanyTx is RestoreContactTx for a company.
+//
+//gate:parent-version-door
 func (s *Store) RestoreCompanyTx(
 	ctx context.Context, tx pgx.Tx, id ids.CompanyID, ifVersion *int64, with storekit.RestoreWith,
 ) (storekit.RestoreReport, error) {
@@ -195,7 +199,12 @@ func (s *Store) RestoreCompanyTx(
 	if err := ensureRestorable(ctx, tx, auth.CompanyArchive, companyEntity, id.UUID); err != nil {
 		return storekit.RestoreReport{}, err
 	}
-	return storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, with)
+	report, err := storekit.Unarchive(ctx, tx, companyUnarchive, id.UUID, ifVersion, with)
+	if err != nil {
+		return report, err
+	}
+	// The restore puts the company's domains back, the own company's among them.
+	return report, storekit.OwnCompanyDomainsChanged(ctx, tx, id.UUID)
 }
 
 // ensureRestorable asks what the archive asks of the row: write authority and

@@ -633,18 +633,26 @@ describe("whether the staged mail may go", () => {
   });
 
   it("refuses a blank subject or message in the editor", async () => {
-    stubEngine(() => jsonResponse(allowedPreview(["anna@example.test"])));
+    const fetched = stubEngine(() =>
+      jsonResponse(allowedPreview(["anna@example.test"])),
+    );
     render(<ApprovalRow approval={heldDraft()} />);
     await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
 
-    await userEvent.clear(screen.getByLabelText(/Subject/));
+    const subject = screen.getByLabelText(/Subject/);
+    await userEvent.clear(subject);
 
     expect(
       screen.getAllByText(en["decision.fieldRequired"]).length,
     ).toBeGreaterThan(0);
-    expect(
+    await userEvent.click(
       screen.getByRole("button", { name: en["decision.approveEdited"] }),
-    ).toBeDisabled();
+    );
+    expect(subject).toHaveFocus();
+    const approved = fetched.mock.calls.filter(([input]) =>
+      String(input instanceof Request ? input.url : input).endsWith("/approve"),
+    );
+    expect(approved).toHaveLength(0);
   });
 
   it("keeps the edited text when the approve is refused", async () => {

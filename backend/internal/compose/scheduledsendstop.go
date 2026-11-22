@@ -51,6 +51,9 @@ func NewScheduledSendStop(pool *pgxpool.Pool, ident *identity.Service, log *slog
 // HandleEvent routes one envelope. Anything that is not a stop on a contact
 // answers nil, so the consumer group keeps flowing.
 func (s *ScheduledSendStop) HandleEvent(ctx context.Context, env events.Envelope) error {
+	if !events.ScheduledSendStopTypes.Has(env.Type) {
+		return nil
+	}
 	purpose, stop, err := stopOf(env)
 	if err != nil || !stop {
 		return err

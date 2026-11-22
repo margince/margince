@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { WriteRefused } from "../../design-system/querystates";
@@ -78,6 +79,7 @@ export function leadBand({
           reader was on History said nothing at all. */}
       <WriteRefused titleKey="lead.writeRefused" error={refusal} />
       {sentence && <p id={reasonId}>{sentence}</p>}
+      {sentence && <EditAccessRequest kind="lead" record={lead} />}
     </>
   );
 }

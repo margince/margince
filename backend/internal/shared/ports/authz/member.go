@@ -28,6 +28,13 @@ func MemberPrincipal(ctx context.Context, r Resolver, workspaceID, userID ids.UU
 	return HumanPrincipal(userID, rbac, seat), nil
 }
 
+// WithAuthority is p with a member's resolved grants, teams and seat set on it.
+// The rest of p, such as its scopes, passport and locale, stays as it was.
+func WithAuthority(p principal.Principal, rbac RBAC, seat principal.SeatType) principal.Principal {
+	p.SeatType, p.Permissions, p.TeamIDs = seat, rbac.Permissions, rbac.TeamIDs
+	return p
+}
+
 // HumanPrincipal is the principal a member's resolved authority makes, for a
 // caller that resolved many members in one read rather than through
 // MemberPrincipal one at a time.

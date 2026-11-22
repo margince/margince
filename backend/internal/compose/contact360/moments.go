@@ -106,7 +106,7 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	}
 	said := momentCopyFor(string(identity.ReaderLanguageForRecord(ctx, tx)))
 	said.zone = zone
-	asks, err := s.doneAsksFor(ctx, tx, contactID, now, out)
+	asks, err := s.doneAsksFor(ctx, tx, contactID, now, out, zone)
 	if err != nil {
 		return err
 	}

@@ -17,6 +17,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { WriteRefused } from "../../design-system/querystates";
+import { type FieldFaults, useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { todayIn } from "../../format/calendarday";
 import { AI_RATE_DAY_ZONE } from "../../format/timezone";
@@ -29,7 +30,7 @@ import {
   useAvailableModels,
 } from "../../lib/ai-models";
 import { labelFor } from "../../lib/labelfor";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { DECISION_PROVIDERS, PROVIDERS } from "../ai/ai-routing-fields";
 import { PER_MTOK_PRICE } from "./priceinput";
 import "./rates.css";
@@ -109,6 +110,8 @@ export function PriceForm({
   frame?: (fields: ReactNode, actions: ReactNode) => ReactNode;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const qc = useQueryClient();
   const [typedProvider, setProvider] = useState("");
   const provider = initial?.provider ?? fixedProvider ?? typedProvider;
@@ -137,6 +140,7 @@ export function PriceForm({
   // biome-ignore lint/correctness/useExhaustiveDependencies: the fields are the trigger, not read
   useEffect(() => {
     setError(null);
+    faults.show(new Map());
   }, [
     provider,
     modelId,
@@ -179,9 +183,14 @@ export function PriceForm({
     opts: Readonly<{
       inputMode?: "text" | "decimal";
       placeholder?: string;
+      required?: string;
     }> = {},
   ) => (
-    <Field label={label}>
+    <Field
+      label={label}
+      required={opts.required !== undefined}
+      error={opts.required ? faults.of(opts.required) : undefined}
+    >
       {(control) => (
         <TextInput
           {...control}
@@ -195,7 +204,7 @@ export function PriceForm({
   );
 
   const fields = (
-    <div className="form-stack">
+    <div className="form-stack" ref={faultsRoot}>
       {initial ? (
         <p className="t-sub">
           {t("aiRates.manual.editing", {
@@ -213,11 +222,16 @@ export function PriceForm({
           onModel={pickModel}
           lane={lane}
           boundModels={boundModels}
+          faults={faults}
         />
       )}
       <div className="form-row">
         {initial ? null : <LaneField lane={lane} onChange={setLane} />}
-        <Field label={t("settings.rates.colEffective")}>
+        <Field
+          label={t("settings.rates.colEffective")}
+          required
+          error={faults.of("effective_date")}
+        >
           {(control) => (
             <DateInput
               {...control}
@@ -232,9 +246,11 @@ export function PriceForm({
       <div className="form-row">
         {field(t("settings.rates.colInput"), input, setInput, {
           placeholder: "5.00",
+          required: "input",
         })}
         {field(t("settings.rates.colOutput"), output, setOutput, {
           placeholder: "25.00",
+          required: "output",
         })}
       </div>
       <div className="form-row">
@@ -254,7 +270,19 @@ export function PriceForm({
       </Button>
       <Button
         variant="primary"
+        pending={save.isPending}
         onClick={(event) => {
+          const blank = blankRequired(locale, {
+            provider: [t("settings.rates.colProvider"), provider],
+            ...(provider === ""
+              ? {}
+              : { model: [t("settings.rates.colModel"), modelId] as const }),
+            effective_date: [t("settings.rates.colEffective"), effectiveDate],
+            input: [t("settings.rates.colInput"), input],
+            output: [t("settings.rates.colOutput"), output],
+          });
+          // A malformed price already says so under the boxes.
+          if (faults.show(blank) || malformed) return;
           if (refuseUnreadableField(event.currentTarget)) {
             return;
           }
@@ -270,17 +298,6 @@ export function PriceForm({
             effective_date: effectiveDate,
           });
         }}
-        // A cleared date box reports "", and the server refuses an empty
-        // effective date; the refusal is spelled here, before the write.
-        disabled={
-          save.isPending ||
-          malformed ||
-          provider.trim() === "" ||
-          modelId.trim() === "" ||
-          input.trim() === "" ||
-          output.trim() === "" ||
-          effectiveDate === ""
-        }
       >
         {t("settings.rates.setRate")}
       </Button>
@@ -300,6 +317,7 @@ function NewPriceIdentity({
   onModel,
   lane,
   boundModels,
+  faults,
 }: Readonly<{
   fixedProvider: string | undefined;
   typedProvider: string;
@@ -308,13 +326,18 @@ function NewPriceIdentity({
   onModel: (next: string) => void;
   lane: ModelLane;
   boundModels?: readonly BoundModel[];
+  faults: FieldFaults;
 }>) {
   const t = useT();
   const provider = fixedProvider ?? typedProvider;
   return (
     <>
       {fixedProvider === undefined && (
-        <Field label={t("settings.rates.colProvider")}>
+        <Field
+          label={t("settings.rates.colProvider")}
+          required
+          error={faults.of("provider")}
+        >
           {(control) => (
             <Select
               {...control}
@@ -338,6 +361,7 @@ function NewPriceIdentity({
           value={modelId}
           onChange={onModel}
           bound={boundModels}
+          error={faults.of("model")}
         />
       )}
     </>
@@ -408,19 +432,21 @@ function VendorModelField({
   value,
   onChange,
   bound,
+  error,
 }: Readonly<{
   provider: string;
   lane: ModelLane;
   value: string;
   onChange: (next: string) => void;
   bound?: readonly BoundModel[];
+  error?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const sheet = useAiModelCatalogue();
   const available = useAvailableModels(provider, "", true);
   return (
-    <Field label={t("settings.rates.colModel")}>
+    <Field label={t("settings.rates.colModel")} required error={error}>
       {(control) => (
         <ComboBox
           {...control}

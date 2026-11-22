@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { formatNumber, INTL_LOCALE } from "../../format/format";
+import { formatNumber } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import type { Locale, Translator } from "../../i18n";
 import { translatePlural } from "../../i18n";
 
@@ -51,7 +52,7 @@ export function planCoverageText(
           count,
           read: formatNumber(total - unread.length, locale),
         });
-  const names = new Intl.ListFormat(INTL_LOCALE[locale], {
+  const names = listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(unread);

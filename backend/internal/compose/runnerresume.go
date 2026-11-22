@@ -40,7 +40,7 @@ type approvalDecision struct {
 // Every other event on the group's streams is not ours — nil, not an
 // error, so the group keeps flowing.
 func (s *RunnerService) HandleEvent(ctx context.Context, env kevents.Envelope) error {
-	if env.Type != "approval.decided" {
+	if !kevents.OvernightAgentTypes.Has(env.Type) {
 		return nil
 	}
 	approvalID := ids.From[ids.ApprovalKind](env.Entity.ID)

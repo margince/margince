@@ -156,6 +156,9 @@ func (s *Service) ReactivateUser(ctx context.Context, actor Identity, userID ids
 			 WHERE id = $1 RETURNING status`, userID).Scan(&restored); err != nil {
 			return err
 		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "user", userID.UUID,
 			map[string]any{userAuditKeyStatus: status}, map[string]any{userAuditKeyStatus: restored})
 		if err != nil {
@@ -266,6 +269,9 @@ func (s *Service) DeactivateUser(ctx context.Context, actor Identity, in Deactiv
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, in.UserID); err != nil {
+			return err
+		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
 			return err
 		}
 		if err := s.revokeBorrowedAuthority(ctx, tx, in.UserID); err != nil {

@@ -5,10 +5,12 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { OverviewRow } from "../design-system/overviewcard";
+import { taskDueOnDay, taskDueZone } from "../format/calendarday";
 import { formatNumber } from "../format/format";
 import { formatDueCompact } from "../format/format.dates";
 import { daysPast } from "../format/lateness";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useCompanyZone } from "../lib/companyzone";
 import { displayedSubject } from "../lib/systemdisplay";
 import { type DatedTask, taskStanding } from "../lib/taskstanding";
 import { useViewerZone } from "../lib/viewerzone";
@@ -42,6 +44,7 @@ export function openTaskOf(
   task: components["schemas"]["Activity"],
   asOf: string,
   untitled: string,
+  companyZone: string,
 ): OpenTask {
   return {
     id: task.id,
@@ -50,7 +53,17 @@ export function openTaskOf(
     due_has_time: task.due_has_time,
     due_intent: task.due_intent,
     overdue: task.due_at
-      ? daysPast(Date.parse(task.due_at), Date.parse(asOf)).late
+      ? daysPast(
+          Date.parse(
+            taskDueOnDay(
+              task.due_at,
+              task.due_has_time,
+              task.due_intent,
+              companyZone,
+            ),
+          ),
+          Date.parse(asOf),
+        ).late
       : false,
     assignee_id: task.assignee_id,
     version: task.version,
@@ -123,7 +136,11 @@ export function TaskStandingMark({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useViewerZone();
+  const zone = taskDueZone(
+    task.due_has_time,
+    useViewerZone(),
+    useCompanyZone(),
+  );
   const standing = taskStanding(task, asOf, zone);
   switch (standing.kind) {
     case "late":

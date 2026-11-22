@@ -453,7 +453,7 @@ func (c *openAICompatClient) post(ctx context.Context, path string, payload []by
 	if c.apiKey != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	}
-	resp, err := sendModelRequest(c.http, httpReq)
+	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: openai-compat: %w", err)
 	}

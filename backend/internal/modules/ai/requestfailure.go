@@ -29,7 +29,7 @@ func (r *Router) AnnounceRequestFailure(ctx context.Context, task Task, cause er
 	// own settle repairs the occurrence — and the projection's attempt
 	// guard makes that repair certain.
 	lc := newLogicalCall()
-	trace := r.newAttemptTrace(ctx, task, "", "", model.Request{})
+	trace := newAttemptTrace(ctx, task, "", model.Request{})
 	trace.ErrorSentinel = classifyError(fmt.Errorf("%w: %w", errRequestFailed, cause))
 	lc.append(trace)
 	r.flushDetached(ctx, r.binding(), lc)

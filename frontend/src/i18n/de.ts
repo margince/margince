@@ -560,6 +560,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "dataTasks.status.running": "Läuft",
   "dataTasks.status.paused": "Pausiert",
   "dataTasks.status.done": "Abgeschlossen",
+  "dataTasks.status.doneWithAction": "Abgeschlossen, Aktion nötig",
   "dataTasks.status.failed": "Fehlgeschlagen",
   "dataTasks.action.pause": "Pausieren",
   "dataTasks.action.resume": "Fortsetzen",
@@ -577,6 +578,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein vorheriger Schritt muss zuerst abgeschlossen werden.",
   "dataTasks.blocked.missing_prerequisite":
     "Erforderliche Aktualisierungen müssen zuerst abgeschlossen werden.",
+  "dataTasks.actionRecords_one": "{count} Datensatz noch zu bearbeiten",
+  "dataTasks.actionRecords_other": "{count} Datensätze noch zu bearbeiten",
   "approval.preview.createEmployer":
     "Das fehlende Unternehmen erstellen und als Arbeitgeber dieses Kontakts verknüpfen.",
   "approval.preview.reuseEmployer":
@@ -977,7 +980,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Eingegangen am",
   "reporting.enteredOn": "In die Phase gekommen am",
   "reporting.accruedOn": "Angefallen am",
-  "reporting.introducedOn": "Vorgestellt am",
+  "reporting.introductionCountedOn": "Vorgestellt oder erfasst am",
   "reporting.bookedOn": "Gebucht am",
   "reporting.commissionAmount": "Provision",
   "reporting.hoursUnit": "Stunden",
@@ -2491,6 +2494,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.rbac_defaults": "Anfangsberechtigungen der Erweiterungen",
   "systemJob.release_version": "Versionsprüfung",
   "systemJob.report_schedule": "Geplante Berichte",
+  "systemJob.chat_task_reader": "Chat und offene Aufgaben",
   "systemJob.request_settlement": "Abschluss von Anfragen",
   "systemJob.restore_drill": "Eintrag eines Wiederherstellungstests",
   "systemJob.risk_verdict": "Prüfung des Deal-Risikos",
@@ -2501,6 +2505,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.sign_in_policy_read": "Lesen der Anmelderichtlinie",
   "systemJob.stage_evidence": "Phasenbelege",
   "systemJob.stage_evidence_read": "Auswertung der Phasenbelege",
+  "systemJob.stage_evidence_reread": "Erneute Auswertung der Phasenbelege",
   "systemJob.suppression_journal_worker": "Export des Löschjournals",
   "systemJob.stored_object_reap_worker": "Bereinigung des Dateispeichers",
   "systemJob.technical_backfill": "Nachholen der technischen Abfrage",
@@ -2634,6 +2639,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.reversal.undoneBy": "Rückgängig gemacht von {undoer}",
   "history.reversal.unpaired": "Macht eine frühere Änderung rückgängig",
   "history.edge.marker": "Verknüpfung",
+  "history.edge.linked": "{subject} hat {name} als {role} verknüpft",
+  "history.edge.roleChanged":
+    "{subject} hat die Rolle bei {name} von {previous} zu {role} geändert",
+  "history.edge.roleSet":
+    "{subject} hat die Rolle bei {name} zu {role} geändert",
+  "history.edge.changed":
+    "{subject} hat die Verknüpfung mit {name} geändert: {fields}",
+  "history.edge.unlinked": "{subject} hat die Verknüpfung mit {name} gelöst",
+  "history.edge.roleRemoved":
+    "{subject} hat die Rolle {previous} bei {name} entfernt",
+  "history.edge.alsoChanged": "außerdem geändert: {fields}",
   "history.subject.viaClient": "{name} (über {client})",
   "history.subject.viaAgent": "{name} (über einen Agenten)",
   "history.subject.viaConnector": "{name} (über einen Connector)",
@@ -2785,6 +2801,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.stage_id": "Phase",
   "history.field.disqualify_reason_id": "Disqualifizierungsgrund",
   "history.field.trigger": "Qualifiziert durch",
+  "history.field.role": "Rolle",
+  "history.field.is_current_primary": "Hauptarbeitgeber",
+  "history.field.employment_status": "Beschäftigungsstatus",
+  "history.field.started_precision": "Genauigkeit des Startdatums",
+  "history.field.ended_precision": "Genauigkeit des Enddatums",
   "history.field.win_probability_override": "Abschlusschance am Deal",
   "history.field.win_probability_set_by": "Abschlusschance gesetzt von",
   "history.field.fx_rate_date": "Datum des Wechselkurses",
@@ -3166,14 +3187,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "board.count_other": "Deals: {count}",
   "board.weightedLabel": "gewichtet",
   "board.ratesOn": "Wechselkurse vom {date}",
-  "board.unpriced_one": "{count} ohne Preis",
-  "board.unpriced_other": "{count} ohne Preis",
+  "coverage.noRate_one": "{count} Deal hat keinen Wechselkurs{currencies}",
+  "coverage.noRate_other": "{count} Deals haben keinen Wechselkurs{currencies}",
+  "coverage.noValue_one": "{count} Deal hat keinen Wert",
+  "coverage.noValue_other": "{count} Deals haben keinen Wert",
+  "coverage.partial": "Teilsumme",
+  "coverage.partialTip": "Teilsumme: Diese Deals sind nicht enthalten.",
   "board.totalsTip":
     "{total} offen, {weighted} gewichtet mit der Abschlusschance jedes Deals.",
-  "board.unpricedTip_one":
-    "{count} Deal hat keinen Preis und zählt in keiner der beiden Summen.",
-  "board.unpricedTip_other":
-    "{count} Deals haben keinen Preis und zählen in keiner der beiden Summen.",
   "board.convertedTip": "Umgerechnet mit Wechselkursen vom {date}.",
   "board.matchesIn_one": "{count} Treffer in {columns}",
   "board.matchesIn_other": "{count} Treffer in {columns}",
@@ -3606,6 +3627,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Server hat zu lange gebraucht und die Anfrage abgebrochen. Versuche es gleich noch einmal.",
   "common.individualPerformanceOff":
     "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben. Eine Prognose wird ganz zurückgehalten, wenn eine ihrer Teilgruppen die Zahlen eines einzelnen Mitglieds zeigen würde.",
+  "common.ownerNotMeasurable":
+    "Die Zahlen dieser verantwortlichen Person darfst du nicht auswerten. Entferne den Filter nach verantwortlicher Person, oder lass deine Reichweite von einem Admin erweitern.",
   "common.permissionDenied":
     "Du hast keine Berechtigung für diese Aktion. Lass deinen Zugriff von einem Admin oder der Person erweitern, die diesen Datensatz mit dir geteilt hat.",
   "common.seatReadOnly":
@@ -4220,8 +4243,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
   "co.health.reason.lastMet_other": "Zuletzt vor {days} Tagen getroffen.",
-  "co.health.reason.singleThreaded":
+  "co.health.reason.singleThreaded_one":
     "In Kontakt, aber ein einziger Kontakt trägt das ganze Unternehmen.",
+  "co.health.reason.singleThreaded_other":
+    "In Kontakt, aber nur {count} Kontakte tragen das ganze Unternehmen.",
   "co.health.reason.severalContacts_one":
     "{count} Kontakt hier steht in Verbindung.",
   "co.health.reason.severalContacts_other":
@@ -4931,6 +4956,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
   "approval.kind.ownership_transfer": "Datensatz übergeben",
+  "approval.kind.edit_access": "Schreibzugriff geben",
   "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
@@ -5549,6 +5575,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.domainContacts.changed":
     "Die Liste hat sich geändert, während sie offen war. Prüfe die Auswahl und verknüpfe erneut.",
   "co.domainContacts.dismiss": "Nicht jetzt",
+  "company.duplicates.entry_one": "Mögliches Duplikat ({count})",
+  "company.duplicates.entry_other": "Mögliche Duplikate ({count})",
+  "company.duplicates.title": "Mögliche Duplikate",
+  "company.duplicates.lead":
+    "Diese Unternehmen ähneln diesem. Öffne eines, um sie zu vergleichen.",
+  "company.duplicates.created":
+    "Ein Unternehmen mit diesem Namen gibt es schon.",
   "co.domainContacts.link_one": "{count} Kontakt verknüpfen",
   "co.domainContacts.link_other": "{count} Kontakte verknüpfen",
   "co.domainContacts.linkNone": "Kontakte verknüpfen",
@@ -6075,6 +6108,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.bulkAssignedDone_other": "{count} Leads an {owner} zugewiesen.",
   "lead.bulkDisqualifiedDone_one": "{count} Lead disqualifiziert.",
   "lead.bulkDisqualifiedDone_other": "{count} Leads disqualifiziert.",
+  "lead.bulkAssignTitle_one": "Diesen Lead an {owner} zuweisen?",
+  "lead.bulkAssignTitle_other": "{count} Leads an {owner} zuweisen?",
   "lead.bulkFailed": "{count} nicht übernommen:",
   "lead.bulkFailedRow": "nicht gespeichert",
   "lead.bulkOutcomeConflict": "inzwischen von jemand anderem geändert",
@@ -6879,6 +6914,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.bulkStage": "In Phase verschieben",
   "deals.bulkStagePick": "Phase wählen",
   "deals.bulkMove": "Verschieben",
+  "deals.bulkMoveTitle_one": "{count} Deal nach {stage} verschieben?",
+  "deals.bulkMoveTitle_other": "{count} Deals nach {stage} verschieben?",
+  "deals.bulkMoveWill_one": "{count} Deal wird nach {stage} verschoben.",
+  "deals.bulkMoveWill_other": "{count} Deals werden nach {stage} verschoben.",
   "deals.bulkMoved_one": "{count} Deal nach {stage} verschoben.",
   "deals.bulkMoved_other": "{count} Deals nach {stage} verschoben.",
   "deals.bulkAlreadyThere_one": "{count} war schon in {stage}.",
@@ -7726,7 +7765,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.city": "Stadt",
   "create.region": "Bundesland oder Region",
   "create.postalCode": "Postleitzahl",
-  "create.country": "Ländercode (ISO 3166)",
+  "create.country": "Land",
   "create.companyName": "Unternehmen",
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
@@ -7749,8 +7788,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gib einen Link zu einem persönlichen Profil ein, etwa linkedin.com/in/name.",
   "create.dateRangeReversed":
     "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",
-  "create.countryCodeInvalid":
-    "Gib das Land als Code aus zwei Buchstaben ein, etwa DE oder US.",
   "create.referenceNotFound":
     "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",
@@ -7928,6 +7965,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "chatCapture.readBadge": "Von der KI aus dem Screenshot übernommen",
   "chatCapture.channel": "Chat-App",
   "chatCapture.file": "Beim Kontakt ablegen",
+  "chatCapture.fileOnLead": "Beim Lead ablegen",
+  "chatCapture.fileOnDeal": "Beim Deal ablegen",
   "chatCapture.fileFailed": "Der Chat konnte nicht abgelegt werden",
 
   // Ein Dokument hinzufügen. Die Frage „Wozu gehört es?" trägt die eigentliche
@@ -8064,6 +8103,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.deleteTitle": "{name} löschen?",
   "files.deleteBody":
     "Die Datei wird aus diesem Deal entfernt, und die Käuferseite sieht sie in keinem Deal Room mehr. Der Eintrag im Raum bleibt, bis du ihn entfernst.",
+  "files.edit": "Bearbeiten",
+  "files.editTitle": "{name} bearbeiten",
+  "files.editState": "Status",
+  "files.save": "Speichern",
+  "files.deleteBodyRecord":
+    "Die Datei wird aus den Dokumenten dieses Eintrags entfernt.",
   "files.showHidden": "Ausgeblendete Dateien anzeigen",
   "files.hideHidden": "Ausgeblendete Dateien verbergen",
   "dealfiles.origin.from": "Von {who}",
@@ -8202,6 +8247,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "handover.withdraw": "Anfrage zurückziehen",
   "handover.sent": "Anfrage an {owner} gesendet",
   "handover.withdrawn": "Anfrage zurückgezogen",
+  // Asking a record's owner for edit access; the owner stays the owner.
+  "editAccess.ask": "{owner} um Schreibzugriff bitten",
+  "editAccess.requested":
+    "Du hast {owner} um Schreibzugriff gebeten. Die Anfrage bleibt bis {date} offen.",
+  "editAccess.withdraw": "Anfrage zum Schreibzugriff zurückziehen",
+  "editAccess.sent": "Schreibzugriff bei {owner} angefragt",
+  "editAccess.withdrawn": "Anfrage zum Schreibzugriff zurückgezogen",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Übergeben an…",
   "handover.offerTo": "Übergeben an",
@@ -8787,6 +8839,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotSendCapable":
     "Dein Postfach ist nur zum Erfassen verbunden, ohne Berechtigung zum Senden. Verbinde das Postfach neu und erlaube das Senden. Ein Postfach, das vor Einführung des Versands verbunden wurde, lässt sich nicht nachträglich erweitern.",
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
+  "compose.mailboxNotConnected":
+    "Es ist kein Postfach verbunden. Verbinde eines, um aus Margince zu senden.",
+  "compose.mailboxNotConnectedGoto": "Postfach verbinden",
   "compose.sharedUnsubscribeToken":
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
@@ -8873,7 +8928,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.count": "Offene Deals",
   "analytics.unweighted": "Deal-Wert",
   "analytics.weighted": "Wahrscheinlichkeitsbereinigter Wert",
-  "analytics.priced": "{priced} von {total} bepreist",
   "analytics.planNote":
     "Der ausgeführte Plan und die Zeilen, mit denen diese Zahl abgeglichen wird",
   "analytics.reportDeals": "Offene Deals nach Phase",
@@ -9445,7 +9499,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.forecastDeals_other": "{count} Deals",
   "analytics.forecastNoAmount": "Kein Betrag",
   "analytics.forecastWeighted": "{amount} gewichtet",
-  "analytics.forecastPriced": "{priced} von {count} bepreist",
   "analytics.readingNone": "Keine",
   "analytics.readingLoading": "Wird geladen",
   "analytics.readingUnavailable": "Nicht verfügbar",
@@ -9467,7 +9520,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.share.linkWarning":
     "Der Link wird nur einmal angezeigt und lässt sich später nicht mehr abrufen. Kopiere den Link jetzt.",
   "analytics.share.leaveWarning":
-    "Schließen ohne Kopieren verwirft den Link, und ein neuer muss erstellt werden.",
+    "Wenn du ohne Kopieren schließt, lässt sich der Link nicht mehr anzeigen. Er bleibt offen, bis er abläuft, du ihn unter Geteilte Links schließt oder du den Zugriff auf die Prognose verlierst.",
   "analytics.share.copy": "Link kopieren",
   "analytics.share.copied": "Kopiert",
   "analytics.share.copyFailed":
@@ -11022,10 +11075,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ kann nicht geschrieben werden: Dieses Feld ist nicht mehr aktiv.",
   "import.reason.id_not_a_company_id":
     "„{value}“ ist keine Unternehmens-ID. Exportiere die Unternehmen, um ihre IDs zu erhalten, oder lasse die Spalte leer, um die Zeile als neues Unternehmen zu importieren.",
+  "import.reason.id_not_a_record_id":
+    "„{value}“ ist keine Datensatz-ID. Exportiere die Liste, um die IDs zu erhalten, oder lasse die Spalte leer, um die Zeile als neuen Datensatz zu importieren.",
+  "import.reason.id_record_not_visible":
+    "Kein Datensatz, den du sehen kannst, hat die ID „{value}“. Er kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
+  "import.reason.ref_taken_by_another_record":
+    "Die Referenz „{ref}“ steht bereits für einen anderen Datensatz aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwende eine neue Referenz für diese Zeile oder korrigiere die ID-Spalte.",
   "import.reason.id_not_visible":
     "Kein Unternehmen, das du sehen kannst, hat die ID „{value}“. Es kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
   "import.reason.id_on_non_company":
-    "Nur eine Unternehmenszeile kann „{column}“ angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
+    "Nur eine Zeile für Unternehmen, Kontakte, Leads oder Deals kann „{column}“ angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
   "import.reason.link_ambiguous":
     "Mehr als ein Unternehmen heißt „{name}“, daher kann nur ein Mensch entscheiden, welches diesen Kontakt beschäftigt.",
   "import.reason.link_ambiguous_dropped":
@@ -11407,6 +11466,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.recoveryHealth": "Wiederherstellungstests",
   "settings.recoveryHealthSub":
     "Wann die Wiederherstellung aus dem Backup zuletzt getestet wurde und wie lange sie gedauert hat.",
+  "settings.vacuumHealth": "Tabellenspeicher",
+  "settings.vacuumHealthSub":
+    "Tabellen, deren Dateien viel Platz ohne lebende Zeilen enthalten. Margince führt die Bereinigung nicht selbst aus.",
+  "vacuumHealth.adminOnly":
+    "Der Tabellenspeicher betrifft die ganze Installation und braucht eine Berechtigung, die deine Rolle nicht hat.",
+  "vacuumHealth.scope":
+    "Gezählt wird nur die Datei der Tabelle selbst. Die Indizes der Tabelle und der eigene Speicher für lange Werte (TOAST) zählen nicht.",
+  "vacuumHealth.thresholds":
+    "Eine Tabelle wird gelistet, wenn mindestens {percent} ihrer Datei und mindestens {size} keine lebende Zeile enthalten. Die Größen sind Schätzungen aus den Statistiken der Datenbank.",
+  "vacuumHealth.empty":
+    "Keine Tabelle hat so viel Platz ohne lebende Zeilen. Es ist nichts auszuführen.",
+  "vacuumHealth.unmeasured_one":
+    "{count} große Tabelle hat noch keine Statistiken und daher keine Schätzung. Die Datenbank erhebt sie bei der nächsten Analyse der Tabelle.",
+  "vacuumHealth.unmeasured_other":
+    "{count} große Tabellen haben noch keine Statistiken und daher keine Schätzung. Die Datenbank erhebt sie bei der nächsten Analyse jeder Tabelle.",
+  "vacuumHealth.col.table": "Tabelle",
+  "vacuumHealth.col.size": "Größe",
+  "vacuumHealth.col.waste": "Platz ohne lebende Zeilen",
+  "vacuumHealth.col.run": "Auszuführen",
+  "vacuumHealth.runAs": "Als {owner} ausführen.",
+  "vacuumHealth.copy": "Befehl kopieren",
+  "vacuumHealth.copied": "Kopiert",
+  "vacuumHealth.copyRemedy": "Markiere den Befehl und kopiere ihn von Hand.",
+  "vacuumHealth.howTitle": "So führst du es aus",
+  "vacuumHealth.step.window":
+    "Plane ein Wartungsfenster. VACUUM FULL sperrt die Tabelle, solange es läuft: Niemand kann sie bis zum Ende lesen oder ändern.",
+  "vacuumHealth.step.disk":
+    "Prüfe den freien Speicherplatz. Das Neuschreiben braucht Platz für eine neue Kopie der Tabelle und ihrer Indizes.",
+  "vacuumHealth.step.owner":
+    "Verbinde dich mit der Datenbank als die Rolle aus der Zeile. Diese Rolle besitzt die Tabelle; die Rolle, unter der Margince läuft, kann das nicht.",
+  "vacuumHealth.step.run":
+    "Führe den Befehl aus. Er erneuert auch die Statistiken, sodass die Tabelle beim nächsten Lesen von dieser Liste verschwindet.",
+  "vacuumHealth.repack":
+    "Ohne Sperre geht es mit dem Werkzeug pg_repack, das eine Tabelle neu schreibt, während sie in Gebrauch bleibt. Es muss auf dem Datenbankserver installiert sein.",
   "settings.automaticWork": "Automatische Arbeit",
   "settings.automaticWorkSub":
     "Was Margince jedem Teammitglied von selbst gegeben hat, und wie viel davon als „Nicht meins“ zurückkam.",
@@ -12682,6 +12775,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "backfill.narrowingNote":
     "Für dieses Postfach wurde bereits ein längerer Zeitraum importiert. Wähle denselben oder einen längeren Zeitraum.",
   "backfill.staleUpdated": "Seit {duration} kein Fortschritt.",
+  "backfill.restartedNote":
+    "Der Import hat von vorn begonnen, weil das Postfach seine Position verloren hat. Die Zählung der E-Mails beginnt neu; gefundene Kontakte bleiben erhalten.",
+  "backfill.retryNote":
+    "Beim Import ist ein Verbindungsproblem aufgetreten. Er versucht es erneut. Die letzte Seite wird neu gelesen, ihre E-Mails werden erneut gezählt.",
   "backfill.countScanned_one": "{count} E-Mail geprüft",
   "backfill.countScanned_other": "{count} E-Mails geprüft",
   "backfill.errorResumeNote":
@@ -13068,10 +13165,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.imapSecretHint":
     "Verwende ein App-spezifisches Passwort. Das Passwort wird im Schlüsseltresor gespeichert und nach Zeitplan zum Lesen der E-Mails genutzt, bis du das Postfach trennst. Beim Trennen wird das Passwort gelöscht.",
   "connectors.imapSubmitCta": "Verbinden",
-  "connectors.imapNeeded": "Pflichtfelder",
-  "connectors.imapStillNeeded": "Erforderlich: {fields}",
-  "connectors.imapRange": "Von {min} bis {max}",
-  "connectors.imapOutOfRange": "Außerhalb des Bereichs: {fields}",
+  "connectors.imapHostName":
+    "Gib nur den Servernamen ein, zum Beispiel imap.example.com.",
+  "connectors.imapSecretEmptied":
+    "Nach dem Fehlversuch geleert. Gib es erneut ein.",
   "connectors.imapLoginRejected":
     "Das Postfach hat diese Zugangsdaten abgelehnt. Prüfe Server, E-Mail-Adresse und App-Passwort.",
   "connectors.imapUnreachable":
@@ -14422,6 +14519,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ihre Antwort wurde erfasst. Das zuständige Team bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
     "Dieser Link ist nicht mehr gültig. Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
+  "confirm.deadLinkBody":
+    "Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
   "confirm.questionChanged":
     "Die Frage auf dieser Seite hat sich geändert, nachdem Sie sie geöffnet haben. Laden Sie die Seite neu und antworten Sie noch einmal.",
   "prefs.lockedWhy":
@@ -14911,7 +15010,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.customField": "Eigenes Feld",
   "audit.kind.activity_review_template": "Vorlage für Aktivitätsbewertungen",
   "audit.kind.agent_standing_grant": "Dauerhafte Agentenberechtigung",
-  "audit.kind.ai_call": "KI-Aufruf",
   "audit.kind.ai_feedback": "KI-Feedback",
   "audit.kind.ai_model_rate": "KI-Modellpreis",
   "audit.kind.analytics_share": "Geteilter Bericht",
@@ -14939,7 +15037,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.communication_instruction": "Kommunikationsanweisung",
   "audit.kind.communication_review": "Kommunikationsprüfung",
   "audit.kind.communication_suppression": "Kommunikationssperre",
-  "audit.kind.company_domain_question_reader": "Frage zur Unternehmensdomain",
   "audit.kind.confirm_token": "Bestätigungslink",
   "audit.kind.consent_text_version": "Version des Einwilligungstexts",
   "audit.kind.contact_acquisition_evidence": "Herkunftsnachweis des Kontakts",
@@ -15051,6 +15148,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.audit.footer":
     "Jedes Hinzufügen, Bearbeiten und Archivieren wird dauerhaft im Audit-Log erfasst.",
   "cf.retired": "Stillgelegt",
+  "cf.retiredLabel": "{label} (stillgelegt)",
   "cf.retire.title": "„{label}“ archivieren?",
   "cf.retire.body":
     "Das Feld verschwindet aus neuen Datensätzen und Filtern. Gespeicherte Werte bleiben erhalten. Das Archivieren lässt sich nicht rückgängig machen.",
@@ -17121,6 +17219,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gemessen an der Einschätzung für diesen Zeitraum.",
   "forecast.pipelineBasisWhy.historical_median":
     "Gemessen am Median der letzten 4 vergleichbaren Zeiträume.",
+  "forecast.pipelineBasisLeftOut_one":
+    "{count} gewonnener Deal dieser Perioden hat keinen Betrag oder Wechselkurs und fehlt im Median.",
+  "forecast.pipelineBasisLeftOut_other":
+    "{count} gewonnene Deals dieser Perioden haben keinen Betrag oder Wechselkurs und fehlen im Median.",
   "forecast.pipelineAbsentTitle":
     "Keine Pipeline-Abdeckung für diesen Zeitraum",
   "forecast.pipelineAbsent.call_withheld":
@@ -17426,6 +17528,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",
   "connectFlow.calendarImap": "Über IMAP nicht verfügbar.",
   "connectFlow.pickService": "Wähle E-Mail, Kalender oder beides.",
+  "connectFlow.pickMail": "Wähle E-Mail.",
   "connectFlow.importLabel": "Ältere E-Mails importieren",
   "connectFlow.importNone": "Keine",
   "connectFlow.importAfter":
@@ -18058,7 +18161,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Suche und Abruf haben keine Denkstufe und keine Zeitlimits. Anbieter und Modell änderst du in der Zeile „Embedding-Modell“ unter Modellstufen.",
   "workingHours.unsetTitle": "Noch nicht festgelegt",
   "workingHours.unset":
-    "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, in der Zeitzone der Installation angeboten.",
+    "Zur Buchung werden 09:00 bis 17:00 Uhr, Montag bis Freitag, angeboten.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
   "workingHours.day.1": "Montag",
@@ -18408,6 +18511,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "capturePurge.preview": "Zuerst prüfen",
   "capturePurge.confirm": "Endgültig löschen",
   "capturePurge.done": "Schließen",
+  "capturePurge.recheck": "Erneut prüfen",
+  "capturePurge.changed":
+    "Die E-Mails haben sich seit der Prüfung geändert. Prüfe die Anzahl unten, bevor du löschst.",
   "capturePurge.failed":
     "Die Löschung konnte nicht abgeschlossen werden. Einige Nachrichten wurden möglicherweise bereits vernichtet. Prüfe erneut, was noch vorhanden ist.",
   "capturePurge.refused":
@@ -18461,7 +18567,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureExclusions.containersUnreadableBody":
     "In dieser Liste fehlen möglicherweise Ordner, da der E-Mail-Anbieter nicht geantwortet hat. Bitte versuche es gleich erneut oder schließe E-Mails nach Absendeadresse oder Domain aus.",
   "captureExclusions.kindLabel": "Typ",
-  "captureExclusions.addLabel": "Adresse oder Domain ausschließen",
+  "captureExclusions.title.address": "Adresse ausschließen",
+  "captureExclusions.title.domain": "Domain ausschließen",
+  "captureExclusions.title.container": "Ordner oder Label ausschließen",
+  "captureExclusions.field.address": "Adresse",
+  "captureExclusions.field.domain": "Domain",
+  "captureExclusions.noMailbox": "Verbinde zuerst ein Postfach.",
   "captureExclusions.placeholder.address": "name@beispiel.example",
   "captureExclusions.placeholder.domain": "beispiel.example",
   "captureExclusions.add": "Ausschließen",
@@ -20071,7 +20182,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.standing.dims": "Wie die Beziehung steht",
   "contact.standing.dim.promises": "Deine Zusagen",
   "contact.standing.dim.promisesNone": "Keine offen",
-  "contact.standing.dim.promisesUncounted": "Zu viele Aufgaben zum Zählen",
   "standing.overdue_one": "{count} überfällig",
   "standing.overdue_other": "{count} überfällig",
   "standing.ofOpen_one": "von {count} offenen",
@@ -21226,6 +21336,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur ein Kontakt. Füge einen zweiten hinzu.",
   "deal.committee.missing.secondEngaged":
     "Weniger als zwei im Austausch. Erreiche einen zweiten Kontakt.",
+  "deal.committee.missing.anotherContact":
+    "Zu wenige Kontakte. Füge einen weiteren hinzu.",
+  "deal.committee.missing.anotherEngaged":
+    "Zu wenige im Austausch. Erreiche einen weiteren Kontakt.",
   "deal.committee.foot": "{named} benannt · {engaged} von {named} aktiv",
   "deal.brief.title": "Worum es geht",
   "deal.brief.byModel": "Von Margince aus der Mail des Kunden geschrieben",
@@ -22836,6 +22950,27 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.archive_deal": "Deal archiviert:",
   "magic.action.archive_lead": "Lead archiviert:",
   "magic.action.archive_project": "Projekt archiviert:",
+  "magic.action.create_offer": "Angebot erstellt zu:",
+  "magic.action.update_offer": "Angebot geändert zu:",
+  "magic.action.archive_offer": "Angebot archiviert zu:",
+  "magic.action.create_contract": "Vertrag hinzugefügt zu:",
+  "magic.action.update_contract": "Vertrag geändert zu:",
+  "magic.action.archive_contract": "Vertrag archiviert zu:",
+  "magic.action.create_deal_room": "Deal Room eröffnet zu:",
+  "magic.action.update_deal_room": "Deal Room geändert zu:",
+  "magic.action.archive_deal_room": "Deal Room archiviert zu:",
+  "magic.action.create_stage_evidence": "Phasenbeleg erfasst zu:",
+  "magic.action.update_stage_evidence": "Phasenbeleg geändert zu:",
+  "magic.action.archive_stage_evidence": "Phasenbeleg zurückgezogen zu:",
+  "magic.action.create_introduction": "Vorstellung angefragt zu:",
+  "magic.action.update_introduction": "Vorstellung geändert zu:",
+  "magic.action.archive_introduction": "Vorstellung archiviert zu:",
+  "magic.action.create_assignment": "Zuständigkeit vergeben zu:",
+  "magic.action.update_assignment": "Zuständigkeit geändert zu:",
+  "magic.action.archive_assignment": "Zuständigkeit entfernt zu:",
+  "magic.action.create_attachment": "Datei hinzugefügt zu:",
+  "magic.action.update_attachment": "Datei geändert zu:",
+  "magic.action.archive_attachment": "Datei archiviert zu:",
   "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
   "magic.action.archive_activity_email": "E-Mail archiviert:",
   "magic.action.archive_activity_meeting": "Termin archiviert:",
@@ -23045,6 +23180,33 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Deine Kurzadresse {url} funktioniert dann auch nicht mehr. Du kannst sie danach wieder wählen.",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
+  "scheduling.team.title": "Teammitglieder auf diesem Link",
+  "scheduling.team.foot":
+    "Gäste sehen nur Zeiten, in denen du und alle Teammitglieder hier frei sind, jeweils in deren eigenen Arbeitszeiten. Jede Buchung lädt alle Teammitglieder ein.",
+  "scheduling.team.add": "Teammitglied hinzufügen",
+  "scheduling.team.addHelp":
+    "Angeboten werden nur Mitglieder mit verbundenem Kalender. Jedes Teammitglied bestätigt, bevor der Link Buchungen annimmt.",
+  "scheduling.team.full":
+    "Dieser Link nennt bereits fünf Teammitglieder, mehr geht nicht.",
+  "scheduling.team.choose": "Teammitglied wählen",
+  "scheduling.team.noneToAdd":
+    "Kein anderes Mitglied hat einen verbundenen Kalender",
+  "scheduling.team.remove": "Entfernen",
+  "scheduling.team.pending": "Wartet auf Bestätigung",
+  "scheduling.team.confirmed": "Bestätigt",
+  "scheduling.team.left": "Hat den Link verlassen",
+  "scheduling.team.unavailable":
+    "Nicht verfügbar: kein Mitglied mehr oder Kalender nicht lesbar",
+  "scheduling.team.requestsTitle": "Links anderer Mitglieder, die dich nennen",
+  "scheduling.team.requestLabel": "{title} mit {name}",
+  "scheduling.team.requestPending":
+    "Bestätige, damit Gäste Zeiten buchen können, in denen du frei bist. Du wirst zu jedem Termin eingeladen, der über diesen Link gebucht wird.",
+  "scheduling.team.requestConfirmed":
+    "Gäste buchen Zeiten, in denen du frei bist. Du wirst zu jedem Termin eingeladen, der über diesen Link gebucht wird.",
+  "scheduling.team.confirm": "Bestätigen",
+  "scheduling.team.leave": "Verlassen",
+  "worklist.untitled.booking_health_team_not_ready":
+    "Deine Buchungsseite ist pausiert: Ein Teammitglied hat nicht bestätigt, hat den Link verlassen oder hat keinen lesbaren Kalender",
   "scheduling.personalLinksFoot":
     "Termin mit einer bestimmten Person? Öffne ihren Kontakt und wähle Termin buchen, um einige Zeiten oder einen persönlichen Link zu senden, den nur sie nutzen kann.",
   "scheduling.liveNoInvitesTitle":
@@ -23191,6 +23353,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "saveBar.save": "Speichern",
   "saveBar.discard": "Verwerfen",
   "saveBar.unsaved": "Ungespeicherte Änderungen",
+  "saveBar.offered": "Speichere, um diese Werte zu übernehmen.",
   "saveBar.invalid": "Korrigiere die markierten Felder, um zu speichern.",
   "privacy.typeErasePrompt": "Gib zur Bestätigung dieses Wort ein:",
   "aiFigures.window": "Zeitraum",
@@ -23572,6 +23735,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.docState.final": "Endfassung",
   "legalReview.advanceRefused":
     "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Frage eine Rechtsprüfung an und verschiebe den Deal danach.",
+  "legalReview.advanceRefused.pending":
+    "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Die Prüfung wartet noch auf eine Antwort der Rechtsabteilung.",
+  "legalReview.advanceRefused.changesNeeded":
+    "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Die Rechtsabteilung hat Änderungen verlangt: Nimm sie vor und frage die Prüfung erneut an.",
+  "legalReview.advanceRefused.termsChanged":
+    "Betrag oder Angebot haben sich seit der Freigabe geändert. Frage die Prüfung erneut an und verschiebe den Deal danach.",
   "legalReview.packHistory": "Phasenverlauf",
   "legalReview.enteredStage": "{stage}, erreicht {date}",
   "legalReview.settingsTitle": "Rechtsprüfung",
@@ -23642,6 +23811,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
   "aiTask.name.chat_summary": "Zusammenfassung eines Chat-Kanals",
+  "aiTask.name.chat_task_reading": "Chat und offene Aufgaben",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
   "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",
@@ -24089,6 +24259,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Suche findet möglicherweise nicht alle Datensätze, bis die Indexierung aufgeholt hat. Die Datensätze bleiben gespeichert.",
   "health.effect.updates":
     "Die Änderungen dieser Aktualisierung bleiben unvollständig. Bereits gespeicherte Änderungen bleiben erhalten; einige Datensätze können noch ihre bisherigen Werte haben.",
+  "health.effect.updatesAction":
+    "Die Aktualisierung ist abgeschlossen. Einige gefundene Datensätze warten noch darauf, dass jemand sie bearbeitet.",
   "health.effect.recovery":
     "Die normale CRM-Arbeit kann weitergehen. Bei einem Ausfall kann die Wiederherstellung länger dauern oder mehr neue Daten verlieren, als die Ziele vorsehen.",
   "health.effect.automatic":
@@ -24305,6 +24477,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Für eine Datenaktualisierung ist ein weiterer Versuch erfasst",
   "health.code.updates_review":
     "Eine Datenaktualisierung braucht eine Administratorprüfung",
+  "health.code.updates_action":
+    "Eine Datenaktualisierung ist abgeschlossen und hat Datensätze hinterlassen, die jemand bearbeiten muss",
   "health.code.recovery_missing": "Kein Wiederherstellungstest aufgezeichnet",
   "health.code.recovery_verified":
     "Der erfasste Wiederherstellungstest erfüllte seine Ziele",

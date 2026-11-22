@@ -75,7 +75,8 @@ func (r *Registry) arrivalMailboxes(ctx context.Context, userID ids.UserID, acti
 // their live mailboxes of providers that canSend. It is from when they named
 // one, else the first that can send of those anchor arrived in, else their
 // default. A from
-// that is not theirs or cannot send chooses nothing. The send is then refused
+// that is not theirs or cannot send chooses nothing. A member with no live
+// mailbox of those providers at all answers ErrNoConnection. The send is then refused
 // instead of leaving through a mailbox they did not ask for.
 func (r *Registry) ChooseSendingMailbox(
 	ctx context.Context, userID ids.UserID, from ids.UUID, anchor ids.ActivityID, providers []string,
@@ -84,6 +85,9 @@ func (r *Registry) ChooseSendingMailbox(
 	all, err := r.SendingMailboxes(ctx, userID, providers)
 	if err != nil {
 		return SendingMailbox{}, err
+	}
+	if len(all) == 0 {
+		return SendingMailbox{}, ErrNoConnection
 	}
 	capable := make(map[ids.UUID]SendingMailbox, len(all))
 	var first *SendingMailbox

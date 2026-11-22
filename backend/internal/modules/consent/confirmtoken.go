@@ -20,9 +20,7 @@ package consent
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"slices"
@@ -31,6 +29,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
@@ -411,8 +410,7 @@ func newConfirmToken() (string, error) {
 // for the first caller, because the second one arrived and a shared helper
 // called hashConfirmToken would have read as the wrong function being reused.
 func hashPublicToken(token string) string {
-	sum := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(sum[:])
+	return storekit.TokenHash(token)
 }
 
 // auditKeyKind names which question a minted link asks, on its audit row. One

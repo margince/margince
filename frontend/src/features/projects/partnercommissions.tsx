@@ -9,12 +9,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { Row, Stack } from "../../design-system/stack";
 import { StatStrip } from "../../design-system/statstrip";
 import { stable } from "../../format/collate";
-import {
-  formatDate,
-  formatMoney,
-  formatNumber,
-  INTL_LOCALE,
-} from "../../format/format";
+import { formatDate, formatMoney, formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
@@ -23,6 +18,7 @@ import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
 import "./partnercommissions.css";
+import { numberFormat } from "../../format/formatters";
 
 // What a partner has earned, on the partner's own company page.
 //
@@ -362,7 +358,7 @@ function CommissionLedger({
  */
 export function formatRate(rateBps: number, locale: Locale): string {
   const percent = rateBps / 100;
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "percent",
     maximumFractionDigits: Number.isInteger(percent) ? 0 : 2,
   }).format(percent / 100);

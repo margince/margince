@@ -15,6 +15,7 @@ import { formatDayMonth } from "../../format/format.dates";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
+import { dueOnDay } from "../../lib/standingpeeks";
 import { ENGAGEMENT_LABELS } from "./company360.strip";
 import { upcomingMeeting } from "./companynextmeeting";
 import { activityHeadline } from "./companyrecent";
@@ -27,6 +28,8 @@ export type TimelineWords = Readonly<{
   plural: PluralTranslator;
   locale: Locale;
   zone: string;
+  /** The company's zone, which counts a task that has only a date. */
+  companyZone?: string;
 }>;
 
 // How many earlier exchanges the axis draws beside the last contact. More
@@ -59,7 +62,6 @@ export function companyTimeline(
   view: Company360,
   words: TimelineWords,
 ): { events: TimelineEvent[]; gap?: TimelineGap } {
-  const day = (iso: string) => formatDayMonth(iso, words.locale, words.zone);
   const asOf = Date.parse(view.as_of);
   const last = view.last_contact;
   const rows = view.activities?.data ?? [];
@@ -81,7 +83,7 @@ export function companyTimeline(
     events: [
       ...happened,
       ...lastContact(view, rows, words),
-      ...owedAhead(view, words, day),
+      ...owedAhead(view, words),
     ],
     gap: silence(view, words),
   };
@@ -171,22 +173,28 @@ function lastContact(
   ];
 }
 
-function owedAhead(
-  view: Company360,
-  words: TimelineWords,
-  day: (iso: string) => string,
-): TimelineEvent[] {
+function owedAhead(view: Company360, words: TimelineWords): TimelineEvent[] {
   const events: TimelineEvent[] = [];
+  const day = (iso: string) => formatDayMonth(iso, words.locale, words.zone);
   // The two the spine always drew: a longer list is the Tasks tab.
   for (const step of (view.next_steps?.data ?? []).slice(0, 2)) {
     if (step.due_at) {
+      const due = dueOnDay(
+        words,
+        step.due_at,
+        step.due_has_time,
+        step.due_intent,
+      );
+      const at = due.at;
+      const dueDay = (iso: string) =>
+        formatDayMonth(iso, words.locale, due.zone);
       events.push({
         key: `step-${step.activity_id}`,
-        at: step.due_at,
+        at,
         title: step.subject,
         sub: step.overdue
-          ? `${day(step.due_at)} · ${words.t("co.spine.overdue")}`
-          : day(step.due_at),
+          ? `${dueDay(at)} · ${words.t("co.spine.overdue")}`
+          : dueDay(at),
         kind: step.overdue ? "late" : "ahead",
       });
     }

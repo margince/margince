@@ -6,7 +6,6 @@ package activities
 import (
 	"context"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/jackc/pgx/v5"
@@ -31,8 +30,15 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 
 const attachmentColumns = `at.id, at.entity_type, at.entity_id, at.filename,
 	at.content_type, at.byte_size, at.checksum, at.source, at.captured_by, at.created_at,
-	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, at.company_id,
+	at.category, at.title, at.doc_state, at.pinned, at.supersedes_id, ` + filedCompany + `,
 	at.contract_id, at.bytes_withheld, at.url`
+
+// filedCompany is the company a file belongs to, read from the record it is
+// filed on. A company's file is its own, and a deal's file follows the deal's
+// company as it is now. A contact's or a mail's file has none.
+const filedCompany = `CASE at.entity_type
+		WHEN 'company' THEN at.entity_id
+		WHEN 'deal' THEN (SELECT filed.company_id FROM deal filed WHERE filed.id = at.entity_id) END`
 
 // attachmentSource marks how the row was captured; a direct upload is "upload".
 const attachmentSource = "upload"
@@ -430,35 +436,4 @@ func ensureContractFileable(ctx context.Context, tx pgx.Tx, contractID *ids.UUID
 		return err
 	}
 	return auth.EnsureAttachTarget(ctx, tx, anchor, anchorID)
-}
-
-// accountRollUp resolves the account a newly filed attachment belongs to, which
-// is what makes it reachable from the company's document library.
-//
-// It is a READ PATH, not a second parent: visibility stays the primary parent's
-// (see documents.go). Filing it at write time is what the library's index scan
-// depends on — a file uploaded without it is invisible to the account view
-// forever, and nothing about the upload looks wrong when that happens.
-//
-// A CONTACT rolls up to nothing on purpose. contact→company runs through
-// `relationship` with kind 'employment', which is many-valued: a contact who
-// works at two companies has no single account, and picking one would file the
-// document under a company the uploader never named. A null here means the file
-// is reachable from the contact, not that it was lost.
-func accountRollUp(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (ids.UUID, bool, error) {
-	switch entityType {
-	case linkEntityCompany:
-		return entityID, true, nil
-	case linkEntityDeal:
-		var company *ids.UUID
-		if err := tx.QueryRow(ctx,
-			`SELECT company_id FROM deal WHERE id = $1`, entityID).Scan(&company); err != nil {
-			return ids.UUID{}, false, fmt.Errorf("resolving the deal's account for a filed document: %w", err)
-		}
-		if company == nil {
-			return ids.UUID{}, false, nil
-		}
-		return *company, true, nil
-	}
-	return ids.UUID{}, false, nil
 }

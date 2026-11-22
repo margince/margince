@@ -50,13 +50,13 @@ describe("ResolveSheet", () => {
     // An answer that hides nothing needs no reason — demanding one would make
     // the common answers tedious enough that contacts stop giving them.
     await user.click(screen.getByLabelText("Record corrected"));
-    expect(screen.queryByLabelText("Why")).toBeNull();
+    expect(screen.queryByLabelText(/^Why/)).toBeNull();
 
     await user.click(screen.getByLabelText("Value is correct"));
-    expect(screen.getByLabelText("Why")).toBeTruthy();
+    expect(screen.getByLabelText(/^Why/)).toBeTruthy();
 
     await user.click(screen.getByLabelText("Not relevant to this deal"));
-    expect(screen.getByLabelText("Why")).toBeTruthy();
+    expect(screen.getByLabelText(/^Why/)).toBeTruthy();
   });
 
   // "Not now" is an answer about when. Without a date it is a dismissal
@@ -66,34 +66,34 @@ describe("ResolveSheet", () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByLabelText("Not now"));
-    expect(screen.getByLabelText("Remind on")).toBeTruthy();
+    expect(screen.getByLabelText(/^Remind on/)).toBeTruthy();
     // A deferral is not a suppression: no reason, no expiry.
-    expect(screen.queryByLabelText("Why")).toBeNull();
+    expect(screen.queryByLabelText(/^Why/)).toBeNull();
     expect(screen.queryByLabelText("Expires on")).toBeNull();
   });
 
   // Nothing chosen is not an answer.
-  it("cannot be submitted before an outcome is chosen", async () => {
-    open();
-    expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
-      "disabled",
-      true,
-    );
+  it("says an outcome is required on Save, and sends nothing", async () => {
+    const onSubmit = open();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByText("Answer type is required.")).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("cannot be submitted while a required field is empty", async () => {
-    open();
+  it("says an empty required field is required on Save, and focuses it", async () => {
+    const onSubmit = open();
     const user = userEvent.setup();
-    const save = screen.getByRole("button", { name: "Save" });
 
     await user.click(screen.getByLabelText("Value is correct"));
-    expect(save).toHaveProperty("disabled", true);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    const why = screen.getByLabelText(/^Why/);
+    expect(screen.getByText("Why is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(why);
+    expect(onSubmit).not.toHaveBeenCalled();
 
-    await user.type(
-      screen.getByLabelText("Why"),
-      "Checked against the signed order",
-    );
-    expect(save).toHaveProperty("disabled", false);
+    await user.type(why, "Checked against the signed order");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   // Only the fields the outcome takes. Sending an expiry with a deferral would
@@ -104,7 +104,7 @@ describe("ResolveSheet", () => {
     const user = userEvent.setup();
 
     await user.click(screen.getByLabelText("Not now"));
-    await user.type(screen.getByLabelText("Remind on"), "2026-06-30");
+    await user.type(screen.getByLabelText(/^Remind on/), "2026-06-30");
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(submitted).toHaveLength(1);

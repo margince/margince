@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -233,7 +234,7 @@ func TestOperatorResetPasswordRevokesALiveOAuthGrantToo(t *testing.T) {
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
 		VALUES ($1, $1, 'operator-reset-cascade', ARRAY['read']::text[], $2, now() + interval '30 days', $3)`,
-		e.member.UserID, "operator-reset-cascade-hash-"+grantID.String(), grantID); err != nil {
+		e.member.UserID, storekit.TokenHash(grantID.String()), grantID); err != nil {
 		t.Fatalf("minting the connection's credential: %v", err)
 	}
 

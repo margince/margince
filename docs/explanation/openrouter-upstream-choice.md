@@ -279,8 +279,6 @@ tree does not read it. Until it does, use the cost column of the `A/B` test:
 
 - **`served_provider`**: the upstream that served the call, from the `provider`
   field of the response. Empty on a direct vendor, which reports none.
-- **`finish_reason`**, so an answer that ended early and a complete one are different
-  rows.
 - **`cached_tokens` and `cache_write_tokens`**, read from the
   `usage.prompt_tokens_details` of the response, both already within
   `prompt_tokens`. So an upstream that caches prices at its cache rates,

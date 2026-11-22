@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -357,7 +358,7 @@ func TestAPromotionOutlivesARefreshOfItsAgentsPassport(t *testing.T) {
 			successor := ids.NewV7()
 			s.e.WsExec(t, `INSERT INTO passport (id,on_behalf_of,granted_by,label,scopes,token_hash,expires_at,oauth_grant_id)
  VALUES (@successor,@user,@user,'oauth:claude',@scopes,@token,now()+interval '1 day',@grant)`,
-				pgx.NamedArgs{"successor": successor, "user": s.e.Rep1, "scopes": next.scopes, "token": "hash-" + successor.String(), "grant": grant})
+				pgx.NamedArgs{"successor": successor, "user": s.e.Rep1, "scopes": next.scopes, "token": storekit.TokenHash(successor.String()), "grant": grant})
 			s.e.WsExec(t, `UPDATE passport SET revoked_at=now() WHERE id=$1`, passport)
 			_, err := s.svc.Decide(s.approver, id, true, nil)
 			if next.refused {

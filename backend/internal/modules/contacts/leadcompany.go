@@ -40,12 +40,12 @@ func (s *Store) LinkLeadCompany(ctx context.Context, id ids.LeadID, companyID id
 	if err := httperr.RequireBodyID(leadCompanyIDColumn, companyID.UUID); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
 	var out crmcontracts.Lead
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, "lead")
+		if err != nil {
+			return err
+		}
 		out, err = linkLeadCompanyTx(ctx, tx, id, companyID, active)
 		return err
 	})
@@ -183,7 +183,7 @@ func (s *Store) carryLeadIndustry(ctx context.Context, tx pgx.Tx, company *ids.C
 	if err != nil || code == nil {
 		return err
 	}
-	_, err = s.updateCompanyInTx(ctx, tx, *company, UpdateCompanyInput{Industry: code}, nil)
+	_, err = s.writeCompanyInTx(ctx, tx, *company, UpdateCompanyInput{Industry: code}, nil)
 	return err
 }
 

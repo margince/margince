@@ -243,10 +243,17 @@ describe("a cell read by its field's type", () => {
   });
 
   it("keeps a calendar day on its day in any zone", () => {
-    renderTyped({ cf_renewal: "2026-12-01T00:00:00Z" });
+    renderTyped({ cf_renewal: "2026-12-01" });
 
     expect(screen.getByText("1 Dec 2026")).toBeTruthy();
     expect(screen.queryByText("30 Nov 2026")).toBeNull();
+  });
+
+  it("shows a timestamp at midnight UTC on the reader's day, as the record lists do", () => {
+    renderTyped({ created_at: "2026-03-01T00:00:00Z" });
+
+    expect(screen.getByText("28 Feb 2026")).toBeTruthy();
+    expect(screen.queryByText("1 Mar 2026")).toBeNull();
   });
 
   it("writes a figure, an amount and a yes in the reader's words", () => {
@@ -428,7 +435,12 @@ describe("the columns past the opening six", () => {
           truncated: false,
         }}
         resource="company"
-        fields={[]}
+        fields={WIDE.slice(1).map((name) => ({
+          name,
+          type: "text",
+          operators: ["eq"],
+          custom: false,
+        }))}
         named={[]}
         unit="companies"
         widthsKey="filter-preview-wide"
@@ -449,6 +461,40 @@ describe("the columns past the opening six", () => {
     await user.click(offered);
 
     expect(screen.getByRole("columnheader", { name: "f" })).toBeTruthy();
+  });
+
+  it("leave out a stored column the product has no word for", async () => {
+    const user = userEvent.setup();
+    render(
+      <FilterResults
+        preview={{
+          resource: "company",
+          match_count: 1,
+          columns: ["id", "name", "captured_by", "anonymized_address_hashes"],
+          rows: [{ id: "c1", name: "Acme", captured_by: "human:x" }],
+          truncated: false,
+        }}
+        resource="company"
+        fields={[
+          { name: "name", type: "text", operators: ["eq"], custom: false },
+        ]}
+        named={[]}
+        unit="companies"
+        widthsKey="filter-preview-stored"
+        pending={false}
+      />,
+      { wrapper },
+    );
+
+    const step = await openViewStep(user, "Columns");
+    expect(
+      within(step).queryByRole("checkbox", { name: /captured by/i }),
+    ).toBeNull();
+    expect(
+      within(step).queryByRole("checkbox", {
+        name: /anonymized address hashes/i,
+      }),
+    ).toBeNull();
   });
 });
 
