@@ -106,3 +106,19 @@ it("offers a task move the server did not refuse", async () => {
   expect(button).toBeEnabled();
   expect(button).not.toHaveAccessibleDescription();
 });
+
+it("draws a refused bring-in-the-manager move with the server's reason and writes no request", async () => {
+  const reason = "You do not have permission to change deals";
+  const writes = mount({
+    action: "bring_in_manager",
+    arguments: { deal_id: DEAL, reasons: ["stuck"] },
+    blocked_reason: reason,
+  });
+  const button = await screen.findByRole("button", {
+    name: /bring in manager/i,
+  });
+  expect(button).toBeDisabled();
+  expect(button).toHaveAccessibleDescription(reason);
+  await userEvent.click(button);
+  expect(writes).toEqual([]);
+});

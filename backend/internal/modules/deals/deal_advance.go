@@ -391,6 +391,11 @@ func (s *Store) buildStageAdvance(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	if err != nil {
 		return nil, "", err
 	}
+	if DealStatus(status) != DealOpen && DealStatus(current.Status) == DealOpen {
+		if err := dropManagerRequest(ctx, tx, p, ids.UUID(current.Id)); err != nil {
+			return nil, "", err
+		}
+	}
 	stored, storedBy := storedWinProbability(current)
 	setWinProbability(p, stored, storedBy, nil, SourceStage)
 	return p, status, nil

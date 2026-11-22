@@ -14290,6 +14290,8 @@ export const en = {
   "deal360.readFull": "Read full brief",
   "deal360.openTask": "Open task",
   "deal360.createTask": "Create follow-up",
+  "deal360.bringInManager": "Bring in manager",
+  "deal360.managerAsked": "Manager asked",
   "deal360.followUpCreated": "Follow-up created",
   "deal360.openBrief": "Open meeting brief",
   "deal360.unreadable":
@@ -21443,6 +21445,11 @@ export const en = {
   "worklist.gap.tab": "Close the gap",
   "worklist.gap.title": "Close the gap",
   "worklist.gap.loading": "Loading the ranked deals…",
+  "worklist.gap.requested.title": "Asked for your help",
+  "worklist.gap.requested.done": "Mark handled",
+  "worklist.gap.reason.big_deal": "Above the team’s median value",
+  "worklist.gap.reason.single_contact": "Only one contact engaged",
+  "worklist.gap.reason.stuck": "Stuck in its stage",
   "worklist.gap.empty":
     "No team has a ranked list yet. Margince ranks deals once a day for each captured team.",
   "worklist.gap.behind":

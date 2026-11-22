@@ -4993,6 +4993,9 @@ public.deal.legal_hold boolean NOT NULL gen=- def=false
 public.deal.lost_reason text gen=- def=-
 public.deal.lost_reason_basis text gen=- def=-
 public.deal.lost_reason_code text gen=- def=-
+public.deal.manager_request_reasons text[] gen=- def=-
+public.deal.manager_requested_at timestamp with time zone gen=- def=-
+public.deal.manager_requested_by uuid gen=- def=-
 public.deal.name text NOT NULL gen=- def=-
 public.deal.owner_id uuid gen=- def=-
 public.deal.partner_attribution text gen=- def=-
