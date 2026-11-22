@@ -14,8 +14,6 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/santhosh-tekuri/jsonschema/v6"
-
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/pdftext"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -165,8 +163,9 @@ func documentKindOf(body []byte) documentKind {
 	return documentKindOther
 }
 
-// answerCheck is the answer's own check, fed back to the model on a
-// retry. A task with a schema must answer a JSON value that conforms to it.
+// answerCheck is the answer's own check, fed back to the model on a retry.
+// The provider holds the model to a task's schema while it writes, as for every
+// core task. The core adds that a schema task answers one JSON object.
 func answerCheck(task extension.AITask) ai.Validator {
 	if task.Schema == "" {
 		return func(text string) error {
@@ -177,33 +176,10 @@ func answerCheck(task extension.AITask) ai.Validator {
 		}
 	}
 	return func(text string) error {
-		schema, err := compileSchema(task.Schema)
-		if err != nil {
-			return err
-		}
-		answer, err := jsonschema.UnmarshalJSON(strings.NewReader(text))
-		if err != nil {
-			return errors.New("the answer is not valid JSON")
-		}
-		if err := schema.Validate(answer); err != nil {
-			return fmt.Errorf("the answer does not fit the schema: %w", err)
+		var object map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(text), &object); err != nil {
+			return errors.New("the answer is not one JSON object")
 		}
 		return nil
 	}
-}
-
-func compileSchema(src string) (*jsonschema.Schema, error) {
-	doc, err := jsonschema.UnmarshalJSON(strings.NewReader(src))
-	if err != nil {
-		return nil, fmt.Errorf("the task's schema is not valid JSON: %w", err)
-	}
-	compiler := jsonschema.NewCompiler()
-	if err := compiler.AddResource("task.json", doc); err != nil {
-		return nil, fmt.Errorf("the task's schema was refused: %w", err)
-	}
-	schema, err := compiler.Compile("task.json")
-	if err != nil {
-		return nil, fmt.Errorf("the task's schema was refused: %w", err)
-	}
-	return schema, nil
 }

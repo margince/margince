@@ -162,10 +162,8 @@ type ModelPath struct {
 	// it has to be able to ask what its binding can carry before it sends any.
 	DocumentExtract documentCompleter
 	// Enrich is the §2.9 evidence-or-omit signature field extraction lane.
-	Enrich completer
-	// ExtensionTask is the lane every extension AI call rides (BindExtensionAI).
-	// One task serves every unit, so no unit holds a provider client.
-	ExtensionTask extai.Lane
+	Enrich        completer
+	ExtensionTask extai.Lane // the lane every extension AI call rides; no unit holds a provider client
 	// ProposeRoles reads a deal's buying roles out of what its contacts wrote.
 	// The one lane in this struct with NO floor behind it: every other absent
 	// lane degrades to a deterministic answer, and a buying role has none —

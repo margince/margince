@@ -38,14 +38,10 @@ import (
 // cost them the afternoon.
 var errExtensionRuntimeUnwired = errors.New("compose: this role bound no pool for the extension runtime, so no extension capability can be served")
 
-// extensionRuntimeDeps is the boot's binding of what every per-call Runtime
-// is built over. It is process-wide for the same reason composedTools is: a
-// role has one pool and one custodian, both settled at boot, and the tool
-// adapter that needs them is reached through a registry that cannot carry
-// them (mcp.Tool.Handle takes a context and raw JSON, nothing else).
-//
-// The mutex guards the write-then-read ordering across the boot/serve
-// boundary, not concurrent bindings — a role binds once.
+// extensionRuntimeDeps is the boot's binding of what every per-call Runtime is
+// built over. It is process-wide because the tool adapter that needs it is
+// reached through a registry that carries only a context and raw JSON. The mutex
+// orders the write at boot before the reads that serve; a role binds once.
 var extensionRuntimeDeps struct {
 	mu sync.RWMutex
 	extensionRuntimeBinding
@@ -114,10 +110,8 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 
 // AI is the unit's AI port for this call, guarded by this Runtime's lifetime.
 func (r *callRuntime) AI() extension.AI { //nolint:ireturn // the published port, as Secrets.
-	return extai.Port{
-		Scope: r.scoped, Unit: r.unit, Declared: ComposedExtensions, Pool: r.deps.pool,
-		PDF: processPDFReader, MaxDocumentBytes: maxDocumentBytes, MaxInputChars: maxDocumentTextChars,
-	}
+	return extai.Port{Scope: r.scoped, Unit: r.unit, Declared: ComposedExtensions, Pool: r.deps.pool,
+		PDF: processPDFReader, MaxDocumentBytes: maxDocumentBytes, MaxInputChars: maxDocumentTextChars}
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than

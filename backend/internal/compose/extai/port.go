@@ -53,6 +53,9 @@ func Bind(pool *pgxpool.Pool, lane Lane) {
 	bound.pool, bound.lane = pool, lane
 }
 
+// laneFor answers the lane bound for pool, or nil.
+//
+//nolint:ireturn // the bound lane is an interface by design; tests substitute it.
 func laneFor(pool *pgxpool.Pool) Lane {
 	bound.mu.RLock()
 	defer bound.mu.RUnlock()
@@ -187,7 +190,7 @@ func callError(ctx context.Context, err error) error {
 }
 
 // Preflight runs the published Validate the generator also runs, and refuses a
-// name the unit declares twice or a schema that does not compile. Nothing
+// name the unit declares twice . Nothing
 // applies until the whole set has passed.
 func Preflight(e extension.Extension) error {
 	seen := map[extension.AITaskName]bool{}
@@ -199,11 +202,6 @@ func Preflight(e extension.Extension) error {
 			return fmt.Errorf("compose: extension %q declares AI task %q twice", e.Name, task.Name)
 		}
 		seen[task.Name] = true
-		if task.Schema != "" {
-			if _, err := compileSchema(task.Schema); err != nil {
-				return fmt.Errorf("compose: extension %q: AI task %q: %w", e.Name, task.Name, err)
-			}
-		}
 	}
 	return nil
 }

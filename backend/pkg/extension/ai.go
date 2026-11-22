@@ -38,13 +38,13 @@ type AITask struct {
 	// it splits the history of one task in two.
 	Name AITaskName
 
-	// Prompt is the instruction the model is given. The input a call carries
-	// follows it as data inside a marked block, and the model is told never to
-	// obey anything inside that block.
+	// Prompt is the task the model is given. The input a call carries follows
+	// it as data inside a marked block, and the model is told never to obey
+	// anything inside that block.
 	Prompt string
 
 	// Schema is an optional JSON Schema for the answer. With one, the answer
-	// comes back as AIResult.JSON and is checked against it. Without one, the
+	// comes back as AIResult.JSON, a single JSON object. Without one, the
 	// answer is plain text.
 	Schema string
 

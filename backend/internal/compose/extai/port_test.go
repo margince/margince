@@ -245,8 +245,8 @@ func TestAPDFWithTextIsReadAsTextAndTheAnswerIsCheckedAgainstTheSchema(t *testin
 	}
 }
 
-func TestAnAnswerOutsideTheSchemaIsNotHandedToTheUnit(t *testing.T) {
-	fake := ai.NewFakeClient().Script(`{"total":"lots"}`, `{"total":"lots"}`, `{"total":"lots"}`, `{"total":"lots"}`)
+func TestAnAnswerThatIsNotAJSONObjectIsNotHandedToTheUnit(t *testing.T) {
+	fake := ai.NewFakeClient().Script("lots", "lots", "lots", "lots")
 	rt, _ := aiRuntime(t, offline(), fake)
 	if _, err := rt.AI().Run(t.Context(), "invoice_total", noContact()); !errors.Is(err, extension.ErrAIUnavailable) {
 		t.Fatalf("err = %v, want ErrAIUnavailable", err)
@@ -290,8 +290,7 @@ func TestPreflightRefusesABadOrRepeatedAITask(t *testing.T) {
 	}
 	twice := extension.Extension{Name: "books", AITasks: []extension.AITask{aiUnitTasks[0], aiUnitTasks[0]}}
 	bad := extension.Extension{Name: "books", AITasks: []extension.AITask{{Name: "Bad", Prompt: "x"}}}
-	badSchema := extension.Extension{Name: "books", AITasks: []extension.AITask{{Name: "s", Prompt: "x", Schema: `{"type":"nope"}`}}}
-	for name, e := range map[string]extension.Extension{"twice": twice, "bad name": bad, "bad schema": badSchema} {
+	for name, e := range map[string]extension.Extension{"twice": twice, "bad name": bad} {
 		if err := Preflight(e); err == nil {
 			t.Errorf("%s: want a refusal", name)
 		}

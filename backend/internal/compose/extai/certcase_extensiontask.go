@@ -40,12 +40,16 @@ type certExpectation struct {
 	Contains []string `json:"contains"`
 }
 
+// CertCases is the certification case factory of the extension_task/run site.
 type CertCases struct{}
 
+// Site names the one site every extension AI call rides.
 func (CertCases) Site() aitasks.Site {
 	return aitasks.Site{Task: ai.TaskExtensionTask, Variant: "run", Kind: ai.SiteKindOneShot}
 }
 
+// Prepare turns one fixture and its expectation into a runnable case.
+//
 //nolint:ireturn // PreparedCase IS the seam: one implementation per site behind the one interface the cert lane runs.
 func (CertCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCase, error) {
 	var f certFixture
