@@ -317,6 +317,55 @@ describe("the orphan finder, over a planted tree", () => {
     };
     expect(verdict(files, ["logo.png", "logo.svg"])).toEqual(["logo.svg"]);
   });
+
+  it("reports a loaded module the checked program does not hold", () => {
+    const files = {
+      [MAIN]: `import "./card";`,
+      "/app/src/card.tsx": `t("a.card");`,
+    };
+    const graph = moduleGraph({
+      tree: new Map(Object.entries(files)),
+      aliases: new Map(),
+      catalogs: new Set(),
+    });
+    const { [MAIN]: main } = files;
+    const use = liveKeyUse(
+      programOver({ [MAIN]: main }),
+      graph.reach([MAIN]),
+      [MAIN],
+      new Set(),
+    );
+    expect(use.missing).toEqual(["/app/src/card.tsx"]);
+  });
+
+  it("counts a class, enum or namespace that runs code when it loads", () => {
+    const files = {
+      [MAIN]: `import "./defs";`,
+      "/app/src/defs.ts": [
+        `declare function deco(x: unknown): any;`,
+        `declare function mixin(x: unknown): any;`,
+        `export class Decorated { @deco(t("a.decorator")) x = 1; }`,
+        `export class Extended extends mixin(t("a.extends")) {}`,
+        `export class Computed { [t("a.computed")] = 1; }`,
+        `export class Static { static label = t("a.static"); }`,
+        `export class Block { static { t("a.block"); } }`,
+        `export enum Mode { A = t("a.enum") }`,
+        `export namespace Space { t("a.namespace"); }`,
+        `export class Quiet { label() { return t("a.quiet"); } }`,
+      ].join("\n"),
+    };
+    const keys = [
+      "a.decorator",
+      "a.extends",
+      "a.computed",
+      "a.static",
+      "a.block",
+      "a.enum",
+      "a.namespace",
+      "a.quiet",
+    ];
+    expect(verdict(files, keys)).toEqual(["a.quiet"]);
+  });
 });
 
 describe("the orphan-keys rule", () => {

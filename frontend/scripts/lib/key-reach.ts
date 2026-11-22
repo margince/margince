@@ -25,6 +25,8 @@ export type KeyUse = {
   readonly literals: ReadonlySet<string>;
   /** One pattern per template that can produce a key. */
   readonly templates: readonly RegExp[];
+  /** Loaded modules the checked program does not hold; their keys are unread. */
+  readonly missing: readonly string[];
 };
 
 type Unit = {
@@ -100,6 +102,44 @@ function isPure(expression: ts.Expression | undefined): boolean {
   return false;
 }
 
+const hasDecorators = (node: ts.Node): boolean =>
+  ts.canHaveDecorators(node) && (ts.getDecorators(node) ?? []).length > 0;
+
+// A class runs its decorators, its `extends` expression, its computed member
+// names and its static initializers when it is defined.
+function isInertClass(declaration: ts.ClassDeclaration): boolean {
+  const extendsExpressions = (declaration.heritageClauses ?? [])
+    .filter((clause) => clause.token === ts.SyntaxKind.ExtendsKeyword)
+    .flatMap((clause) => clause.types.map((type) => type.expression));
+  return (
+    !hasDecorators(declaration) &&
+    extendsExpressions.every(isPure) &&
+    declaration.members.every((member) => {
+      const isStatic =
+        ts.getCombinedModifierFlags(member) & ts.ModifierFlags.Static;
+      return (
+        !hasDecorators(member) &&
+        !ts.isClassStaticBlockDeclaration(member) &&
+        !(ts.isPropertyDeclaration(member) && isStatic) &&
+        !(member.name && ts.isComputedPropertyName(member.name))
+      );
+    })
+  );
+}
+
+// An enum member's initializer and a namespace body are code too.
+function isInertDeclaration(statement: ts.Statement): boolean {
+  if (ts.isFunctionDeclaration(statement)) return true;
+  if (ts.isClassDeclaration(statement)) return isInertClass(statement);
+  if (ts.isEnumDeclaration(statement)) {
+    return statement.members.every((member) => isPure(member.initializer));
+  }
+  return (
+    ts.isModuleDeclaration(statement) &&
+    (ts.getCombinedModifierFlags(statement) & ts.ModifierFlags.Ambient) !== 0
+  );
+}
+
 function unitsOf(file: ts.SourceFile): Unit[] {
   return file.statements.flatMap((statement): Unit[] => {
     if (ts.isImportDeclaration(statement)) return [];
@@ -112,17 +152,13 @@ function unitsOf(file: ts.SourceFile): Unit[] {
         inert: isPure(declaration.initializer),
       }));
     }
-    const declares =
-      ts.isFunctionDeclaration(statement) ||
-      ts.isClassDeclaration(statement) ||
-      ts.isEnumDeclaration(statement);
     const exportsOnly =
       ts.isExportDeclaration(statement) || ts.isExportAssignment(statement);
     return [
       {
         node: statement,
         exported: exportsOnly || hasExport(statement),
-        inert: declares || ts.isModuleDeclaration(statement) || exportsOnly,
+        inert: exportsOnly || isInertDeclaration(statement),
       },
     ];
   });
@@ -205,6 +241,7 @@ class Reach {
   private readonly live = new Set<Unit>();
   private readonly queue: Unit[] = [];
   readonly literals = new Set<string>();
+  readonly missing: string[] = [];
   readonly templates = new Map<string, RegExp>();
 
   constructor(
@@ -231,10 +268,9 @@ class Reach {
     const known = this.unitsByFile.get(path);
     if (known !== undefined) return known;
     const file = this.program.getSourceFile(path);
-    const units =
-      file === undefined || !this.loaded.has(path) || this.catalogs.has(path)
-        ? []
-        : unitsOf(file);
+    const reads = this.loaded.has(path) && !this.catalogs.has(path);
+    if (reads && file === undefined) this.missing.push(path);
+    const units = file === undefined || !reads ? [] : unitsOf(file);
     this.unitsByFile.set(path, units);
     for (const unit of units) this.unitByNode.set(unit.node, unit);
     return units;
@@ -356,7 +392,11 @@ export function liveKeyUse(
 ): KeyUse {
   const reach = new Reach(program, loaded, catalogs);
   reach.run(entries);
-  return { literals: reach.literals, templates: [...reach.templates.values()] };
+  return {
+    literals: reach.literals,
+    templates: [...reach.templates.values()],
+    missing: reach.missing,
+  };
 }
 
 /** Whether the code names `key` literally or a template can produce it. */

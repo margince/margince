@@ -5,7 +5,7 @@
 // nothing renders, a story, a test or a module nothing imports vouches for
 // nothing, and a template vouches only for what its types can produce.
 
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import {
   bundleEntries,
   reachedModulesIn,
@@ -13,7 +13,12 @@ import {
 import { type KeyUse, liveKeyUse, usesKey } from "../../scripts/lib/key-reach";
 import { en } from "../../src/i18n/en";
 import { LOCALES } from "../../src/i18n/locale";
-import { type CensusRule, srcDir } from "../tree";
+import {
+  type CensusFile,
+  type CensusRule,
+  type CensusTree,
+  srcDir,
+} from "../tree";
 import { srcModules } from "./caption-tables.census";
 
 /**
@@ -36,24 +41,44 @@ export function orphanKeys(keys: readonly string[], use: KeyUse): string[] {
   return keys.filter((key) => !usesKey(use, key) && !underPluralBase(key));
 }
 
+// The floors and the findings read one pass over the same corpus.
+const used = new WeakMap<readonly CensusFile[], KeyUse>();
+
+function keyUseOf(corpus: readonly CensusFile[], tree: CensusTree): KeyUse {
+  const known = used.get(corpus);
+  if (known) return known;
+  const catalogs = new Set(
+    LOCALES.map((locale) => join(srcDir, "i18n", `${locale}.ts`)),
+  );
+  const entries = bundleEntries();
+  const loaded = reachedModulesIn(
+    new Map(corpus.map((file) => [file.path, file.text])),
+    { catalogs },
+    entries,
+  );
+  const use = liveKeyUse(tree.checked(), loaded, entries, catalogs);
+  used.set(corpus, use);
+  return use;
+}
+
 export const rule: CensusRule = {
   name: "orphan-keys",
   corpus: srcModules,
-  across: (corpus, tree) => {
-    const catalogs = new Set(
-      LOCALES.map((locale) => join(srcDir, "i18n", `${locale}.ts`)),
-    );
-    const entries = bundleEntries();
-    const loaded = reachedModulesIn(
-      new Map(corpus.map((file) => [file.path, file.text])),
-      { catalogs },
-      entries,
-    );
-    return orphanKeys(
-      Object.keys(en),
-      liveKeyUse(tree.checked(), loaded, entries, catalogs),
-    );
+  // A pass that read fewer modules than the bundle loads would call keys dead
+  // that a module it skipped renders.
+  floors: (corpus, tree) => {
+    const use = keyUseOf(corpus, tree);
+    return [
+      ...use.missing.map(
+        (path) =>
+          `${relative(srcDir, path)} is loaded but absent from the checked program, so its keys were not read`,
+      ),
+      ...(use.literals.size > 1000
+        ? []
+        : [`the pass read ${use.literals.size} literals, not over 1000`]),
+    ];
   },
+  across: (corpus, tree) => orphanKeys(Object.keys(en), keyUseOf(corpus, tree)),
   advice:
     "These catalog keys are translated three times and rendered nowhere the " +
     "shipped bundle loads. Delete them from en, de and vi, or render them.",

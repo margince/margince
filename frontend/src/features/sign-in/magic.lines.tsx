@@ -6,6 +6,7 @@ import { Disclosure } from "../../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
 import { approvalHref } from "../../lib/approvalhref";
 import { approvalKindLabel } from "../../lib/approvalkindlabel";
@@ -168,9 +169,18 @@ function lineDetail(line: MagicLine, t: Translator, locale: Locale): string[] {
   );
 }
 
+// The only consequences a watching line states as coverage; a skewed response
+// carrying another registered one must not print a sentence about capture.
+const CAPTURE_CONSEQUENCES: ReadonlySet<MessageKey> = new Set<MessageKey>([
+  "magic.consequence.capture_not_collecting",
+  "magic.consequence.capture_may_be_incomplete",
+  "magic.consequence.capture_history_incomplete",
+]);
+
 function captureCoverage(line: MagicLine, t: Translator): string | null {
   const key = line.consequence ? magicConsequenceKey(line.consequence) : null;
-  return line.lane === "watching" && key ? t(key) : null;
+  const states = key !== null && CAPTURE_CONSEQUENCES.has(key);
+  return line.lane === "watching" && key !== null && states ? t(key) : null;
 }
 
 function forecastReasonValues(line: MagicLine, locale: Locale) {
