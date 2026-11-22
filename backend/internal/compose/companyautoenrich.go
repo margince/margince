@@ -66,17 +66,9 @@ func NewCompanyAutoEnrichTrigger(pool *pgxpool.Pool, enqueue *jobs.Runner, log *
 // first delivery queued, and the sweep still reconciles whatever slips
 // through.
 func (g *CompanyAutoEnrichTrigger) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.Type != string(recordTypeCompany) {
-		return nil
-	}
-	switch env.Type {
-	// Every event that can make a company newly due: appearing,
-	// gaining a domain (a company save's domain change arrives as
-	// company.updated), or inheriting one in a merge. An archive needs
-	// no reaction — the pass only ever starts reads, and an archived
-	// company is not due.
-	case "company.created", "company.updated", "company.merged":
-	default:
+	// Every event that can make a company newly due: appearing, gaining a
+	// domain, or inheriting one in a merge. An archived company is not due.
+	if !events.CompanyAutoEnrichTypes.Has(env.Type) || env.Entity.Type != string(recordTypeCompany) {
 		return nil
 	}
 	// A stale event has no promptness left to buy: it is either a replayed

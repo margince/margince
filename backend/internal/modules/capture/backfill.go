@@ -106,6 +106,11 @@ type BackfillRun struct {
 	// rather than reading the window again from the top: it ended on an error
 	// and still holds the page it stopped at.
 	Resumable bool
+	// WindowRestarts counts walks begun again after the provider refused the
+	// saved page token; the message counts start from zero each time.
+	WindowRestarts int
+	// RetryAttempts is the run's consecutive failed pages, zero once one lands.
+	RetryAttempts int
 }
 
 // connectionForUser resolves the calling user's live connection mailbox names.
@@ -349,14 +354,15 @@ func latestBackfill(ctx context.Context, tx pgx.Tx, connID ids.UUID) (*BackfillR
 		       b.scanned + b.inflight_scanned, b.captured + b.inflight_captured, b.skipped + b.inflight_skipped,
 		       b.failed, b.contacts_created, b.companies_created,
 		       b.started_at, b.completed_at, b.updated_at, b.last_error_class,
-		       `+resumableRunPredicate+`
+		       `+resumableRunPredicate+`, b.window_restarts, b.consecutive_failures
 		FROM capture_backfill b JOIN capture_connection c ON c.id = b.connection_id
 		WHERE b.connection_id = $1
 		ORDER BY b.created_at DESC LIMIT 1`, connID)
 	var b BackfillRun
 	err := row.Scan(&b.ID, &b.ConnectionID, &b.WindowMonths, &b.AfterDate, &b.Status, &b.Cursor, &b.Estimate, &b.EstimateIsFloor,
 		&b.Scanned, &b.Captured, &b.Skipped, &b.Failed, &b.Contacts, &b.Companies,
-		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass, &b.Resumable)
+		&b.StartedAt, &b.CompletedAt, &b.UpdatedAt, &b.ErrorClass, &b.Resumable,
+		&b.WindowRestarts, &b.RetryAttempts)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // absence IS the answer: the contract's state "none", not an error
 	}

@@ -335,29 +335,28 @@ type teamRow struct {
 	CreatedAt   time.Time
 }
 
-// teamColumns is the roster team SELECT list: the active-member count
-// joins app_user so a suspended/deactivated seat's membership row never
-// inflates the count (mirrors the active-only gate on ListUsers).
-const teamColumns = `t.id, t.name, COUNT(u.id) AS member_count, t.created_at`
+// teamMemberCountSQL counts a team's active and invited human seats, so the count
+// agrees with the Members page. Suspended and deactivated seats never count.
+// It reads the team as `t`.
+var teamMemberCountSQL = `(SELECT count(*) FROM team_membership tm
+	   JOIN app_user u ON u.id = tm.user_id AND ` + TeamSeatSQL("u") + `
+	  WHERE tm.team_id = t.id)`
 
-var teamFromJoin = `
-	FROM team t
-	LEFT JOIN team_membership tm ON tm.team_id = t.id
-	LEFT JOIN app_user u ON u.id = tm.user_id AND ` + LiveMemberSQL("u") + ``
+var teamColumns = `t.id, t.name, ` + teamMemberCountSQL + ` AS member_count, t.created_at`
 
 var listTeamsQuery = `
-	SELECT ` + teamColumns + teamFromJoin + `
+	SELECT ` + teamColumns + `
+	FROM team t
 	WHERE t.archived_at IS NULL
 	  AND ($1::timestamptz IS NULL OR (t.created_at, t.id) > ($1, $2))
-	GROUP BY t.id
 	ORDER BY t.created_at, t.id
 	LIMIT $3`
 
 var listTeamsFilteredQuery = `
-	SELECT ` + teamColumns + teamFromJoin + `
+	SELECT ` + teamColumns + `
+	FROM team t
 	WHERE t.archived_at IS NULL AND f_unaccent(t.name) ILIKE f_unaccent($1)
 	  AND ($2::timestamptz IS NULL OR (t.created_at, t.id) > ($2, $3))
-	GROUP BY t.id
 	ORDER BY t.created_at, t.id
 	LIMIT $4`
 
@@ -368,7 +367,7 @@ func scanTeam(r pgx.Row) (teamRow, error) {
 }
 
 // ListTeams returns one keyset page of the installation's active teams, with
-// each team's active-membership count, optionally filtered by in.Q.
+// each team's active-and-invited membership count, optionally filtered by in.Q.
 //
 // No workspace predicate anywhere in it: ADR-0091 §8 phase D has taken the
 // tenant column off team and, with this slice, off app_user too. The member

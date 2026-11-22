@@ -10,14 +10,16 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
-import { useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
 import { searchCompanyCandidates } from "./contactemployers";
 import {
   type EmploymentStatusChoice,
   EmploymentStatusFields,
+  employmentDateFaults,
 } from "./employmentstatusfields";
 import "../../design-system/querystates.css";
 
@@ -248,7 +250,9 @@ function EmploymentMatchModal({
   onSave: (body: Request) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const heading = useId();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
   const [domain, setDomain] = useState(item.domain ?? "");
   const [started, setStarted] = useState(item.started ?? "");
@@ -261,7 +265,7 @@ function EmploymentMatchModal({
       <Heading size="large" id={heading} className="t-h2 modal-title">
         {t("employment.resolve")}
       </Heading>
-      <div className="form-stack">
+      <div className="form-stack" ref={faultsRoot}>
         <p>
           {item.company_name} · {item.role}
         </p>
@@ -272,7 +276,10 @@ function EmploymentMatchModal({
               aria-describedby={control["aria-describedby"]}
               searchTargets={searchCompanyCandidates}
               selected={company}
-              onPick={setCompany}
+              onPick={(next) => {
+                setCompany(next);
+                faults.edited("domain");
+              }}
               disabled={pending}
             />
           )}
@@ -281,23 +288,35 @@ function EmploymentMatchModal({
           <Field
             label={t("employment.website")}
             hint={t("employment.websiteHint")}
+            required
+            error={faults.of("domain")}
           >
             {(control) => (
               <TextInput
                 {...control}
                 value={domain}
-                onChange={(event) => setDomain(event.target.value)}
+                onChange={(event) => {
+                  setDomain(event.target.value);
+                  faults.edited("domain");
+                }}
                 disabled={pending}
               />
             )}
           </Field>
         )}
-        <Field label={t("employment.start")} hint={t("employment.dateHint")}>
+        <Field
+          label={t("employment.start")}
+          hint={t("employment.dateHint")}
+          error={faults.of("start")}
+        >
           {(control) => (
             <TextInput
               {...control}
               value={started}
-              onChange={(e) => setStarted(e.target.value)}
+              onChange={(e) => {
+                setStarted(e.target.value);
+                faults.edited("start");
+              }}
               disabled={pending}
             />
           )}
@@ -306,7 +325,11 @@ function EmploymentMatchModal({
           status={status}
           onStatusChange={setStatus}
           end={ended}
-          onEndChange={setEnded}
+          onEndChange={(next) => {
+            setEnded(next);
+            faults.edited("end");
+          }}
+          endError={faults.of("end")}
           disabled={pending}
           statusPlaceholder={t("employment.keepImportedStatus")}
         />
@@ -318,13 +341,20 @@ function EmploymentMatchModal({
         </Button>
         <Button
           variant="primary"
-          disabled={
-            pending ||
-            (!company && !domain.trim()) ||
-            !/^$|^\d{4}-\d{2}(-\d{2})?$/.test(started) ||
-            !/^$|^\d{4}-\d{2}(-\d{2})?$/.test(ended)
-          }
-          onClick={() =>
+          disabled={pending}
+          onClick={() => {
+            const found = new Map([
+              ...(company
+                ? []
+                : blankRequired(locale, {
+                    domain: [t("employment.website"), domain],
+                  })),
+              ...employmentDateFaults(locale, t, {
+                start: started,
+                end: ended,
+              }),
+            ]);
+            if (faults.show(found)) return;
             onSave({
               action: "resolve",
               resolve_group: true,
@@ -334,8 +364,8 @@ function EmploymentMatchModal({
               employment_status: status || undefined,
               started,
               ended,
-            })
-          }
+            });
+          }}
         >
           {t("employment.saveMatch")}
         </Button>

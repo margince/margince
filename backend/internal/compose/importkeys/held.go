@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -93,9 +94,9 @@ func LinkedInHeld(ctx context.Context, pool *pgxpool.Pool, object, url string) (
 			_, held, err = storekit.LiveLeadByLinkedInURL(ctx, tx, url, nil)
 			return err
 		}
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company WHERE lower(linkedin_url) = lower($1) AND archived_at IS NULL)`,
-			url).Scan(&held)
+		var err error
+		held, err = contacts.CompanyLinkedInRival(ctx, tx, ids.CompanyID{}, url)
+		return err
 	})
 	return held, err
 }
@@ -108,10 +109,9 @@ func DomainHeld(ctx context.Context, pool *pgxpool.Pool, domain string) (bool, e
 	}
 	var held bool
 	err := probe(ctx, pool, fmt.Sprintf("%q", domain), func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company_domain
-			   WHERE domain = ANY($1) AND archived_at IS NULL)`,
-			owndomain.Spellings(domain)).Scan(&held)
+		var err error
+		held, err = contacts.CompanyDomainHeld(ctx, tx, ids.CompanyID{}, domain)
+		return err
 	})
 	return held, err
 }

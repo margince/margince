@@ -265,3 +265,23 @@ func TestAWithheldCallWithoutFourPeriodsSaysWithheld(t *testing.T) {
 		t.Fatalf("sufficiency = %+v, want absent %q and no figures", got, AbsenceCallWithheld)
 	}
 }
+
+// A median over periods that left won deals out says how many each left out.
+// A manager's call has no history behind it, so it says none.
+func TestAHistoricalMedianStatesTheWonDealsEachPeriodLeavesOut(t *testing.T) {
+	t.Parallel()
+	history := fourPeriods(900_00, 800_00, 700_00, 600_00, 500_00)
+	history.ComparableUnpriced = []int{0, 2, 0, 1, 3}
+	got, err := AssessSufficiency(Readings{WonMinor: 200_00, OpenMinor: 500_00}, history, SeenCall{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []int{0, 2, 0, 1}; len(got.ComparableUnpriced) != 4 || got.ComparableUnpriced[1] != want[1] || got.ComparableUnpriced[3] != want[3] {
+		t.Errorf("left out = %v, want the four periods the median used: %v", got.ComparableUnpriced, want)
+	}
+	call := int64(100_000)
+	withCall, err := AssessSufficiency(Readings{WonMinor: 200_00, OpenMinor: 500_00}, history, SeenCall{Amount: &call})
+	if err != nil || len(withCall.ComparableUnpriced) != 0 {
+		t.Errorf("a manager's call states %v left out, want none: %v", withCall.ComparableUnpriced, err)
+	}
+}

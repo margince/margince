@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { NameDialog } from "./namedialog";
 
@@ -30,13 +30,15 @@ const meta: Meta<typeof NameDialog> = {
 export default meta;
 type Story = StoryObj<typeof NameDialog>;
 
-// Nothing typed yet: the save is refused as a state, not as a write in flight.
+// Nothing typed yet: the save says the name is required and goes to it.
 export const Create: Story = {
-  play: async () => {
+  args: { onSave: fn() },
+  play: async ({ args }) => {
     const dialog = within(await within(document.body).findByRole("dialog"));
-    await expect(
-      dialog.getByRole("button", { name: "Add reason" }),
-    ).toBeDisabled();
+    await userEvent.click(dialog.getByRole("button", { name: "Add reason" }));
+    await expect(dialog.getByText("Reason is required.")).toBeVisible();
+    await expect(dialog.getByRole("textbox", { name: /Reason/ })).toHaveFocus();
+    await expect(args.onSave).not.toHaveBeenCalled();
   },
 };
 
@@ -46,13 +48,17 @@ export const Rename: Story = {
     title: "Rename reason",
     initial: "Bad timing",
     confirmLabel: "Save name",
+    onSave: fn(),
+    onClose: fn(),
   },
-  play: async () => {
+  play: async ({ args }) => {
     const dialog = within(await within(document.body).findByRole("dialog"));
-    await expect(dialog.getByLabelText("Reason")).toHaveValue("Bad timing");
-    await expect(
-      dialog.getByRole("button", { name: "Save name" }),
-    ).toBeDisabled();
+    await expect(dialog.getByRole("textbox", { name: /Reason/ })).toHaveValue(
+      "Bad timing",
+    );
+    await userEvent.click(dialog.getByRole("button", { name: "Save name" }));
+    await expect(args.onSave).not.toHaveBeenCalled();
+    await expect(args.onClose).toHaveBeenCalled();
   },
 };
 

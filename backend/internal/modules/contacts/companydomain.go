@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -98,7 +99,10 @@ func (s *Store) setCompanyDomain(ctx context.Context, tx pgx.Tx, companyID ids.C
 	if err != nil {
 		return fmt.Errorf("set company domain: %w", err)
 	}
-	return nil
+	if err := storekit.OwnCompanyDomainsChanged(ctx, tx, companyID.UUID); err != nil {
+		return err
+	}
+	return touchChildSetParent(ctx, tx, entityCompany, companyID.UUID)
 }
 
 // companyHost reduces a website to the bare domain the company_domain

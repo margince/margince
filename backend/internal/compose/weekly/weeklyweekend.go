@@ -63,13 +63,12 @@ import (
 // unreconstructible, and a block carrying any such deal says so rather than
 // publishing a number it cannot stand behind.
 //
-// NO WRITER TOMBSTONES A DEAL TODAY, so this excludes nothing in practice: the
-// scrub verbs are written against contact, lead, activity, attachment,
-// deal_room_participant, scheduled_send and the AI records. It is here because
-// it must be here BEFORE deal erasure lands rather than after — a boundary added
-// afterwards has already served the images it was meant to withhold. The day the
-// set widens, gates/scrubbedentitytypes_test.go fails and asks what a frozen
-// week should report.
+// No writer tombstones a deal today, so this excludes nothing in practice.
+// The scrub verbs are written against the record types
+// gates/scrubbedentitytypes_test.go lists, and none is a deal. The boundary must
+// be here before deal erasure lands. One added afterwards has already served the
+// images it was meant to withhold. The day the set gains a deal, that gate
+// fails and asks what a frozen week should report.
 //
 // The verbs are the field-image ones. `update` and `restore` carry the column
 // patches (the two the update door may write, per auditverb), `advance_stage`

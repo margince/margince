@@ -21,6 +21,7 @@ import {
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { taskDueOnDay } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -231,7 +232,16 @@ function OpenLeads({
             <span>{lead.next_task_subject}</span>
             {lead.next_task_due_at && (
               <span className="t-caption">
-                {formatDate(lead.next_task_due_at, locale, progress.timezone)}
+                {formatDate(
+                  taskDueOnDay(
+                    lead.next_task_due_at,
+                    lead.next_task_due_has_time,
+                    lead.next_task_due_intent,
+                    progress.timezone,
+                  ),
+                  locale,
+                  progress.timezone,
+                )}
               </span>
             )}
           </span>

@@ -260,6 +260,11 @@ A **wait until** date that is still to come hides the stalled mark, and the mark
 comes back on its own after that date. It does not hide a close date that has
 passed, which is a different thing and stays in view.
 
+The **Going cold** mark on the deal page shows after 30 days with no activity.
+A wait until date still to come, or a meeting booked for later, hides it as it
+hides the stalled mark. The overnight list of deals at risk leaves such a deal
+out too, unless something else is wrong with it.
+
 There is a second, shorter time: **19 days** with no activity makes a deal
 *quiet*. The morning screens notice that well before the deal reaches the 60
 days for stalled. "Quiet" and "stalled" say different things about the same

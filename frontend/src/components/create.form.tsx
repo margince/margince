@@ -117,7 +117,7 @@ export function RecordFormBody({
   // fields write from the reader's own, so the box stays untouched until used.
   const prefilled = usePrefilledPick(fields, values, rows);
   const answers = { ...values, ...prefilled };
-  // A field its showWhen hides neither renders nor holds Save hostage.
+  // A field its showWhen hides neither renders nor counts as missing.
   const shown = visibleFields(fields, values);
   // A write must not bring back an answer to a question withdrawn in between.
   // Otherwise the first partner's claim would carry onto a second one named
@@ -125,7 +125,7 @@ export function RecordFormBody({
   const [edited, setEdited] = useState(false);
   const [editedOpen, setEditedOpen] = useState(dialog?.open);
   // The fields the reader has emptied or tried to save empty: each says it is
-  // required, where a disabled Save alone would not say why.
+  // required. Save stays enabled, so its press is what explains a gap.
   const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
   // The server's refusals, each on its field until that field is edited.
   const [faults, faultsRoot] = useFieldFaults();
@@ -177,10 +177,9 @@ export function RecordFormBody({
       : [];
   });
   const refusals = new Map(checked.map((c) => [c.key, c.refusal] as const));
-  // A field's own validate holds Save from the first render. An empty field
-  // keeps quiet until the reader changes something or tries to save. A value
-  // already there, or a rule across fields, is said at once or once any field
-  // is filled.
+  // An empty field keeps quiet until the reader changes something or tries to
+  // save. A value already there, or a rule across fields, is said at once or
+  // once any field is filled.
   const said = (key: string) => {
     const entry = checked.find((c) => c.key === key);
     const empty = !(values[key] ?? "").trim();
@@ -353,7 +352,6 @@ export function RecordFormBody({
         variant="primary"
         type="submit"
         form={formId}
-        disabled={!pending && (requiredMissing || refusals.size > 0)}
         pending={pending}
         busyLabel={t(SUBMIT_COPY[intent].busy)}
       >

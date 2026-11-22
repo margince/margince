@@ -105,6 +105,16 @@ describe("the zone the dialog names", () => {
   });
 });
 
+describe("the presets", () => {
+  // A preset is the design system's Button: its focus ring and press latch.
+  it("are buttons of the design system", () => {
+    render(<Dialog now={AFTERNOON} />);
+
+    const preset = screen.getByRole("button", { name: /^Tomorrow morning/ });
+    expect(preset.classList.contains("btn")).toBe(true);
+  });
+});
+
 describe("choosing a date and time to send", () => {
   it("refuses the days before today and keeps the day chosen", async () => {
     const { user } = await openPicker(AFTERNOON);
@@ -132,6 +142,16 @@ describe("choosing a date and time to send", () => {
       expect(hour(past).getAttribute("aria-describedby")).toBe(reason.id);
     }
     expect(hour("17:00").disabled).toBe(false);
+  });
+
+  // The hours are one design-system strip, named for what they choose.
+  it("offers the hours as one named group of options", async () => {
+    await openPicker(AFTERNOON);
+
+    const group = screen.getByRole("group", { name: "Time" });
+    expect(group.classList.contains("segmented")).toBe(true);
+    expect(group.contains(hour("17:00"))).toBe(true);
+    expect(group.contains(hour("08:00"))).toBe(true);
   });
 
   it("opens on the next hour left today", async () => {

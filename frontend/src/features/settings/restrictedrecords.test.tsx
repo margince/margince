@@ -191,16 +191,16 @@ describe("RestrictedRecordsCard", () => {
       await screen.findByRole("button", { name: /^Release email of/i }),
     );
     // The reason is what makes it a decision rather than a toggle, so the
-    // confirm is inert until one is typed.
+    // confirm asks for one before anything is sent.
     const confirm = screen.getByRole("button", { name: "Release and erase" });
-    expect(confirm).toBeDisabled();
     expect(screen.getByText(/Releasing ERASES the record/)).toBeVisible();
+    await user.click(confirm);
+    const why = screen.getByRole("textbox", { name: /Why/ });
+    expect(screen.getByText("Why is required.")).toBeVisible();
+    expect(why).toHaveFocus();
+    expect(sent.some((call) => call.key.endsWith("/release"))).toBe(false);
 
-    await user.type(
-      screen.getByRole("textbox", { name: /Why/ }),
-      "wrongly classified: marketing enquiry",
-    );
-    expect(confirm).toBeEnabled();
+    await user.type(why, "wrongly classified: marketing enquiry");
     await user.click(confirm);
 
     await waitFor(() =>
@@ -292,12 +292,13 @@ describe("RestrictedRecordsCard", () => {
     );
     const id = within(dialog).getByRole("textbox", { name: /Record ID/ });
     await user.type(id, "not-a-record");
-    expect(confirm).toBeDisabled();
     expect(id).toHaveAccessibleDescription(/Not a valid record ID/);
+    await user.click(confirm);
+    expect(id).toHaveFocus();
+    expect(sent.some((call) => call.key.endsWith("/pin"))).toBe(false);
 
     await user.clear(id);
     await user.type(id, HELD_ANGEBOT.activity_id);
-    expect(confirm).toBeEnabled();
     await user.click(confirm);
     await waitFor(() =>
       expect(sent.find((call) => call.key.endsWith("/pin"))).toEqual({

@@ -84,7 +84,7 @@ func NewSharedAuthorizer(cfg SharedAuthConfig) *SharedAuthorizer {
 	if now == nil {
 		now = time.Now
 	}
-	return &SharedAuthorizer{tokenURLFormat: cfg.TokenURLFormat, http: netguard.NoRedirect(client), tokens: oauthflow.NewTokenCache(now)}
+	return &SharedAuthorizer{tokenURLFormat: cfg.TokenURLFormat, http: netguard.NoRedirect(client), tokens: oauthflow.NewTokenCache(now, oauthflow.SharedTokenLimit)}
 }
 
 // AccessToken returns an application token for the sealed credential. A

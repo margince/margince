@@ -109,6 +109,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
+- [set-up-windows-wsl-development.md](how-to/set-up-windows-wsl-development.md): work on the code
+  on Windows, in WSL.
 - [move-frontend-code.md](how-to/move-frontend-code.md): put a frontend file in the folder that owns it.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
   and calendar capture need.
@@ -258,6 +260,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   is down. Generated.
 - [glossary.md](reference/glossary.md): what each technical name in the plain pages means.
 - [record-vocabulary.md](reference/record-vocabulary.md): one name for each kind of record, in the app and in the code.
+- [administered-lists.md](reference/administered-lists.md): the two shapes of a list an admin changes, and when to use each.
 - [browser-support.md](reference/browser-support.md): the browsers the app supports, and when code may use a web feature.
 - [ui-copy-style.md](reference/ui-copy-style.md): how to write English text in the app.
 - [docs-prose-style.md](reference/docs-prose-style.md): how to write a doc page.

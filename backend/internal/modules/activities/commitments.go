@@ -65,6 +65,9 @@ type OpenTask struct {
 	// DueHasTime is true when DueAt names a time of day rather than a day.
 	DueHasTime bool
 	DueIntent  *crmcontracts.IntentTime
+	// Overdue is whether the task is late at the sweep's AsOf. The rule is
+	// storekit.TaskDueBeforeSQL: a chosen date is late once that date is over.
+	Overdue bool
 	// AssigneeID and AssigneeName are absent together for an unassigned
 	// task: a promise with no owner, which is the single most useful thing
 	// this read surfaces.
@@ -125,11 +128,12 @@ type ListOpenTasksInput struct {
 // boundary changes its position in an over-long list, never the verdict shown.
 func openTasksOrder(slippedFirst bool) string {
 	if slippedFirst {
-		return `(` + storekit.TaskDueSQL("a") + ` IS NOT NULL AND ` + storekit.TaskDueSQL("a") + ` < now()) DESC,
-		         CASE WHEN ` + storekit.TaskDueSQL("a") + ` < now() THEN ` + storekit.TaskDueSQL("a") + ` END DESC,
-		         ` + storekit.TaskDueSQL("a") + ` ASC NULLS LAST, a.created_at ASC, a.id ASC`
+		slipped := storekit.TaskDueBeforeSQL("a", "now()")
+		return slipped + ` DESC,
+		         CASE WHEN ` + slipped + ` THEN ` + storekit.TaskDueOrderSQL("a") + ` END DESC,
+		         ` + storekit.TaskDueOrderSQL("a") + ` ASC NULLS LAST, a.created_at ASC, a.id ASC`
 	}
-	return storekit.TaskDueSQL("a") + ` ASC NULLS LAST, a.id ASC`
+	return storekit.TaskDueOrderSQL("a") + ` ASC NULLS LAST, a.id ASC`
 }
 
 // openTasksDefaultLimit and openTasksMaxLimit bound one sweep. The read is a
@@ -192,7 +196,8 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 	if err != nil {
 		return nil, false, err
 	}
-	rows, err := tx.Query(ctx, `SELECT `+openTaskColumns()+`
+	columns := openTaskColumns(openTasksMoment(in, arg))
+	rows, err := tx.Query(ctx, `SELECT `+columns+`
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id
 		WHERE `+joinAnd(where)+
@@ -360,7 +365,7 @@ func attachTaskAbout(ctx context.Context, tx pgx.Tx, tasks []OpenTask) error {
 
 func scanOpenTask(row pgx.CollectableRow) (OpenTask, error) {
 	var t OpenTask
-	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt, &t.DueIntent, &t.Version)
+	err := row.Scan(&t.ID, &t.Subject, &t.DueAt, &t.DueHasTime, &t.AssigneeID, &t.AssigneeName, &t.CreatedAt, &t.DueIntent, &t.Version, &t.Overdue)
 	t.DueHasTime = t.DueHasTime && t.DueAt != nil
 	return t, err
 }
@@ -392,8 +397,17 @@ func joinAnd(terms []string) string {
 	return out
 }
 
-func openTaskColumns() string {
+func openTaskColumns(moment string) string {
 	return "a.id, coalesce(a.subject, ''), " + storekit.TaskDueSQL("a") +
 		", a.due_has_time, a.assignee_id, coalesce(u.display_name, ''), a.created_at, " + storekit.IntentWireSQL("a", "due") +
-		", a.version"
+		", a.version, " + storekit.TaskDueBeforeSQL("a", moment)
+}
+
+// openTasksMoment is the SQL for the instant a sweep judges lateness against:
+// its AsOf, or the database clock when the caller named none.
+func openTasksMoment(in ListOpenTasksInput, arg func(any) int) string {
+	if in.AsOf.IsZero() {
+		return "now()"
+	}
+	return sprintf("$%d", arg(in.AsOf))
 }

@@ -36,6 +36,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -78,6 +79,9 @@ type OpenCommitment struct {
 	// DueHasTime is true when DueAt names a time of day; a claim never does.
 	DueHasTime bool
 	DueIntent  *crmcontracts.IntentTime
+	// Overdue is the task's own lateness under the one due-day rule, set by a
+	// reader that judged it. Nil means judge DueAt as an instant.
+	Overdue *bool
 	// FiledAt is when the promise was made: a task's creation, a claim's
 	// message. It breaks ties between two promises sharing a deadline, so the
 	// answer does not depend on which source a seam happened to read first.
@@ -213,9 +217,13 @@ func (t reviewCommitments) Handle(ctx context.Context, in json.RawMessage) (json
 	// about, read off rows this call does not hand over — so the answer is
 	// tainted with their content.
 	noteDerivedContent(ctx)
+	loc, err := loadSweepZone(sweep.TimeZone)
+	if err != nil {
+		return nil, err
+	}
 	items := make([]CommitmentItem, 0, len(sweep.Commitments))
 	for _, c := range sweep.Commitments {
-		item := c.wire(sweep.AsOf)
+		item := c.wire(sweep.AsOf, loc)
 		noteCommitmentEvidence(ctx, item)
 		items = append(items, item)
 	}
@@ -238,16 +246,22 @@ func requireCommitmentLimit(limit int) error {
 	}
 }
 
+// RankedDue is the instant the promise is judged and ranked at. A task with a
+// chosen date and no time is due at the end of that date in loc.
+func (c OpenCommitment) RankedDue(loc *time.Location) *time.Time {
+	return deadline.TaskDueOn(c.DueAt, c.DueHasTime, storekit.WallClock(c.DueIntent), loc)
+}
+
 // wire turns one swept promise into the item a caller is served, with the
 // state it is in as of the sweep's own instant.
-func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
+func (c OpenCommitment) wire(asOf time.Time, loc *time.Location) CommitmentItem {
 	item := CommitmentItem{
 		TaskID: c.TaskID, ClaimID: c.ClaimID, Source: c.Source,
 		SourceActivityID: c.SourceActivityID,
 		Quote:            c.Quote, Subject: c.Subject, DueAt: c.DueAt,
 		DueHasTime: c.DueHasTime,
 		DueIntent:  c.DueIntent,
-		State:      commitmentState(c.DueAt, asOf),
+		State:      c.state(asOf),
 		// Never null: a model handed null reads it as "unknown" where an empty
 		// array says "this promise names no record".
 		About: c.About,
@@ -259,10 +273,35 @@ func (c OpenCommitment) wire(asOf time.Time) CommitmentItem {
 		item.AssigneeID = c.AssigneeID
 		item.AssigneeName = c.AssigneeName
 	}
-	if days, overdue := daysOverdue(c.DueAt, asOf); overdue {
+	if days, overdue := c.daysOverdue(asOf, loc); overdue {
 		item.DaysOverdue = &days
+	} else if c.late() {
+		// Late by its chosen date while its instant has not passed yet.
+		item.DaysOverdue = new(0)
 	}
 	return item
+}
+
+// daysOverdue counts whole days late. A task with only a date counts calendar
+// days from its picked date, the rule that ranks it. Any other counts elapsed.
+func (c OpenCommitment) daysOverdue(asOf time.Time, loc *time.Location) (int, bool) {
+	if wall := storekit.WallClock(c.DueIntent); c.DueAt != nil && !c.DueHasTime && wall != "" && loc != nil {
+		if offset, ok := deadline.WallDayOffset(wall, asOf, loc); ok {
+			return -offset, offset < 0
+		}
+	}
+	return daysOverdue(c.DueAt, asOf)
+}
+
+// late says the reader that built this row judged it overdue by the one task
+// rule, which a chosen date cannot get from its instant.
+func (c OpenCommitment) late() bool { return c.Overdue != nil && *c.Overdue }
+
+func (c OpenCommitment) state(asOf time.Time) string {
+	if c.late() {
+		return commitmentOverdue
+	}
+	return commitmentState(c.DueAt, asOf)
 }
 
 // commitmentState judges one promise against the instant the set was swept at.
@@ -299,4 +338,17 @@ func noteCommitmentEvidence(ctx context.Context, item CommitmentItem) {
 	case item.SourceActivityID != nil:
 		noteEvidence(ctx, datasource.EntityActivity, *item.SourceActivityID)
 	}
+}
+
+// loadSweepZone resolves the installation zone a sweep names. A caller with no
+// zone to offer counts its days on UTC's calendar.
+func loadSweepZone(name string) (*time.Location, error) {
+	if name == "" {
+		return time.UTC, nil
+	}
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		return nil, fmt.Errorf("the sweep's time zone %q does not resolve: %w", name, err)
+	}
+	return loc, nil
 }

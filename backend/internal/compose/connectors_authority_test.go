@@ -48,6 +48,24 @@ func (liveAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.Se
 	return principal.SeatFull, nil
 }
 
+// grantedAuthority answers one fixed grant set and seat for every member.
+type grantedAuthority struct {
+	rbac authz.RBAC
+	seat principal.SeatType
+}
+
+func (g grantedAuthority) EffectiveRBAC(context.Context, ids.UUID, ids.UUID) (authz.RBAC, error) {
+	return g.rbac, nil
+}
+
+func (g grantedAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (principal.SeatType, error) {
+	return g.seat, nil
+}
+
+func (g grantedAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	return g.rbac, g.seat, nil
+}
+
 // deadAuthority is identity's resolver answering for a human who no longer
 // resolves — deactivated, suspended, or gone.
 type deadAuthority struct{}
@@ -99,14 +117,10 @@ func TestCallbackRefusesADeadGrantorBeforeExchangingTheCode(t *testing.T) {
 	}
 }
 
-// AdmittedAuthority delegates to this fixture's own two reads; see
-// authztest.AdmittedFromPair for why the body is not written out here.
 func (r liveAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }
 
-// AdmittedAuthority delegates to this fixture's own two reads; see
-// authztest.AdmittedFromPair for why the body is not written out here.
 func (r deadAuthority) AdmittedAuthority(ctx context.Context, ws, human, _ ids.UUID) (authz.RBAC, principal.SeatType, error) {
 	return authztest.AdmittedFromPair(ctx, ws, human, r.EffectiveRBAC, r.SeatType)
 }

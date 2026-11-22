@@ -33,8 +33,11 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const UnknownDates: Story = {
   play: async () => {
-    expect(await screen.findByRole("button", { name: "Save" })).toBeDisabled();
     const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Save" }));
+    expect(
+      await screen.findByText("Employment status is required."),
+    ).toBeVisible();
     await user.click(
       screen.getByRole("combobox", { name: "Employment status" }),
     );

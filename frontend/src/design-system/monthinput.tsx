@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useState } from "react";
-import { INTL_LOCALE } from "../format/intllocale";
+import { monthName } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { type FieldControl, TextInput } from "./field";
 import { Select } from "./select";
@@ -36,12 +36,11 @@ export function MonthInput({
   const { locale } = useLocale();
   const [year, setYear] = useState(value.slice(0, 4));
   const month = value.slice(5, 7);
-  const names = new Intl.DateTimeFormat(INTL_LOCALE[locale], { month: "long" });
   const options = [
     { value: "", label: t("calendar.anyMonth") },
     ...Array.from({ length: 12 }, (_, index) => ({
       value: String(index + 1).padStart(2, "0"),
-      label: names.format(new Date(2000, index, 1)),
+      label: monthName(index + 1, locale),
     })),
   ];
   const report = (nextMonth: string, nextYear: string) => {

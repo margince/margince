@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -100,6 +101,7 @@ export function stubRoutes(overrides: Record<string, Route> = {}) {
       if (isPreviewDoor(url.pathname)) {
         return jsonResponse(allowedPreview(previewedAddresses(body)));
       }
+      if (key === "GET /connectors") return jsonResponse(CONNECTED_ROSTER);
       return jsonResponse({});
     }),
   );

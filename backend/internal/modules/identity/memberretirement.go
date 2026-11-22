@@ -331,6 +331,9 @@ func (s *Service) applyMemberRetirement(ctx context.Context, tx pgx.Tx, actor Id
 	if _, err := tx.Exec(ctx, `UPDATE app_user SET removed_at = now(), merged_into_user_id = @merged WHERE id = @member`, pgx.StrictNamedArgs{memberParameter: source, "merged": merged}); err != nil {
 		return err
 	}
+	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+		return err
+	}
 	auditID, err := storekit.Audit(ctx, tx, "archive", "user", source.UUID,
 		map[string]string{"display_name": preview.SourceName, "status": before.Status}, map[string]any{"removed": true, "merged_into_user_id": merged, "work_given_to": target})
 	if err != nil {

@@ -50,7 +50,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 - `custom_field_pkey`: `unique, btree (id)`
 - `idx_custom_field_object`: `btree (object, status)`
 - `uq_custom_field_column`: `unique, btree (object, column_name)`
-- `uq_custom_field_slug`: `unique, btree (object, slug)`
+- `uq_custom_field_slug`: `unique, btree (object, slug) WHERE (status <> 'retired')`
 
 **Triggers**
 

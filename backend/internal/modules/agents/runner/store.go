@@ -178,6 +178,15 @@ func (s *Store) MarkFailed(ctx context.Context, runID ids.UUID, reason FailureRe
 	})
 }
 
+// failStuckRunsSQL closes the 'running' rows older than a grace in
+// microseconds. idx_agent_run_running serves its status filter.
+const failStuckRunsSQL = `
+	UPDATE agent_run
+	   SET status = 'failed', degrade_reason = $2, updated_at = now(), finished_at = now()
+	 WHERE status = 'running'
+	   AND updated_at < now() - ($1 * interval '1 microsecond')
+	RETURNING id, agent_spec, trigger_ref, passport_id, created_at, finished_at, degrade_reason, attempt`
+
 // FailStuckRuns closes the runs that were claimed and then abandoned — a row
 // left in 'running' with nothing alive to finish it — and returns the ids it
 // closed so the caller can name them.
@@ -207,13 +216,7 @@ func (s *Store) FailStuckRuns(ctx context.Context, grace time.Duration, reason F
 	}
 	var swept []ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			UPDATE agent_run
-			   SET status = 'failed', degrade_reason = $2, updated_at = now(), finished_at = now()
-			 WHERE status = 'running'
-			   AND updated_at < now() - ($1 * interval '1 microsecond')
-			RETURNING id, agent_spec, trigger_ref, passport_id, created_at, finished_at, degrade_reason, attempt`,
-			graceMicros, string(reason))
+		rows, err := tx.Query(ctx, failStuckRunsSQL, graceMicros, string(reason))
 		if err != nil {
 			return err
 		}

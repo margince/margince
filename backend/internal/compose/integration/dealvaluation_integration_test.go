@@ -133,8 +133,9 @@ func TestProjectAndBoardValuesAndReportsExposeMissingPrices(t *testing.T) {
 	}
 	for _, key := range []string{"deals-by-stage", "pipeline-current"} {
 		rows = runPrebuiltReport(f.e.Admin(), t, f.e, key, valuationPlan(f.project))
-		if len(rows) != 1 || rows[0]["base_minor"] != nil || rows[0]["weighted_base_minor"] != nil || cell(rows[0], "deals") != "4" || cell(rows[0], "priced_deals") != "3" {
-			t.Fatalf("%s = %v, want null converted totals with three priced of four deals", key, rows)
+		coverage, _ := rows[0]["coverage"].(map[string]any)
+		if len(rows) != 1 || cell(rows[0], "base_minor") != fmt.Sprint(want) || cell(rows[0], "weighted_base_minor") != "30002" || cell(rows[0], "deals") != "4" || cell(rows[0], "priced_deals") != "3" || coverage["partial"] != true || fmt.Sprint(coverage["missing_currencies"]) != "[GBP]" {
+			t.Fatalf("%s = %v, want the converting deals' totals, three priced of four, and GBP named as missing", key, rows)
 		}
 	}
 	rows = runPrebuiltReport(f.e.Admin(), t, f.e, "projects-by-phase", "")
@@ -275,7 +276,7 @@ func TestLegacyUnpriceableWinsStayUnknownAcrossProjectAndCompanyTotals(t *testin
 		t.Fatalf("unpriced company = %+v, %v", page.Deals, err)
 	}
 	tree, err := compose.CompanyHierarchyRollup(f.e.Admin(), f.e.Pool, f.company.UUID, "self", compose.CompanyRollupPeriod{}, fixedClock(valuationDate.Add(time.Hour)))
-	if err != nil || tree.ClosedWonMinor != nil {
-		t.Fatalf("unpriced company hierarchy = %+v, %v", tree, err)
+	if err != nil || tree.ClosedWonMinor != nil || tree.ClosedWonCoverage.NoRateDeals != 1 || !tree.ClosedWonCoverage.Partial {
+		t.Fatalf("unpriced company hierarchy = %+v, %v, want no total and one deal with no rate", tree, err)
 	}
 }

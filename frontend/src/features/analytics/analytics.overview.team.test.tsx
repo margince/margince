@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { forgetSeat } from "../../lib/storage";
 import { jsonResponse } from "../../testing/story-utils";
 import { outlookFor } from "./analytics.assessment.fixtures";
+import { upcomingWindow } from "./analytics.overview.routes.fixtures";
 import {
   metric,
   openOverview as open,
@@ -431,10 +432,7 @@ describe("Team prospecting", () => {
           scope: TEAM,
           workflow: "handoff",
           upcoming_meetings: 2,
-          upcoming_window: {
-            start_at: "2026-09-21T09:00:00Z",
-            end_at: "2026-10-05T09:00:00Z",
-          },
+          upcoming_window: upcomingWindow("2026-09-21T09:00:00Z"),
         }),
     });
     expect(

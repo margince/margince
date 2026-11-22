@@ -16,6 +16,7 @@ import (
 	"net/mail"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -63,6 +64,23 @@ func furtherAttendees(in crmcontracts.MeetingInvitationRequest) ([]string, error
 		raw = append(raw, string(address))
 	}
 	return normalizedAttendees(raw, string(in.AttendeeEmail))
+}
+
+// withTeamAttendees adds each team member's address to the further attendees,
+// so every member is on the one provider event.
+func withTeamAttendees(in crmcontracts.MeetingInvitationRequest, team []teamCalendar) crmcontracts.MeetingInvitationRequest {
+	if len(team) == 0 {
+		return in
+	}
+	var further []openapi_types.Email
+	if in.AttendeeEmails != nil {
+		further = append(further, *in.AttendeeEmails...)
+	}
+	for _, member := range team {
+		further = append(further, openapi_types.Email(member.Address))
+	}
+	in.AttendeeEmails = &further
+	return in
 }
 
 // resolveRoster resolves the invitation's addresses: what each one is to the host.

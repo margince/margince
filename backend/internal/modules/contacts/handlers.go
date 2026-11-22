@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/signature"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type Handlers struct {
@@ -130,7 +129,7 @@ func (h Handlers) WithBlobstore(blob blobstore.Store) Handlers {
 // WithFieldCatalog wires the workspace custom-field catalog into the
 // transport's store (see Store.WithFieldCatalog); compose injects
 // modules/customfields' Service here.
-func (h Handlers) WithFieldCatalog(catalog fieldcatalog.Reader) Handlers {
+func (h Handlers) WithFieldCatalog(catalog storekit.FieldCatalog) Handlers {
 	h.store = h.store.WithFieldCatalog(catalog)
 	return h
 }

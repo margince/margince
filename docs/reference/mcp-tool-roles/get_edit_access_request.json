@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "edit_access_request",
+  "verb": "get_edit_access_request",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}

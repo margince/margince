@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -10,7 +11,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
@@ -189,6 +190,13 @@ describe("the bulk bar's roster caveat", () => {
   });
 });
 
+async function confirmMove(user: ReturnType<typeof userEvent.setup>) {
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["deals.bulkMove"] }),
+  );
+}
+
 // Moving a stage fans out one advance per deal, each with the row's own
 // version guard: a guard pinned to the wrong revision refuses a write nobody
 // raced, and one missing lets a stale move overwrite a concurrent edit.
@@ -231,6 +239,7 @@ describe("the bulk bar's stage move", () => {
     await user.click(
       screen.getByRole("button", { name: en["deals.bulkMove"] }),
     );
+    await confirmMove(user);
 
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0].method).toBe("POST");
@@ -290,6 +299,7 @@ describe("the bulk bar's stage move result", () => {
     );
 
     await moveTo(user, OTHER_STAGE);
+    await confirmMove(user);
 
     expect(
       await screen.findByText(
@@ -321,6 +331,284 @@ describe("the bulk bar's stage move result", () => {
     ).toBeTruthy();
     expect(advanced).toEqual([]);
     expect(onDone).not.toHaveBeenCalled();
+  });
+});
+
+describe("the bulk bar's stage move confirmation", () => {
+  const rows = (n: number, stageId = STAGE.id): Deal[] =>
+    Array.from({ length: n }, (_, i) => ({
+      ...DEAL,
+      id: `d-${i + 1}`,
+      name: `Deal ${i + 1}`,
+      stage_id: stageId,
+    }));
+
+  function stubWrites() {
+    const advanced: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request) => {
+        if (input.method === "POST") {
+          advanced.push(new URL(input.url, "https://test.local").pathname);
+          return json(DEAL);
+        }
+        return json({ data: [], page: { has_more: false } });
+      }),
+    );
+    return advanced;
+  }
+
+  async function press(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      screen.getByRole("combobox", { name: en["deals.bulkStage"] }),
+    );
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: OTHER_STAGE.name,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["deals.bulkMove"] }),
+    );
+    return screen.findByRole("dialog");
+  }
+
+  it("shows what a move of 3 deals does and writes nothing until Confirm", async () => {
+    const advanced = stubWrites();
+    const user = userEvent.setup();
+    renderBar(
+      <DealBulkBar
+        deals={rows(3)}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    const dialog = await press(user);
+
+    expect(within(dialog).getByText("Move 3 deals to Proposal?")).toBeTruthy();
+    expect(
+      within(dialog).getByText("3 deals will move to Proposal."),
+    ).toBeTruthy();
+    expect(within(dialog).queryByText(en["bulk.largeTitle"])).toBeNull();
+    expect(advanced).toEqual([]);
+  });
+
+  it("warns Large change for 11 deals but not for 10", async () => {
+    stubWrites();
+    const user = userEvent.setup();
+    const { unmount } = renderBar(
+      <DealBulkBar
+        deals={rows(11)}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+    expect(
+      within(await press(user)).getByText(en["bulk.largeTitle"]),
+    ).toBeTruthy();
+    unmount();
+    cleanup();
+
+    renderBar(
+      <DealBulkBar
+        deals={rows(10)}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+    expect(
+      within(await press(user)).queryByText(en["bulk.largeTitle"]),
+    ).toBeNull();
+  });
+
+  it("counts deals already in the stage and leaves them out of the warning", async () => {
+    stubWrites();
+    const user = userEvent.setup();
+    renderBar(
+      <DealBulkBar
+        deals={[
+          ...rows(10),
+          ...rows(4, OTHER_STAGE.id).map((d, i) => ({ ...d, id: `x-${i}` })),
+        ]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    const dialog = await press(user);
+
+    expect(
+      within(dialog).getByText(
+        "10 deals will move to Proposal. 4 were already in Proposal.",
+      ),
+    ).toBeTruthy();
+    expect(within(dialog).queryByText(en["bulk.largeTitle"])).toBeNull();
+  });
+
+  it("moves nothing when the reader cancels", async () => {
+    const advanced = stubWrites();
+    const onDone = vi.fn();
+    const user = userEvent.setup();
+    renderBar(
+      <DealBulkBar
+        deals={rows(3)}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={onDone}
+      />,
+    );
+
+    const dialog = await press(user);
+    await user.click(
+      within(dialog).getByRole("button", { name: en["create.cancel"] }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(advanced).toEqual([]);
+    expect(onDone).not.toHaveBeenCalled();
+  });
+});
+
+describe("the bulk bar's stage move edge cases", () => {
+  const SECOND: Deal = { ...DEAL, id: "d-2", name: "Ott expansion" };
+  const THIRD: Deal = { ...DEAL, id: "d-3", name: "Kern pilot" };
+
+  function problem(status: number) {
+    return new Response(
+      JSON.stringify({ title: "x", status, code: "conflict", detail: "moved" }),
+      {
+        status,
+        headers: { "content-type": "application/problem+json" },
+      },
+    );
+  }
+
+  function stubAdvance(refuse: (path: string) => Response | null) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request) => {
+        if (input.method === "POST") {
+          const path = new URL(input.url, "https://test.local").pathname;
+          return refuse(path) ?? json(DEAL);
+        }
+        return json({ data: [], page: { has_more: false } });
+      }),
+    );
+  }
+
+  async function pressMove(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(
+      screen.getByRole("combobox", { name: en["deals.bulkStage"] }),
+    );
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: OTHER_STAGE.name,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["deals.bulkMove"] }),
+    );
+  }
+
+  it("closes the dialog when the selection changes under it, so no empty stage is sent", async () => {
+    const sent: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request) => {
+        if (input.method === "POST") {
+          sent.push(await input.clone().text());
+        }
+        return json({ data: [], page: { has_more: false } });
+      }),
+    );
+    function Harness() {
+      const [rows, setRows] = useState([DEAL, SECOND]);
+      return (
+        <>
+          <button type="button" onClick={() => setRows([THIRD])}>
+            swap selection
+          </button>
+          <DealBulkBar
+            deals={rows}
+            stages={[STAGE, OTHER_STAGE]}
+            onDone={() => {}}
+          />
+        </>
+      );
+    }
+    const user = userEvent.setup();
+    renderBar(<Harness />);
+
+    await pressMove(user);
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    // The dialog is modal, so the selection changes from the outside.
+    act(() => {
+      screen.getByText("swap selection").click();
+    });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(sent).toEqual([]);
+  });
+
+  it("moves the rest and names the deal that answered 409", async () => {
+    stubAdvance((path) =>
+      path === "/v1/deals/d-2/advance" ? problem(409) : null,
+    );
+    const user = userEvent.setup();
+    renderBar(
+      <DealBulkBar
+        deals={[DEAL, SECOND, THIRD]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    await pressMove(user);
+    await confirmMove(user);
+
+    expect(await screen.findByText("2 deals moved to Proposal.")).toBeTruthy();
+    expect(
+      await screen.findByText(/1 not applied:.*Ott expansion/),
+    ).toBeTruthy();
+  });
+
+  it("says nothing moved when every deal is refused", async () => {
+    stubAdvance(() => problem(409));
+    const user = userEvent.setup();
+    renderBar(
+      <DealBulkBar
+        deals={[DEAL, SECOND]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    await pressMove(user);
+    await confirmMove(user);
+
+    expect(await screen.findByText(/2 not applied:/)).toBeTruthy();
+    expect(screen.queryByText(/moved to Proposal/)).toBeNull();
+  });
+
+  it("uses the singular wording for one deal", async () => {
+    stubAdvance(() => null);
+    const user = userEvent.setup();
+    renderBar(
+      <DealBulkBar
+        deals={[DEAL]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    await pressMove(user);
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Move 1 deal to Proposal?")).toBeTruthy();
+    expect(
+      within(dialog).getByText("1 deal will move to Proposal."),
+    ).toBeTruthy();
+    await confirmMove(user);
+    expect(await screen.findByText("1 deal moved to Proposal.")).toBeTruthy();
   });
 });
 

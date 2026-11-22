@@ -1,0 +1,172 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { pretendReaderZone } from "../testing/readerzone.testkit";
+import { formatDate, formatMoney, formatTimeOfDay } from "./format";
+import {
+  dateTimeFormat,
+  displayNames,
+  listFormat,
+  numberFormat,
+  relativeTimeFormat,
+  zonelessDateTimeFormat,
+} from "./formatters";
+import { setDateTimePreferences } from "./preferences";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  setDateTimePreferences({ dateFormat: "locale", timeFormat: "locale" });
+});
+
+describe("the formatter cache", () => {
+  it("builds one money formatter for a page of rows in one currency", () => {
+    const built = vi.spyOn(Intl, "NumberFormat");
+    for (let row = 0; row < 100; row += 1) {
+      formatMoney(row * 100, "CHF", "vi");
+    }
+    expect(built).toHaveBeenCalledTimes(1);
+  });
+
+  it("builds the date formatters for a page of rows in one zone once", () => {
+    const built = vi.spyOn(Intl, "DateTimeFormat");
+    formatDate("2026-03-04T10:00:00Z", "de", "Asia/Kathmandu");
+    const firstRow = built.mock.calls.length;
+    expect(firstRow).toBeGreaterThan(0);
+    for (let row = 1; row < 100; row += 1) {
+      formatDate(
+        `2026-03-04T10:${String(row % 60).padStart(2, "0")}:00Z`,
+        "de",
+        "Asia/Kathmandu",
+      );
+    }
+    expect(built).toHaveBeenCalledTimes(firstRow);
+  });
+
+  it("never answers one zone with another zone's formatter", () => {
+    // 00:30 on the 16th in Auckland, 05:30 on the 15th in Los Angeles.
+    const instant = "2026-06-15T12:30:00Z";
+    expect(formatDate(instant, "en", "Pacific/Auckland")).toBe("16/06/2026");
+    expect(formatDate(instant, "en", "America/Los_Angeles")).toBe("15/06/2026");
+    expect(formatDate(instant, "en", "Pacific/Auckland")).toBe("16/06/2026");
+  });
+
+  it("reads a changed clock preference on the next call", () => {
+    const evening = "2026-09-13T18:05:00Z";
+    setDateTimePreferences({ dateFormat: "locale", timeFormat: "24h" });
+    expect(formatTimeOfDay(evening, "en", "UTC")).toBe("18:05");
+    setDateTimePreferences({ dateFormat: "locale", timeFormat: "12h" });
+    expect(formatTimeOfDay(evening, "en", "UTC")).toMatch(/6:05\s*pm/i);
+  });
+
+  it("keys on the options, not on the order they are written in", () => {
+    const first = numberFormat("de", {
+      style: "percent",
+      maximumFractionDigits: 1,
+    });
+    expect(
+      numberFormat("de", { maximumFractionDigits: 1, style: "percent" }),
+    ).toBe(first);
+    expect(
+      numberFormat("de", {
+        style: "percent",
+        maximumFractionDigits: 1,
+        minimumFractionDigits: undefined,
+      }),
+    ).toBe(first);
+    expect(
+      numberFormat("en", { style: "percent", maximumFractionDigits: 1 }),
+    ).not.toBe(first);
+  });
+
+  it.each([
+    [
+      "fraction digits",
+      () => numberFormat("en", { maximumFractionDigits: 0 }).format(1.25),
+      () => numberFormat("en", { maximumFractionDigits: 2 }).format(1.25),
+    ],
+    [
+      "currency display",
+      () =>
+        numberFormat("en", { style: "currency", currency: "USD" }).format(1),
+      () =>
+        numberFormat("en", {
+          style: "currency",
+          currency: "USD",
+          currencyDisplay: "code",
+        }).format(1),
+    ],
+    [
+      "numbering system",
+      () => numberFormat("en", { numberingSystem: "latn" }).format(12),
+      () => numberFormat("en", { numberingSystem: "arab" }).format(12),
+    ],
+    [
+      "calendar",
+      () =>
+        dateTimeFormat("en", { timeZone: "UTC", year: "numeric" }).format(0),
+      () =>
+        dateTimeFormat("en", {
+          timeZone: "UTC",
+          year: "numeric",
+          calendar: "buddhist",
+        }).format(0),
+    ],
+    [
+      "list type",
+      () => listFormat("en", { type: "conjunction" }).format(["a", "b"]),
+      () => listFormat("en", { type: "disjunction" }).format(["a", "b"]),
+    ],
+    [
+      "relative-time numeric",
+      () => relativeTimeFormat("en", { numeric: "always" }).format(1, "day"),
+      () => relativeTimeFormat("en", { numeric: "auto" }).format(1, "day"),
+    ],
+    [
+      "display-names type",
+      () => displayNames("en", { type: "region" }).of("DE"),
+      () => displayNames("en", { type: "language" }).of("DE"),
+    ],
+  ])("keeps two formatters apart that differ only in %s", (_, one, other) => {
+    expect(one()).not.toBe(other());
+    expect(one()).toBe(one());
+  });
+
+  it("hands back a distinct formatter for each value of an option", () => {
+    expect(numberFormat("en", { maximumFractionDigits: 0 })).not.toBe(
+      numberFormat("en", { maximumFractionDigits: 2 }),
+    );
+    expect(listFormat("en", { type: "conjunction" })).not.toBe(
+      listFormat("en", { type: "disjunction" }),
+    );
+    expect(displayNames("en", { type: "region" })).not.toBe(
+      displayNames("en", { type: "language" }),
+    );
+  });
+
+  it("formats a missing zone in the browser's zone, as before the cache", () => {
+    // 00:30 on the 16th in Auckland, 05:30 on the 15th in Los Angeles.
+    const instant = "2026-06-15T12:30:00Z";
+    pretendReaderZone("Pacific/Auckland");
+    // @ts-expect-error a wire field the schema requires can still be absent.
+    expect(formatDate(instant, "en", undefined)).toBe("16/06/2026");
+    pretendReaderZone("America/Los_Angeles");
+    // @ts-expect-error as above, after the browser's zone changed.
+    expect(formatDate(instant, "en", undefined)).toBe("15/06/2026");
+  });
+
+  it("still throws for a zone Intl rejects", () => {
+    expect(() =>
+      dateTimeFormat("en", { day: "numeric", timeZone: "" }),
+    ).toThrow(RangeError);
+    expect(() =>
+      dateTimeFormat("en", { day: "numeric", timeZone: "Mars/Olympus" }),
+    ).toThrow(RangeError);
+  });
+
+  it("builds a zoneless date formatter anew, so it reads the browser zone again", () => {
+    expect(zonelessDateTimeFormat("en", { weekday: "narrow" })).not.toBe(
+      zonelessDateTimeFormat("en", { weekday: "narrow" }),
+    );
+  });
+});

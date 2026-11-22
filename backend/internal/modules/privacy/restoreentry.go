@@ -52,11 +52,11 @@ func ReadRestoreOf(ctx context.Context, db *database.DB, entityType string, enti
 		if err != nil {
 			return err
 		}
-		mask, err := withheldHistoryOf(ctx, entityType)
+		mask, edgeMask, err := historyMasks(ctx, entityType)
 		if err != nil {
 			return err
 		}
-		entry = recordHistoryEntry(row, mask)
+		entry = recordHistoryEntry(row, mask, edgeMask)
 		return nil
 	})
 	if err != nil {

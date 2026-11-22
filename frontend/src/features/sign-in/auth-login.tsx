@@ -6,6 +6,7 @@ import { AuthCardTitle, type AuthPhase } from "../../components/auth-core";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { firstRefusedControl } from "../../design-system/formvalidity";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useAddressWriters } from "../../lib/urlstate";
@@ -200,9 +201,9 @@ export function LoginForm({
           icon={<Lock aria-hidden />}
           labelEnd={
             resetAvailable ? (
-              <button type="button" className="auth-link" onClick={onForgot}>
+              <Button type="button" variant="link" onClick={onForgot}>
                 {t("auth.forgotLink")}
-              </button>
+              </Button>
             ) : undefined
           }
           error={passwordError}
@@ -269,6 +270,8 @@ export function ForgotForm({
 }: Readonly<{ onSent: (email: string) => void; onBack: () => void }>) {
   const t = useT();
   const [email, setEmail] = useState("");
+  const [faults, faultsRoot] = useFieldFaults();
+  const emailRef = useRef<HTMLInputElement>(null);
 
   const request = useMutation({
     mutationFn: async () => {
@@ -278,26 +281,36 @@ export function ForgotForm({
     onSuccess: () => onSent(email.trim()),
   });
 
-  const ready = email.trim() !== "";
+  // The same sentences as the sign-in card the reader came from.
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (ready && !request.isPending) {
+    const found = new Map<string, string>();
+    if (email.trim() === "") found.set("email", t("auth.emailMissing"));
+    else if (emailRef.current?.validity.typeMismatch === true) {
+      found.set("email", t("auth.emailMalformed"));
+    }
+    if (!faults.show(found) && !request.isPending) {
       request.mutate();
     }
   };
 
   return (
-    <form className="auth-card" onSubmit={submit}>
+    <form className="auth-card" ref={faultsRoot} onSubmit={submit} noValidate>
       <AuthCardTitle>{t("auth.forgotTitle")}</AuthCardTitle>
       <p>{t("auth.forgotSub")}</p>
       <div className="auth-fields">
         {/* Same icon as the sign-in card's email field. Without it the text
             starts 22px further left than on the screen the user just came from,
             and the two cards stop looking like one surface. */}
-        <Field label={t("auth.email")} icon={<Mail aria-hidden />}>
+        <Field
+          label={t("auth.email")}
+          icon={<Mail aria-hidden />}
+          error={faults.of("email")}
+        >
           {(control) => (
             <TextInput
               {...control}
+              ref={emailRef}
               type="email"
               required
               name="email"
@@ -311,7 +324,10 @@ export function ForgotForm({
               spellCheck={false}
               placeholder={t("auth.emailPlaceholder")}
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                faults.edited("email");
+              }}
             />
           )}
         </Field>
@@ -320,16 +336,12 @@ export function ForgotForm({
         <ErrorNote message={problemMessageOf(request.error, t)} />
       )}
       <div className="auth-actions">
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={!ready || request.isPending}
-        >
+        <Button type="submit" variant="primary" pending={request.isPending}>
           {t("auth.sendResetLink")}
         </Button>
-        <button type="button" className="auth-link" onClick={onBack}>
+        <Button type="button" variant="link" onClick={onBack}>
           {t("auth.backToLogin")}
-        </button>
+        </Button>
       </div>
     </form>
   );

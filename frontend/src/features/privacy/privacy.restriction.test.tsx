@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { NewDsrForm } from "./privacy";
+import { NewDsrForm } from "./privacy.newrequest";
 import { choose, render, stubRoutes } from "./privacy.testkit";
 
 beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));

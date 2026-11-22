@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 )
@@ -83,7 +82,7 @@ func doneQuestions(ctx context.Context, tx pgx.Tx, now time.Time, said momentCop
 	asked := map[string]doneAsk{}
 	for _, promise := range promises {
 		item := byClaim[promise.ID]
-		plain := said.promiseCard(now, item, deadline.Passed(item.DueAt, now))
+		plain := said.promiseCard(now, item, item.Overdue(now))
 		if moment, ok := momentaction.AskPromiseDone(said.Spoken, loc, plain, promise, followUps); ok {
 			asked[plain.ClaimKey] = doneAsk{moment: moment, contact: ids.From[ids.ContactKind](promise.Contact)}
 		}

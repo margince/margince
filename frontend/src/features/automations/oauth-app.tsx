@@ -8,8 +8,9 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { describedByIds } from "../../design-system/describedby";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { lockFor } from "../../format/settinglocks";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import {
   APP_LIST_KEY,
@@ -20,7 +21,11 @@ import {
   type Vendor,
   vendorCopy,
 } from "../../lib/oauth-app";
-import { problemMessageOf, throwProblem } from "../../lib/problem";
+import {
+  blankRequired,
+  problemMessageOf,
+  throwProblem,
+} from "../../lib/problem";
 
 /**
  * An OAuth app this installation holds: Google's or Microsoft's, which mailbox
@@ -175,7 +180,12 @@ export function OAuthAppCard(app: OAuthAppIdentity) {
   const clientIdRef = useRef<HTMLInputElement>(null);
 
   const busy = save.isPending || remove.isPending;
-  const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const labels = {
+    clientId: t("oauthApp.clientId"),
+    clientSecret: t("oauthApp.clientSecret"),
+  };
   const failure = save.error ?? remove.error;
   // A failed refetch keeps the old data while the gate above offers Retry.
   const loaded = appQuery.isError ? undefined : appQuery.data;
@@ -228,13 +238,18 @@ export function OAuthAppCard(app: OAuthAppIdentity) {
             uris={loaded.redirect_uris}
             sub={copy.redirectSub}
           />
-          <div className="form-stack">
+          <div className="form-stack" ref={faultsRoot}>
             {lock.disabled && (
               <p id={lockId} className="t-caption">
                 {lock.reason}
               </p>
             )}
-            <Field label={t("oauthApp.clientId")} hint={replaceHint}>
+            <Field
+              label={labels.clientId}
+              hint={replaceHint}
+              required
+              error={faults.of("clientId")}
+            >
               {(control) => (
                 <TextInput
                   {...control}
@@ -247,11 +262,18 @@ export function OAuthAppCard(app: OAuthAppIdentity) {
                   autoComplete="off"
                   disabled={!canManage || busy || lock.disabled}
                   placeholder={copy.clientIdPlaceholder}
-                  onChange={(e) => setClientId(e.target.value)}
+                  onChange={(e) => {
+                    setClientId(e.target.value);
+                    faults.edited("clientId");
+                  }}
                 />
               )}
             </Field>
-            <Field label={t("oauthApp.clientSecret")}>
+            <Field
+              label={labels.clientSecret}
+              required
+              error={faults.of("clientSecret")}
+            >
               {(control) => (
                 <TextInput
                   {...control}
@@ -263,7 +285,10 @@ export function OAuthAppCard(app: OAuthAppIdentity) {
                   autoComplete="off"
                   value={clientSecret}
                   disabled={!canManage || busy || lock.disabled}
-                  onChange={(e) => setClientSecret(e.target.value)}
+                  onChange={(e) => {
+                    setClientSecret(e.target.value);
+                    faults.edited("clientSecret");
+                  }}
                 />
               )}
             </Field>
@@ -298,8 +323,13 @@ export function OAuthAppCard(app: OAuthAppIdentity) {
                 <Button
                   variant="primary"
                   pending={save.isPending}
-                  disabled={!canManage || remove.isPending || !ready}
+                  disabled={!canManage || remove.isPending}
                   onClick={() => {
+                    const blank = blankRequired(locale, {
+                      clientId: [labels.clientId, clientId],
+                      clientSecret: [labels.clientSecret, clientSecret],
+                    });
+                    if (faults.show(blank)) return;
                     remove.reset();
                     save.mutate(
                       {

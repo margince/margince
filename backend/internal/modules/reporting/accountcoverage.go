@@ -31,6 +31,14 @@ func AccountCoverageThresholds(ctx context.Context, tx pgx.Tx) (crmcontracts.Acc
 	return filledThresholds(framework.Definition.AccountCoverage), framework.Revision, nil
 }
 
+// SingleThreaded is the one rule every surface calls a deal single-threaded
+// by: at most maxEngagedSeats engaged contacts, once anybody has touched it.
+// Before any touch every seat is unengaged by construction, so the count
+// would describe the calendar rather than the deal.
+func SingleThreaded(touched bool, engaged, maxEngagedSeats int) bool {
+	return touched && engaged <= maxEngagedSeats
+}
+
 func filledThresholds(in *crmcontracts.AccountCoverageThresholds) crmcontracts.AccountCoverageThresholds {
 	seats, untouched, silent, won := defaultMaxEngagedSeats, defaultUntouchedDays, defaultSilentDays, defaultWonWithinDays
 	if in != nil {

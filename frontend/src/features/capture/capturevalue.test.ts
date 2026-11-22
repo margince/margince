@@ -31,6 +31,17 @@ describe("captureValueMessage", () => {
     );
   });
 
+  it("answers a wildcard domain the server cannot read with the catalog's sentence", () => {
+    const err = refusal(
+      "value",
+      "invalid_exclusion",
+      "*.example.test is not a usable domain name",
+    );
+    expect(captureValueMessage(err, "domain", t)).toBe(
+      en["captureValue.refusedDomain"],
+    );
+  });
+
   it("reads a domain with no dot as the same shape failure", () => {
     const err = refusal("value", "invalid_exclusion", "acme is not a domain");
     expect(captureValueMessage(err, "domain", t)).toBe(

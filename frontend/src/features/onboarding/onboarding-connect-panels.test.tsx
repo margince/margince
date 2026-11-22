@@ -118,8 +118,13 @@ describe("ImapConnectPanel", () => {
     await user.type(port, "99999");
     await user.click(screen.getByRole("button", { name: "Connect" }));
 
-    expect(screen.getByText("From 1 to 65535")).toBeInTheDocument();
-    expect(screen.getByText("Out of range: Port")).toBeInTheDocument();
+    expect(screen.getByLabelText("Port")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(
+      screen.getByText("Port must be from 1 to 65535."),
+    ).toBeInTheDocument();
     expect(calls).toHaveLength(0);
   });
 

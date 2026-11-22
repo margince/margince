@@ -796,7 +796,10 @@ paths:
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: control_data_task, router: change_settings, action: control_data_task, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       summary: Pause, resume, retry or estimate a background correction.
-      description: Requires data_task:update and the observed ledger version. Retry retains the audit run ID.
+      description: >-
+        Requires data_task:update and the observed ledger version. Retry retains the audit run ID. On a
+        failed step it continues from the cursor; on a done step with action_needed it starts the step
+        over, so the records left open are tried again.
       requestBody:
         required: true
         content:
@@ -1086,6 +1089,37 @@ paths:
           description: >
             Refused: the caller, or the user an agent works for, holds no `job_health:read`
             (the admin and ops roles hold it).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /admin/vacuum-recommendations:
+    get:
+      tags: [Identity]
+      operationId: getVacuumRecommendations
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      x-human-only-reason: security   # names the database's tables, sizes and owner role
+      summary: Which tables would win back enough space from a full vacuum run out of band.
+      description: >
+        Admin and ops only (`job_health:read`). Estimates, from the database's own statistics, how much
+        of each table's file holds no live row. Sizes and row counts are those of the table's last
+        `VACUUM` or `ANALYZE`; indexes and TOAST are not counted, and a table that was never updated or
+        deleted from is left out. A table is listed when that share is at least
+        `min_waste_percent` and the space is at least `min_waste_bytes`, largest first. Each entry
+        carries the statement to run and the role that owns the table. Margince never runs it:
+        `VACUUM FULL` locks the table for reads and writes until it ends. A table the statistics do
+        not yet describe, and that is large enough to qualify, is counted in `unmeasured_tables`.
+      responses:
+        '200':
+          description: The tables worth a full vacuum, with the thresholds that chose them.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VacuumRecommendations' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >
+            Refused: the caller holds no `job_health:read` (the admin and ops roles hold it).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -3913,7 +3947,8 @@ paths:
         All money converts to the workspace base currency. An open deal whose currency has no
         stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
         substituting a rate of 1. A won deal is valued at the base amount frozen when it was
-        won; one won deal in the period with no base value makes `closed_won` null.
+        won. `closed_won` adds the won deals that have one, and `closed_won_coverage` says how many
+        it leaves out and why. It is null only when no won deal in the period converts.
         Totals are server-computed and reconcile exactly to their parts — never client-summed.
         Requires read on companies, deals, and activities; figures aggregate every deal
         and activity of each readable company — per-record row visibility within a
@@ -6966,6 +7001,10 @@ paths:
         deal as it stands: a retried call must not close a closed deal again and move its
         close day. A `lost_reason` is trimmed and must not be blank (422 `lost_reason_required`).
         A `to_stage_id` that names a stage nobody has answers 422 naming `to_stage_id`.
+        A move past a stage that waits for legal answers 422 `legal_review_required` on
+        `to_stage_id`. Its `params.review_state` names the next step: `none` (request a review),
+        `pending` (legal has not answered yet), `changes_needed` (make the changes and request
+        again) or `terms_changed` (the amount or offer changed since the approval).
       # advance_deal is the one TierDynamic tool (ADR-0026): the gate resolves the tier from the
       # stage semantics at BOTH ENDS of the move, not statically. open→open = 🟢 (no token); a
       # terminal won/lost stage at either end = 🟡 (approval token required), so closing a deal and
@@ -11858,6 +11897,80 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '204': { description: The booking page is marked as used. }
         '404': { $ref: '#/components/responses/NotFound' }
+  /scheduling/team-candidates:
+    get:
+      tags: [Activities]
+      operationId: listSchedulingTeamCandidates
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: List the colleagues the caller may name on their booking link.
+      description: |
+        A colleague is offered when they are a live member other than the caller and their own
+        booking settings name a calendar connection Margince can read. A colleague without one is
+        left out, so a time a team link offers is free for everyone on it.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The colleagues who may be named, by name.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SchedulingTeamCandidate' }
+  /scheduling/team-requests:
+    get:
+      tags: [Activities]
+      operationId: listSchedulingTeamRequests
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: List the colleagues' booking links that name the caller.
+      description: |
+        Each live booking link that names the caller as a team member, with whether the caller
+        confirmed it. A link that the caller left is not listed.
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '200':
+          description: The links that name the caller.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SchedulingTeamRequest' }
+  /scheduling/team-requests/{host_user_id}:
+    parameters:
+      - { name: host_user_id, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [Activities]
+      operationId: answerSchedulingTeamRequest
+      security: [ { cookieAuth: [] } ]   # human session only: a member's consent to share free time
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Confirm or leave a colleague's booking link that names the caller.
+      description: |
+        `confirmed` lets the link read the caller's free time and put the caller on each meeting
+        booked through it. `left` takes the caller off: the link stops taking bookings until its
+        owner removes the caller, and the owner sees why. Answers 404 when no live link of that
+        colleague names the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SchedulingTeamAnswer' }
+      responses:
+        default:
+          description: The operation could not be completed.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '204': { description: The answer is recorded. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /scheduling/invitations:
     post:
       tags: [Activities]
@@ -11938,7 +12051,9 @@ paths:
       description: |
         With reliable=true, reads live calendar occupancy and applies bookable hours,
         notice, buffers and booking horizon. Without it, returns CRM-only availability
-        for compatibility. This read never books or sends an invitation.
+        for compatibility. This read never books or sends an invitation. It reads the named
+        host alone: the colleagues a booking link names are not counted, so a time it returns
+        may still be taken for one of them.
       x-mcp-tool: { verb: check_availability, tier: auto_execute, scope: read }
       parameters:
         - { name: reliable, in: query, required: false, schema: { type: boolean, default: false } }
@@ -17350,7 +17465,11 @@ paths:
         lists and saved views), rendered to CSV or JSON. Supply exactly one source — an inline `object`
         with a `filter` (the canonical §13.5 predicate), a `view_id`, or a `list_id` (while lists are
         switched on): a Live List exports the records its filter matches, a Shortlist its members, and
-        the export is then listed on the list as a use. Bulk record read
+        the export is then listed on the list as a use. The CSV of a contact, company, deal or lead is
+        the file Data import reads back: the import's own columns (owner by email, tags, company,
+        pipeline and stage by name, amounts in major units) with `id` last, a byte order mark for
+        Excel, and a file name made of the list or view name and the day. The JSON stays the raw
+        stored form. Bulk record read
         that can exfiltrate at scale, so it is **human-only** (an agent principal is rejected) and every
         export writes one `audit_log` entry (who exported what slice, when — P7/P12).
         A CSV text cell beginning with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed
@@ -18823,7 +18942,7 @@ paths:
                     base_currency: EUR
                     fiscal_year_start_month: 1
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422':
           description: The plan failed validation (out-of-vocabulary field, invalid aggregate).
@@ -20751,6 +20870,24 @@ paths:
           required: false
           schema: { type: boolean, default: false }
           description: Report what would be destroyed and change nothing.
+        - name: expect_destroyed
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: |
+            The `destroyed` count a preview showed. With the two below, it binds the purge to what the
+            caller saw: when the current selection differs, nothing is destroyed and the answer is 409.
+            Send all three or none; ignored on a preview.
+        - name: expect_released
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: The `released` count the preview showed.
+        - name: expect_anonymised
+          in: query
+          required: false
+          schema: { type: integer, minimum: 0 }
+          description: The `anonymised` count the preview showed.
       responses:
         '200':
           description: What was destroyed, or what would be.
@@ -20759,6 +20896,7 @@ paths:
               schema: { $ref: '#/components/schemas/CapturePurgeOutcome' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -25187,6 +25325,7 @@ paths:
       parameters:
         - { name: status, in: query, schema: { type: string, enum: [open, merged, not_a_duplicate], default: open } }
         - { name: entity_type, in: query, schema: { type: string, enum: [contact, company, lead] } }
+        - { name: record_id, in: query, schema: { type: string, format: uuid }, description: 'Only the pairs naming this record on either end. Needs `entity_type`, the record''s type; without it the answer is 422.' }
         - { name: cursor, in: query, schema: { type: string }, description: Opaque keyset cursor. }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
       responses:
@@ -29071,6 +29210,78 @@ paths:
       x-mcp-tool: { verb: withdraw_ownership_request, router: change_access, action: withdraw_ownership_request, tier: auto_execute, scope: write, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Withdraw the caller's open request to be handed this record.
+      description: The card leaves the owner's inbox. `404` when the caller has no open request.
+      responses:
+        '204': { description: The request is withdrawn. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{record_type}/{id}/edit-access-request:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { type: string, enum: [contact, company, deal, lead, project] }
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: requestEditAccess
+      x-mcp-tool: { verb: request_edit_access, router: change_access, action: request_edit_access, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Ask a record's owner for edit access.
+      description: |
+        For a record the caller can see but not change, because a colleague owns it. The request is an
+        `edit_access` approval in the owner's inbox; only the owner can decide it, and it stays open for
+        7 days. Only the owner can approve it, in person; their agent may decline it. When the owner
+        approves, the caller gets a write share on the record and the owner stays its owner. The caller is
+        told when it is declined or expires, or closed because the record changed owner. A second press
+        while a request is open answers that request with `200`; a new request answers `201`. `409` names
+        why nothing can be asked for: `unowned`, `already_yours_to_change`, `owner_unavailable` (the owner
+        is suspended or has left; ask an administrator), or `declined` (this owner declined the same
+        request before).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: The request already open for this record and caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '201':
+          description: The request is in the owner's inbox.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: 'Nothing can be asked for (`code`: `unowned`, `already_yours_to_change`, `owner_unavailable`, `declined`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Identity]
+      operationId: getEditAccessRequest
+      x-mcp-tool: { verb: get_edit_access_request, router: read_details, action: edit_access_request, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The caller's open request for edit access to this record.
+      responses:
+        '200':
+          description: The caller's open request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: withdrawEditAccessRequest
+      x-mcp-tool: { verb: withdraw_edit_access_request, router: change_access, action: withdraw_edit_access_request, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Withdraw the caller's open request for edit access to this record.
       description: The card leaves the owner's inbox. `404` when the caller has no open request.
       responses:
         '204': { description: The request is withdrawn. }
@@ -35921,8 +36132,8 @@ paths:
         the same test the deal-health composite uses — one definition, so two screens
         cannot disagree about the same deal.
 
-        Risk kinds and their sources: `single_threaded_theirs` is REPORT-PARAM-1
-        verbatim (fewer than two engaged contacts); `single_threaded_ours` is
+        Risk kinds and their sources: `single_threaded_theirs` is a touched deal
+        with at most `max_engaged_seats` engaged contacts; `single_threaded_ours` is
         GRAPH-RISK-1, a statement about OUR coverage rather than the customer's, which
         is why it carries its own id; `coverage_gap` is a deal with seats but no engaged
         champion — a well-threaded deal nobody inside is arguing for.
@@ -37522,19 +37733,26 @@ paths:
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       x-agent-access: human-only
       x-human-only-reason: covered
-      summary: File a chat screenshot on its contact as one message activity, with the image attached.
+      summary: File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
       description: |
         The confirm step after a `chat_capture` reading of a screenshot uploaded to a
-        contact. It writes one `message` activity linked to that contact, on the channel
-        named, with `body` as its text, and moves the image from the contact onto the
-        activity. Nothing is written before this call: the reading never files anything.
+        contact, lead or deal. It writes one `message` activity linked to that record, on
+        the channel named, with `body` as its text, and moves the image from the record
+        onto the activity. Nothing is written before this call: the reading never files anything.
+
+        With a `chat_task_reading` model set up, the filed text is then read against the
+        caller's own open tasks on that record. A task the chat settles is marked done, or
+        moved to the day the chat names, by Margince on the caller's behalf, with the chat
+        line it rests on as evidence. The change shows in Done for you with Undo, and the
+        same chat never changes that task again. An unsure reading, or no model, changes
+        no task, and a failed reading never refuses the filing.
 
         When `body` is the reading's own text unchanged, the activity is written by the
         reader on behalf of the caller, which is how the product marks text a model
         read. A body the caller typed or changed is the caller's own. An empty body is
         allowed, so a screenshot the model could not read is still filed.
 
-        Requires UPDATE on the contact and CREATE on activities. The reading named must
+        Requires UPDATE on the record and CREATE on activities. The reading named must
         belong to this file, be a `chat_capture` reading, and be finished; otherwise
         422. `channel_provider` must be a registered provider (`GET /v1/channel-providers`).
         A second call with the same reading answers the activity the first one wrote.
@@ -37554,7 +37772,7 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: The chat's header shows someone other than the contact, and `confirm_other_counterparty` was not set.
+          description: The chat's header shows someone other than the contact or lead, and `confirm_other_counterparty` was not set.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -39802,7 +40020,7 @@ components:
             role:
               value: { type: 'https://errors.gradion.com/role_cannot_capture', title: Forbidden, status: 403, code: role_cannot_capture, detail: 'Your role cannot record activities, so this mailbox cannot be captured. Ask an admin to change your role.' }
     PermissionDenied:
-      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to.'
+      description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (🟡 gate). On an analytics, report, forecast, target or team-week read, `code: individual_performance_off` means the installation switched off `individual_performance` and the request names a colleague, splits by owner or host, or has a figure that only one other member contributes to. On the same reads, `code: owner_not_measurable` means a filter names an owner whose figures the caller may not measure.'
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -39956,10 +40174,12 @@ components:
                     - { field: 'emails[0].email', code: invalid_email }
     SendValidationError:
       description: |
-        The send failed validation, or no mailbox can carry it. The second answers with the top-level
-        `code: mailbox_not_send_capable` and no `details.errors`, because no field of the request can
-        fix it: the sender must connect a mailbox that can send, or an administrator must set up
-        sending for the installation. A scheduled send is checked the same way when it is created.
+        The send failed validation, or no mailbox can carry it. The second answers with a top-level
+        `code` and no `details.errors`, because no field of the request can fix it. `mailbox_not_connected`
+        means the sender holds no mailbox at all and must connect one. `mailbox_not_send_capable` means
+        they hold mailboxes that cannot send, so they must reconnect one with permission to send, or an
+        administrator must set up sending for the installation. A scheduled send is checked the same way
+        when it is created.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -39976,6 +40196,8 @@ components:
                     - { field: to, code: required }
             mailboxNotSendCapable:
               value: { type: 'https://errors.gradion.com/mailbox_not_send_capable', title: Unprocessable Entity, status: 422, code: mailbox_not_send_capable, detail: reconnect your mailbox to enable sending }
+            mailboxNotConnected:
+              value: { type: 'https://errors.gradion.com/mailbox_not_connected', title: Unprocessable Entity, status: 422, code: mailbox_not_connected, detail: connect a mailbox to send }
 
   # ------------------------------- schemas ----------------------------------
   schemas:
@@ -45552,6 +45774,8 @@ components:
             contacts_created: { type: integer }
             companies_created: { type: integer }
         resumable: { type: boolean, description: 'The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.' }
+        window_restarts: { type: integer, description: 'How many times the scan began again from the newest message because the provider no longer accepted its place. `counts.messages_scanned`, `captured` and `skipped` start again from zero each time; the contacts and companies already created stay counted. A client says so rather than showing the lower count as lost work.' }
+        retry_attempts: { type: integer, description: 'Pages in a row that failed and will be tried again; 0 once a page succeeds. The committed counts are kept across a retry, and only the unfinished page is read again.' }
         started_at: { type: [string, 'null'], format: date-time }
         completed_at: { type: [string, 'null'], format: date-time }
         updated_at: { type: [string, 'null'], format: date-time, description: 'Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").' }
@@ -45613,7 +45837,7 @@ components:
         review:
           type: object
           properties:
-            dedupe_open: { type: integer, description: 'Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.' }
+            dedupe_open: { type: integer, description: 'Every open duplicate review item on the reader''s own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.' }
             approvals_pending: { type: integer, description: 'Pending 🟡 items (enrich, quarantine, merge).' }
             classify:
               type: object
@@ -45904,6 +46128,8 @@ components:
         activity_id: { type: string, format: uuid }
         subject: { type: [string, 'null'] }
         due_at: { type: [string, 'null'], format: date-time }
+        due_has_time: { type: boolean, description: 'True when due_at names a time of day; false when the task was due on a date with no time.' }
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
 
     LegalReviewPacketDocument:
       type: object
@@ -46189,11 +46415,16 @@ components:
           description: 'Set when this reader may merge the pair only one way: the record that must survive. It is the record the reader may not change, and it keeps its owner. Null when either may be kept, or when no merge is offered.'
     ContactCaseOwner:
       type: object
-      required: [user_id, name, seat, member_ids]
+      required: [user_id, name, seat, status, member_ids]
       properties:
         user_id: { type: string, format: uuid }
         name: { type: string }
         seat: { type: string, enum: [full, read], x-extensible-enum: true }
+        status:
+          type: string
+          enum: [active, invited]
+          x-extensible-enum: true
+          description: '`invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.'
         member_ids: { type: array, items: { type: string, format: uuid } }
     ContactCaseResolution:
       type: object
@@ -47295,7 +47526,7 @@ components:
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       x-extensible-enum: true
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
@@ -47766,6 +47997,19 @@ components:
               reason: { type: string, description: 'What kept it from reversing, in terms the operator can act on — never a database or driver message.' }
               reason_code: { $ref: '#/components/schemas/ImportReasonCode' }
 
+    ImportRunRefusal:
+      type: object
+      description: 'A refusal of a run''s file by field and code, with the values its sentence names.'
+      required: [field, code]
+      properties:
+        field: { type: string, description: 'The field the refusal names, as in a 422 `errors` entry.' }
+        code: { type: string, description: 'The refusal code, as in a 422 `errors` entry.' }
+        max: { type: integer, minimum: 1, description: 'The limit the refusal names. Absent when it names none.' }
+        params:
+          type: object
+          additionalProperties: { type: string }
+          description: 'The values the code''s sentence names, by name. Absent when it names none.'
+
     ImportRun:
       type: object
       required: [id, connector, status, checkpoint, version, source_released, source, captured_by, created_at, updated_at]
@@ -47790,6 +48034,14 @@ components:
         status:     { $ref: '#/components/schemas/ImportRunStatus' }
         checkpoint: { type: integer, minimum: 0, description: 'Absolute offset into the source''s rows for a forward run (`running`/`failed`), or into import_record_map''s rows once the run is `undoing`; 0 = not started either way. What a resume continues from.' }
         error:      { type: [string, 'null'], description: 'Why a failed run stopped, or why a draft''s last test stopped, in the uploader''s terms. Never a driver or SQL message.' }
+        error_refusal:
+          allOf: [ { $ref: '#/components/schemas/ImportRunRefusal' } ]
+          readOnly: true
+          description: >-
+            `error` as the field error an upload refusal carries, for a draft
+            whose test run refused its file: a screen words it in the reader's
+            language and keeps `error` for a code it does not know. Absent for
+            any other stop, and on a run stored before it was kept.
         version:    { type: integer, minimum: 1, description: 'Bumped by every saved change of a choice. A save, a test and an approval may name it, and are refused on another.' }
         draft_step: { $ref: '#/components/schemas/ImportDraftStep' }
         profile:
@@ -48133,7 +48385,9 @@ components:
             Where it is sent it is exact rather than an estimate, counted over
             the same filters and the same row scope as the page beside it, in
             the same transaction, so the two cannot disagree about what
-            matching means.
+            matching means. The contact, company and lead lists count on the
+            first page only and send no total with a cursor, so a client keeps
+            the first page's total while it loads further pages.
 
     # ---- mixins ----
     Provenance:
@@ -49686,9 +49940,13 @@ components:
           type: array
           items: { type: string }
         computable: { type: boolean }
+        coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         reason:
           type: [string, 'null']
-          description: Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx".
+          description: >-
+            Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx",
+            "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked.
 
     Company:
       type: object
@@ -50086,9 +50344,9 @@ components:
 
         `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
         weighted by its stage's win probability, and never a past period's pipeline.
-        `closed_won` is the deals won in `closed_won_period`; a null amount means at least
-        one of them has no base value on file, so the total is incomplete rather than
-        smaller. `activity_count_30d` counts the activities that reached a counted account
+        `closed_won` is the deals won in `closed_won_period` that have a base value on file.
+        `closed_won_coverage` counts the others by cause, for the deals this reader may read, and
+        its `partial` flag is true when any deal is left out. A null amount means none converts. `activity_count_30d` counts the activities that reached a counted account
         in `activity_window`, the 30 days before the read, which no period parameter moves.
       required: [root_id, scope, weighted_pipeline, closed_won, activity_count_30d, aggregated_account_count, restricted_excluded, computed_at, pipeline_state_at, closed_won_period, activity_window, current_periods]
       properties:
@@ -50100,6 +50358,7 @@ components:
           format: date-time
           description: The instant the pipeline is read at. It is the moment of the read, whatever period is named.
         closed_won: { $ref: '#/components/schemas/Money' }
+        closed_won_coverage: { $ref: '#/components/schemas/ReportRowCoverage' }
         closed_won_period: { $ref: '#/components/schemas/CompanyRollupWonPeriod' }
         activity_count_30d: { type: integer }
         activity_window: { $ref: '#/components/schemas/ReportingWindow' }
@@ -51135,7 +51394,8 @@ components:
           `at`, the last of the two.
         - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
         - `last_met`: in touch through a meeting `days` days ago.
-        - `single_threaded`: in touch, but one contact carries the whole account.
+        - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+          the published `account_coverage.max_engaged_seats`.
         - `several_contacts`: `count` contacts here are in touch with us.
         - `deals_all_stalled`: all `count` open deals have stalled.
         - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -51220,8 +51480,10 @@ components:
         single_threaded:
           type: [boolean, 'null']
           description: >-
-            The whole relationship rests on one contact. Named as a fact rather than scored,
-            because it is the one shape a rep can fix before it costs them the account.
+            The relationship rests on no more contacts in touch than the published
+            `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding
+            follows too. Named as a fact rather than scored, because it is the one shape a rep can
+            fix before it costs them the account.
         open_commitments:
           type: [integer, 'null']
           description: >-
@@ -52871,6 +53133,13 @@ components:
             The task an extracted `commitment_ours` created, so completing either side completes
             both. Null for every other kind — a reminder about THEIR promise is a rep action, not
             an auto-task.
+        task_open:
+          type: boolean
+          description: >-
+            True when the task `task_activity_id` names is open and this reader may see it. Set
+            only by the contact 360 read; absent elsewhere and when the claim names no task.
+            `next_steps` is capped, so a claim whose task is past the cap still counts as owed,
+            and one whose task is done or hidden does not.
         taken_by_user_id:
           type: [string, 'null']
           format: uuid
@@ -55694,6 +55963,13 @@ components:
             the edge sections are withheld: absence says nothing about who has talked.
           items: { $ref: '#/components/schemas/DealCoverageLine' }
         risks:        { type: array, items: { $ref: '#/components/schemas/DealCoverageRisk' } }
+        max_engaged_seats:
+          type: integer
+          minimum: 0
+          description: |
+            The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+            judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+            Absent when the edge sections are withheld, since no finding is judged then.
         sections_omitted:
           type: array
           description: |
@@ -55888,7 +56164,7 @@ components:
         display_name:
           type: string
           minLength: 1
-          maxLength: 255
+          maxLength: 120
           description: |
             The name colleagues see. Surrounding whitespace is trimmed and a name
             that is only whitespace is refused — the same bounds the invite form
@@ -56963,7 +57239,8 @@ components:
         engaged_seats: { type: integer, description: "Contacts engaged on the deal, for a single-threaded row." }
         named_seats: { type: integer, description: "Contacts named on the deal, engaged or not." }
         open_deals: { type: integer, description: "Open deals on the account, for an untouched row." }
-        open_amount_minor: { type: integer, format: int64, description: "Their amounts, in the installation currency, when every one carries a rate." }
+        open_amount_minor: { type: integer, format: int64, description: "Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`." }
+        open_amount_coverage: { $ref: '#/components/schemas/ReportRowCoverage' }
         won_deal: { $ref: '#/components/schemas/AccountCoverageDeal' }
         last_inbound: { type: string, format: date-time }
         last_outbound: { type: string, format: date-time }
@@ -59490,13 +59767,60 @@ components:
         blocker:
           type: string
           readOnly: true
-          enum: [none, no_calendar, calendar_read_only, calendar_unavailable]
+          enum: [none, no_calendar, calendar_read_only, calendar_unavailable, team_not_ready]
           x-extensible-enum: true
           description: |
             Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
             the page names no calendar (a page saved before the profile existed reads this way).
             `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-            the connection is gone or refused. Answered on the host's own profile read only.
+            the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+            left, or has no calendar Margince can read; `team_members` says which. Answered on the
+            host's own profile read only.
+        team_members:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/SchedulingTeamMember' }
+          description: |
+            Colleagues who must attend every meeting booked through this page. Guests see only the
+            times when the host and every member are free, inside each one's own working hours, and
+            each booking invites every member. A member named here starts as `pending` and the page
+            takes no bookings until every member has confirmed. Only `user_id` is read from a
+            request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+    SchedulingTeamMember:
+      type: object
+      required: [user_id]
+      properties:
+        user_id: { type: string, format: uuid }
+        name: { type: string, readOnly: true }
+        state:
+          type: string
+          readOnly: true
+          enum: [pending, confirmed, left, unavailable]
+          x-extensible-enum: true
+          description: |
+            `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+            `left`: the member left the link; remove them to take bookings again. `unavailable`:
+            the member left the workspace or Margince cannot read their calendar.
+    SchedulingTeamCandidate:
+      type: object
+      required: [user_id, name]
+      properties:
+        user_id: { type: string, format: uuid }
+        name: { type: string }
+    SchedulingTeamRequest:
+      type: object
+      required: [host_user_id, host_name, title, state]
+      properties:
+        host_user_id: { type: string, format: uuid }
+        host_name: { type: string }
+        title: { type: string, description: The meeting title the link offers. }
+        state: { type: string, enum: [pending, confirmed], x-extensible-enum: true }
+    SchedulingTeamAnswer:
+      type: object
+      additionalProperties: false
+      required: [state]
+      properties:
+        state: { type: string, enum: [confirmed, left] }
     SchedulingAliasRequest:
       type: object
       required: [alias]
@@ -61605,9 +61929,9 @@ components:
         other_counterparty:
           type: [string, 'null']
           description: |
-            For a finished `chat_capture` reading of a screenshot on a contact: the name or
-            number the chat header shows when neither agrees with that contact. Null when
-            they agree, when the header shows neither, and for every other reading.
+            For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+            name or number the chat header shows when neither agrees with that record. Null
+            when they agree, when the header shows neither, on a deal, and for every other reading.
             `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
 
     AttachmentReadRequest:
@@ -61638,7 +61962,7 @@ components:
           type: boolean
           default: false
           description: |
-            The caller confirms the chat belongs on this contact although its header shows
+            The caller confirms the chat belongs on this record although its header shows
             someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
             is refused with 409.
 
@@ -63520,6 +63844,8 @@ components:
         open_task_count: { type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118).' }
         next_task_subject: { type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader''s language, as its History row names it; a task typed by hand reads as written.' }
         next_task_due_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.' }
+        next_task_due_has_time: { type: boolean, readOnly: true, description: 'True when next_task_due_at names a time of day; false when the next task is due on a date with no time.' }
+        next_task_due_intent: { allOf: [{ $ref: '#/components/schemas/IntentTime' }], readOnly: true, description: 'The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader.' }
         score_reason: { type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.' }
         source: { type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from. The `lead_source` list that administered it is deprecated.' }
         source_label: { type: [string, 'null'], readOnly: true, description: 'The label the deprecated lead_source list gives `source`; null for connector, seed and other free values.' }
@@ -65476,7 +65802,8 @@ components:
           type: array
           description: |
             Up to `limit` matching rows as column→value maps, ordered by id,
-            after the request's `cursor` when it names one.
+            after the request's `cursor` when it names one. A date column is
+            its calendar day (`2026-12-01`); a timestamp is an RFC 3339 instant.
             Deliberately the export's projection rather than a shape invented for
             this screen: a preview that showed different columns than the export
             of the same filter would be a preview of something else.
@@ -67586,6 +67913,8 @@ components:
       properties:
         subject: { type: string }
         due_at: { type: [string, 'null'], format: date-time }
+        due_has_time: { type: boolean, description: 'True when due_at names a time of day; false when the task is due on a date with no time.' }
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
         assignee_id:
           type: [string, 'null']
           format: uuid
@@ -67819,7 +68148,7 @@ components:
       additionalProperties: false
       description: "What the coverage section counts as at risk. Absent fields take the defaults the answer prints."
       properties:
-        max_engaged_seats: { type: integer, minimum: 0, maximum: 10, description: "A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1." }
+        max_engaged_seats: { type: integer, minimum: 0, maximum: 10, description: "A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. The coverage section and the deal page both judge by it. Default 1." }
         untouched_days: { type: integer, minimum: 1, maximum: 365, description: "A company with an open deal and no exchange within this many days is untouched. Default 21." }
         silent_days: { type: integer, minimum: 1, maximum: 365, description: "A won company with no exchange within this many days is silent. Default 30." }
         won_within_days: { type: integer, minimum: 1, maximum: 730, description: "How far back a won deal still makes a company a won one. Default 180." }
@@ -68219,7 +68548,7 @@ components:
       additionalProperties: false
       required: [display_name, email, expected_updated_at]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 120 }
         email: { type: string, format: email, description: May change only before the account has been used to sign in. }
         role: { type: string, description: Omit to keep the current roles. }
         team_ids:
@@ -68525,7 +68854,7 @@ components:
           description: >-
             The extension unit the member serves, by its manifest name. Only that unit may act as
             the member. A name no installed unit carries is accepted and simply never used.
-        display_name: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 120 }
     FormerMemberRequest:
       type: object
       description: >-
@@ -68539,7 +68868,7 @@ components:
           description: >-
             Their work address as the source system spelled it. It is the identity the
             seat is keyed on, so a second record for the same address is refused.
-        display_name: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 120 }
         role:
           type: string
           maxLength: 64
@@ -68564,7 +68893,7 @@ components:
       required: [email, display_name, role]
       properties:
         email: { type: string, format: email }
-        display_name: { type: string, minLength: 1, maxLength: 255 }
+        display_name: { type: string, minLength: 1, maxLength: 120 }
         greeting_name:
           type: [string, 'null']
           maxLength: 120
@@ -68710,7 +69039,7 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
-        member_count: { type: integer, description: 'Active memberships; populated by listTeams.' }
+        member_count: { type: integer, description: 'Active and invited memberships; populated by listTeams.' }
 
     # `Role` used to sit here as an untyped mirror of the `role` table — the
     # "schema below" the deferred-stubs block promised while /roles was
@@ -69463,6 +69792,12 @@ components:
         divided by a target derived from the same pipeline is always fine and says
         nothing.
       properties:
+        comparable_unpriced:
+          type: array
+          items: { type: integer }
+          description: >-
+            For each comparable period behind a historical median, newest first, the won
+            deals its total leaves out for want of an amount or an exchange rate.
         absent:
           type: string
           enum: [insufficient_basis, call_withheld, insufficient_history]
@@ -71658,6 +71993,52 @@ components:
           nullable: true
           description: The most recent drill, or null when none was ever recorded.
 
+    VacuumRecommendations:
+      type: object
+      additionalProperties: false
+      description: |
+        The tables a full vacuum would shrink by enough to be worth a maintenance window. Sizes are
+        estimates from the statistics the database keeps for its query planner.
+      required: [generated_at, min_waste_percent, min_waste_bytes, tables, unmeasured_tables]
+      properties:
+        generated_at: { type: string, format: date-time }
+        min_waste_percent:
+          type: integer
+          description: The smallest share of a table's file, in percent, that must be empty for it to be listed.
+        min_waste_bytes:
+          type: integer
+          description: The smallest empty space, in bytes, for a table to be listed.
+        tables:
+          type: array
+          description: The tables over both thresholds, most empty space first.
+          items: { $ref: '#/components/schemas/VacuumRecommendation' }
+        unmeasured_tables:
+          type: integer
+          description: Tables large enough to qualify that have no statistics yet, so no estimate.
+
+    VacuumRecommendation:
+      type: object
+      additionalProperties: false
+      required: [schema, table, owner, table_bytes, waste_bytes, waste_percent, statement]
+      properties:
+        schema: { type: string }
+        table: { type: string }
+        owner:
+          type: string
+          description: The database role that owns the table. Only it can run the statement.
+        table_bytes:
+          type: integer
+          description: The size of the table's file at its last `VACUUM` or `ANALYZE`, without its indexes or TOAST.
+        waste_bytes:
+          type: integer
+          description: The estimated space in that file that holds no live row.
+        waste_percent:
+          type: integer
+          description: '`waste_bytes` as a whole percent of `table_bytes`, rounded down.'
+        statement:
+          type: string
+          description: The statement to run, with the names quoted.
+
     AutomaticWorkHealth:
       type: object
       additionalProperties: false
@@ -71980,6 +72361,33 @@ components:
         missing_prerequisites:
           type: array
           items: {type: string}
+        action_needed:
+          $ref: '#/components/schemas/DataTaskActionNeeded'
+
+    DataTaskActionNeeded:
+      type: object
+      additionalProperties: false
+      description: >-
+        Records a finished step left for someone to act on. The step is still done, so later steps run.
+        Records lists at most 100 of them; count is the total.
+      required: [reason, sentence, remedy, count, records]
+      properties:
+        reason: {type: string, enum: [privacy_reviewer_missing], x-extensible-enum: true}
+        sentence: {type: string, description: "What was left open, in the reader's language."}
+        remedy: {type: string, description: "What to do about it, in the reader's language."}
+        count: {type: integer, format: int64, minimum: 0}
+        records:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/DataTaskActionRecord'}
+
+    DataTaskActionRecord:
+      type: object
+      additionalProperties: false
+      required: [type, id]
+      properties:
+        type: {type: string}
+        id: {type: string, format: uuid}
 
     SystemHealth:
       type: object
@@ -72590,9 +72998,9 @@ components:
         masked to the viewer's readable fields — an absent key was hidden, not null.
         `summary` is server-composed plain language in English. A client that
         renders the line in its reader's language builds it from `action` and the
-        actor fields. It falls back to `summary` for an edge row, whose role
-        travels only in the sentence, and for an action or actor kind it does
-        not know.
+        actor fields. For an edge row it builds from `edge.role` and
+        `edge.changed_fields`, and falls back to `summary` when an older server
+        omits them, and for an action or actor kind it does not know.
         Field-level detail lives in before/after for the client to render.
       required: [id, actor_type, actor_id, action, occurred_at, summary]
       properties:
@@ -72695,6 +73103,21 @@ components:
           description: >-
             The other endpoint's display name, resolved by the read. Null when the row no
             longer resolves — the line then names the link without claiming a name for it.
+        role:
+          type: [string, 'null']
+          description: >-
+            The role the link was made with (create) or changed to (update), as the reader's
+            field mask allows. Absent when the link has no role, when the reader's mask
+            withholds it, and on an unlink; a client then falls back to `kind` or to `summary`.
+        previous_role:
+          type: [string, 'null']
+          description: The role an update replaced, or removed when `role` is then absent. Set only when the role changed.
+        changed_fields:
+          type: array
+          items: { type: string }
+          description: >-
+            Names of the link fields an update moved, sorted, masked like `role`. Absent on
+            create and unlink. An older server omits it, and the client then shows `summary`.
 
     Undoability:
       type: object
@@ -72865,7 +73288,9 @@ components:
         rows:
           type: array
           items: { type: object, additionalProperties: true }
-          description: Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
+          description: >-
+            Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
+            A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
         total_rows:
           type: integer
           description: >-
@@ -72879,6 +73304,31 @@ components:
         derivation_url:
           type: [string, 'null']
           description: Handle for "Explain This Number" drill-through to source rows (`GET /reports/{report}/derivation`); the result-level handle explains the whole filtered set, each row's handle the single cell.
+
+    ReportRowCoverage:
+      type: object
+      required: [aggregates, partial, no_value_deals, no_rate_deals, missing_currencies]
+      description: >-
+        What a row's partial sums leave out. A sum over a converted amount adds
+        the deals that convert, so without this a short sum reads as a whole one.
+      properties:
+        aggregates:
+          type: array
+          items: { type: string }
+          description: The aliases of the row's partial sums, which this coverage qualifies.
+        partial:
+          type: boolean
+          description: True when at least one deal is left out of those sums.
+        no_value_deals:
+          type: integer
+          description: Deals in the group with no amount.
+        no_rate_deals:
+          type: integer
+          description: Deals in the group with an amount whose currency has no exchange rate as of the answer's date.
+        missing_currencies:
+          type: array
+          items: { type: string }
+          description: The currencies with no exchange rate, from the same statement as the sums.
 
     ReportDerivation:
       type: object
@@ -73289,6 +73739,7 @@ components:
         - capture_confidentiality_verdict
         - capture_counterparty_verdict
         - chat_summary
+        - chat_task_reading
         - cert_judge
         - cold_start
         - corpus_ask
@@ -73332,7 +73783,7 @@ components:
          site_triage, stage_evidence_extract, summarize, transcript, transcript_propose, voice_build,
          corpus_ask, weekly_review, weekly_learnings, propose_roles, owed_verdict,
          request_settlement, account_scan, tag_suggest, report_setup, report_interpret,
-         reader_rendering, deal_verdict, rewrite, chat_summary]
+         reader_rendering, deal_verdict, rewrite, chat_summary, chat_task_reading]
       x-extensible-enum: true
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
@@ -74024,7 +74475,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
+        display_name: { type: string, minLength: 1, maxLength: 120, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
@@ -76287,6 +76738,16 @@ components:
         record_type: { type: string, enum: [contact, company], x-extensible-enum: true }
         record_id: { type: string, format: uuid }
         to_id: { type: string, format: uuid, description: The colleague the offer is put to. }
+        status: { type: string, enum: [pending], x-extensible-enum: true }
+        expires_at: { type: string, format: date-time }
+    EditAccessRequest:
+      type: object
+      required: [approval_id, record_type, record_id, owner_id, status, expires_at]
+      properties:
+        approval_id: { type: string, format: uuid }
+        record_type: { type: string, enum: [contact, company, deal, lead, project], x-extensible-enum: true }
+        record_id: { type: string, format: uuid }
+        owner_id: { type: string, format: uuid, description: The owner the request is put to. }
         status: { type: string, enum: [pending], x-extensible-enum: true }
         expires_at: { type: string, format: date-time }
     OwnershipRequest:
@@ -80225,10 +80686,13 @@ components:
         counts: { $ref: '#/components/schemas/TeamWeeklyCounts' }
         pipeline:
           description: |
-            What the team's week did to the pipeline. ABSENT when any member's week could not
-            be converted — summing only the ones that did would be a confident number quietly
-            missing a rep.
+            What the team's week did to the pipeline: the members' figures added together. ABSENT when
+            a member's week is unread or has a figure no deal converts into, or members differ in
+            currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+            review was frozen before it said what it leaves out.
           allOf: [{ $ref: '#/components/schemas/WeeklyReviewPipeline' }]
+        pipeline_coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         reps_unread:
           type: integer
           minimum: 0
@@ -80687,7 +81151,9 @@ components:
           type: integer
           minimum: 0
           description: |
-            Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+            Open deals with more distinct contacts in the last 30 days than the published
+            `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+            more), as of when the week was frozen. Thirty rather than
             the review's own week: the risk measured is the single point of failure, and a deal
             worked steadily for a month is multi-threaded whether or not the second contact
             happened to appear in these seven days.
@@ -80865,12 +81331,15 @@ components:
             What the week did to the pipeline, in the installation's base currency at the rate that
             applied when the review was written.
 
-            ABSENT when the week held a deal that could not be converted — an open deal freezes no
-            rate, so a currency with no usable rate makes the whole figure unanswerable. A total
-            covering three of four deals would be a confident number that is quietly short, and
-            nothing is ever converted at an invented rate of 1. Absent is also the answer when the
-            installation names no base currency.
+            Each figure adds the deals that convert. ABSENT when no deal of one of the three figures
+            converts, or when the installation names no base currency. Nothing is ever converted at an
+            invented rate of 1.
+
+            `pipeline_coverage` says how many deals the figures leave out, by cause, and which
+            currencies have no rate. It is absent for a review frozen before it said so.
           allOf: [{ $ref: '#/components/schemas/WeeklyReviewPipeline' }]
+        pipeline_coverage:
+          $ref: '#/components/schemas/ReportRowCoverage'
         prior:
           description: |
             The same rep's previous review, so a reader can see what CHANGED rather than only what
@@ -84822,7 +85291,8 @@ components:
         value_base_minor:
           type: integer
           format: int64
-          description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+          description: The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
+        value_coverage: { $ref: '#/components/schemas/ReportRowCoverage' }
         value_moved_base_minor:
           type: integer
           format: int64

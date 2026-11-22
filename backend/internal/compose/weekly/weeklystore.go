@@ -20,6 +20,9 @@ package weekly
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -158,6 +161,13 @@ type Money struct {
 	// the installation names no base currency. The zero value is therefore the
 	// honest "not computable", not a week in which nothing happened.
 	Known bool
+	// Assessed is true when the review says what its sums leave out. A review
+	// frozen before it did reads false: coverage not assessed.
+	Assessed     bool
+	NoValueDeals int
+	NoRateDeals  int
+	// MissingCurrencies lists the currencies with no rate, comma-joined.
+	MissingCurrencies string
 }
 
 // DealLine is one deal the week is about, frozen at the moment it was written.
@@ -298,3 +308,37 @@ func (e *Engine) WithAttention(attention TeamAttention) *Engine {
 //
 // Held by: TestASecondAssemblyInOneWeekReadsTheFirst
 // (backend/internal/compose/weekly/weekly_integration_test.go)
+
+// frozenGaps is the stored coverage of a review's money. Null is a review
+// frozen before it said what its sums leave out: coverage not assessed.
+type frozenGaps struct {
+	NoValue    int      `json:"no_value"`
+	NoRate     int      `json:"no_rate"`
+	Currencies []string `json:"currencies"`
+}
+
+// scanGaps reads the stored document into the review's money.
+func scanGaps(stored []byte, money *Money) error {
+	if stored == nil {
+		return nil
+	}
+	var g frozenGaps
+	if err := json.Unmarshal(stored, &g); err != nil {
+		return fmt.Errorf("weekly: reading a review's coverage: %w", err)
+	}
+	money.Assessed, money.NoValueDeals, money.NoRateDeals = true, g.NoValue, g.NoRate
+	money.MissingCurrencies = strings.Join(g.Currencies, ",")
+	return nil
+}
+
+// gapsOf is the document a review freezes, or nil for one that states none.
+func gapsOf(money Money) *frozenGaps {
+	if !money.Assessed {
+		return nil
+	}
+	currencies := []string{}
+	if money.MissingCurrencies != "" {
+		currencies = strings.Split(money.MissingCurrencies, ",")
+	}
+	return &frozenGaps{NoValue: money.NoValueDeals, NoRate: money.NoRateDeals, Currencies: currencies}
+}

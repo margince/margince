@@ -162,8 +162,8 @@ describe("the Google app card", () => {
   it("locks the form under an app the environment sets, and names the variable", async () => {
     mount(fromEnvironment());
     const clientId =
-      await screen.findByLabelText<HTMLInputElement>("Client ID");
-    const secret = screen.getByLabelText<HTMLInputElement>("Client secret");
+      await screen.findByLabelText<HTMLInputElement>(/^Client ID/);
+    const secret = screen.getByLabelText<HTMLInputElement>(/^Client secret/);
     expect(clientId.disabled).toBe(true);
     expect(secret.disabled).toBe(true);
     expect(secret.value).toBe("");
@@ -272,7 +272,7 @@ describe("the Google app card", () => {
 
     expect(await screen.findByRole("button", { name: "Retry" })).toBeTruthy();
     expect(screen.queryByText(SIGN_IN_URI)).toBeNull();
-    expect(screen.queryByLabelText("Client ID")).toBeNull();
+    expect(screen.queryByLabelText(/^Client ID/)).toBeNull();
   });
 
   it("does not advertise a redirect URI for a flow this deployment does not serve", async () => {
@@ -281,12 +281,23 @@ describe("the Google app card", () => {
     expect(screen.queryByText(SIGN_IN_URI)).toBeNull();
   });
 
+  it("says each empty half of the pair is required, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const { calls } = mount(absent());
+    await screen.findByText(/No app is available/);
+    await user.click(screen.getByRole("button", { name: "Store app" }));
+    expect(screen.getByText("Client ID is required.")).toBeTruthy();
+    expect(screen.getByText("Client secret is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByLabelText(/^Client ID/));
+    expect(calls).toHaveLength(0);
+  });
+
   it("sends the pair together and then holds neither", async () => {
     const user = userEvent.setup();
     const { calls } = mount(absent());
     await screen.findByText(/No app is available/);
-    const secret = screen.getByLabelText<HTMLInputElement>("Client secret");
-    await user.type(screen.getByLabelText("Client ID"), CLIENT_ID);
+    const secret = screen.getByLabelText<HTMLInputElement>(/^Client secret/);
+    await user.type(screen.getByLabelText(/^Client ID/), CLIENT_ID);
     await user.type(secret, "GOCSPX-secret");
     await user.click(screen.getByRole("button", { name: "Store app" }));
     await waitFor(() => expect(calls.length).toBe(1));
@@ -324,8 +335,8 @@ describe("the Google app card", () => {
   it("clears the typed credentials when the app is removed instead", async () => {
     const user = userEvent.setup();
     mount(stored());
-    const id = await screen.findByLabelText<HTMLInputElement>("Client ID");
-    const secret = screen.getByLabelText<HTMLInputElement>("Client secret");
+    const id = await screen.findByLabelText<HTMLInputElement>(/^Client ID/);
+    const secret = screen.getByLabelText<HTMLInputElement>(/^Client secret/);
     await user.type(id, CLIENT_ID);
     await user.type(secret, "GOCSPX-typed-then-abandoned");
 
@@ -410,8 +421,8 @@ describe("the Microsoft app card", () => {
     const unpinned = microsoft();
     unpinned.tenant = undefined;
     const { calls } = mount(unpinned, "microsoft");
-    await user.type(await screen.findByLabelText("Client ID"), ENTRA_ID);
-    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.type(await screen.findByLabelText(/^Client ID/), ENTRA_ID);
+    await user.type(screen.getByLabelText(/^Client secret/), "s3cret");
     await user.type(screen.getByLabelText("Directory (tenant) ID"), DIRECTORY);
     await user.click(screen.getByRole("button", { name: "Replace app" }));
 
@@ -429,8 +440,8 @@ describe("the Microsoft app card", () => {
   it("carries a pinned directory through a rotation nobody retyped", async () => {
     const user = userEvent.setup();
     const { calls } = mount(microsoft(), "microsoft");
-    await user.type(await screen.findByLabelText("Client ID"), ENTRA_ID);
-    await user.type(screen.getByLabelText("Client secret"), "rotated");
+    await user.type(await screen.findByLabelText(/^Client ID/), ENTRA_ID);
+    await user.type(screen.getByLabelText(/^Client secret/), "rotated");
     await user.click(screen.getByRole("button", { name: "Replace app" }));
 
     await waitFor(() => expect(calls.length).toBe(1));
@@ -443,8 +454,8 @@ describe("the Microsoft app card", () => {
   it("widens the app only when the directory is explicitly cleared", async () => {
     const user = userEvent.setup();
     const { calls } = mount(microsoft(), "microsoft");
-    await user.type(await screen.findByLabelText("Client ID"), ENTRA_ID);
-    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.type(await screen.findByLabelText(/^Client ID/), ENTRA_ID);
+    await user.type(screen.getByLabelText(/^Client secret/), "s3cret");
     await user.clear(screen.getByLabelText("Directory (tenant) ID"));
     await user.click(screen.getByRole("button", { name: "Replace app" }));
 
@@ -457,7 +468,7 @@ describe("the Microsoft app card", () => {
   // fills it in believes they narrowed something.
   it("offers no directory field for Google", async () => {
     mount(stored());
-    await screen.findByLabelText("Client ID");
+    await screen.findByLabelText(/^Client ID/);
     expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
   });
 });

@@ -1,5 +1,5 @@
 import type { Locale } from "../i18n";
-import { INTL_LOCALE } from "./format";
+import { pluralRules } from "./formatters";
 
 // Which plural form a count takes, in the reader's language.
 //
@@ -17,20 +17,6 @@ import { INTL_LOCALE } from "./format";
 // written at fifteen call sites is fifteen separate wrongs the day one of them
 // ships, with no single place to fix them.
 
-// One instance per locale rather than one per call: constructing an
-// Intl.PluralRules is the expensive half, and selecting from it is not.
-const RULES = new Map<Locale, Intl.PluralRules>();
-
-function rulesFor(locale: Locale): Intl.PluralRules {
-  const existing = RULES.get(locale);
-  if (existing) {
-    return existing;
-  }
-  const rules = new Intl.PluralRules(INTL_LOCALE[locale]);
-  RULES.set(locale, rules);
-  return rules;
-}
-
 /**
  * The CLDR plural category a count falls in for this locale.
  *
@@ -45,5 +31,5 @@ export function pluralCategory(
   if (!Number.isFinite(count)) {
     throw new Error(`plural category asked for a non-finite count: ${count}`);
   }
-  return rulesFor(locale).select(count);
+  return pluralRules(locale).select(count);
 }

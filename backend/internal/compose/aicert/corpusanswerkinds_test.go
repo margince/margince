@@ -86,6 +86,7 @@ var recognisedOwners = []string{
 	"capture_classify/deal_topic",
 	"capture_confidentiality_verdict/thread",
 	"capture_counterparty_verdict/verdict",
+	"chat_task_reading/chat_tasks",
 	"cold_start/acts, cold_start/company_message, cold_start/sitereadmessage",
 	"deal_verdict/deal_verdict",
 	// strong | moderate | weak. The band IS the answer; the claims are why.

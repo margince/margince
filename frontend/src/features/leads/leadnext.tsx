@@ -1,7 +1,9 @@
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
 import { Button } from "../../design-system/atoms";
+import { taskDueOnDay } from "../../format/calendarday";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { navigate } from "../../lib/router";
 import { type PeekTask, tasksPeek } from "../../lib/standingpeeks";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -34,7 +36,8 @@ export function LeadNextBar({
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const next = leadNext(lead, { t, locale, zone, record: zone, asOf });
+  const companyZone = useCompanyZone();
+  const next = leadNext(lead, { t, locale, zone, record: companyZone, asOf });
   return (
     <RecordNextBar
       // A lead ready to qualify outranks what just came in.
@@ -57,8 +60,8 @@ export function LeadNextBar({
         count: next.more,
         onOpen: () => navigate({ screen: "worklist" }),
         peek: tasksPeek(
-          otherTasks(lead, activities).slice(0, next.more),
-          { t, plural, locale, zone },
+          otherTasks(lead, activities, companyZone).slice(0, next.more),
+          { t, plural, locale, zone, companyZone },
           next.more,
           () => navigate({ screen: "worklist" }),
         ),
@@ -70,14 +73,20 @@ export function LeadNextBar({
 // The open tasks on the page behind the one the bar names, nearest date first,
 // undated last. The lead keeps only that one task's subject, so the first
 // task that matches it and its date is the one the bar draws.
-function otherTasks(lead: Lead, activities: readonly Activity[]): PeekTask[] {
+function otherTasks(
+  lead: Lead,
+  activities: readonly Activity[],
+  zone: string,
+): PeekTask[] {
+  const dueOn = (row: Activity) =>
+    Date.parse(
+      row.due_at
+        ? taskDueOnDay(row.due_at, row.due_has_time, row.due_intent, zone)
+        : "9999-12-31",
+    );
   const open = activities
     .filter((row) => row.kind === "task" && !row.is_done && !row.archived_at)
-    .sort(
-      (a, b) =>
-        Date.parse(a.due_at ?? "9999-12-31") -
-        Date.parse(b.due_at ?? "9999-12-31"),
-    );
+    .sort((a, b) => dueOn(a) - dueOn(b));
   const named = open.findIndex(
     (row) =>
       row.subject === lead.next_task_subject &&
@@ -89,5 +98,7 @@ function otherTasks(lead: Lead, activities: readonly Activity[]): PeekTask[] {
       id: row.id,
       subject: row.subject ?? "",
       dueAt: row.due_at,
+      dueHasTime: row.due_has_time,
+      dueIntent: row.due_intent,
     }));
 }

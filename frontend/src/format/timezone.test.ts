@@ -361,32 +361,29 @@ describe("zoneNameAndOffset", () => {
   const at = new Date("2026-09-05T10:30:00Z");
 
   it("names a given zone in the reader's language, not the IANA id", () => {
-    expect(zoneNameAndOffset("en-GB", at, "Asia/Bangkok")).toBe(
+    expect(zoneNameAndOffset("en", at, "Asia/Bangkok")).toBe(
       "Indochina Time · UTC+7",
     );
-    expect(zoneNameAndOffset("vi-VN", at, "Asia/Bangkok")).toBe(
+    expect(zoneNameAndOffset("vi", at, "Asia/Bangkok")).toBe(
       "Giờ Đông Dương · UTC+7",
     );
   });
 
   it("reads the offset the zone has at that instant", () => {
-    expect(zoneNameAndOffset("en-GB", at, "Europe/Berlin")).toBe(
+    expect(zoneNameAndOffset("en", at, "Europe/Berlin")).toBe(
       "Central European Summer Time · UTC+2",
     );
   });
 
   it("shows a zone the formatters refuse as it was stored", () => {
-    expect(zoneNameAndOffset("en-GB", at, "Mars/Olympus")).toBe("Mars/Olympus");
+    expect(zoneNameAndOffset("en", at, "Mars/Olympus")).toBe("Mars/Olympus");
     // Intl names this one, as "GMT+01:00"; the formatters refuse it.
-    expect(zoneNameAndOffset("en-GB", at, "Etc/GMT-1")).toBe("Etc/GMT-1");
+    expect(zoneNameAndOffset("en", at, "Etc/GMT-1")).toBe("Etc/GMT-1");
   });
 
-  it("throws on a bad locale tag or instant instead of hiding it", () => {
-    expect(() => zoneNameAndOffset("en_GB!", at, "Asia/Bangkok")).toThrow(
-      RangeError,
-    );
+  it("throws on a bad instant instead of hiding it", () => {
     expect(() =>
-      zoneNameAndOffset("en-GB", new Date(Number.NaN), "Asia/Bangkok"),
+      zoneNameAndOffset("en", new Date(Number.NaN), "Asia/Bangkok"),
     ).toThrow(RangeError);
   });
 });

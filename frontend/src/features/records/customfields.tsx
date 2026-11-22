@@ -191,7 +191,10 @@ export function CustomFieldsAdmin() {
       const previous = queryClient.getQueryData(key);
       queryClient.setQueryData(key, (old) =>
         old
-          ? { ...old, data: [...old.data, stagedField(draft, meUserId ?? "")] }
+          ? {
+              ...old,
+              data: [...old.data, stagedField(draft, meUserId ?? "")],
+            }
           : old,
       );
       return { previous, key };

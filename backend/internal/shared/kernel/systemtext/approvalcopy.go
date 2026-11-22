@@ -10,6 +10,10 @@ var approvalDefinitions = map[string]Definition{
 
 	"approval.taskCompleted":                {Words: langcopy.Phrase{En: "Done because you wrote to %s on %s", De: "Erledigt, weil du %s am %s geschrieben hast", Vi: "Đã hoàn tất vì bạn đã gửi email cho %s vào %s"}, Arguments: []string{argumentText, argumentText}},
 	"approval.taskBooked":                   {Words: langcopy.Phrase{En: "Done because %s booked a meeting for %s", De: "Erledigt, weil %s ein Meeting für %s gebucht hat", Vi: "Đã hoàn tất vì %s đã đặt cuộc họp vào %s"}, Arguments: []string{argumentText, argumentText}},
+	"approval.taskChatDone":                 {Words: langcopy.Phrase{En: "Done because the chat said “%s”", De: "Erledigt, weil im Chat stand: „%s“", Vi: "Đã hoàn tất vì cuộc trò chuyện có câu “%s”"}, Arguments: []string{argumentText}},
+	"approval.taskChatMoved":                {Words: langcopy.Phrase{En: "Moved to %s because the chat said “%s”", De: "Auf %s verschoben, weil im Chat stand: „%s“", Vi: "Đã dời sang %s vì cuộc trò chuyện có câu “%s”"}, Arguments: []string{argumentText, argumentText}},
+	"approval.taskChatDoneUnquoted":         {Words: langcopy.Phrase{En: "Done because of a filed chat", De: "Erledigt wegen eines abgelegten Chats", Vi: "Đã hoàn tất nhờ một cuộc trò chuyện đã lưu"}, Arguments: []string{}},
+	"approval.taskChatMovedUnquoted":        {Words: langcopy.Phrase{En: "Moved to %s because of a filed chat", De: "Wegen eines abgelegten Chats auf %s verschoben", Vi: "Đã dời sang %s nhờ một cuộc trò chuyện đã lưu"}, Arguments: []string{argumentText}},
 	"approval.taskContact":                  {Words: langcopy.Phrase{En: "the contact", De: "dem Kontakt", Vi: "liên hệ"}, Arguments: []string{}},
 	"approval.taskBooker":                   {Words: langcopy.Phrase{En: "the contact", De: "der Kontakt", Vi: "liên hệ"}, Arguments: []string{}},
 	"approval.signaturePrivate":             {Words: langcopy.Phrase{En: "The sender’s private signature cannot be shown to this reviewer. Ask the sender to review this message.", De: "Die private Signatur des Absenders ist für diese Prüfung nicht freigegeben. Den Absender um Prüfung dieser Nachricht bitten.", Vi: "Không thể hiển thị chữ ký riêng của người gửi cho người xem xét này. Hãy yêu cầu người gửi xem xét tin nhắn."}, Arguments: []string{}},
@@ -66,4 +70,19 @@ func TaskClosedContactKey(booking bool) string {
 		return "approval.taskBooker"
 	}
 	return "approval.taskContact"
+}
+
+// TaskChatKey names the receipt sentence that quotes the chat line for a task
+// a filed chat changed: done, or moved to a new day.
+func TaskChatKey(moved bool) string {
+	if moved {
+		return "approval.taskChatMoved"
+	}
+	return "approval.taskChatDone"
+}
+
+// TaskChatUnquotedKey is TaskChatKey's sentence for a reader who may not read
+// the chat, which names no chat line.
+func TaskChatUnquotedKey(moved bool) string {
+	return TaskChatKey(moved) + "Unquoted"
 }

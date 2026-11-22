@@ -36,7 +36,7 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		// what this clause replaced. The bound the caller passes is the END of
 		// the day, so `<=` would put a task due at exactly tomorrow 00:00 on
 		// today's list — a promise reported late a day early.
-		deadline := sprintf(storekit.TaskDueSQL("a")+" < $%d", arg(*in.OpenAndDueBy))
+		deadline := storekit.TaskDueBeforeSQL("a", sprintf("$%d", arg(*in.OpenAndDueBy)))
 		if in.IncludeEmailRequests && in.OpenAndDueAfter == nil {
 			// An undated reminder of a request and an undated promise are both
 			// owed now: nobody named a later day for either.
@@ -59,14 +59,11 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		// meets the exclusive upper bound above exactly: a task due at tomorrow
 		// 00:00 is outside today's read and inside the upcoming one, and none
 		// can fall between the two or be counted by both.
-		// The due date is either the stored one or NULL, so the plain column
-		// bound holds whenever the window's does. Spelled for the task index.
 		if in.IncludeWebsiteInquiries {
 			clauses = append(clauses, "NOT "+provenance.WebsiteInquiryTaskSQL("a"))
 		}
-		from := arg(*in.OpenAndDueAfter)
-		clauses = append(clauses,
-			sprintf(openTask+"((a.due_at >= $%[1]d AND "+storekit.TaskDueSQL("a")+" >= $%[1]d)"+backlog+")", from))
+		from := storekit.TaskDueFromSQL("a", sprintf("$%d", arg(*in.OpenAndDueAfter)))
+		clauses = append(clauses, openTask+"("+from+backlog+")")
 	}
 	if in.ExceptRemindersDue && reminders != "" {
 		clauses = append(clauses, "NOT COALESCE("+reminders+", FALSE)")

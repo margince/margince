@@ -2,12 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { aiAdminFixture } from "../ai-admin-fixture";
-import {
-  aiCallStats,
-  aiRouting,
-  aiUsage,
-  installationLicense,
-} from "./fixtures";
+import { aiCallStats, aiRouting, aiUsage } from "./adminfixtures";
+import { installationLicense } from "./fixtures";
 import type { Handler } from "./server";
 
 // Neither a refusal nor an absence verifies a grant, so both drop the seat

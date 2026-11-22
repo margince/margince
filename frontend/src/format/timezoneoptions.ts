@@ -3,7 +3,7 @@
 
 import type { Locale } from "../i18n";
 import { forReader } from "./collate";
-import { INTL_LOCALE } from "./intllocale";
+import { dateTimeFormat } from "./formatters";
 import { browserZone, isRenderableZone, UTC_ZONE } from "./timezone";
 
 // Zones ICU still lists under the name IANA has since replaced. A reader looks
@@ -81,7 +81,7 @@ function timezoneOptionLabel(locale: Locale, zone: string, at: Date): string {
   const city = parts.pop() ?? zone;
   const place = parts.length ? `${city} (${parts.join(" / ")})` : city;
   try {
-    const offset = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    const offset = dateTimeFormat(locale, {
       timeZone: zone,
       timeZoneName: "shortOffset",
     })

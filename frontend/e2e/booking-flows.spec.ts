@@ -174,8 +174,10 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await expect(
     settings.getByRole("combobox", { name: de["scheduling.provider"] }),
   ).toHaveCount(0);
+  // The connected calendar is offered as the answer, so the bar asks to keep
+  // it and claims no edit.
   const saveCalendar = settings
-    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("region", { name: de["saveBar.offered"] })
     .getByRole("button", { name: de["saveBar.save"], exact: true });
   await saveCalendar.click();
   await expect(saveCalendar).toHaveCount(0);
@@ -494,8 +496,9 @@ test("calendar setup enables booking with the existing Account name", async ({
     exact: true,
   });
   await expect(accept).toBeDisabled();
+  // The one writable calendar is offered as the answer, not typed in.
   const saveCalendar = page
-    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("region", { name: de["saveBar.offered"] })
     .getByRole("button", { name: de["saveBar.save"], exact: true });
   await saveCalendar.click();
   await expect(saveCalendar).toHaveCount(0);
