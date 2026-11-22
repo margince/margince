@@ -176,6 +176,7 @@ public.activity.thread_key text gen=- def=-
 public.activity.trg_activity_updated CREATE TRIGGER trg_activity_updated BEFORE UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.activity.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity.version bigint NOT NULL gen=- def=1
+public.activity.wait_for_participant_stamps CREATE TRIGGER wait_for_participant_stamps BEFORE UPDATE ON public.activity FOR EACH ROW WHEN ((new.domain_evidence_version IS DISTINCT FROM old.domain_evidence_version)) EXECUTE FUNCTION wait_for_participant_stamps()
 public.activity_audience_member acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity_audience_member.activity_audience_member_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.activity_audience_member.activity_audience_member_pkey PRIMARY KEY (activity_id, subject_type, subject_id)
@@ -927,7 +928,6 @@ public.advance_activity_domain_evidence_version() secdef=false cfg=- acl=-
 BEGIN
  IF ROW(NEW.occurred_at, NEW.occurred_precision, NEW.archived_at, NEW.restricted_at)
  IS DISTINCT FROM ROW(OLD.occurred_at, OLD.occurred_precision, OLD.archived_at, OLD.restricted_at) THEN
-  PERFORM 1 FROM activity WHERE id = OLD.id FOR UPDATE;
   NEW.domain_evidence_version := OLD.domain_evidence_version + 1;
  END IF;
  RETURN NEW;
@@ -11705,6 +11705,12 @@ public.voice_profile_version_history CREATE INDEX voice_profile_version_history 
 public.voice_profile_version_one_active CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_version USING btree (voice_profile_id) WHERE (status = 'active'::text)
 public.voice_profile_version_pkey CREATE UNIQUE INDEX voice_profile_version_pkey ON public.voice_profile_version USING btree (id)
 public.voice_profile_version_predecessor_ix CREATE INDEX voice_profile_version_predecessor_ix ON public.voice_profile_version USING btree (voice_profile_id, predecessor_version)
+public.wait_for_participant_stamps() secdef=false cfg=- acl=- 
+BEGIN
+ PERFORM 1 FROM activity WHERE id = OLD.id FOR UPDATE;
+ RETURN NEW;
+END;
+
 public.web_form acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.web_form.allowed_origins text[] NOT NULL gen=- def='{}'::text[]
 public.web_form.archived_at timestamp with time zone gen=- def=-

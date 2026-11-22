@@ -114,3 +114,26 @@ func TestAParticipantRowStillNeedsItsActivity(t *testing.T) {
 		t.Errorf("a deleted activity left %d participant rows", left)
 	}
 }
+
+// The row lock must follow the advisory locks the other triggers take.
+// A participant insert takes those first, so the other order can deadlock.
+func TestTheStampWaitIsTheLastTriggerBeforeAnActivityUpdate(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	var last string
+	var count int
+	// The two `tgtype` bits select row triggers that run before an update, which fire in name order.
+	if err := conn.QueryRow(context.Background(), `
+		SELECT max(tgname COLLATE "C"), count(*) FROM pg_trigger
+		 WHERE tgrelid = 'activity'::regclass AND NOT tgisinternal
+		   AND tgtype & 2 = 2 AND tgtype & 16 = 16`).Scan(&last, &count); err != nil {
+		t.Fatal(err)
+	}
+	if count < 5 {
+		t.Fatalf("read %d triggers before an activity update, fewer than the 5 the schema holds", count)
+	}
+	if last != "wait_for_participant_stamps" {
+		t.Errorf("%s fires after wait_for_participant_stamps, so the row lock precedes whatever lock it takes", last)
+	}
+}

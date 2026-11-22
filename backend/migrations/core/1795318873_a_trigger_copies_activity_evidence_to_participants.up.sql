@@ -2,17 +2,19 @@ SET LOCAL lock_timeout = '3s';
 
 -- A participant insert stamps under a key-share lock on its activity.
 -- The row lock makes that insert wait for this change and then read the changed row.
-CREATE OR REPLACE FUNCTION advance_activity_domain_evidence_version() RETURNS trigger
+-- Its name sorts last, so the lock follows the advisory locks of the triggers before it.
+CREATE FUNCTION wait_for_participant_stamps() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
- IF ROW(NEW.occurred_at, NEW.occurred_precision, NEW.archived_at, NEW.restricted_at)
- IS DISTINCT FROM ROW(OLD.occurred_at, OLD.occurred_precision, OLD.archived_at, OLD.restricted_at) THEN
-  PERFORM 1 FROM activity WHERE id = OLD.id FOR UPDATE;
-  NEW.domain_evidence_version := OLD.domain_evidence_version + 1;
- END IF;
+ PERFORM 1 FROM activity WHERE id = OLD.id FOR UPDATE;
  RETURN NEW;
 END;
 $$;
+
+CREATE TRIGGER wait_for_participant_stamps
+ BEFORE UPDATE ON activity
+ FOR EACH ROW WHEN (NEW.domain_evidence_version IS DISTINCT FROM OLD.domain_evidence_version)
+ EXECUTE FUNCTION wait_for_participant_stamps();
 
 CREATE FUNCTION copy_activity_domain_evidence() RETURNS trigger
 LANGUAGE plpgsql AS $$
