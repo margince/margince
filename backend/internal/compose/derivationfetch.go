@@ -268,6 +268,12 @@ func derivationFrame(ctx context.Context, tx pgx.Tx, plan derivationPlan) (repor
 	}
 	if !plan.asOf.IsZero() {
 		frame.AsOf = plan.asOf
+		// A handle minted before it carried a sheet revision reads the sheet at
+		// the headline's instant.
+		frame.RatesAt = plan.asOf
+	}
+	if !plan.ratesAt.IsZero() {
+		frame.RatesAt = plan.ratesAt
 	}
 	// The same override, one field over. Without it the detail converts at
 	// whatever base the installation holds now. A handle minted under EUR and

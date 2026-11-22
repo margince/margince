@@ -3634,7 +3634,8 @@ public.company_open_pipeline_gaps(as_of date) secdef=false cfg=- acl==X/margince
                           SELECT 1 FROM fx_rate f
                            WHERE f.from_currency = d.currency
                              AND f.to_currency = base.code
-                             AND f.rate_date <= as_of)) AS currencies
+                             AND f.rate_date <= as_of
+                             AND f.superseded_at IS NULL)) AS currencies
        FROM deal d
        LEFT JOIN LATERAL (
          SELECT (value #>> '{}')::text AS code
@@ -3689,6 +3690,7 @@ public.company_open_pipeline_rollup(as_of date) secdef=false cfg=- acl==X/margin
         AND r.from_currency = d.currency
         AND r.to_currency = base.code
         AND r.rate_date <= as_of
+        AND r.superseded_at IS NULL
       ORDER BY r.rate_date DESC
       LIMIT 1
    ) live ON true
@@ -6233,13 +6235,13 @@ public.forecast_snapshot_pkey CREATE UNIQUE INDEX forecast_snapshot_pkey ON publ
 public.fx_rate acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.fx_rate.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.fx_rate.from_currency currency_code NOT NULL gen=- def=-
-public.fx_rate.fx_rate_pair_day UNIQUE (from_currency, to_currency, rate_date)
 public.fx_rate.fx_rate_pkey PRIMARY KEY (id)
 public.fx_rate.id uuid NOT NULL gen=- def=uuidv7()
 public.fx_rate.rate numeric(20,10) NOT NULL gen=- def=-
 public.fx_rate.rate_date date NOT NULL gen=- def=-
+public.fx_rate.superseded_at timestamp with time zone gen=- def=-
 public.fx_rate.to_currency currency_code NOT NULL gen=- def=-
-public.fx_rate_pair_day CREATE UNIQUE INDEX fx_rate_pair_day ON public.fx_rate USING btree (from_currency, to_currency, rate_date)
+public.fx_rate_current_pair_day CREATE UNIQUE INDEX fx_rate_current_pair_day ON public.fx_rate USING btree (from_currency, to_currency, rate_date) WHERE (superseded_at IS NULL)
 public.fx_rate_pkey CREATE UNIQUE INDEX fx_rate_pkey ON public.fx_rate USING btree (id)
 public.geocode_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.geocode_cache.created_at timestamp with time zone NOT NULL gen=- def=now()
