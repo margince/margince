@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { calendarDaysBetween, relativeDays } from "./format";
+import { calendarDaysBetween, daysAgoText } from "./format";
 
 // Day counting reads the CALENDAR, not the clock.
 //
@@ -14,7 +14,7 @@ import { calendarDaysBetween, relativeDays } from "./format";
 // visibly disagree.
 
 // Mirrors the real translator's parameter type rather than a wider one: the
-// whole point of the last case below is what `relativeDays` hands across, and a
+// whole point of the last case below is what `daysAgoText` hands across, and a
 // double that accepted a number would have accepted the defect too.
 const t = (key: string, vars?: Record<string, string>) =>
   vars ? `${key}:${JSON.stringify(vars)}` : key;
@@ -102,67 +102,23 @@ describe("calendarDaysBetween in a reader zone", () => {
   });
 });
 
-describe("relativeDays", () => {
-  const now = new Date("2026-08-24T12:00:00Z");
-
-  it("says never for an absent timestamp", () => {
-    expect(relativeDays(null, t, "en", "UTC", now)).toBe("contact.strip.never");
-    expect(relativeDays(undefined, t, "en", "UTC", now)).toBe(
-      "contact.strip.never",
-    );
-  });
-
-  it("says today for the same calendar day", () => {
-    expect(relativeDays("2026-08-24T01:00:00Z", t, "en", "UTC", now)).toBe(
-      "contact.strip.today",
-    );
-  });
-
-  it("says today for a future timestamp rather than a negative count", () => {
-    expect(relativeDays("2026-09-01T00:00:00Z", t, "en", "UTC", now)).toBe(
-      "contact.strip.today",
-    );
-  });
-
-  it("says yesterday for the previous calendar day", () => {
-    expect(relativeDays("2026-08-23T22:00:00Z", t, "en", "UTC", now)).toBe(
-      "contact.strip.yesterday",
-    );
-  });
-
-  it("counts the days for anything older", () => {
-    expect(relativeDays("2026-05-20T09:00:00Z", t, "en", "UTC", now)).toBe(
-      'contact.strip.days:{"count":"96"}',
-    );
+describe("daysAgoText", () => {
+  it("says today for none and for a future count, yesterday for one", () => {
+    expect(daysAgoText(0, t, "en")).toBe("contact.strip.today");
+    expect(daysAgoText(-3, t, "en")).toBe("contact.strip.today");
+    expect(daysAgoText(1, t, "en")).toBe("contact.strip.yesterday");
   });
 
   it("hands the count across already grouped for this reader", () => {
     // A four-figure count is where the two notations part: a German reader
     // reads "1.200" and an English one "1,200", and a raw number would have
     // reached the sentence as "1200" for both.
-    expect(relativeDays("2023-05-12T09:00:00Z", t, "en", "UTC", now)).toBe(
+    expect(daysAgoText(96, t, "en")).toBe('contact.strip.days:{"count":"96"}');
+    expect(daysAgoText(1200, t, "en")).toBe(
       'contact.strip.days:{"count":"1,200"}',
     );
-    expect(relativeDays("2023-05-12T09:00:00Z", t, "de", "UTC", now)).toBe(
+    expect(daysAgoText(1200, t, "de")).toBe(
       'contact.strip.days:{"count":"1.200"}',
-    );
-  });
-
-  it("reads the day in the zone it is drawn in", () => {
-    const soon = new Date("2026-10-06T18:00:00Z");
-    expect(
-      relativeDays("2026-10-06T08:00:00Z", t, "en", "Asia/Bangkok", soon),
-    ).toBe("contact.strip.yesterday");
-    expect(relativeDays("2026-10-06T08:00:00Z", t, "en", "UTC", soon)).toBe(
-      "contact.strip.today",
-    );
-  });
-
-  it("reads a late-evening timestamp as yesterday, not today", () => {
-    // The boundary the millisecond spelling gets wrong: 13 hours earlier but a
-    // different date, which a reader calls yesterday and a duration calls today.
-    expect(relativeDays("2026-08-23T23:00:00Z", t, "en", "UTC", now)).toBe(
-      "contact.strip.yesterday",
     );
   });
 });

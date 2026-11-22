@@ -1,27 +1,26 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// A key is live only when a module the shipped bundle loads names it. A story,
-// a test, a fixture or a module nothing imports vouches for nothing.
+// A key is live only when code the shipped bundle runs names it: an export
+// nothing renders, a story, a test or a module nothing imports vouches for
+// nothing, and a template vouches only for what its types can produce.
 
 import { join } from "node:path";
-import type { Module } from "../../scripts/lib/bundle-reach";
+import {
+  bundleEntries,
+  reachedModulesIn,
+} from "../../scripts/lib/bundle-reach";
+import { type KeyUse, liveKeyUse, usesKey } from "../../scripts/lib/key-reach";
 import { en } from "../../src/i18n/en";
 import { LOCALES } from "../../src/i18n/locale";
 import { type CensusRule, srcDir } from "../tree";
-import { shippedModules, srcModules } from "./caption-tables.census";
+import { srcModules } from "./caption-tables.census";
 
 /**
- * Keys no loaded module renders, literally, under a template stem, or as the
- * arm of a plural pair whose base it names.
+ * Keys no live code renders: not named literally, not produced by a template
+ * whose types allow it, and not an arm of a plural pair whose base is.
  */
-export function orphanKeys(
-  keys: readonly string[],
-  modules: Iterable<Module>,
-): string[] {
-  const loaded = [...modules];
-  const literals = new Set(loaded.flatMap((module) => module.literals));
-  const stems = [...new Set(loaded.flatMap((module) => module.stems))];
+export function orphanKeys(keys: readonly string[], use: KeyUse): string[] {
   const catalog = new Set(keys);
   // Only the two arms of a full pair: half a pair is the orphan this finds.
   const underPluralBase = (key: string): boolean => {
@@ -31,27 +30,28 @@ export function orphanKeys(
     return (
       catalog.has(`${base}_one`) &&
       catalog.has(`${base}_other`) &&
-      literals.has(base)
+      usesKey(use, base)
     );
   };
-  return keys.filter(
-    (key) =>
-      !literals.has(key) &&
-      !underPluralBase(key) &&
-      !stems.some((stem) => key.startsWith(stem)),
-  );
+  return keys.filter((key) => !usesKey(use, key) && !underPluralBase(key));
 }
 
 export const rule: CensusRule = {
   name: "orphan-keys",
   corpus: srcModules,
-  across: (corpus) => {
+  across: (corpus, tree) => {
     const catalogs = new Set(
       LOCALES.map((locale) => join(srcDir, "i18n", `${locale}.ts`)),
     );
+    const entries = bundleEntries();
+    const loaded = reachedModulesIn(
+      new Map(corpus.map((file) => [file.path, file.text])),
+      { catalogs },
+      entries,
+    );
     return orphanKeys(
       Object.keys(en),
-      shippedModules(corpus, catalogs).values(),
+      liveKeyUse(tree.checked(), loaded, entries, catalogs),
     );
   },
   advice:

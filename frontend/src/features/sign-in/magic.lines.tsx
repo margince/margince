@@ -14,6 +14,7 @@ import type { MagicLane, MagicLine } from "../../lib/magic.queries";
 import { lineSentence } from "../../lib/magiccopy";
 import {
   magicByKey,
+  magicConsequenceKey,
   magicUndoReasonKey,
   magicWhyKey,
 } from "../../lib/magickeys";
@@ -168,15 +169,8 @@ function lineDetail(line: MagicLine, t: Translator, locale: Locale): string[] {
 }
 
 function captureCoverage(line: MagicLine, t: Translator): string | null {
-  if (line.lane !== "watching") return null;
-  switch (line.consequence) {
-    case "magic.consequence.capture_not_collecting":
-    case "magic.consequence.capture_may_be_incomplete":
-    case "magic.consequence.capture_history_incomplete":
-      return t(line.consequence);
-    default:
-      return null;
-  }
+  const key = line.consequence ? magicConsequenceKey(line.consequence) : null;
+  return line.lane === "watching" && key ? t(key) : null;
 }
 
 function forecastReasonValues(line: MagicLine, locale: Locale) {

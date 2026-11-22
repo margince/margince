@@ -912,7 +912,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ngân sách AI đã đạt giới hạn. Công việc sẽ tự động tiếp tục khi có ngân sách.",
   "reporting.latestSnapshot": "Ảnh chụp mới nhất",
   "reporting.contextDetails": "Chi tiết báo cáo",
-  "reporting.pipelineFilter": "Cơ hội đang mở · dự kiến chốt",
   "reporting.targetRemaining": "Còn {amount}",
   "reporting.targetExceeded": "Vượt mục tiêu {amount}",
   "reporting.targetPeriodSummary": "{actual} trên {target} · {percent}%",
@@ -959,7 +958,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.commissionAmount": "Hoa hồng",
   "reporting.hoursUnit": "Giờ",
   "reporting.outOf": "Trên tổng {total}",
-  "reporting.valueChanges": "Thay đổi giá trị",
   "reporting.movement.new": "Deal mới",
   "reporting.movement.pulled_in": "Kéo vào kỳ này",
   "reporting.movement.pushed_out": "Đẩy ra khỏi kỳ này",
@@ -1055,8 +1053,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.attainment": "{percent}% mục tiêu",
   "reporting.remaining": "Còn lại",
   "reporting.ownerMetric": "{metric} theo thành viên",
-  "reporting.quarterStart": "Chọn tháng đầu tiên của quý tài chính.",
-  "reporting.additional": "Phân tích khác",
   "reporting.settings": "Cài đặt báo cáo",
   "reporting.execution.skipped": "Đã bỏ qua",
   "reporting.execution.suspended": "Đã tạm dừng",
@@ -1066,7 +1062,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.execution.running": "Đang chụp…",
   "reporting.execution.pending": "Đang chờ xử lý",
   "reporting.targetHistory": "Lịch sử mục tiêu",
-  "reporting.unit": "Đơn vị",
   "reporting.amountUnit": "Giá trị",
   "reporting.daysUnit": "Ngày",
   "reporting.countUnit": "Số lượng",
@@ -1135,7 +1130,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.status.ok": "Bao phủ đầy đủ",
   "retention.scopeReportEdition": "Bản báo cáo đã lưu",
   "reporting.lastCapture": "Lần chụp thành công gần nhất {at}",
-  "reporting.allocationDifference": "Mục tiêu nhóm trừ mục tiêu đã phân bổ",
   "reporting.fromDate": "Từ ngày",
   "reporting.throughDate": "Đến hết ngày",
   "reporting.chooseDates": "Chọn ngày bắt đầu và ngày kết thúc để xem kỳ này.",
@@ -1275,10 +1269,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.monthly": "Hằng tháng",
   "reporting.day": "Ngày chạy",
   "reporting.time": "Giờ địa phương",
-  "reporting.timezone": "Múi giờ báo cáo",
   "reporting.nextRun": "Lần chạy tiếp theo: {at}",
   "reporting.pause": "Đã tạm dừng",
-  "reporting.resume": "Tiếp tục",
   "reporting.compare": "So sánh ảnh chụp",
   "reporting.left": "Ảnh chụp trước",
   "reporting.right": "Ảnh chụp sau",
@@ -1286,12 +1278,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.value": "Mục tiêu",
   "reporting.newTarget": "Đặt mục tiêu",
   "reporting.revise": "Sửa mục tiêu",
-  "reporting.up": "Chuyển lên",
-  "reporting.down": "Chuyển xuống",
-  "reporting.periodStart": "Ngày đầu tiên của kỳ mục tiêu",
   "reporting.noComparison":
     "Chọn hai ảnh chụp cùng phạm vi, thuộc hai kỳ đã hoàn tất liên tiếp.",
-  "reporting.noSource": "Không có chi tiết nguồn.",
   "reporting.framework": "Thiết lập báo cáo",
   "reporting.template": "Chế độ xem mặc định",
   "reporting.sales": "Bán hàng",
@@ -1460,46 +1448,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đang mở ngày {date}: {amount} trong {count} deal.",
   "reporting.writtenOpen_other":
     "Đang mở ngày {date}: {amount} trong {count} deal.",
-  "reporting.writtenSomeFailed":
-    "Hiện không đọc được một số số liệu, nên bản tóm tắt này bỏ qua chúng.",
-  "reporting.writtenTargetReached":
-    "Doanh số đã chốt trong {quarter} đã đạt mục tiêu {target}.",
-  "reporting.writtenNoTarget":
-    "Chưa đặt mục tiêu doanh số cho {quarter}, nên không có khoảng cách để hiển thị.",
-  "reporting.writtenFinish": "Kết quả dự kiến cho {quarter}: {amount}.",
-  "reporting.writtenFinishShort":
-    "Kết quả dự kiến cho {quarter}: {amount}, thấp hơn mục tiêu {target} là {gap}.",
-  "reporting.writtenFinishAhead":
-    "Kết quả dự kiến cho {quarter}: {amount}, cao hơn mục tiêu {target} là {gap}.",
-  "reporting.writtenFinishOnTarget":
-    "Kết quả dự kiến cho {quarter}: {amount}, đúng bằng mục tiêu {target}.",
-  "reporting.writtenCoverage":
-    "Các deal đang mở dự kiến chốt trong quý này bao phủ {ratio}× của {remaining} còn phải chốt.",
-  "reporting.writtenAccepted_one":
-    "{count} bàn giao được chấp nhận trong {period}.",
-  "reporting.writtenAccepted_other":
-    "{count} bàn giao được chấp nhận trong {period}.",
-  "reporting.writtenAcceptedNone":
-    "Không có bàn giao nào được chấp nhận trong {period}.",
-  "reporting.writtenQualified_one": "{count} lead đủ điều kiện trong {period}.",
-  "reporting.writtenQualified_other":
-    "{count} lead đủ điều kiện trong {period}.",
-  "reporting.writtenQualifiedNone":
-    "Không có lead nào đủ điều kiện trong {period}.",
-  "reporting.writtenMeetings_one":
-    "{count} cuộc họp đã diễn ra trong {period}.",
-  "reporting.writtenMeetings_other":
-    "{count} cuộc họp đã diễn ra trong {period}.",
-  "reporting.writtenMeetingsNone":
-    "Không có cuộc họp nào diễn ra trong {period}.",
-  "reporting.writtenLeadsWaiting_one":
-    "{count} lead vẫn đang chờ phản hồi đầu tiên.",
-  "reporting.writtenLeadsWaiting_other":
-    "{count} lead vẫn đang chờ phản hồi đầu tiên.",
-  "reporting.writtenHandoffsWaiting_one":
-    "{count} bàn giao đang chờ bộ phận bán hàng quyết định.",
-  "reporting.writtenHandoffsWaiting_other":
-    "{count} bàn giao đang chờ bộ phận bán hàng quyết định.",
   "reporting.prepared.prospectingTitle": "Tiến độ tìm kiếm khách hàng của tôi",
   "reporting.prepared.prospectingPurpose":
     "Cuộc họp đã diễn ra, bàn giao được chấp nhận và lead đủ điều kiện trong tuần này, so với mục tiêu tháng.",
@@ -1599,8 +1547,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.last_week": "Tuần đã hoàn tất gần nhất",
   "reporting.this_quarter": "Quý tài chính này",
   "reporting.custom": "Khoảng tùy chỉnh",
-  "reporting.start": "Ngày bắt đầu",
-  "reporting.end": "Ngày kết thúc (không bao gồm)",
   "reporting.bookings_trend": "Doanh số đã chốt theo thời gian",
   "reporting.stage_distribution": "Pipeline đang mở theo giai đoạn",
   "reporting.owner_attainment": "Doanh số đã chốt theo thành viên",
@@ -1697,7 +1643,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.metrics": "Chỉ số",
   "reporting.metric": "Chỉ số",
   "reporting.cancel": "Hủy",
-  "reporting.saved": "Đã lưu báo cáo",
   "reporting.live": "Báo cáo trực tiếp",
   "reporting.opening": "Đầu kỳ",
   "reporting.closing": "Cuối kỳ",
@@ -1718,8 +1663,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.pickAgreed": "Chọn thời gian đã thống nhất",
   "scheduling.openTimes": "Giờ trống",
   "scheduling.guestPicks": "{name} chọn thời gian",
-  "scheduling.guestPicksHelp":
-    "Bạn gửi một liên kết riêng. Họ xem các giờ trống của bạn và đặt một giờ.",
   "scheduling.guestPicksOne": "Khách đặt một trong các giờ trống trên lịch.",
   "scheduling.guest": "Khách",
   "scheduling.length": "Thời lượng",
@@ -1760,28 +1703,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.linkReplaced":
     "Bạn đã thay đổi đề xuất này nên đề xuất có liên kết mới. Liên kết trước vẫn mở cho đến khi bạn thu hồi trong mục Cuộc họp của liên hệ.",
   "scheduling.bookWith": "Đặt lịch họp với {name}",
-  "scheduling.setupTitle": "Hoàn tất thiết lập đặt lịch · xong {done}/{total}",
-  "scheduling.stepCalendar": "Lịch có thể gửi lời mời",
-  "scheduling.stepHours": "Giờ làm việc và múi giờ",
-  "scheduling.stepLink": "Đã bật liên kết đặt lịch",
-  "scheduling.stepDone": "Đã xong",
-  "scheduling.stepOpen": "Chưa xong",
   "scheduling.calendarTitle": "Lịch",
-  "scheduling.calendarIntro": "Nơi gửi lời mời và nơi đọc thời gian bận.",
-  "scheduling.availabilityTitle": "Thời gian rảnh",
-  "scheduling.defaultsTitle": "Mặc định cuộc họp",
-  "scheduling.defaultsIntro":
-    "Áp dụng cho mọi cuộc họp mới. Có thể thay đổi khi đặt lịch.",
-  "scheduling.videoDefaultGoogle": "Thêm liên kết Google Meet vào cuộc họp mới",
-  "scheduling.videoDefaultTeams":
-    "Thêm liên kết Microsoft Teams vào cuộc họp mới",
-  "scheduling.videoDefaultGeneric": "Thêm liên kết gọi video vào cuộc họp mới",
-  "scheduling.videoDefaultHelp":
-    "Tạo cùng mỗi lời mời trên lịch, kể cả lịch họp đặt qua liên kết đặt lịch. Có thể tắt cho từng cuộc họp khi đặt lịch.",
-  "scheduling.videoTeamsHelp":
-    "Cần tài khoản Microsoft 365 cơ quan hoặc trường học.",
-  "scheduling.unsaved": "Có thay đổi chưa lưu",
-  "scheduling.discard": "Bỏ thay đổi",
   "scheduling.back": "Quay lại Margince",
   "scheduling.prepare": "Chuẩn bị cho cuộc họp này",
   "scheduling.timezone": "Múi giờ",
@@ -1807,27 +1729,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.proposalChoose": "Chọn giờ tại đây hoặc tìm giờ trống khác:",
   "scheduling.proposalReply":
     "Bạn cũng có thể trả lời kèm một thời gian phù hợp.",
-  "scheduling.proposalHelp":
-    "Các lựa chọn này không giữ chỗ trong lịch của bạn. Liên kết cá nhân chỉ dùng để đặt lịch một lần và hết hạn sau bảy ngày hoặc sau giờ đề xuất cuối cùng.",
-  "scheduling.createPersonalLink": "Tạo liên kết cá nhân",
-  "scheduling.reviewProposal": "Tạo đề xuất",
-  "scheduling.personalLink": "Mở lời mời cá nhân",
-  "scheduling.expires": "Hết hạn {date}",
-  "scheduling.reviewEmail": "Xem lại email",
   "scheduling.method": "Cách sắp xếp cuộc họp",
   "scheduling.propose": "Đề xuất thời gian",
   "scheduling.sharePersonal": "Chia sẻ liên kết cá nhân",
-  "scheduling.selectOptions_one": "Chọn hai hoặc ba giờ · đã chọn {count}",
-  "scheduling.selectOptions_other": "Chọn hai hoặc ba giờ · đã chọn {count}",
-  "scheduling.blockingCalendars": "Các lịch khác cũng chặn thời gian",
-  "scheduling.blockingHelp":
-    "Lịch sự kiện luôn chặn thời gian. Tên sự kiện riêng tư vẫn nằm trong lịch của bạn.",
   "scheduling.savedRequest":
     "Đã lưu yêu cầu cuộc họp. Mở yêu cầu để kiểm tra lời mời, đổi giờ hoặc hủy.",
   "scheduling.openMeeting": "Xem cuộc họp",
   "scheduling.emailReminder": "Nhắc qua email một giờ trước",
-  "scheduling.reminderHelp":
-    "Áp dụng cho cuộc họp về sau. Dùng hộp thư đã kết nối và kiểm tra quyền gửi email trước khi gửi.",
   "scheduling.reminder.pending": "Đã lên lịch email nhắc.",
   "scheduling.reminder.queued": "Đang chờ gửi email nhắc.",
   "scheduling.reminder.unavailable":
@@ -1842,7 +1750,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.copyFallback": "Chọn và sao chép liên kết bên dưới.",
   "scheduling.preview": "Xem trước trang công khai",
   "scheduling.settings": "Cài đặt cuộc họp",
-  "scheduling.save": "Lưu cài đặt",
   "settings.tab.meetings": "Cuộc họp",
   "settings.page.meetings.sub": "Giờ làm việc, lịch và tùy chọn đặt lịch.",
   "scheduling.missingSavedCalendar":
@@ -1869,17 +1776,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.findNext": "Tìm giờ trống tiếp theo",
   "scheduling.noTimesHorizon":
     "Không có giờ trống trong khoảng đặt lịch. Xem lại cài đặt cuộc họp và các sự kiện trên lịch.",
-  "scheduling.allDayBlocks":
-    "Sự kiện cả ngày đánh dấu bận cũng chặn giờ trống.",
-  "scheduling.effectiveHours": "Giờ đặt được: {start} đến {end} ({zone}).",
   "scheduling.bookingUntil": "Có thể đặt lịch đến hết {date}.",
-  "scheduling.outsideHorizon":
-    "Ngày này nằm ngoài khoảng đặt lịch. Chọn ngày sớm hơn hoặc cập nhật cài đặt cuộc họp.",
   "scheduling.provider": "Nhà cung cấp lịch",
-  "scheduling.proposalChanged":
-    "Liên kết này giữ nguyên thông tin đã tạo. Có thể tạo liên kết mới cho các thay đổi; liên kết trước vẫn có hiệu lực cho đến khi hết hạn.",
-  "scheduling.proposalUpdate": "Tạo đề xuất cập nhật",
-  "scheduling.calendar": "Lịch sự kiện",
   "scheduling.bookContact": "Đặt lịch họp",
   "scheduling.bookPickContact": "Tìm liên hệ của công ty này",
   "scheduling.setupCalendar": "Chọn lịch đặt cuộc họp",
@@ -1888,10 +1786,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "scheduling.readOnlyCalendar":
     "Lịch đang kết nối để đọc sự kiện. Kết nối lại và cấp quyền gửi lời mời để tạo, đổi giờ và hủy cuộc họp.",
-  "scheduling.disconnectedCalendar":
-    "Kết nối lịch này trước khi gửi lời mời. Nếu chỉ kết nối hộp thư, hãy kết nối lịch riêng.",
-  "scheduling.expiredCalendar":
-    "Kết nối lịch đã hết hạn. Kết nối lại để gửi lời mời.",
   "scheduling.bookRefused": "Quản trị viên cần cấp quyền đặt lịch họp.",
   "scheduling.meetingChanged":
     "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
@@ -1899,27 +1793,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chọn lịch trong Cài đặt, mục Cuộc họp để xem trước giờ trống.",
   "scheduling.publicCalendarUnavailable":
     "Trang đặt lịch đang hoạt động nhưng lời mời trên lịch không khả dụng. Mở cài đặt cuộc họp để kiểm tra kết nối hoặc tạm dừng trang.",
-  "scheduling.manageConnection": "Mở kết nối lịch",
-  "scheduling.calendarConnected":
-    "Đã kết nối: {account}. Đã cấp quyền gửi lời mời.",
   "scheduling.noWritableCalendar":
     "Không có lịch nào có thể chỉnh sửa. Chọn nhà cung cấp khác hoặc kiểm tra quyền truy cập lịch.",
   "scheduling.finishSetup":
     "Hoàn tất thiết lập lịch trong cài đặt cuộc họp để chọn giờ trống.",
   "scheduling.readOnlyBadge": "Lịch chỉ đọc",
-  "scheduling.accountName":
-    "Tên trên trang đặt lịch lấy từ Cài đặt, mục Tài khoản.",
   "scheduling.linkNotCreated": "Lưu cài đặt cuộc họp để tạo liên kết đặt lịch.",
   "scheduling.calendarSetupNeeded": "Chọn và lưu lịch trước.",
-  "scheduling.noCalendar":
-    "Chưa kết nối lịch. Kết nối hộp thư không kèm theo lịch của hộp thư đó.",
-  "scheduling.hostName": "Tên công khai",
   "scheduling.subject": "Tiêu đề cuộc họp",
   "scheduling.location": "Địa điểm hoặc liên kết cuộc họp",
-  "scheduling.duration": "Thời lượng cuộc họp",
-  "scheduling.noticeHelp":
-    "24 giờ nghĩa là đặt trước ít nhất một ngày trọn vẹn.",
-  "scheduling.anchorBrand": "Tên và logo công ty lấy từ hồ sơ công ty.",
   "scheduling.locationExample": "https://meet.google.com/abc-defg-hij",
   "scheduling.locationHelp":
     "Dán liên kết Google Meet, Zoom hoặc Teams, hoặc nhập địa chỉ họp. Đây là nơi diễn ra cuộc họp, không phải trang đặt lịch của bạn.",
@@ -1927,9 +1809,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ xem trước. Trang đặt lịch đang hoạt động; bản xem trước này không gửi lời mời nào.",
   "scheduling.previewPaused":
     "Chỉ xem trước. Đặt lịch công khai đang tạm dừng. Khách truy cập không thể đặt lịch cho đến khi bạn bật liên kết trong Cài đặt, mục Cuộc họp.",
-  "scheduling.notice": "Thời gian báo trước tối thiểu (giờ)",
-  "scheduling.buffer": "Thời gian đệm (phút)",
-  "scheduling.horizon": "Khoảng đặt lịch (ngày)",
 
   "scheduling.invite": "Gửi lời mời",
   "scheduling.contact": "Bạn sẽ gặp ai?",
@@ -2944,7 +2823,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "search.group.showAllNamed": "Hiển thị tất cả {group}",
   "search.kind.contact": "Liên hệ",
   "search.kind.company": "Công ty",
-  "search.kind.partnerCompany": "Công ty đối tác",
   "search.kind.deal": "Deal",
   "search.kind.project": "Dự án",
   "search.kind.product": "Sản phẩm",
@@ -6959,7 +6837,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "decision.reject": "Từ chối",
   "decision.draftSubject": "Tiêu đề",
   "decision.draftBody": "Nội dung",
-  "decision.dismiss": "Bỏ qua",
   "decision.versionSkew":
     "Hồ sơ này đã thay đổi sau khi xếp chờ duyệt. Xếp chờ duyệt lại trước khi quyết định.",
   "decision.fxRateMoved":
@@ -9186,7 +9063,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.myPipeline": "Deal đang mở của tôi",
   "analytics.sdrLeads": "Lead của tôi trong tháng này",
   "analytics.sdrReading.leads_promoted": "Lead đủ điều kiện",
-  "analytics.sdrReading.leads_qualified": "Lead đủ điều kiện",
   "analytics.sdrReading.lead_first_response":
     "Thời gian phản hồi đầu tiên, lead đã được phản hồi",
   "analytics.sdrReading.leads_awaiting_response":
@@ -11934,12 +11810,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không có mục nào bị giữ lại. Mọi lần xóa đến nay đều đã hoàn tất đầy đủ.",
   "restricted.heldLabel": "Mục đang bị giữ",
   "restricted.kind": "Loại",
-  "restricted.occurred": "Ngày",
   "restricted.deals": "Deal hoặc dự án",
   "restricted.noDeal": "Không có deal đi kèm",
   "restricted.reason": "Giữ lại vì",
   "restricted.until": "Giữ đến",
-  "restricted.redacted": "Đã che",
   "restricted.since": "Từ {date}",
   "restricted.nothingRedacted": "Không ẩn nội dung nào",
   "restricted.redactedCount_one": "Đã gỡ {count} trường",
@@ -11949,7 +11823,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "restricted.kind.call": "Cuộc gọi",
   "restricted.kind.meeting": "Cuộc họp",
   "restricted.kind.message": "Tin nhắn",
-  "restricted.decide": "Quyết định",
   "restricted.reasonLabel": "Lý do",
   "restricted.reasonHint":
     "Ghi vào nhật ký hoạt động kèm tên bạn. Nêu rõ quyết định và căn cứ của quyết định.",
@@ -12456,7 +12329,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // surface the onboarding copy promises.
   // Các đơn vị bản cài đặt này ghép vào, đặt trên trang cài đặt giữ loại thông tin
   // đăng nhập mà đơn vị đó dùng.
-  "extUnits.open": "Mở",
 
   // Connected inboxes (Settings → Integrations): the "manage in Settings"
   // surface the onboarding copy promises.
@@ -14068,9 +13940,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal360.verdict.drifting": "Đang chững lại",
   "deal360.verdict.blocked": "Bị chặn",
   "deal360.verdict.cold": "Nguội",
-  "recordmail.title": "Email",
-  "recordmail.reply": "Soạn trả lời",
-  "recordmail.send": "Viết email",
   "deal360.rewrite": "Tạo lại",
   "deal360.readFull": "Đọc bản tóm tắt đầy đủ",
   "deal360.openTask": "Mở việc cần làm",
@@ -14790,8 +14659,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mỗi vai trò được làm gì, và được truy cập hồ sơ của ai.",
   "settings.page.seats.sub":
     "Số tài khoản đang dùng so với số tài khoản bản cài đặt này được cấp phép.",
-  "settings.page.stageautomation.sub":
-    "Thành tích của từng bước chuyển giai đoạn trước khi bước đó tự động chuyển deal.",
   "settings.page.leads.sub":
     "Nguồn lead, lý do loại lead và thời gian phản hồi đầu tiên.",
   "settings.page.products.sub": "Sản phẩm công ty đang bán, và mẫu báo giá.",
@@ -15536,7 +15403,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thêm văn mẫu để dựng Voice DNA. Chỉ bạn có thể xem Voice DNA, và Voice DNA chỉ học từ những gì đã thêm. Lần dựng đầu mất khoảng một phút.",
   "settings.voice.privacy": "Chỉ bạn có thể xem Voice DNA này.",
   "settings.voice.status.collecting": "Đang thu thập",
-  "settings.voice.status.ready": "Sẵn sàng",
   "settings.voice.status.stale": "Cần dựng lại",
   "settings.voice.bandThin": "mỏng",
   "settings.voice.bandGood": "tốt",
@@ -16123,7 +15989,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Vai trò được chọn sẽ thay thế toàn bộ vai trò hiện có.",
   "users.deactivate": "Vô hiệu hóa",
   "users.reactivate": "Kích hoạt lại",
-  "users.status.active": "Đang hoạt động",
   "users.status.invited": "Đã mời",
   "users.status.inviteMailFailed": "Không gửi được email mời",
   "users.status.deactivated": "Đã vô hiệu hóa",
@@ -19427,7 +19292,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Trung bình: thỉnh thoảng hai bên có liên hệ. Lần liên hệ gần nhất là {last}.",
   "contact.strength.sentence.strong":
     "Mạnh: hai bên liên hệ đều đặn, cả hai chiều. Lần liên hệ gần nhất là {last}.",
-  "contact.bandBadge.none": "Chưa liên lạc",
   "contact.bandBadge.weak": "Yếu",
   "contact.bandBadge.moderate": "Trung bình",
   "contact.bandBadge.strong": "Mạnh",
@@ -19545,7 +19409,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.action.research": "Tìm hiểu",
   "contact.action.importActivities": "Nhập hoạt động",
 
-  "contact.strip.never": "Chưa có",
   "contact.strip.today": "Hôm nay",
   "contact.strip.yesterday": "Hôm qua",
   "contact.strip.days": "{count} ngày",
@@ -22646,7 +22509,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.readsBusy": "Đọc giờ bận",
   "scheduling.sendsInvites": "Gửi lời mời",
   "scheduling.syncedAgo": "Đã đồng bộ {ago}",
-  "scheduling.reconnectNeeded": "Cần kết nối lại",
   "scheduling.expiredRow":
     "Kết nối đã hết hạn. Margince không đọc được giờ bận và không gửi được lời mời cho đến khi bạn kết nối lại.",
   "scheduling.eventCalendar": "Thêm cuộc hẹn đã đặt vào",
@@ -23535,17 +23397,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.decision.unpriced_other": "{count} deal không có giá trị",
   "analytics.decision.fx_one": "{count} deal không có tỷ giá",
   "analytics.decision.fx_other": "{count} deal không có tỷ giá",
-  "reporting.writtenChecksFailed":
-    "Không đọc được các kiểm tra đang mở, nên ở đây không nói gì về việc cần chú ý.",
-  "reporting.writtenChecksNone": "Không có kiểm tra đang mở nào cần trả lời.",
-  "reporting.writtenChecks_one":
-    "{count} kiểm tra đang mở về {deals} cần trả lời.",
-  "reporting.writtenChecks_other":
-    "{count} kiểm tra đang mở về {deals} cần trả lời.",
-  "reporting.writtenChecksOnly_one": "{count} kiểm tra đang mở cần trả lời.",
-  "reporting.writtenChecksOnly_other": "{count} kiểm tra đang mở cần trả lời.",
-  "reporting.writtenChecksDeals_one": "{count} deal khác nhau",
-  "reporting.writtenChecksDeals_other": "{count} deal khác nhau",
   "analytics.intervention.notPermitted":
     "Bạn không có quyền xem các kiểm tra dự báo.",
   "health.needsFix": "Cần sửa",
@@ -23952,13 +23803,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Mục tiêu chưa đủ: ít nhất một thành viên chưa có mục tiêu tháng, hiện là {subtotal}",
   "progress.goalIncompleteLine":
     "Mục tiêu chưa đủ: đã đặt {set}/{needed} tháng, hiện là {subtotal}",
-  "progress.goal.set": "Đã đặt",
-  "progress.goal.zero": "Bằng không",
   "progress.goal.missing": "Chưa đặt mục tiêu",
   "progress.goal.incomplete": "Mục tiêu chưa đủ",
   "progress.goal.withheld": "Bị ẩn",
   "progress.goal.other_currency": "Bằng tiền tệ khác",
-  "progress.goal.changed_outside_plan": "Đã đổi ngoài kế hoạch",
   "progress.goalChanged":
     "Một tháng của mục tiêu này đã được đổi ngoài kế hoạch. Quản lý nên xem lại kế hoạch.",
   "progress.completion": "{percent}% mục tiêu",
