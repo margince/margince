@@ -291,8 +291,8 @@ if [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
 This alarm runs the SMB tier only, and that shapes what the finding means: SMB
 is the corpus most installations look like, while the PERF-7 SLO binds at
 mid-market. So a breach here is worse than it sounds — the SMALLER corpus is
-already over a bound the larger one has to meet. Mid-market is not measured by
-any schedule; run \`make bench-perf\` by hand to see it.
+already over a bound the larger one has to meet. The weekly run also measures
+mid-market in its own job, which files nothing until its budget is set.
 
 The breach is recorded, and the run proposes the record as a pull request. Merge
 it only once the breach is understood; until then the published page shows the

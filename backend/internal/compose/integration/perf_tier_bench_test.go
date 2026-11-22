@@ -23,10 +23,9 @@ package integration
 // The write-path regression it once caught by TIMING OUT rather than by
 // measuring is now held deterministically, by the seq_scan count in
 // lastactivity_integration_test.go. Run this one with `make bench-perf`
-// (mid-market, writes a record) or `make bench-perf-check` (SMB, writes
+// (mid-market, writes a record) or `make bench-perf-check` (one tier, writes
 // nothing); the scheduled workflow records SMB weekly through `make bench-perf
-// BENCH_PERF_TIER=smb`. Mid-market is by hand only, so no schedule measures
-// the tier the SLO actually binds at.
+// BENCH_PERF_TIER=smb` and checks mid-market through `make bench-perf-check`.
 
 import (
 	"context"
@@ -176,6 +175,12 @@ func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
 		writeTierBenchRecord(t, owner, report)
 	}
 	if err := report.Gate(); err != nil {
+		// MARGINCE_BENCH_GATE=0 measures only: the p95 lines above are the result,
+		// and the breach is named so a reader sees what an enforced run would fail.
+		if os.Getenv("MARGINCE_BENCH_GATE") == "0" {
+			t.Logf("PERF budget gate not enforced (MARGINCE_BENCH_GATE=0): %v", err)
+			return
+		}
 		t.Fatalf("PERF budget gate is red: %v", err)
 	}
 }

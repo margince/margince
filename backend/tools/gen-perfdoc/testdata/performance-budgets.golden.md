@@ -18,7 +18,8 @@ Re-measure with `make bench-perf`, `make bench-record`,
 `make bench-perf-check` and `make bench-mobile-check` measure
 without recording. The weekly scheduled job records the SMB tier of
 `bench-perf` and `bench-mobile` and opens a pull request with the
-records, so a row changes only when a maintainer merges it.
+records, so a row changes only when a maintainer merges it. It also
+measures the mid-market tier with `bench-perf-check`, which records nothing.
 
 ## The budgets
 

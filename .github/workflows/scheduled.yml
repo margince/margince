@@ -42,10 +42,10 @@ name: scheduled
 #                        mid-market, and a row measured below it renders
 #                        `inconclusive`, never `within budget`. Weekly is the
 #                        honest cadence for a budget nobody merges against —
-#                        drift nobody looks for is drift nobody finds. SMB only:
-#                        mid-market does not finish inside a CI budget (see
-#                        bench-perf-check), and an alarm that cannot finish files
-#                        a breach it never measured.
+#                        drift nobody looks for is drift nobody finds. Two jobs,
+#                        one per tier: SMB is the drift alarm; mid-market is where
+#                        the SLO binds and reports its p95 without enforcing it
+#                        until its budget is set from runner measurements.
 #
 #   vendor live        — one real call to each data vendor, daily. The offline
 #                        tests read a recording of the vendor's API, which stays
@@ -95,7 +95,11 @@ on:
   workflow_dispatch:
     inputs:
       perf:
-        description: "Also run and record the PERF budgets (SMB tier and mobile; mid-market is by hand, `make bench-perf`)"
+        description: "Also run and record the PERF budgets (SMB tier and mobile) and measure mid-market once"
+        type: boolean
+        default: false
+      perf_measure:
+        description: "Measure PERF-3/PERF-7 on the mid-market tier on five runners and print each p95 in the job summary (nothing recorded)"
         type: boolean
         default: false
       trend:
@@ -362,9 +366,8 @@ jobs:
     runs-on: ubuntu-latest
     # The SMB tier measures in under a minute on a fast machine; 30 leaves room
     # for a slow runner and for the seed, without letting a hung one sit until
-    # the six-hour default. Mid-market is deliberately not here — see
-    # bench-perf-check in backend/Makefile for why a job that cannot finish is
-    # worse than no job.
+    # the six-hour default. Mid-market has its own job, perf-mid-market, because
+    # its seed is two orders of magnitude larger.
     #
     # The target's own `go test -timeout` is 20m, DERIVED from this rather than
     # equal to it: checkout, setup-go, the cache restore and `db-up` all spend
@@ -430,6 +433,66 @@ jobs:
           path: docs/reference/perfbench/bench-perf.json
           retention-days: 30
           if-no-files-found: ignore
+
+  # PERF-3/PERF-7 on the mid-market tier, where the PERF-7 SLO binds. It runs
+  # `make bench-perf-check`, which writes no record, and it does not feed the
+  # reporter: it opens no issue and proposes no pull request.
+  #
+  # BENCH_PERF_GATE below is the single line that decides whether a breach fails
+  # the job. It stays "0" (report the p95, never fail) until the budget is set
+  # from several runner measurements: a number taken from a laptop would file a
+  # false breach every week. A dispatch with `perf_measure` always measures only,
+  # on five runners at once, so the spread between runners is visible.
+  perf-mid-market:
+    name: perf budgets (PERF-3/PERF-7, mid-market tier, run ${{ matrix.run }})
+    if: github.event.schedule == '0 2 * * 1' || (github.event_name == 'workflow_dispatch' && (inputs.perf || inputs.perf_measure))
+    runs-on: ubuntu-latest
+    # The go test budget (45m) sits inside this, with room for checkout, the cache
+    # restore and `db-up`, for the reason given on perf-budgets.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        run: ${{ fromJSON(github.event_name == 'workflow_dispatch' && inputs.perf_measure && '[1,2,3,4,5]' || '[1]') }}
+    env:
+      BENCH_PERF_GATE: "0"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Restore the Go build cache
+        uses: ./.github/actions/go-build-cache
+        with:
+          flavor: integration
+      - name: Start the dev infra stack (compose + app role)
+        working-directory: .
+        run: make db-up
+      - name: PERF-3/PERF-7 on the mid-market tier
+        working-directory: .
+        env:
+          MEASURE_ONLY: ${{ inputs.perf_measure }}
+        run: |
+          set -o pipefail
+          if [ "$MEASURE_ONLY" = "true" ]; then BENCH_PERF_GATE=0; fi
+          make bench-perf-check BENCH_PERF_CHECK_TIER=mid_market BENCH_PERF_CHECK_TIMEOUT=45m 2>&1 | tee bench.log
+      - name: Report the p95 of this run
+        if: always()
+        working-directory: .
+        run: |
+          {
+            echo "### mid-market tier, run ${{ matrix.run }}"
+            echo
+            echo "| query | p50 | p95 | p99 | budget |"
+            echo "|---|---|---|---|---|"
+            sed -nE 's/.*perfbench \[[a-z_]+\]: ([a-z_0-9]+) p50=([^ ]+) p95=([^ ]+) p99=([^ ]+) \(budget ([^,]+),.*/| \1 | \2 | \3 | \4 | \5 |/p' bench.log
+            grep -h "gate not enforced" bench.log || true
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # PERF-1's PERCEIVED budget (MOBILE-AC-2), the browser half of what
   # perf-budgets measures over HTTP.
