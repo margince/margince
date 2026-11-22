@@ -25,8 +25,8 @@ const (
 	// meets its foreign key, which is the proof it got that far.
 	insertNotice = `INSERT INTO notice (recipient_user_id, kind, subject, captured_by, target_type, target_id)
 		VALUES (uuidv7(), 'automation', 's', 'system:x', $1, uuidv7())`
-	insertContribution = `INSERT INTO report_edition_contribution (edition_id, metric, context_id, contribution_key, group_key, source_type, source_id, fact)
-		VALUES (uuidv7(), 'm', 'c', 'k', 'g', $1, uuidv7(), '{}')`
+	insertContribution = `INSERT INTO report_edition_contribution (edition_id, metric, context_id, contribution_key, source_type, source_id, fact)
+		VALUES (uuidv7(), 'm', 'c', 'k', $1, uuidv7(), '{}')`
 )
 
 func TestANoticeNamesATargetTypeAnApprovalOrTheNoticeItselfCanName(t *testing.T) {

@@ -38,9 +38,7 @@ func TestDeletingAMemberTakesTheirRunLedgersWithThem(t *testing.T) {
 		`INSERT INTO brief_run (user_id, as_of, candidate_count, local_day, revenue_norm_minor)
 		 VALUES ($1, now(), 0, current_date, 1)`,
 		`INSERT INTO notification_digest_run (user_id, digest_date) VALUES ($1, current_date)`,
-		`INSERT INTO report_run (asked_by, captured_by, group_floor, query, result_columns, result_rows,
-		                         schema_version, total_safe, withheld)
-		 VALUES ($1, 'human:test', 0, '{}', '[]', '[]', 'v1', false, false)`,
+		`INSERT INTO report_run (asked_by, captured_by, group_floor, query) VALUES ($1, 'human:test', 0, '{}')`,
 		`INSERT INTO worklist_snapshot (reader_id, as_of, buckets, expires_at, params_fingerprint, rows)
 		 VALUES ($1, now(), '{}', now() + interval '1 hour', 'fingerprint', '[]')`,
 	} {
