@@ -404,7 +404,7 @@ func TestAnOpenUndatedTaskIsTheMoment(t *testing.T) {
 	// The package's fixed noon, not now: the "due later today" case
 	// below asks a CALENDAR-day question, so a real clock decides it by what
 	// hour the suite happens to run. Two hours past 22:00 is tomorrow, and the
-	// sentence flips to "Due in 1 days."
+	// sentence flips to "Due tomorrow."
 	filed := now.Add(-48 * time.Hour)
 	page := &crmcontracts.Contact360{
 		NextSteps: &struct {

@@ -11,29 +11,30 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
-var dueWords = struct{ Ahead, One, Today langcopy.Phrase }{
-	Ahead: langcopy.Phrase{En: "Due in %d days.", De: "Fällig in %d Tagen.", Vi: "Đến hạn sau %d ngày."},
-	One:   langcopy.Phrase{En: "Due in one day.", De: "In einem Tag fällig.", Vi: "Đến hạn sau một ngày."},
-	Today: langcopy.Phrase{En: "Due today.", De: "Heute fällig.", Vi: "Đến hạn hôm nay."},
+var dueWords = struct{ Ahead, Tomorrow, Today langcopy.Phrase }{
+	Ahead:    langcopy.Phrase{En: "Due in %d days.", De: "Fällig in %d Tagen.", Vi: "Đến hạn sau %d ngày."},
+	Tomorrow: langcopy.Phrase{En: "Due tomorrow.", De: "Morgen fällig.", Vi: "Đến hạn ngày mai."},
+	Today:    langcopy.Phrase{En: "Due today.", De: "Heute fällig.", Vi: "Đến hạn hôm nay."},
 }
 
 // DeadlineWords gives both record cards the same explanation of a dated task.
-func DeadlineWords(due time.Time, now time.Time, language string) string {
-	if words, late := LateWords(&due, now, language); late {
+func DeadlineWords(due time.Time, now time.Time, loc *time.Location, language string) string {
+	if words, late := LateWords(&due, now, loc, language); late {
 		return words
 	}
-	return UpcomingWords(due, now, language)
+	return UpcomingWords(due, now, loc, language)
 }
 
-// UpcomingWords counts remaining whole days, rather than calendar boundaries.
-func UpcomingWords(due time.Time, now time.Time, language string) string {
+// UpcomingWords counts calendar days in loc, as the task table's badge beside
+// it does, so a task due at 01:00 tomorrow reads "tomorrow" at 23:00 today.
+func UpcomingWords(due time.Time, now time.Time, loc *time.Location, language string) string {
 	said := langcopy.For(language)
-	days := elapsed.FullDaysUntil(now, due)
+	days := elapsed.Days(now, due, loc)
 	if days <= 0 {
 		return said.Say(dueWords.Today)
 	}
 	if days == 1 {
-		return said.Say(dueWords.One)
+		return said.Say(dueWords.Tomorrow)
 	}
 	return fmt.Sprintf(said.Say(dueWords.Ahead), days)
 }

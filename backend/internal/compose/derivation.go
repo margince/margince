@@ -21,7 +21,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -255,32 +254,7 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	plan.asOf = q.AsOf
 	plan.baseCurrency = q.BaseCurrency
 
-	// Drill-through columns: the row identity plus every dimension and
-	// measure the vocabulary declares — a derived measure (e.g. the
-	// weighted value) sits NEXT TO its inputs, so the lineage bottoms
-	// out at base values with no opaque intermediate step.
-	//
-	// On an install-wide report these rows carry colleagues' owners and
-	// amounts, which adds no disclosure: deal and project are identity tables,
-	// deal values are open to every seat that may read the deal, and the
-	// ordinary read serves this caller the same owner and amount. What that
-	// read withholds, a field mask, is withheld here too (fetchDerivation's
-	// mask exclusion). Held by:
-	// TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore.
-	plan.columns = []string{"id"}
-	plan.selects = []string{"t.id AS id"}
-	for _, name := range sortedKeys(spec.dimensions) {
-		plan.columns = append(plan.columns, name)
-		plan.selects = append(plan.selects, spec.dimensions[name]+" AS "+name)
-	}
-	for _, name := range sortedKeys(spec.measures) {
-		plan.columns = append(plan.columns, name)
-		expression := spec.measures[name]
-		if coverage, ok := spec.sumCoverage[name]; ok {
-			expression = moneytotal.CompleteAggregateSQL(expression, coverage, false)
-		}
-		plan.selects = append(plan.selects, expression+" AS "+name)
-	}
+	plan.columns, plan.selects = derivationColumns(spec)
 	for _, agg := range plan.aggregates {
 		name, sel, err := aggregateSelect(spec, agg)
 		if err != nil {
@@ -292,9 +266,8 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 	return plan, nil
 }
 
-// grantedSpec is the spec with the dimensions and measures this caller may
-// not read removed, so a drill-through selects only what the caller could
-// have grouped or aggregated by themselves.
+// grantedSpec is the spec without the dimensions, drill columns and measures
+// this caller may not read, so a drill-through selects only what they may read.
 func grantedSpec(ctx context.Context, spec reportSpec) reportSpec {
 	narrowed := spec
 	narrowed.dimensions = map[string]string{}
@@ -304,6 +277,10 @@ func grantedSpec(ctx context.Context, spec reportSpec) reportSpec {
 	narrowed.measures = map[string]string{}
 	for _, name := range grantedNames(ctx, spec, spec.measures) {
 		narrowed.measures[name] = spec.measures[name]
+	}
+	narrowed.drillColumns = map[string]string{}
+	for _, name := range grantedNames(ctx, spec, spec.drillColumns) {
+		narrowed.drillColumns[name] = spec.drillColumns[name]
 	}
 	narrowed.defaultAggs = grantedDefaultAggregates(ctx, spec)
 	if len(narrowed.measures) < len(spec.measures) {

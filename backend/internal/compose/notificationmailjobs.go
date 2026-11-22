@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log/slog"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -323,11 +324,16 @@ func (w *notificationMailWorker) recordMailFailure(ctx context.Context, notice i
 	}
 }
 
+// notificationSubjectLimit bounds the whole subject, prefix included. The
+// body still carries the notice's full sentence.
+const notificationSubjectLimit = 100
+
 // notificationMailSubject is what a colleague sees in their list: the prefix
 // that says somebody is waiting, then the notice's own line.
 func notificationMailSubject(notice notices.Notice, words mailcopy.Copy) string {
 	notice = notice.InLanguage(textlang.Lang(words.Language))
-	return words.NotificationSubject + mailcopy.OneLine(notice.Subject)
+	room := notificationSubjectLimit - utf8.RuneCountInString(words.NotificationSubject)
+	return words.NotificationSubject + mailcopy.WordSnippet(notice.Subject, room)
 }
 
 // notificationMessage is the message itself: why it arrived, what is waiting,

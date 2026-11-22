@@ -185,7 +185,7 @@ func (said momentCopy) openPromiseWhyNow(now time.Time, task crmcontracts.Activi
 		logged := occurredday.DateIn(occurredday.Moment{At: task.OccurredAt, DateOnly: occurredday.IsDay(task.OccurredPrecision)}, said.zone)
 		return fmt.Sprintf(said.Say(momentWords.TaskUndated), logged.Format(time.DateOnly))
 	}
-	return owedwork.DeadlineWords(*task.DueAt, now, string(said.Lang()))
+	return owedwork.DeadlineWords(*task.DueAt, now, said.zone, string(said.Lang()))
 }
 
 // overduePromiseMoment: we are past the date on something we said we would
@@ -390,7 +390,7 @@ func (said momentCopy) openClaimWhyNow(now time.Time, claim crmcontracts.Convers
 	if claim.DueAt == nil {
 		return said.Say(momentWords.ClaimUndated)
 	}
-	return owedwork.UpcomingWords(*claim.DueAt, now, string(said.Lang()))
+	return owedwork.UpcomingWords(*claim.DueAt, now, said.zone, string(said.Lang()))
 }
 
 // claimMomentKey names WHICH promise a card is about, not merely that it is a

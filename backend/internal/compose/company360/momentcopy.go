@@ -3,11 +3,20 @@
 
 package company360
 
-import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+import (
+	"time"
 
-type momentCopy struct{ langcopy.Spoken }
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+)
 
-func momentCopyFor(language string) momentCopy { return momentCopy{langcopy.For(language)} }
+type momentCopy struct {
+	langcopy.Spoken
+	zone *time.Location
+}
+
+func momentCopyFor(language string) momentCopy {
+	return momentCopy{Spoken: langcopy.For(language), zone: time.UTC}
+}
 
 var momentWords = struct {
 	TaskUndated    langcopy.Phrase

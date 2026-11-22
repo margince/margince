@@ -6,6 +6,7 @@ package compose
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
@@ -65,5 +66,30 @@ func TestACommitmentEmailNamesItsFactsOneALine(t *testing.T) {
 	bare := notificationMessage(notice, approvalMailFacts{Rich: true, Deadline: facts.Deadline}, "https://example.test", words)
 	if strings.Count(bare.Text, notice.Subject) != 1 || !strings.Contains(bare.Text, "Decision deadline: tomorrow") {
 		t.Errorf("an email with no facts must have no heading and still its deadline: %q", bare.Text)
+	}
+}
+
+// A phone shows about sixty characters of a subject, so the subject is cut to
+// a whole word and the body keeps the sentence the cut left out.
+func TestALongApprovalSubjectEndsOnAWholeWordAndTheBodyKeepsItAll(t *testing.T) {
+	summary := `Set up a partner program on company "ZZ email approval company mwg26xsk" (kinds: referral), with no margin tier`
+	notice := notices.Notice{Subject: summary, Body: "Decision deadline: soon"}
+	for _, language := range []string{"en", "de", "vi"} {
+		words := mailcopy.For(language)
+		subject := notificationMailSubject(notice, words)
+		if n := utf8.RuneCountInString(subject); n > 100 {
+			t.Errorf("%s: subject is %d characters: %q", language, n, subject)
+		}
+		kept, cut := strings.CutSuffix(strings.TrimPrefix(subject, words.NotificationSubject), "…")
+		if !cut || !strings.HasPrefix(summary, kept) || summary[len(kept)] != ' ' {
+			t.Errorf("%s: %q does not end on a whole word of the summary", language, subject)
+		}
+		if body := notificationMessage(notice, approvalMailFacts{}, "https://example.test", words).Text; !strings.Contains(body, summary) {
+			t.Errorf("%s: the body lost the full sentence", language)
+		}
+	}
+	short := notices.Notice{Subject: "Set up a partner program"}
+	if got := notificationMailSubject(short, mailcopy.For("en")); got != "Your decision is needed: Set up a partner program" {
+		t.Errorf("a short subject changed: %q", got)
 	}
 }

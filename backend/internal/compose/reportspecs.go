@@ -254,7 +254,8 @@ var prebuiltReports = map[string]reportSpec{
 			colPartnerCompanyID: tableCompany,
 			colCompanyID:        tableCompany,
 		},
-		defaultBy: moneyDefaultBy(fieldStageID),
+		drillColumns: dealCompanyDrillColumn,
+		defaultBy:    moneyDefaultBy(fieldStageID),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "amount_minor_sum"},
@@ -456,8 +457,10 @@ var prebuiltReports = map[string]reportSpec{
 		filterScopes: projectFilterScope,
 		// partner_company_id points at a company a normal deal read masks
 		// per row when the caller cannot open it, so grouping by it must not
-		// name one they could not have seen.
-		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany},
+		// name one they could not have seen. company_id is never grouped, and
+		// is scoped so its drill column is blanked the same way.
+		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany, colCompanyID: tableCompany},
+		drillColumns:    dealCompanyDrillColumn,
 		defaultBy:       moneyDefaultBy(fieldWinProbabilityBand),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
