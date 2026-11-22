@@ -45,7 +45,12 @@ var initiativeObjectives = []crmcontracts.ReportingMetricID{
 
 // setupPeriods are the periods a proposal may name: every reporting period
 // but a custom window, which the words cannot bound.
-var setupPeriods = []string{"this_week", "last_week", "this_month", "last_month", "this_quarter", "last_quarter", "last_year"}
+var setupPeriods = []string{
+	string(crmcontracts.ReportSetupSelectionPeriodThisWeek), string(crmcontracts.ReportSetupSelectionPeriodLastWeek),
+	string(crmcontracts.ReportSetupSelectionPeriodThisMonth), string(crmcontracts.ReportSetupSelectionPeriodLastMonth),
+	string(crmcontracts.ReportSetupSelectionPeriodThisQuarter), string(crmcontracts.ReportSetupSelectionPeriodLastQuarter),
+	string(crmcontracts.ReportSetupSelectionPeriodLastYear),
+}
 
 // productLister is the product catalog read under the reader's own grant.
 type productLister interface {

@@ -31,10 +31,10 @@ func reportingPrevious(frame crmcontracts.ReportingContext) crmcontracts.Reporti
 		return crmcontracts.ReportingWindow{StartAt: start.AddDate(0, 0, -7), EndAt: end.In(start.Location()).AddDate(0, 0, -7)}
 	}
 	months := 1
-	switch kind {
-	case "this_quarter", "last_quarter":
+	switch crmcontracts.ReportingSelectionPeriod(kind) {
+	case crmcontracts.ReportingSelectionPeriodThisQuarter, crmcontracts.ReportingSelectionPeriodLastQuarter:
 		months = 3
-	case "last_year":
+	case crmcontracts.ReportingSelectionPeriodLastYear:
 		months = 12
 	}
 	previousStart := start.AddDate(0, -months, 0)
