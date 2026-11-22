@@ -24,13 +24,12 @@ import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { OverflowMenu } from "../../design-system/overflowmenu";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import { useMessageAudience } from "../../lib/audienceservice";
 import { useCanWriteRecord } from "../../lib/capability";
 import { captureReviewTarget } from "../../lib/capturereview";
-import { labelFor, valueFor } from "../../lib/labelfor";
+import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
 import { hashWithParams } from "../../lib/urlstate";
@@ -51,62 +50,13 @@ import {
   RelinkModal,
 } from "../mail/compose";
 import { ActivityFilesAction } from "./activityfiles";
+import { audienceWords } from "./audiencewords";
 import { DealRelevanceAction, DealRelevanceBadge } from "./dealdecline";
 import { MoveButton } from "./movebutton";
 import { ProjectFilingAction } from "./projectfiling";
 
 type Activity = components["schemas"]["Activity"];
 type ActivityAudience = components["schemas"]["ActivityAudience"];
-type AudienceWords = Readonly<{
-  title: MessageKey;
-  legend: MessageKey;
-  scope: MessageKey;
-  hints?: Readonly<Record<ActivityAudience, MessageKey>>;
-}>;
-
-const MESSAGE_AUDIENCE_WORDS: AudienceWords = {
-  title: "compose.audienceTitle",
-  legend: "compose.audienceLegend",
-  scope: "compose.audienceNote",
-};
-
-// The choices' hints for a row that is not a message, which name no noun.
-const ROW_AUDIENCE_HINTS: Readonly<Record<ActivityAudience, MessageKey>> = {
-  workspace: "activity.audience.workspaceHint",
-  participants: "activity.audience.participantsHint",
-  selected: "activity.audience.selectedHint",
-};
-
-// The visibility dialog names the kind of row it changes, so a note is not
-// called a message.
-const AUDIENCE_WORDS: Readonly<Record<Activity["kind"], AudienceWords>> = {
-  email: MESSAGE_AUDIENCE_WORDS,
-  message: MESSAGE_AUDIENCE_WORDS,
-  note: {
-    title: "activity.audience.noteTitle",
-    legend: "activity.audience.noteLegend",
-    scope: "activity.audience.noteScope",
-    hints: ROW_AUDIENCE_HINTS,
-  },
-  call: {
-    title: "activity.audience.callTitle",
-    legend: "activity.audience.callLegend",
-    scope: "activity.audience.callScope",
-    hints: ROW_AUDIENCE_HINTS,
-  },
-  meeting: {
-    title: "activity.audience.meetingTitle",
-    legend: "activity.audience.meetingLegend",
-    scope: "activity.audience.meetingScope",
-    hints: ROW_AUDIENCE_HINTS,
-  },
-  task: {
-    title: "activity.audience.taskTitle",
-    legend: "activity.audience.taskLegend",
-    scope: "activity.audience.taskScope",
-    hints: ROW_AUDIENCE_HINTS,
-  },
-};
 type AudienceMember = components["schemas"]["AudienceMember"];
 
 type RowVerbProps = Readonly<{
@@ -417,7 +367,7 @@ export function AudienceAction({
   if (activity.captured_by.startsWith("connector:") && !internal) {
     return null;
   }
-  const words = valueFor(AUDIENCE_WORDS, activity.kind, MESSAGE_AUDIENCE_WORDS);
+  const words = audienceWords(activity.kind);
   return (
     <>
       <Button

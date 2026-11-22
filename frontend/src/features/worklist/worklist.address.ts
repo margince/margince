@@ -112,8 +112,8 @@ export function useWorklistAddress(
     }
     setParams(next);
   };
-  // A scope word and a named owner together are refused, so a scope pressed
-  // while a colleague's queue is open goes back to the scope's own queue.
+  // A scope word and a named owner together are refused. So a scope pressed
+  // over a colleague's queue opens the scope's own queue.
   const setScope = (next: WorklistScope) => {
     const params = new Map(currentParams());
     params.set(scopeParam, next);
