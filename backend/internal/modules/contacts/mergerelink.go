@@ -355,25 +355,12 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	return nil
 }
 
-// relinkParticipantRows moves who-was-in-it onto the survivor.
+// relinkParticipantRows moves who was in a message onto the survivor.
 //
-// activity_link says how a message is FILED and moves with the rest of the
-// satellites above; activity_participant says who was IN it, and it used to stay
-// behind. The result was a merge that looked complete and left the interaction
-// graph — "who on our team knows this contact" — crediting a record no read
-// returns, because every reader of those rows matches contact_id exactly and none
-// walks merged_into_id.
-//
-// Delete before repoint, because uq_activity_participant spans
-// (activity, role, user, contact, address, channel_user_id): where BOTH halves of
-// the merge sat on one activity in the same role and with the same other arms,
-// they are one party recorded twice, so the source's row is dropped rather than
-// collided into the survivor's. Two rows differing by address are NOT that case
-// — they are two addresses of one party — and both repoint, which is what
-// capture would have written had the records been one all along. Two differing
-// by ACCOUNT are the same story in the chat vocabulary, which is why the twin
-// test carries that arm too: without it a merge silently drops one of the two
-// group chats a contact was on.
+// Delete before repoint, because uq_activity_participant_identity spans activity, role
+// and a digest of (user, contact, address, channel_user_id). Two rows that differ only
+// by the merged contact are one party recorded twice, and the source's row is dropped.
+// Rows differing by address or by account are two ways to reach one party and both repoint.
 func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant ap
