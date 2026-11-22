@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -251,43 +252,40 @@ func TestPipelineCurrentDetailReconcilesToTheConvertedHeadline(t *testing.T) {
 	}
 }
 
-// A converted headline and the detail behind it use ONE exchange rate.
-//
-// The handle carries the instant the headline was computed at, so a detail
-// opened later converts the way the headline did rather than the way the rate
-// sheet reads when it is opened.
-//
-// The FX lookup compares by DAY (`rate_date <= as_of::date`), so a rate added
-// during this test cannot separate the two reads — both fall on the same date.
-// What is provable here is that the handle CARRIES the instant and that the
-// detail still reconciles; a rate crossing a day boundary is the case the unit
-// test beside this one pins, where the two instants can be stated exactly.
-func TestPipelineCurrentDetailCarriesTheHeadlinesInstant(t *testing.T) {
-	e := setupForecast(t)
-	seedRate(t, e, "0.5", 1)
-	seedPricedDeal(t, e, "Abroad", 10_000, "USD", "open")
-
-	result := e.runReport(e.Admin(), t, "pipeline-current", pipelineCurrentPlan)
-	row := dealsByStageRow(t, result, e.stages[pipelineTestStage].String())
-	handle, ok := row["derivation_url"].(string)
-	if !ok || handle == "" {
-		t.Fatalf("no derivation handle on the converted row: %+v", row)
+// A corrected rate governs every new report. A drill-through from a figure
+// computed before the correction still sums to that figure. The handle carries
+// the instant, and the detail reads the rate versions of then.
+func TestPipelineCurrentDetailKeepsTheRateItsHeadlineUsedAfterACorrection(t *testing.T) {
+	e := integration.Setup(t)
+	e.SeedOpenForeignDeal(t, "USD", 10_000)
+	setRate := func(rate string) {
+		if _, err := e.Deals.SetFxRate(e.Admin(), deals.SetFxRateInput{FromCurrency: "USD", Rate: rate}); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if !strings.Contains(handle, "as_of=") {
-		t.Fatalf("the handle pins no instant, so the detail will convert at "+
-			"whatever the sheet says when it is opened: %s", handle)
+	engine := newReportEngine(e.Pool)
+	request := reportRequest{Aggregates: []reportAggregate{{Fn: aggFnSum, Field: fieldAmountBaseMinor, As: "base"}}}
+	run := func() reportOutcome {
+		outcome, err := engine.Run(e.Admin(), "pipeline-current", request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return outcome
 	}
-	headline := wireInt(t, row, "base")
-	if headline != 5_000 {
-		t.Fatalf("headline converted to %d, want 5000 at the rate in force", headline)
+	setRate("0.5")
+	headline := run()
+	setRate("0.9")
+	detail, err := engine.Derive(e.Admin(), "pipeline-current", derivationQuery{
+		Aggregates: headline.Aggregates, AsOf: headline.GeneratedAt, BaseCurrency: headline.BaseCurrency,
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
-
-	derivation := e.explainReport(e.Admin(), t, "pipeline-current", handle)
-	if len(derivation.Rows) != 1 {
-		t.Fatalf("detail opened %d rows, want the one deal: %+v", len(derivation.Rows), derivation.Rows)
+	if got := valuationJSON(t, detail.Aggregates, "base"); got != "5000" {
+		t.Errorf("drill-through from the old figure summed to %s, want the headline's 5000", got)
 	}
-	if got := wireInt(t, derivation.Aggregates, "base"); got != headline {
-		t.Errorf("detail recomputed to %d, want the headline's %d", got, headline)
+	if got := valuationJSON(t, run().Rows[0], "base"); got != "9000" {
+		t.Errorf("a new report read %s, want the corrected rate's 9000", got)
 	}
 }
 

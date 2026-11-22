@@ -173,6 +173,18 @@ func (e *Env) SeedOpenDealOn(t *testing.T, name string, company ids.UUID) ids.UU
 	return ids.UUID(d.Id)
 }
 
+// SeedOpenForeignDeal creates an open deal in the given currency in the default
+// pipeline, acting as admin.
+func (e *Env) SeedOpenForeignDeal(t *testing.T, currency string, amountMinor int64) {
+	t.Helper()
+	pipeline, open, _ := DealFixture(t, e)
+	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Abroad", PipelineID: pipeline, StageID: open, AmountMinor: &amountMinor, Currency: &currency, Source: "manual",
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // MakeCapturePrivate turns a seeded contact or company into a
 // capture-private row — `visibility='owner'`, owned by the given user — the
 // state a connector leaves an unpromoted contact in. Contact, company,
