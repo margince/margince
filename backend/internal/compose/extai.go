@@ -11,18 +11,23 @@ package compose
 // answer check.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/pdftext"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -79,6 +84,9 @@ func (a callAI) Run(ctx context.Context, name extension.AITaskName, in extension
 	if err != nil {
 		return extension.AIResult{}, err
 	}
+	if err := a.refuseWhileAContactIsRestricted(ctx); err != nil {
+		return extension.AIResult{}, err
+	}
 	validate := extensionAnswerCheck(task)
 	resp, err := ai.Ask(ai.WithExtensionTask(ctx, string(task.Name)), lane, req, validate)
 	if err != nil {
@@ -93,6 +101,36 @@ func (a callAI) Run(ctx context.Context, name extension.AITaskName, in extension
 		out.JSON = json.RawMessage(resp.Text)
 	}
 	return out, nil
+}
+
+// refuseWhileAContactIsRestricted refuses every extension AI call in a
+// workspace that holds a contact under a restriction of processing.
+// The core cannot see where a unit's input came from, so the unit's own
+// Contacts and NoContact statements are not what the check rests on.
+// The router still checks the named contacts.
+func (a callAI) refuseWhileAContactIsRestricted(ctx context.Context) error {
+	check := a.rt.deps.anyContactRestricted
+	if check == nil {
+		check = func(ctx context.Context) (bool, error) {
+			restricted := false
+			err := database.WithWorkspaceTx(ctx, a.rt.deps.pool, func(tx pgx.Tx) error {
+				var err error
+				restricted, err = storekit.AnyContactRestricted(ctx, tx)
+				return err
+			})
+			return restricted, err
+		}
+	}
+	restricted, err := check(ctx)
+	if err != nil {
+		slog.Default().WarnContext(ctx, "extension AI call could not read restrictions", "error", err)
+		return fmt.Errorf("%w: restrictions of processing could not be read", extension.ErrAIUnavailable)
+	}
+	if restricted {
+		return fmt.Errorf("%w: a contact is under a restriction of processing, and an extension's input cannot be checked against it",
+			extension.ErrAIUnavailable)
+	}
+	return nil
 }
 
 // declaredAITask finds the task the named unit declared in this boot's set.
@@ -190,11 +228,10 @@ func extensionAIDocumentTexts(ctx context.Context, task extension.AITask, docs [
 		if len(doc.Body) > maxDocumentBytes {
 			return nil, fmt.Errorf("%w: a document is over %d MiB", extension.ErrInvalid, maxDocumentBytes>>20)
 		}
-		mime := mediaTypeOf(doc.ContentType)
-		switch {
-		case model.CarriesMIME(documentTextMIMEs, mime):
+		switch extensionDocumentKind(doc.Body) {
+		case documentKindText:
 			out = append(out, strings.TrimSpace(string(doc.Body)))
-		case mime == documentPDFMIME:
+		case documentKindPDF:
 			text, err := processPDFReader.Read(ctx, doc.Body, maxExtensionAIInputChars)
 			switch {
 			case errors.Is(err, pdftext.ErrNoTextLayer):
@@ -208,6 +245,27 @@ func extensionAIDocumentTexts(ctx context.Context, task extension.AITask, docs [
 		}
 	}
 	return out, nil
+}
+
+type documentKind int
+
+const (
+	documentKindOther documentKind = iota
+	documentKindText
+	documentKindPDF
+)
+
+// extensionDocumentKind goes by the bytes and never by the unit's label, which
+// the unit or a sender chose. A PDF labelled text/plain would otherwise skip the
+// PDF reader and the scan refusal and reach the model as raw bytes.
+func extensionDocumentKind(body []byte) documentKind {
+	if bytes.HasPrefix(body, []byte("%PDF-")) {
+		return documentKindPDF
+	}
+	if strings.HasPrefix(http.DetectContentType(body), "text/") {
+		return documentKindText
+	}
+	return documentKindOther
 }
 
 // extensionAnswerCheck is the answer's own check, fed back to the model on a

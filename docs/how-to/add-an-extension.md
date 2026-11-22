@@ -1610,7 +1610,10 @@ The rules:
   characters, and the call log keeps it, so a rename splits one task's history.
 - **Name the contacts the call carries** in `Contacts`, or say in `NoContact` why it carries none. A contact
   under a restriction of processing refuses the call. A call that does neither is refused with `ErrInvalid`.
-- **A PDF is read as text** by the reader the core uses for its own PDFs. A scan with no text layer is refused
+  The core cannot check where your input came from, so it also refuses every AI call while any contact in the
+  workspace is under a restriction of processing. The error is `ErrAIUnavailable`, and the call may be tried
+  again after the restriction lifts.
+- **A document is read by its bytes, not its label.** A PDF is read as text by the reader the core uses for its own PDFs. A scan with no text layer is refused
   with `ErrAIScannedDocument`. No document goes to a model as bytes, and an image is refused with
   `ErrAIDocumentType`.
 - **`Documents: true` is required** to pass documents. Text types go through as text.

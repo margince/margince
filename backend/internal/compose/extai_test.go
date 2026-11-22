@@ -58,7 +58,10 @@ func aiRuntime(t *testing.T, cfg ai.RoutingConfig, fake *ai.FakeClient) (*callRu
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	return &callRuntime{
 		unit: "books", version: "1.0.0", live: true, callCtx: ctx,
-		deps: extensionRuntimeBinding{pool: &pgxpool.Pool{}, ai: path.ExtensionTask},
+		deps: extensionRuntimeBinding{
+			pool: &pgxpool.Pool{}, ai: path.ExtensionTask,
+			anyContactRestricted: func(context.Context) (bool, error) { return false, nil },
+		},
 	}, calls
 }
 
@@ -223,7 +226,8 @@ func TestDocumentsAreRefusedForATaskThatDoesNotDeclareThem(t *testing.T) {
 	if _, err := rt.AI().Run(t.Context(), "summarise", in); !errors.Is(err, extension.ErrInvalid) {
 		t.Fatalf("err = %v, want ErrInvalid", err)
 	}
-	in.Documents = []extension.AIDocument{{ContentType: "image/png", Body: []byte("x")}}
+	png := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
+	in.Documents = []extension.AIDocument{{ContentType: "text/plain", Body: png}}
 	if _, err := rt.AI().Run(t.Context(), "invoice_total", in); !errors.Is(err, extension.ErrAIDocumentType) {
 		t.Fatalf("an image: err = %v, want ErrAIDocumentType", err)
 	}
@@ -257,5 +261,82 @@ func TestPreflightRefusesABadOrRepeatedAITask(t *testing.T) {
 		if err := preflightAITasks(e); err == nil {
 			t.Errorf("%s: want a refusal", name)
 		}
+	}
+}
+
+func blankPDF(t *testing.T, text string) []byte {
+	t.Helper()
+	doc := fpdf.New("P", "mm", "A4", "")
+	doc.AddPage()
+	if text != "" {
+		doc.SetFont("Helvetica", "", 12)
+		doc.Cell(0, 8, text)
+	}
+	var out bytes.Buffer
+	if err := doc.Output(&out); err != nil {
+		t.Fatal(err)
+	}
+	return out.Bytes()
+}
+
+func TestADocumentIsReadByItsBytesAndNotByItsLabel(t *testing.T) {
+	fake := ai.NewFakeClient().Script(`{"total":1}`)
+	rt, _ := aiRuntime(t, offline(), fake)
+	in := noContact()
+
+	in.Documents = []extension.AIDocument{{ContentType: "text/plain", Body: blankPDF(t, "")}}
+	if _, err := rt.AI().Run(t.Context(), "invoice_total", in); !errors.Is(err, extension.ErrAIScannedDocument) {
+		t.Fatalf("a scan labelled text/plain: err = %v, want ErrAIScannedDocument", err)
+	}
+	in.Documents = []extension.AIDocument{{ContentType: "text/plain", Body: blankPDF(t, "Total EUR 77.00")}}
+	if _, err := rt.AI().Run(t.Context(), "invoice_total", in); err != nil {
+		t.Fatal(err)
+	}
+	payload := string(fake.Calls()[0].Payload)
+	if !strings.Contains(payload, "77.00") || strings.Contains(payload, "%PDF") {
+		t.Fatalf("a PDF labelled text/plain must be read as a PDF, got %q", payload)
+	}
+}
+
+// The unit's own statement about its contacts is not what the check rests on:
+// a restricted contact anywhere in the workspace refuses the call.
+func TestARestrictedContactRefusesTheCallWhateverTheUnitSaysAboutItsInput(t *testing.T) {
+	fake := ai.NewFakeClient().Script("x")
+	rt, _ := aiRuntime(t, offline(), fake)
+	rt.deps.anyContactRestricted = func(context.Context) (bool, error) { return true, nil }
+	for name, in := range map[string]extension.AIInput{
+		"a reason that says no contact data": {Text: "hello", NoContact: "not contact data"},
+		"an unrelated contact id":            {Text: "hello", Contacts: []string{ids.NewV7().String()}},
+	} {
+		if _, err := rt.AI().Run(t.Context(), "summarise", in); !errors.Is(err, extension.ErrAIUnavailable) {
+			t.Errorf("%s: err = %v, want ErrAIUnavailable", name, err)
+		}
+	}
+	if n := len(fake.Calls()); n != 0 {
+		t.Fatalf("the model was called %d times", n)
+	}
+}
+
+func TestARebindToAnotherPoolDropsTheLanesBuiltOnTheOldOne(t *testing.T) {
+	before := boundExtensionRuntime()
+	t.Cleanup(func() {
+		extensionRuntimeDeps.mu.Lock()
+		extensionRuntimeDeps.extensionRuntimeBinding = before
+		extensionRuntimeDeps.mu.Unlock()
+	})
+	path, err := NewLocalModelPath(offline())
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, second := &pgxpool.Pool{}, &pgxpool.Pool{}
+	BindExtensionRuntime(first, nil)
+	BindExtensionAI(path.ExtensionTask)
+	BindExtensionRuntime(first, nil)
+	if boundExtensionRuntime().ai == nil {
+		t.Fatal("rebinding the same pool dropped the AI lane")
+	}
+	BindExtensionRuntime(second, nil)
+	if boundExtensionRuntime().ai != nil {
+		t.Fatal("the AI lane built over the old pool survived a rebind to another")
 	}
 }

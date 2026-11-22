@@ -78,6 +78,8 @@ type extensionRuntimeBinding struct {
 	// ai is the model lane a unit's AI calls ride, bound by BindExtensionAI.
 	// Nil on a role that bound none, and AI then answers ErrAIUnavailable.
 	ai extensionAILane
+	// anyContactRestricted replaces the database read of restrictions in tests.
+	anyContactRestricted func(context.Context) (bool, error)
 }
 
 // BindExtensionCapture records the capture pipeline a unit's ingress lands
@@ -126,6 +128,10 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 			"every extension capability from now on runs against the new one")
 	}
 	binding := extensionRuntimeDeps.extensionRuntimeBinding
+	if prev := binding.pool; prev != nil && prev != pool {
+		// Both were built over the old pool, so they are rebound by their own calls.
+		binding.ai, binding.captureSink = nil, nil
+	}
 	binding.pool, binding.vault = pool, vault
 	extensionRuntimeDeps.extensionRuntimeBinding = binding
 }

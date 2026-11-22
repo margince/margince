@@ -1309,6 +1309,7 @@ site `current` on one model and `stale` on three is counted once, as
 | Record | The saved result of one paid test run: one binding, one task. |
 | Band | The grade a record gives its setup. `certified`: good enough to ship. `supported_degraded`: it works, but worse. `not_supported`: do not ship it. |
 
+| Extension task | `extension_task` is the one task every extension's AI call takes. Its scenarios measure that path, not the prompt of any extension, so a grade on it does not vouch for an extension's own prompt. |
 #### The four states
 
 A state says whether a saved result still describes the product as it is

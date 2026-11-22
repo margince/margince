@@ -15,3 +15,4 @@
 # so the gate only warns about it; remove it with the next edit here.
 # Package removals are never allowlistable (deprecate-then-major cycle,
 # ADR-0120 §3).
+github.com/margince/margince/backend/pkg/extension: Runtime.AI: added # Runtime is implemented only by the core and by unit test fakes, so only fakes must add one method; ratified in #8293
