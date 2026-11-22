@@ -5338,6 +5338,7 @@ export const en = {
   "email.thread.details": "Details",
   "email.thread.textForwarded":
     "The text below is the forwarded mail, not words the sender wrote.",
+  "email.thread.noText": "This message has no text.",
   "email.thread.textPartial":
     "Part of the text of this mail could not be read.",
   "email.thread.textUnassessed": "Email text not verified",

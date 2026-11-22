@@ -5398,6 +5398,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "email.thread.details": "Details",
   "email.thread.textForwarded":
     "Der Text unten stammt aus der weitergeleiteten Mail, nicht vom Verfasser selbst.",
+  "email.thread.noText": "Diese Nachricht hat keinen Text.",
   "email.thread.textPartial":
     "Ein Teil des Textes dieser Mail konnte nicht gelesen werden.",
   "email.thread.textUnassessed": "E-Mail-Text nicht geprüft",
