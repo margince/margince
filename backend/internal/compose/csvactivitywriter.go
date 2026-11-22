@@ -32,7 +32,7 @@ func (w *csvWriters) createActivity(ctx context.Context, row migration.Row, type
 	if why.Code != "" {
 		return skippedFor(why), nil
 	}
-	twin := noteTwinKey(w.runID, in, "")
+	twin := noteTwinKey(w.runID, in, nil)
 	if kept, found, err := w.filedNoteTwin(ctx, twin); err != nil {
 		return migration.EnsureResult{}, err
 	} else if found {
@@ -95,7 +95,7 @@ func (w *csvWriters) predictActivityCreate(ctx context.Context, row migration.Ro
 	if why, refused := activityRefusalOf(err, textFields(row.Fields)); refused {
 		return predictUnwritable, why, nil
 	}
-	if err == nil && w.predictedNoteTwin(noteTwinKey(w.runID, in, textFields(row.Fields)[activityTargetLinks])) {
+	if err == nil && w.predictedNoteTwin(noteTwinKey(w.runID, in, pendingRefsOf(typed))) {
 		return predictUnwritable, migration.Why(migration.ReasonNoteRepeated), nil
 	}
 	return predictCreate, migration.Reason{}, err
