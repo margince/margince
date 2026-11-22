@@ -271,7 +271,7 @@ func TestAChangeDuringAPassKeepsItsResultOutOfDate(t *testing.T) {
 		e.deliver(t, e.editDeal(t, e.faulted, 3600000))
 		return subjects, err
 	}
-	if _, err := e.scanner(duringRead).Scan(e.passCtx(), e.at, nil); err != nil {
+	if _, err := e.scanner(duringRead).Scan(e.passCtx(), e.at); err != nil {
 		t.Fatalf("the pass: %v", err)
 	}
 	if f := e.freshness(t); f.ChangedDeals != 1 {
@@ -291,7 +291,7 @@ func TestAPassThatMissedASourceKeepsTheReadingOutOfDate(t *testing.T) {
 		}
 	}
 	scanner := assurance.NewScanner(e.store, AssuranceSubjects, mailUnread, AssuranceConfig())
-	result, err := scanner.Scan(e.passCtx(), e.at.Add(time.Minute), nil)
+	result, err := scanner.Scan(e.passCtx(), e.at.Add(time.Minute))
 	if err != nil || result.Status != assurance.StatusIncomplete || result.EligibleDeals == 0 {
 		t.Fatalf("the pass = %+v, %v; want an incomplete run that read the deals", result, err)
 	}
@@ -307,7 +307,7 @@ func TestAFailedPassKeepsTheReadingOutOfDate(t *testing.T) {
 	unreadable := func(context.Context, pgx.Tx, time.Time, []assurance.SourceCoverage) ([]assurance.Subject, error) {
 		return nil, errors.New("the deals could not be read")
 	}
-	result, err := e.scanner(unreadable).Scan(e.passCtx(), e.at.Add(time.Minute), nil)
+	result, err := e.scanner(unreadable).Scan(e.passCtx(), e.at.Add(time.Minute))
 	if err != nil || result.Status != assurance.StatusIncomplete {
 		t.Fatalf("the failed pass = %+v, %v; want an incomplete run", result, err)
 	}
@@ -330,7 +330,7 @@ func TestReadingFreshnessRunsNoPass(t *testing.T) {
 
 func (e *freshnessEnv) scan(t *testing.T) error {
 	t.Helper()
-	_, err := assuranceScanner(e.Pool, e.store).Scan(e.passCtx(), e.at, nil)
+	_, err := assuranceScanner(e.Pool, e.store).Scan(e.passCtx(), e.at)
 	return err
 }
 

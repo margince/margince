@@ -37,7 +37,7 @@ func (c *capturingEnqueuer) EnqueueTxUnique(_ context.Context, _ pgx.Tx, args ri
 	return true, nil
 }
 
-// A check the agent starts is its own, and its run says so.
+// A check the agent starts is its own, and its job says so.
 func TestAnAgentStartsAnInputCheckThatNamesIt(t *testing.T) {
 	v := setupViability(t)
 	agent := agentOfTheAdmin(t, v.Env)
@@ -55,8 +55,5 @@ func TestAnAgentStartsAnInputCheckThatNamesIt(t *testing.T) {
 	worker := &assuranceRunWorker{sweep: v.worker}
 	if err := worker.Work(context.Background(), &river.Job[AssuranceRunArgs]{Args: args}); err != nil {
 		t.Fatalf("a run the agent asked for: %v", err)
-	}
-	if got := v.WsScalar(t, `SELECT requested_by FROM assurance_run ORDER BY id DESC LIMIT 1`); got != args.RequestedBy {
-		t.Errorf("the run names %q, want %q", got, args.RequestedBy)
 	}
 }

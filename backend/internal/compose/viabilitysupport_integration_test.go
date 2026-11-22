@@ -11,12 +11,18 @@ package compose
 // activities stores, with the verdict written by the classifier's own writer.
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // customerMails logs a message the buyer sent on the deal and returns it.
@@ -45,10 +51,25 @@ func (v *viabilityEnv) refuses(t *testing.T, reply ids.UUID) {
 	}
 }
 
+// receiptOf answers the outcome the check stored for a deal, and the reasons
+// behind it as the reader the pass assesses with gives them.
 func (v *viabilityEnv) receiptOf(t *testing.T, deal ids.UUID) (outcome, reasons string) {
 	t.Helper()
-	return v.WsScalar(t, `SELECT outcome FROM assurance_deal_receipt WHERE deal_id = $1`, deal),
-		v.WsScalar(t, `SELECT array_to_string(reasons, ',') FROM assurance_deal_receipt WHERE deal_id = $1`, deal)
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), v.WS), assuranceActor)
+	var codes []string
+	if err := database.WithWorkspaceTx(ctx, v.Pool, func(tx pgx.Tx) error {
+		subjects, err := assuranceSubjects(ctx, tx, v.now, AssuranceCoverage(ctx, tx, v.now), []ids.UUID{deal})
+		if err != nil || len(subjects) != 1 {
+			return fmt.Errorf("reading the deal as the check does: %d subjects: %w", len(subjects), err)
+		}
+		for _, reason := range subjects[0].Viability.Reasons {
+			codes = append(codes, string(reason))
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return v.WsScalar(t, `SELECT outcome FROM assurance_deal_receipt WHERE deal_id = $1`, deal), strings.Join(codes, ",")
 }
 
 func TestARefusalRequiresAReviewAndAnUnjudgedReplyCounts(t *testing.T) {

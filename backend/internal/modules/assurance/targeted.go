@@ -70,7 +70,7 @@ func (s *Scanner) ScanDeal(ctx context.Context, now time.Time, deal ids.UUID) (R
 func (s *Scanner) scanOneDeal(
 	ctx context.Context, tx pgx.Tx, now time.Time, deal ids.UUID, generation int64, out *Result,
 ) error {
-	runID, err := s.store.openRun(ctx, tx, now, nil, &deal)
+	runID, err := s.store.openRun(ctx, tx, now, &deal)
 	if err != nil {
 		return err
 	}

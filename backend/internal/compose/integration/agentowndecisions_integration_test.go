@@ -364,8 +364,8 @@ func TestAnAgentReadsAnAICallWithoutItsPayload(t *testing.T) {
 	d := newTwoDoors(t, "agent-ai-call", "read", "write")
 	var call string
 	if err := d.e.Owner.QueryRow(t.Context(), `
-		INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint, logical_call_id)
-		VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'a-model', 'print', gen_random_uuid()) RETURNING id::text`).Scan(&call); err != nil {
+		INSERT INTO ai_call (task, tier, provider, model_id, logical_call_id)
+		VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'a-model', gen_random_uuid()) RETURNING id::text`).Scan(&call); err != nil {
 		t.Fatalf("seeding the call: %v", err)
 	}
 	if _, err := d.e.Owner.Exec(t.Context(), `

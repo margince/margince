@@ -33,11 +33,11 @@ func TestCompanySiteReadMessageUsesTheStoredDossierAndReturnsRuntime(t *testing.
 		VALUES ('anthropic','claude-workbench-test',1000000,5000000,500000,2000000,$1)`, usedAt)
 	env.WsExec(t, `
 		INSERT INTO ai_call (correlation_id, task, tier, provider, model_id,
-		  served_model, served_identity_source, request_fingerprint, tokens_in, tokens_out, reasoning_tokens,
+		  served_model, served_identity_source, tokens_in, tokens_out, reasoning_tokens,
 		  cached_tokens, cache_write_tokens, latency_ms, occurred_at, logical_call_id)
-		VALUES ($1,$2,$3,'anthropic','claude-workbench-test','claude-workbench-test-202607','response',$4,
-		  1000,100,20,200,50,750,$5,$6)`, read.ID, string(ai.TaskColdStart),
-		string(ai.TierCheapCloud), "workbench-fingerprint", usedAt, read.ID)
+		VALUES ($1,$2,$3,'anthropic','claude-workbench-test','claude-workbench-test-202607','response',
+		  1000,100,20,200,50,750,$4,$5)`, read.ID, string(ai.TaskColdStart),
+		string(ai.TierCheapCloud), usedAt, read.ID)
 	human := env.As(env.Rep1, nil, integration.AdminPerms)
 	brain := &replyBrainStub{response: model.Response{Text: `{
 		"kind":"recommendation",

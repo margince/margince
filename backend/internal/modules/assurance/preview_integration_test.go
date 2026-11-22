@@ -111,7 +111,7 @@ func TestAWorkspaceSaysWhetherItHasEverBeenChecked(t *testing.T) {
 			"check it before anybody chose to be checked")
 	}
 
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatalf("the first pass: %v", err)
 	}
 
@@ -148,7 +148,7 @@ func TestAPreviewCountsWhatTheRunThenRaises(t *testing.T) {
 		previewed += c.Count
 	}
 
-	result, err := scanner.Scan(ctx, at, nil)
+	result, err := scanner.Scan(ctx, at)
 	if err != nil {
 		t.Fatalf("the pass: %v", err)
 	}
@@ -162,37 +162,6 @@ func TestAPreviewCountsWhatTheRunThenRaises(t *testing.T) {
 	if preview.Readiness != result.Readiness {
 		t.Errorf("the preview predicted readiness %q and the pass reached %q",
 			preview.Readiness, result.Readiness)
-	}
-}
-
-// A pass a human asked for names them; the nightly one names nobody.
-//
-// captured_by stays the system on both, because the pass reads the whole
-// pipeline and a run captured_by a manager would sign them to every exception
-// it raises. Who ASKED is the separate fact, and this is where it lands.
-func TestAPassRecordsWhoAskedForItAndTheNightlyOneDoesNot(t *testing.T) {
-	t.Parallel()
-	e := setupScan(t)
-	ctx := e.as()
-
-	scanner := NewScanner(e.store, previewSubjects(e.rep.String()), previewCoverage(), DefaultConfig())
-
-	nightly, err := scanner.Scan(ctx, time.Now().UTC(), nil)
-	if err != nil {
-		t.Fatalf("the nightly pass: %v", err)
-	}
-	asker := e.rep.String()
-	asked, err := scanner.Scan(ctx, time.Now().UTC().Add(time.Minute), &asker)
-	if err != nil {
-		t.Fatalf("the requested pass: %v", err)
-	}
-
-	if got := e.requesterOf(t, nightly.RunID.String()); got != nil {
-		t.Errorf("the nightly run names %q as having asked for it; nobody did", *got)
-	}
-	got := e.requesterOf(t, asked.RunID.String())
-	if got == nil || *got != asker {
-		t.Errorf("the requested run recorded %v as the asker, want %q", got, asker)
 	}
 }
 
@@ -214,19 +183,6 @@ func (e *scanEnv) countRows(t *testing.T) map[string]int {
 			out[table] = count
 		}
 		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	return out
-}
-
-func (e *scanEnv) requesterOf(t *testing.T, runID string) *string {
-	t.Helper()
-	ctx := e.as()
-	var out *string
-	if err := e.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT requested_by FROM assurance_run WHERE id = $1`, runID).Scan(&out)
 	}); err != nil {
 		t.Fatal(err)
 	}
