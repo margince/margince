@@ -136,6 +136,9 @@ type counterpartyDecision struct {
 	// learn something this function just decided.
 	traceOutcome TraceOutcome
 	traceReason  string
+	// notesMail marks Google's mail about a meeting: held to its participants,
+	// filed under no contact, its notes landed on the meeting (meetingnotesmail.go).
+	notesMail bool
 }
 
 // traced is the decision with its trace fields set, so a tier can answer in one
