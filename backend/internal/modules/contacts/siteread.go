@@ -279,27 +279,43 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, companyID *ids.Company
 	return out, joined, nil
 }
 
-// UpdateSiteReadProgress records the worker's live position — the phase
-// and how many pages have committed — on a still-running dossier, so the
-// SPA's poll shows movement during the crawl and the model call instead
-// of a silent 'running'. Best-effort by contract: a read that is no
-// longer running is simply not updated (the terminal write won), never
-// an error. No auth.Require, same rationale as BeginSiteRead.
-func (s *Store) UpdateSiteReadProgress(ctx context.Context, readID ids.UUID, phase string, pages []SiteReadPage) error {
+// UpdateSiteReadProgress records the phase and the committed page count on a
+// still-running dossier, so the SPA's poll shows movement during the crawl.
+// It is announced to the AI-activity projection in the same transaction, under
+// the lease the claim announced. A lease that is not positive is refused.
+// claimedAt is the claim BeginSiteRead handed this worker. A worker whose claim
+// was reclaimed presents an old one and changes nothing.
+// A read that is no longer running is not updated, and that is not an error:
+// the terminal write won. No auth.Require, same rationale as BeginSiteRead.
+func (s *Store) UpdateSiteReadProgress(ctx context.Context, readID ids.UUID, claimedAt time.Time, phase string, pages []SiteReadPage, lease time.Duration) error {
 	if phase != "crawling" && phase != "extracting" {
 		return fmt.Errorf("contacts: %q is not a site-read phase (crawling|extracting)", phase)
+	}
+	if lease <= 0 {
+		return errors.New("contacts: site-read progress lease must be positive")
+	}
+	if claimedAt.IsZero() {
+		return errors.New("contacts: site-read progress needs the claim it reports for")
 	}
 	pagesRaw, err := marshalSiteReadList(pages)
 	if err != nil {
 		return fmt.Errorf("contacts: progressive site-read pages: %w", err)
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
+		updated, err := scanSiteRead(tx.QueryRow(ctx, `
 			UPDATE site_read SET phase = $2, pages = $3, pages_read = $4, updated_at = now()
-			WHERE id = $1 AND status = 'running'`, readID, phase, pagesRaw, len(pages)); err != nil {
+			WHERE id = $1 AND status = 'running' AND started_at = $5
+			RETURNING `+siteReadColumns, readID, phase, pagesRaw, len(pages), claimedAt))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
 			return fmt.Errorf("update site read progress: %w", err)
 		}
-		return nil
+		if updated.PagesRead == 0 {
+			return logSiteReadActivity(ctx, tx, updated, lease)
+		}
+		return logSiteReadProgress(ctx, tx, updated, lease)
 	})
 }
 
