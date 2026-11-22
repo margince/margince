@@ -427,3 +427,23 @@ func TestANarrowingKeepsAnAddressAColleagueSetAgain(t *testing.T) {
 		t.Fatal("narrowing the mail took back an address a colleague set after the fill")
 	}
 }
+
+func TestTheStreetGoesWithTheLastMailThatVouchedForIt(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	contactID, vouched := e.signedMail(ctx, t, "Dana Vouched", signerMail{})
+	employer := e.employee(ctx, t, &contactID, "Acme Logistics", true, "acme-mail.example", false)
+	statement := []SignatureField{signed(fieldAddress, signedAddress), signed(fieldCompanyName, "Acme Logistics")}
+	e.applySigned(ctx, t, contactID, vouched, statement...)
+	// A spoofed mail may restate the contact's address, never the employer's street.
+	spoofed := e.mailFrom(ctx, t, contactID, e.senderOf(ctx, t, contactID), signerMail{spoofed: true})
+	e.applySigned(ctx, t, contactID, spoofed, statement...)
+	e.narrow(ctx, t, vouched)
+
+	if got := e.count(ctx, t, `SELECT count(*) FROM contact WHERE id = $1 AND address_city = 'Hamburg'`, contactID); got != 1 {
+		t.Error("the contact's address went although another mail still states it")
+	}
+	if got := e.count(ctx, t, `SELECT count(*) FROM company WHERE id = $1 AND address_line1 IS NULL`, employer); got != 1 {
+		t.Error("the employer's street stayed after the last mail that vouched for it was narrowed")
+	}
+}
