@@ -6,6 +6,7 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -101,23 +102,19 @@ func isContractEnum(t reflect.Type) bool {
 	return ok
 }
 
-// reflectedInputs are the inputs derived from a Go type, with what each was
-// served as. ContractEnumGaps reads them, so a census covers every such input
-// rather than a list kept beside them.
+// reflectedInputs holds one entry per Go type an input was derived from, so
+// deriving the same type again changes nothing. ContractEnumGaps reads it.
 var reflectedInputs = struct {
-	mu   sync.Mutex
-	list []reflectedInput
-}{}
-
-type reflectedInput struct {
-	typ    reflect.Type
-	schema json.RawMessage
-}
+	mu     sync.Mutex
+	byType map[reflect.Type]json.RawMessage
+}{byType: map[reflect.Type]json.RawMessage{}}
 
 func recordReflectedInput(typ reflect.Type, schema json.RawMessage) {
 	reflectedInputs.mu.Lock()
 	defer reflectedInputs.mu.Unlock()
-	reflectedInputs.list = append(reflectedInputs.list, reflectedInput{typ: typ, schema: schema})
+	if _, seen := reflectedInputs.byType[typ]; !seen {
+		reflectedInputs.byType[typ] = schema
+	}
 }
 
 // ContractEnumGaps names every contract enum field of an input derived from a Go
@@ -126,16 +123,16 @@ func recordReflectedInput(typ reflect.Type, schema json.RawMessage) {
 // A gate can tell a full census from an empty one.
 func ContractEnumGaps() (gaps, checked []string) {
 	reflectedInputs.mu.Lock()
-	inputs := slices.Clone(reflectedInputs.list)
+	inputs := maps.Clone(reflectedInputs.byType)
 	reflectedInputs.mu.Unlock()
-	for _, input := range inputs {
+	for _, typ := range slices.SortedFunc(maps.Keys(inputs), func(a, b reflect.Type) int { return strings.Compare(a.String(), b.String()) }) {
 		var served jsonSchema
-		if err := json.Unmarshal(input.schema, &served); err != nil {
-			gaps = append(gaps, fmt.Sprintf("%s: the served schema does not parse: %v", input.typ, err))
+		if err := json.Unmarshal(inputs[typ], &served); err != nil {
+			gaps = append(gaps, fmt.Sprintf("%s: the served schema does not parse: %v", typ, err))
 			continue
 		}
-		checked = append(checked, input.typ.String())
-		gaps = append(gaps, enumGapsIn(input.typ.String(), input.typ, &served)...)
+		checked = append(checked, typ.String())
+		gaps = append(gaps, enumGapsIn(typ.String(), typ, &served)...)
 	}
 	return gaps, checked
 }

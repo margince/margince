@@ -81,3 +81,15 @@ func TestAContractEnumTheTableLacksFailsTheInputSchema(t *testing.T) {
 		t.Error("a contract enum with no table entry was served without values")
 	}
 }
+
+// Deriving an input again, as a rebuilt tool surface does, keeps the census at
+// one entry per type instead of growing it.
+func TestDerivingAnInputAgainLeavesTheCensusUnchanged(t *testing.T) {
+	describedSchema[ReportingRead]("", "")
+	_, before := ContractEnumGaps()
+	describedSchema[ReportingRead]("", "")
+	describedSchema[ReportingRead]("", "")
+	if _, after := ContractEnumGaps(); len(after) != len(before) {
+		t.Errorf("the census holds %d inputs after deriving one again, was %d", len(after), len(before))
+	}
+}
