@@ -751,7 +751,7 @@
 .actions-split > .btn:last-child {
   border-start-start-radius: 0;
   border-end-start-radius: 0;
-  border-inline-start: 1px solid var(--bgElevated);
+  border-inline-start: 1px solid var(--bgField);
   padding-inline: var(--space-2);
 }
 
@@ -1272,7 +1272,7 @@ span.error-line {
 .input {
   font: inherit;
   color: inherit;
-  background: var(--bgElevated);
+  background: var(--bgField);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-control);
   padding: var(--inputPaddingY) var(--inputPaddingX);
@@ -1397,7 +1397,7 @@ span.error-line {
      than the bare one under it in the same form is the same field twice. */
   padding-inline: var(--inputPaddingX);
   min-block-size: var(--inputHeight);
-  background: var(--bgElevated);
+  background: var(--bgField);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-well);
@@ -1625,7 +1625,7 @@ span.error-line {
 .textarea {
   font: inherit;
   color: inherit;
-  background: var(--bgElevated);
+  background: var(--bgField);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   /* The field's own insets, so a textarea and the input above it start their

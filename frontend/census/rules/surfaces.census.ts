@@ -8,6 +8,7 @@
 import { readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
+import { classMeetings, withMeetings } from "../../scripts/lib/class-meetings";
 import {
   alternativesOf,
   classesOf,
@@ -50,7 +51,7 @@ import { sheetRules } from "../tree";
 
 // A rule outside surfaces.css that names a rung or paints a member overrules
 // the ladder. The ledger lists the ones still standing; the ceiling only falls.
-const LEDGER_CEILING = { spellings: 76, states: 6 };
+const LEDGER_CEILING = { spellings: 0, states: 6 };
 
 const ledgerPath = join(here, "surfaces.ledger.txt");
 export const tokensPath = join(here, "tokens.css");
@@ -394,7 +395,16 @@ export const rule: CensusRule = {
         "spellings",
       ),
       ...againstLedger(
-        memberPaints(all, MEMBERS),
+        memberPaints(
+          all,
+          withMeetings(
+            MEMBERS,
+            corpus
+              .filter(isScript)
+              .flatMap((file) => classMeetings(file.path, file.text)),
+            new Set(all.flatMap((one) => [...classesOf(one.selector)])),
+          ),
+        ),
         kept.states,
         LEDGER_CEILING.states,
         "states",

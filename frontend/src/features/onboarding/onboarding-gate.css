@@ -64,7 +64,7 @@
      ratio --borderStrong gives (1.45:1 on --bgElevated). */
   border: 1px solid var(--borderControl);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
   /* A field, so it takes the floor and not the top side — the same depth the
      design system's own fields wear, because this one is a hand-rolled shell
      and a reader cannot tell it apart from theirs. */

@@ -3,6 +3,7 @@
 
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { classMeetings, withMeetings } from "../../scripts/lib/class-meetings";
 import type { Rule } from "../../scripts/lib/css-rules";
 import { here, membersOf, probe, ref } from "../../scripts/lib/surface-sheets";
 import { stable } from "../../src/format/collate";
@@ -142,6 +143,42 @@ describe("the nesting ladder has one painter", () => {
         members,
       ),
     ).toEqual([]);
+  });
+
+  it("finds a member painted by a class that only markup joins to it", () => {
+    const source = `
+      const cardClass = ["pane", alert && "pane-alert", narrow && \`pane-narrow-\${narrow}\`]
+        .filter(Boolean)
+        .join(" ");
+      const a = <i className={\`pane \${extra}\`} />;
+      const b = <i className="pane-label t-eyebrow" />;
+      const c = <i className={\`pane-\${tone}\`} />;
+      const d = <i className="pane is-lifted pane-tail" />;`;
+    const members = withMeetings(
+      membersOf([".pane"]),
+      classMeetings("planted.tsx", source),
+      new Set([
+        "pane-narrow-row",
+        "pane-narrow-stack",
+        "pane-head",
+        "pane-tail",
+      ]),
+    );
+    const paint = (selector: string) =>
+      memberPaints([probe(selector, "background: var(--dangerBg)")], members);
+    expect(paint(".pane-alert")).toHaveLength(1);
+    expect(paint(".pane-narrow-row")).toHaveLength(1);
+    expect(paint(".pane-narrow-stack")).toHaveLength(1);
+    expect(paint(".pane-tail")).toHaveLength(1);
+    expect(paint(".pane-head")).toEqual([]);
+    expect(paint(".pane-label")).toEqual([]);
+    expect(paint(".is-lifted")).toEqual([]);
+    expect(
+      memberPaints(
+        [probe(".pane.is-picked", "background: var(--dangerBg)")],
+        members,
+      ),
+    ).toHaveLength(1);
   });
 
   it("finds a ladder class no other sheet styles", () => {
