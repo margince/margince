@@ -42,8 +42,7 @@ func WordSnippet(text string, limit int) string {
 	return strings.TrimRightFunc(head, clauseEnd) + "…"
 }
 
-// clauseEnd is what may close the kept text before the mark: a space, or a
-// comma, colon or semicolon that would read as the sentence going on.
+// clauseEnd is a space or clause mark, which would read as the sentence going on.
 func clauseEnd(r rune) bool {
 	return unicode.IsSpace(r) || r == ',' || r == ';' || r == ':'
 }

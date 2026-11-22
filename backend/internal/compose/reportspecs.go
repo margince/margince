@@ -455,10 +455,8 @@ var prebuiltReports = map[string]reportSpec{
 			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
 		filterScopes: projectFilterScope,
-		// partner_company_id points at a company a normal deal read masks
-		// per row when the caller cannot open it, so grouping by it must not
-		// name one they could not have seen. company_id is never grouped, and
-		// is scoped so its drill column is blanked the same way.
+		// A normal deal read masks both companies per row. company_id is never
+		// grouped here; its scope blanks the drill column.
 		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany, colCompanyID: tableCompany},
 		drillColumns:    dealCompanyDrillColumn,
 		defaultBy:       moneyDefaultBy(fieldWinProbabilityBand),

@@ -5,13 +5,8 @@ package compose
 
 import "github.com/margince/margince/backend/internal/shared/kernel/moneytotal"
 
-// derivationColumns are the drill-through's output names and their selects,
-// aligned by index: the row identity, every dimension, every drill column, then
-// every measure, so a derived measure sits next to its inputs.
-//
-// An install-wide report's rows carry colleagues' owners and amounts, which the
-// ordinary read already serves this caller, and a field mask that read applies
-// is applied here too. Held by: TestADrillThroughShowsWhatTheOrdinaryReadShowsAndNoMore.
+// derivationColumns returns names and selects aligned by index. A measure follows
+// the dimensions, so a derived measure sits next to its inputs.
 func derivationColumns(spec reportSpec) (columns, selects []string) {
 	columns, selects = []string{"id"}, []string{"t.id AS id"}
 	add := func(name, expression string) {

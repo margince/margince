@@ -167,25 +167,8 @@ func derivationRows(
 	return scanDerivationRows(pgRows, plan.columns)
 }
 
-// maskedDerivationSelects is plan.selects with each REFERENCE column wrapped so
-// that a row pointing at a record this caller cannot open returns NULL there
-// instead of the id.
-//
-// Masking rather than excluding, and the difference is the whole of it. The
-// drill-through returns every dimension and drill column the spec declares, so a
-// reader can see why each record is in this group, which means it hands back
-// the partner id even when the number above it was a stage total. Dropping
-// those rows to avoid naming the partner would make the explanation smaller
-// than the number it explains. Blanking the column keeps both true: the row is
-// one this caller may read, and the reference is one they may not.
-//
-// It mirrors what an ordinary read of the same record already does
-// (deals/fieldmask.go blanks partner_company_id and keeps the deal), so a reader
-// who follows the link sees the same rows with the same holes.
-//
-// The aggregate recompute does NOT take this treatment and must not: it counts
-// rows, names no reference, and wrapping a column it never returns would only
-// make the two halves read different SQL for one row set.
+// maskedDerivationSelects blanks a reference the caller cannot open and keeps
+// its row. Not excluding: dropped rows would add up to less than the headline.
 func maskedDerivationSelects(
 	ctx context.Context, spec reportSpec, plan derivationPlan, arg func(any) int,
 ) ([]string, error) {
@@ -228,13 +211,7 @@ func maskedDerivationSelects(
 	if len(masks) == 0 {
 		return plan.selects, nil
 	}
-	// plan.columns and plan.selects are built in one pass and stay aligned, so
-	// the column name at index i names the expression selected at index i.
-	//
-	// Measures are looked up too: a spec that exposed a reference as a measure
-	// would otherwise return the id unmasked, which is a disclosure and not an
-	// error. TestNoMeasureCarriesAReference refuses that spec at the gate, and
-	// this stays honest either way rather than assuming the gate.
+	// Measures are looked up too, so a reference spelled as one is still blanked.
 	out := make([]string, len(plan.selects))
 	copy(out, plan.selects)
 	for i, name := range plan.columns {

@@ -72,12 +72,8 @@ type Item struct {
 // never overdue: nothing with no date can have missed it.
 func (i Item) Overdue(now time.Time) bool { return deadline.Passed(i.DueAt, now) }
 
-// LateWords says how late an overdue promise is, in the reader's terms, and
-// whether it is late at all. Both record pages' task cards read it, so the
-// same lateness is worded the same way whichever record it is seen from.
-//
-// Days late are calendar days in loc, the count the page's late badge shows,
-// so a promise due at 23:00 reads "one day ago" at 01:00, beside "1 day late".
+// LateWords says how late an overdue promise is, and whether it is late. It
+// counts calendar days in loc, as the page's late badge beside it does.
 func LateWords(due *time.Time, now time.Time, loc *time.Location, language string) (string, bool) {
 	if !deadline.Passed(due, now) {
 		return "", false

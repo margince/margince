@@ -166,8 +166,7 @@ func TestAnUndatedDayTaskUsesItsOwnDate(t *testing.T) {
 	}
 }
 
-// A task and a claim both due at 01:00 tomorrow, read at 23:00 in Bangkok: the
-// two instants share a UTC date, so only the record zone makes it "tomorrow".
+// 23:00 and 01:00 in Bangkok share a UTC date. Only the record zone makes it tomorrow.
 func TestADeadlineAfterMidnightIsDueTomorrowInTheRecordZone(t *testing.T) {
 	bangkok := time.FixedZone("UTC+7", 7*60*60)
 	lateEvening := time.Date(2026, 8, 4, 23, 0, 0, 0, bangkok)

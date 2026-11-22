@@ -32,8 +32,7 @@ func TestADrillThroughThatNamesAPartnerAlsoNamesTheDealsCompany(t *testing.T) {
 	}
 }
 
-// A drill column is shown, never grouped by: a handle that groups by one is
-// refused, and no spec spells one a second time as a dimension or measure.
+// A drill column is shown and never grouped by.
 func TestADrillColumnIsNeverAGroup(t *testing.T) {
 	judged := 0
 	for name, spec := range prebuiltReports {
@@ -56,9 +55,7 @@ func TestADrillColumnIsNeverAGroup(t *testing.T) {
 	}
 }
 
-// A reader bounded to their own companies gets the deal's company through the
-// same blanking the partner column takes, so a row keeps its deal and loses
-// only the id they could not open.
+// The deal's company is blanked the same way as its partner.
 func TestTheDealsCompanyIsBlankedLikeItsPartner(t *testing.T) {
 	spec := pipelineCurrentSpec()
 	plan, err := compileDerivation(spec, derivationQuery{})

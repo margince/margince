@@ -69,8 +69,7 @@ func TestACommitmentEmailNamesItsFactsOneALine(t *testing.T) {
 	}
 }
 
-// A phone shows about sixty characters of a subject, so the subject is cut to
-// a whole word and the body keeps the sentence the cut left out.
+// A phone shows about sixty characters of a subject. The body keeps what the cut drops.
 func TestALongApprovalSubjectEndsOnAWholeWordAndTheBodyKeepsItAll(t *testing.T) {
 	summary := `Set up a partner program on company "ZZ email approval company mwg26xsk" (kinds: referral), with no margin tier`
 	notice := notices.Notice{Subject: summary, Body: "Decision deadline: soon"}

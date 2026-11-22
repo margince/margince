@@ -203,23 +203,8 @@ func TestEveryDeclaredReferenceScopeNamesARowScopedTable(t *testing.T) {
 	}
 }
 
-// Every reference a caller can SELECT BY resolves through the vocabulary
-// namedByReport reads, so that naming one applies its scope.
-//
-// namedByReport (reportwhere.go) looks a group-by key up in spec.dimensions and
-// a filter key in spec.filters. Those are the two maps whose values are SQL
-// expressions comparable against spec.referenceScopes. This asserts the
-// converse: every scoped reference IS reachable that way, or is a drill column
-// the drill-through blanks through it. A scope that never renders reads
-// exactly like one that does.
-//
-// It says nothing about spec.thresholds, and that is the point of writing it
-// this way rather than scanning threshold SQL for column names: a threshold
-// renders its own clause from a bind position, so a reference inside one would
-// be spelled however its author spelled it, and a substring scan would miss the
-// case it exists to catch. What holds instead is that a threshold takes a
-// NUMBER from the caller (thresholdValue) and compares it — it cannot carry a
-// caller-supplied reference id at all, so there is nothing for a scope to gate.
+// A scope that no question names and no drill column blanks never renders.
+// Thresholds take a number, never a reference id, so they need no scope.
 func TestEveryScopedReferenceIsReachableThroughTheVocabulary(t *testing.T) {
 	judged := 0
 	for name, spec := range prebuiltReports {
