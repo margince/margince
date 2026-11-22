@@ -271,7 +271,7 @@ func freeSignatureEmail(ctx context.Context, tx pgx.Tx, address string) (bool, e
 func addSignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, address string) error {
 	wsID, ok := principal.WorkspaceID(ctx)
 	if !ok {
-		return fmt.Errorf("contacts: a signature's email outside a workspace")
+		return errors.New("contacts: a signature's email outside a workspace")
 	}
 	var next int
 	if err := tx.QueryRow(ctx, `SELECT coalesce(max(position) + 1, 0) FROM contact_email

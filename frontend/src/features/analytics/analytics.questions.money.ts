@@ -49,11 +49,11 @@ function pinnedCurrency(filters: readonly FilterLike[]): string | null {
 }
 
 /**
- * The currency an amount compared by a filter is in: the base currency for a
- * converted measure, the pinned currency for one kept in each deal's own.
- * Null when neither is known, undefined for a field that is not money. The
- * reader types major units and the engine compares minor ones, so no money
- * filter is sent without this.
+ * The currency an amount compared by a filter is in. A converted measure is
+ * in the base currency, and one kept in each deal's own currency is in the
+ * pinned one. Null when neither is known, undefined for a field that is not
+ * money. The reader types major units and the engine compares minor ones, so
+ * no money filter is sent without this.
  */
 export function filterAmountCurrency(
   field: string,
@@ -95,16 +95,16 @@ export function measureReading(
     return { kind: "money", currency };
   }
   // A converted amount with no base currency to state it in is not a mix of
-  // currencies, and grouping by currency would not give it one.
+  // currencies. Grouping by currency would not give it one.
   return isNativeMoneyField(field, money)
     ? { kind: "mixed" }
     : { kind: "noBase" };
 }
 
 /**
- * The currency a money field's value on this row is in, null when no single
- * one applies, and undefined for a field that is not money at all. A native
- * amount is in the row's own currency, or the one a filter pinned; a
+ * The currency a money field's value on this row is in. Null when no single
+ * one applies, undefined for a field that is not money at all. A native
+ * amount is in the row's own currency, or in the one a filter pinned. A
  * converted one is in the base currency.
  */
 export function moneyCurrency(

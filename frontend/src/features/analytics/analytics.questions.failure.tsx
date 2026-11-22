@@ -10,10 +10,10 @@ import { ProblemError } from "../../lib/problem";
 import { REFUSAL_KEY, refusalOf } from "./analytics.questions.vocab";
 
 /**
- * Why a question was not answered. A refusal is guidance, not a fault: the
- * heading says in the reader's language what kind of refusal it is, and the
- * engine's own account follows, the smallest change that would have worked
- * first. Anything else is an ordinary failure, in the reader's words.
+ * Why a question was not answered. A refusal is guidance, not a fault. The
+ * heading says in the reader's language what kind of refusal it is. The
+ * engine's own account follows, with the smallest change that would have
+ * worked first. Anything else is an ordinary failure, in the reader's words.
  */
 export function QuestionFailure({
   error,
