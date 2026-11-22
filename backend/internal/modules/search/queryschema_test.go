@@ -200,8 +200,8 @@ func TestACatalogFaultRefusesThePublishedRead(t *testing.T) {
 func TestThePublishedPlanNamesEveryPlanMember(t *testing.T) {
 	doc := readSchema(readerFor("deal"), t, NewQuerySchemaResource(NewVocabularyResolver()))
 	plan := reflect.TypeFor[Plan]()
-	for i := range plan.NumField() {
-		name, _, _ := strings.Cut(plan.Field(i).Tag.Get("json"), ",")
+	for field := range plan.Fields() {
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 		if name == "" || name == "-" {
 			continue
 		}

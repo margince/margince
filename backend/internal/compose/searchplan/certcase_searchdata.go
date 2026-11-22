@@ -98,9 +98,8 @@ func (c *Fixture) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: "the read plan differs from the expected source, period or filters"}
 }
 
-// decodeExpected reads a case's answer: one plan, or a list of plans that each
-// read the same rows, as a count of open deals is one over either population
-// that holds them.
+// decodeExpected reads a case's answer: one plan, or a list of plans that read
+// the same rows. A count of open deals is one over any population holding them.
 func decodeExpected(expected json.RawMessage) ([]Plan, error) {
 	var answers []json.RawMessage
 	if json.Unmarshal(expected, &answers) != nil {

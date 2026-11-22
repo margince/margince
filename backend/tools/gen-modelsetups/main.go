@@ -104,15 +104,14 @@ func render(dir string) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("gen-modelsetups: reading %s: %w", entry.Name(), err)
 		}
-		title := presetTitle.FindSubmatch(raw)
-		if title == nil {
+		if presetTitle.Find(raw) == nil {
 			return nil, fmt.Errorf("gen-modelsetups: %s has no `# Model setup:` line to name it by", entry.Name())
 		}
 		body, err := compose.PresetRoutingBody(raw)
 		if err != nil {
 			return nil, fmt.Errorf("gen-modelsetups: %s: %w", entry.Name(), err)
 		}
-		fmt.Fprintf(&out, "  %s: {\n    title: %q,\n    routing: ", strings.TrimSuffix(entry.Name(), ".yaml"), title[1])
+		fmt.Fprintf(&out, "  %s: {\n    routing: ", strings.TrimSuffix(entry.Name(), ".yaml"))
 		if err := writeValue(&out, body, 2); err != nil {
 			return nil, fmt.Errorf("gen-modelsetups: %s: %w", entry.Name(), err)
 		}
@@ -141,7 +140,7 @@ export const MODEL_SETUPS = {
 
 const footer = `} as const satisfies Record<
   string,
-  { title: string; routing: components["schemas"]["AiRouting"] }
+  { routing: components["schemas"]["AiRouting"] }
 >;
 
 export type ModelSetupId = keyof typeof MODEL_SETUPS;

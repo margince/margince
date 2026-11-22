@@ -24,6 +24,7 @@ import {
   vendorSuggestions,
 } from "../../lib/ai-models";
 import { tierLabel, tierRank } from "../../lib/ai-tier-label";
+import { MODEL_SETUP_TITLES } from "../../lib/modelsetup-titles";
 import { MODEL_SETUPS } from "../../lib/modelsetups.gen";
 import {
   SETUP_PROVIDER_IDS,
@@ -458,7 +459,9 @@ function SetupTiers({
   );
   return (
     <Field
-      label={t("firstRun.ai.setup", { setup: setup.title })}
+      label={t("firstRun.ai.setup", {
+        setup: t(MODEL_SETUP_TITLES[preset.setup]),
+      })}
       hint={t("firstRun.ai.setupHint")}
     >
       {() => (

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { stable } from "../../format/collate";
 import { MODEL_SETUPS } from "../../lib/modelsetups.gen";
 import { SETUP_PROVIDERS } from "../../lib/setup-providers";
 import { chatTiers, taskLadders } from "./installation-setup.ai-key";
@@ -47,7 +48,7 @@ describe("chatTiers", () => {
       { provider: "openai_compatible", chatModel: "vendor/one" },
       { base_url: "https://openrouter.ai/api" },
     );
-    expect(Object.keys(tiers).sort()).toEqual([
+    expect(Object.keys(tiers).sort(stable)).toEqual([
       "cheap_cloud",
       "frontier",
       "local_small",

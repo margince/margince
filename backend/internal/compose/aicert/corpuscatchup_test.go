@@ -20,8 +20,8 @@ import (
 
 // An agent_loop case answers catch_me_up_on from its fixture, where production
 // assembles the picture in modules/search. The case cannot run that assembler
-// without a database, so each section a fixture names must be one the
-// assembler can emit: a renamed or missing section fails here, not in a paid run.
+// without a database. So each section a fixture names must be one the assembler
+// can emit, and a renamed section fails here, not in a paid run.
 func TestEveryCatchUpFixtureNamesASectionTheAssemblerEmits(t *testing.T) {
 	exact, prefixes := assemblerSectionNames(t)
 	census, err := compose.NewTaskCensus()
@@ -67,7 +67,7 @@ func TestEveryCatchUpFixtureNamesASectionTheAssemblerEmits(t *testing.T) {
 }
 
 // assemblerSectionNames reads every graphSection literal in modules/search: a
-// constant name exactly, and a name built as "prefix" + something as a prefix.
+// constant name as itself, and a name built as "prefix" + something as a prefix.
 // A name it cannot read fails the test rather than going unchecked.
 func assemblerSectionNames(t *testing.T) (map[string]bool, []string) {
 	t.Helper()

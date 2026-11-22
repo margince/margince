@@ -17732,9 +17732,24 @@ export const en = {
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
     "Any model the provider serves works. The tests graded the setup above, not one model on every tier.",
+  "firstRun.ai.setupTitle.consumer_class_brokered":
+    "Gemma 4 you could run yourself, through OpenRouter",
+  "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
+  "firstRun.ai.setupTitle.gemini_vertex_eu":
+    "Google Gemini in the EU, through Vertex AI",
+  "firstRun.ai.setupTitle.gemma4_local_ollama":
+    "Gemma 4 on your own server, through Ollama",
+  "firstRun.ai.setupTitle.openrouter_cloud":
+    "Open models from OpenAI and Mistral, through OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_cloud_eu":
+    "Mistral models in the EU, through OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_openai":
+    "OpenAI GPT-6, through OpenRouter",
+  "firstRun.ai.setupTitle.qwen3_local_vllm":
+    "Qwen3 on your own server, through vLLM",
   "firstRun.ai.setup": "Models: {setup}",
   "firstRun.ai.setupHint":
-    "The setup our tests graded for this provider, one model for each tier. You can change any of them later in Settings under AI.",
+    "The setup the tests graded for this provider, one model for each tier. You can change any of them later in Settings under AI.",
   "firstRun.ai.oneModel": "Use one model for every tier instead",
   "aiCert.ready": "Ready",
   "aiCert.withCare": "Usable with care",

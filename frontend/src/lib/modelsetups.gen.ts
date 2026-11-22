@@ -10,7 +10,6 @@ import type { components } from "../api/schema";
  */
 export const MODEL_SETUPS = {
   consumer_class_brokered: {
-    title: "Gemma 4 you could run yourself, through OpenRouter",
     routing: {
       embeddings: {
         base_url: "https://openrouter.ai/api",
@@ -77,7 +76,6 @@ export const MODEL_SETUPS = {
     },
   },
   gemini_cloud: {
-    title: "Google Gemini",
     routing: {
       embeddings: {
         dimensions: 1536,
@@ -112,7 +110,6 @@ export const MODEL_SETUPS = {
     },
   },
   gemini_vertex_eu: {
-    title: "Google Gemini in the EU, through Vertex AI",
     routing: {
       embeddings: {
         dimensions: 1536,
@@ -157,7 +154,6 @@ export const MODEL_SETUPS = {
     },
   },
   gemma4_local_ollama: {
-    title: "Gemma 4 on your own server, through Ollama",
     routing: {
       embeddings: {
         dimensions: 1024,
@@ -186,7 +182,6 @@ export const MODEL_SETUPS = {
     },
   },
   openrouter_cloud: {
-    title: "Open models from OpenAI and Mistral, through OpenRouter",
     routing: {
       embeddings: {
         base_url: "https://openrouter.ai/api",
@@ -246,7 +241,6 @@ export const MODEL_SETUPS = {
     },
   },
   openrouter_cloud_eu: {
-    title: "Mistral models in the EU, through OpenRouter",
     routing: {
       embeddings: {
         base_url: "https://openrouter.ai/api",
@@ -317,7 +311,6 @@ export const MODEL_SETUPS = {
     },
   },
   openrouter_openai: {
-    title: "OpenAI GPT-6, through OpenRouter",
     routing: {
       embeddings: {
         base_url: "https://openrouter.ai/api",
@@ -360,7 +353,6 @@ export const MODEL_SETUPS = {
     },
   },
   qwen3_local_vllm: {
-    title: "Qwen3 on your own server, through vLLM",
     routing: {
       embeddings: {
         base_url: "http://localhost:8001",
@@ -391,7 +383,7 @@ export const MODEL_SETUPS = {
   },
 } as const satisfies Record<
   string,
-  { title: string; routing: components["schemas"]["AiRouting"] }
+  { routing: components["schemas"]["AiRouting"] }
 >;
 
 export type ModelSetupId = keyof typeof MODEL_SETUPS;

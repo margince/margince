@@ -4,7 +4,7 @@
 package compose
 
 // The tool surface a certified scheduled agent calls. Reads are answered from
-// the fixture, decoded into production types so it serves only real shapes; the
+// the fixture, decoded into production types so it serves only real shapes. The
 // one write is checked as its store checks it, then acknowledged, never performed.
 
 import (

@@ -216,9 +216,9 @@ func writeWhichAIRecheck(p *strings.Builder, cert whichAICert) {
 			}
 		}
 	}
-	switch {
-	case older == 0:
-	case older == measured:
+	switch older {
+	case 0:
+	case measured:
 		fmt.Fprintf(p, "\nAll %d of these grades were measured on an older version of Margince and wait for a re-check.\n", measured)
 	default:
 		fmt.Fprintf(p, "\n%d of these %d grades were measured on an older version of Margince and wait for a re-check.\n",
