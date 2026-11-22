@@ -151,8 +151,8 @@ Each string it changes must be the old string with spans replaced by the mask ma
 statutory hold keeps its trail.
 The trigger is in [the repair's migration](../../backend/migrations/core/1794348833_the_credential_repair_may_rewrite_an_audit_image.up.sql).
 
-**Growth.** The table keeps every row for good. No retention rule deletes or anonymizes a row
-because of its age, and no job passes the immutability guard to do so. A row is about 600 bytes with
+**Growth.** The table keeps every row for good. No retention rule deletes a row or removes its
+personal values because the row is old. No job passes the guard that stops rows from changing. A row is about 600 bytes with
 its indexes, one for each change to a record. An operator who needs the disk space copies old rows to
 storage outside the product.
 
