@@ -30,9 +30,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AuditFilter narrows the audit page. The actor filter matches the
-// stored typed principal id (`human:<uuid>`, `agent:<passport>`,
-// `system:*`) verbatim — the column already carries the typed spelling.
+// AuditFilter narrows the audit page. The actor filter takes the stored
+// typed principal id (`human:<uuid>`, `agent:<passport>`, `system:*`). A
+// human also matches the rows an agent wrote on their behalf. An agent acts
+// with its user's permission, so its rows belong to that user's history.
 type AuditFilter struct {
 	Actor      *string
 	EntityType *string
@@ -384,7 +385,13 @@ func buildAuditWhere(f AuditFilter) (string, []any, error) {
 		return "$" + strconv.Itoa(len(args))
 	}
 	if f.Actor != nil {
-		where += " AND a.actor_id = " + arg(*f.Actor)
+		// Each row still names who acted, so the member's own rows and their
+		// agent's stay apart on the page.
+		actor := "a.actor_id = " + arg(*f.Actor)
+		if user, human := principal.HumanUserID(*f.Actor); human {
+			actor = "(" + actor + " OR a.on_behalf_of = " + arg(user) + ")"
+		}
+		where += " AND " + actor
 	}
 	if f.EntityType != nil {
 		where += " AND a.entity_type = " + arg(*f.EntityType)

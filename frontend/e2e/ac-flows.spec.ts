@@ -134,18 +134,20 @@ test("AC-settings-16: the audit log renders attributed entries, filters live, an
     page.getByText("connector:gmail", { exact: true }),
   ).toBeVisible();
   // The dials stand open on a bar above the trail, each applying on its own.
-  // The actor filter still speaks the API's `type:id` vocabulary, which is the
-  // spelling the column itself carries.
+  // The actor dial offers members by the names the column shows.
+  await page.getByRole("combobox", { name: de["settings.auditActor"] }).click();
   await page
-    .getByRole("textbox", { name: de["settings.auditActor"] })
-    .fill("agent:runner");
-  // The matching row stays, and both non-matching rows go. The agent row was on
-  // screen before the filter was typed, so its presence alone proves nothing.
-  await expect(page.getByText("Marcus Brandt", { exact: true })).toBeVisible();
-  await expect(trail.getByText("Du", { exact: true })).toHaveCount(0);
+    .getByRole("listbox")
+    .getByRole("option", { name: "Lena Fischer" })
+    .click();
+  // The reader's own row stays, and both rows of others go. The reader's row
+  // was on screen before the pick, so its presence alone proves nothing.
+  await expect(trail.getByText("Du", { exact: true })).toBeVisible();
+  await expect(page.getByText("Marcus Brandt", { exact: true })).toHaveCount(0);
   await expect(page.getByText("connector:gmail", { exact: true })).toHaveCount(
     0,
   );
+  await expect(page).toHaveURL(/actor=human%3Au1/);
 });
 
 test("AC-settings: the passport list is metadata-only and strikes revoked rows", async ({

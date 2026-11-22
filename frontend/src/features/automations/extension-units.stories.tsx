@@ -85,6 +85,7 @@ export const NoUnitOnIntegrations: Story = { render: story("workspace") };
 const DISPATCH_UNIT: ExtensionDescriptor = {
   name: "dispatch-connector",
   title: "",
+  summary: "",
   secretScope: "workspace",
   verbs: [],
   entries: [],

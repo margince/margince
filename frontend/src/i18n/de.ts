@@ -8872,6 +8872,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
+  "tasks.remind.menu": "Erinnerung",
+  "tasks.remind.inAnHour": "In 1 Stunde",
+  "tasks.remind.tomorrowMorning": "Morgen früh",
+  "tasks.remind.beforeDue": "1 Stunde vor Fälligkeit",
+  "tasks.remind.pick": "Zeit wählen",
+  "tasks.remind.remove": "Erinnerung entfernen",
+  "tasks.remind.current": "Erinnerung am {when}",
+  "tasks.remind.set": "Erinnerung am {when} gesetzt.",
+  "tasks.remind.removed": "Erinnerung entfernt.",
+  "tasks.remind.failed":
+    "Die Erinnerung wurde nicht gespeichert. Versuche es erneut.",
+  "tasks.remind.pickTitle": "Erinnerung am",
+  "tasks.remind.day": "Tag",
+  "tasks.remind.time": "Uhrzeit",
+  "tasks.remind.save": "Erinnerung setzen",
+  "tasks.remind.needsTime": "Gib einen Tag und eine Uhrzeit ein.",
+  "tasks.remind.past": "Wähle eine Zeit, die noch bevorsteht.",
   "tasks.log.action": "Ergebnis erfassen",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
@@ -16759,9 +16776,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companyManualSub":
     "Die Website-Analyse ist für diese Installation nicht aktiviert. Diese 3 Antworten ergeben einen nutzbaren Unternehmenskontext, ohne Modellaufruf und ohne externe Anfrage.",
   "settings.companyCreateWorkspace": "Unternehmenskontext erstellen",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Alle Aktionen",
+  "settings.auditAnyActor": "Alle",
+  "settings.auditActorDelegated":
+    "Mit allem, was ein KI-Assistent in ihrem Auftrag getan hat.",
+  "settings.auditAnyEntity": "Alle Typen",
+  "settings.auditEntityIdHint":
+    "Füge die ganze Datensatz-ID ein. Nutze dafür „Datensatz-ID kopieren“ in einer Zeile.",
+  "settings.auditRangeReversed":
+    "Wähle ein Bis-Datum am oder nach dem Von-Datum.",
   "product.title": "Produkte",
   "product.readOnly":
     "Nur Lesezugriff. Deine Rolle darf keine Produkte ändern.",

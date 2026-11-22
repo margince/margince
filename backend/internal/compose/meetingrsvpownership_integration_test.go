@@ -419,7 +419,7 @@ func TestAReconnectedSeatsRemovalRetiresTheRowAnotherCalendarTookOver(t *testing
 				t.Fatal(err)
 			}
 			o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: listed})
-			if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND user_id=$2 AND roster_seat=$3`, meeting, e.Rep2, e.Rep1); n == 0 {
+			if n := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND user_id=$2 AND $3=ANY(roster_seats)`, meeting, e.Rep2, e.Rep1); n == 0 {
 				t.Fatal("the organizer's roster did not take over the disconnected guest's row")
 			}
 			reconnect(t, e, registry, e.Rep2, provider, guest)

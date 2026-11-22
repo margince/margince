@@ -33085,7 +33085,7 @@ export interface components {
             provider: "telegram" | "dispact";
             /** @description The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
-            /** @description The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram. */
+            /** @description The chat's web address, such as `https://chat.example.com`; a bare host means https. Required for Dispact, which every team hosts itself; refused for Telegram. */
             address?: string;
             /** @description The Dispact app's events secret, `whsec_…`, which signs each notice of a new message. Optional; without it Margince reads the channels every minute. Refused for Telegram. Sealed into the vault on arrival and never echoed back. */
             eventsSecret?: string;

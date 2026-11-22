@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -130,6 +130,18 @@ const LONG: AuditLogEntry = {
   occurred_at: ago(12),
 };
 
+const MEMBERS = [
+  ["u-ada", "Ada Brandt"],
+  ["u-lars", "Lars Brandt"],
+  ["u-dana", "Dana Kessler"],
+].map(([id, name]) => ({
+  id,
+  email: `${id}@demo.example`,
+  display_name: name,
+  status: "active",
+  is_agent: false,
+}));
+
 type Answer = () => Response | Promise<Response>;
 
 const page =
@@ -148,6 +160,11 @@ function story(auditLog: Answer, allow: GrantSpec = ADMIN) {
           user: { ...meFixture().user, id: VIEWER, display_name: "Ada Brandt" },
         }),
       "GET /audit-log": auditLog,
+      "GET /users": () =>
+        jsonResponse({
+          data: MEMBERS,
+          page: { next_cursor: null, has_more: false },
+        }),
     });
     return (
       <StoryProviders>
@@ -206,14 +223,59 @@ function narrowedToNothing(): Answer {
 }
 
 // The dials stand open above the trail; a narrowing that finds nothing says so.
+// A picked member's hint says their agent's rows are in it too.
 export const Filtered: Story = {
   render: () => story(narrowedToNothing())(),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(await canvas.findByLabelText("Actor"), "agent:sdr");
+    await userEvent.click(
+      await canvas.findByRole("combobox", { name: "Actor" }),
+    );
+    const listbox = await within(document.body).findByRole("listbox");
+    await userEvent.click(
+      within(listbox).getByRole("option", { name: "Lars Brandt" }),
+    );
     await expect(
       await canvas.findByText("No recorded actions match these filters."),
     ).toBeInTheDocument();
+  },
+};
+
+// The eight characters a row shows are not an id the server can answer, so
+// the field says what to paste and the trail stays.
+export const ShortIdRefused: Story = {
+  render: story(page(ENTRIES)),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByRole("textbox", { name: "Entity ID" }),
+      "9008eb3f",
+    );
+    await expect(
+      await canvas.findByText(
+        "Paste the full record ID. Use Copy record ID on a row.",
+      ),
+    ).toBeInTheDocument();
+  },
+};
+
+export const RangeReversed: Story = {
+  render: story(page(ENTRIES)),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      await canvas.findByRole("textbox", { name: "From" }),
+      "2026-11-17{Enter}",
+    );
+    await userEvent.type(
+      await canvas.findByRole("textbox", { name: "To" }),
+      "2026-11-01{Enter}",
+    );
+    await waitFor(() =>
+      expect(
+        canvas.getAllByText("Pick a To date on or after the From date."),
+      ).toHaveLength(2),
+    );
   },
 };
 
