@@ -20,8 +20,6 @@ package compose
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -142,15 +140,6 @@ const (
 	// is recorded on its source as a finding, and no work is created for anyone.
 	CommitmentPromiserUnassignable CommitmentOutcome = "promiser_not_assignable"
 )
-
-// commitmentLocator names one promise across readings of one source: the same
-// source, the same side, the same party and the same evidence span. It is
-// built by the server from what it holds, never from the model's wording, so a
-// re-read that paraphrases the summary still finds the promise it read before.
-func commitmentLocator(sourceActivity ids.UUID, kind, party, span string) string {
-	sum := sha256.Sum256([]byte(sourceActivity.String() + "\x00" + kind + "\x00" + party + "\x00" + span))
-	return hex.EncodeToString(sum[:])
-}
 
 // CommitmentDispatcher applies the rule. Every extractor calls the same one.
 type CommitmentDispatcher struct {

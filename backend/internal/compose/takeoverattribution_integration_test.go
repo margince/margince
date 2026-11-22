@@ -74,6 +74,7 @@ func (r takeoverReading) reading(sentence string, seat *ids.UUID) Commitment {
 	c := Commitment{
 		Meaning: openCommitmentMeaning("", sentence), AsOf: r.asOf, ReadMessages: []ids.UUID{r.source}, Extractor: signalScanActor,
 		SourceActivityID: r.source, Summary: sentence, Quote: sentence, Span: sentence, PromisedTo: &r.contact, Confidence: 0.95,
+		Evidence: approvals.Evidence{Snippet: sentence, SourceType: "activity", SourceID: r.source},
 	}
 	if seat != nil {
 		party = "seat:" + seat.String()

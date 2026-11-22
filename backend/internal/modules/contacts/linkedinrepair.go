@@ -195,8 +195,8 @@ const leadPairColumns = `l.id, matches.contact_ids, matches.fields, matches.matc
 const maxContactsPerLeadReview = 10
 
 // existingLeadContactPairs lists live leads that share an identity with a live
-// contact, and skips a lead whose every pair of contacts a person already
-// dismissed as not a duplicate: that lead stays a lead for good. Fields and
+// contact. It skips a lead whose every pair of contacts a person already
+// dismissed as not a duplicate, so that lead stays a lead for good. Fields and
 // Values name, per contact in id order, the identity that matched.
 const existingLeadContactPairs = `
 	FROM lead l
@@ -232,8 +232,8 @@ const existingLeadContactPairs = `
 			   AND d.left_contact_id = a.id AND d.right_contact_id = b.id)))`
 
 // MergeExistingLeadContactPairsTx promotes unambiguous pairs into the contact.
-// A lead that matches several contacts is left alone and each pair of those
-// contacts goes to the duplicate review, where merging them makes the lead
+// A lead that matches several contacts is left alone. Each pair of those
+// contacts goes to the duplicate review. Merging them makes the lead
 // unambiguous for the next run.
 func (s *Store) MergeExistingLeadContactPairsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (leadContactRepairPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
@@ -295,9 +295,9 @@ func (p leadContactPair) fileContactPairs(ctx context.Context, tx pgx.Tx, by str
 }
 
 // rereadUnderLocks locks the matched contacts in id order, then the lead's
-// identities, the order a contact edit takes them in, and reads the lead's
-// matches again. It answers false when they are no longer the contacts the page
-// saw, so a concurrent edit is left for the next run.
+// identities. A contact edit takes them in the same order. It then reads the
+// lead's matches again. It answers false when they are no longer the contacts
+// the page saw, so a concurrent edit is left for the next run.
 func (p leadContactPair) rereadUnderLocks(ctx context.Context, tx pgx.Tx) (leadContactPair, bool, error) {
 	for _, contact := range p.ContactIDs {
 		if err := auth.EnsureWritableLive(ctx, tx, contactEntity, contact); err != nil {
