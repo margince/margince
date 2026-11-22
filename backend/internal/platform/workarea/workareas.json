@@ -1023,6 +1023,7 @@
     "claimRecord": "sharing",
     "claimTaskReminderDelivery": "activities",
     "clearActivityDisposition": "activities",
+    "clearContactImpersonationWarning": "contacts",
     "clearLeadManualSignal": "leads",
     "clearVoiceCorpus": "voice",
     "closeDealRoom": "deal_rooms",

@@ -1267,7 +1267,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.questionBoundPeriod":
     "Diese Frage hat Filter. Die Zeiträume darin behalten die Daten vom Zeitpunkt des Platzierens: ein Geschäftsjahr ab {month}, in {zone}.",
   "reporting.fiscalQuarterNote":
-    "Dieses Quartal folgt dem Geschäftsjahr, das im {month} beginnt.",
+    "Quartale und Jahre folgen hier dem Geschäftsjahr, das im {month} beginnt.",
   "reporting.previewChart": "Vorschau",
   "reporting.previewLoading": "Vorschau wird geladen…",
   "reporting.previewEmpty":
@@ -1627,9 +1627,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wurde in einer Währung festgelegt, die nicht mehr die Basiswährung ist. Lege das Ziel neu fest, um zu vergleichen.",
   "reporting.this_week": "Diese Woche",
   "reporting.this_month": "Dieser Monat",
-  "reporting.last_month": "Letzter Monat",
+  "reporting.last_month": "Letzter abgeschlossener Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",
   "reporting.this_quarter": "Dieses Geschäftsquartal",
+  "reporting.last_quarter": "Letztes abgeschlossenes Quartal",
+  "reporting.last_year": "Letztes abgeschlossenes Jahr",
   "reporting.custom": "Eigener Zeitraum",
   "reporting.start": "Startdatum",
   "reporting.end": "Enddatum (nicht eingeschlossen)",
@@ -2867,6 +2869,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erfasster Austausch zurückgenommen",
   "history.field.acquisition_request_retracted":
     "Anfrage aus der Herkunft zurückgenommen",
+  "history.field.impersonation_warning_cleared":
+    "Warnung vor möglicher Täuschung aufgehoben",
+  "history.field.impersonation_warning_carried":
+    "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
@@ -2905,6 +2911,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.value.meeting_status.no_show": "Nicht erschienen",
   "history.value.meeting_status.canceled": "Abgesagt",
   "history.value.relationship_mark.vendor_marketing": "Anbieter-Werbung",
+  "history.value.impersonation.punycode_domain": "Kodierte E-Mail-Domain",
+  "history.value.impersonation.display_name_other_domain":
+    "Andere Domain im Anzeigenamen",
+  "history.value.impersonation.unrecorded": "Anzeichen nicht festgehalten",
 
   "confidence.high": "hoch",
   "confidence.med": "mittel",
@@ -9052,7 +9062,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.upcomingTitle": "Anstehende Termine",
   "analytics.prospect.cohortTitle": "Was aus deinen Übergaben wurde",
   "analytics.prospect.cohortPeriods":
-    "Für eine Woche oder einen Monat angezeigt. Wähle einen dieser Zeiträume.",
+    "Für dieses Geschäftsquartal und einen eigenen Zeitraum nicht angezeigt. Wähle einen anderen Zeitraum.",
   "analytics.prospect.cohortCaption_one":
     "{count} Übergabe, die du {period} eingereicht hast, nach aktuellem Stand",
   "analytics.prospect.cohortCaption_other":
@@ -17185,9 +17195,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.fiscalImpactKept_other":
     "{count} Berichte haben eine Karte, die nach einem Zeitraum filtert, und behalten ihre Daten.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} Bericht liest dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgt dem neuen Beginn.",
+    "{count} Bericht liest dieses Quartal, das letzte abgeschlossene Quartal oder Jahr, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgt dem neuen Beginn.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} Berichte lesen dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgen dem neuen Beginn.",
+    "{count} Berichte lesen dieses Quartal, das letzte abgeschlossene Quartal oder Jahr, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgen dem neuen Beginn.",
   "installationSettings.fiscalImpactLoading":
     "Gespeicherte Arbeit, die diese Änderung betrifft, wird gezählt…",
   "installationSettings.forwardMeasure": "Grundlage der Hochrechnung",
@@ -22453,6 +22463,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.follow.setAside":
     "Du hast diesen Kontakt bis {date} zurückgestellt.",
   "contact.follow.resume": "Wieder verfolgen",
+  "contact.impersonation.title":
+    "Diese Absendeadresse gibt sich möglicherweise als jemand anderes aus",
+  "contact.impersonation.clear": "Als unbedenklich einstufen",
+  "contact.impersonation.reason.punycodeDomain":
+    "Die E-Mail-Domain nutzt eine kodierte Schreibweise, die einer anderen Domain ähneln kann.",
+  "contact.impersonation.reason.displayNameOtherDomain":
+    "Der Anzeigename enthält eine Adresse auf einer anderen Domain als der, von der die E-Mail kam.",
+  "contact.impersonation.reason.unrecorded":
+    "Die Prüfung hat nicht festgehalten, welches Anzeichen gefunden wurde.",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Die Aufgabe konnte nicht wieder geöffnet werden. Bitte versuche es erneut.",

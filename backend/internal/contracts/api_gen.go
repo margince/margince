@@ -8911,6 +8911,24 @@ func (e ContactGraphRouteType) Valid() bool {
 	}
 }
 
+// Defines values for ContactImpersonationWarningReason.
+const (
+	ContactImpersonationWarningReasonDisplayNameOtherDomain ContactImpersonationWarningReason = "display_name_other_domain"
+	ContactImpersonationWarningReasonPunycodeDomain         ContactImpersonationWarningReason = "punycode_domain"
+)
+
+// Valid indicates whether the value is a known member of the ContactImpersonationWarningReason enum.
+func (e ContactImpersonationWarningReason) Valid() bool {
+	switch e {
+	case ContactImpersonationWarningReasonDisplayNameOtherDomain:
+		return true
+	case ContactImpersonationWarningReasonPunycodeDomain:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactMeans.
 const (
 	ContactMeansEmail ContactMeans = "email"
@@ -21406,7 +21424,9 @@ func (e ReportSetupRequestSite) Valid() bool {
 // Defines values for ReportSetupSelectionPeriod.
 const (
 	ReportSetupSelectionPeriodLastMonth   ReportSetupSelectionPeriod = "last_month"
+	ReportSetupSelectionPeriodLastQuarter ReportSetupSelectionPeriod = "last_quarter"
 	ReportSetupSelectionPeriodLastWeek    ReportSetupSelectionPeriod = "last_week"
+	ReportSetupSelectionPeriodLastYear    ReportSetupSelectionPeriod = "last_year"
 	ReportSetupSelectionPeriodThisMonth   ReportSetupSelectionPeriod = "this_month"
 	ReportSetupSelectionPeriodThisQuarter ReportSetupSelectionPeriod = "this_quarter"
 	ReportSetupSelectionPeriodThisWeek    ReportSetupSelectionPeriod = "this_week"
@@ -21417,7 +21437,11 @@ func (e ReportSetupSelectionPeriod) Valid() bool {
 	switch e {
 	case ReportSetupSelectionPeriodLastMonth:
 		return true
+	case ReportSetupSelectionPeriodLastQuarter:
+		return true
 	case ReportSetupSelectionPeriodLastWeek:
+		return true
+	case ReportSetupSelectionPeriodLastYear:
 		return true
 	case ReportSetupSelectionPeriodThisMonth:
 		return true
@@ -22040,7 +22064,9 @@ func (e ReportingSelectionCloseWindow) Valid() bool {
 const (
 	ReportingSelectionPeriodCustom      ReportingSelectionPeriod = "custom"
 	ReportingSelectionPeriodLastMonth   ReportingSelectionPeriod = "last_month"
+	ReportingSelectionPeriodLastQuarter ReportingSelectionPeriod = "last_quarter"
 	ReportingSelectionPeriodLastWeek    ReportingSelectionPeriod = "last_week"
+	ReportingSelectionPeriodLastYear    ReportingSelectionPeriod = "last_year"
 	ReportingSelectionPeriodThisMonth   ReportingSelectionPeriod = "this_month"
 	ReportingSelectionPeriodThisQuarter ReportingSelectionPeriod = "this_quarter"
 	ReportingSelectionPeriodThisWeek    ReportingSelectionPeriod = "this_week"
@@ -22053,7 +22079,11 @@ func (e ReportingSelectionPeriod) Valid() bool {
 		return true
 	case ReportingSelectionPeriodLastMonth:
 		return true
+	case ReportingSelectionPeriodLastQuarter:
+		return true
 	case ReportingSelectionPeriodLastWeek:
+		return true
+	case ReportingSelectionPeriodLastYear:
 		return true
 	case ReportingSelectionPeriodThisMonth:
 		return true
@@ -29990,7 +30020,9 @@ func (e EvaluateReportingParamsScopeKind) Valid() bool {
 const (
 	EvaluateReportingParamsPeriodCustom      EvaluateReportingParamsPeriod = "custom"
 	EvaluateReportingParamsPeriodLastMonth   EvaluateReportingParamsPeriod = "last_month"
+	EvaluateReportingParamsPeriodLastQuarter EvaluateReportingParamsPeriod = "last_quarter"
 	EvaluateReportingParamsPeriodLastWeek    EvaluateReportingParamsPeriod = "last_week"
+	EvaluateReportingParamsPeriodLastYear    EvaluateReportingParamsPeriod = "last_year"
 	EvaluateReportingParamsPeriodThisMonth   EvaluateReportingParamsPeriod = "this_month"
 	EvaluateReportingParamsPeriodThisQuarter EvaluateReportingParamsPeriod = "this_quarter"
 	EvaluateReportingParamsPeriodThisWeek    EvaluateReportingParamsPeriod = "this_week"
@@ -30003,7 +30035,11 @@ func (e EvaluateReportingParamsPeriod) Valid() bool {
 		return true
 	case EvaluateReportingParamsPeriodLastMonth:
 		return true
+	case EvaluateReportingParamsPeriodLastQuarter:
+		return true
 	case EvaluateReportingParamsPeriodLastWeek:
+		return true
+	case EvaluateReportingParamsPeriodLastYear:
 		return true
 	case EvaluateReportingParamsPeriodThisMonth:
 		return true
@@ -30080,7 +30116,9 @@ func (e ExportReportingEvaluationParamsScopeKind) Valid() bool {
 const (
 	ExportReportingEvaluationParamsPeriodCustom      ExportReportingEvaluationParamsPeriod = "custom"
 	ExportReportingEvaluationParamsPeriodLastMonth   ExportReportingEvaluationParamsPeriod = "last_month"
+	ExportReportingEvaluationParamsPeriodLastQuarter ExportReportingEvaluationParamsPeriod = "last_quarter"
 	ExportReportingEvaluationParamsPeriodLastWeek    ExportReportingEvaluationParamsPeriod = "last_week"
+	ExportReportingEvaluationParamsPeriodLastYear    ExportReportingEvaluationParamsPeriod = "last_year"
 	ExportReportingEvaluationParamsPeriodThisMonth   ExportReportingEvaluationParamsPeriod = "this_month"
 	ExportReportingEvaluationParamsPeriodThisQuarter ExportReportingEvaluationParamsPeriod = "this_quarter"
 	ExportReportingEvaluationParamsPeriodThisWeek    ExportReportingEvaluationParamsPeriod = "this_week"
@@ -30093,7 +30131,11 @@ func (e ExportReportingEvaluationParamsPeriod) Valid() bool {
 		return true
 	case ExportReportingEvaluationParamsPeriodLastMonth:
 		return true
+	case ExportReportingEvaluationParamsPeriodLastQuarter:
+		return true
 	case ExportReportingEvaluationParamsPeriodLastWeek:
+		return true
+	case ExportReportingEvaluationParamsPeriodLastYear:
 		return true
 	case ExportReportingEvaluationParamsPeriodThisMonth:
 		return true
@@ -30170,7 +30212,9 @@ func (e GetReportingEvidenceParamsScopeKind) Valid() bool {
 const (
 	GetReportingEvidenceParamsPeriodCustom      GetReportingEvidenceParamsPeriod = "custom"
 	GetReportingEvidenceParamsPeriodLastMonth   GetReportingEvidenceParamsPeriod = "last_month"
+	GetReportingEvidenceParamsPeriodLastQuarter GetReportingEvidenceParamsPeriod = "last_quarter"
 	GetReportingEvidenceParamsPeriodLastWeek    GetReportingEvidenceParamsPeriod = "last_week"
+	GetReportingEvidenceParamsPeriodLastYear    GetReportingEvidenceParamsPeriod = "last_year"
 	GetReportingEvidenceParamsPeriodThisMonth   GetReportingEvidenceParamsPeriod = "this_month"
 	GetReportingEvidenceParamsPeriodThisQuarter GetReportingEvidenceParamsPeriod = "this_quarter"
 	GetReportingEvidenceParamsPeriodThisWeek    GetReportingEvidenceParamsPeriod = "this_week"
@@ -30183,7 +30227,11 @@ func (e GetReportingEvidenceParamsPeriod) Valid() bool {
 		return true
 	case GetReportingEvidenceParamsPeriodLastMonth:
 		return true
+	case GetReportingEvidenceParamsPeriodLastQuarter:
+		return true
 	case GetReportingEvidenceParamsPeriodLastWeek:
+		return true
+	case GetReportingEvidenceParamsPeriodLastYear:
 		return true
 	case GetReportingEvidenceParamsPeriodThisMonth:
 		return true
@@ -30435,10 +30483,12 @@ func (e GetSdrTeamReviewParamsScopeKind) Valid() bool {
 
 // Defines values for GetSdrTeamReviewParamsPeriod.
 const (
-	GetSdrTeamReviewParamsPeriodLastMonth GetSdrTeamReviewParamsPeriod = "last_month"
-	GetSdrTeamReviewParamsPeriodLastWeek  GetSdrTeamReviewParamsPeriod = "last_week"
-	GetSdrTeamReviewParamsPeriodThisMonth GetSdrTeamReviewParamsPeriod = "this_month"
-	GetSdrTeamReviewParamsPeriodThisWeek  GetSdrTeamReviewParamsPeriod = "this_week"
+	GetSdrTeamReviewParamsPeriodLastMonth   GetSdrTeamReviewParamsPeriod = "last_month"
+	GetSdrTeamReviewParamsPeriodLastQuarter GetSdrTeamReviewParamsPeriod = "last_quarter"
+	GetSdrTeamReviewParamsPeriodLastWeek    GetSdrTeamReviewParamsPeriod = "last_week"
+	GetSdrTeamReviewParamsPeriodLastYear    GetSdrTeamReviewParamsPeriod = "last_year"
+	GetSdrTeamReviewParamsPeriodThisMonth   GetSdrTeamReviewParamsPeriod = "this_month"
+	GetSdrTeamReviewParamsPeriodThisWeek    GetSdrTeamReviewParamsPeriod = "this_week"
 )
 
 // Valid indicates whether the value is a known member of the GetSdrTeamReviewParamsPeriod enum.
@@ -30446,7 +30496,11 @@ func (e GetSdrTeamReviewParamsPeriod) Valid() bool {
 	switch e {
 	case GetSdrTeamReviewParamsPeriodLastMonth:
 		return true
+	case GetSdrTeamReviewParamsPeriodLastQuarter:
+		return true
 	case GetSdrTeamReviewParamsPeriodLastWeek:
+		return true
+	case GetSdrTeamReviewParamsPeriodLastYear:
 		return true
 	case GetSdrTeamReviewParamsPeriodThisMonth:
 		return true
@@ -44771,6 +44825,9 @@ type Contact struct {
 	GreetingRegister *ContactGreetingRegister `json:"greeting_register,omitempty"`
 	Id               openapi_types.UUID       `json:"id"`
 
+	// ImpersonationWarning Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`).
+	ImpersonationWarning *ContactImpersonationWarning `json:"impersonation_warning,omitempty"`
+
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
@@ -45727,6 +45784,18 @@ type ContactGraphRouteEvidence struct {
 
 // ContactGraphRouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 type ContactGraphRouteType string
+
+// ContactImpersonationWarning The sign of impersonation the sender check saw when capture made this contact from a mail.
+type ContactImpersonationWarning struct {
+	// DetectedAt When the sender check recorded it.
+	DetectedAt time.Time `json:"detected_at"`
+
+	// Reason Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+	Reason *ContactImpersonationWarningReason `json:"reason,omitempty"`
+}
+
+// ContactImpersonationWarningReason Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+type ContactImpersonationWarningReason string
 
 // ContactListResponse defines model for ContactListResponse.
 type ContactListResponse struct {
@@ -54597,7 +54666,7 @@ type InstallationFiscalYearImpact struct {
 	// ReportsWithKeptPeriods Live reports with a card whose saved question filters on a period.
 	ReportsWithKeptPeriods int `json:"reports_with_kept_periods" minimum:"0"`
 
-	// ReportsWithRelativePeriods Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
+	// ReportsWithRelativePeriods Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window.
 	ReportsWithRelativePeriods int `json:"reports_with_relative_periods" minimum:"0"`
 
 	// SavedQuestions Saved questions, of every member, that filter on a period.
@@ -64701,6 +64770,8 @@ type ReportingSelection struct {
 	// evaluation time. Read at that exact moment, the week holds no time
 	// yet and the context's interval starts where it ends. A month target
 	// beside it still counts the whole month up to the evaluation time.
+	// `last_quarter` and `last_year` are the last completed fiscal quarter
+	// and fiscal year, in the installation's fiscal calendar.
 	Period      ReportingSelectionPeriod      `json:"period"`
 	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
 	ProductId   *ReportingProductId           `json:"product_id,omitempty"`
@@ -64718,6 +64789,8 @@ type ReportingSelectionCloseWindow string
 // evaluation time. Read at that exact moment, the week holds no time
 // yet and the context's interval starts where it ends. A month target
 // beside it still counts the whole month up to the evaluation time.
+// `last_quarter` and `last_year` are the last completed fiscal quarter
+// and fiscal year, in the installation's fiscal calendar.
 type ReportingSelectionPeriod string
 
 // ReportingSelectionTargetBasis defines model for ReportingSelection.TargetBasis.
@@ -79252,6 +79325,12 @@ type CreateContactEnrichmentRunParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ClearContactImpersonationWarningJSONBody defines parameters for ClearContactImpersonationWarning.
+type ClearContactImpersonationWarningJSONBody struct {
+	// DetectedAt The `detected_at` of the `impersonation_warning` the caller read.
+	DetectedAt time.Time `json:"detected_at"`
+}
+
 // DraftIntroNoteJSONBody defines parameters for DraftIntroNote.
 type DraftIntroNoteJSONBody struct {
 	// ThroughContactId The intermediary on a route that runs through another contact, when it does. Absent means the colleague knows the target directly.
@@ -85574,6 +85653,9 @@ type ApplyContactEmploymentImportJSONRequestBody = EmploymentImportRequest
 // CreateContactEnrichmentRunJSONRequestBody defines body for CreateContactEnrichmentRun for application/json ContentType.
 type CreateContactEnrichmentRunJSONRequestBody = CreateContactEnrichmentRunRequest
 
+// ClearContactImpersonationWarningJSONRequestBody defines body for ClearContactImpersonationWarning for application/json ContentType.
+type ClearContactImpersonationWarningJSONRequestBody ClearContactImpersonationWarningJSONBody
+
 // DraftIntroNoteJSONRequestBody defines body for DraftIntroNote for application/json ContentType.
 type DraftIntroNoteJSONRequestBody DraftIntroNoteJSONBody
 
@@ -88561,6 +88643,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "id")
 	}
 
+	if raw, found := object["impersonation_warning"]; found {
+		err = json.Unmarshal(raw, &a.ImpersonationWarning)
+		if err != nil {
+			return fmt.Errorf("error reading 'impersonation_warning': %w", err)
+		}
+		delete(object, "impersonation_warning")
+	}
+
 	if raw, found := object["imported_from"]; found {
 		err = json.Unmarshal(raw, &a.ImportedFrom)
 		if err != nil {
@@ -88878,6 +88968,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.ImpersonationWarning != nil {
+		object["impersonation_warning"], err = json.Marshal(a.ImpersonationWarning)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'impersonation_warning': %w", err)
+		}
 	}
 
 	if a.ImportedFrom != nil {
@@ -101326,6 +101423,9 @@ type ServerInterface interface {
 	// Who around this contact could open a door, and through whom.
 	// (GET /contacts/{id}/graph)
 	GetContactGraph(w http.ResponseWriter, r *http.Request, id Id)
+	// Answer a contact's impersonation warning as fine.
+	// (POST /contacts/{id}/impersonation-warning/clear)
+	ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft the forwardable note a colleague can paste into their own introduction.
 	// (POST /contacts/{id}/intro-note-draft)
 	DraftIntroNote(w http.ResponseWriter, r *http.Request, id Id)
@@ -105997,6 +106097,12 @@ func (_ Unimplemented) GetContactEnrichmentRun(w http.ResponseWriter, r *http.Re
 // Who around this contact could open a door, and through whom.
 // (GET /contacts/{id}/graph)
 func (_ Unimplemented) GetContactGraph(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a contact's impersonation warning as fine.
+// (POST /contacts/{id}/impersonation-warning/clear)
+func (_ Unimplemented) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -130012,6 +130118,38 @@ func (siw *ServerInterfaceWrapper) GetContactGraph(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContactGraph(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClearContactImpersonationWarning operation middleware
+func (siw *ServerInterfaceWrapper) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearContactImpersonationWarning(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -161374,6 +161512,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/graph", wrapper.GetContactGraph)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/impersonation-warning/clear", wrapper.ClearContactImpersonationWarning)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/intro-note-draft", wrapper.DraftIntroNote)

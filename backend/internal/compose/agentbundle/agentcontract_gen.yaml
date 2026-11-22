@@ -10937,6 +10937,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -11114,6 +11116,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -11273,6 +11277,8 @@ paths:
               - last_month
               - last_week
               - this_quarter
+              - last_quarter
+              - last_year
               - custom
         - name: start_at
           in: query
@@ -23809,7 +23815,7 @@ paths:
           description: The team or owner named by `scope_kind`.
         - name: period
           in: query
-          schema: {type: string, enum: [this_week, last_week, this_month, last_month], default: this_week}
+          schema: {type: string, enum: [this_week, last_week, this_month, last_month, last_quarter, last_year], default: this_week}
           description: The period, in the installation's reporting zone.
       responses:
         '200':
@@ -32551,6 +32557,11 @@ components:
           enum: [formal, familiar, null]
           description: >-
             How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+        impersonation_warning:
+          allOf: [{$ref: '#/components/schemas/ContactImpersonationWarning'}]
+          readOnly: true
+          description: >-
+            Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`).
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -38737,7 +38748,7 @@ components:
         country: {$ref: '#/components/schemas/ReportingCountry'}
         period:
           type: string
-          enum: [this_week, this_month, last_month, last_week, this_quarter]
+          enum: [this_week, this_month, last_month, last_week, this_quarter, last_quarter, last_year]
         metrics:
           type: array
           maxItems: 8
@@ -45919,12 +45930,16 @@ components:
             - last_month
             - last_week
             - this_quarter
+            - last_quarter
+            - last_year
             - custom
           description: |-
             `this_week` runs from Monday 00:00 in the installation zone to the
             evaluation time. Read at that exact moment, the week holds no time
             yet and the context's interval starts where it ends. A month target
             beside it still counts the whole month up to the evaluation time.
+            `last_quarter` and `last_year` are the last completed fiscal quarter
+            and fiscal year, in the installation's fiscal calendar.
         interval:
           $ref: '#/components/schemas/ReportingWindow'
         target_basis:
@@ -55380,6 +55395,21 @@ components:
       type: object
       properties:
         reason: {type: [string, 'null'], description: Optional buyer-given decline reason (rides offer.rejected).}
+    ContactImpersonationWarning:
+      type: object
+      description: >-
+        The sign of impersonation the sender check saw when capture made this contact from a mail.
+      required: [detected_at]
+      properties:
+        reason:
+          type: string
+          enum: [punycode_domain, display_name_other_domain]
+          description: >-
+            Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+        detected_at:
+          type: string
+          format: date-time
+          description: When the sender check recorded it.
     ContactAcquisitionRequest:
       type: object
       description: A request to hear from us that the contact's acquisition records.
