@@ -1221,6 +1221,8 @@ public.ai_task_run.ai_task_run_attempt_check CHECK ((attempt >= 1))
 public.ai_task_run.ai_task_run_identity UNIQUE (source, occurrence_key)
 public.ai_task_run.ai_task_run_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE SET NULL
 public.ai_task_run.ai_task_run_pkey PRIMARY KEY (id)
+public.ai_task_run.ai_task_run_progress_processed_check CHECK (((progress_processed IS NULL) OR (progress_processed >= 0)))
+public.ai_task_run.ai_task_run_progress_total_check CHECK (((progress_total IS NULL) OR ((progress_total >= 1) AND (progress_processed IS NOT NULL) AND (progress_processed <= progress_total))))
 public.ai_task_run.ai_task_run_quantity_check CHECK (((quantity IS NULL) OR (quantity >= 0)))
 public.ai_task_run.ai_task_run_quantity_unit_check CHECK (((quantity_unit IS NULL) OR (quantity_unit = ANY (ARRAY['messages'::text, 'records'::text, 'contacts'::text, 'documents'::text]))))
 public.ai_task_run.ai_task_run_queued_has_no_start CHECK (((state = 'queued'::text) = (started_at IS NULL)))
@@ -1236,6 +1238,8 @@ public.ai_task_run.id uuid NOT NULL gen=- def=uuidv7()
 public.ai_task_run.kind text NOT NULL gen=- def=-
 public.ai_task_run.occurrence_key text NOT NULL gen=- def=-
 public.ai_task_run.passport_id uuid gen=- def=-
+public.ai_task_run.progress_processed integer gen=- def=-
+public.ai_task_run.progress_total integer gen=- def=-
 public.ai_task_run.quantity integer gen=- def=-
 public.ai_task_run.quantity_unit text gen=- def=-
 public.ai_task_run.queued_at timestamp with time zone NOT NULL gen=- def=-
