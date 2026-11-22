@@ -17,6 +17,7 @@ import {
   EXPLANATION,
   QUERY,
   refusal,
+  SCHEMA,
   STAGES,
   USERS,
   WITHHELD_ANSWER,
@@ -35,7 +36,10 @@ function jsonResponse(body: unknown) {
 
 type Asked = { url: string; body: unknown };
 
-function stubServer(explanation: unknown = EXPLANATION): Asked[] {
+function stubServer(
+  explanation: unknown = EXPLANATION,
+  schema: unknown = SCHEMA,
+): Asked[] {
   const asked: Asked[] = [];
   vi.stubGlobal(
     "fetch",
@@ -49,6 +53,7 @@ function stubServer(explanation: unknown = EXPLANATION): Asked[] {
         asked.push({ url, body });
         return jsonResponse(explanation);
       }
+      if (url.includes("/analytics/schema")) return jsonResponse(schema);
       if (url.endsWith("/me"))
         return jsonResponse(meFixture({ rowScope: "all" }));
       if (url.includes("/stages")) return jsonResponse(STAGES);
@@ -151,10 +156,12 @@ describe("the answer table", () => {
     ).toBeTruthy();
   });
 
-  it("says there is nothing when no record matches", () => {
+  it("says there is nothing when no record matches", async () => {
     stubServer();
     renderAnswer({ ...ANSWER, rows: [] });
-    expect(screen.getByText("No records match this question.")).toBeTruthy();
+    expect(
+      await screen.findByText("No records match this question."),
+    ).toBeTruthy();
     expect(screen.queryByRole("table")).toBeNull();
   });
 });
@@ -424,4 +431,43 @@ it("keeps the answer’s conversion frame when the page currency differs", async
   expect(await screen.findByText(/USD.*12/)).toBeTruthy();
   expect(screen.getByText("US$1,000")).toBeTruthy();
   expect(screen.getByText(/7 records are left out/)).toBeTruthy();
+});
+
+// Which measure is money is the schema's to say. An amount under a name with
+// no `_minor` reads as money, and a `_minor` name the server does not mark
+// reads as a number.
+it("reads money from the schema's mark, never from a field's name", async () => {
+  const entity = {
+    name: QUERY.entity,
+    group_by: ["stage_id"],
+    measures: ["deal_value", "legacy_minor"],
+    money: { deal_value: "row_currency" },
+  };
+  stubServer(EXPLANATION, { version: "v1", entities: [entity] });
+  renderAnswer(
+    {
+      ...ANSWER,
+      columns: ["stage_id", "currency", "sum_deal_value", "sum_legacy_minor"],
+      rows: [
+        {
+          stage_id: "s-qual",
+          currency: "USD",
+          sum_deal_value: 100000,
+          sum_legacy_minor: 250000,
+          _withheld: false,
+        },
+      ],
+    },
+    {
+      ...QUERY,
+      group_by: ["stage_id", "currency"],
+      measures: [
+        { fn: "sum", field: "deal_value" },
+        { fn: "sum", field: "legacy_minor" },
+      ],
+    },
+  );
+  const row = (await screen.findAllByRole("row"))[1];
+  expect(await within(row).findByText("US$1,000")).toBeTruthy();
+  expect(within(row).getByText("250,000")).toBeTruthy();
 });

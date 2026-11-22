@@ -70532,7 +70532,7 @@ components:
       additionalProperties: false
     AnalyticsEntity:
       type: object
-      required: [name, group_by, measures]
+      required: [name, group_by, measures, money]
       properties:
         name: { type: string, description: "The population, by name." }
         group_by:
@@ -70543,6 +70543,17 @@ components:
           type: array
           items: { type: string }
           description: The fields this population can be aggregated over.
+        money:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [row_currency, base_currency]
+            x-extensible-enum: true
+          description: |
+            The measures that are amounts in minor units, and the currency each is in:
+            `row_currency` in each record's own currency, which a sum across currencies
+            refuses, or `base_currency` converted to the installation's base currency. A
+            measure not named here is a plain number, whatever its name.
         custom_fields:
           type: array
           items: { $ref: '#/components/schemas/AnalyticsCustomField' }

@@ -2170,6 +2170,24 @@ func (e AnalyticsCustomFieldType) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsEntityMoney.
+const (
+	AnalyticsEntityMoneyBaseCurrency AnalyticsEntityMoney = "base_currency"
+	AnalyticsEntityMoneyRowCurrency  AnalyticsEntityMoney = "row_currency"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsEntityMoney enum.
+func (e AnalyticsEntityMoney) Valid() bool {
+	switch e {
+	case AnalyticsEntityMoneyBaseCurrency:
+		return true
+	case AnalyticsEntityMoneyRowCurrency:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyticsFilterOp.
 const (
 	AnalyticsFilterOpAnalyticsOpEq        AnalyticsFilterOp = "eq"
@@ -36170,9 +36188,18 @@ type AnalyticsEntity struct {
 	// Measures The fields this population can be aggregated over.
 	Measures []string `json:"measures"`
 
+	// Money The measures that are amounts in minor units, and the currency each is in:
+	// `row_currency` in each record's own currency, which a sum across currencies
+	// refuses, or `base_currency` converted to the installation's base currency. A
+	// measure not named here is a plain number, whatever its name.
+	Money map[string]AnalyticsEntityMoney `json:"money"`
+
 	// Name The population, by name.
 	Name string `json:"name"`
 }
+
+// AnalyticsEntityMoney defines model for AnalyticsEntity.Money.
+type AnalyticsEntityMoney string
 
 // AnalyticsExplainRequest One cell of an answer, named by the question and its group keys.
 type AnalyticsExplainRequest struct {

@@ -10,6 +10,7 @@ import {
   derivationColumns,
   parseDerivationQuery,
 } from "./analytics.explain";
+import { REPORT_SCHEMA } from "./analytics.questions.testkit";
 import { type ReportsStubOpts, render, reportsStub } from "./analytics.testkit";
 
 // "Explain this number" in both of its hosts: the panel under a report card,
@@ -502,38 +503,48 @@ describe("parseDerivationQuery", () => {
 // same row. Formatting both against the base currency puts a euro sign on a
 // dollar deal — a wrong number wearing a right-looking symbol.
 describe("drill-through money", () => {
+  // What the server marks each column as, across the deal and project reports.
+  const MONEY = Object.assign(
+    {},
+    ...REPORT_SCHEMA.entities.map((entity) => entity.money),
+  );
+
   it("writes a converted measure in the base currency", () => {
     const row = { amount_base_minor: 500000, currency: "USD" };
-    expect(derivationCellCurrency("amount_base_minor", row, "EUR")).toBe("EUR");
+    expect(derivationCellCurrency("amount_base_minor", row, "EUR", MONEY)).toBe(
+      "EUR",
+    );
   });
 
   it("writes an unconverted measure in the deal's own currency", () => {
     const row = { amount_minor: 500000, currency: "USD" };
-    expect(derivationCellCurrency("amount_minor", row, "EUR")).toBe("USD");
+    expect(derivationCellCurrency("amount_minor", row, "EUR", MONEY)).toBe(
+      "USD",
+    );
   });
 
   // The two project measures are named `_minor` and are already folded into
-  // the base currency. The name says native and the declaration says
+  // the base currency. The name says native and the served mark says
   // converted.
   //
-  // The declaration is the one that is right. A row carrying a currency beside
+  // The served mark is the one that is right. A row carrying a currency beside
   // them would otherwise stamp it on a converted total.
   it("writes a converted measure named _minor in the base currency", () => {
     const row = { open_deal_value_minor: 500000, currency: "USD" };
-    expect(derivationCellCurrency("open_deal_value_minor", row, "EUR")).toBe(
-      "EUR",
-    );
-    expect(derivationCellCurrency("won_deal_value_minor", row, "EUR")).toBe(
-      "EUR",
-    );
+    expect(
+      derivationCellCurrency("open_deal_value_minor", row, "EUR", MONEY),
+    ).toBe("EUR");
+    expect(
+      derivationCellCurrency("won_deal_value_minor", row, "EUR", MONEY),
+    ).toBe("EUR");
   });
 
   // A row that names no currency has nothing to write the figure in. Falling
   // back to the base currency would be a guess presented as a fact.
   it("names no currency for an unconverted measure on a row without one", () => {
-    expect(derivationCellCurrency("amount_minor", {}, "EUR")).toBeNull();
+    expect(derivationCellCurrency("amount_minor", {}, "EUR", MONEY)).toBeNull();
     expect(
-      derivationCellCurrency("amount_minor", { currency: "" }, "EUR"),
+      derivationCellCurrency("amount_minor", { currency: "" }, "EUR", MONEY),
     ).toBeNull();
   });
 });

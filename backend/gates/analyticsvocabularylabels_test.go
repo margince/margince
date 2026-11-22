@@ -10,11 +10,11 @@ package gates
 //
 // The vocabulary is derived from the report catalog, so a field added to a spec
 // reaches the builder the day it ships. Without its catalog key it renders as a
-// wire name beside translated neighbours; a key for a field that is gone is one
-// the builder offers and the engine refuses. The same holds for the populations,
-// and the measures shown in a row's own currency. The aggregates and comparisons
-// the browser types from the contract's enums, so those are held against the
-// contract, and the compiler holds the browser's exhaustive label maps to them.
+// wire name beside translated neighbours. A key for a field that is gone is one
+// the builder offers and the engine refuses. The same holds for the populations.
+// The browser reads which measures are money from the served schema. It types
+// the aggregates and comparisons from the contract's enums, so those are held
+// against the contract. The compiler holds its exhaustive label maps to them.
 //
 // Each server side is derived from its Go owner, the vocabulary from what a seat
 // holding every grant is handed, and each is held in both directions. The
@@ -51,7 +51,7 @@ var tsLiteralString = regexp.MustCompile(`["']([^"'\n]+)["']`)
 
 // analyticsServer holds the server side of each mirror, derived once.
 type analyticsServer struct {
-	fields, entities, native, numberDims, booleanDims []string
+	fields, entities, numberDims, booleanDims []string
 }
 
 // analyticsPlant is one drift planted in the real sources, and the mirror that
@@ -101,7 +101,6 @@ func TestTheQuestionBuilderGateSeesEveryDriftShape(t *testing.T) {
 		{"a population without its label", catalog, unlabelledEntity, "population"},
 		{"a label for a retired population", catalog, retiredEntity, "population"},
 	}
-	plants = append(plants, listPlants(t, catalog, vocab, "NATIVE_CURRENCY_MEASURES", "native")...)
 	plants = append(plants, listPlants(t, catalog, vocab, "NUMBER_DIMENSIONS", "number")...)
 	plants = append(plants, listPlants(t, catalog, vocab, "BOOLEAN_DIMENSIONS", "boolean")...)
 	for _, plant := range plants {
@@ -162,13 +161,9 @@ func deriveAnalyticsServer(t *testing.T) analyticsServer {
 		analyticsquery.ShapeNumber: {}, analyticsquery.ShapeBoolean: {},
 	}
 	dimensionShape := map[string]analyticsquery.ColumnShape{}
-	native := map[string]bool{}
 	for _, entity := range schema.Entities {
 		for name, field := range entity.Fields {
 			fields[name] = true
-			if field.Currency != nil {
-				native[name] = true
-			}
 			if field.Kind != analyticsquery.KindDimension {
 				continue
 			}
@@ -186,11 +181,10 @@ func deriveAnalyticsServer(t *testing.T) analyticsServer {
 	}
 	server := analyticsServer{
 		fields: slices.Sorted(maps.Keys(fields)), entities: schema.EntityNames(),
-		native:      slices.Sorted(maps.Keys(native)),
 		numberDims:  slices.Sorted(maps.Keys(shapes[analyticsquery.ShapeNumber])),
 		booleanDims: slices.Sorted(maps.Keys(shapes[analyticsquery.ShapeBoolean])),
 	}
-	if len(server.fields) == 0 || len(server.entities) == 0 || len(server.native) == 0 ||
+	if len(server.fields) == 0 || len(server.entities) == 0 ||
 		len(server.numberDims) == 0 || len(server.booleanDims) == 0 {
 		t.Fatalf("a server set derived empty (%+v) — this gate would hold the browser to nothing", server)
 	}
@@ -213,11 +207,6 @@ func analyticsMirrors(t *testing.T, server analyticsServer, catalog, vocab strin
 			"population labels (ENTITY_LABEL_KEY)", server.entities,
 			literalMatches(tsLiteralKey, vocab[entities[0]:entities[1]]),
 			"a population shows as its wire name, or a retired one is offered and refused",
-		},
-		{
-			"native currency measures (NATIVE_CURRENCY_MEASURES)", server.native,
-			list("NATIVE_CURRENCY_MEASURES"),
-			"a per-currency amount is shown in the base currency, or a base amount in a row's own",
 		},
 		{
 			"number dimensions (NUMBER_DIMENSIONS)", server.numberDims, list("NUMBER_DIMENSIONS"),

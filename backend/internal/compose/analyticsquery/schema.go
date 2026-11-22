@@ -165,6 +165,28 @@ func (e Entity) FieldNames(kind FieldKind) []string {
 	return out
 }
 
+// Money names each measure that is an amount and the currency it is in, as
+// the schema the browser reads states it. A field with no currency is a number.
+func (e Entity) Money() map[string]string {
+	out := map[string]string{}
+	for name, field := range e.Fields {
+		switch {
+		case field.Kind != KindMeasure:
+		case field.Currency != nil:
+			out[name] = MoneyRowCurrency
+		case field.Unpriced != "":
+			out[name] = MoneyBaseCurrency
+		}
+	}
+	return out
+}
+
+// The currencies Money names.
+const (
+	MoneyRowCurrency  = "row_currency"
+	MoneyBaseCurrency = "base_currency"
+)
+
 // FilterableNames lists every field a filter may name, in a stable order.
 //
 // Every kind is filterable. A dimension narrows to one of its values, a

@@ -18,6 +18,7 @@ import {
   EXPLANATION,
   QUERY,
   refusal,
+  SCHEMA,
   STAGES,
   USERS,
   WITHHELD_ANSWER,
@@ -45,6 +46,7 @@ function answerStory(
       "GET /stages": () => jsonResponse(STAGES),
       "GET /users": () => jsonResponse(USERS),
       "POST /analytics/explain": () => jsonResponse(EXPLANATION),
+      "GET /analytics/schema": () => jsonResponse(SCHEMA),
     });
     return (
       <StoryProviders>

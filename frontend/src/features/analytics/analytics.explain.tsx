@@ -7,6 +7,7 @@ import { Button, SectionHeader, Skeleton } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { QueryGate } from "../../design-system/querystates";
 import { Stack } from "../../design-system/stack";
 import { rowsState, SurfaceState } from "../../design-system/surfacestate";
 import {
@@ -20,7 +21,13 @@ import type { MessageKey } from "../../i18n/en";
 import { translatedPipeline } from "../../lib/labeltranslation";
 import { unwrap } from "../../lib/problem";
 import { ExplainDrawer } from "./analytics.explain.drawer";
-import { isMoneyField, isNativeMoneyField } from "./analytics.questions.vocab";
+import {
+  isMoneyField,
+  isNativeMoneyField,
+  type MoneyFields,
+  moneyFieldsOf,
+} from "./analytics.questions.vocab";
+import { useAnalyticsSchema } from "./analytics.schema";
 
 // "Explain this number": where a figure on the Analytics screen came from. ONE
 // body, two hosts: the panel under a report card explains the whole result, and
@@ -154,25 +161,16 @@ export function derivationColumns(
 
 const IDENTITY_COLUMNS = ["label", "id"];
 
-// Which currency a money cell is counted in.
-//
-// Read from the declared native set rather than from the column's name.
-//
-// Two project measures are named `_minor` and are already folded into the base
-// currency. A name-based rule labelled them with whatever currency the row
-// carried beside them.
-//
-// A `_base_minor` name still answers base: it says so, and nothing native is
-// spelled that way.
+// Which currency a money cell is counted in, as the report's served schema
+// marks the column: its row's own, or the base currency. Never read from the
+// column's name, which a converted project value shares with a native amount.
 export function derivationCellCurrency(
   col: string,
   row: Record<string, unknown>,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): string | null {
-  if (col.endsWith("_base_minor")) {
-    return baseCurrency;
-  }
-  if (isMoneyField(col) && !isNativeMoneyField(col)) {
+  if (!isNativeMoneyField(col, money)) {
     return baseCurrency;
   }
   const own = row.currency;
@@ -184,8 +182,11 @@ export function derivationCellCurrency(
 function renderDerivationCell(
   col: string,
   row: Record<string, unknown>,
-  baseCurrency: string | null,
-  locale: Locale,
+  frame: Readonly<{
+    baseCurrency: string | null;
+    money: MoneyFields;
+    locale: Locale;
+  }>,
 ): ReactNode {
   const value = row[col];
   if (value == null) {
@@ -204,11 +205,11 @@ function renderDerivationCell(
       return <EntityRef kind="company" id={value} />;
     }
   }
-  if (col.endsWith("_minor") && typeof value === "number") {
+  if (isMoneyField(col, frame.money) && typeof value === "number") {
     return formatAnalyticsMoneyOrAbsent(
       value,
-      derivationCellCurrency(col, row, baseCurrency),
-      locale,
+      derivationCellCurrency(col, row, frame.baseCurrency, frame.money),
+      frame.locale,
     );
   }
   return String(value);
@@ -251,6 +252,7 @@ function DerivationRows({
 }: Readonly<{ derivation: Derivation; baseCurrency: string | null }>) {
   const t = useT();
   const { locale } = useLocale();
+  const schema = useAnalyticsSchema();
   const columns = derivationColumns(derivation);
   const { rows } = derivation;
   const { state, remaining } = rowsState(rows.length, derivation.total_rows);
@@ -265,21 +267,33 @@ function DerivationRows({
         detail={{ remaining }}
       >
         {rows.length > 0 && (
-          <DataTable
-            label={t("explain.sources")}
-            columns={columns.map((col) => ({
-              key: col,
-              header: derivationHeader(col, derivation.report, t),
-              render: (row: Record<string, unknown>) =>
-                renderDerivationCell(col, row, baseCurrency, locale),
-            }))}
-            rows={rows}
-            rowKey={(row) =>
-              typeof row.id === "string"
-                ? `id:${row.id}`
-                : `at:${position.get(row)}`
-            }
-          />
+          // No amount is drawn before the schema says which columns are money.
+          <QueryGate query={schema} pendingLabel={t("common.loading")}>
+            {(vocabulary) => (
+              <DataTable
+                label={t("explain.sources")}
+                columns={columns.map((col) => ({
+                  key: col,
+                  header: derivationHeader(col, derivation.report, t),
+                  render: (row: Record<string, unknown>) =>
+                    renderDerivationCell(col, row, {
+                      baseCurrency,
+                      money: moneyFieldsOf(
+                        vocabulary.entities,
+                        derivation.report,
+                      ),
+                      locale,
+                    }),
+                }))}
+                rows={rows}
+                rowKey={(row) =>
+                  typeof row.id === "string"
+                    ? `id:${row.id}`
+                    : `at:${position.get(row)}`
+                }
+              />
+            )}
+          </QueryGate>
         )}
       </SurfaceState>
     </>

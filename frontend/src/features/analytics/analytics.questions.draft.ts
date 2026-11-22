@@ -16,6 +16,7 @@ import {
   filterFields,
   isNativeMoneyField,
   type MeasureFn,
+  type MoneyFields,
   QUESTION_LIMIT,
   type QuestionOp,
   takesValue,
@@ -113,6 +114,7 @@ function valueMissing(value: LeafValue): boolean {
 export function draftProblem(
   draft: QuestionDraft,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): MessageKey | null {
   if (draft.entity === "") {
     return "analytics.q.needEntity";
@@ -126,7 +128,7 @@ export function draftProblem(
   if (draft.filters.some((f) => takesValue(f.op) && valueMissing(f.value))) {
     return "analytics.q.needValue";
   }
-  return amountProblem(draft, baseCurrency);
+  return amountProblem(draft, baseCurrency, money);
 }
 
 // A money filter compares an amount the reader typed in major units, so it
@@ -134,18 +136,20 @@ export function draftProblem(
 function amountProblem(
   draft: QuestionDraft,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): MessageKey | null {
   for (const filter of draft.filters) {
     const currency = filterAmountCurrency(
       filter.field,
       draft.filters,
       baseCurrency,
+      money,
     );
     if (currency === undefined || !takesValue(filter.op)) {
       continue;
     }
     if (currency === null) {
-      return isNativeMoneyField(filter.field)
+      return isNativeMoneyField(filter.field, money)
         ? "analytics.q.needCurrencyFilter"
         : "analytics.noBaseCurrencyWhy";
     }
@@ -172,6 +176,7 @@ export function toQuery(
   draft: QuestionDraft,
   scope: ScopeWire,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): AnalyticsQuery {
   const query: AnalyticsQuery = {
     entity: draft.entity,
@@ -187,7 +192,11 @@ export function toQuery(
   if (draft.filters.length > 0) {
     query.filters = draft.filters.map((f) =>
       takesValue(f.op)
-        ? { field: f.field, op: f.op, value: wireValue(f, draft, baseCurrency) }
+        ? {
+            field: f.field,
+            op: f.op,
+            value: wireValue(f, draft, baseCurrency, money),
+          }
         : { field: f.field, op: f.op },
     );
   }
@@ -199,11 +208,13 @@ function wireValue(
   filter: FilterDraft,
   draft: QuestionDraft,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): LeafValue {
   const currency = filterAmountCurrency(
     filter.field,
     draft.filters,
     baseCurrency,
+    money,
   );
   if (!currency) {
     return filter.value;
@@ -231,6 +242,7 @@ function leafValue(value: unknown): LeafValue {
 export function draftFromQuery(
   query: AnalyticsQuery,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): QuestionDraft {
   const filters = query.filters ?? [];
   let id = 0;
@@ -243,7 +255,12 @@ export function draftFromQuery(
       field: m.field ?? "",
     })),
     filters: filters.map((f) => {
-      const currency = filterAmountCurrency(f.field, filters, baseCurrency);
+      const currency = filterAmountCurrency(
+        f.field,
+        filters,
+        baseCurrency,
+        money,
+      );
       return {
         id: ++id,
         field: f.field,

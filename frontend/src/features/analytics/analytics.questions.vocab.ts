@@ -59,16 +59,20 @@ function isEntityName(name: string): name is EntityName {
 }
 
 /**
- * The money measures kept in each deal's OWN currency. Every other `_minor`
- * measure was converted into the base currency before it was summed.
- * Mirrors the fields the served analytics vocabulary marks with a per-row
- * `Currency` (backend/internal/compose/reportnativemoney.go reads it from each
- * measure's SQL); backend/gates/analyticsvocabularylabels_test.go holds the two equal.
+ * Each measure of a population that is an amount, and the currency it is in,
+ * as the schema serves it. A field not named here is a plain number, whatever
+ * its name.
  */
-export const NATIVE_CURRENCY_MEASURES = [
-  "amount_minor",
-  "weighted_amount_minor",
-] as const;
+export type MoneyFields = AnalyticsEntity["money"];
+
+export const NO_MONEY: MoneyFields = {};
+
+export function moneyFieldsOf(
+  entities: readonly AnalyticsEntity[],
+  entity: string,
+): MoneyFields {
+  return entities.find((e) => e.name === entity)?.money ?? NO_MONEY;
+}
 
 // How many groups a question asks for. Sent rather than defaulted, so "only
 // the first N are shown" states the number the server actually applied.
@@ -336,12 +340,12 @@ export function columnLabel(
     : analyticsFieldLabel(t, column, custom);
 }
 
-export function isMoneyField(field: string): boolean {
-  return field.endsWith("_minor");
+export function isMoneyField(field: string, money: MoneyFields): boolean {
+  return Object.hasOwn(money, field);
 }
 
-export function isNativeMoneyField(field: string): boolean {
-  return NATIVE_CURRENCY_MEASURES.some((native) => native === field);
+export function isNativeMoneyField(field: string, money: MoneyFields): boolean {
+  return money[field] === "row_currency";
 }
 
 // The one currency a question's filters pin every record to, if any.
@@ -366,11 +370,12 @@ export function filterAmountCurrency(
   field: string,
   filters: readonly FilterLike[],
   baseCurrency: string | null,
+  money: MoneyFields,
 ): string | null | undefined {
-  if (!isMoneyField(field)) {
+  if (!isMoneyField(field, money)) {
     return undefined;
   }
-  return isNativeMoneyField(field)
+  return isNativeMoneyField(field, money)
     ? pinnedCurrency(filters)
     : baseCurrency || null;
 }
@@ -390,18 +395,21 @@ export function measureReading(
   row: AnswerRow,
   query: AnalyticsQuery,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): MeasureReading {
   const field = measure.field ?? "";
-  if (measure.fn === "count_distinct" || !isMoneyField(field)) {
+  if (measure.fn === "count_distinct" || !isMoneyField(field, money)) {
     return { kind: "number" };
   }
-  const currency = moneyCurrency(field, row, query, baseCurrency);
+  const currency = moneyCurrency(field, row, query, baseCurrency, money);
   if (currency) {
     return { kind: "money", currency };
   }
   // A converted amount with no base currency to state it in is not a mix of
   // currencies, and grouping by currency would not give it one.
-  return isNativeMoneyField(field) ? { kind: "mixed" } : { kind: "noBase" };
+  return isNativeMoneyField(field, money)
+    ? { kind: "mixed" }
+    : { kind: "noBase" };
 }
 
 /**
@@ -415,11 +423,12 @@ export function moneyCurrency(
   row: AnswerRow,
   query: AnalyticsQuery,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): string | null | undefined {
-  if (!isMoneyField(field)) {
+  if (!isMoneyField(field, money)) {
     return undefined;
   }
-  if (!isNativeMoneyField(field)) {
+  if (!isNativeMoneyField(field, money)) {
     return baseCurrency || null;
   }
   return rowText(row, "currency") ?? pinnedCurrency(query.filters ?? []);

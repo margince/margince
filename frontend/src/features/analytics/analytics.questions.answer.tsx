@@ -8,6 +8,7 @@ import { Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
+import { QueryGate } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
 import {
   formatAnalyticsMoneyOrAbsent,
@@ -37,13 +38,16 @@ import {
   isMoneyField,
   isNativeMoneyField,
   isWithheldRow,
+  type MoneyFields,
   measureOfColumn,
   measureReading,
   moneyCurrency,
+  moneyFieldsOf,
   QUESTION_LIMIT,
   REFUSAL_KEY,
   refusalOf,
 } from "./analytics.questions.vocab";
+import { useAnalyticsSchema } from "./analytics.schema";
 
 type Translate = ReturnType<typeof useT>;
 
@@ -59,6 +63,7 @@ function measureCell(
   column: string,
   row: AnswerRow,
   baseCurrency: string | null,
+  money: MoneyFields,
   locale: Locale,
   t: Translate,
 ): ReactNode {
@@ -67,7 +72,7 @@ function measureCell(
   if (!measure || typeof value !== "number") {
     return value == null ? MONEY_ABSENT : String(value);
   }
-  const reading = measureReading(measure, row, query, baseCurrency);
+  const reading = measureReading(measure, row, query, baseCurrency, money);
   if (reading.kind === "mixed") {
     return t("analytics.q.mixedCurrencies");
   }
@@ -90,6 +95,7 @@ function anyReading(
   query: AnalyticsQuery,
   answer: AnalyticsAnswer,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): boolean {
   return answer.rows.some(
     (row) =>
@@ -98,7 +104,7 @@ function anyReading(
         const measure = measureOfColumn(query, column);
         return (
           measure !== undefined &&
-          measureReading(measure, row, query, baseCurrency).kind === kind
+          measureReading(measure, row, query, baseCurrency, money).kind === kind
         );
       }),
   );
@@ -109,6 +115,7 @@ type CellFrame = Readonly<{
   namer: Namer;
   source?: ExplainSource;
   baseCurrency: string | null;
+  money: MoneyFields;
   withheldGroups: number;
   fieldLabels: CustomLabels;
 }>;
@@ -129,7 +136,7 @@ function AnswerCell({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const { query, namer, baseCurrency, withheldGroups } = frame;
+  const { query, namer, baseCurrency, money, withheldGroups } = frame;
   if (isWithheldRow(row)) {
     return first
       ? plural("analytics.q.withheldGroups", withheldGroups, {
@@ -139,7 +146,7 @@ function AnswerCell({
   }
   const cell = (query.group_by ?? []).includes(column)
     ? namer(column, row[column])
-    : measureCell(query, column, row, baseCurrency, locale, t);
+    : measureCell(query, column, row, baseCurrency, money, locale, t);
   if (!first || frame.source === undefined) {
     return <>{cell}</>;
   }
@@ -156,13 +163,24 @@ function AnswerCell({
  * as zeros or dropped: each is null in every column, so a row apiece repeats
  * one sentence, and how many there are is already on the wire.
  */
-export function AnswerTable({
-  query,
-  answer,
-  baseCurrency,
-  source,
-  fieldLabels = NO_LABELS,
-}: Readonly<{
+export function AnswerTable(props: AnswerProps) {
+  const t = useT();
+  const schema = useAnalyticsSchema();
+  // The schema says which measures are amounts, so no cell is drawn before it
+  // arrives. A raw minor-unit figure reads as a hundred times the money.
+  return (
+    <QueryGate query={schema} pendingLabel={t("common.loading")}>
+      {(vocabulary) => (
+        <MoneyAnswerTable
+          {...props}
+          money={moneyFieldsOf(vocabulary.entities, props.query.entity)}
+        />
+      )}
+    </QueryGate>
+  );
+}
+
+type AnswerProps = Readonly<{
   query: AnalyticsQuery;
   answer: AnalyticsAnswer;
   baseCurrency: string | null;
@@ -171,7 +189,16 @@ export function AnswerTable({
   source?: ExplainSource;
   /** The administrator's names for the installation's own fields. */
   fieldLabels?: CustomLabels;
-}>) {
+}>;
+
+function MoneyAnswerTable({
+  query,
+  answer,
+  baseCurrency,
+  money,
+  source,
+  fieldLabels = NO_LABELS,
+}: AnswerProps & Readonly<{ money: MoneyFields }>) {
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -191,6 +218,7 @@ export function AnswerTable({
     namer,
     source,
     baseCurrency: answerCurrency,
+    money,
     withheldGroups,
     fieldLabels,
   };
@@ -201,8 +229,8 @@ export function AnswerTable({
       {query.measures.some(
         (measure) =>
           measure.field &&
-          isMoneyField(measure.field) &&
-          !isNativeMoneyField(measure.field),
+          isMoneyField(measure.field, money) &&
+          !isNativeMoneyField(measure.field, money),
       ) &&
         answer.base_currency &&
         answer.rate_date && (
@@ -223,7 +251,7 @@ export function AnswerTable({
           {t("analytics.q.withheldBody")}
         </Callout>
       )}
-      {anyReading("mixed", query, answer, answerCurrency) && (
+      {anyReading("mixed", query, answer, answerCurrency, money) && (
         <Callout
           tone="info"
           kind="standing"
@@ -232,7 +260,7 @@ export function AnswerTable({
           {t("analytics.q.mixedBody")}
         </Callout>
       )}
-      {anyReading("noBase", query, answer, answerCurrency) && (
+      {anyReading("noBase", query, answer, answerCurrency, money) && (
         <Callout
           tone="info"
           kind="standing"
@@ -296,7 +324,7 @@ function RowExplain({
   children: ReactNode;
 }>) {
   const t = useT();
-  const { query, namer, baseCurrency, fieldLabels } = frame;
+  const { query, namer, baseCurrency, money, fieldLabels } = frame;
   const group = explainGroup(query, row);
   return (
     <ExplainDrawer
@@ -308,6 +336,7 @@ function RowExplain({
           query={query}
           group={group}
           baseCurrency={baseCurrency}
+          money={money}
           fieldLabels={fieldLabels}
         />
       )}
@@ -346,12 +375,14 @@ function ExplainRecords({
   query,
   group,
   baseCurrency,
+  money,
   fieldLabels,
 }: Readonly<{
   source: ExplainSource;
   query: AnalyticsQuery;
   group: unknown[] | undefined;
   baseCurrency: string | null;
+  money: MoneyFields;
   fieldLabels: CustomLabels;
 }>) {
   const t = useT();
@@ -400,6 +431,7 @@ function ExplainRecords({
                   query,
                   namer,
                   baseCurrency,
+                  money,
                   locale,
                 }),
             }))}
@@ -439,6 +471,7 @@ function recordCell(
     query: AnalyticsQuery;
     namer: Namer;
     baseCurrency: string | null;
+    money: MoneyFields;
     locale: Locale;
   }>,
 ): ReactNode {
@@ -449,7 +482,13 @@ function recordCell(
   if (column === "id" && typeof value === "string") {
     return <span title={value}>{shortId(value)}</span>;
   }
-  const currency = moneyCurrency(column, row, frame.query, frame.baseCurrency);
+  const currency = moneyCurrency(
+    column,
+    row,
+    frame.query,
+    frame.baseCurrency,
+    frame.money,
+  );
   if (currency !== undefined && typeof value === "number") {
     return formatAnalyticsMoneyOrAbsent(value, currency, frame.locale);
   }

@@ -36,6 +36,7 @@ import {
   fnLabel,
   fnsFor,
   type MeasureFn,
+  NO_MONEY,
   opLabel,
   QUESTION_OPS,
   type QuestionOp,
@@ -140,7 +141,7 @@ export function QuestionBuilder({
   const plural = usePlural();
   const { locale } = useLocale();
   const entity = entities.find((candidate) => candidate.name === draft.entity);
-  const problem = draftProblem(draft, baseCurrency);
+  const problem = draftProblem(draft, baseCurrency, entity?.money ?? NO_MONEY);
   const reason = problem ? t(problem) : undefined;
   const reasonId = useId();
   const population = [...entities]
