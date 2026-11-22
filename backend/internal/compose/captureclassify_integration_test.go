@@ -684,3 +684,35 @@ func TestAVerdictAboutAnEditedMessageStoresNeitherLabelNorReply(t *testing.T) {
 		t.Error("the edited message was labelled from the text the model read")
 	}
 }
+
+func TestOneOutOfRangeConfidenceKeepsTheOtherLabelsAndIsAskedAgainNextPass(t *testing.T) {
+	e := integration.Setup(t)
+	first := seedUnlabeledEmail(t, e, "first")
+	percent := seedUnlabeledEmail(t, e, "ninety percent")
+	third := seedUnlabeledEmail(t, e, "third")
+	brain := &scriptedClassifyBrain{confidence: map[string]float64{"ninety percent": 90}}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("a bad confidence failed the pass: %v", err)
+	}
+	for name, id := range map[string]ids.UUID{"first": first, "third": third} {
+		if labelOf(t, e, id) == nil {
+			t.Errorf("%s lost its label to its neighbour's bad confidence", name)
+		}
+	}
+	if l := labelOf(t, e, percent); l != nil {
+		t.Errorf("the out-of-range answer was stored as %q", *l)
+	}
+	if brain.calls != 2 {
+		t.Fatalf("model calls = %d, want 2: the batch, then the dropped message alone, which ends the pass", brain.calls)
+	}
+
+	brain.confidence["ninety percent"] = 0.9
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("next pass: %v", err)
+	}
+	if labelOf(t, e, percent) == nil {
+		t.Error("the dropped message was not asked again by the next pass")
+	}
+}

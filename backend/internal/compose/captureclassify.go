@@ -299,9 +299,10 @@ func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) (
 	return resolveClassifyRefs(payload.Results, batch), judgeOf(resp), nil
 }
 
-// resolveClassifyRefs rewrites each validated result's ref to its activity id.
+// resolveClassifyRefs rewrites each validated result's ref to its activity id
+// and drops the results whose confidence is outside [0,1].
 func resolveClassifyRefs(results []classifyResult, batch []unlabeledMessage) []classifyResult {
-	return resolveBatchRefs(results, capturelabel.Refs(batch))
+	return resolveBatchRefs(keepInRange(results, classifyResult.confidence), capturelabel.Refs(batch))
 }
 
 // judgeOf names what actually answered.
@@ -352,8 +353,8 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 		if !classifyLabels[r.Label] {
 			return fmt.Sprintf("label %q is not commitment|meeting|other", clampToken(r.Label))
 		}
-		if r.Confidence < 0 || r.Confidence > 1 {
-			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
+		if !confidenceInRange(r.Confidence) {
+			continue // dropped by resolveClassifyRefs; its other fields are never read
 		}
 		if r.Reply == "" {
 			continue // absent is the answer for outbound mail and for anything that does not read as a reply
@@ -371,6 +372,8 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 	}
 	return ""
 }
+
+func (r classifyResult) confidence() schema.Confidence { return r.Confidence }
 
 func (r classifyResult) answeredID() string { return r.ID }
 

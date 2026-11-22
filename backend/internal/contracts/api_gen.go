@@ -35759,10 +35759,21 @@ type AiProviderSettings struct {
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
-	Model      string `json:"model"`
-	Processing string `json:"processing"`
-	Provider   string `json:"provider"`
-	Tier       string `json:"tier"`
+	// Certification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+	Certification *AiRouteCertification `json:"certification,omitempty"`
+	Model         string                `json:"model"`
+	Processing    string                `json:"processing"`
+	Provider      string                `json:"provider"`
+	Tier          string                `json:"tier"`
+}
+
+// AiRouteCertification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+type AiRouteCertification struct {
+	// Current Every record behind the verdict still describes the prompts this build sends.
+	Current bool `json:"current"`
+
+	// Verdict The worst verdict across the task's sites and across the records of this model.
+	Verdict string `json:"verdict"`
 }
 
 // AiRouting The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set

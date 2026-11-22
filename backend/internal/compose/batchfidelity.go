@@ -85,6 +85,27 @@ func checkBatchFidelity[T batchAnswer](results []T, requestedIDs []string) strin
 	return ""
 }
 
+// confidenceInRange reports whether a model-reported score is a confidence at
+// all. 90 and 9 both appear for "90%", so no rescaling is safe and a value
+// outside [0,1] is read as no answer.
+func confidenceInRange(c schema.Confidence) bool { return c >= 0 && c <= 1 }
+
+// keepInRange drops the answers whose confidence is outside [0,1] and keeps the
+// rest of the reply. It is the one rule of every batched verdict site: the
+// answer is left out, its message stays unjudged, and a later pass asks again.
+//
+// Run it after checkBatchFidelity, which counts a dropped answer as given, so
+// one bad score does not fail the ids of the whole reply.
+func keepInRange[T any](results []T, confidence func(T) schema.Confidence) []T {
+	kept := make([]T, 0, len(results))
+	for _, r := range results {
+		if confidenceInRange(confidence(r)) {
+			kept = append(kept, r)
+		}
+	}
+	return kept
+}
+
 // requestedIDNode is the schema node for the id an answer names: a string that
 // must be one of the ids this call sent.
 //

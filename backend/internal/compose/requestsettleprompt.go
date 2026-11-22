@@ -93,6 +93,8 @@ type settleResult struct {
 	Confidence schema.Confidence `json:"confidence"`
 }
 
+func (r settleResult) confidence() schema.Confidence { return r.Confidence }
+
 func (r settleResult) answeredID() string { return r.ID }
 
 func (r settleResult) answering(id string) settleResult { r.ID = id; return r }
@@ -219,12 +221,9 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 	if msg := checkBatchFidelity(payload.Results, refs.All()); msg != "" {
 		return msg
 	}
-	for _, r := range resolveBatchRefs(payload.Results, refs) {
+	for _, r := range resolveSettleResults(payload, refs) {
 		if !settleVerdicts[r.Verdict] {
 			return fmt.Sprintf("verdict %q is not settled|still_owed|unsure", clampToken(r.Verdict))
-		}
-		if r.Confidence < 0 || r.Confidence > 1 {
-			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
 		}
 		// Prose on a settled verdict would be a second answer to the question
 		// the verdict already answered, and the column's CHECK refuses it — so
@@ -249,6 +248,12 @@ func validateSettlePayload(payload settlePayload, batch []settleCandidate) strin
 		}
 	}
 	return ""
+}
+
+// resolveSettleResults reads the payload back to request ids and drops the
+// results whose confidence is outside [0,1].
+func resolveSettleResults(payload settlePayload, refs *promptref.Refs) []settleResult {
+	return resolveBatchRefs(keepInRange(payload.Results, settleResult.confidence), refs)
 }
 
 // settleRemainderGrounded reports whether a still_owed result quotes the

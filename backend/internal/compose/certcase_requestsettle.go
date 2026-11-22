@@ -277,7 +277,7 @@ func (c *requestSettleCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 // verdict against the wrong conversation the moment a model reordered its list.
 func (c *requestSettleCase) faults(payload settlePayload) []string {
 	answers := map[string]settleResult{}
-	for _, r := range resolveBatchRefs(payload.Results, settleRefs(c.batch)) {
+	for _, r := range resolveSettleResults(payload, settleRefs(c.batch)) {
 		answers[r.ID] = r
 	}
 	var faults []string

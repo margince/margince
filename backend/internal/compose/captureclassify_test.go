@@ -118,9 +118,8 @@ func TestClassifyPayloadFidelity(t *testing.T) {
 			results: []classifyResult{ok(a, "spam", 0.9), ok(b, "other", 0.9)},
 			wantErr: true,
 		},
-		"an out-of-range confidence fails": {
+		"an out-of-range confidence does not fail the reply": {
 			results: []classifyResult{ok(a, "other", 1.2), ok(b, "other", 0.9)},
-			wantErr: true,
 		},
 	}
 	for name, tc := range cases {

@@ -2009,6 +2009,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
   "aiAdmin.decisionSkip.unbound":
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
+  "aiAdmin.certification.certified":
+    "{model} ist für diese Aufgabe zertifiziert.",
+  "aiAdmin.certification.degraded":
+    "{model} wird für diese Aufgabe mit verminderter Qualität unterstützt.",
+  "aiAdmin.certification.notSupported":
+    "{model} ist für diese Aufgabe nicht zertifiziert. Es wird trotzdem verwendet, prüfen Sie also, was es liefert.",
+  "aiAdmin.certification.unrecorded":
+    "Für {model} liegt zu dieser Aufgabe kein Zertifizierungsnachweis vor.",
+  "aiAdmin.certification.stale": "Der Nachweis stammt aus früheren Prompts.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 

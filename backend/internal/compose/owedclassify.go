@@ -401,7 +401,7 @@ func (c *OwedClassifier) ask(ctx context.Context, batch []owedCandidate) ([]owed
 	if msg := validateOwedPayload(payload, batch); msg != "" {
 		return nil, fmt.Errorf("owed classify: %s", msg)
 	}
-	return resolveBatchRefs(payload.Results, owedverdict.Refs(batch)), nil
+	return resolveOwedResults(payload, batch), nil
 }
 
 // owedShapeValid is the deterministic hard floor beneath the response schema:
@@ -433,11 +433,16 @@ func validateOwedPayload(payload owedPayload, batch []owedCandidate) string {
 		if !owedVerdicts[r.Verdict] {
 			return fmt.Sprintf("verdict %q is not asks_us|informs_us", clampToken(r.Verdict))
 		}
-		if r.Confidence < 0 || r.Confidence > 1 {
-			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
-		}
 	}
 	return ""
+}
+
+func (r owedResult) confidence() schema.Confidence { return r.Confidence }
+
+// resolveOwedResults reads the payload back to activity ids and drops the
+// results whose confidence is outside [0,1].
+func resolveOwedResults(payload owedPayload, batch []owedCandidate) []owedResult {
+	return resolveBatchRefs(keepInRange(payload.Results, owedResult.confidence), owedverdict.Refs(batch))
 }
 
 func (r owedResult) answeredID() string { return r.ID }

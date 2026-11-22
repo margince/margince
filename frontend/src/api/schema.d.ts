@@ -32606,6 +32606,17 @@ export interface components {
             model: string;
             /** @enum {string} */
             processing: "cloud_provider" | "configured_endpoint";
+            certification?: components["schemas"]["AiRouteCertification"];
+        };
+        /** @description What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified. */
+        AiRouteCertification: {
+            /**
+             * @description The worst verdict across the task's sites and across the records of this model.
+             * @enum {string}
+             */
+            verdict: "certified" | "supported_degraded" | "not_supported";
+            /** @description Every record behind the verdict still describes the prompts this build sends. */
+            current: boolean;
         };
         AiFeatureRoute: {
             task: string;

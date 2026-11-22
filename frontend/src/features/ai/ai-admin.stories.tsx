@@ -181,6 +181,33 @@ const mixedFeatures = [
     ],
   },
 ];
+// A fallback model the records do not certify for the task it serves.
+const certificationFeatures = [
+  {
+    ...feature,
+    task: "draft_reply",
+    display_name: "Draft a reply",
+    effective_candidates: [
+      {
+        ...lead,
+        certification: { verdict: "not_supported" as const, current: false },
+      },
+    ],
+  },
+  {
+    ...feature,
+    task: "summarize",
+    effective_candidates: [
+      {
+        ...lead,
+        certification: { verdict: "certified" as const, current: true },
+      },
+    ],
+  },
+];
+export const CertificationPerTask: Story = {
+  render: story("normal", true, certificationFeatures),
+};
 export const DecisionFirstOnTop: Story = {
   render: story("normal", true, mixedFeatures),
 };

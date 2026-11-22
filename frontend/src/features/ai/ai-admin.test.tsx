@@ -444,6 +444,51 @@ it("puts decision-first rows on top, then rows that declare a skip, then the res
   }
 });
 
+it("says per task what the records say about the model a tier serves", async () => {
+  const user = userEvent.setup({ delay: null });
+  const [lead] = feature.effective_candidates;
+  if (!lead) throw new Error("the feature fixture carries no candidate");
+  const withCertification = (
+    task: string,
+    certification?: {
+      verdict: "certified" | "supported_degraded" | "not_supported";
+      current: boolean;
+    },
+  ) => ({
+    ...feature,
+    task,
+    display_name: `Activity ${task}`,
+    effective_candidates: [{ ...lead, model: "m-1", certification }],
+  });
+  render(
+    <LocaleProvider initial="en">
+      <AiFeatureTable
+        rows={[
+          withCertification("a", { verdict: "certified", current: true }),
+          withCertification("b", { verdict: "not_supported", current: true }),
+          withCertification("c", {
+            verdict: "supported_degraded",
+            current: false,
+          }),
+          withCertification("d"),
+        ]}
+      />
+    </LocaleProvider>,
+  );
+  expect(await openTaskDetails(user, "Activity a")).toHaveTextContent(
+    "m-1 is certified for this task.",
+  );
+  expect(await openTaskDetails(user, "Activity b")).toHaveTextContent(
+    "m-1 is not certified for this task. It is still used",
+  );
+  expect(await openTaskDetails(user, "Activity c")).toHaveTextContent(
+    "reduced quality. The record predates the current prompts.",
+  );
+  expect(await openTaskDetails(user, "Activity d")).toHaveTextContent(
+    "No certification record covers m-1 for this task.",
+  );
+});
+
 it("shows a badge only for a departure, and no disclosure for a single candidate", async () => {
   const user = userEvent.setup({ delay: null });
   render(

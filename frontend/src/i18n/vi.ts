@@ -1959,6 +1959,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Mô hình theo chính sách",
   "aiAdmin.decisionSkip.unbound":
     "Không dùng mô hình quyết định: chưa gán mô hình nào.",
+  "aiAdmin.certification.certified":
+    "{model} đã được chứng nhận cho tác vụ này.",
+  "aiAdmin.certification.degraded":
+    "{model} được hỗ trợ cho tác vụ này nhưng chất lượng giảm.",
+  "aiAdmin.certification.notSupported":
+    "{model} chưa được chứng nhận cho tác vụ này. Mô hình vẫn được dùng, vì vậy hãy kiểm tra kết quả.",
+  "aiAdmin.certification.unrecorded":
+    "Chưa có bản ghi chứng nhận nào cho {model} ở tác vụ này.",
+  "aiAdmin.certification.stale": "Bản ghi có trước các prompt hiện tại.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 

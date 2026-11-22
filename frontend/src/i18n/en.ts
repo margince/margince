@@ -1932,6 +1932,14 @@ export const en = {
   "aiAdmin.activity": "Activity",
   "aiAdmin.model": "Model selected by policy",
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
+  "aiAdmin.certification.certified": "{model} is certified for this task.",
+  "aiAdmin.certification.degraded":
+    "{model} is supported for this task with reduced quality.",
+  "aiAdmin.certification.notSupported":
+    "{model} is not certified for this task. It is still used, so check what it produces.",
+  "aiAdmin.certification.unrecorded":
+    "No certification record covers {model} for this task.",
+  "aiAdmin.certification.stale": "The record predates the current prompts.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
