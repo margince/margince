@@ -105,8 +105,12 @@ func TestTheRollupsWonTotalIsWholeAndStopsAtTheRead(t *testing.T) {
 	e.WsExec(t, `INSERT INTO deal (id, name, amount_minor, currency, fx_rate_to_base, pipeline_id, stage_id, company_id, status, closed_at, source, captured_by)
 		VALUES ($1, 'Legacy Win', 700, 'GBP', '1.0', $2, $3, $4, 'won', $5, 'manual', 'human:test')`,
 		unpriced, st.pipeline, st.won, root, period.Start)
-	if got := read(); got.ClosedWonMinor != nil {
-		t.Errorf("won = %d with one unpriced win, want null rather than the priced part", *got.ClosedWonMinor)
+	got := read()
+	if got.ClosedWonMinor == nil || *got.ClosedWonMinor != 1_000 {
+		t.Errorf("won = %v with one unpriced win, want the 1000 that converts", got.ClosedWonMinor)
+	}
+	if c := got.ClosedWonCoverage; !c.Partial || c.NoRateDeals != 1 || c.NoValueDeals != 0 || len(c.MissingCurrencies) != 1 || c.MissingCurrencies[0] != "GBP" {
+		t.Errorf("coverage = %+v, want one deal with no rate, in GBP", c)
 	}
 }
 

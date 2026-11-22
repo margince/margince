@@ -1,5 +1,6 @@
-import { useContext, useMemo } from "react";
+import { useCallback, useContext, useMemo, useRef } from "react";
 import {
+  addressMovedFromOutside,
   announceAddressChanged,
   navigateReplacing,
   type Route,
@@ -140,6 +141,21 @@ export function replaceParams(params: UrlParams): void {
   // in that gap the list would still be reading the dials the reader has just
   // changed — one fetch for the previous query before the one they asked for.
   announceAddressChanged();
+}
+
+/**
+ * For a list whose narrowing just changed: whether the address brought the
+ * change, by a link, history or typing rather than a dial. Such an address
+ * names its page. `narrowedBy` is the narrowing the address spells, without the
+ * page, so typing in a search box or a page-only link moves nothing here.
+ */
+export function useNarrowedFromOutside(narrowedBy: string): () => boolean {
+  const checked = useRef(narrowedBy);
+  return useCallback(() => {
+    const moved = narrowedBy !== checked.current;
+    checked.current = narrowedBy;
+    return moved && addressMovedFromOutside();
+  }, [narrowedBy]);
 }
 
 /**

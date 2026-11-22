@@ -5,8 +5,13 @@ import { api } from "../../api/client";
 import { AuthCardTitle } from "../../components/auth-core";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
-import { useT } from "../../i18n";
+import {
+  focusFirstRefused,
+  useFieldFaults,
+} from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { blankRequired } from "../../lib/problem";
 import { MIN_PASSWORD, passwordFault } from "./passwordrule";
 
 /*
@@ -68,6 +73,8 @@ export function ResetForm({
   selfServiceAvailable: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
   const [password, setPassword] = useState("");
   const reveal = usePasswordReveal({
     show: t("auth.showPassword"),
@@ -101,23 +108,31 @@ export function ResetForm({
   // card agree on what a character is. `password.length` counts UTF-16 units, so
   // an emoji password could clear the floor here and be refused there.
   const fault = passwordFault(password);
-  const ready = password !== "" && !fault;
+  const label = t("auth.newPassword");
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (ready && !reset.isPending) {
+    if (faults.show(blankRequired(locale, { password: [label, password] }))) {
+      return;
+    }
+    // A password the rule refuses already says so at the field.
+    if (fault) {
+      focusFirstRefused(event.currentTarget);
+      return;
+    }
+    if (!reset.isPending) {
       reset.mutate();
     }
   };
 
   return (
-    <form className="auth-card" onSubmit={submit}>
+    <form className="auth-card" ref={faultsRoot} noValidate onSubmit={submit}>
       <AuthCardTitle>{t("auth.resetTitle")}</AuthCardTitle>
       <p>{t("auth.resetSub")}</p>
       <div className="auth-fields">
         <Field
-          label={t("auth.newPassword")}
+          label={label}
           icon={<Lock aria-hidden />}
-          error={fault ? t(fault) : undefined}
+          error={faults.of("password") ?? (fault ? t(fault) : undefined)}
           // The rule, until the rule is being broken. Then the refusal restates
           // it in the danger tone, and a grey copy underneath is noise.
           hint={fault ? undefined : t("auth.passwordHint")}
@@ -134,7 +149,10 @@ export function ResetForm({
               autoCapitalize="none"
               spellCheck={false}
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                faults.edited("password");
+              }}
             />
           )}
         </Field>
@@ -148,9 +166,9 @@ export function ResetForm({
               refused password is a working link thrown away. */}
           {failure === "token" &&
             (selfServiceAvailable ? (
-              <button type="button" className="auth-link" onClick={onRestart}>
+              <Button type="button" variant="link" onClick={onRestart}>
                 {t("auth.requestNewLink")}
-              </button>
+              </Button>
             ) : (
               // With no outbound email there is no self-service flow. An admin
               // issued this link by hand, so the next step is to ask that admin.
@@ -161,16 +179,12 @@ export function ResetForm({
         </div>
       )}
       <div className="auth-actions">
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={!ready || reset.isPending}
-        >
+        <Button type="submit" variant="primary" pending={reset.isPending}>
           {t("auth.setNewPassword")}
         </Button>
-        <button type="button" className="auth-link" onClick={onBack}>
+        <Button type="button" variant="link" onClick={onBack}>
           {t("auth.backToLogin")}
-        </button>
+        </Button>
       </div>
     </form>
   );

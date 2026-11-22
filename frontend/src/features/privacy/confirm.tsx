@@ -29,7 +29,7 @@ import {
   SubscriptionConfirm,
 } from "./confirmsubscription";
 import { useMailLanguage } from "./publiclocale";
-import { PublicPage } from "./publicpage";
+import { DeadLinkPage, PublicPage } from "./publicpage";
 import "./confirm.css";
 
 // The public, anonymous confirm-your-details page: what a contact lands on from
@@ -47,11 +47,7 @@ import "./confirm.css";
 export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
   const t = useT();
   if (!token) {
-    return (
-      <PublicPage>
-        <EmptyState>{t("confirm.invalidLink")}</EmptyState>
-      </PublicPage>
-    );
+    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
   }
   return <ConfirmDetailsBody token={token} />;
 }
@@ -78,6 +74,27 @@ function marketingQuestion(
     no: served?.answers[1] ?? t("confirm.marketing.no"),
     text: served?.text ?? ask,
   };
+}
+
+// A link the server refused as unknown or spent, on the read or on the press.
+function isDeadLink(error: unknown): boolean {
+  return error instanceof LinkInvalidError;
+}
+
+function refusalOf(readError: unknown, pressError: unknown): unknown {
+  return readError ?? (isDeadLink(pressError) ? pressError : undefined);
+}
+
+function RefusedPage({ error }: Readonly<{ error: unknown }>) {
+  const t = useT();
+  if (isDeadLink(error)) {
+    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
+  }
+  return (
+    <PublicPage>
+      <EmptyState>{explainConfirmError(error, t)}</EmptyState>
+    </PublicPage>
+  );
 }
 
 function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
@@ -200,12 +217,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </PublicPage>
     );
   }
-  if (details.error || !card) {
-    return (
-      <PublicPage>
-        <EmptyState>{explainConfirmError(details.error, t)}</EmptyState>
-      </PublicPage>
-    );
+  const refusal = refusalOf(details.error, submit.error);
+  if (refusal || !card) {
+    return <RefusedPage error={refusal} />;
   }
   // THE DISCRIMINATOR, ASKED BEFORE ANY RECORD FIELD IS READ.
   //

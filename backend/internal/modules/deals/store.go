@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -41,7 +42,7 @@ type Store struct {
 	db *database.DB
 	// catalog is the fieldcatalog seam (custom-field columns); nil means
 	// no catalog is wired and every read/write runs core-columns-only.
-	catalog fieldcatalog.Reader
+	catalog storekit.FieldCatalog
 	// clock is the "today" source for effective-dated writes (fx_rate);
 	// injected so append-forward date validation is deterministic in tests.
 	clock func() time.Time
@@ -251,28 +252,19 @@ func (s *Store) SetClock(clock func() time.Time) *Store {
 // (compose injects modules/customfields' Service here — ADR-0054: a
 // module never imports a sibling), making active cf_* columns
 // participate in deal reads and writes.
-func (s *Store) WithFieldCatalog(catalog fieldcatalog.Reader) *Store {
+func (s *Store) WithFieldCatalog(catalog storekit.FieldCatalog) *Store {
 	s.catalog = catalog
 	return s
 }
 
-// activeColumns answers the workspace's active custom columns for the
-// deal object (this store's one record type). It runs its own catalog
-// transaction, so callers fetch BEFORE opening their write/read
-// transaction (never inside it — a nested pool acquire under load is a
-// deadlock shape). A store without a wired catalog answers empty: core
-// columns only.
-func (s *Store) activeColumns(ctx context.Context) ([]fieldcatalog.Column, error) {
-	return s.activeColumnsFor(ctx, "deal")
-}
-
-// activeColumnsFor is activeColumns for the module's other record type.
-// The rule about fetching BEFORE the transaction opens is the same.
-func (s *Store) activeColumnsFor(ctx context.Context, object string) ([]fieldcatalog.Column, error) {
+// activeColumnsIn answers the workspace's active custom columns for the deal
+// object. It reads on the transaction the store's entry point opened, so no
+// second connection is taken. A store without a wired catalog answers empty.
+func (s *Store) activeColumnsIn(ctx context.Context, tx pgx.Tx) ([]fieldcatalog.Column, error) {
 	if s.catalog == nil {
 		return nil, nil
 	}
-	return s.catalog.ActiveColumns(ctx, object)
+	return s.catalog.ActiveColumnsIn(ctx, tx, dealTable)
 }
 
 // CustomColumns is the catalog's answer, carried from a caller that had to
@@ -302,12 +294,15 @@ var ErrCustomFieldsNeedTheStoresOwnTransaction = errors.New(
 
 // ActiveDealColumns is the caller-side half of UpdateDealTx and CreateDealTx.
 // A caller that opens the transaction itself does this read before opening it,
-// the order every store-opened entry point uses.
+// because its catalog read takes a connection of its own.
 //
 // Unlike contacts's twin it takes no grant of its own. Its one caller, the
 // extraction accept-write, has already taken deal:update before the write.
 func (s *Store) ActiveDealColumns(ctx context.Context) (CustomColumns, error) {
-	cols, err := s.activeColumns(ctx)
+	if s.catalog == nil {
+		return CustomColumns{}, nil
+	}
+	cols, err := s.catalog.ActiveColumns(ctx, dealTable)
 	if err != nil {
 		return CustomColumns{}, err
 	}

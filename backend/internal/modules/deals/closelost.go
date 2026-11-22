@@ -74,15 +74,15 @@ func (s *Store) CloseAsLost(ctx context.Context, in CloseLostInput) (bool, error
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return false, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return false, err
-	}
 	var closed bool
 	// A lock cycle with a writer that took the deal before its activity is
 	// retried, and the close re-reads everything.
-	err = storekit.RetryLockCycles(ctx, func() error {
+	err := storekit.RetryLockCycles(ctx, func() error {
 		return s.Tx(ctx, func(tx pgx.Tx) error {
+			active, err := s.activeColumnsIn(ctx, tx)
+			if err != nil {
+				return err
+			}
 			actor, ok, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
 			if err != nil || !ok {
 				return err

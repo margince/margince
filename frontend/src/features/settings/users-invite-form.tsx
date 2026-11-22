@@ -27,6 +27,7 @@ import {
   writeMayHaveLanded,
 } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { AccessPreviewPanel } from "./users-access";
 import {
   entityOptions,
@@ -286,7 +287,7 @@ export function InviteUserForm({
               <TextInput
                 {...control}
                 placeholder={t("users.namePlaceholder")}
-                maxLength={255}
+                maxLength={TEXT_LIMITS.label}
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);

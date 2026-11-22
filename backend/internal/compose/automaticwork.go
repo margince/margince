@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -58,7 +59,7 @@ type automaticWorkHandlers struct {
 func (h automaticWorkHandlers) GetAutomaticWorkHealth(
 	w http.ResponseWriter, r *http.Request, params crmcontracts.GetAutomaticWorkHealthParams,
 ) {
-	if !admitHealthReader(w, r) {
+	if !adminadmit.HealthReader(w, r) {
 		return
 	}
 	days := automaticWorkDefaultDays
@@ -72,7 +73,7 @@ func (h automaticWorkHandlers) GetAutomaticWorkHealth(
 		days = *params.Days
 	}
 	now := h.now()
-	serveHealthReport(w, r, h.pool, "automatic work health",
+	adminadmit.ServeReport(w, r, h.pool, "automatic work health",
 		func(ctx context.Context, tx pgx.Tx) (crmcontracts.AutomaticWorkHealth, error) {
 			return readAutomaticWorkHealth(ctx, tx, now, days)
 		})

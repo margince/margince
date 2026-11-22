@@ -96,11 +96,12 @@ func companyRollupToWire(result CompanyRollupResult) crmcontracts.CompanyHierarc
 
 	won := result.ClosedWonPeriod
 	return crmcontracts.CompanyHierarchyRollup{
-		RootId:           openapi_types.UUID(result.RootID),
-		Scope:            crmcontracts.CompanyHierarchyRollupScope(result.Scope),
-		WeightedPipeline: companyRollupMoney(result.WeightedPipelineMinor, result.BaseCurrency),
-		PipelineStateAt:  result.PipelineStateAt,
-		ClosedWon:        crmcontracts.Money{AmountMinor: result.ClosedWonMinor, Currency: &result.BaseCurrency},
+		RootId:            openapi_types.UUID(result.RootID),
+		Scope:             crmcontracts.CompanyHierarchyRollupScope(result.Scope),
+		WeightedPipeline:  companyRollupMoney(result.WeightedPipelineMinor, result.BaseCurrency),
+		PipelineStateAt:   result.PipelineStateAt,
+		ClosedWon:         crmcontracts.Money{AmountMinor: result.ClosedWonMinor, Currency: &result.BaseCurrency},
+		ClosedWonCoverage: wonCoverageWire(result.ClosedWonCoverage),
 		ClosedWonPeriod: crmcontracts.CompanyRollupWonPeriod{
 			Grain: crmcontracts.CompanyRollupWonPeriodGrain(won.Grain), Label: won.Label,
 			StartAt: won.Start, EndAt: won.End, Anchor: crmcontracts.CompanyRollupWonPeriodAnchorClosedAt,
@@ -126,4 +127,12 @@ func companyRollupMoney(minor int64, currency string) crmcontracts.Money {
 	amount := minor
 	cur := currency
 	return crmcontracts.Money{AmountMinor: &amount, Currency: &cur}
+}
+
+// wonCoverageWire is a coverage the read took, absent when the read took none.
+func wonCoverageWire(coverage crmcontracts.ReportRowCoverage) *crmcontracts.ReportRowCoverage {
+	if coverage.Aggregates == nil {
+		return nil
+	}
+	return &coverage
 }

@@ -16,7 +16,6 @@ import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { SettingRow } from "../../design-system/settingrow";
 import { middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
-import { INTL_LOCALE } from "../../format/intllocale";
 import { zoneNameAndOffset } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { mailboxParams } from "../../lib/connectors";
@@ -46,7 +45,7 @@ export function HistoryBaselineRow({
           ? `${t("connectors.historyBaseline.current", {
               date: formatDate(baseline.date, locale, baseline.timezone),
               zone: zoneNameAndOffset(
-                INTL_LOCALE[locale],
+                locale,
                 new Date(middayInstant(baseline.date, baseline.timezone)),
                 baseline.timezone,
               ),

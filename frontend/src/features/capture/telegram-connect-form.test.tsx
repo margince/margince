@@ -108,7 +108,10 @@ describe("BotConnectForm", () => {
     expect(screen.getByText(/starts with gwapp_/)).toBeInTheDocument();
     await user.type(screen.getByLabelText("Bot token *"), "gwapp_fake");
     const submit = screen.getByRole("button", { name: "Connect" });
-    expect(submit).toBeDisabled();
+    await user.click(submit);
+    expect(screen.getByText("Chat address is required.")).toBeVisible();
+    expect(screen.getByLabelText("Chat address *")).toHaveFocus();
+    expect(calls).toHaveLength(0);
     await user.type(
       screen.getByLabelText("Chat address *"),
       "https://chat.example.com",

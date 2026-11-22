@@ -114,6 +114,44 @@ describe("the container kind", () => {
     ).toBeTruthy();
   });
 
+  it("asks to connect a mailbox when none is connected, and titles the dialog by kind", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backend(CAPTURE_EDITOR, undefined, "gcal");
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <CaptureExclusionsCard />
+      </Providers>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText("ex@partner.test")).toBeTruthy(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["captureExclusions.addOpen"] }),
+    );
+    expect(
+      screen.getByRole("heading", {
+        name: en["captureExclusions.title.address"],
+      }),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", {
+        name: en["captureExclusions.kind.container"],
+      }),
+    );
+
+    expect(
+      await screen.findByText(en["captureExclusions.noMailbox"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["captureExclusions.noContainers"])).toBeNull();
+    expect(
+      screen.getByRole("heading", {
+        name: en["captureExclusions.title.container"],
+      }),
+    ).toBeTruthy();
+  });
+
   // A LIST THAT STOPPED SHORT SAYS SO, beside the folders it did read. Shown as
   // complete, a mailbox whose folder is missing reads as a mailbox without that
   // folder — and somebody stops looking for the thing they came to exclude.

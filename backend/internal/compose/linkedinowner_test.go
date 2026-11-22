@@ -50,3 +50,15 @@ func TestTheGhostOwnerPassRunsUnderTheOwnersSeat(t *testing.T) {
 		t.Errorf("principal = %+v, want the owner's user id form acting on their own behalf", p)
 	}
 }
+
+func TestOwnersAgentKeepsAReadSeatOwnersSeatAndNamesThem(t *testing.T) {
+	owner := ids.NewV7()
+	viaService, _ := authz.MemberPrincipal(context.Background(), readSeatOwner{}, ids.NewV7(), owner)
+	for name, member := range map[string]principal.Principal{"service": viaService, "transaction": authz.HumanPrincipal(owner, authz.RBAC{}, principal.SeatRead)} {
+		agent := ownersAgentPrincipal(member, marginceActorID)
+		if _, writes := agent.Scopes[principal.ScopeWrite]; agent.SeatType != principal.SeatRead || agent.Type != principal.PrincipalAgent ||
+			agent.ID != marginceActorID || agent.OnBehalfOf != owner || agent.UserID != owner || !writes || len(agent.Scopes) != 1 {
+			t.Errorf("%s: agent = %+v, want a write-only agent for the owner on a read seat", name, agent)
+		}
+	}
+}

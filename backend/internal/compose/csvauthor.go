@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -27,7 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-const csvTargetAuthor = "author"
+const csvTargetAuthor = recordexport.Author
 
 // isCreateOnlyTarget reports a target the import writes when it CREATES a
 // record and never on a re-import's update. The author is who wrote the record

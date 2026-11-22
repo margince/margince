@@ -41,20 +41,82 @@ const withheldPersonalParts = "capture_personal_parts_withheld"
 // the thread, made the message private.
 const verdictPersonalSender = "personal_sender"
 
-// messageIsPrivateTx answers "does this message keep its files". The raw store
-// and staging both call it with the same record.
+// messageIsPrivateTx answers "does this message keep its files", asked fresh.
 func messageIsPrivateTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (bool, string, error) {
-	private, verdict, err := threadIsPrivateTx(ctx, tx, rec)
-	if err != nil || private {
-		return private, verdict, err
+	decided, err := decideMessagePrivacyTx(ctx, tx, rec, fields)
+	return decided.private, decided.verdict, err
+}
+
+// capturedMessageIsPrivateTx is messageIsPrivateTx for a new message's readers:
+// the stored original, its files and its filing take the capture's one answer.
+func capturedMessageIsPrivateTx(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+) (bool, string, error) {
+	if decided, ok := decidedPrivacy(ctx, rec); ok {
+		return decided.private, decided.verdict, nil
+	}
+	return messageIsPrivateTx(ctx, tx, rec, fields)
+}
+
+// messagePrivacy is the privacy answer for one record, with the thread's half
+// kept apart for the ladder, which asks only that half.
+type messagePrivacy struct {
+	key           connector.NaturalKey
+	threadPrivate bool
+	private       bool
+	verdict       string
+}
+
+type messagePrivacyKey struct{}
+
+func decideMessagePrivacyTx(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+) (messagePrivacy, error) {
+	decided := messagePrivacy{key: rec.NaturalKey}
+	var err error
+	decided.threadPrivate, decided.verdict, err = threadIsPrivateTx(ctx, tx, rec)
+	if err != nil || decided.threadPrivate {
+		decided.private = decided.threadPrivate
+		return decided, err
 	}
 	personal, err := senderIsPersonalTx(ctx, tx, rec, fields)
 	if err != nil || !personal {
-		return false, "", err
+		return decided, err
 	}
-	return true, verdictPersonalSender, nil
+	decided.private, decided.verdict = true, verdictPersonalSender
+	return decided, nil
+}
+
+// withMessagePrivacyTx decides rec's privacy once and carries it on ctx, so the
+// stored original, the files and the filing take one answer. The capture writes
+// only pending verdicts after this, and only the verdict engine settles one private.
+func withMessagePrivacyTx(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
+) (context.Context, error) {
+	decided, err := decideMessagePrivacyTx(ctx, tx, rec, fields)
+	if err != nil {
+		return ctx, err
+	}
+	return context.WithValue(ctx, messagePrivacyKey{}, decided), nil
+}
+
+// decidedPrivacy is the answer carried for this record. A record under another
+// key, such as the seat-scoped copy of a collided message, asks for itself.
+func decidedPrivacy(ctx context.Context, rec connector.NormalizedRecord) (messagePrivacy, bool) {
+	decided, ok := ctx.Value(messagePrivacyKey{}).(messagePrivacy)
+	return decided, ok && decided.key == rec.NaturalKey
+}
+
+// capturedThreadIsPrivateTx is threadIsPrivateTx, answered from the capture's
+// own decision when it carries one for rec.
+func capturedThreadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
+	if decided, ok := decidedPrivacy(ctx, rec); ok {
+		return decided.threadPrivate, nil
+	}
+	private, _, err := threadIsPrivateTx(ctx, tx, rec)
+	return private, err
 }
 
 // storedMessageIsPrivateTx is messageIsPrivateTx for a message already stored,
@@ -168,7 +230,7 @@ func withholdOriginalPartsTx(
 	if !ok {
 		return rec, nil
 	}
-	private, _, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	private, _, err := capturedMessageIsPrivateTx(ctx, tx, rec, fields)
 	if err != nil {
 		return rec, err
 	}

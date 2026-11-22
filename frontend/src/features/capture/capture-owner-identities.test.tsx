@@ -159,7 +159,7 @@ it("says what an address must look like when the server refuses it", async () =>
     ),
   ).toBeTruthy();
   await user.type(
-    screen.getByRole("textbox", { name: en["ownerIdentities.valueLabel"] }),
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
     "not an address",
   );
   await user.click(
@@ -170,6 +170,28 @@ it("says what an address must look like when the server refuses it", async () =>
     await screen.findByText(en["captureValue.refusedAddress"]),
   ).toBeTruthy();
   expect(screen.queryByText(/give one email address/)).toBeNull();
+});
+
+it("says the address is required when declared empty, and sends nothing", async () => {
+  const posted = vi.fn(() => jsonResponse({}, 201));
+  installFetchStub({
+    "GET /me": meRoute({}),
+    "GET /capture/owner-identities": () => jsonResponse({ data: [] }),
+    "POST /capture/owner-identities": posted,
+  });
+  render(<OwnerIdentitiesCard />);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole("button", { name: en["ownerIdentities.add"] }),
+  );
+  await user.click(
+    screen.getByRole("button", { name: en["ownerIdentities.confirm"] }),
+  );
+  expect(screen.getByText("Address or domain is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
+  );
+  expect(posted).not.toHaveBeenCalled();
 });
 
 it("offers the add verb while the addresses are still loading", async () => {
@@ -334,7 +356,7 @@ it("asks before storing a customer's domain and resends it with confirm", async 
     screen.getByRole("button", { name: en["ownerIdentities.kind.domain"] }),
   );
   await user.type(
-    screen.getByRole("textbox", { name: en["ownerIdentities.valueLabel"] }),
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
     "demo.test",
   );
   await user.click(
@@ -379,7 +401,7 @@ it("asks about a contact's address in its own words", async () => {
     await screen.findByRole("button", { name: en["ownerIdentities.add"] }),
   );
   await user.type(
-    screen.getByRole("textbox", { name: en["ownerIdentities.valueLabel"] }),
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
     "alice@demo.test",
   );
   await user.click(
@@ -426,7 +448,7 @@ it("says a consumer mail domain cannot be a whole domain, and offers no way arou
     screen.getByRole("button", { name: en["ownerIdentities.kind.domain"] }),
   );
   await user.type(
-    screen.getByRole("textbox", { name: en["ownerIdentities.valueLabel"] }),
+    screen.getByRole("textbox", { name: /^Address or domain/ }),
     "gmail.com",
   );
   await user.click(

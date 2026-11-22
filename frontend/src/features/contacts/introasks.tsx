@@ -28,6 +28,7 @@ import {
   useCompleteIntroRequest,
   useIntroRequests,
 } from "./introrequests";
+import { lastReadFailed } from "./readfailed";
 
 type CompleteMutation = ReturnType<typeof useCompleteIntroRequest>;
 type CancelMutation = ReturnType<typeof useCancelIntroRequest>;
@@ -92,7 +93,7 @@ export function IntroAsksPanel({
   const cancel = useCancelIntroRequest(contactId);
 
   // A failed read keeps the card, because no card at all reads as no asks.
-  if (asks.isError) {
+  if (lastReadFailed(asks)) {
     return (
       <Panel title={t("contact.intro.asksTitle")}>
         <PanelBody>

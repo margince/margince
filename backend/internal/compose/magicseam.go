@@ -51,10 +51,18 @@ func newMagicService(
 		WithTroubledRuns(automation.NewAutomationStore(db)).
 		WithPendingDecisions(magicPendingDecisions{svc: staged}).
 		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)}).
-		WithDecidedReceipts(magicDecidedReceipts{
-			receipts: attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: staged, deals: deals.NewStore(db, DealsInstallation())},
-		}).
+		WithDecidedReceipts(HomeDecidedReceipts(pool, staged)).
 		WithReferenceNames(newAttentionNames(db))
+}
+
+// HomeDecidedReceipts is the Done for you source Home reads.
+//
+//nolint:ireturn // magic.Service takes the source through its DecidedReceipts seam, and this is that source.
+func HomeDecidedReceipts(pool *pgxpool.Pool, staged *approvals.Service) magic.DecidedReceipts {
+	db := InstallationDB(pool)
+	return magicDecidedReceipts{receipts: attentionReceipts{
+		tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: staged, deals: deals.NewStore(db, DealsInstallation()),
+	}}
 }
 
 type magicDecidedReceipts struct{ receipts attentionReceipts }
@@ -83,7 +91,7 @@ func decidedUndo(receipt attention.Receipt) *crmcontracts.MagicUndo {
 	if receipt.Source != attention.ReceiptFromCorrection || receipt.Undo == nil {
 		return nil
 	}
-	if receipt.TargetType == entityTypeActivity && receipt.Kind == "task_completed" && !receipt.Undo.Reversed {
+	if receipt.TargetType == entityTypeActivity && attention.IsTaskReceipt(receipt.Kind) && !receipt.Undo.Reversed {
 		undo := magicOffer(receipt.Undo.AuditLogID)
 		undo.Version = &receipt.Undo.Version
 		return undo

@@ -69,13 +69,18 @@ it("reviews a fresh ask and keeps its words when the replacement is refused", as
     </QueryClientProvider>,
   );
   const submit = screen.getByRole("button", { name: "Request introduction" });
-  expect(submit).toBeDisabled();
+  await user.click(submit);
+  expect(writes).toHaveLength(0);
+  expect(screen.getByText("Reason for request is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(
+    screen.getByRole("textbox", { name: /^Why are you replacing this ask\?/ }),
+  );
   await user.type(
-    screen.getByRole("textbox", { name: "Why are you replacing this ask?" }),
+    screen.getByRole("textbox", { name: /^Why are you replacing this ask\?/ }),
     "The original colleague left.",
   );
   await user.type(
-    screen.getByRole("textbox", { name: "Reason for request" }),
+    screen.getByRole("textbox", { name: /^Reason for request/ }),
     "Please consider this new route.",
   );
   await user.click(submit);
@@ -98,7 +103,7 @@ it("reviews a fresh ask and keeps its words when the replacement is refused", as
   });
   expect(await screen.findByRole("alert")).toBeVisible();
   expect(
-    screen.getByRole("textbox", { name: "Reason for request" }),
+    screen.getByRole("textbox", { name: /^Reason for request/ }),
   ).toHaveValue("Please consider this new route.");
   expect(closed).not.toHaveBeenCalled();
 });

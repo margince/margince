@@ -49,7 +49,7 @@ func NewAudienceRescopeGen(pool *pgxpool.Pool) *AudienceRescopeGen {
 // audience — the shape SetAudience emits, and nothing else. Every other event
 // answers nil so the group keeps flowing.
 func (g *AudienceRescopeGen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Type != "activity.updated" || env.Entity.ID == ids.Nil {
+	if !events.AudienceRescopeTypes.Has(env.Type) || env.Entity.ID == ids.Nil {
 		return nil
 	}
 	var payload struct {

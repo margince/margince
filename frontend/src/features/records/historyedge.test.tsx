@@ -52,6 +52,7 @@ const employer: NonNullable<components["schemas"]["HistoryEdge"]> = {
   other_entity_type: "company",
   other_entity_id: "company-9",
   other_label: "Employer GmbH",
+  role: "cto",
 };
 
 // A link created between this contact and a company. The images are the EDGE's
@@ -273,6 +274,7 @@ describe("a link's columns never reach a pair's face", () => {
       other_entity_type: "company",
       other_entity_id: "11111111-1111-1111-1111-111111111111",
       other_label: "Employer GmbH",
+      role: "cto",
     },
   };
   const linkReversed: AuditHistoryEntry = {

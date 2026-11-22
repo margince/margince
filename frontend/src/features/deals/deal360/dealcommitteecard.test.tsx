@@ -108,6 +108,7 @@ function stubFetch(
 
 const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   deal_id: DEAL,
+  max_engaged_seats: 1,
   stakeholders: [
     {
       contact_id: "c-1",

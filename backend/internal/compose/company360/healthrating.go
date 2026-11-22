@@ -83,12 +83,21 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 			lastMetSentence(touch.Days))
 	case single:
 		return dimension(crmcontracts.HealthDimensionRatingGood, crmcontracts.HealthDimensionReasonCodeSingleThreaded,
-			crmcontracts.HealthDimensionReasonParams{}, "In contact, but one contact carries the whole account.")
+			crmcontracts.HealthDimensionReasonParams{Count: &active}, singleThreadedSentence(active))
 	default:
 		return dimension(crmcontracts.HealthDimensionRatingStrong, crmcontracts.HealthDimensionReasonCodeSeveralContacts,
 			crmcontracts.HealthDimensionReasonParams{Count: &active},
 			fmt.Sprintf("%d contacts here are in touch.", active))
 	}
+}
+
+// singleThreadedSentence is the English fallback of the single-threaded
+// reason. A threshold above one can call two or more contacts too few.
+func singleThreadedSentence(active int) string {
+	if active == 1 {
+		return "In contact, but one contact carries the whole account."
+	}
+	return fmt.Sprintf("In contact, but only %d contacts carry the whole account.", active)
 }
 
 // lastMetSentence is the English fallback of the last-met count. A count of

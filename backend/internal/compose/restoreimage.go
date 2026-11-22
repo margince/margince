@@ -19,6 +19,7 @@ import (
 	"sort"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -186,7 +187,7 @@ func filterImage(entityType string, before, after json.RawMessage) (map[string]j
 				return nil, nil, err
 			}
 		case spelledAsReplacedList:
-			patch[key] = listRestore(value)
+			patch[key] = listRestore(key, value)
 		default:
 			patch[key] = value
 		}
@@ -277,9 +278,14 @@ func mergedRestore(before, after json.RawMessage) (json.RawMessage, error) {
 
 // listRestore is the list a restore sends for a replaced set: the one the image
 // holds, or the empty list where it records none.
-func listRestore(before json.RawMessage) json.RawMessage {
+func listRestore(key string, before json.RawMessage) json.RawMessage {
 	if len(before) == 0 || string(before) == jsonNull {
 		return json.RawMessage("[]")
+	}
+	// A row of the image carries its ids and stamps, which the update shape
+	// refuses; the set is sent as the fields a replace-set reads.
+	if projected, err := contacts.ChildSetImage(key, before); err == nil && contacts.IsChildSet(key) {
+		return projected
 	}
 	return before
 }

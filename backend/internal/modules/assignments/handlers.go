@@ -4,13 +4,10 @@
 package assignments
 
 import (
-	"log/slog"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -24,7 +21,7 @@ func NewHandlers(store *Store) Handlers { return Handlers{store: store} }
 func (h Handlers) ListRecordRoles(w http.ResponseWriter, r *http.Request) {
 	out, err := h.store.ListRecordRoles(r.Context())
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RecordRoleListResponse{Data: out})
@@ -51,7 +48,7 @@ func (h Handlers) CreateRecordRole(
 	}
 	out, err := h.store.CreateRecordRole(r.Context(), in)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	w.Header().Set("Location", "/v1/record-roles/"+out.Id.String())
@@ -75,7 +72,7 @@ func (h Handlers) UpdateRecordRole(
 		Active:        req.Active,
 	})
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
@@ -88,7 +85,7 @@ func (h Handlers) ListRecordAssignments(
 ) {
 	out, err := h.store.ListForRecord(r.Context(), recordType, ids.UUID(recordID))
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RecordAssignmentListResponse{Data: out})
@@ -116,7 +113,7 @@ func (h Handlers) CreateRecordAssignment(
 		RoleID:      ids.UUID(req.RoleId),
 	})
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	w.Header().Set("Location", "/v1/assignments/"+out.Id.String())
@@ -142,7 +139,7 @@ func (h Handlers) UpdateRecordAssignment(
 	}
 	out, err := h.store.UpdateAssignment(r.Context(), ids.UUID(id), in)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
@@ -151,25 +148,10 @@ func (h Handlers) UpdateRecordAssignment(
 // ArchiveRecordAssignment ends a responsibility, keeping it in history.
 func (h Handlers) ArchiveRecordAssignment(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if err := h.store.ArchiveAssignment(r.Context(), ids.UUID(id)); err != nil {
-		writeStoreErr(w, r, err)
+		httperr.Write(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-// writeStoreErr maps a store error onto the wire. A CHECK breach that slipped
-// past validation answers a typed 422 rather than an opaque 500; the constraint
-// NAME stays out of the body, because it is schema the caller cannot act on,
-// and goes to the operator's log instead.
-func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
-	if constraint, ok := storekit.CheckViolation(err); ok {
-		slog.WarnContext(r.Context(), "a schema rule with no message of its own refused a write",
-			"method", r.Method, "path", capabilitypath.Redact(r.URL.Path), "constraint", constraint)
-		httperr.Write(w, r, httperr.Validation("body", "value_not_allowed",
-			"a value violates a rule on this record"))
-		return
-	}
-	httperr.Write(w, r, err)
 }
 
 // checkAssignmentIDs refuses an id the caller did not send. An absent key

@@ -199,6 +199,11 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     await user.click(screen.getByLabelText("New owner"));
     await user.click(await screen.findByRole("option", { name: "Lena F." }));
     await user.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Assign",
+      }),
+    );
 
     await waitFor(() => expect(sent).not.toBeNull());
     expect(sent).toEqual({
@@ -263,6 +268,11 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     await user.click(screen.getByLabelText("New owner"));
     await user.click(await screen.findByRole("option", { name: "Lena F." }));
     await user.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Assign",
+      }),
+    );
 
     expect(
       await screen.findByText(/active colleague you may assign work to/),

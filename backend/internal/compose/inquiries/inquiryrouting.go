@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -241,11 +242,11 @@ func (r Routing) human(ctx context.Context, id ids.UUID) (context.Context, error
 	if err != nil {
 		return nil, err
 	}
-	rbac, err := identity.NewService(r.db.Pool()).EffectiveRBAC(ctx, workspace.UUID, id)
+	member, err := authz.MemberPrincipal(ctx, identity.NewService(r.db.Pool()), workspace.UUID, id)
 	if err != nil {
 		return nil, err
 	}
-	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: principal.HumanIDPrefix + id.String(), UserID: id, TeamIDs: rbac.TeamIDs, Permissions: rbac.Permissions}), nil
+	return principal.WithActor(ctx, member), nil
 }
 
 func (r Routing) owner(ctx context.Context, target datasource.EntityRef) (*ids.UUID, error) {

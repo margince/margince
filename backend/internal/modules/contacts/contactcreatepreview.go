@@ -39,11 +39,11 @@ func (s *Store) PreviewContactCreationForActor(ctx context.Context, in CreateCon
 	if _, err := s.readyContactCreate(creatorCtx, &in); err != nil {
 		return out, err
 	}
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return out, err
-	}
-	err = s.txSnapshot(ctx, func(tx pgx.Tx) error {
+	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		// The write probes the source as the creator, so the preview does too.
 		// Otherwise an approval reads ready and then fails as not found.
 		if err := refuseUnreadableSource(creatorCtx, tx, in.CreatedFromActivityID); err != nil {

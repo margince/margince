@@ -135,3 +135,27 @@ it("says the sheet is withheld from a seat without the read grant", async () => 
   render(<TaxRatesCard />);
   expect(await screen.findByText(en["taxRates.withheld"])).toBeInTheDocument();
 });
+
+it("says on Save that the country and rate are required, and sends nothing", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal("fetch", backend(KEEPER, calls));
+  render(<TaxRatesCard />);
+  await user.click(
+    await screen.findByRole("button", { name: en["taxRates.add"] }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["taxRates.save"] }),
+  );
+  expect(
+    within(dialog).getByText(`${en["taxRates.colCountry"]} is required.`),
+  ).toBeInTheDocument();
+  expect(
+    within(dialog).getByText(`${en["taxRates.colRate"]} is required.`),
+  ).toBeInTheDocument();
+  expect(document.activeElement).toBe(
+    within(dialog).getByRole("combobox", { name: en["taxRates.colCountry"] }),
+  );
+  expect(calls.filter((call) => call.method === "POST")).toEqual([]);
+});

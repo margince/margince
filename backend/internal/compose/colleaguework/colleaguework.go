@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -78,13 +79,15 @@ func introductionsMadeSQL(ctx context.Context, r Reading, arg func(any) int) (st
 // meetingsBookedForColleaguesSQL credits the seat whose session, or agent,
 // created the meeting, at its creation, for the host that create named. A
 // source system means an import, transcript or connector booked it. A meeting
-// created at or after its start, or first recorded as held, missed or
-// cancelled, was logged rather than booked. A later cancellation keeps it.
+// created at or after the start it was created with, or first recorded as
+// held, missed or cancelled, was logged rather than booked. A later
+// reschedule or cancellation keeps the answer.
 func meetingsBookedForColleaguesSQL(ctx context.Context, r Reading, arg func(any) int) (string, error) {
 	readable, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}
+	created := activities.StartAtCreationSQL("a")
 	return `SELECT a.id::text,a.id,COALESCE(NULLIF(a.subject,''),` + r.Label + `),booked.seat,COALESCE(u.display_name,''),
  a.created_at,NULL::text,NULL::timestamptz,'booked_for_colleague'
  FROM activity a
@@ -95,9 +98,10 @@ func meetingsBookedForColleaguesSQL(ctx context.Context, r Reading, arg func(any
    ORDER BY made.occurred_at,made.id LIMIT 1) booked ON ` + storekit.AuditForAUser("booked") + `
  LEFT JOIN LATERAL (SELECT h.status FROM activity_meeting_history h
    WHERE h.activity_id=a.id ORDER BY h.effective_at,h.id LIMIT 1) opened ON true
+ ` + created.Join + `
  LEFT JOIN app_user u ON u.id=booked.seat
  WHERE a.kind='meeting' AND a.archived_at IS NULL AND a.source_system IS NULL AND booked.host<>booked.seat
- AND COALESCE(opened.status,'booked')='booked' AND ` + occurredday.AheadSQL("a", "a.created_at") + `
+ AND COALESCE(opened.status,'booked')='booked' AND ` + occurredday.AheadAtSQL(created.Start, created.Precision, "a.created_at") + `
  AND ` + readable + ` AND ` + r.Fields + `
  AND a.created_at>=` + r.From + ` AND a.created_at<` + r.Until + ` AND ` + r.Credited + `
  ORDER BY a.id LIMIT ` + r.Limit, nil

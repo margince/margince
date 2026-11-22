@@ -388,7 +388,7 @@ the flag.
 
 | Kind | The rule, as coded |
 |---|---|
-| `single_threaded_theirs` | Under two engaged contacts (`reportThreadingFloor = 2`). Their side: one contact stands for the customer. |
+| `single_threaded_theirs` | A touched deal with at most `account_coverage.max_engaged_seats` engaged contacts (default 1). `reporting.SingleThreaded` holds the rule, and Account coverage judges by it too. Their side: too few contacts stand for the customer. |
 | `single_threaded_ours` | One team member holds ≥ `ourSideDominanceShare` (0.8) of at least `ourSideMinInteractions` (5) 90-day interactions. A separate rule from `single_threaded_theirs`, with its own kind. |
 | `coverage_gap` | Seats on the deal, but no *engaged* champion. Not the same as single-threading: three engaged contacts and no champion in that group is a deal nobody inside is pushing for. |
 | `champion_left` | The built-in `champion` seat has left the account. |

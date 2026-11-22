@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -15,6 +16,36 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// jsonExportColumn reads one column of a JSON export's rows. A null cell reads
+// as empty, as an empty CSV cell does.
+func jsonExportColumn(t *testing.T, raw []byte, column string) []string {
+	t.Helper()
+	var doc struct {
+		Rows []map[string]json.RawMessage `json:"rows"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parsing the json export: %v", err)
+	}
+	out := make([]string, 0, len(doc.Rows))
+	for _, row := range doc.Rows {
+		cell, ok := row[column]
+		if !ok {
+			t.Fatalf("a json export row has no %q column: %v", column, row)
+		}
+		var text string
+		if string(cell) != "null" {
+			if err := json.Unmarshal(cell, &text); err != nil {
+				t.Fatalf("column %q holds %s, want text", column, cell)
+			}
+		}
+		out = append(out, text)
+	}
+	return out
+}
+
+// The CSV export is the file the import reads back, so the linked company's
+// current name travels in the JSON export only.
+//
 // A lead export keeps the company name typed on the lead, which an import
 // writes back. Beside it, it names the linked company as it is called now.
 func TestALeadExportKeepsTheTypedNameAndAddsTheLinkedCompanysCurrentOne(t *testing.T) {
@@ -37,12 +68,12 @@ func TestALeadExportKeepsTheTypedNameAndAddsTheLinkedCompanysCurrentOne(t *testi
 		t.Fatalf("resolving the lead engine: ok=%v %v", ok, err)
 	}
 	result, err := compose.NewFilteredExportWriter(e.Pool).WriteFiltered(
-		ctx, engine, storekit.Predicate{Field: "status", Op: "eq", Value: "new"}, "csv",
+		ctx, engine, storekit.Predicate{Field: "status", Op: "eq", Value: "new"}, "json",
 	)
 	if err != nil {
 		t.Fatalf("filtered export: %v", err)
 	}
-	exported, typed, current := CSVColumn(t, result.Body, "id"), CSVColumn(t, result.Body, "company_name"), CSVColumn(t, result.Body, "linked_company_name")
+	exported, typed, current := jsonExportColumn(t, result.Body, "id"), jsonExportColumn(t, result.Body, "company_name"), jsonExportColumn(t, result.Body, "linked_company_name")
 	got := map[string][2]string{}
 	for i, id := range exported {
 		got[id] = [2]string{typed[i], current[i]}
@@ -79,18 +110,18 @@ func TestALeadExportWithholdsTheNameOfACompanyTheExporterCannotOpen(t *testing.T
 		t.Fatalf("resolving the lead engine: ok=%v %v", ok, err)
 	}
 	result, err := compose.NewFilteredExportWriter(e.Pool).WriteFiltered(
-		ctx, engine, storekit.Predicate{Field: "status", Op: "eq", Value: "new"}, "csv",
+		ctx, engine, storekit.Predicate{Field: "status", Op: "eq", Value: "new"}, "json",
 	)
 	if err != nil {
 		t.Fatalf("filtered export: %v", err)
 	}
-	if exported := CSVColumn(t, result.Body, "id"); len(exported) != 1 || exported[0] != lead.String() {
+	if exported := jsonExportColumn(t, result.Body, "id"); len(exported) != 1 || exported[0] != lead.String() {
 		t.Fatalf("exported ids = %v, want the one lead %s", exported, lead)
 	}
-	if typed := CSVColumn(t, result.Body, "company_name"); typed[0] != "Meridian" {
+	if typed := jsonExportColumn(t, result.Body, "company_name"); typed[0] != "Meridian" {
 		t.Errorf("company_name = %q, want the name typed on the lead", typed[0])
 	}
-	if linked := CSVColumn(t, result.Body, "linked_company_name"); linked[0] != "" {
+	if linked := jsonExportColumn(t, result.Body, "linked_company_name"); linked[0] != "" {
 		t.Errorf("linked_company_name = %q, want empty for a company this exporter cannot open", linked[0])
 	}
 }

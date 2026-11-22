@@ -49,12 +49,12 @@ func (s *Store) LinkContactEmployer(ctx context.Context, contactID ids.ContactID
 	if err := auth.Require(ctx, contactEntity, principal.ActionUpdate); err != nil {
 		return LinkEmployerResult{}, err
 	}
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return LinkEmployerResult{}, err
-	}
 	var out LinkEmployerResult
 	err = s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		out = LinkEmployerResult{}
 		if err := auth.EnsureWritableLive(ctx, tx, contactEntity, contactID.UUID); err != nil {
 			return err

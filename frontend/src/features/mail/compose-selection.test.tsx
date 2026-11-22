@@ -17,6 +17,7 @@ import {
 } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
 import { draftButton } from "../../testing/composedraft.testkit";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -103,6 +104,7 @@ function setup(
       if (path === "/activities/a2") return json(second);
       if (path === "/activities")
         return json({ data: [anchor, second], page: { has_more: false } });
+      if (path === "/connectors") return json(CONNECTED_ROSTER);
       if (path === "/voice-profiles") return json({ data: [] });
       return json({});
     }),

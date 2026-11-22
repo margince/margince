@@ -70,6 +70,7 @@ function CaptureGauge({
           scanned: formatNumber(capture.scanned, locale),
           total: formatNumber(capture.estimated, locale),
         });
+  const note = capture.course === null ? null : t(capture.course);
   const gauge = (
     <>
       {/* Always `ingest`: this chip exists only while mail is arriving, so
@@ -81,12 +82,13 @@ function CaptureGauge({
         state="ingest"
         size="md"
         surface="dark"
-        progress={capture.fraction ?? undefined}
+        progress={note === null ? (capture.fraction ?? undefined) : undefined}
         className="capturechip-core"
       />
       <span className="capturechip-words">
         <span className="capturechip-line">{t("shell.capture.importing")}</span>
         <span className="capturechip-detail">{detail}</span>
+        {note !== null && <span className="capturechip-detail">{note}</span>}
       </span>
     </>
   );
@@ -98,7 +100,14 @@ function CaptureGauge({
         <AppLink
           className="capturechip-link"
           href={CONNECTIONS_HREF}
-          aria-label={`${t("shell.capture.importing")}. ${detail}. ${t("shell.capture.open")}`}
+          aria-label={[
+            t("shell.capture.importing"),
+            detail,
+            note,
+            t("shell.capture.open"),
+          ]
+            .filter(Boolean)
+            .join(". ")}
         >
           {gauge}
         </AppLink>

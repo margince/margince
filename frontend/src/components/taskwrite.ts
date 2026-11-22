@@ -11,6 +11,7 @@ import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useCompanyZone } from "../lib/companyzone";
 import { hideHomeRows } from "../lib/homerows";
 import { noteHomeTaskDone } from "../lib/installhint";
 import { problemCodeOf, unwrap } from "../lib/problem";
@@ -38,6 +39,7 @@ const TASK_WRITE = ["task-write"] as const;
 export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
+  const companyZone = useCompanyZone();
   return useMutation({
     mutationKey: TASK_WRITE,
     mutationFn: async (input: TaskPatch) => {
@@ -52,7 +54,7 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
         t,
       );
       if (input.body.due_at && data) {
-        await refreshMovedTask(queryClient, invalidateKeys, data);
+        await refreshMovedTask(queryClient, invalidateKeys, data, companyZone);
       }
       // The version the write PRODUCED, answered so a follow-on press has one.
       // An undo re-sending the version the row was drawn at would be refused as

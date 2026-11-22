@@ -141,7 +141,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	if err != nil {
 		return ctx, deniedIfGone("the credential or the human behind it", spec.Name, err)
 	}
-	p.SeatType, p.Permissions, p.TeamIDs = seat, rbac.Permissions, rbac.TeamIDs
+	p = authz.WithAuthority(p, rbac, seat)
 	// A passport's areas come from this same read, so a run that authenticated
 	// once is held to a change from its next call.
 	if !p.PassportID.IsZero() {

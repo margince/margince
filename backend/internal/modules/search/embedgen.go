@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -95,8 +94,11 @@ var embedText = map[string]string{
 // entities. Events that are not entity-content changes are not ours —
 // nil, so the consumer group keeps flowing.
 func (g *EmbedGen) HandleEvent(ctx context.Context, env kevents.Envelope) error {
+	if !kevents.ContextGraphTypes.Has(env.Type) {
+		return nil
+	}
 	query, embeddable := embedText[env.Entity.Type]
-	if !embeddable || !contentChanging(env.Type) {
+	if !embeddable {
 		return nil
 	}
 	// The generator reads AS the system: embeddings are an index over
@@ -124,15 +126,4 @@ func (g *EmbedGen) HandleEvent(ctx context.Context, env kevents.Envelope) error 
 	}
 	_, err = g.store.UpsertEmbedding(wsCtx, env.Entity.Type, env.Entity.ID, text, g.embedder)
 	return err
-}
-
-// contentChanging filters the event types whose payload implies the
-// indexed text may have moved.
-func contentChanging(eventType string) bool {
-	for _, suffix := range []string{".created", ".updated", ".captured", ".promoted", ".merged"} {
-		if strings.HasSuffix(eventType, suffix) {
-			return true
-		}
-	}
-	return false
 }

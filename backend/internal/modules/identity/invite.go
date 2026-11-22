@@ -116,6 +116,9 @@ func (s *Service) InviteMember(ctx context.Context, actor Identity, in InviteUse
 		if insErr != nil {
 			return insErr
 		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		invited, err = s.seatInvitedTx(ctx, tx, actor, in, invitedSeat{user: newUserID, role: roleID, tokenHash: tokenHash})
 		return err
 	}

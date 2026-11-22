@@ -70,12 +70,12 @@ func (s *Store) RejectCompany(
 	if err := auth.Require(ctx, entityCompany, principal.ActionUpdate); err != nil {
 		return Rejection{}, err
 	}
-	active, err := s.activeColumns(ctx, entityCompany)
-	if err != nil {
-		return Rejection{}, err
-	}
 	var out Rejection
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, entityCompany)
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureWritable(ctx, tx, entityCompany, id.UUID); err != nil {
 			return err
 		}

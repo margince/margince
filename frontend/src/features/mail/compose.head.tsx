@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Callout } from "../../design-system/callout";
 import { ProjectPicker, projectLabel } from "../../design-system/projectpicker";
 import { Switch } from "../../design-system/switch";
-import { INTL_LOCALE } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useThreadProject } from "../../lib/activityfiling";
 import type { Transport } from "../../lib/contacttransports";
@@ -218,7 +218,7 @@ export function ReplyStandingNotice({
       <Callout kind="standing" title={t("compose.colleagueMailboxTitle")}>
         <p>
           {plural("compose.colleagueMailbox", seats.length, {
-            names: new Intl.ListFormat(INTL_LOCALE[locale], {
+            names: listFormat(locale, {
               style: "long",
               type: "conjunction",
             }).format(

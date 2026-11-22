@@ -1,24 +1,25 @@
-# Holds two workflows to their cadence while main is moving: main-health every
-# two hours, cache-warm every three.
+# Holds two workflows to their cadence while a branch is moving: main-health every
+# two hours on main, cache-warm every three on main and on develop.
 #
 # GitHub's scheduler can run a cron hours late or not at all, with no record of a
-# run it skipped. A push is delivered, and each of these only needs a new run once
-# something has landed on main. A cold cache-warm slows every pull request's lanes.
+# run it skipped, and it runs a cron only on the default branch. A push is
+# delivered, and each of these only needs a new run once something has landed. A
+# cold cache-warm slows every pull request's lanes into that branch.
 #
 # A dispatch through GITHUB_TOKEN does start a workflow, unlike a push made with it.
 name: pace
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
 
 permissions:
   contents: read
 
-# One at a time, so a push arriving just after a dispatch reads that run rather
-# than racing it. Only the newest waiting push matters: all of them ask one question.
+# One at a time per branch, so a push arriving just after a dispatch reads that run
+# rather than racing it. Only the newest waiting push matters: all ask one question.
 concurrency:
-  group: ${{ github.workflow }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -33,8 +34,10 @@ jobs:
         include:
           - workflow: main-health.yml
             interval: 7200
+            branches: '["main"]'
           - workflow: cache-warm.yml
             interval: 10800
+            branches: '["main", "develop"]'
     permissions:
       contents: read
       # To read the workflow's last run and to dispatch the next one.
@@ -44,9 +47,11 @@ jobs:
         with:
           persist-credentials: false
       - name: Start ${{ matrix.workflow }} if it is due
+        if: contains(fromJSON(matrix.branches), github.ref_name)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           WORKFLOW: ${{ matrix.workflow }}
           INTERVAL: ${{ matrix.interval }}
-        run: ./scripts/pace-workflow.sh "$WORKFLOW" "$INTERVAL"
+          BRANCH: ${{ github.ref_name }}
+        run: ./scripts/pace-workflow.sh "$WORKFLOW" "$INTERVAL" "$BRANCH"

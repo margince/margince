@@ -13,10 +13,12 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -331,6 +333,62 @@ func TestAWonDealIsNotGoingCold(t *testing.T) {
 	// a rep to ignore the flag on the deals where it means something.
 	if findRisk(coverageRisks(t, e, deal), "going_cold") != nil {
 		t.Error("a won deal silent for 400 days was flagged as going cold")
+	}
+}
+
+// Going-cold and the deal's stalled flag share one rule for "gone quiet". A
+// running pause or a meeting booked ahead silences both. A pause that ended, a
+// meeting that happened and a cancelled booking silence neither.
+func TestGoingColdIsAbsentExactlyWhereTheDealIsNotStalled(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	now := clocktest.Now(t)
+	deal := func(name string) string {
+		_, id := dealAtAnAccount(t, e, name+" GmbH", name)
+		return id
+	}
+	pause := func(deal string, until time.Time) {
+		if status := e.Call(t, "PATCH", "/v1/deals/"+deal,
+			AnyMap{"wait_until": until.Format(time.DateOnly)}, nil, nil); status != http.StatusOK {
+			t.Fatalf("pausing the deal until %s: %d", until.Format(time.DateOnly), status)
+		}
+	}
+	meeting := func(deal string, at time.Time, status string) {
+		createdID(t, e, "/v1/activities", AnyMap{
+			"kind": "meeting", "subject": "Proposal walkthrough", "source": "manual", "meeting_status": status,
+			"occurred_at": at.UTC().Format(time.RFC3339),
+			"links":       []AnyMap{{"entity_type": "deal", "entity_id": deal}},
+		})
+	}
+	paused, pauseEnded := deal("Paused"), deal("PauseEnded")
+	booked, held, cancelled, plain := deal("Booked"), deal("Held"), deal("Cancelled"), deal("Plain")
+	pause(paused, now.AddDate(0, 1, 0))
+	pause(pauseEnded, now.AddDate(0, 0, -3))
+	meeting(booked, now.AddDate(0, 0, 5), "booked")
+	meeting(held, now.AddDate(0, 0, -80), "held")
+	meeting(cancelled, now.AddDate(0, 0, 5), "canceled")
+	for _, id := range []string{paused, pauseEnded, booked, held, cancelled, plain} {
+		ageLastTouch(t, e, id, 70)
+	}
+
+	for name, tc := range map[string]struct {
+		deal string
+		cold bool
+	}{
+		"paused": {paused, false}, "meeting booked": {booked, false},
+		"pause ended": {pauseEnded, true}, "meeting held": {held, true},
+		"booking cancelled": {cancelled, true}, "plain": {plain, true},
+	} {
+		var read struct {
+			Stalled bool `json:"stalled"`
+		}
+		if status := e.Call(t, "GET", "/v1/deals/"+tc.deal, nil, nil, &read); status != http.StatusOK {
+			t.Fatalf("%s: reading the deal: %d", name, status)
+		}
+		cold := findRisk(coverageRisks(t, e, tc.deal), "going_cold") != nil
+		if read.Stalled != tc.cold || cold != tc.cold {
+			t.Errorf("%s after 70 silent days: stalled=%v going_cold=%v, want both %v", name, read.Stalled, cold, tc.cold)
+		}
 	}
 }
 

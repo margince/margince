@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/importkeys"
+	"github.com/margince/margince/backend/internal/compose/importtextbounds"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -355,17 +356,34 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return skippedFor(cannotEditWhy(w.object)), nil
 	}
+	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if why.Code != "" {
+		return skippedFor(why), nil
+	}
 	// A reviewed plan lands the row inside one shared transaction, so a refused
 	// write is rolled back to here before the row is skipped.
 	if err := database.WithSavepoint(ctx, func(ctx context.Context) error {
 		return w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID))
 	}); err != nil {
-		// One bad row is skipped with its reason and the rest of the file lands.
-		why, refused := importkeys.UpdateRefusal(err)
-		if !refused {
-			return migration.EnsureResult{}, err
+		// A corrected file that moves an address onto another contact has one bad
+		// row. It is skipped with its reason, and the rest of the file lands. A
+		// typo in a spreadsheet must not abort the whole migration.
+		if contacts.IsClaimedEmail(err) {
+			return skippedFor(duplicateEmailWhy), nil
 		}
-		return skippedFor(why), nil
+		if why, held := importkeys.StoreKeyWhy(err); held {
+			return skippedFor(why), nil
+		}
+		if refusedAsErased(err) {
+			return skippedFor(addressErasedWhy), nil
+		}
+		if why, over := importtextbounds.NameTooLong(err); over {
+			return skippedFor(why), nil
+		}
+		return migration.EnsureResult{}, err
 	}
 	if err := w.tagExisting(ctx, id, row); err != nil {
 		return migration.EnsureResult{}, err
@@ -395,8 +413,7 @@ func (w *csvWriters) apply(
 	case migration.ObjectLead:
 		in := leadUpdateFrom(changed, typed)
 		in.IfVersion = w.reviewedVersion(id)
-		_, err := w.contacts.UpdateLead(ctx, ids.From[ids.LeadKind](id), in)
-		return err
+		return w.contacts.ApplyLeadUpdate(ctx, ids.From[ids.LeadKind](id), in)
 	case migration.ObjectCompany:
 		in := companyUpdateFrom(changed, typed)
 		in.IfVersion = w.reviewedVersion(id)
@@ -416,8 +433,7 @@ func (w *csvWriters) apply(
 		if hasDomain {
 			in.Domains = &mergedDomains
 		}
-		_, err = w.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
-		return err
+		return w.contacts.ApplyCompanyUpdate(ctx, ids.From[ids.CompanyKind](id), in)
 	case migration.ObjectContact:
 		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), changed, current, source)
 	default:
@@ -442,15 +458,8 @@ func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed
 		}
 		return ids.UUID(company.Id), nil
 	})
-	if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {
-		// A domain names ONE company across the estate, so a row claiming one
-		// another company already holds is refused by the store — the same shape
-		// a contact's claimed email has. One bad row is a skip with a reason, not
-		// a failed run: the rest of the file still lands.
-		return skippedFor(domainClaimedWhy), nil
-	}
-	if importkeys.LinkedInClaimed(err) {
-		return skippedFor(linkedInClaimedWhy), nil
+	if why, held := importkeys.StoreKeyWhy(err); held {
+		return skippedFor(why), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err

@@ -168,3 +168,152 @@ func TestOneStatementClearsEachThreadFromItsOwnEarliestMessage(t *testing.T) {
 		t.Error("a message written after the settling reply cleared the stamp of a thread it cannot unsettle")
 	}
 }
+
+// settledThread is one thread with an ask our reply settled, and a later ask
+// still open. The stamp of the first is our reply's time, the second's infinity.
+type settledThread struct {
+	key, buyer             string
+	sender                 ids.UUID
+	answered, reply, later ids.UUID
+	now                    time.Time
+}
+
+func (e *loadEnv) settledThread(t *testing.T) settledThread {
+	t.Helper()
+	s := settledThread{
+		key:    "thread-" + ids.NewV7().String(),
+		buyer:  "buyer-" + ids.NewV7().String() + "@customer.test",
+		sender: ids.NewV7(),
+		now:    clocktest.Now(t),
+	}
+	s.answered = e.mailAt(t, s.key, "inbound", s.buyer, s.now.Add(-6*time.Hour))
+	s.reply = e.mailAt(t, s.key, "outbound", s.buyer, s.now.Add(-5*time.Hour))
+	s.later = e.mailAt(t, s.key, "inbound", s.buyer, s.now.Add(-2*time.Hour))
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Buyer', 'manual', 'system')`, s.sender)
+	e.exec(t, `INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'manual', 'system')`, s.sender, s.buyer)
+	e.exec(t, `INSERT INTO activity_participant (activity_id, contact_id, address, role) VALUES ($1, $2, $3, 'from')`,
+		s.answered, s.sender, s.buyer)
+	e.exec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, $2, 'to')`, s.reply, s.buyer)
+	e.stampSettled(t)
+	if !e.stamped(t, s.answered) || !e.stamped(t, s.later) {
+		t.Fatal("the fixture left a message of the thread unstamped")
+	}
+	return s
+}
+
+// stamped says the message carries a stamp, settled or checked open.
+func (e *loadEnv) stamped(t *testing.T, message ids.UUID) bool {
+	t.Helper()
+	var set bool
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT reply_settled_at IS NOT NULL FROM activity WHERE id = $1`, message).Scan(&set); err != nil {
+		t.Fatalf("reading the stamp: %v", err)
+	}
+	return set
+}
+
+// A participant of a message at t can move only stamps at or after t. A new
+// reply's recipients keep the older settled stamp; a recipient added to the old
+// ask itself clears it.
+func TestAParticipantClearsOnlyTheStampsFromItsOwnMessageOn(t *testing.T) {
+	e := setupLoad(t)
+	s := e.settledThread(t)
+
+	newer := e.mailAt(t, s.key, "outbound", s.buyer, s.now.Add(-time.Hour))
+	e.exec(t, `INSERT INTO activity_participant (activity_id, address, role)
+		VALUES ($1, $2, 'to'), ($1, 'colleague@customer.test', 'cc')`, newer, s.buyer)
+	if !e.stamped(t, s.answered) {
+		t.Error("the recipients of a newer reply cleared the stamp of an ask settled before it")
+	}
+	if e.stamped(t, s.later) {
+		t.Error("the recipients of a reply to the open ask left its stamp in place")
+	}
+
+	e.stampSettled(t)
+	e.exec(t, `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'colleague@customer.test', 'cc')`, s.answered)
+	if e.stamped(t, s.answered) {
+		t.Error("a participant added to the settled ask left its stamp in place")
+	}
+
+	e.stampSettled(t)
+	e.exec(t, `DELETE FROM activity_participant WHERE activity_id = $1 AND role = 'to'`, s.reply)
+	if e.stamped(t, s.answered) {
+		t.Error("removing the recipient of the settling reply left the ask settled")
+	}
+}
+
+// Columns the owed check never reads move no stamp; each column it reads does.
+func TestOnlyAColumnTheOwedCheckReadsClearsTheStamp(t *testing.T) {
+	e := setupLoad(t)
+	s := e.settledThread(t)
+	other := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Other', 'manual', 'system')`, other)
+
+	e.exec(t, `UPDATE activity_participant SET response = 'accepted', display_name = 'Buyer' WHERE activity_id = $1`, s.answered)
+	e.exec(t, `UPDATE contact_email SET is_primary = false, email_type = 'personal' WHERE contact_id = $1`, s.sender)
+	if !e.stamped(t, s.answered) || !e.stamped(t, s.later) {
+		t.Error("a write of a column the owed check never reads cleared a stamp")
+	}
+
+	reads := []struct{ column, sql string }{
+		{"activity_participant.role", `UPDATE activity_participant SET role = 'cc' WHERE activity_id = $1 AND role = 'from'`},
+		{"activity_participant.role back", `UPDATE activity_participant SET role = 'from' WHERE activity_id = $1 AND role = 'cc'`},
+		{"activity_participant.address", `UPDATE activity_participant SET address = 'Buyer@customer.test' WHERE activity_id = $1`},
+		{"activity_participant.contact_id", `UPDATE activity_participant SET contact_id = NULL WHERE activity_id = $1`},
+		{"activity_participant.contact_id back", `UPDATE activity_participant SET contact_id = '` + s.sender.String() + `' WHERE activity_id = $1`},
+		{"activity_participant.activity_id", `UPDATE activity_participant SET activity_id = '` + s.later.String() + `' WHERE activity_id = $1`},
+		{"activity_participant.activity_id back", `UPDATE activity_participant SET activity_id = $1 WHERE activity_id = '` + s.later.String() + `'`},
+	}
+	for _, read := range reads {
+		e.stampSettled(t)
+		e.exec(t, read.sql, s.answered)
+		if e.stamped(t, s.answered) {
+			t.Errorf("a change of %s left the ask's stamp in place", read.column)
+		}
+	}
+
+	senderReads := []struct{ column, sql string }{
+		{"contact_email.email", `UPDATE contact_email SET email = 'renamed-' || email WHERE contact_id = $1`},
+		{"contact_email.archived_at", `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1`},
+		{"contact_email.contact_id", `UPDATE contact_email SET contact_id = '` + other.String() + `' WHERE contact_id = $1`},
+		{"a new contact_email", `INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, 'second@customer.test', 'manual', 'system')`},
+		{"a deleted contact_email", `DELETE FROM contact_email WHERE contact_id = $1`},
+	}
+	for _, read := range senderReads {
+		e.stampSettled(t)
+		e.exec(t, read.sql, s.sender)
+		if e.stamped(t, s.answered) {
+			t.Errorf("a change of %s left the stamp of the sender's ask in place", read.column)
+		}
+	}
+}
+
+// One statement that writes rows on two threads clears each thread from its
+// own earliest message, never from the earliest across the statement.
+func TestOneParticipantStatementClearsEachThreadFromItsOwnEarliestMessage(t *testing.T) {
+	e := setupLoad(t)
+	early, late := e.settledThread(t), e.settledThread(t)
+	e.exec(t, `UPDATE activity_participant SET activity_id = $2 WHERE activity_id = $1 AND role = 'from'`, late.answered, late.later)
+	e.stampSettled(t)
+
+	e.exec(t, `INSERT INTO activity_participant (activity_id, address, role)
+		VALUES ($1, 'colleague@customer.test', 'cc'), ($2, 'colleague@customer.test', 'cc')`, early.reply, late.later)
+	if e.stamped(t, early.answered) || e.stamped(t, late.later) {
+		t.Error("a participant row left a stamp at or after its own message in place")
+	}
+	if !e.stamped(t, late.answered) {
+		t.Error("the other thread's earlier message decided where this thread cleared from")
+	}
+
+	e.stampSettled(t)
+	e.exec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by)
+		VALUES ($1, 'second-early@customer.test', 'manual', 'system'), ($2, 'second-late@customer.test', 'manual', 'system')`,
+		early.sender, late.sender)
+	if e.stamped(t, early.answered) || e.stamped(t, late.later) {
+		t.Error("a sender address left the stamp of the sender's own mail in place")
+	}
+	if !e.stamped(t, late.answered) {
+		t.Error("the other sender's earlier mail decided where this thread cleared from")
+	}
+}

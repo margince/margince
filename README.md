@@ -34,6 +34,8 @@ This is the stack for working on the code. It runs in `dev` mode: it has no tria
 a real install must pass, so do not use it for real work.
 
 You need Go 1.27 or later, Docker with Compose, `jq`, `golangci-lint`, Node 24 and pnpm.
+On Windows, work in WSL, as
+[docs/how-to/set-up-windows-wsl-development.md](docs/how-to/set-up-windows-wsl-development.md) says.
 
 1. Install the tools and the git hooks once: `make install`.
 2. Start the stack: `make dev`. It starts Postgres, Redis, the API and the web app, then returns.
@@ -104,9 +106,7 @@ Margince is source-available under the Business Source License 1.1 ([LICENSE](LI
 public. You may read, run and change it. [LICENSING.md](LICENSING.md) explains the license, and why you
 accept [CLA.md](CLA.md) to send code.
 
-- You may use it free in production for your own company, up to 3 seats. The limit is for all your
-  installations and the companies you own or that own you. A seat is a named user. AI agents and
-  service accounts are not seats.
+- Production use needs a subscription from Gradion.
 - To host it as a service for other companies, you need a hosting partner agreement with Gradion.
 - Each release becomes Apache 2.0 no later than two years after it ships.
 

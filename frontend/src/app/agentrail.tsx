@@ -92,7 +92,9 @@ function importRing(
   if (capture === null || !RUNNING.has(state)) {
     return undefined;
   }
-  return capture.progress.fraction ?? undefined;
+  return capture.progress.course === null
+    ? (capture.progress.fraction ?? undefined)
+    : undefined;
 }
 
 /**

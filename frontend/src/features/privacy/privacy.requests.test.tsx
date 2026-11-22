@@ -199,6 +199,34 @@ describe("the subject-request table", () => {
     expect(within(filter).queryByText("in progress")).toBeNull();
   });
 
+  it("says on Open request that the subject is required, and sends nothing", async () => {
+    const create = vi.fn(() => json(NAMED, 201));
+    stub(create);
+    render();
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["privacy.newRequest"] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await pickOption(
+      user,
+      within(dialog).getByLabelText(en["privacy.kind"]),
+      en["privacy.kindRectify"],
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: en["privacy.openRequest"] }),
+    );
+
+    expect(
+      within(dialog).getByText(`${en["privacy.subjectRef"]} is required.`),
+    ).toBeInTheDocument();
+    expect(document.activeElement).toBe(
+      within(dialog).getByLabelText(`${en["privacy.subjectRef"]} *`),
+    );
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("puts a refused due date beside its field", async () => {
     stub(() =>
       json(
@@ -228,7 +256,7 @@ describe("the subject-request table", () => {
       en["privacy.kindRectify"],
     );
     await user.type(
-      within(dialog).getByLabelText(en["privacy.subjectRef"]),
+      within(dialog).getByLabelText(`${en["privacy.subjectRef"]} *`),
       "anna@acme.test",
     );
     await within(dialog).findByText(en["jurisdiction.rule.gdpr"], {

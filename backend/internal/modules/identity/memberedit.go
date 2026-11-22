@@ -148,6 +148,9 @@ func (s *Service) editMemberIdentityTx(ctx context.Context, tx pgx.Tx, actor Ide
 		}
 		return err
 	}
+	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+		return err
+	}
 	if email != in.Email {
 		if err := endCredentialAuthority(ctx, tx, member, "account_email_changed"); err != nil {
 			return err

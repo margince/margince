@@ -101,17 +101,10 @@ it("lets go of that company when the role turns current again", async () => {
   await user.type(screen.getByRole("searchbox"), "emp");
   const dialog = screen.getByRole("dialog");
   await user.click(await within(dialog).findByText("Employer GmbH"));
-  expect(
-    within(dialog)
-      .getByRole("button", { name: "Create" })
-      .hasAttribute("disabled"),
-  ).toBe(false);
   await chooseStatus(user, "Current");
-  expect(
-    within(dialog)
-      .getByRole("button", { name: "Create" })
-      .hasAttribute("disabled"),
-  ).toBe(true);
+  await user.click(within(dialog).getByRole("button", { name: "Create" }));
+  expect(within(dialog).getByText("Employer is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(within(dialog).getByRole("searchbox"));
 });
 
 // A role there that has ended does not keep the company off a current role:

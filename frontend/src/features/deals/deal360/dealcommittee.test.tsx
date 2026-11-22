@@ -21,6 +21,7 @@ const DEAL_ID = "01a03000-0000-7000-8000-000000000001";
 
 const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   deal_id: DEAL_ID,
+  max_engaged_seats: 1,
   stakeholders: [
     {
       contact_id: "01a03000-0000-7000-8000-0000000000b1",
@@ -197,6 +198,45 @@ describe("the buying committee, drawn", () => {
     expect(
       screen.getByText(en["deal.committee.missing.secondEngaged"]),
     ).toBeTruthy();
+  });
+
+  it("asks for another contact, not a second, when the published threshold allows two engaged", () => {
+    const thin: DealCoverage["risks"][number] = {
+      kind: "single_threaded_theirs",
+      summary: "thin",
+    };
+    draw({
+      coverage: coverage({ max_engaged_seats: 2, risks: [thin] }),
+      withheld: false,
+      pending: false,
+    });
+    expect(
+      screen.getByText(en["deal.committee.missing.anotherContact"]),
+    ).toBeTruthy();
+    cleanup();
+    draw({
+      coverage: coverage({
+        max_engaged_seats: 2,
+        stakeholders: [
+          ...coverage().stakeholders,
+          {
+            contact_id: "01a03000-0000-7000-8000-0000000000b4",
+            contact_name: "Omar Haddad",
+            role: "user",
+            engaged: true,
+          },
+        ],
+        risks: [thin],
+      }),
+      withheld: false,
+      pending: false,
+    });
+    expect(
+      screen.getByText(en["deal.committee.missing.anotherEngaged"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(en["deal.committee.missing.secondEngaged"]),
+    ).toBeNull();
   });
 
   it("names in the legend every mark the card draws, our side included", () => {

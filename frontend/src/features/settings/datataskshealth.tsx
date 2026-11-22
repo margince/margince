@@ -25,6 +25,7 @@ import { HomeRepairControls } from "./homerepair";
 
 type Progress = components["schemas"]["DataTaskProgress"];
 type Control = components["schemas"]["DataTaskControl"];
+type ActionNeeded = components["schemas"]["DataTaskActionNeeded"];
 const queryKey = ["admin", "data-tasks"];
 const statusLabels: Record<Progress["status"], MessageKey> = {
   pending: "dataTasks.status.pending",
@@ -46,6 +47,29 @@ const blockLabels: Record<
   earlier_step: "dataTasks.blocked.earlier_step",
   missing_prerequisite: "dataTasks.blocked.missing_prerequisite",
 };
+
+function validAction(action: ActionNeeded | undefined): boolean {
+  return (
+    action === undefined ||
+    (typeof action === "object" &&
+      action !== null &&
+      [action.reason, action.sentence, action.remedy].every(
+        (value) => typeof value === "string",
+      ) &&
+      Number.isSafeInteger(action.count) &&
+      action.count >= 0 &&
+      Array.isArray(action.records) &&
+      action.records.every(
+        (record) =>
+          typeof record?.type === "string" && typeof record.id === "string",
+      ))
+  );
+}
+
+// A done step with action needed still asks for someone, so it reads as open work.
+function settled(row: Progress) {
+  return row.status === "done" && row.action_needed === undefined;
+}
 
 function validProgress(row: Progress): boolean {
   return (
@@ -77,7 +101,8 @@ function validProgress(row: Progress): boolean {
     (row.estimate === undefined ||
       (Number.isSafeInteger(row.estimate) && row.estimate >= 0)) &&
     Array.isArray(row.missing_prerequisites) &&
-    row.missing_prerequisites.every((value) => typeof value === "string")
+    row.missing_prerequisites.every((value) => typeof value === "string") &&
+    validAction(row.action_needed)
   );
 }
 
@@ -184,6 +209,13 @@ function taskActions(row: Progress, canChange: boolean): Control["action"][] {
   if (
     canChange &&
     row.version > 0 &&
+    row.action_needed &&
+    row.status === "done"
+  )
+    return ["retry"];
+  if (
+    canChange &&
+    row.version > 0 &&
     row.status !== "done" &&
     knownState &&
     row.blocked_reason !== "newer_release_required" &&
@@ -200,6 +232,7 @@ function taskActions(row: Progress, canChange: boolean): Control["action"][] {
 
 function taskTone(row: Progress) {
   if (row.status === "failed") return "danger";
+  if (row.action_needed) return "warning";
   if (row.status === "done") return "success";
   if (
     row.blocked_reason &&
@@ -209,6 +242,23 @@ function taskTone(row: Progress) {
   )
     return "warning";
   return "default";
+}
+
+function LeftForSomeone({ action }: Readonly<{ action: ActionNeeded }>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (
+    <>
+      <p>
+        {action.sentence} {action.remedy}
+      </p>
+      <p>
+        {plural("dataTasks.actionRecords", action.count, {
+          count: formatNumber(action.count, locale),
+        })}
+      </p>
+    </>
+  );
 }
 
 function TaskRow({ row }: Readonly<{ row: Progress }>) {
@@ -233,7 +283,11 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
         <>
           {t("dataTasks.step", { step: row.step })}{" "}
           <Badge tone={taskTone(row)}>
-            {t(valueFor(statusLabels, row.status, "dataTasks.unknownState"))}
+            {t(
+              row.action_needed && row.status === "done"
+                ? "dataTasks.status.doneWithAction"
+                : valueFor(statusLabels, row.status, "dataTasks.unknownState"),
+            )}
           </Badge>
         </>
       }
@@ -260,6 +314,7 @@ function TaskRow({ row }: Readonly<{ row: Progress }>) {
               })}
             </p>
           )}
+          {row.action_needed && <LeftForSomeone action={row.action_needed} />}
           {row.error_sentence && (
             <ErrorLine standing>
               {row.error_sentence} {row.error_remedy}
@@ -377,9 +432,7 @@ function TaskSections({ rows }: Readonly<{ rows: Progress[] }>) {
   const [kept, setKept] = useState(
     () =>
       new Set(
-        rows
-          .filter((row) => row.status !== "done" && !optional(row))
-          .map(taskStepKey),
+        rows.filter((row) => !settled(row) && !optional(row)).map(taskStepKey),
       ),
   );
   const keep = (task: string) =>
@@ -388,17 +441,16 @@ function TaskSections({ rows }: Readonly<{ rows: Progress[] }>) {
         new Set([
           ...previous,
           ...rows
-            .filter((row) => row.task_id === task && row.status !== "done")
+            .filter((row) => row.task_id === task && !settled(row))
             .map(taskStepKey),
         ]),
     );
 
   const active = rows.filter(
-    (row) =>
-      (row.status !== "done" || kept.has(taskStepKey(row))) && !optional(row),
+    (row) => (!settled(row) || kept.has(taskStepKey(row))) && !optional(row),
   );
   const finished = rows.filter(
-    (row) => row.status === "done" && !kept.has(taskStepKey(row)),
+    (row) => settled(row) && !kept.has(taskStepKey(row)),
   );
   const manual = rows.filter(optional);
   return rows.length === 0 ? (

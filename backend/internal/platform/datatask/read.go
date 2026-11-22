@@ -44,7 +44,7 @@ func (e *Engine) describeProgress(ctx context.Context, tx pgx.Tx, stored map[str
 				p = Progress{TaskID: task.ID, Step: step.Name, Status: Pending, TaskVersion: task.Version, BatchLimit: step.Limit}
 			}
 			if !task.Manual && p.Status == Done && p.TaskVersion < task.Version {
-				p.Status = Pending
+				p.Status, p.Action = Pending, nil
 			}
 			p.Title = task.Title
 			if task.Manual && !task.hasCurrentReview(p) {

@@ -4,6 +4,7 @@ import type {
   QueryKey,
 } from "@tanstack/react-query";
 import type { components } from "../api/schema";
+import { taskDueOnDay } from "../format/calendarday";
 import { showsAMessage, TASK_QUEUE_KEY } from "../lib/activitykeys";
 import { ENTITY_KINDS } from "../lib/entity";
 import { problemCodeOf } from "../lib/problem";
@@ -33,6 +34,7 @@ export async function refreshMovedTask(
   client: QueryClient,
   invalidateKeys: readonly QueryKey[],
   activity: Activity,
+  companyZone: string,
 ) {
   const queryKey = ["activity", activity.id];
   await Promise.all([
@@ -41,7 +43,14 @@ export async function refreshMovedTask(
   ]);
   client.setQueryData(queryKey, activity);
   const overdue = activity.due_at
-    ? Date.parse(activity.due_at) < Date.now()
+    ? Date.parse(
+        taskDueOnDay(
+          activity.due_at,
+          activity.due_has_time,
+          activity.due_intent,
+          companyZone,
+        ),
+      ) < Date.now()
     : false;
   const moved = (item: WorklistItem): WorklistItem =>
     item.source === "task" && item.id === activity.id
@@ -49,6 +58,7 @@ export async function refreshMovedTask(
           ...item,
           due_at: activity.due_at ?? undefined,
           due_has_time: activity.due_has_time,
+          due_intent: activity.due_intent,
           version: activity.version,
           overdue,
           because: overdue

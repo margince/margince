@@ -101,10 +101,11 @@ The 13 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## data_task_run
 
-22 columns · primary key `(task_id, step)` · referenced by 0 foreign keys
+23 columns · primary key `(task_id, step)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
+| `action_needed` | `jsonb` |  |  |
 | `activation` | `jsonb` |  |  |
 | `batch_limit` | `integer` | yes |  |
 | `batches` | `bigint`, default `0` | yes |  |

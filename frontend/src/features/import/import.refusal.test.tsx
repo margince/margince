@@ -12,8 +12,8 @@ import type { Locale } from "../../i18n/locale";
 import { ProblemError } from "../../lib/problem";
 import { formatFixture } from "../../testing/import.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
-import { ImportRefusal } from "./import.notices";
-import type { ImportFormat } from "./importtypes";
+import { ImportRefusal, useRunStopSentence } from "./import.notices";
+import type { ImportFormat, ImportRun } from "./importtypes";
 
 afterEach(cleanup);
 
@@ -347,5 +347,65 @@ describe("a refused file says what is wrong in the reader's words", () => {
   it("keeps the server's sentence for a code this build does not know", () => {
     refused({ field: "file", code: "from_a_newer_server" });
     expect(body()).toBe(SERVER_SENTENCE);
+  });
+});
+
+// A test run the worker refused stores the refusal's code beside its sentence.
+describe("a run the background test refused", () => {
+  const STORED = "Line 7 has more or fewer fields than the header row.";
+
+  function StopLine({ run }: Readonly<{ run: ImportRun }>) {
+    return <p data-testid="stop">{useRunStopSentence(run)}</p>;
+  }
+
+  function stopped(
+    stored: Pick<ImportRun, "error" | "error_refusal">,
+    locale: Locale,
+  ): string {
+    const run: ImportRun = {
+      id: "r1",
+      connector: "csv",
+      status: "pending",
+      checkpoint: 0,
+      version: 1,
+      source_released: false,
+      source: "import_api",
+      captured_by: "u-ada",
+      created_at: "2026-10-12T09:30:00Z",
+      updated_at: "2026-10-12T09:30:00Z",
+      ...stored,
+    };
+    render(
+      <StoryProviders locale={locale}>
+        <StopLine run={run} />
+      </StoryProviders>,
+    );
+    return screen.getByTestId("stop").textContent ?? "";
+  }
+
+  it("words its refusal in the reader's language", () => {
+    const run = {
+      error: STORED,
+      error_refusal: {
+        field: "file",
+        code: "unreadable",
+        params: { reason: "field_count", line: "7", file: "leads.csv" },
+      },
+    };
+    expect(stopped(run, "de")).toBe(
+      "In „leads.csv“: Zeile 7 hat mehr oder weniger Felder als die Kopfzeile. Korrigiere diese Zeile und lade die Datei erneut hoch.",
+    );
+  });
+
+  it("shows the stored sentence of a run kept before its code was", () => {
+    expect(stopped({ error: STORED }, "de")).toBe(STORED);
+  });
+
+  it("shows the stored sentence for a code this build does not know", () => {
+    const run = {
+      error: STORED,
+      error_refusal: { field: "file", code: "from_a_newer_server" },
+    };
+    expect(stopped(run, "de")).toBe(STORED);
   });
 });

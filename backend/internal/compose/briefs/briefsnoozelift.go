@@ -95,6 +95,18 @@ func NextSnoozeEndSQL(user, asOf string) string {
 		WHERE br.user_id = %s AND bi.reopen_on = 'time' AND %s)`, user, briefSnoozedSQL(asOf))
 }
 
+// LiftedSnoozesDigestSQL is a digest of user's reply and meeting snoozes that
+// have lifted by asOf, or NULL when none has. A lift writes nothing, so a
+// changed digest is the only sign that an answer which hid the item is behind.
+// It reads every snooze the user ever set, the same set as SnoozedDeals. That
+// keeps a cache hit cheaper than a miss, which reads the queue itself.
+func LiftedSnoozesDigestSQL(user, asOf string) string {
+	return fmt.Sprintf(`(SELECT decode(md5(string_agg(bi.id::text, ',' ORDER BY bi.id)), 'hex') FROM brief_item bi
+		JOIN brief_run br ON br.id = bi.brief_run_id
+		WHERE br.user_id = %s AND bi.state = 'snoozed' AND bi.reopen_on <> 'time' AND NOT %s)`,
+		user, briefSnoozeHoldsSQL("bi", asOf))
+}
+
 func briefSnoozeHoldsSQL(item, asOf string) string {
 	return fmt.Sprintf("(CASE WHEN %s.reopen_on = 'time' THEN %s > %s ELSE NOT %s END)",
 		item, storekit.IntentInstantColumnSQL(item, "snoozed", "snoozed_until"), asOf, briefSnoozeLiftedSQL(item+".deal_id", item+".reopen_on", item+".reopen_ref", item+".state_at", asOf))

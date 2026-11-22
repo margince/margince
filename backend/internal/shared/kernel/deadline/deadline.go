@@ -4,7 +4,11 @@
 // Package deadline answers whether a promised moment has passed.
 package deadline
 
-import "time"
+import (
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+)
 
 // Passed reports whether a due moment is in the past — whether the thing is
 // LATE.
@@ -66,4 +70,51 @@ func DaysPast(due *time.Time, now time.Time) (int, bool) {
 		return 0, false
 	}
 	return int(now.Sub(*due) / (24 * time.Hour)), true
+}
+
+// WallDayOffset is how many calendar days the chosen date of a task lies from
+// today in loc: negative once it is behind us, 0 on it. The date is read from
+// the wall clock text, not from the instant it resolves to. A reader in another
+// zone than the chooser's therefore counts the same day. It reports false when
+// the text does not start with a date.
+func WallDayOffset(wallClock string, now time.Time, loc *time.Location) (int, bool) {
+	if len(wallClock) < len(time.DateOnly) {
+		return 0, false
+	}
+	day, err := time.Parse(time.DateOnly, wallClock[:len(time.DateOnly)])
+	if err != nil {
+		return 0, false
+	}
+	noon := time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, loc)
+	return elapsed.Days(now, noon, loc), true
+}
+
+// TaskPassed is Passed for a task. A task with a chosen date and no time is
+// late once that date is behind today in loc, whatever instant the date
+// resolves to. Any other task is late by its instant. wallClock is the chosen
+// clock's text, empty when the task has none.
+func TaskPassed(due *time.Time, hasTime bool, wallClock string, now time.Time, loc *time.Location) bool {
+	if due != nil && !hasTime && wallClock != "" {
+		if days, ok := WallDayOffset(wallClock, now, loc); ok {
+			return days < 0
+		}
+	}
+	return Passed(due, now)
+}
+
+// TaskDueOn is the instant a task's lateness and order are judged at. A task
+// with a chosen date and no time is due until the start of the next calendar
+// day in loc. It is judged at the last instant before that start. Any other
+// task, and a nil loc, keep the due instant. storekit.TaskDueOrderSQL spells
+// the same rule.
+func TaskDueOn(due *time.Time, hasTime bool, wallClock string, loc *time.Location) *time.Time {
+	if due == nil || hasTime || wallClock == "" || loc == nil || len(wallClock) < len(time.DateOnly) {
+		return due
+	}
+	day, err := time.Parse(time.DateOnly, wallClock[:len(time.DateOnly)])
+	if err != nil {
+		return due
+	}
+	end := time.Date(day.Year(), day.Month(), day.Day()+1, 0, 0, 0, 0, loc).Add(-time.Nanosecond)
+	return &end
 }

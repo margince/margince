@@ -79,7 +79,7 @@ var readProbeCallers = gatekit.Waive(map[string]string{
 	"contracts.createContractTx":             "reference: a new contract names its company and deal",
 	"contracts.ensureLinksVisible":           "reference: a contract names its deal, project and company",
 	"contracts.Store.ListCompanyContracts":   "read: lists the contracts of a visible company",
-	"contracts.Store.ListDealContracts":      "read: lists the contracts of a visible deal",
+	"contracts.Store.readDealContracts":      "read: lists the contracts of a visible deal",
 	"contracts.Store.ListProjectContractsTx": "read: lists the contracts of a visible project",
 
 	"deals.admitOfferCreation":           "reference: a new offer names its deal and buyer company",
