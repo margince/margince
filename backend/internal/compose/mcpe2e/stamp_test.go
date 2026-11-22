@@ -6,6 +6,7 @@ package mcpe2e
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -360,31 +361,25 @@ func TestTheLintCensusReadsAFileWhole(t *testing.T) {
 
 func TestTheLaneLintsThroughScenariolintAlone(t *testing.T) {
 	root := filepath.Join("..", "..", "..", "..")
-	dirs := []string{"scripts", "docs", ".github", "e2e"}
 	if err := gatekit.DeclareInputs(os.Getenv, "../../../../scripts", "../../../../docs", "../../../../.github",
 		"../../../../e2e", "../../../../Makefile", "../../../Makefile"); err != nil {
 		t.Fatal(err)
 	}
-	files := []string{filepath.Join(root, "Makefile"), filepath.Join(root, "backend", "Makefile")}
-	for _, dir := range dirs {
-		err := filepath.WalkDir(filepath.Join(root, dir), func(path string, entry os.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if entry.IsDir() && (entry.Name() == "node_modules" || entry.Name() == "records") {
-				return filepath.SkipDir
-			}
-			if !entry.IsDir() && slices.Contains([]string{".sh", ".md", ".yml", ".yaml", ".py"}, filepath.Ext(path)) {
-				files = append(files, path)
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
+	// Tracked files only: a __pycache__ or other build leftover is not the
+	// tree, and the test cache's digest does not cover it.
+	out, err := exec.Command("git", "-C", root, "ls-files", "-z", "--",
+		"scripts", "docs", ".github", "e2e", "Makefile", "backend/Makefile").Output()
+	if err != nil {
+		t.Fatalf("asking git for the tracked scripts, docs and workflows: %v", err)
+	}
+	var files []string
+	for path := range strings.SplitSeq(strings.TrimRight(string(out), "\x00"), "\x00") {
+		if filepath.Base(path) == "Makefile" || slices.Contains([]string{".sh", ".md", ".yml", ".yaml", ".py"}, filepath.Ext(path)) {
+			files = append(files, path)
 		}
 	}
 	for _, path := range files {
-		body, err := os.ReadFile(path) // #nosec G304 -- a file of this repository
+		body, err := os.ReadFile(filepath.Join(root, path)) // #nosec G304 -- a file git tracks in this repository
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -393,7 +388,7 @@ func TestTheLaneLintsThroughScenariolintAlone(t *testing.T) {
 		}
 	}
 	if len(files) < 10 {
-		t.Fatalf("read %d files; the walk found too little to hold anything", len(files))
+		t.Fatalf("read %d files; git listed too little to hold anything", len(files))
 	}
 }
 
