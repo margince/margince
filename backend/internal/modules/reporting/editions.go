@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -103,6 +104,20 @@ func (s *Service) GetEdition(ctx context.Context, id ids.UUID) (crmcontracts.Rep
 	var out crmcontracts.ReportingEdition
 	err := s.store.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error { var err error; out, err = s.GetEditionTx(ctx, tx, id); return err })
 	return out, err
+}
+
+// EditionExport is GetEdition with the reader's language, read in its snapshot.
+// A file built from it names catalog entries as the reader's screen does.
+func (s *Service) EditionExport(ctx context.Context, id ids.UUID) (crmcontracts.ReportingEdition, langcopy.Spoken, error) {
+	var out crmcontracts.ReportingEdition
+	var names langcopy.Spoken
+	err := s.store.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.GetEditionTx(ctx, tx, id)
+		names = s.readerCopy(ctx, tx)
+		return err
+	})
+	return out, names, err
 }
 
 // GetEditionTx shares the caller’s snapshot while applying edition read authority.

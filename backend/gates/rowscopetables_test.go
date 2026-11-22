@@ -616,7 +616,8 @@ const (
 	// find the contact ids held by a live lead's historical or identity links.
 	// The data task runs as the system principal over the workspace. A unique id
 	// goes only into promoteLeadTx, which locks both records and rechecks the
-	// promotion; several ids leave the lead untouched. No id reaches a caller.
+	// promotion. Several ids leave the lead untouched and go to the duplicate
+	// review. No id reaches a caller.
 	//
 	// 145-146: contacts.retractUnsupportedPhones reads contact ids to lock and
 	// audit unsupported signature numbers. Its caller requires the system actor;

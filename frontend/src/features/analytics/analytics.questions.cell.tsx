@@ -11,11 +11,11 @@ import {
 import type { Locale, useT } from "../../i18n";
 import { coverageOfMeasure, hasGap } from "../../lib/moneycoverage";
 import { CoverageFootnote } from "./analytics.moneygap";
+import { type MoneyFields, measureReading } from "./analytics.questions.money";
 import {
   type AnalyticsQuery,
   type AnswerRow,
   measureOfColumn,
-  measureReading,
 } from "./analytics.questions.vocab";
 
 type Translate = ReturnType<typeof useT>;
@@ -27,11 +27,20 @@ export function measureCell(
   column: string,
   row: AnswerRow,
   baseCurrency: string | null,
+  money: MoneyFields,
   locale: Locale,
   t: Translate,
 ): ReactNode {
   const coverage = coverageOfMeasure(row, column);
-  const figure = measureFigure(query, column, row, baseCurrency, locale, t);
+  const figure = measureFigure(
+    query,
+    column,
+    row,
+    baseCurrency,
+    money,
+    locale,
+    t,
+  );
   if (!hasGap(coverage)) {
     return figure;
   }
@@ -49,6 +58,7 @@ function measureFigure(
   column: string,
   row: AnswerRow,
   baseCurrency: string | null,
+  money: MoneyFields,
   locale: Locale,
   t: Translate,
 ): ReactNode {
@@ -57,7 +67,7 @@ function measureFigure(
   if (!measure || typeof value !== "number") {
     return value == null ? MONEY_ABSENT : String(value);
   }
-  const reading = measureReading(measure, row, query, baseCurrency);
+  const reading = measureReading(measure, row, query, baseCurrency, money);
   if (reading.kind === "mixed") {
     return t("analytics.q.mixedCurrencies");
   }

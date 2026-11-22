@@ -11,6 +11,14 @@ import type {
   AnalyticsQuery,
 } from "./analytics.questions.vocab";
 
+// The amounts a deal population serves, and the currency the server marks each in.
+export const DEAL_MONEY: AnalyticsEntity["money"] = {
+  amount_minor: "row_currency",
+  weighted_amount_minor: "row_currency",
+  amount_base_minor: "base_currency",
+  weighted_base_minor: "base_currency",
+};
+
 export const ENTITIES: AnalyticsEntity[] = [
   {
     name: "deals-by-stage",
@@ -23,16 +31,19 @@ export const ENTITIES: AnalyticsEntity[] = [
       "win_probability",
     ],
     measures: ["amount_minor", "weighted_amount_minor"],
+    money: DEAL_MONEY,
   },
   {
     name: "leads-by-status",
     group_by: ["owner_id", "source", "status"],
     measures: [],
+    money: {},
   },
   {
     name: "meeting-conversion",
     group_by: ["became_opportunity", "host_user_id"],
     measures: [],
+    money: {},
   },
 ];
 
@@ -41,6 +52,7 @@ export const CUSTOM_DEALS: AnalyticsEntity = {
   name: "deals-by-stage",
   group_by: ["cf_strategic", "cf_territory", "company_cf_tier", "status"],
   measures: ["amount_minor"],
+  money: DEAL_MONEY,
   custom_fields: [
     {
       name: "cf_strategic",
@@ -73,6 +85,30 @@ export const CUSTOM_DEALS: AnalyticsEntity = {
 };
 
 export const SCHEMA = { version: "v1", entities: ENTITIES };
+
+// The schema the report screens read: the deal populations, and the project
+// one whose `_minor` values the server serves converted.
+export const REPORT_SCHEMA = {
+  version: "v1",
+  entities: [
+    ...ENTITIES,
+    ...["forecast", "pipeline-current"].map((name) => ({
+      name,
+      group_by: [],
+      measures: Object.keys(DEAL_MONEY),
+      money: DEAL_MONEY,
+    })),
+    {
+      name: "projects-by-phase",
+      group_by: [],
+      measures: ["open_deal_value_minor", "won_deal_value_minor"],
+      money: {
+        open_deal_value_minor: "base_currency",
+        won_deal_value_minor: "base_currency",
+      },
+    },
+  ],
+} satisfies { version: string; entities: AnalyticsEntity[] };
 
 export const CONTEXT = {
   default_scope: { kind: "workspace" as const, label: "Whole company" },

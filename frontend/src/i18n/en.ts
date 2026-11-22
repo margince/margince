@@ -17747,6 +17747,12 @@ export const en = {
   "aiRouting.baseUrl.help.anthropic":
     "Host root; /v1 is added. Blank uses Anthropic’s own API.",
   "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
+  "aiRouting.baseUrl.help.ollama":
+    "Host root, such as http://localhost:11434. Blank uses the default.",
+  "aiRouting.baseUrl.placeholder.ollama": "http://localhost:11434",
+  "aiRouting.baseUrl.help.vllm":
+    "Host root; /v1 is added. Blank uses http://localhost:8000.",
+  "aiRouting.baseUrl.placeholder.vllm": "http://localhost:8000",
   "aiRouting.models.askingLocation":
     "Asking Google which models {location} serves…",
   "aiRouting.models.noKey": "No key, so no model list. Type any ID it serves.",

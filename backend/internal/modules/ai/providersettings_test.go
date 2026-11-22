@@ -722,3 +722,42 @@ func TestResolve_AnUnknownProvidersLaneKeepsItsHost(t *testing.T) {
 		t.Errorf("served premium host = %q, want the lane's own kept", got)
 	}
 }
+
+// A host saved on a local provider's sheet reaches every lane bound to it. The
+// embeddings lane follows unless it names its own server. The host is stored
+// on the provider, never on a lane.
+func TestWithProviderSettings_ALocalProvidersHostReachesEveryLane(t *testing.T) {
+	for _, provider := range []string{"ollama", "vllm"} {
+		t.Run(provider, func(t *testing.T) {
+			cfg := mustParse(t, "profile: sovereign\ntiers:\n"+
+				"  local_small: {provider: "+provider+", model: m}\n  cheap_cloud: {provider: "+provider+", model: m}\n"+
+				"  premium: {provider: "+provider+", model: m}\n  frontier: {provider: "+provider+", model: m}\n"+
+				"embeddings: {provider: "+provider+", model: e, dimensions: 1024}\n")
+			const host = "http://10.0.0.5:9000"
+
+			stored, served, err := cfg.withProviderSettings(provider, ProviderSettings{BaseURL: host})
+			if err != nil {
+				t.Fatalf("a local provider's host was refused: %v", err)
+			}
+			if got := stored.Providers[provider].BaseURL; got != host {
+				t.Errorf("stored provider host = %q, want %q", got, host)
+			}
+			for tier, lane := range stored.Tiers {
+				if lane.BaseURL != "" {
+					t.Errorf("stored tier %s repeats the host %q", tier, lane.BaseURL)
+				}
+			}
+			for tier, lane := range served.Tiers {
+				if lane.BaseURL != host {
+					t.Errorf("served tier %s dials %q, want %q", tier, lane.BaseURL, host)
+				}
+			}
+			if got := served.Embeddings.BaseURL; got != host {
+				t.Errorf("served embeddings dial %q, want %q", got, host)
+			}
+			if _, _, err := cfg.withProviderSettings(provider, ProviderSettings{BaseURL: "http://gpu.internal:9000"}); err == nil {
+				t.Error("a sovereign installation accepted a host it cannot verify as local")
+			}
+		})
+	}
+}

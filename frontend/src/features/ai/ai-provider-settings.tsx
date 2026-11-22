@@ -14,7 +14,6 @@ import { Callout } from "../../design-system/callout";
 import { Select } from "../../design-system/select";
 import { lockReasonOr, useRefusalId } from "../../format/settinglocks";
 import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { invalidateProviderHealth } from "../../lib/ai-provider-health";
 import { ROUTING_KEY } from "../../lib/ai-routing-query";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -26,9 +25,12 @@ import {
 } from "./ai-openrouter-settings";
 import { isOpenRouter } from "./ai-provider-links";
 import {
-  type OtherHost,
-  OtherHostFields,
-} from "./ai-provider-settings.otherhost";
+  LOCAL_PROVIDERS,
+  OTHER,
+  SERVICES,
+  type Service,
+} from "./ai-provider-services";
+import { OtherHostFields } from "./ai-provider-settings.otherhost";
 
 // Where a provider is reached. Set once here; every lane that binds the
 // provider reads it. A known service fills its own host, so the reader picks a
@@ -37,189 +39,25 @@ import {
 type Routing = components["schemas"]["AiRouting"];
 type ProviderSettings = components["schemas"]["AiProviderSettings"];
 
-type Service = Readonly<{
-  id: string;
-  label: MessageKey;
-  // The host it saves; empty means the adapter's compiled default.
-  host: string;
-  note?: MessageKey;
-  noteLink?: string;
-}>;
+type KeyStatus = components["schemas"]["AiProviderKeyStatus"];
 
-type ProviderServices = Readonly<{
-  services: readonly Service[];
-  other: OtherHost & { label: MessageKey };
-}>;
-
-const OTHER = "other";
-
-// Langdock serves each vendor's wire under its own path, once per region, on
-// one key; `version` is the segment the adapter expects in its host.
-function langdock(
-  wire: string,
-  version = "",
-  note?: MessageKey,
-): readonly Service[] {
-  return [
-    {
-      id: "langdock-eu",
-      label: "aiProviderSettings.service.langdockEu",
-      host: `https://api.langdock.com/${wire}/eu${version}`,
-      note,
-    },
-    {
-      id: "langdock-us",
-      label: "aiProviderSettings.service.langdockUs",
-      host: `https://api.langdock.com/${wire}/us${version}`,
-      note,
-    },
-  ];
+/** The key list with a keyless row for each local provider it does not name. */
+export function withLocalProviders(
+  listed: readonly KeyStatus[],
+): readonly KeyStatus[] {
+  const named = new Set(listed.map((p) => p.provider));
+  const local = LOCAL_PROVIDERS.filter((p) => !named.has(p)).map(
+    (provider): KeyStatus => ({
+      provider,
+      configured: false,
+      env_var: "",
+      optional: false,
+      credential_kind: "api_key",
+      usable: true,
+    }),
+  );
+  return [...listed, ...local];
 }
-
-const SERVICES: ReadonlyMap<string, ProviderServices> = new Map([
-  [
-    "openai_compatible",
-    {
-      services: [
-        {
-          id: "openrouter",
-          label: "aiProviderSettings.service.openrouter",
-          host: "https://openrouter.ai/api",
-        },
-        {
-          id: "openrouter-eu",
-          label: "aiProviderSettings.service.openrouterEu",
-          host: "https://eu.openrouter.ai/api",
-          note: "aiProviderSettings.service.openrouterEu.note",
-          noteLink: "https://openrouter.ai/docs/guides/features/sovereign-ai",
-        },
-        {
-          id: "mistral",
-          label: "aiProviderSettings.service.mistral",
-          host: "https://api.mistral.ai",
-        },
-        {
-          id: "together",
-          label: "aiProviderSettings.service.together",
-          host: "https://api.together.xyz",
-        },
-        {
-          id: "groq",
-          label: "aiProviderSettings.service.groq",
-          host: "https://api.groq.com/openai",
-        },
-        {
-          id: "deepseek",
-          label: "aiProviderSettings.service.deepseek",
-          host: "https://api.deepseek.com",
-        },
-        ...langdock("openai"),
-      ],
-      other: {
-        label: "aiProviderSettings.service.otherChat",
-        help: "aiRouting.baseUrl.help",
-        placeholder: "aiRouting.baseUrl.placeholder",
-      },
-    },
-  ],
-  [
-    "gemini",
-    {
-      services: [
-        {
-          id: "google-ai-studio",
-          label: "aiProviderSettings.service.googleAiStudio",
-          host: "",
-        },
-        // Its Gemini path serves no embedder, and the embeddings lane on
-        // gemini follows this host.
-        ...langdock(
-          "google",
-          "/v1beta",
-          "aiProviderSettings.service.langdockGemini.note",
-        ),
-      ],
-      other: {
-        label: "aiProviderSettings.service.otherGemini",
-        help: "aiRouting.baseUrl.help.gemini",
-        placeholder: "aiRouting.baseUrl.placeholder.gemini",
-      },
-    },
-  ],
-  [
-    "openai",
-    {
-      services: [
-        { id: "openai", label: "aiProviderSettings.service.openai", host: "" },
-        ...langdock("openai"),
-      ],
-      other: {
-        label: "aiProviderSettings.service.otherOpenai",
-        help: "aiRouting.baseUrl.help.openai",
-        placeholder: "aiRouting.baseUrl.placeholder.openai",
-      },
-    },
-  ],
-  [
-    "anthropic",
-    {
-      services: [
-        {
-          id: "anthropic",
-          label: "aiProviderSettings.service.anthropic",
-          host: "",
-        },
-        ...langdock("anthropic"),
-      ],
-      other: {
-        label: "aiProviderSettings.service.otherAnthropic",
-        help: "aiRouting.baseUrl.help.anthropic",
-        placeholder: "aiRouting.baseUrl.placeholder.anthropic",
-      },
-    },
-  ],
-  [
-    "jev_compatible",
-    {
-      services: [
-        {
-          id: "openrouter",
-          label: "aiProviderSettings.service.openrouter",
-          host: "https://openrouter.ai/api/alpha/decisions",
-        },
-        {
-          id: "openrouter-eu",
-          label: "aiProviderSettings.service.openrouterEu",
-          host: "https://eu.openrouter.ai/api/alpha/decisions",
-          note: "aiProviderSettings.service.openrouterEu.note",
-          noteLink: "https://openrouter.ai/docs/guides/features/sovereign-ai",
-        },
-      ],
-      other: {
-        label: "aiProviderSettings.service.otherDecisions",
-        help: "aiRouting.baseUrl.help.jevCompatible",
-        placeholder: "aiRouting.baseUrl.placeholder.jevCompatible",
-      },
-    },
-  ],
-  [
-    "jev",
-    {
-      services: [
-        {
-          id: "typesafe",
-          label: "aiProviderSettings.service.typesafe",
-          host: "",
-        },
-      ],
-      other: {
-        label: "aiProviderSettings.service.otherAddress",
-        help: "aiRouting.baseUrl.help.jev",
-        placeholder: "aiRouting.baseUrl.placeholder.jev",
-      },
-    },
-  ],
-]);
 
 /** Whether a provider has anything this sheet can set. */
 export function hasProviderSettings(provider: string): boolean {
@@ -251,6 +89,7 @@ const UNCHOSEN = "";
 
 /** The service a stored host belongs to: a known one, Other, or none yet. */
 export function serviceOf(provider: string, host: string): string {
+  if (SERVICES.get(provider)?.direct) return OTHER;
   const known = SERVICES.get(provider)?.services ?? [];
   if (host.trim() === "") {
     return known.find((s) => s.host === "")?.id ?? UNCHOSEN;
@@ -384,7 +223,7 @@ export function ProviderSettingsForm({
           {refusal}
         </p>
       )}
-      {catalog && (
+      {catalog && !catalog.direct && (
         <Field label={t("aiProviderSettings.service.label")}>
           {(control) => (
             <Select
@@ -410,6 +249,7 @@ export function ProviderSettingsForm({
           other={catalog.other}
           typed={typed}
           disabled={disabled}
+          guide={!catalog.direct}
           onChange={setTyped}
         />
       )}

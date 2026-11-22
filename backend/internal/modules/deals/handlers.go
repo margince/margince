@@ -124,9 +124,9 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 var dealPicklists = map[string]string{
 	"deal_priority_check":              "priority",
 	"deal_commercial_motion_check":     "commercial_motion",
-	"deal_partner_attribution_check":   "partner_attribution",
-	"deal_status_check":                "status",
-	"deal_won_without_contract_reason": "won_without_contract_reason",
+	"deal_partner_attribution_check":   partnerAttributionField,
+	"deal_status_check":                filterStatus,
+	"deal_won_without_contract_reason": wonWithoutContractReasonField,
 }
 
 // writeOfferTemplateConflict maps the two offer_template pre-checked

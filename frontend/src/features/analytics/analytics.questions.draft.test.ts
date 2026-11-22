@@ -10,7 +10,7 @@ import {
   retarget,
   toQuery,
 } from "./analytics.questions.draft";
-import { ENTITIES } from "./analytics.questions.testkit";
+import { DEAL_MONEY, ENTITIES } from "./analytics.questions.testkit";
 
 const [deals, leads] = ENTITIES;
 
@@ -30,7 +30,12 @@ const composed: QuestionDraft = {
 describe("a draft becoming the query the engine reads", () => {
   it("sends count with no field, the scope, and the limit it will report", () => {
     expect(
-      toQuery(composed, { scope_kind: "team", scope_id: "t-1" }, "EUR"),
+      toQuery(
+        composed,
+        { scope_kind: "team", scope_id: "t-1" },
+        "EUR",
+        DEAL_MONEY,
+      ),
     ).toEqual({
       entity: "deals-by-stage",
       scope_kind: "team",
@@ -46,20 +51,24 @@ describe("a draft becoming the query the engine reads", () => {
   });
 
   it("leaves out an empty grouping and an empty filter list", () => {
-    const query = toQuery(newDraft("leads-by-status"), {}, "EUR");
+    const query = toQuery(newDraft("leads-by-status"), {}, "EUR", DEAL_MONEY);
     expect(query).not.toHaveProperty("group_by");
     expect(query).not.toHaveProperty("filters");
   });
 
   it("comes back from a saved query as the same draft", () => {
-    const query = toQuery(composed, {}, "EUR");
-    expect(toQuery(draftFromQuery(query, "EUR"), {}, "EUR")).toEqual(query);
+    const query = toQuery(composed, {}, "EUR", DEAL_MONEY);
+    expect(
+      toQuery(draftFromQuery(query, "EUR", DEAL_MONEY), {}, "EUR", DEAL_MONEY),
+    ).toEqual(query);
   });
 });
 
 describe("why a draft cannot be asked yet", () => {
   it("wants a report first", () => {
-    expect(draftProblem(newDraft(""), "EUR")).toBe("analytics.q.needEntity");
+    expect(draftProblem(newDraft(""), "EUR", DEAL_MONEY)).toBe(
+      "analytics.q.needEntity",
+    );
   });
 
   it("wants a field for every aggregate but count", () => {
@@ -67,6 +76,7 @@ describe("why a draft cannot be asked yet", () => {
       draftProblem(
         { ...composed, measures: [{ id: 1, fn: "avg", field: "" }] },
         "EUR",
+        DEAL_MONEY,
       ),
     ).toBe("analytics.q.needField");
   });
@@ -79,9 +89,10 @@ describe("why a draft cannot be asked yet", () => {
           filters: [{ id: 3, field: "status", op: "eq", value: "" }],
         },
         "EUR",
+        DEAL_MONEY,
       ),
     ).toBe("analytics.q.needValue");
-    expect(draftProblem(composed, "EUR")).toBeNull();
+    expect(draftProblem(composed, "EUR", DEAL_MONEY)).toBeNull();
   });
 });
 
@@ -123,8 +134,8 @@ describe("an amount in a filter", () => {
     const draft = withFilters([
       { id: 3, field: "amount_base_minor", op: "gte", value: 5000 },
     ]);
-    expect(draftProblem(draft, "EUR")).toBeNull();
-    expect(toQuery(draft, {}, "EUR").filters).toEqual([
+    expect(draftProblem(draft, "EUR", DEAL_MONEY)).toBeNull();
+    expect(toQuery(draft, {}, "EUR", DEAL_MONEY).filters).toEqual([
       { field: "amount_base_minor", op: "gte", value: 500_000 },
     ]);
   });
@@ -134,8 +145,8 @@ describe("an amount in a filter", () => {
       { id: 3, field: "currency", op: "eq", value: "VND" },
       { id: 4, field: "amount_minor", op: "gte", value: 5000 },
     ]);
-    expect(draftProblem(draft, "EUR")).toBeNull();
-    expect(toQuery(draft, {}, "EUR").filters?.[1]).toEqual({
+    expect(draftProblem(draft, "EUR", DEAL_MONEY)).toBeNull();
+    expect(toQuery(draft, {}, "EUR", DEAL_MONEY).filters?.[1]).toEqual({
       field: "amount_minor",
       op: "gte",
       value: 5000,
@@ -146,18 +157,24 @@ describe("an amount in a filter", () => {
     const draft = withFilters([
       { id: 3, field: "amount_minor", op: "gte", value: 5000 },
     ]);
-    expect(draftProblem(draft, "EUR")).toBe("analytics.q.needCurrencyFilter");
+    expect(draftProblem(draft, "EUR", DEAL_MONEY)).toBe(
+      "analytics.q.needCurrencyFilter",
+    );
   });
 
   it("refuses a converted amount with no base currency, and a figure the currency cannot hold", () => {
     const converted = withFilters([
       { id: 3, field: "amount_base_minor", op: "gte", value: 5000 },
     ]);
-    expect(draftProblem(converted, null)).toBe("analytics.noBaseCurrencyWhy");
+    expect(draftProblem(converted, null, DEAL_MONEY)).toBe(
+      "analytics.noBaseCurrencyWhy",
+    );
     const tooFine = withFilters([
       { id: 3, field: "amount_base_minor", op: "gte", value: 50.001 },
     ]);
-    expect(draftProblem(tooFine, "EUR")).toBe("analytics.q.amountInvalid");
+    expect(draftProblem(tooFine, "EUR", DEAL_MONEY)).toBe(
+      "analytics.q.amountInvalid",
+    );
   });
 
   it("comes back from a saved question in the major units the reader typed", () => {
@@ -167,7 +184,10 @@ describe("an amount in a filter", () => {
       ]),
       {},
       "EUR",
+      DEAL_MONEY,
     );
-    expect(draftFromQuery(query, "EUR").filters[0]?.value).toBe(5000);
+    expect(draftFromQuery(query, "EUR", DEAL_MONEY).filters[0]?.value).toBe(
+      5000,
+    );
   });
 });
