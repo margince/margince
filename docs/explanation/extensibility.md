@@ -610,12 +610,10 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 - [how-to/add-an-extension.md](../how-to/add-an-extension.md): build and ship a unit, step by step.
 - [privacy-and-consent.md](privacy-and-consent.md): the retention engine that reads a pack.
 - [composition-layer.md](composition-layer.md): how `compose` boots and wires the composed set.
-- [agent-surface.md](agent-surface.md): the registry and admission gate a served extension tool goes
-  through.
+- [agent-surface.md](agent-surface.md): the registry and admission gate a served tool goes through.
 - [ingress-gate-and-auto-capture.md](ingress-gate-and-auto-capture.md): what the core does with a record
   a unit lands, with the merge-key declaration and the channel path.
-- [outbound-messaging.md](outbound-messaging.md): the reply path that ends at the `Channel.Send` of a
-  unit.
+- [outbound-messaging.md](outbound-messaging.md): the reply path that ends at a unit's `Channel.Send`.
 - [frontend-architecture.md](frontend-architecture.md): the SPA that the frontend part of an extension
   adds to.
 - [reference/make-targets.md](../reference/make-targets.md): `composition`, `check-composition`,

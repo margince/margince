@@ -1618,7 +1618,7 @@ The rules:
   it comes back as `AIResult.Text`.
 - **The answer is advice.** `AIResult.MachineMade` is always true. A unit that shows or stores it says a model
   wrote it.
-- **A refusal by routing, the region limit, a restriction or the budget** is `ErrAIUnavailable`. The call went
+- **`ErrAIUnavailable`** means routing, the region limit, a restriction or the budget refused the call. It went
   nowhere, so a job may try again later.
 - The core's certification covers the one `extension_task` site. It does not run a unit's own examples yet.
 
