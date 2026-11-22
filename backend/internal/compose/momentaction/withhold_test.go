@@ -23,7 +23,9 @@ func seated(seat principal.SeatType, grant principal.ObjectGrant) context.Contex
 		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(), SeatType: seat,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"rep"},
-			Objects:  map[string]principal.ObjectGrant{"activity": grant},
+			Objects: map[string]principal.ObjectGrant{
+				"activity": grant, "deal": {Read: true, Update: grant.Create},
+			},
 			RowScope: principal.RowScopeAll,
 		},
 	})

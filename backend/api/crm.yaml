@@ -36127,6 +36127,47 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /deals/{id}/manager-request:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: requestDealManager
+      x-mcp-tool: { verb: request_deal_manager, router: change_attention, action: request_deal_manager, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Ask the team's manager to look at this deal.
+      description: |
+        Accepting the Worklist's "bring in the manager" move. The deal then carries when it was
+        asked, by whom and why, and the team's leads see it on their focus list. It is one fact on
+        the deal, not a task per lead. Asking again changes nothing. A deal that is not open, or
+        one the caller may not change, answers 404.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RequestDealManagerRequest' }
+      responses:
+        '204': { description: Asked. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Deals]
+      operationId: clearDealManagerRequest
+      x-mcp-tool: { verb: clear_deal_manager_request, router: change_attention, action: clear_deal_manager_request, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Mark the manager request on this deal as handled.
+      description: |
+        Clears the request. A team lead, or a seat with oversight of every team, may clear it. A
+        request also leaves the focus list by itself once the deal is no longer open. Idempotent:
+        a deal with no request answers the same success.
+      responses:
+        '204': { description: 'Cleared, or there was none.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/coverage:
     get:
       tags: [Deals]
@@ -69683,6 +69724,42 @@ components:
           type: array
           description: One entry per team with a daily freeze this quarter, ordered by team id.
           items: { $ref: '#/components/schemas/ForecastFocusTeam' }
+        requests:
+          type: array
+          description: >-
+            Open deals a seller asked the team's manager to look at, oldest request first, next to
+            the frozen lists. Empty for a reader who leads no team, and while individual
+            performance is off. A deal the caller may not read is left out.
+          items: { $ref: '#/components/schemas/ForecastFocusRequested' }
+    RequestDealManagerRequest:
+      type: object
+      required: [reasons]
+      properties:
+        reasons:
+          type: array
+          minItems: 1
+          maxItems: 3
+          items:
+            type: string
+            enum: [big_deal, single_contact, stuck]
+          description: >-
+            Why the manager is asked, as the move named them: `big_deal` is a value above the
+            team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in
+            its stage. A client words them.
+      additionalProperties: false
+    ForecastFocusRequested:
+      type: object
+      required: [deal_id, deal_name, requested_at, reasons]
+      properties:
+        deal_id: { type: string, format: uuid }
+        deal_name: { type: string }
+        owner_id: { type: string, format: uuid, description: Absent when individual performance is off. }
+        requested_by: { type: string, format: uuid, description: Absent when individual performance is off. }
+        requested_at: { type: string, format: date-time }
+        reasons:
+          type: array
+          items: { type: string, enum: [big_deal, single_contact, stuck], x-extensible-enum: true }
+      additionalProperties: false
     ForecastFocusTeam:
       type: object
       required: [team_id, snapshot_id, taken_at, base_currency, status, deals, masked_count]
@@ -70280,6 +70357,53 @@ components:
           type: array
           description: One row per deal that moved, each in exactly one bucket.
           items: { $ref: '#/components/schemas/ForecastMovementDeal' }
+        focus_actions:
+          allOf: [{ $ref: '#/components/schemas/ForecastMovementFocusActions' }]
+          description: >-
+            How much of the change came from deals on the opening snapshot's stored focus list
+            that were worked between the two snapshots. Absent when no listed deal was worked.
+            It is a cause beside the buckets, not a bucket, so the buckets still add up.
+      additionalProperties: false
+    ForecastMovementFocusActions:
+      type: object
+      required: [amount_minor, deals]
+      properties:
+        amount_minor:
+          type: integer
+          format: int64
+          description: The change of the worked focus-list deals, in the reading drawn.
+        share_bps:
+          type: integer
+          description: >-
+            That change as a share of the whole change, in basis points. Absent when the whole
+            change is zero.
+        deals:
+          type: array
+          description: The worked deals, largest change first, each with links to what was done.
+          items: { $ref: '#/components/schemas/ForecastMovementFocusDeal' }
+      additionalProperties: false
+    ForecastMovementFocusDeal:
+      type: object
+      required: [deal_id, amount_minor, actions]
+      properties:
+        deal_id: { type: string, format: uuid }
+        amount_minor: { type: integer, format: int64 }
+        actions:
+          type: array
+          description: Up to five of the actions, oldest first.
+          items: { $ref: '#/components/schemas/ForecastMovementFocusAction' }
+      additionalProperties: false
+    ForecastMovementFocusAction:
+      type: object
+      required: [activity_id, kind, at]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [task_done, mail_sent, meeting_held]
+          x-extensible-enum: true
+        at: { type: string, format: date-time }
+        subject: { type: string }
       additionalProperties: false
     ForecastMovementBucket:
       type: object
@@ -70327,7 +70451,7 @@ components:
           items:
             type: string
             enum: [new, pulled_in, pushed_out, amount, category, stage_weight, record_changed, won, lost,
-                   reopened_or_archived, fx]
+                   reopened_or_archived, fx, focus_actions]
             x-extensible-enum: true
       additionalProperties: false
     NewForecastCall:
@@ -85615,7 +85739,7 @@ components:
           description: The deal recommendation's evidence basis, preserved across surfaces.
         action:
           type: string
-          enum: [draft_reply, draft_email, create_task, open_task, open_meeting_brief, reconnect, none]
+          enum: [draft_reply, draft_email, create_task, open_task, open_meeting_brief, reconnect, bring_in_manager, none]
           x-extensible-enum: true
           description: |
             `draft_reply` answers the message in `activity_id` — offered only where the
@@ -85628,11 +85752,24 @@ components:
             `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
             sends the reader to reauthorize a source that stopped answering.
 
+            `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+            one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+            `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+            deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+            requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+            when one of those facts changes.
+
             `none` is a producer's answer that there is nothing to do — a closed deal has
             no next step. It is a member of this enum so a producer that computes one has
             a word for it, but NO row carries it: a step of "nothing" and no step at all
             read the same to a reader, so the producers drop it and send no `move`. A
             client that meets one anyway draws nothing, which is the same outcome.
+        reason:
+          type: string
+          description: >-
+            One sentence saying why this move is offered. Carried by `bring_in_manager`, whose
+            reasons are facts about the deal; the other verbs leave it absent and the row's own
+            reason stands.
         activity_id:
           type: string
           format: uuid

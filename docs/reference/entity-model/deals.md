@@ -79,7 +79,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-49 columns · primary key `(id)` · referenced by 30 foreign keys
+52 columns · primary key `(id)` · referenced by 30 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -105,6 +105,9 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `lost_reason` | `text` |  | The free note on a lost deal. |
 | `lost_reason_basis` | `text` |  | How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. |
 | `lost_reason_code` | `text` |  | The key from `/loss-reasons` this loss counts under. |
+| `manager_request_reasons` | `text[]` |  |  |
+| `manager_requested_at` | `timestamp with time zone` |  |  |
+| `manager_requested_by` | `uuid` |  |  |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `partner_attribution` | `text` |  | What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). |

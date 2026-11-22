@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/hostauthority"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/managermove"
 	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
@@ -254,7 +255,8 @@ func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.H
 		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
 	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
-		WithReaderRows(ForecastReaderContributions).WithGoalReadable(newReportingService(pool, now).GoalReadable)
+		WithReaderRows(ForecastReaderContributions).WithGoalReadable(newReportingService(pool, now).GoalReadable).
+		WithManagerRequests(managermove.Requests(deals.NewStore(InstallationDB(pool), DealsInstallation())))
 }
 
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {

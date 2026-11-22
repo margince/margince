@@ -4016,6 +4016,8 @@
   "room.docs.alreadyPresent": "Tệp này đã có trong Deal Room.",
   "deal360.openTask": "Mở việc cần làm",
   "deal360.createTask": "Tạo việc tiếp theo",
+  "deal360.bringInManager": "Mời quản lý tham gia",
+  "deal360.managerAsked": "Đã nhờ quản lý",
   "deal360.followUpCreated": "Đã tạo việc tiếp theo",
   "deal360.openBrief": "Mở bản tóm tắt cuộc họp",
   "auto.runs.outcomeFired": "Đã kích hoạt",
