@@ -13,6 +13,7 @@ import (
 const (
 	repoPresets  = "../../../config/presets"
 	repoFrontend = "../../../frontend/src/lib/modelsetups.gen.ts"
+	repoStock    = "../../internal/modules/ai/stockpresets_gen.go"
 )
 
 func TestTheCommittedTableIsCurrent(t *testing.T) {
@@ -26,6 +27,25 @@ func TestTheCommittedTableIsCurrent(t *testing.T) {
 	}
 	if string(onDisk) != string(want) {
 		t.Errorf("%s is stale: run make gen", repoFrontend)
+	}
+}
+
+// The Go table of presets that reorder a task holds each such preset, and only
+// those, as its file reads.
+func TestTheCommittedStockTableIsCurrent(t *testing.T) {
+	want, err := renderStock(repoPresets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	onDisk, err := os.ReadFile(repoStock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(onDisk) != string(want) {
+		t.Errorf("%s is stale: run make gen", repoStock)
+	}
+	if !strings.Contains(string(want), `"gemini_cloud.yaml"`) || strings.Contains(string(want), `"openrouter_cloud.yaml"`) {
+		t.Errorf("the stock table names the wrong presets:\n%s", want)
 	}
 }
 

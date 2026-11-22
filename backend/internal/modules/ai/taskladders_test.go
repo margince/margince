@@ -4,6 +4,7 @@
 package ai
 
 import (
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -75,5 +76,49 @@ func TestATaskLadderOrderMustReorderARealTasksOwnRungs(t *testing.T) {
 		if _, err := ParseRouting([]byte(raw)); err == nil || !strings.Contains(err.Error(), "task_ladders") {
 			t.Errorf("%s: err = %v, want a task_ladders refusal", name, err)
 		}
+	}
+}
+
+// An installation bound tier for tier to a committed preset takes that preset's
+// task order; one bound otherwise, or already ordering its tasks, keeps its own.
+func TestAStockBindingAdoptsItsPresetsTaskOrderAndACustomOneDoesNot(t *testing.T) {
+	stock, err := ParsePreset([]byte(stockPresets["gemini_cloud.yaml"]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	installed := stock
+	installed.TaskLadders = nil
+	adopted, ok := installed.WithStockTaskLadders()
+	if !ok || !slices.Equal(adopted.Ladder(TaskAgentLoop), stock.Ladder(TaskAgentLoop)) {
+		t.Errorf("a stock Gemini install adopted %v (%v), want %v", adopted.TaskLadders, ok, stock.TaskLadders)
+	}
+
+	vertex, err := ParsePreset([]byte(stockPresets["gemini_vertex_eu.yaml"]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	vertex.TaskLadders = nil
+	for tier, binding := range vertex.Tiers {
+		binding.Location = "europe-west4"
+		vertex.Tiers[tier] = binding
+	}
+	if _, ok := vertex.WithStockTaskLadders(); !ok {
+		t.Error("a stock Vertex install at a location of its own did not adopt its preset's order")
+	}
+
+	customised := stock
+	customised.TaskLadders = nil
+	customised.Tiers = maps.Clone(stock.Tiers)
+	premium := customised.Tiers[TierPremium]
+	premium.Model = "gemini-3.1-flash-lite"
+	customised.Tiers[TierPremium] = premium
+	if got, ok := customised.WithStockTaskLadders(); ok || len(got.TaskLadders) > 0 {
+		t.Errorf("a customised install adopted %v", got.TaskLadders)
+	}
+
+	ordered := stock
+	ordered.TaskLadders = map[Task][]Tier{TaskAgentLoop: TaskLadder(TaskAgentLoop)}
+	if got, ok := ordered.WithStockTaskLadders(); ok || !slices.Equal(got.Ladder(TaskAgentLoop), TaskLadder(TaskAgentLoop)) {
+		t.Errorf("an install ordering its own tasks was given %v", got.TaskLadders)
 	}
 }

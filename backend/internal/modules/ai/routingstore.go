@@ -428,3 +428,23 @@ func canonicalEndpoint(raw string) string {
 	parsed.RawPath = strings.TrimRight(parsed.RawPath, "/")
 	return parsed.String()
 }
+
+// AdoptStockTaskLaddersTx gives the stored binding the task order of the
+// committed preset it binds tier for tier, inside the caller's transaction and
+// under the routing lock; the settings store audits the write. A binding an
+// operator chose for themselves is left as it is, and so is one with no tiers.
+func (s *RoutingStore) AdoptStockTaskLaddersTx(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {
+		return false, err
+	}
+	current, err := config.StoredValTx(ctx, tx, s.cfg, Routing)
+	if err != nil || current.Unconfigured() {
+		return false, err
+	}
+	next, adopted := current.WithStockTaskLadders()
+	if !adopted {
+		s.logger().InfoContext(ctx, "ai routing binds no committed preset tier for tier, or orders its own tasks; its task order is left as stored")
+		return false, nil
+	}
+	return true, config.SaveTx(ctx, s.cfg, tx, Routing, next)
+}

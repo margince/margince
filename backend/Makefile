@@ -928,7 +928,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/attemptlimitcmd -out internal/modules/ai/attemptlimits_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/taskgradecmd -out internal/modules/ai/taskgrades_gen.go
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-modelsetups -out ../frontend/src/lib/modelsetups.gen.ts
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-modelsetups -out ../frontend/src/lib/modelsetups.gen.ts -out-go internal/modules/ai/stockpresets_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-messaging-rules -root ..
 
 # Every file the settings registry is the source of: the settings tables in

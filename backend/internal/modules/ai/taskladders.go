@@ -37,3 +37,27 @@ func (cfg RoutingConfig) validateTaskLadders() error {
 	}
 	return nil
 }
+
+// WithStockTaskLadders gives a stored binding the task order of the committed
+// preset it binds tier for tier (provider, model and thinking level on every
+// tier, its own location aside), when it reorders no task itself. A binding an
+// operator chose for themselves answers false and is left as it is.
+func (cfg RoutingConfig) WithStockTaskLadders() (RoutingConfig, bool) {
+	if len(cfg.TaskLadders) > 0 {
+		return cfg, false
+	}
+	for _, name := range slices.Sorted(maps.Keys(stockPresets)) {
+		stock, err := ParsePreset([]byte(stockPresets[name]))
+		if err == nil && sameTierModels(cfg.Tiers, stock.Tiers) {
+			cfg.TaskLadders = maps.Clone(stock.TaskLadders)
+			return cfg, true
+		}
+	}
+	return cfg, false
+}
+
+func sameTierModels(a, b map[Tier]ProviderConfig) bool {
+	return maps.EqualFunc(a, b, func(x, y ProviderConfig) bool {
+		return x.Provider == y.Provider && x.Model == y.Model && x.ThinkingLevel == y.ThinkingLevel
+	})
+}
