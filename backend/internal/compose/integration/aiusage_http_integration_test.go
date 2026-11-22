@@ -130,10 +130,10 @@ func TestAiUsageOverHTTP(t *testing.T) {
 func seedAiCall(t *testing.T, e *apptest.AppEnv, wsID string, task, tier, provider, model string, tokensIn, tokensOut int, occurredAt time.Time) {
 	t.Helper()
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint,
+		INSERT INTO ai_call (task, tier, provider, model_id,
 		  tokens_in, tokens_out, occurred_at, logical_call_id)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-		task, tier, provider, model, "fp-"+ids.NewV7().String(),
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+		task, tier, provider, model,
 		tokensIn, tokensOut, occurredAt, ids.NewV7()); err != nil {
 		t.Fatalf("insert ai_call: %v", err)
 	}

@@ -289,10 +289,10 @@ embeddings: {provider: fake, model: fake-embed, dimensions: 8}
 func seedCachedCall(t *testing.T, e *apptest.AppEnv, tier string, at time.Time) {
 	t.Helper()
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO ai_call (id, task, tier, provider, model_id, request_fingerprint,
+		INSERT INTO ai_call (id, task, tier, provider, model_id,
 		                     tokens_in, tokens_out, latency_ms, logical_call_id,
 		                     attempt, is_terminal, cache_hit, occurred_at)
-		VALUES ($1, 'capture_confidentiality_verdict', $2, 'test', 'test-model', 'fp',
+		VALUES ($1, 'capture_confidentiality_verdict', $2, 'test', 'test-model',
 		        0, 0, 5, $3, 1, true, true, $4)`,
 		ids.NewV7(), tier, ids.NewV7(), at); err != nil {
 		t.Fatalf("seeding a cached ai_call: %v", err)
@@ -313,10 +313,10 @@ func seedAttempt(t *testing.T, e *apptest.AppEnv, tier, sentinel string,
 		errSentinel = sentinel
 	}
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO ai_call (id, task, tier, provider, model_id, request_fingerprint,
+		INSERT INTO ai_call (id, task, tier, provider, model_id,
 		                     tokens_in, tokens_out, latency_ms, error_sentinel,
 		                     logical_call_id, attempt, is_terminal, occurred_at)
-		VALUES ($1, 'capture_confidentiality_verdict', $2, 'test', 'test-model', 'fp',
+		VALUES ($1, 'capture_confidentiality_verdict', $2, 'test', 'test-model',
 		        10, 5, $3, $4, $5, $6, $7, $8)`,
 		ids.NewV7(), tier, latency, errSentinel, logical, attempt, terminal, at); err != nil {
 		t.Fatalf("seeding an ai_call: %v", err)
@@ -332,11 +332,11 @@ func seedDecisionAttempt(t *testing.T, e *apptest.AppEnv, sentinel string,
 		errSentinel = sentinel
 	}
 	if _, err := e.Owner.Exec(context.Background(), `
-		INSERT INTO ai_call (id, task, kind, tier, provider, model_id, request_fingerprint,
+		INSERT INTO ai_call (id, task, kind, tier, provider, model_id,
 		                     tokens_in, tokens_out, latency_ms, error_sentinel,
 		                     logical_call_id, attempt, is_terminal, occurred_at)
 		VALUES ($1, 'site_triage', 'decision', 'decide', 'jev_compatible',
-		        'typesafe/jev-1.13', 'fp', 10, 0, 200, $2, $3, 1, $4, $5)`,
+		        'typesafe/jev-1.13', 10, 0, 200, $2, $3, 1, $4, $5)`,
 		ids.NewV7(), errSentinel, logical, terminal, at); err != nil {
 		t.Fatalf("seeding a decision ai_call: %v", err)
 	}
