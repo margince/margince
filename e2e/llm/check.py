@@ -243,7 +243,28 @@ def lint(path):
 
         if data["setup"] not in casesetup.STEPS:
             problems.append(f"setup {data['setup']!r} is no step in casesetup.py")
-    return problems + _entry_problems(data) + _door_problems(data)
+    return problems + _entry_problems(data) + _door_problems(data) + _judge_problems(data)
+
+
+# A judged criterion is read beside the final answer alone, so one that defers
+# to what a tool answered asks for a reading the judge cannot make: name the
+# expected facts in the criterion instead.
+_DEFERS_TO_A_TOOL = re.compile(
+    r"\b(?:as the tools? (?:reports?|says?|shows?|returns?|returned|gives?|flagged)"
+    r"|the tools?(?:'s)? (?:answer|output|result|reading|data)"
+    r"|tool (?:results?|output|answers?)"
+    r"|(?:that|which|what) the tools? (?:flag|report|return|say|show)\w*"
+    r"|the tools? (?:did not|didn't|does not|doesn't|never) (?:flag|report|return|say|show)\w*"
+    r"|(?:reading|read) it made|against (?:the|what the) tools?)\b",
+    re.IGNORECASE,
+)
+
+
+def _judge_problems(data):
+    return [f"judge criterion {number} defers to a tool's answer ({match.group(0)!r}), which the judge never "
+            "sees: name the expected facts in the criterion"
+            for number, criterion in enumerate(data.get("judge", []), 1)
+            for match in [_DEFERS_TO_A_TOOL.search(criterion)] if match]
 
 
 def _door_problems(data):
