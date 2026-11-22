@@ -166,8 +166,9 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// evidence read switches to its generic plan first, which is one more
 	// statement and spares a plan of the gate on every page. The clock here is a
 	// past instant the stored strength dates cannot answer. So strength reads
-	// the stored row and then the history's dates and the window's counts.
-	const budget = 62
+	// the stored row and then the history's dates and the window's counts. The
+	// single-thread threshold is read from the reporting framework's own table.
+	const budget = 63
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}
