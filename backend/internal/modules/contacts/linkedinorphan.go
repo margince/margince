@@ -59,3 +59,43 @@ func releaseOrphanedSuggestions(ctx context.Context, tx pgx.Tx, owner ids.UUID) 
 	}
 	return nil
 }
+
+// relinkLinkedInConnections points the connections matched to the merged-away
+// contact at the survivor, whatever their status.
+//
+// A merge archives the source, so a connection left on it would read as an
+// orphan and lose a suggestion the survivor deserves. Moving it here keeps one
+// place that moves a contact's references.
+func relinkLinkedInConnections(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
+	rows, err := tx.Query(ctx, `
+		UPDATE linkedin_connection SET matched_contact_id = $2, updated_at = now()
+		 WHERE matched_contact_id = $1 AND tombstoned_at IS NULL
+		RETURNING id, match_status`, sourceID.UUID, targetID.UUID)
+	if err != nil {
+		return fmt.Errorf("contacts: moving LinkedIn connections to the survivor: %w", err)
+	}
+	type moved struct {
+		id     ids.UUID
+		status string
+	}
+	var done []moved
+	for rows.Next() {
+		var m moved
+		if err := rows.Scan(&m.id, &m.status); err != nil {
+			rows.Close()
+			return err
+		}
+		done = append(done, m)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, m := range done {
+		images := matchImages(m.status, &sourceID.UUID, m.status, &targetID.UUID)
+		if _, err := storekit.Audit(ctx, tx, "update", "linkedin_connection", m.id, images.before, images.after); err != nil {
+			return err
+		}
+	}
+	return nil
+}

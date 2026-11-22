@@ -97,11 +97,15 @@ func runLinkedInMatch(ctx context.Context, s *Store, owner, onlyContact ids.UUID
 	}); err != nil {
 		return LinkedInMatchResult{}, err
 	}
+	// Its own transaction, so no connection row is locked while the match
+	// transaction locks contacts: erasure and the matcher take contacts first.
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return releaseOrphanedSuggestions(ctx, tx, owner)
+	}); err != nil {
+		return LinkedInMatchResult{}, err
+	}
 	var out LinkedInMatchResult
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := releaseOrphanedSuggestions(ctx, tx, owner); err != nil {
-			return err
-		}
 		return matchInTx(ctx, tx, owner, onlyContact, canConfirm, &out)
 	})
 	return out, err
