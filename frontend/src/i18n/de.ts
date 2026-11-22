@@ -16492,12 +16492,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "users.teamArchivedBadge": "Archiviert",
   "users.showArchivedTeams": "Archivierte Teams anzeigen",
   "users.showArchivedTeamsSub":
-    "Ein archiviertes Team lässt seine Mitglieder nichts bearbeiten, bis du es wiederherstellst.",
+    "Ein archiviertes Team gibt seinen Mitgliedern keinen Zugriff, bis du es wiederherstellst.",
   "users.archiveTeamTitle": "„{name}“ archivieren?",
   "users.archiveTeamBody_one":
-    "{count} Mitglied kann dann nicht mehr bearbeiten, was dieses Team erlaubt. Du kannst das Team unter „Archivierte Teams anzeigen“ wiederherstellen.",
+    "Das Team hat {count} Mitglied. Es verliert den Zugriff, den das Team gibt: mit dem Team geteilte Datensätze und, als Teamleitung, die Datensätze des Teams. Du kannst es unter „Archivierte Teams anzeigen“ wiederherstellen.",
   "users.archiveTeamBody_other":
-    "{count} Mitglieder können dann nicht mehr bearbeiten, was dieses Team erlaubt. Du kannst das Team unter „Archivierte Teams anzeigen“ wiederherstellen.",
+    "Das Team hat {count} Mitglieder. Diese verlieren den Zugriff, den das Team gibt: mit dem Team geteilte Datensätze und, als Teamleitung, die Datensätze des Teams. Du kannst es unter „Archivierte Teams anzeigen“ wiederherstellen.",
   "users.teamRenameTitle": "Team umbenennen",
   "users.teamRenameSave": "Namen speichern",
   "users.teamRenamed": "Team in „{name}“ umbenannt",

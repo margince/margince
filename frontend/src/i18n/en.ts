@@ -16370,12 +16370,12 @@ export const en = {
   "users.teamArchivedBadge": "Archived",
   "users.showArchivedTeams": "Show archived teams",
   "users.showArchivedTeamsSub":
-    "An archived team lets its members edit nothing until you restore it.",
+    "An archived team gives its members no access until you restore it.",
   "users.archiveTeamTitle": "Archive “{name}”?",
   "users.archiveTeamBody_one":
-    "{count} member can no longer edit what this team lets them edit. You can restore the team under “Show archived teams”.",
+    "The team has {count} member. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
   "users.archiveTeamBody_other":
-    "{count} members can no longer edit what this team lets them edit. You can restore the team under “Show archived teams”.",
+    "The team has {count} members. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
   "users.teamRenameTitle": "Rename team",
   "users.teamRenameSave": "Save name",
   "users.teamRenamed": "Team renamed to “{name}”",

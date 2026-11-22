@@ -32,6 +32,8 @@ export function useTeamLifecycle() {
   const qc = useQueryClient();
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["teams"] });
+    // The roster's team_ids name live teams only, so they change too.
+    qc.invalidateQueries({ queryKey: ["users"] });
     qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
   };
   const restore = useMutation({
