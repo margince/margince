@@ -464,9 +464,9 @@ func TestTheTaskOverrideContractIsTheServersBounds(t *testing.T) {
 	}
 }
 
-// The Azure `location:` matrix. The editor refuses the spellings no region has,
-// and the parser alone refuses a well-formed region it does not list, because
-// the schema cannot hold the region list.
+// The Azure `location:` matrix. The editor refuses spellings no region has.
+// Only the parser refuses a well-formed region it does not list, because the
+// schema cannot hold the region list.
 func TestTheSchemaAndTheParserAgreeOnEveryAzurePlacement(t *testing.T) {
 	t.Parallel()
 	sch := compiledRoutingSchema(t)

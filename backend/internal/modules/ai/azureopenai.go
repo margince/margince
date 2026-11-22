@@ -3,7 +3,7 @@
 
 package ai
 
-// azure_openai is the OpenAI-compatible adapter in its Azure mode: the
+// azure_openai is the OpenAI-compatible adapter in its Azure mode. The
 // deployment name goes in the path, the api-version in the query, and the key
 // in the api-key header. The binding's location is the Azure region that
 // processes the call, which core must recognise (azureregions.go).
@@ -113,6 +113,16 @@ func validateAzureEntry(settings ProviderSettings) error {
 		return azureRegionError("providers: "+providerAzureOpenAI, settings.Location)
 	}
 	return nil
+}
+
+// selectPlaced builds a client for a provider addressed by a location.
+//
+//nolint:ireturn // SelectBrain's own return shape, so a refusal stays a nil interface
+func selectPlaced(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (model.Client, error) {
+	if cfg.Provider == providerAzureOpenAI {
+		return selectAzureOpenAI(cfg, keys, httpc)
+	}
+	return selectVertex(cfg, keys, httpc)
 }
 
 // selectAzureOpenAI builds the azure_openai client. Its placement is checked

@@ -227,8 +227,8 @@ func (c *openAICompatClient) ListModels(ctx context.Context) ([]model.Info, erro
 	return openAIWireModels(ctx, c.http, "openai-compat", c.modelsURL(), c.authorize)
 }
 
-// bearerAuthorizer sends apiKey as a bearer token, or nothing when it is empty
-// (a local vLLM takes no auth, the same condition the adapter's own post applies).
+// bearerAuthorizer sends apiKey as a bearer token, or nothing when it is empty.
+// A local vLLM takes no auth.
 func bearerAuthorizer(apiKey string) func(*http.Request) error {
 	return func(r *http.Request) error {
 		if apiKey != "" {

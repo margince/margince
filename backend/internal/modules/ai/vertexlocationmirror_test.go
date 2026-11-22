@@ -12,16 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// The contract and the editor schema each spell the location rule as a
-// pattern, and both must be vertexLocationShape exactly: a looser copy admits
-// a location the parser refuses, a stricter one refuses one it serves.
-//
-// The editor schema states each provider's location shape beside it: the
-// Vertex shape for gemini_vertex and the Azure region shape for azure_openai,
-// each on the provider entry, the tier binding and the embeddings lane. The
-// contract's location fields carry no pattern, because azure_openai takes a
-// region name there and the parser holds each shape; only the Vertex-only
-// available-models query parameter keeps one.
+// The editor schema states each provider's location shape: the Vertex shape
+// for gemini_vertex and the Azure region shape for azure_openai. A looser Vertex
+// copy admits a location the parser refuses. The contract's location fields
+// carry no pattern; only the Vertex-only query parameter keeps one.
 //
 // Every pattern on a field named location is collected, wherever it sits, and
 // the count is pinned, so a copy moved or dropped fails instead of vanishing.

@@ -26,7 +26,7 @@ type ProviderSettings struct {
 	// answers.
 	Upstream *OpenRouterRouting `yaml:"upstream" json:"upstream,omitempty"`
 	// Location is the Vertex AI location or Azure region a provider is served
-	// from, which is where the vendor processes the call for every lane on it.
+	// from. The vendor processes the call there for every lane on it.
 	Location string `yaml:"location" json:"location,omitempty"`
 }
 

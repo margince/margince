@@ -63,7 +63,7 @@ var anonymousOutbound = gatekit.Waive(map[string]string{
 	"internal/modules/ai/gemini.go:func post":               "carries the customer's own provider key, which is the identity that provider bills and throttles",
 	"internal/modules/ai/ollama.go:func post":               "reaches a model runner the operator runs themselves, on a host they configured — they already know what is calling it",
 	"internal/modules/ai/openai.go:func postRaw":            "carries the customer's own provider key, which is the identity that provider bills and throttles",
-	"internal/modules/ai/openaicompat.go:func post":         "carries the customer's own provider key, which is the identity that provider bills and throttles",
+	"internal/modules/ai/openaicompat.go:func postFor":      "carries the customer's own provider key, which is the identity that provider bills and throttles",
 	"internal/modules/ai/decisionwire.go:func Decide":       "carries the customer's own provider key to a decision endpoint, or reaches a decision runner the operator runs on a host they configured — either way the other end already knows what is calling it",
 	"internal/modules/ai/decisionprobe.go:func wireProbe":   "the key test's empty decision request: the same caller as Decide, carrying the customer's own key to the endpoint they bound, or reaching a runner they configured",
 	"internal/modules/ai/vertexcredential.go:func exchange": "presents an assertion signed by the customer's own service account, which is the identity Google checks",

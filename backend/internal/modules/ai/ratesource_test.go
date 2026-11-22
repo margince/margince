@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-// Gemini on Vertex AI serves Gemini's models and Azure OpenAI serves OpenAI's,
-// so each sheet falls back to the vendor's; no other provider borrows a price.
+// Gemini on Vertex AI serves Gemini's models and Azure OpenAI serves OpenAI's.
+// Each sheet falls back to the vendor's; no other provider borrows a price.
 func TestOnlyVertexAndAzureArePricedByAnotherProvider(t *testing.T) {
 	from, to := rateFallbacks()
 	if !slices.Equal(from, []string{providerAzureOpenAI, providerGeminiVertex}) || !slices.Equal(to, []string{providerOpenAI, providerGemini}) {

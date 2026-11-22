@@ -198,10 +198,10 @@ var providerRegistry = []providerDescriptor{
 		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
 	},
 	{
-		// Azure OpenAI is the OpenAI-compatible adapter in its Azure mode: the
-		// host is the customer's own resource, the model is a deployment name,
-		// and the Azure region (the binding's location) is where the data is
-		// processed. A vendor cloud, so never local and always https.
+		// Azure OpenAI is the OpenAI-compatible adapter in its Azure mode.
+		// The host is the customer's own resource and the model is a
+		// deployment name. The binding's location is the Azure region where the
+		// data is processed. A vendor cloud, so never local and always https.
 		priceSource: priceSource{kind: priceNotPublished},
 		name:        providerAzureOpenAI, caps: capChat, egress: egressPublicOnly, key: AzureOpenAIKey,
 		servedSource: servedIdentitySourceEcho, public: true, pricedBy: providerOpenAI,

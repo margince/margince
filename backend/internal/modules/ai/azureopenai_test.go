@@ -139,8 +139,8 @@ func TestAzureRefusesADeploymentNameThatIsNotAPathSegment(t *testing.T) {
 	}
 }
 
-// What the issue names as the main risk: data leaving the agreed country
-// through a region core does not know, or through one outside a stricter profile.
+// The main risk is data leaving the agreed country. That happens through a
+// region core does not know, or through one outside a stricter profile.
 func TestAzureRegionDecidesWhereDataMayGo(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

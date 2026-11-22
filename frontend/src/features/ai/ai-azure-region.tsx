@@ -5,8 +5,7 @@ import { Field, TextInput } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 
 // Where Azure processes an Azure OpenAI call. The server maps each region to a
-// country and blocks one it does not know, so the field says so up front; the
-// server's answer on save stays the check.
+// country and blocks one it does not know. The field says so up front.
 
 export const AZURE_PROVIDER = "azure_openai";
 

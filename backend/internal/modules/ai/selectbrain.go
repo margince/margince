@@ -232,10 +232,8 @@ func selectBrainOn(cfg ProviderConfig, keys config.Lookup, httpc *http.Client) (
 			attachmentMIMEs: narrowedCarriage(geminiCarries, cfg.Input),
 			thinkingLevel:   cfg.ThinkingLevel,
 		}, nil
-	case providerGeminiVertex:
-		return selectVertex(cfg, keys, httpc)
-	case providerAzureOpenAI:
-		return selectAzureOpenAI(cfg, keys, httpc)
+	case providerGeminiVertex, providerAzureOpenAI:
+		return selectPlaced(cfg, keys, httpc)
 	case "":
 		return nil, errors.New("ai: binding has no provider")
 	default:

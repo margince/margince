@@ -79,8 +79,8 @@ func (g googleFixture) RoundTrip(req *http.Request) (*http.Response, error) {
 	return fixtureTransport.RoundTrip(routed)
 }
 
-// azureFixture sends every request for the Azure resource host to base, which
-// is how an httptest server stands in for a host the placement rule pins.
+// azureFixture sends every request for the Azure resource host to base.
+// That is how an httptest server stands in for a host the placement rule pins.
 type azureFixture struct{ base string }
 
 func (a azureFixture) RoundTrip(req *http.Request) (*http.Response, error) {
