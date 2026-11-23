@@ -623,42 +623,28 @@ bench-perf: composition ## PERF-3/PERF-7 benchmark harness, writing a record; mi
 	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_TIMEOUT) ./internal/compose/integration'
 	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
-# The SMB budgets, recording NOTHING: a drift check, run by hand, without
-# touching the published page.
+# The budgets of one tier, recording NOTHING: a drift check that leaves the
+# published page alone. BENCH_PERF_CHECK_TIER picks the tier (smb by default;
+# the weekly workflow also runs mid_market, where the PERF-7 SLO binds).
 #
-# SMB ONLY, and the omission is the honest half of this target. Mid-market is
-# where the PERF-7 SLO binds, so a drift alarm would ideally watch it. What
-# used to rule it out was the seed: 250k contacts, 500k activities and 50k
-# relationships did not finish inside `go test`'s budget at all. That was the
-# seed planning its denormalisation triggers against an unanalysed database,
-# not the volume, and it is fixed in seedBenchTier — measured on a fast laptop
-# afterwards: SMB 12.4s, mid-market 151.4s.
-#
-# The remaining reason is a budget, not a clock: mid-market's PERF-3 p95 lands
-# at 181ms against a 200ms budget on that laptop — 9% of headroom. What the
-# runner would measure is unknown, and not safe to guess in either direction:
-# the same laptop reads SMB's search_fts at 35.7ms where the 2026-09-07 CI run
-# read 6.1ms, so a laptop number is not even a conservative one. A weekly job
-# that breaches on measurement spread files an issue saying a budget is
-# breaching, which would be a fabricated finding — so which tier the alarm
-# gates on is a call somebody has to make on the runner's own numbers, not a
-# default to drift into.
-#
-# So the alarm watches SMB, which is what most installations look like, and
-# drift there is real drift. Mid-market stays with `bench-perf`, by hand, where
-# a contact is watching the numbers — and a PERF-7 row measured below
-# mid-market renders `inconclusive` in the published page rather than claiming
-# a bound it did not test.
+# BENCH_PERF_GATE=0 measures without failing on a breach: the harness still
+# prints every p50/p95/p99 and says which budget it would have failed. The
+# scheduled workflow's measure-only dispatch uses it to read the spread between
+# runners. The weekly run keeps the gate on.
 #
 # MARGINCE_BENCH_RECORD is cleared rather than merely left unset: "writes
 # nothing" must be a property of the target, not of whatever the caller's shell
 # happened to export. A developer with it set from an earlier `bench-perf` would
-# otherwise have this target rewrite the published record from the SMB tier.
-bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record written (needs db-up)
+# otherwise have this target rewrite the published record.
+BENCH_PERF_CHECK_TIER    ?= smb
+BENCH_PERF_GATE          ?= 1
+BENCH_PERF_CHECK_TIMEOUT ?= 20m
+bench-perf-check: composition ## PERF-3/PERF-7 on one tier (BENCH_PERF_CHECK_TIER, smb by default), no record written; BENCH_PERF_GATE=0 reports without failing (needs db-up)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
-	  && cd backend && MARGINCE_BENCH_TIER=smb MARGINCE_BENCH_RECORD= \
+	  && cd backend && MARGINCE_BENCH_TIER=$(BENCH_PERF_CHECK_TIER) \
+	     MARGINCE_BENCH_GATE=$(BENCH_PERF_GATE) MARGINCE_BENCH_RECORD= \
 	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
-	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout 20m ./internal/compose/integration'
+	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_CHECK_TIMEOUT) ./internal/compose/integration'
 
 # The `bench` lane: measurements run BY HAND, never by a merge gate.
 #
@@ -666,8 +652,8 @@ bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record writte
 # runs any of them. `make vet` and both golangci passes still TYPE-CHECK them,
 # which is the only thing standing between a by-hand lane and rot.
 #
-# bench-perf above is the one exception to "by hand": the scheduled workflow
-# runs it weekly on the SMB tier, because PERF-3/PERF-7 lost its standing
+# bench-perf above and bench-perf-check are the exceptions to "by hand": the
+# scheduled workflow runs them weekly, because PERF-3/PERF-7 lost its standing
 # merge-gate canary and drift nobody looks for is drift nobody finds.
 #
 # Separate targets rather than one, because they measure unrelated promises and
