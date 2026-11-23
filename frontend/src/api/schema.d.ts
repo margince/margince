@@ -51259,8 +51259,8 @@ export interface components {
         };
         /**
          * @description How accurate the forecast has been: two comparisons of what it said with what happened,
-         *     read from the frozen daily forecasts of the whole installation, so every reader sees the
-         *     same answer. Only counts and sums are returned.
+         *     read from the frozen daily forecasts of the whole installation. Only counts and sums are
+         *     returned.
          *
          *     `calibration` takes each deal that has since been won or lost, and the chance it was
          *     weighted by in the last freeze at least `lead_days` before it closed. It groups those
@@ -51269,7 +51269,9 @@ export interface components {
          *
          *     `landings` takes each of the last four finished quarters, and sets what the last freeze
          *     at least four weeks before the quarter ended said it would land (won plus weighted open
-         *     pipeline) against what was won.
+         *     pipeline) against what was won. A reader who may not see the installation's frozen
+         *     forecasts, the reader `GET /forecast` shows no snapshots of the whole company, gets no
+         *     landings.
          */
         ForecastAccuracy: {
             calibration: components["schemas"]["ForecastCalibration"];

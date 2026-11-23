@@ -46,9 +46,8 @@ var forecastSettledChancesSQL = `
 
 // forecastLandingsSQL pairs each finished quarter of the workspace forecast
 // with two freezes. One is the last freeze at least $3 days before the quarter
-// ended. The other is the first freeze after it ended.
-// freeze after it ended. Columns: period_start, period_end, currency, said,
-// said_on, landed, said snapshot, landed snapshot.
+// ended. The other is the first freeze after it ended. Columns: period_start,
+// period_end, currency, said, said_on, landed, said snapshot, landed snapshot.
 const forecastLandingsSQL = `
 	SELECT p.period_start, p.period_end, p.base_currency, early.said, early.local_day, late.won_minor, early.id, late.id
 	  FROM (SELECT DISTINCT period_start, period_end, base_currency FROM forecast_snapshot
@@ -82,9 +81,18 @@ func (e *Engine) Accuracy(ctx context.Context, tx pgx.Tx, at time.Time) (forecas
 		return forecasting.Accuracy{}, err
 	}
 	calibration := forecasting.BinAccuracy(settled, analyticsquery.PercentileSampleFloor)
-	landings, landingOwners, err := forecastLandings(system, tx, forecasting.Period{Zone: zone}.LocalDay(at))
+	// The landings are the workspace's frozen totals. GET /forecast and a
+	// snapshot read show those only to a seat that may assert about it.
+	readable, err := e.MayAssertAbout(ctx, tx, forecasting.Scope{Kind: forecasting.ScopeWorkspace})
 	if err != nil {
 		return forecasting.Accuracy{}, err
+	}
+	landings, landingOwners := []forecasting.AccuracyLanding{}, [][]ids.UUID(nil)
+	if readable {
+		landings, landingOwners, err = forecastLandings(system, tx, forecasting.Period{Zone: zone}.LocalDay(at))
+		if err != nil {
+			return forecasting.Accuracy{}, err
+		}
 	}
 	if err := e.NoLoneColleague(ctx, tx, append(owners, landingOwners...)); err != nil {
 		return forecasting.Accuracy{}, err

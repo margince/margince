@@ -48444,8 +48444,8 @@ components:
       type: object
       description: |-
         How accurate the forecast has been: two comparisons of what it said with what happened,
-        read from the frozen daily forecasts of the whole installation, so every reader sees the
-        same answer. Only counts and sums are returned.
+        read from the frozen daily forecasts of the whole installation. Only counts and sums are
+        returned.
       required: [calibration, landings]
       additionalProperties: false
       properties:

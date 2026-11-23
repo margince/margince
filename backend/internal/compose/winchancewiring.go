@@ -29,6 +29,9 @@ var chances = winchance.New(winchance.Deps{
 		return period, err
 	},
 	NoLoneColleague: requireNoLoneColleague,
+	MayAssertAbout: func(ctx context.Context, tx pgx.Tx, scope forecasting.Scope) (bool, error) {
+		return forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
+	},
 })
 
 // WinChanceEngine is the win chance reader the composition wires everywhere.

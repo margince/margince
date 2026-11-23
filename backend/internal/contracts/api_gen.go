@@ -52557,8 +52557,8 @@ type FooterFinding struct {
 }
 
 // ForecastAccuracy How accurate the forecast has been: two comparisons of what it said with what happened,
-// read from the frozen daily forecasts of the whole installation, so every reader sees the
-// same answer. Only counts and sums are returned.
+// read from the frozen daily forecasts of the whole installation. Only counts and sums are
+// returned.
 //
 // `calibration` takes each deal that has since been won or lost, and the chance it was
 // weighted by in the last freeze at least `lead_days` before it closed. It groups those
@@ -52567,7 +52567,9 @@ type FooterFinding struct {
 //
 // `landings` takes each of the last four finished quarters, and sets what the last freeze
 // at least four weeks before the quarter ended said it would land (won plus weighted open
-// pipeline) against what was won.
+// pipeline) against what was won. A reader who may not see the installation's frozen
+// forecasts, the reader `GET /forecast` shows no snapshots of the whole company, gets no
+// landings.
 type ForecastAccuracy struct {
 	Calibration ForecastCalibration       `json:"calibration"`
 	Landings    []ForecastAccuracyLanding `json:"landings"`
@@ -53131,8 +53133,8 @@ type ForecastStageChance struct {
 // ForecastStageChances defines model for ForecastStageChances.
 type ForecastStageChances struct {
 	// Accuracy How accurate the forecast has been: two comparisons of what it said with what happened,
-	// read from the frozen daily forecasts of the whole installation, so every reader sees the
-	// same answer. Only counts and sums are returned.
+	// read from the frozen daily forecasts of the whole installation. Only counts and sums are
+	// returned.
 	//
 	// `calibration` takes each deal that has since been won or lost, and the chance it was
 	// weighted by in the last freeze at least `lead_days` before it closed. It groups those
@@ -53141,7 +53143,9 @@ type ForecastStageChances struct {
 	//
 	// `landings` takes each of the last four finished quarters, and sets what the last freeze
 	// at least four weeks before the quarter ended said it would land (won plus weighted open
-	// pipeline) against what was won.
+	// pipeline) against what was won. A reader who may not see the installation's frozen
+	// forecasts, the reader `GET /forecast` shows no snapshots of the whole company, gets no
+	// landings.
 	Accuracy *ForecastAccuracy `json:"accuracy,omitempty"`
 
 	// EvidenceCutoff The start of today in the installation's zone. No outcome after it counts.
