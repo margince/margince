@@ -3,9 +3,9 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Button, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { useFieldFaults } from "../../design-system/savepage";
+import { FieldEditDialog } from "../../design-system/fieldeditdialog";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
@@ -182,7 +182,6 @@ export function EvidenceVerdict({
   // may confirm it is not offered a correction the server would refuse.
   const mayCorrect = anchor && claim.field === "display_name" ? admin : true;
   const [correcting, setCorrecting] = useState(false);
-  const [draft, setDraft] = useState(claim.value);
 
   // Both verbs change the sidecar AND, for a canonical field, the company
   // row — so the record read, the list it appears in and the 360 that summarizes
@@ -209,16 +208,10 @@ export function EvidenceVerdict({
   const correct = useMutation({
     mutationFn: (edit: Readonly<{ ruled: EvidenceClaim; value: string }>) =>
       edit.ruled.correctPath(edit.value),
-    onSuccess: async () => {
-      setCorrecting(false);
-      await settle();
-    },
+    onSuccess: settle,
   });
-  const reasonFor = (failure: Error | null) =>
-    failure === null ? undefined : problemMessageOf(failure, t);
-  const corrected = reasonFor(correct.error);
-  const confirmed = reasonFor(confirm.error);
-  const [faults, faultsRoot] = useFieldFaults<HTMLSpanElement>();
+  const confirmed =
+    confirm.error === null ? undefined : problemMessageOf(confirm.error, t);
   const valueLabel = t("evidence.correctedValue");
 
   // Already a human's word. Saying who and when is the whole point — a
@@ -249,45 +242,6 @@ export function EvidenceVerdict({
     return null;
   }
 
-  if (correcting) {
-    return (
-      <span className="evidence-verdict" ref={faultsRoot}>
-        <Field
-          label={valueLabel}
-          labelHidden
-          required
-          error={faults.of("value") ?? corrected}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              value={draft}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                faults.edited("value");
-              }}
-            />
-          )}
-        </Field>
-        <Button
-          pending={correct.isPending}
-          busyLabel={t("evidence.saving")}
-          onClick={() => {
-            const blank = blankRequired(locale, { value: [valueLabel, draft] });
-            if (!faults.show(blank)) {
-              correct.mutate({ ruled: claim, value: draft.trim() });
-            }
-          }}
-        >
-          {t("evidence.save")}
-        </Button>
-        <Button onClick={() => setCorrecting(false)}>
-          {t("evidence.cancel")}
-        </Button>
-      </span>
-    );
-  }
-
   return (
     <span className="evidence-verdict">
       <Button
@@ -298,19 +252,31 @@ export function EvidenceVerdict({
         {t("evidence.confirm")}
       </Button>
       {mayCorrect && (
-        <Button
-          onClick={() => {
-            // A correction abandoned earlier does not speak for this one.
-            correct.reset();
-            faults.show(new Map());
-            setDraft(claim.value);
-            setCorrecting(true);
-          }}
-        >
+        <Button onClick={() => setCorrecting(true)}>
           {t("evidence.correct")}
         </Button>
       )}
       {confirmed && <ErrorLine inline>{confirmed}</ErrorLine>}
+      <FieldEditDialog
+        open={correcting}
+        label={valueLabel}
+        value={claim.value}
+        settle={(draft) => draft.trim()}
+        check={(next) =>
+          blankRequired(locale, { value: [valueLabel, next] }).get("value")
+        }
+        onClose={() => setCorrecting(false)}
+        onSave={(next) => correct.mutateAsync({ ruled: claim, value: next })}
+      >
+        {({ control, draft, setDraft, saving }) => (
+          <TextInput
+            {...control}
+            value={draft}
+            readOnly={saving}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        )}
+      </FieldEditDialog>
     </span>
   );
 }

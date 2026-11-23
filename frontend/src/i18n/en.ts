@@ -769,7 +769,6 @@ export const en = {
   "approval.preview.basisObligation": "Legal obligation",
   "approval.preview.basisSecurity": "Vital or security interest",
   "approval.preview.basisCustomer": "Existing customer exception",
-  "approval.preview.basisAgreement": "Recipient agreement",
   "approval.preview.promotionTrigger": "Qualification trigger",
   "approval.preview.promotionNote": "Qualification evidence",
   "approval.preview.promotionEvidence": "Supporting activity",
@@ -3844,8 +3843,6 @@ export const en = {
   "company.lifecycle.opportunity": "Opportunity",
   "company.lifecycle.onboarding": "Onboarding",
   "company.lifecycle.live": "Live",
-  "company.lifecycle.live.help":
-    "Live means the agreed first scope is in use. Only a colleague sets it, never an assistant or an automation.",
   "company.lifecycle.customer": "Customer",
   "company.lifecycle.former_customer": "Former customer",
   "company.lifecycle.disqualified": "Disqualified",
@@ -6352,6 +6349,27 @@ export const en = {
     "Clear the figure to follow the stage again.",
   "deal.winProbability.reason.stageNamed": "the stage {name}",
   "deal.winProbability.reason.stageUnnamed": "the deal’s stage",
+  "deal.winChance.typed": "Typed at {percent} on {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} deal from here has closed, {percent} won.",
+  "deal.winChance.evidence_other":
+    "{count} deals from here have closed, {percent} won.",
+  "deal.winChance.learningOff": "Learning from closed deals is switched off.",
+  "deal.winChance.signal.quiet": "quiet for {days} days",
+  "deal.winChance.signal.close_pushed": "the close date was pushed",
+  "deal.winChance.signal.no_next_step": "no next step",
+  "deal.winChance.signal.stuck": "stuck for {days} days",
+  "deal.winChance.effect.lowers_one":
+    "{signal} lowers it (learned from {count} closed deal).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} lowers it (learned from {count} closed deals).",
+  "deal.winChance.effect.raises_one":
+    "{signal} raises it (learned from {count} closed deal).",
+  "deal.winChance.effect.raises_other":
+    "{signal} raises it (learned from {count} closed deals).",
+  "deal.winChance.effect.halved":
+    "{signal} halves it, because too few closed deals show the real effect yet.",
+  "deal.winChance.result": "The win chance is {percent}.",
   "deal.winProbability.band.90_plus": "90% or more",
   "deal.winProbability.band.60_89": "60 to 89%",
   "deal.winProbability.band.30_59": "30 to 59%",
@@ -7248,15 +7266,11 @@ export const en = {
   "plan.contract.unwritten": "Not written yet",
   "plan.contract.nothingToName": "Nothing to name",
   "plan.contract.edit": "Edit",
-  "plan.contract.save": "Save",
-  "plan.contract.cancel": "Cancel",
   "plan.contract.crowded": "Week already full",
   "plan.contract.crowdedBody":
     "{committed} items are already booked and {commitments} commitments are planned. Something will not fit.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
-  "plan.help.send": "Send",
-  "plan.help.cancel": "Cancel",
   "plan.help.asked": "Request: {text}",
   "plan.help.waiting": "Help requested · awaiting a response",
   "plan.new.label": "Commitment",
@@ -7799,9 +7813,7 @@ export const en = {
   "evidence.fromProvider": "from provider",
   "evidence.confirm": "Confirm",
   "evidence.correct": "Correct",
-  "evidence.save": "Save",
   "evidence.saving": "Saving…",
-  "evidence.cancel": "Cancel",
   "evidence.correctedValue": "Corrected value",
   "evidence.confirmedAt": "Confirmed by a person {when}",
   "evidence.humanSet": "Set by a person",
@@ -11857,7 +11869,6 @@ export const en = {
     "Needed to keep you or your account safe.",
   "privacynotice.basis.existingCustomer":
     "You are our customer, and we tell you about products like the ones you bought. You can object at any time.",
-  "privacynotice.basis.vnAgreement": "You agreed to receive our advertising.",
   "privacynotice.category.postalAddress": "Your postal address",
   "privacynotice.category.socialProfile":
     "Your profiles and accounts on social networks and chat services",
@@ -16907,6 +16918,21 @@ export const en = {
   "installationSettings.likelyThreshold.help":
     "The probability from which an open deal with a confirmed close date counts as Likely.",
   "forecast.landing": "Landing",
+  "forecast.accuracy.title": "Forecast accuracy",
+  "forecast.accuracy.none":
+    "Not enough closed deals yet. Once deals the forecast counted have closed, this compares what it said with what happened.",
+  "forecast.accuracy.calibration_one":
+    "{count} closed deal, grouped by the chance the forecast gave it {days} days before it closed.",
+  "forecast.accuracy.calibration_other":
+    "{count} closed deals, grouped by the chance the forecast gave them {days} days before they closed.",
+  "forecast.accuracy.band_one": "Chance {mean}, won {won} ({count} deal)",
+  "forecast.accuracy.band_other": "Chance {mean}, won {won} ({count} deals)",
+  "forecast.accuracy.fewDeals_one": "{count} deal, too few to state a share",
+  "forecast.accuracy.fewDeals_other": "{count} deals, too few to state a share",
+  "forecast.accuracy.landings":
+    "Finished quarters: what the forecast said four weeks before the end against what was won.",
+  "forecast.accuracy.landing": "Said {said}, won {landed}",
+  "forecast.accuracy.saidOn": "Said on {date}",
   "forecast.landingSection": "Where the period lands",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingUnrecorded": "Not recorded",
@@ -19383,8 +19409,6 @@ export const en = {
   "contact.enriched.correctedByYou": "Corrected by you",
   "contact.enriched.confirmed": "Confirmed",
   "contact.enriched.confirm": "Confirm value",
-  "contact.enriched.save": "Save correction",
-  "contact.enriched.cancel": "Cancel",
   "contact.graph.loading": "Loading contact network…",
   "contact.graph.routeDirect": "{name} already corresponds with them.",
   "contact.graph.routeVia":

@@ -57,6 +57,9 @@ func Prompt(fence promptfence.Fence, in Input) string {
 	fmt.Fprintf(&b, "Amount: %s\n", amountText(in.AmountMinor, in.Currency))
 	fmt.Fprintf(&b, "Expected close date: %s%s\n", dateText(in.CloseDate), provisionalText(in.Provisional))
 	fmt.Fprintf(&b, "Win probability: %d%% (%s)\n", in.Probability, in.ProbabilitySource)
+	if in.WinChanceLine != "" {
+		fmt.Fprintf(&b, "Win chance the deal shows: %d%% (%s)\n", in.WinChance, in.WinChanceLine)
+	}
 	fmt.Fprintf(&b, "Highest probability a raise may set: %d%%\n", raiseCeiling(in))
 	for _, stage := range in.Later {
 		fmt.Fprintf(&b, "Later stage: %s (stage_id %s, probability %d%%)\n",

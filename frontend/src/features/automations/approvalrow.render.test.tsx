@@ -8,6 +8,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
@@ -669,6 +670,7 @@ describe("whether the staged mail may go", () => {
     vi.stubGlobal("fetch", fetched);
     render(<ApprovalRow approval={heldDraft()} />);
     await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    expect(screen.getByRole("dialog", { name: en["trust.edit"] })).toBeTruthy();
     const subject = screen.getByLabelText(/Subject/);
     await userEvent.clear(subject);
     await userEvent.type(subject, "My own words");
@@ -678,10 +680,29 @@ describe("whether the staged mail may go", () => {
     );
 
     await waitFor(() => expect(approveCalls(fetched)).toBe(1));
+    const dialog = screen.getByRole("dialog", { name: en["trust.edit"] });
     expect(
-      await screen.findByText(/reconnect your mailbox/),
+      await within(dialog).findByText(/reconnect your mailbox/),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/Subject/)).toHaveValue("My own words");
+    expect(within(dialog).getByLabelText(/Subject/)).toHaveValue(
+      "My own words",
+    );
+  });
+
+  it("gives focus back to the Edit control when the editor is cancelled", async () => {
+    stubEngine(() => jsonResponse(allowedPreview(["anna@example.test"])));
+    render(<ApprovalRow approval={heldDraft()} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: en["trust.edit"] })).getByRole(
+        "button",
+        { name: en["deals.cancel"] },
+      ),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus(),
+    );
   });
 
   // A decided row has nothing left to release, so there is nothing to ask.

@@ -145,6 +145,9 @@ it("previews both fields before writing the allowance with its revision", async 
   await user.click(
     await screen.findByRole("button", { name: "Edit allowance" }),
   );
+  expect(
+    screen.getByRole("dialog", { name: "Monthly AI allowance" }),
+  ).toBeTruthy();
   const field = screen.getByLabelText("Tokens per full user per month");
   await user.clear(field);
   await user.type(field, "20000000");
@@ -158,6 +161,7 @@ it("previews both fields before writing the allowance with its revision", async 
   expect(writes).toHaveLength(0);
   await user.click(screen.getByRole("button", { name: "Save allowance" }));
   await screen.findByText("Allowance saved");
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(writes).toEqual([
     {
       config: { tokens_per_full_user: 20000000, company_monthly_tokens: null },

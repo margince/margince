@@ -42,6 +42,8 @@ type Store struct {
 	// dealAmount is a deal's worth in the base currency, as SQL over alias t.
 	// The rate sheet belongs to deals and the rule to compose, which injects it.
 	dealAmount string
+	// winChance renders the win chance of every deal; see WithWinChance.
+	winChance func(ctx context.Context, tx pgx.Tx, deal string, arg func(any) int) (string, error)
 	// baseCurrencyOf reads the installation's base currency; identity owns it.
 	baseCurrencyOf func(ctx context.Context, tx pgx.Tx) (string, error)
 	// ruleUses reads the active automation rules that watch or write a list;

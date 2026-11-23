@@ -35,6 +35,11 @@ export type FieldEditDialogProps = Readonly<{
   label: string;
   /** The stored value. Each opening starts the draft from it. */
   value: string;
+  /**
+   * No value is stored, so `value` is only the empty draft. Saving it as typed,
+   * empty included, is an edit: "nothing to name" differs from never written.
+   */
+  absent?: boolean;
   /** A function hint speaks for the draft, so it can follow the pick. */
   hint?: ReactNode | ((draft: string) => ReactNode);
   onClose: () => void;
@@ -80,6 +85,7 @@ export function FieldEditDialog({
   open,
   label,
   value,
+  absent = false,
   hint,
   onClose,
   onSave,
@@ -111,7 +117,7 @@ export function FieldEditDialog({
   const save = async () => {
     const next = settle(draft);
     // Storing what is already stored writes an audit row for no change.
-    if (next === value) {
+    if (next === value && !absent) {
       onClose();
       return;
     }

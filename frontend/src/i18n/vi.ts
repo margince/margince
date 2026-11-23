@@ -791,7 +791,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.basisObligation": "Nghĩa vụ pháp lý",
   "approval.preview.basisSecurity": "Lợi ích thiết yếu hoặc an ninh",
   "approval.preview.basisCustomer": "Ngoại lệ dành cho khách hàng hiện có",
-  "approval.preview.basisAgreement": "Sự đồng ý của người nhận",
   "approval.preview.promotionTrigger": "Lý do xác định đủ điều kiện",
   "approval.preview.promotionNote": "Bằng chứng đủ điều kiện",
   "approval.preview.promotionEvidence": "Hoạt động làm bằng chứng",
@@ -3787,8 +3786,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.lifecycle.opportunity": "Cơ hội",
   "company.lifecycle.onboarding": "Đang triển khai",
   "company.lifecycle.live": "Đang vận hành",
-  "company.lifecycle.live.help":
-    "Đang vận hành nghĩa là phạm vi đầu tiên đã thỏa thuận đang được sử dụng. Chỉ đồng nghiệp mới đặt trạng thái này, không phải trợ lý hay tự động hóa.",
   "company.lifecycle.customer": "Khách hàng",
   "company.lifecycle.former_customer": "Khách hàng cũ",
   "company.lifecycle.disqualified": "Đã loại",
@@ -6206,6 +6203,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.reason.clear": "Xóa con số để theo lại giai đoạn.",
   "deal.winProbability.reason.stageNamed": "giai đoạn {name}",
   "deal.winProbability.reason.stageUnnamed": "giai đoạn của deal",
+  "deal.winChance.typed": "Được đặt ở mức {percent} cho {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} deal từ đây đã đóng, {percent} thắng.",
+  "deal.winChance.evidence_other":
+    "{count} deal từ đây đã đóng, {percent} thắng.",
+  "deal.winChance.learningOff": "Việc học từ các deal đã đóng đang tắt.",
+  "deal.winChance.signal.quiet": "im lặng {days} ngày",
+  "deal.winChance.signal.close_pushed": "ngày chốt đã bị lùi",
+  "deal.winChance.signal.no_next_step": "chưa có bước tiếp theo",
+  "deal.winChance.signal.stuck": "kẹt {days} ngày",
+  "deal.winChance.effect.lowers_one":
+    "{signal} làm giảm tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} làm giảm tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.raises_one":
+    "{signal} làm tăng tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.raises_other":
+    "{signal} làm tăng tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.halved":
+    "{signal} làm tỷ lệ giảm một nửa, vì còn quá ít deal đã đóng cho thấy tác động thật.",
+  "deal.winChance.result": "Tỷ lệ thắng là {percent}.",
   "deal.winProbability.band.90_plus": "Từ 90% trở lên",
   "deal.winProbability.band.60_89": "60 đến 89%",
   "deal.winProbability.band.30_59": "30 đến 59%",
@@ -7080,15 +7098,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "plan.contract.unwritten": "Chưa có",
   "plan.contract.nothingToName": "Không có gì để nêu",
   "plan.contract.edit": "Sửa",
-  "plan.contract.save": "Lưu",
-  "plan.contract.cancel": "Hủy",
   "plan.contract.crowded": "Tuần đã kín lịch",
   "plan.contract.crowdedBody":
     "Lịch đã có {committed} mục và kế hoạch có {commitments} cam kết. Sẽ có việc không xếp vừa.",
   "plan.help.ask": "Yêu cầu hỗ trợ",
   "plan.help.edit": "Sửa yêu cầu",
-  "plan.help.send": "Gửi",
-  "plan.help.cancel": "Hủy",
   "plan.help.asked": "Yêu cầu: {text}",
   "plan.help.waiting": "Đã yêu cầu hỗ trợ · đang chờ phản hồi",
   "plan.new.label": "Cam kết",
@@ -7598,9 +7612,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "evidence.fromProvider": "từ nhà cung cấp",
   "evidence.confirm": "Xác nhận",
   "evidence.correct": "Sửa",
-  "evidence.save": "Lưu",
   "evidence.saving": "Đang lưu…",
-  "evidence.cancel": "Hủy",
   "evidence.correctedValue": "Giá trị đã sửa",
   "evidence.confirmedAt": "Xác nhận thủ công lúc {when}",
   "evidence.humanSet": "Do một người nhập",
@@ -11586,8 +11598,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cần để bảo vệ quý khách hoặc tài khoản của quý khách.",
   "privacynotice.basis.existingCustomer":
     "Quý khách là khách hàng của chúng tôi, và chúng tôi giới thiệu sản phẩm tương tự sản phẩm đã mua. Quý khách có thể phản đối bất cứ lúc nào.",
-  "privacynotice.basis.vnAgreement":
-    "Quý khách đã đồng ý nhận quảng cáo của chúng tôi.",
   "privacynotice.category.postalAddress": "Địa chỉ bưu chính",
   "privacynotice.category.socialProfile":
     "Hồ sơ và tài khoản của quý khách trên mạng xã hội và dịch vụ trò chuyện",
@@ -16580,6 +16590,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Xác suất mà từ đó một deal đang mở có ngày chốt đã xác nhận được tính là khả năng cao.",
   "forecast.landing": "Dự kiến cuối kỳ",
+  "forecast.accuracy.title": "Độ chính xác của dự báo",
+  "forecast.accuracy.none":
+    "Chưa có đủ deal đã đóng. Khi các deal mà dự báo đã tính được đóng, phần này so sánh điều dự báo nói với điều đã xảy ra.",
+  "forecast.accuracy.calibration_one":
+    "{count} deal đã đóng, nhóm theo tỷ lệ dự báo đã gán cho chúng {days} ngày trước khi đóng.",
+  "forecast.accuracy.calibration_other":
+    "{count} deal đã đóng, nhóm theo tỷ lệ dự báo đã gán cho chúng {days} ngày trước khi đóng.",
+  "forecast.accuracy.band_one": "Tỷ lệ {mean}, thắng {won} ({count} deal)",
+  "forecast.accuracy.band_other": "Tỷ lệ {mean}, thắng {won} ({count} deal)",
+  "forecast.accuracy.fewDeals_one": "{count} deal, quá ít để nêu tỷ lệ",
+  "forecast.accuracy.fewDeals_other": "{count} deal, quá ít để nêu tỷ lệ",
+  "forecast.accuracy.landings":
+    "Các quý đã kết thúc: dự báo nói gì bốn tuần trước khi hết quý so với số đã thắng.",
+  "forecast.accuracy.landing": "Dự báo {said}, thắng {landed}",
+  "forecast.accuracy.saidOn": "Dự báo ngày {date}",
   "forecast.landingSection": "Điểm kết thúc kỳ này",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingUnrecorded": "Chưa ghi nhận",
@@ -19095,8 +19120,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.correctedByYou": "Do bạn sửa",
   "contact.enriched.confirmed": "Đã xác nhận",
   "contact.enriched.confirm": "Xác nhận giá trị",
-  "contact.enriched.save": "Lưu bản sửa",
-  "contact.enriched.cancel": "Hủy",
   "contact.graph.loading": "Đang tải mạng lưới liên hệ…",
   "contact.graph.routeDirect": "{name} đã trao đổi với họ.",
   "contact.graph.routeVia": "{name} trao đổi với {through} ở cùng công ty.",

@@ -305,7 +305,7 @@ An open deal's card on the board shows its probability beside its value, with a 
 
 ## Close dates Margince sets
 
-Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its date; a probability not set by hand is halved, down to a step of 5 (0% under 10%).
+Each night, Margince gives a new close date to an open deal whose expected close is missing or past. It keeps a future date, even one it set on an earlier night. A stalled deal keeps its date, and its owner is asked whether it is still real. A quiet deal keeps its stored probability. [The forecast](forecast-learning.md) lowers it instead, by what your own closed deals show.
 
 The new date is today plus the usual days per stage on won deals, times the stages still open. It is rounded up to whole weeks and is at least 7 days away. It is never further away than the setting `deals.silent_close_days`, which is 120 days unless an admin changed it. Stage moves that an import brought in or another CRM synced in are left out. With fewer than 20 won deals, Margince leaves the date as it is.
 

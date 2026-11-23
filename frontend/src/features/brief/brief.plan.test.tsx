@@ -303,18 +303,55 @@ describe("the week ahead", () => {
     expect(screen.queryByLabelText(en["plan.help.label"])).toBeNull();
 
     await userEvent.click(ask);
+    expect(
+      screen.getByRole("dialog", { name: en["plan.help.label"] }),
+    ).toBeTruthy();
     await userEvent.type(
-      screen.getByLabelText(en["plan.help.label"]),
+      screen.getByRole("textbox", { name: en["plan.help.label"] }),
       "Need you on the pricing call",
     );
     await userEvent.click(
-      screen.getByRole("button", { name: en["plan.help.send"] }),
+      screen.getByRole("button", { name: en["record.save"] }),
     );
 
     await waitFor(() => expect(writes(calls)).toHaveLength(1));
     expect(writes(calls)[0].body).toEqual({
       help_requested: "Need you on the pricing call",
     });
+  });
+
+  // Cancel is the explicit discard, as in every dialog of the app: only Escape,
+  // the X and the backdrop ask. The next opening starts from what is stored.
+  it("drops a help request cancelled in the dialog and reopens empty", async () => {
+    const calls = stubApi({
+      ...KEEPS_A_PLAN,
+      "GET /weekly-plans/current": () => jsonResponse(plan()),
+    });
+    render(<PlanSection />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["plan.help.ask"] }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: en["plan.help.label"] }),
+      "Half a thought",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: en["create.cancel"] }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await userEvent.click(
+      screen.getByRole("button", { name: en["plan.help.ask"] }),
+    );
+
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: en["plan.help.label"],
+        }) as HTMLInputElement
+      ).value,
+    ).toBe("");
+    expect(writes(calls)).toHaveLength(0);
   });
 
   // A standing ask with no answer yet says so. Silence where an answer will go

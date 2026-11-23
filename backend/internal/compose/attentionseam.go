@@ -224,7 +224,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db), work: newInquiryWork(db), db: db},
 		attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
-			engine:  briefs.NewBriefEngine(pool, newContactsStore(db)),
+			engine:  briefs.NewBriefEngine(pool, newContactsStore(db)).WithWinChances(chances.WinChances),
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
 		},
 		nil, // Assigned promises are tasks; taskless claims name no personal owner.
@@ -258,7 +258,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithTaskBacklog(attentionTasks{store: activities.NewStore(db), work: newInquiryWork(db)}).
 		WithHandledReceipts(completedchanges.Reader{Magic: newMagicService(pool, svc, now)}).
 		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
-			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil), now: now}, nil, asOf)
+			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil).WithWinChances(chances.WinChances), now: now}, nil, asOf)
 		}).
 		WithReceiptDetails(attentionReceiptDetails{magic: newMagicService(pool, svc, now), names: newAttentionNames(db)}).
 		WithSnapshots(attentionSnapshots{pool: pool}).

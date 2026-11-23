@@ -307,6 +307,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `childsetaudit_test.go` | H2 | Every writer of a child set moves the parent record's version. |
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
+| `commsbasisnocountry_test.go` | H2 | The communication basis vocabulary is closed and names no market. |
 | `communityhealth_test.go` | H1 | The community-health files GitHub resolves from the repository root. |
 | `companyreaders_test.go` | H2 | `company` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `confidencecolumntype_test.go` | H2 | Every confidence column is numeric(4,3). |
@@ -541,6 +542,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `vocabularycensus_test.go` | H3 | Every closed text vocabulary that a Go constant set mirrors is held to that set by a gate. |
 | `winevidencedoors_test.go` | H3 | Every door that moves a deal carries the caller's win-evidence claim. |
 | `wordingdigest_test.go` | H3 | One way to reduce a subject line and a body to a digest. |
+| `workflowrunwriters_test.go` | H2 | workflowRunWrite matches a SQL string literal that writes workflow\_run. |
 | `worklistdestination_test.go` | H2 | Every source the worklist can emit has one screen it belongs on. |
 | `worklistreasonkinds_test.go` | H2 | Every reason a row gives is one the contract declares and a client can render. |
 | `writtenbyhuman_test.go` | H3 | Every reader of "which activity is an exchange" asks relstrength.InteractionCountsSQL, which carries who wrote the row. |

@@ -153,7 +153,7 @@ func (e *closeDateEnv) readSwept(t *testing.T, id ids.UUID) sweptDeal {
 // outcome and the kinds it staged.
 //
 // The resulting column says what a tier wrote, never which tier wrote it. A
-// downgrade notch and an untouched override are reached from different
+// downgrade review and an untouched deal are reached from different
 // findings. A failure that reads only the column leaves the next reader to
 // reconstruct the path.
 func (e *closeDateEnv) sweptTier(t *testing.T, dealID ids.UUID) string {
@@ -441,15 +441,16 @@ func TestALeftoverCardStillConfirmsTheDateAndClearsProvisional(t *testing.T) {
 	}
 }
 
-// Quietness lowers confidence while a recorded future date stays intact.
+// Quietness leaves the probability and a recorded future date intact.
 func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	e := setupCloseDate(t)
 	if _, err := e.owner.Exec(context.Background(), `UPDATE deal SET archived_at=now() WHERE pipeline_id=$1 AND status='won'`, e.pipeline); err != nil {
 		t.Fatal(err)
 	}
-	// Quiet 90 days, commit override, date still future but inside the
-	// stalled window (unrealistic_stale) → 🔻: one forecast notch down,
-	// the date untouched — the zombie guard.
+	// Quiet 90 days with a commit override, and a date still in the future
+	// but inside the stalled window (unrealistic_stale). The 🔻 tier keeps
+	// the probability set on the deal and leaves the date alone, the zombie
+	// guard.
 	id := e.seedSweepDeal(t, "Gone quiet", e.late, new(95), new(30), 90)
 	originalDate := today().AddDate(0, 0, 30)
 
@@ -458,8 +459,8 @@ func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 	}
 
 	swept := e.readSwept(t, id)
-	if swept.probability == nil || *swept.probability != 45 {
-		t.Errorf("probability = %v, want 45 (one notch down from 95)", swept.probability)
+	if swept.probability == nil || *swept.probability != 95 {
+		t.Errorf("probability = %v, want 95 (the sweep no longer lowers it; the quiet effect does)", swept.probability)
 	}
 	if swept.expectedClose == nil || !swept.expectedClose.Equal(originalDate) {
 		t.Errorf("date = %v, want retained %s", swept.expectedClose, originalDate)
@@ -468,22 +469,24 @@ func TestCloseDateSweepDowngradesWithoutMovingAFutureDate(t *testing.T) {
 		t.Error("retaining the date must not make a human date provisional")
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
-		t.Errorf("the gone-quiet tier staged %d cards; both the notch and the date "+
-			"are applied, and one receipt carries them with one way back", got)
+		t.Errorf("the gone-quiet tier staged %d cards; the date change "+
+			"is applied, and one receipt carries it with one way back", got)
 	}
-	var hasPace bool
-	if err := e.owner.QueryRow(context.Background(), `SELECT evidence ? 'close_date_sample_count' OR evidence ? 'close_date_median_stage_days' OR evidence ? 'close_date_remaining_stages' FROM audit_log WHERE entity_type='deal' AND entity_id=$1 AND evidence ? 'close_date_correction'`, id).Scan(&hasPace); err != nil {
+	// Nothing moved, so there is no correction to record or undo. The deal
+	// stays in the Home at-risk lane, which is where the owner is asked.
+	var corrections int
+	if err := e.owner.QueryRow(context.Background(), `SELECT count(*) FROM audit_log WHERE entity_type='deal' AND entity_id=$1 AND evidence ? 'close_date_correction'`, id).Scan(&corrections); err != nil {
 		t.Fatal(err)
 	}
-	if hasPace {
-		t.Fatal("a retained human date must not acquire an invented estimate basis")
+	if corrections != 0 {
+		t.Fatalf("the sweep wrote %d corrections for a quiet deal whose date and probability stand, want none", corrections)
 	}
 }
 
 func TestCloseDateSweepDowngradesQuietOverdueDealWithProvisionalDate(t *testing.T) {
 	e := setupCloseDate(t)
 	// Quiet AND overdue: the invariant forces a replacement date, but it
-	// lands provisional and the category still notches down.
+	// lands provisional and the probability stays as it was.
 	id := e.seedSweepDeal(t, "Quiet and overdue", e.late, new(60), new(-20), 90)
 
 	if err := e.sweep(); err != nil {
@@ -491,8 +494,8 @@ func TestCloseDateSweepDowngradesQuietOverdueDealWithProvisionalDate(t *testing.
 	}
 
 	swept := e.readSwept(t, id)
-	if swept.probability == nil || *swept.probability != 30 {
-		t.Errorf("probability = %v, want 30 (one notch down from 60)", swept.probability)
+	if swept.probability == nil || *swept.probability != 60 {
+		t.Errorf("probability = %v, want 60 (the sweep no longer lowers it)", swept.probability)
 	}
 	if swept.expectedClose == nil || swept.expectedClose.Before(today()) {
 		t.Errorf("date = %v — the invariant still demands a non-past date", swept.expectedClose)
