@@ -10,8 +10,8 @@
     "use_case_cases": 83,
     "acceptance_criteria_named": 133,
     "tools_added_by_shipped_units": 0,
-    "never_driven_but_graded_elsewhere": 0,
-    "never_driven_near_miss_only": 1
+    "never_driven_but_graded_elsewhere": 1,
+    "never_driven_near_miss_only": 0
   },
   "models": [
     {
@@ -8248,7 +8248,9 @@
       "called_in_held_runs": null,
       "driven": false,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
+      "graded_by_certification_tasks": [
+        "agent_loop"
+      ],
       "near_miss_in_certification_tasks": [
         "agent_loop"
       ],
@@ -8456,10 +8458,10 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [
+      "graded_by_certification_tasks": [
         "agent_loop"
       ],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
           "runs": 2,
@@ -9619,12 +9621,8 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
-      "near_miss_in_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -9716,9 +9714,7 @@
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [
-        "agent_loop"
-      ],
+      "graded_by_certification_tasks": [],
       "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },

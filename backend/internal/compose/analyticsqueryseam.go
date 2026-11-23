@@ -55,6 +55,7 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 			// Reuse the report engine's aliases and fixed joins.
 			From:        granted.fromClause(),
 			BaseWhere:   granted.populationWhere(),
+			Rows:        spec.basePlain,
 			Fields:      map[string]analyticsquery.Field{},
 			Contributor: contributorColumn(granted),
 		}

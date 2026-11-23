@@ -7,7 +7,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -190,6 +192,22 @@ func TestACatalogFaultRefusesThePublishedRead(t *testing.T) {
 		ReadResource(readerFor("deal"), QuerySchemaURI)
 	if !errors.Is(err, boom) {
 		t.Fatalf("read returned %v; want the catalog fault", err)
+	}
+}
+
+// The plan line names every member a Plan decodes, read off its json tags. A
+// member added to Plan then cannot leave callers guessing its name.
+func TestThePublishedPlanNamesEveryPlanMember(t *testing.T) {
+	doc := readSchema(readerFor("deal"), t, NewQuerySchemaResource(NewVocabularyResolver()))
+	plan := reflect.TypeFor[Plan]()
+	for field := range plan.Fields() {
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+		if name == "" || name == "-" {
+			continue
+		}
+		if !strings.Contains(doc.Grammar.Plan, `"`+name+`"`) {
+			t.Errorf("the published plan line does not name the member %q: %s", name, doc.Grammar.Plan)
+		}
 	}
 }
 

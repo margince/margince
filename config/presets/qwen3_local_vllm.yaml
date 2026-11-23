@@ -39,8 +39,8 @@
 # 3 12B cannot hold a 40,960 window here and its JSON output loops, gpt-oss-20b
 # thinks at "medium" on every call because vLLM has no server-side default for
 # its effort, and both Mistral models trailed. On an NVIDIA host serve the
-# original weights instead (Qwen/Qwen3-14B) and bind that id; the records
-# below certify the MLX 4-bit build and do not transfer to it.
+# original weights instead (Qwen/Qwen3-14B) and bind that id. NOT YET
+# MEASURED: no record is committed for this binding, on either build.
 #
 # WHY THOSE MEMORY SHARES. 40,960 is the window the agent loop's prompt budget
 # needs; at it Qwen3-14B needs 6.25GiB of KV cache beside 8.3GB of weights,

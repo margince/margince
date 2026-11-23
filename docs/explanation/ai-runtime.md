@@ -150,8 +150,8 @@ embeddings:    {provider: gemini}
 - `/readyz` names the AI state (`configured` | `fake` | `unconfigured`). So an operator reads the gap
   off the boot log, not off a refused call at `3am`.
 - **The models that can serve a task** are the ladder plus its closure under `degrade_to`, and readers
-  tend to forget the second half. `ai.LeadingTier` is the rung that answers when nothing has gone wrong (the
-  first rung of the ladder). `ai.ServableTiers` is every rung that can end up answering: the ladder,
+  tend to forget the second half. The first rung of `RoutingConfig.Ladder(task)` is the rung that answers when
+  nothing has gone wrong, in the order `task_ladders` gives. `ai.ServableTiers` is every rung that can end up answering: the ladder,
   then every tier that `degrade_to` reaches from it, step after step.
 - An example: `draft_reply` has the ladder `[cheap_cloud, premium]`, and `cheap_cloud` moves down to
   `local_small`. So the model bound at `local_small` serves `draft_reply` when the budget runs low, while

@@ -477,7 +477,7 @@ func TestTheRewriteEndpointRidesTheRewriteLane(t *testing.T) {
 	if len(lanes) != 1 || lanes[0] != "Rewrite" {
 		t.Errorf("compose.WithRewrite is bound to the lanes %v, want exactly modelPath.Rewrite", lanes)
 	}
-	if lead := ai.LeadingTier(ai.TaskRewrite); lead != ai.TierPremium {
+	if lead := ai.TaskLadder(ai.TaskRewrite)[0]; lead != ai.TierPremium {
 		t.Errorf("the rewrite ladder leads with %q, want premium", lead)
 	}
 }

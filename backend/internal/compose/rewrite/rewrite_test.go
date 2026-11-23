@@ -224,7 +224,7 @@ func TestARewriteIsItsOwnTaskServedPremiumFirst(t *testing.T) {
 	if site := (CertCases{}).Site(); site.Task != ai.TaskRewrite {
 		t.Errorf("the rewrite site is certified under %q, want %q", site.Task, ai.TaskRewrite)
 	}
-	if lead := ai.LeadingTier(ai.TaskRewrite); lead != ai.TierPremium {
+	if lead := ai.TaskLadder(ai.TaskRewrite)[0]; lead != ai.TierPremium {
 		t.Errorf("the rewrite ladder leads with %q, want premium", lead)
 	}
 	if !slices.Contains(ai.ServableTiers(ai.TaskRewrite), ai.TierCheapCloud) {

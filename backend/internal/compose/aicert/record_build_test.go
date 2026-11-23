@@ -192,26 +192,30 @@ func TestEveryRecordNamesTheCompanyContextItsTaskWentWithout(t *testing.T) {
 	}
 }
 
-// context_applied is a claim about EVERY run: one run served the company
-// context among several that were not still certifies a prompt production
-// never sends as though it were the one it does.
+// context_applied is a claim about every run production prepends the company
+// context to. One run served it among several that were not would still certify
+// a prompt production never sends. A run owed
+// none, a site whose caller never asks, neither earns nor costs the claim, and
+// a record with no owed run claims nothing.
 func TestContextAppliedHoldsOnlyWhenEveryRunWasServedTheContext(t *testing.T) {
 	withFixedNow(t, time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC))
 	runs := len(ratedAccumulation().allResults)
 	for _, tc := range []struct {
-		served int
-		want   bool
+		owed, served int
+		want         bool
 	}{
-		{served: 0, want: false},
-		{served: runs - 1, want: false},
-		{served: runs, want: true},
+		{owed: runs, served: 0, want: false},
+		{owed: runs, served: runs - 1, want: false},
+		{owed: runs, served: runs, want: true},
+		{owed: runs - 1, served: runs - 1, want: true},
+		{owed: 0, served: 0, want: false},
 	} {
 		acc := ratedAccumulation()
-		acc.contextServed = tc.served
+		acc.contextOwed, acc.contextServed = tc.owed, tc.served
 		rec := buildRecord(ai.TaskOfferDraft, VerdictCertified, acc, ai.ProfileEUHosted, "p000000000000")
 		if rec.ContextApplied != tc.want {
-			t.Errorf("%d of %d runs served the company context: context_applied = %v, want %v",
-				tc.served, runs, rec.ContextApplied, tc.want)
+			t.Errorf("%d of %d owed runs of %d served the company context: context_applied = %v, want %v",
+				tc.served, tc.owed, runs, rec.ContextApplied, tc.want)
 		}
 	}
 }

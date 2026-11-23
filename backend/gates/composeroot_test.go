@@ -31,13 +31,17 @@ const composeRootDir = "internal/compose"
 // landed, so branches already open could still merge. Lower one whenever a
 // change moves code out. Raising one needs a reason in the pull request.
 const (
-	composeRootProductionFiles = 1375
-	// Raised by 2 for the derivation column and stage evidence tests.
-	composeRootTestFiles = 1904
-	// Raised by 60 for the derivation columns and the sender warning reads.
-	composeRootProductionLines = 229_051
-	// Raised by 613 for the derivation column, stage evidence and sender warning tests.
-	composeRootTestLines = 358_507
+	// Raised by 2 for the stock task ladder data task and the agent loop certification cases.
+	composeRootProductionFiles = 1377
+	// Raised by 2 for the derivation column and stage evidence tests, and 2 for the
+	// stock task ladder and agent loop sweep tests.
+	composeRootTestFiles = 1906
+	// Raised by 60 for the derivation columns and the sender warning reads, and 33
+	// for the stock task ladders and the agent loop certification cases.
+	composeRootProductionLines = 229_084
+	// Raised by 613 for the derivation column, stage evidence and sender warning
+	// tests, and 15 for the stock task ladder and agent loop sweep tests.
+	composeRootTestLines = 358_522
 )
 
 // A read under these floors stopped early or read the wrong place, and would
