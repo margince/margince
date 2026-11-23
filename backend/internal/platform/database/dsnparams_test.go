@@ -217,18 +217,39 @@ func TestPoolLimitsIgnoreParameterNamesInValues(t *testing.T) {
 }
 
 func TestExplicitRuntimeParametersKeepTheirCaseInsensitiveNames(t *testing.T) {
-	for _, dsn := range []string{"host=h JIT=on STATEMENT_TIMEOUT=0", "postgres://h/db?JIT=on&STATEMENT_TIMEOUT=0"} {
+	for _, dsn := range []string{"host=h STATEMENT_TIMEOUT=0", "postgres://h/db?STATEMENT_TIMEOUT=0"} {
 		cfg, err := database.PoolConfig(dsn)
 		if err != nil {
 			t.Fatal(err)
 		}
-		for name, want := range map[string]string{"JIT": "on", "STATEMENT_TIMEOUT": "0"} {
+		for name, want := range map[string]string{"STATEMENT_TIMEOUT": "0"} {
 			if cfg.ConnConfig.RuntimeParams[name] != want {
 				t.Fatalf("explicit %s was changed", name)
 			}
 			if _, duplicate := cfg.ConnConfig.RuntimeParams[strings.ToLower(name)]; duplicate {
 				t.Fatalf("default duplicates explicit %s", name)
 			}
+		}
+	}
+}
+
+func TestADSNCannotTurnJITOn(t *testing.T) {
+	for _, dsn := range []string{"host=h JIT=on", "postgres://h/db?jit=on", "postgres://h/db?JIT=on&STATEMENT_TIMEOUT=0"} {
+		cfg, err := database.PoolConfig(dsn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		jit := 0
+		for name, value := range cfg.ConnConfig.RuntimeParams {
+			if strings.EqualFold(name, "jit") {
+				jit++
+				if value != "off" {
+					t.Errorf("%s: jit is %q on the pool", dsn, value)
+				}
+			}
+		}
+		if jit != 1 {
+			t.Errorf("%s: %d jit parameters, want exactly one", dsn, jit)
 		}
 	}
 }

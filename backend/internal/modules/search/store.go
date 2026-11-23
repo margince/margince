@@ -232,11 +232,11 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
-		branches, err := searchUnion(ctx, in, query, types, arg)
+		statement, err := rankedStatement(ctx, in, query, types, shape, arg)
 		if err != nil {
 			return err
 		}
-		if len(branches) == 0 {
+		if statement == "" {
 			// Every requested type was denied by object RBAC: an empty
 			// page, not an error — search discloses nothing the entity
 			// lists would not. Still the shape asked for, so a grouped
@@ -244,9 +244,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			page = shape.page(nil)
 			return nil
 		}
-		bound := slices.DeleteFunc([]string{withinClause(in.Within, arg), excludeClause(in.Exclude, arg)},
-			func(clause string) bool { return clause == "" })
-		hits, err := rank(ctx, tx, shape.statement(branches, strings.Join(bound, " AND "), arg), args)
+		hits, err := rank(ctx, tx, statement, args)
 		if err != nil {
 			return err
 		}
@@ -265,6 +263,18 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 		return Page{}, err
 	}
 	return page, nil
+}
+
+// rankedStatement renders the one statement a search ranks with, binding its
+// values through arg. It is empty when object RBAC admits none of the types.
+func rankedStatement(ctx context.Context, in Input, query string, types []string, shape pageShape, arg func(any) int) (string, error) {
+	branches, err := searchUnion(ctx, in, query, types, arg)
+	if err != nil || len(branches) == 0 {
+		return "", err
+	}
+	bound := slices.DeleteFunc([]string{withinClause(in.Within, arg), excludeClause(in.Exclude, arg)},
+		func(clause string) bool { return clause == "" })
+	return shape.statement(branches, strings.Join(bound, " AND "), arg), nil
 }
 
 func rank(ctx context.Context, tx pgx.Tx, statement string, args []any) ([]Hit, error) {
