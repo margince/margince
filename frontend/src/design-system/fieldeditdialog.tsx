@@ -99,6 +99,7 @@ export function FieldEditDialog({
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  const [refusals, setRefusals] = useState(0);
   const [openedOn, setOpenedOn] = useState(false);
   if (open !== openedOn) {
     setOpenedOn(open);
@@ -107,6 +108,14 @@ export function FieldEditDialog({
       setFailure(null);
     }
   }
+  // A refusal, local or from the server, returns the caret to the field it is about.
+  useEffect(() => {
+    if (refusals === 0) return;
+    document
+      .getElementById(formId)
+      ?.querySelector<HTMLElement>("input, textarea, button")
+      ?.focus();
+  }, [refusals, formId]);
   // Set in the press, so an Enter that lands before `saving` renders is refused.
   const inFlight = useRef(false);
   const dirty = open && (saving || settle(draft) !== value);
@@ -124,6 +133,7 @@ export function FieldEditDialog({
     const refused = check?.(next);
     if (refused) {
       setFailure(refused);
+      setRefusals((count) => count + 1);
       return;
     }
     inFlight.current = true;
@@ -134,6 +144,7 @@ export function FieldEditDialog({
       onClose();
     } catch (err) {
       setFailure(problemMessageOf(err, t));
+      setRefusals((count) => count + 1);
     } finally {
       inFlight.current = false;
       setSaving(false);

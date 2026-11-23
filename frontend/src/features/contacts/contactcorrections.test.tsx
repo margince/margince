@@ -262,6 +262,7 @@ describe("an emptied correction", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(screen.getByText("Title is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(input);
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(posts).not.toHaveBeenCalled();
   });
