@@ -74,8 +74,11 @@ func (s *Store) ApplyEmploymentImport(ctx context.Context, contact ids.ContactID
 		return crmcontracts.EmploymentImportReport{}, err
 	}
 	report, err := s.PreviewEmploymentImport(ctx, contact)
+	if err != nil {
+		return crmcontracts.EmploymentImportReport{}, err
+	}
 	report.Changed = &changed
-	return report, err
+	return report, nil
 }
 
 // employmentFingerprint digests what an import can change for one contact: its
@@ -83,26 +86,24 @@ func (s *Store) ApplyEmploymentImport(ctx context.Context, contact ids.ContactID
 // apply whose before and after digests match changed nothing.
 func employmentFingerprint(ctx context.Context, tx pgx.Tx, contact ids.ContactID) (string, error) {
 	var digest string
-	args := []any{contact, employmentKind}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	contactAt, kindAt := arg(contact), arg(employmentKind)
 	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT md5(concat_ws('#',
  (SELECT string_agg(concat_ws('|', id, version, employment_status, ended_at, is_current_primary, archived_at), ';' ORDER BY id)
   FROM relationship WHERE contact_id=$%d AND kind=$%d),
  (SELECT string_agg(concat_ws('|', id, state, company_id, relationship_id), ';' ORDER BY id)
-  FROM provider_employment_resolution WHERE contact_id=$%d)))`, 1, 2, 1), args...).Scan(&digest)
+  FROM provider_employment_resolution WHERE contact_id=$%d)))`, contactAt, kindAt, contactAt), args...).Scan(&digest)
 	return digest, err
 }
 
 // employmentLinkedRefusal answers a resolve or dismiss of evidence that already
 // created an employment. The evidence has no say over that edge, so the answer
 // names it and how to end it.
-func employmentLinkedRefusal(relationship *uuid.UUID) error {
-	edge := "an employment"
-	if relationship != nil {
-		edge = "the employment " + relationship.String()
-	}
-	return &apperrors.VersionSkewError{Message: "this evidence already created " + edge + ", and resolving or " +
-		"dismissing it does not end that employment: end it with update_record on the relationship " +
-		"(employment_status=former, ended_at), or archive it"}
+func employmentLinkedRefusal(relationship uuid.UUID) error {
+	return &apperrors.VersionSkewError{Message: "this evidence already created the employment " + relationship.String() +
+		", and resolving or dismissing it does not end that employment: end that relationship with " +
+		"employment_status=former and ended_at, or archive it"}
 }
 
 func (s *Store) applyEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact ids.ContactID, e employmentEvidence, req crmcontracts.EmploymentImportRequest, action string) error {
@@ -300,7 +301,8 @@ func retainEmploymentLink(ctx context.Context, tx pgx.Tx, contact ids.ContactID,
 		}
 	}
 	if action != employmentApply && (req.Key == nil || e.key == *req.Key) {
-		return employmentLinkedRefusal(prior.RelationshipId)
+		// employmentImportItem reads a linked outcome whose edge is gone as pending, so a linked item has one.
+		return employmentLinkedRefusal(*prior.RelationshipId)
 	}
 	return recordEmploymentOutcome(ctx, tx, contact, e, employmentLinked, idArg[ids.CompanyKind](prior.CompanyId), uuidArg(prior.RelationshipId))
 }

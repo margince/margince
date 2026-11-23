@@ -445,16 +445,24 @@ func TestEmploymentImportSaysWhenItChangedNothingAndWhyALinkedRoleStays(t *testi
 		t.Fatalf("a replay that moved nothing said changed=%v", again.Changed)
 	}
 
-	item := first.Items[0]
-	dismiss := crmcontracts.EmploymentImportRequestActionDismiss
-	_, err = store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{Action: &dismiss, Key: &item.Key})
-	var skew *apperrors.VersionSkewError
-	if !errors.As(err, &skew) {
-		t.Fatalf("dismissing linked evidence answered %v, want a version-skew refusal with a message", err)
+	if len(first.Items) != 1 || first.Items[0].State != "linked" || first.Items[0].RelationshipId == nil {
+		t.Fatalf("the first apply linked %+v, want one linked item with an employment", first.Items)
 	}
-	for _, says := range []string{item.RelationshipId.String(), "update_record", "employment_status=former"} {
-		if !strings.Contains(skew.Message, says) {
-			t.Errorf("the refusal %q does not say %q", skew.Message, says)
+	item := first.Items[0]
+	for _, action := range []crmcontracts.EmploymentImportRequestAction{crmcontracts.EmploymentImportRequestActionDismiss, crmcontracts.EmploymentImportRequestActionResolve} {
+		_, err = store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{Action: &action, Key: &item.Key})
+		var skew *apperrors.VersionSkewError
+		if !errors.As(err, &skew) || !errors.Is(err, apperrors.ErrVersionSkew) {
+			t.Fatalf("%s of linked evidence answered %v, want a version-skew refusal with a message", action, err)
 		}
+		for _, says := range []string{item.RelationshipId.String(), "employment_status=former", "archive"} {
+			if !strings.Contains(skew.Message, says) {
+				t.Errorf("the %s refusal %q does not say %q", action, skew.Message, says)
+			}
+		}
+	}
+	preview, err := store.PreviewEmploymentImport(e.Admin(), contact)
+	if err != nil || preview.Items[0].State != "linked" {
+		t.Fatalf("a refused dismiss left the evidence %+v, %v; want it still linked", preview.Items, err)
 	}
 }

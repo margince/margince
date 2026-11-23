@@ -35086,7 +35086,7 @@ components:
       type: object
       required: [contact_id, items]
       properties:
-        changed: {type: boolean, description: Whether this apply changed an employment or an evidence outcome. False means the request was reconciled and nothing moved.}
+        changed: {type: boolean, description: 'Whether this apply changed an employment edge or an evidence outcome. False means neither moved; claim processing bookkeeping and the duplicate recheck still run.'}
         warnings: {type: array, items: {type: string}, description: Retained evidence that requires administrator review.}
         contact_id: {type: string, format: uuid}
         items: {type: array, items: {$ref: '#/components/schemas/EmploymentImportItem'}}
