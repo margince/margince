@@ -12361,6 +12361,30 @@ func (e DealViabilityReviewDeliveryState) Valid() bool {
 	}
 }
 
+// Defines values for DealWinChanceEffectSignal.
+const (
+	DealWinChanceEffectSignalClosePushed DealWinChanceEffectSignal = "close_pushed"
+	DealWinChanceEffectSignalNoNextStep  DealWinChanceEffectSignal = "no_next_step"
+	DealWinChanceEffectSignalQuiet       DealWinChanceEffectSignal = "quiet"
+	DealWinChanceEffectSignalStuck       DealWinChanceEffectSignal = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the DealWinChanceEffectSignal enum.
+func (e DealWinChanceEffectSignal) Valid() bool {
+	switch e {
+	case DealWinChanceEffectSignalClosePushed:
+		return true
+	case DealWinChanceEffectSignalNoNextStep:
+		return true
+	case DealWinChanceEffectSignalQuiet:
+		return true
+	case DealWinChanceEffectSignalStuck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DecideCommissionRequestDecision.
 const (
 	DecideCommissionRequestDecisionApprove DecideCommissionRequestDecision = "approve"
@@ -19839,7 +19863,6 @@ const (
 	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
 	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
 	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
-	PrivacyInformationPagePurposeBasesVnSubjectAgreement             PrivacyInformationPagePurposeBases = "vn_subject_agreement"
 )
 
 // Valid indicates whether the value is a known member of the PrivacyInformationPagePurposeBases enum.
@@ -19862,8 +19885,6 @@ func (e PrivacyInformationPagePurposeBases) Valid() bool {
 	case PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence:
 		return true
 	case PrivacyInformationPagePurposeBasesVitalOrSecurityInterest:
-		return true
-	case PrivacyInformationPagePurposeBasesVnSubjectAgreement:
 		return true
 	default:
 		return false
@@ -48912,7 +48933,10 @@ type Deal struct {
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
-	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	// WinChance How `win_probability` of an open deal was made, from the one function every screen, report and tool reads. Absent on a won or lost deal.
+	WinChance *DealWinChance `json:"win_chance,omitempty"`
+
+	// WinProbability The chance this deal is won, in percent. An open deal that follows its stage reads the stage's typed chance moved by what this installation's closed deals show and by the risk effect of the deal's strongest signal; `win_chance` says how. A probability set on the deal stands as set. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
 	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
@@ -48921,7 +48945,7 @@ type Deal struct {
 	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
 	WinProbabilitySetByUserId *openapi_types.UUID `json:"win_probability_set_by_user_id,omitempty"`
 
-	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
 
 	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
@@ -48950,7 +48974,7 @@ type DealPriority string
 // DealStatus defines model for Deal.Status.
 type DealStatus string
 
-// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 type DealWinProbabilitySource string
 
 // DealWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
@@ -49086,7 +49110,10 @@ type DealAdvanced struct {
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
-	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	// WinChance How `win_probability` of an open deal was made, from the one function every screen, report and tool reads. Absent on a won or lost deal.
+	WinChance *DealWinChance `json:"win_chance,omitempty"`
+
+	// WinProbability The chance this deal is won, in percent. An open deal that follows its stage reads the stage's typed chance moved by what this installation's closed deals show and by the risk effect of the deal's strongest signal; `win_chance` says how. A probability set on the deal stands as set. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
 	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
@@ -49095,7 +49122,7 @@ type DealAdvanced struct {
 	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
 	WinProbabilitySetByUserId *openapi_types.UUID `json:"win_probability_set_by_user_id,omitempty"`
 
-	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 	WinProbabilitySource *DealAdvancedWinProbabilitySource `json:"win_probability_source,omitempty"`
 
 	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
@@ -49124,7 +49151,7 @@ type DealAdvancedPriority string
 // DealAdvancedStatus defines model for DealAdvanced.Status.
 type DealAdvancedStatus string
 
-// DealAdvancedWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+// DealAdvancedWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 type DealAdvancedWinProbabilitySource string
 
 // DealAdvancedWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
@@ -50362,6 +50389,42 @@ type DealViabilityTask struct {
 	Done bool               `json:"done"`
 	Id   openapi_types.UUID `json:"id"`
 }
+
+// DealWinChance The parts of one deal's win chance. `explanation` is the same fact as one English line for a tool or a brief; a screen words it from the fields.
+type DealWinChance struct {
+	// EffectDays How many days the signal has held, where it has a length.
+	EffectDays *int `json:"effect_days,omitempty" minimum:"0"`
+
+	// EffectLearned True when the effect comes from this installation's own closed deals; false when it is the fixed halving used while too few have closed.
+	EffectLearned *bool `json:"effect_learned,omitempty"`
+
+	// EffectSample How many closed deals the learned effect rests on.
+	EffectSample *int `json:"effect_sample,omitempty" minimum:"0"`
+
+	// EffectSignal The risk signal that moved the chance. Null when none did.
+	EffectSignal *DealWinChanceEffectSignal `json:"effect_signal,omitempty"`
+
+	// EvidenceN How many deals that entered the stage have closed. Null while learning is off or the probability was set on the deal.
+	EvidenceN *int `json:"evidence_n,omitempty" minimum:"0"`
+
+	// Explanation The one-line reason for the chance, in English.
+	Explanation string `json:"explanation"`
+
+	// InUse The typed chance moved by the stage outcomes, before any risk effect.
+	InUse int `json:"in_use" maximum:"100" minimum:"0"`
+
+	// SelfCorrecting False while the installation switched learning off, so every chance stays the typed one.
+	SelfCorrecting bool `json:"self_correcting"`
+
+	// Typed The chance typed on the deal's stage.
+	Typed int `json:"typed" maximum:"100" minimum:"0"`
+
+	// WonShare The percent of those closed deals that were won.
+	WonShare *int `json:"won_share,omitempty" maximum:"100" minimum:"0"`
+}
+
+// DealWinChanceEffectSignal The risk signal that moved the chance. Null when none did.
+type DealWinChanceEffectSignal string
 
 // DealWinEvidence defines model for DealWinEvidence.
 type DealWinEvidence struct {
@@ -52493,6 +52556,39 @@ type FooterFinding struct {
 	Provisions *[]CitedProvision `json:"provisions,omitempty"`
 }
 
+// ForecastAccuracy How accurate the forecast has been: two comparisons of what it said with what happened,
+// read from the frozen daily forecasts of the whole installation, so every reader sees the
+// same answer. Only counts and sums are returned.
+//
+// `calibration` takes each deal that has since been won or lost, and the chance it was
+// weighted by in the last freeze at least `lead_days` before it closed. It groups those
+// chances in bands of ten and gives, per band, the mean chance and the share won. A band
+// with fewer deals than `floor` gives only its count.
+//
+// `landings` takes each of the last four finished quarters, and sets what the last freeze
+// at least four weeks before the quarter ended said it would land (won plus weighted open
+// pipeline) against what was won.
+type ForecastAccuracy struct {
+	Calibration ForecastCalibration       `json:"calibration"`
+	Landings    []ForecastAccuracyLanding `json:"landings"`
+}
+
+// ForecastAccuracyLanding defines model for ForecastAccuracyLanding.
+type ForecastAccuracyLanding struct {
+	Currency string `json:"currency"`
+
+	// LandedMinor What was won in the period, as the first freeze after it ended says.
+	LandedMinor int64              `json:"landed_minor"`
+	PeriodEnd   openapi_types.Date `json:"period_end"`
+	PeriodStart openapi_types.Date `json:"period_start"`
+
+	// SaidMinor Won plus weighted open pipeline in the last freeze at least four weeks before the period ended.
+	SaidMinor int64 `json:"said_minor"`
+
+	// SaidOn The day of the freeze `said_minor` was read from.
+	SaidOn openapi_types.Date `json:"said_on"`
+}
+
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
 type ForecastAssurance struct {
 	AsOf time.Time `json:"as_of"`
@@ -52574,6 +52670,33 @@ type ForecastBySource struct {
 	Human    ForecastSourceTotal `json:"human"`
 	Margince ForecastSourceTotal `json:"margince"`
 	Stage    ForecastSourceTotal `json:"stage"`
+}
+
+// ForecastCalibration defines model for ForecastCalibration.
+type ForecastCalibration struct {
+	Bands []ForecastCalibrationBand `json:"bands"`
+
+	// Deals How many closed deals the bands hold in all.
+	Deals int `json:"deals" minimum:"0"`
+
+	// Floor The fewest deals a band needs before it states a share.
+	Floor int `json:"floor" minimum:"1"`
+
+	// LeadDays How many days before the close the chance was read.
+	LeadDays int `json:"lead_days" minimum:"1"`
+}
+
+// ForecastCalibrationBand defines model for ForecastCalibrationBand.
+type ForecastCalibrationBand struct {
+	Deals       int `json:"deals" minimum:"1"`
+	FromPercent int `json:"from_percent" maximum:"100" minimum:"0"`
+
+	// MeanPercent The mean chance of the deals in the band. Null below the floor.
+	MeanPercent *int `json:"mean_percent,omitempty" maximum:"100" minimum:"0"`
+	ToPercent   int  `json:"to_percent" maximum:"100" minimum:"0"`
+
+	// WonPercent The share of the deals that were won. Null below the floor.
+	WonPercent *int `json:"won_percent,omitempty" maximum:"100" minimum:"0"`
 }
 
 // ForecastCall defines model for ForecastCall.
@@ -53007,6 +53130,20 @@ type ForecastStageChance struct {
 
 // ForecastStageChances defines model for ForecastStageChances.
 type ForecastStageChances struct {
+	// Accuracy How accurate the forecast has been: two comparisons of what it said with what happened,
+	// read from the frozen daily forecasts of the whole installation, so every reader sees the
+	// same answer. Only counts and sums are returned.
+	//
+	// `calibration` takes each deal that has since been won or lost, and the chance it was
+	// weighted by in the last freeze at least `lead_days` before it closed. It groups those
+	// chances in bands of ten and gives, per band, the mean chance and the share won. A band
+	// with fewer deals than `floor` gives only its count.
+	//
+	// `landings` takes each of the last four finished quarters, and sets what the last freeze
+	// at least four weeks before the quarter ended said it would land (won plus weighted open
+	// pipeline) against what was won.
+	Accuracy *ForecastAccuracy `json:"accuracy,omitempty"`
+
 	// EvidenceCutoff The start of today in the installation's zone. No outcome after it counts.
 	EvidenceCutoff time.Time `json:"evidence_cutoff"`
 
@@ -59389,10 +59526,13 @@ type MorningBriefItemLineage struct {
 // MorningDigest The CAP-DDL-6 payload: what capture did overnight and what awaits the human (CAP-WIRE-6).
 type MorningDigest struct {
 	Capture struct {
+		// ActivitiesCreated Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition.
 		ActivitiesCreated *int `json:"activities_created,omitempty"`
 		CompaniesCreated  *int `json:"companies_created,omitempty"`
 		ContactsCreated   *int `json:"contacts_created,omitempty"`
-		MessagesSynced    *int `json:"messages_synced,omitempty"`
+
+		// MessagesSynced Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition.
+		MessagesSynced *int `json:"messages_synced,omitempty"`
 	} `json:"capture"`
 	Connectors []struct {
 		LastSyncErrorClass *string                          `json:"last_sync_error_class,omitempty"`
@@ -93055,6 +93195,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "wait_until")
 	}
 
+	if raw, found := object["win_chance"]; found {
+		err = json.Unmarshal(raw, &a.WinChance)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_chance': %w", err)
+		}
+		delete(object, "win_chance")
+	}
+
 	if raw, found := object["win_probability"]; found {
 		err = json.Unmarshal(raw, &a.WinProbability)
 		if err != nil {
@@ -93445,6 +93593,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinChance != nil {
+		object["win_chance"], err = json.Marshal(a.WinChance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_chance': %w", err)
 		}
 	}
 
@@ -93923,6 +94078,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 		delete(object, "wait_until")
 	}
 
+	if raw, found := object["win_chance"]; found {
+		err = json.Unmarshal(raw, &a.WinChance)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_chance': %w", err)
+		}
+		delete(object, "win_chance")
+	}
+
 	if raw, found := object["win_probability"]; found {
 		err = json.Unmarshal(raw, &a.WinProbability)
 		if err != nil {
@@ -94320,6 +94483,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinChance != nil {
+		object["win_chance"], err = json.Marshal(a.WinChance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_chance': %w", err)
 		}
 	}
 

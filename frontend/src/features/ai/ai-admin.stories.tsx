@@ -97,7 +97,9 @@ export const Preview: Story = {
       await canvas.findByRole("button", { name: "Edit allowance" }),
     );
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Preview effects" }),
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: "Preview effects",
+      }),
     );
   },
 };
@@ -143,7 +145,9 @@ export const ChangedWhileEditing: Story = {
     focusManager.setFocused(false);
     focusManager.setFocused(true);
     await expect(
-      await canvas.findByRole("button", { name: "Reload values" }),
+      await within(canvasElement.ownerDocument.body).findByRole("button", {
+        name: "Reload values",
+      }),
     ).toBeInTheDocument();
     focusManager.setFocused(undefined);
   },

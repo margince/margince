@@ -2989,7 +2989,7 @@ public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_ap
 public.communication_basis.captured_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_basis.captured_by text NOT NULL gen=- def=-
 public.communication_basis.communication_basis_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
-public.communication_basis.communication_basis_kind CHECK ((kind = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'existing_customer_exception'::text, 'vn_subject_agreement'::text])))
+public.communication_basis.communication_basis_kind CHECK ((kind = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'existing_customer_exception'::text])))
 public.communication_basis.communication_basis_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.communication_basis.communication_basis_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.communication_basis.communication_basis_pkey PRIMARY KEY (id)
@@ -3014,7 +3014,7 @@ public.communication_decision acl=margince_owner=arwdDxt/margince_owner,margince
 public.communication_decision.actor text NOT NULL gen=- def=-
 public.communication_decision.attempt integer NOT NULL gen=- def=0
 public.communication_decision.basis text gen=- def=-
-public.communication_decision.communication_decision_basis CHECK (((basis IS NULL) OR (basis = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'consent'::text, 'existing_customer_exception'::text, 'vn_subject_agreement'::text]))))
+public.communication_decision.communication_decision_basis CHECK (((basis IS NULL) OR (basis = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'consent'::text, 'existing_customer_exception'::text]))))
 public.communication_decision.communication_decision_category CHECK ((resolved_category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text])))
 public.communication_decision.communication_decision_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE CASCADE
 public.communication_decision.communication_decision_execution_authority CHECK ((execution_authority = ANY (ARRAY['supported'::text, 'instruction'::text])))

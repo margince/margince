@@ -1330,8 +1330,6 @@
      "Visibility",
     "vital_or_security_interest":
      "vital or security interest",
-    "vn_subject_agreement":
-     "vn subject agreement",
     "wait_until":
      "Waiting until",
     "win_probability":
@@ -11862,8 +11860,6 @@
      "Correspondence initiated by the recipient",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Vital or security interest",
-    "promotion_basis_kind/text/vn_subject_agreement":
-     "Recipient agreement",
     "promotion_basis_kind/lifecycle/contract":
      "Contract",
     "promotion_basis_kind/lifecycle/existing_customer_exception":
@@ -11878,8 +11874,6 @@
      "Correspondence initiated by the recipient",
     "promotion_basis_kind/lifecycle/vital_or_security_interest":
      "Vital or security interest",
-    "promotion_basis_kind/lifecycle/vn_subject_agreement":
-     "Recipient agreement",
     "promotion_basis_kind/boolean/true":
      "Yes",
     "promotion_basis_until/lifecycle/customer":
@@ -16035,26 +16029,6 @@
     "vital_or_security_interest/lifecycle/unknown":
      "Unknown",
     "vital_or_security_interest/boolean/true":
-     "Yes",
-    "vn_subject_agreement/lifecycle/customer":
-     "Customer",
-    "vn_subject_agreement/lifecycle/disqualified":
-     "Disqualified",
-    "vn_subject_agreement/lifecycle/former_customer":
-     "Former customer",
-    "vn_subject_agreement/lifecycle/live":
-     "Live",
-    "vn_subject_agreement/lifecycle/onboarding":
-     "Onboarding",
-    "vn_subject_agreement/lifecycle/opportunity":
-     "Opportunity",
-    "vn_subject_agreement/lifecycle/prospect":
-     "Prospect",
-    "vn_subject_agreement/lifecycle/target":
-     "Target",
-    "vn_subject_agreement/lifecycle/unknown":
-     "Unknown",
-    "vn_subject_agreement/boolean/true":
      "Yes",
     "wait_until/lifecycle/customer":
      "Customer",
@@ -20292,12 +20266,6 @@
      "Not set",
     "vital_or_security_interest/execution":
      "Set when applied",
-    "vn_subject_agreement/boolean":
-     "No",
-    "vn_subject_agreement/empty":
-     "Not set",
-    "vn_subject_agreement/execution":
-     "Set when applied",
     "wait_until/boolean":
      "No",
     "wait_until/empty":
@@ -21704,8 +21672,6 @@
      "Sichtbarkeit",
     "vital_or_security_interest":
      "vital or security interest",
-    "vn_subject_agreement":
-     "vn subject agreement",
     "wait_until":
      "Wartet bis",
     "win_probability":
@@ -32236,8 +32202,6 @@
      "Von der empfangenden Person begonnene Korrespondenz",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lebenswichtiges Interesse oder Sicherheitsinteresse",
-    "promotion_basis_kind/text/vn_subject_agreement":
-     "Zustimmung der empfangenden Person",
     "promotion_basis_kind/lifecycle/contract":
      "Vertrag",
     "promotion_basis_kind/lifecycle/existing_customer_exception":
@@ -32252,8 +32216,6 @@
      "Von der empfangenden Person begonnene Korrespondenz",
     "promotion_basis_kind/lifecycle/vital_or_security_interest":
      "Lebenswichtiges Interesse oder Sicherheitsinteresse",
-    "promotion_basis_kind/lifecycle/vn_subject_agreement":
-     "Zustimmung der empfangenden Person",
     "promotion_basis_kind/boolean/true":
      "Ja",
     "promotion_basis_until/lifecycle/customer":
@@ -36409,26 +36371,6 @@
     "vital_or_security_interest/lifecycle/unknown":
      "Unbekannt",
     "vital_or_security_interest/boolean/true":
-     "Ja",
-    "vn_subject_agreement/lifecycle/customer":
-     "Kunde",
-    "vn_subject_agreement/lifecycle/disqualified":
-     "Disqualifiziert",
-    "vn_subject_agreement/lifecycle/former_customer":
-     "Ehemaliger Kunde",
-    "vn_subject_agreement/lifecycle/live":
-     "Live",
-    "vn_subject_agreement/lifecycle/onboarding":
-     "Onboarding",
-    "vn_subject_agreement/lifecycle/opportunity":
-     "Chance",
-    "vn_subject_agreement/lifecycle/prospect":
-     "Interessent",
-    "vn_subject_agreement/lifecycle/target":
-     "Zielunternehmen",
-    "vn_subject_agreement/lifecycle/unknown":
-     "Unbekannt",
-    "vn_subject_agreement/boolean/true":
      "Ja",
     "wait_until/lifecycle/customer":
      "Kunde",
@@ -40666,12 +40608,6 @@
      "Nicht gesetzt",
     "vital_or_security_interest/execution":
      "Wird beim Anwenden festgelegt",
-    "vn_subject_agreement/boolean":
-     "Nein",
-    "vn_subject_agreement/empty":
-     "Nicht gesetzt",
-    "vn_subject_agreement/execution":
-     "Wird beim Anwenden festgelegt",
     "wait_until/boolean":
      "Nein",
     "wait_until/empty":
@@ -42078,8 +42014,6 @@
      "Phạm vi hiển thị",
     "vital_or_security_interest":
      "vital or security interest",
-    "vn_subject_agreement":
-     "vn subject agreement",
     "wait_until":
      "Chờ đến",
     "win_probability":
@@ -52610,8 +52544,6 @@
      "Trao đổi do người nhận bắt đầu",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lợi ích thiết yếu hoặc an ninh",
-    "promotion_basis_kind/text/vn_subject_agreement":
-     "Sự đồng ý của người nhận",
     "promotion_basis_kind/lifecycle/contract":
      "Hợp đồng",
     "promotion_basis_kind/lifecycle/existing_customer_exception":
@@ -52626,8 +52558,6 @@
      "Trao đổi do người nhận bắt đầu",
     "promotion_basis_kind/lifecycle/vital_or_security_interest":
      "Lợi ích thiết yếu hoặc an ninh",
-    "promotion_basis_kind/lifecycle/vn_subject_agreement":
-     "Sự đồng ý của người nhận",
     "promotion_basis_kind/boolean/true":
      "Có",
     "promotion_basis_until/lifecycle/customer":
@@ -56783,26 +56713,6 @@
     "vital_or_security_interest/lifecycle/unknown":
      "Chưa rõ",
     "vital_or_security_interest/boolean/true":
-     "Có",
-    "vn_subject_agreement/lifecycle/customer":
-     "Khách hàng",
-    "vn_subject_agreement/lifecycle/disqualified":
-     "Đã loại",
-    "vn_subject_agreement/lifecycle/former_customer":
-     "Khách hàng cũ",
-    "vn_subject_agreement/lifecycle/live":
-     "Đang vận hành",
-    "vn_subject_agreement/lifecycle/onboarding":
-     "Đang triển khai",
-    "vn_subject_agreement/lifecycle/opportunity":
-     "Cơ hội",
-    "vn_subject_agreement/lifecycle/prospect":
-     "Tiềm năng",
-    "vn_subject_agreement/lifecycle/target":
-     "Mục tiêu",
-    "vn_subject_agreement/lifecycle/unknown":
-     "Chưa rõ",
-    "vn_subject_agreement/boolean/true":
      "Có",
     "wait_until/lifecycle/customer":
      "Khách hàng",
@@ -61039,12 +60949,6 @@
     "vital_or_security_interest/empty":
      "Chưa đặt",
     "vital_or_security_interest/execution":
-     "Được xác định khi áp dụng",
-    "vn_subject_agreement/boolean":
-     "Không",
-    "vn_subject_agreement/empty":
-     "Chưa đặt",
-    "vn_subject_agreement/execution":
      "Được xác định khi áp dụng",
     "wait_until/boolean":
      "Không",

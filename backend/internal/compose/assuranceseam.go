@@ -165,9 +165,48 @@ func AssuranceSubjects(
 }
 
 // assuranceSubjects is AssuranceSubjects, narrowed to the deals in only when it
-// is not nil. A review answer and the forecast's risk signals read the same
-// evidence the nightly pass reads.
+// is not nil. Each open deal carries its one win chance, and Likely is read
+// from it.
 func assuranceSubjects(
+	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only []ids.UUID,
+) ([]assurance.Subject, error) {
+	subjects, err := assuranceEvidenceSubjects(ctx, tx, asOf, coverage, only)
+	if err != nil {
+		return nil, err
+	}
+	dealIDs := make([]ids.UUID, 0, len(subjects))
+	for _, s := range subjects {
+		id, err := ids.Parse(s.DealID)
+		if err != nil {
+			return nil, fmt.Errorf("compose: a subject deal id %q does not parse: %w", s.DealID, err)
+		}
+		dealIDs = append(dealIDs, id)
+	}
+	if len(dealIDs) == 0 {
+		return subjects, nil
+	}
+	chances, err := chances.WinChances(ctx, tx, asOf, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+	threshold, err := identity.ForecastLikelyThresholdTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	for i := range subjects {
+		if chance, ok := chances[dealIDs[i]]; ok {
+			subjects[i].WinProbability = chance.Percent
+			subjects[i].Likely = chance.Percent >= threshold
+		}
+	}
+	return subjects, nil
+}
+
+// assuranceEvidenceSubjects reads the evidence the nightly pass reads, with the
+// stored probability. The risk signals that feed the win chance read this and
+// never the chance, which keeps the chance from depending on itself. No signal
+// reads WinProbability or Likely.
+func assuranceEvidenceSubjects(
 	ctx context.Context, tx pgx.Tx, asOf time.Time, coverage []assurance.SourceCoverage, only []ids.UUID,
 ) ([]assurance.Subject, error) {
 	now := asOf.UTC()

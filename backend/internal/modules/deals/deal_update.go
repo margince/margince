@@ -131,9 +131,9 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 		// Nothing changed, but the echo is still a read: `current` came from
 		// the unmasked readDeal, which the before-image needs and the caller
 		// must not have.
-		return finishDealForCaller(ctx, tx, written.current)
+		return s.finishDealStamped(ctx, tx, written.current)
 	}
-	out, err := readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+	out, err := s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("read updated deal: %w", err)
 	}

@@ -241,7 +241,6 @@ export function previewLabel(
       legal_obligation: "approval.preview.basisObligation",
       vital_or_security_interest: "approval.preview.basisSecurity",
       existing_customer_exception: "approval.preview.basisCustomer",
-      vn_subject_agreement: "approval.preview.basisAgreement",
     },
     promotion_restriction_authority: {
       machine: "approval.preview.promotionMachine",

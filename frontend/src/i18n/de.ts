@@ -808,7 +808,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.basisSecurity":
     "Lebenswichtiges Interesse oder Sicherheitsinteresse",
   "approval.preview.basisCustomer": "Bestandskundenausnahme",
-  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
   "approval.preview.promotionTrigger": "Anlass der Qualifizierung",
   "approval.preview.promotionNote": "Beleg zur Qualifizierung",
   "approval.preview.promotionEvidence": "Belegende Aktivität",
@@ -3923,8 +3922,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.lifecycle.opportunity": "Chance",
   "company.lifecycle.onboarding": "Onboarding",
   "company.lifecycle.live": "Live",
-  "company.lifecycle.live.help":
-    "Live heißt: Der vereinbarte erste Umfang ist im Einsatz. Das setzt nur ein Mensch, nie ein Assistent oder eine Automatisierung.",
   "company.lifecycle.customer": "Kunde",
   "company.lifecycle.former_customer": "Ehemaliger Kunde",
   "company.lifecycle.disqualified": "Disqualifiziert",
@@ -6392,6 +6389,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Leere das Feld, um wieder der Phase zu folgen.",
   "deal.winProbability.reason.stageNamed": "die Phase {name}",
   "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
+  "deal.winChance.typed": "Hinterlegt: {percent} für {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} Deal von hier ist abgeschlossen, {percent} gewonnen.",
+  "deal.winChance.evidence_other":
+    "{count} Deals von hier sind abgeschlossen, {percent} gewonnen.",
+  "deal.winChance.learningOff":
+    "Das Lernen aus abgeschlossenen Deals ist ausgeschaltet.",
+  "deal.winChance.signal.quiet": "seit {days} Tagen still",
+  "deal.winChance.signal.close_pushed": "das Abschlussdatum wurde verschoben",
+  "deal.winChance.signal.no_next_step": "kein nächster Schritt",
+  "deal.winChance.signal.stuck": "seit {days} Tagen festgefahren",
+  "deal.winChance.effect.lowers_one":
+    "{signal} senkt sie (gelernt aus {count} abgeschlossenem Deal).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} senkt sie (gelernt aus {count} abgeschlossenen Deals).",
+  "deal.winChance.effect.raises_one":
+    "{signal} erhöht sie (gelernt aus {count} abgeschlossenem Deal).",
+  "deal.winChance.effect.raises_other":
+    "{signal} erhöht sie (gelernt aus {count} abgeschlossenen Deals).",
+  "deal.winChance.effect.halved":
+    "{signal} halbiert sie, weil noch zu wenige abgeschlossene Deals die echte Wirkung zeigen.",
+  "deal.winChance.result": "Die Gewinnchance beträgt {percent}.",
   "deal.winProbability.band.90_plus": "90 % oder mehr",
   "deal.winProbability.band.60_89": "60 bis 89 %",
   "deal.winProbability.band.30_59": "30 bis 59 %",
@@ -7274,15 +7293,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "plan.contract.unwritten": "Noch nicht geschrieben",
   "plan.contract.nothingToName": "Nichts zu nennen",
   "plan.contract.edit": "Bearbeiten",
-  "plan.contract.save": "Speichern",
-  "plan.contract.cancel": "Abbrechen",
   "plan.contract.crowded": "Woche bereits voll",
   "plan.contract.crowdedBody":
     "Bereits gebucht: {committed}. Geplante Zusagen: {commitments}. Nicht alles wird hineinpassen.",
   "plan.help.ask": "Um Hilfe bitten",
   "plan.help.edit": "Anfrage bearbeiten",
-  "plan.help.send": "Senden",
-  "plan.help.cancel": "Abbrechen",
   "plan.help.asked": "Anfrage: {text}",
   "plan.help.waiting": "Hilfe angefragt · Antwort ausstehend",
   "plan.new.label": "Zusage",
@@ -7796,9 +7811,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "evidence.fromProvider": "vom Anbieter",
   "evidence.confirm": "Bestätigen",
   "evidence.correct": "Korrigieren",
-  "evidence.save": "Speichern",
   "evidence.saving": "Wird gespeichert…",
-  "evidence.cancel": "Abbrechen",
   "evidence.correctedValue": "Korrigierter Wert",
   "evidence.confirmedAt": "Von einer Person bestätigt am {when}",
   "evidence.humanSet": "Von einer Person festgelegt",
@@ -11937,8 +11950,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nötig, um Sie oder Ihr Konto zu schützen.",
   "privacynotice.basis.existingCustomer":
     "Sie sind unser Kunde, und wir informieren Sie über Produkte wie die, die Sie gekauft haben. Sie können jederzeit widersprechen.",
-  "privacynotice.basis.vnAgreement":
-    "Sie haben zugestimmt, unsere Werbung zu erhalten.",
   "privacynotice.category.postalAddress": "Ihre Postanschrift",
   "privacynotice.category.socialProfile":
     "Ihre Profile und Konten in sozialen Netzwerken und Chat-Diensten",
@@ -17085,6 +17096,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Die Abschlusschance, ab der ein offener Deal mit bestätigtem Abschlussdatum als wahrscheinlich zählt.",
   "forecast.landing": "Erwartetes Ergebnis",
+  "forecast.accuracy.title": "Genauigkeit der Prognose",
+  "forecast.accuracy.none":
+    "Noch zu wenige abgeschlossene Deals. Sobald Deals der Prognose abgeschlossen sind, vergleicht dieser Bereich, was sie sagte, mit dem, was geschah.",
+  "forecast.accuracy.calibration_one":
+    "{count} abgeschlossener Deal, gruppiert nach der Chance, die die Prognose ihm {days} Tage vor dem Abschluss gab.",
+  "forecast.accuracy.calibration_other":
+    "{count} abgeschlossene Deals, gruppiert nach der Chance, die die Prognose ihnen {days} Tage vor dem Abschluss gab.",
+  "forecast.accuracy.band_one": "Chance {mean}, gewonnen {won} ({count} Deal)",
+  "forecast.accuracy.band_other":
+    "Chance {mean}, gewonnen {won} ({count} Deals)",
+  "forecast.accuracy.fewDeals_one": "{count} Deal, zu wenig für einen Anteil",
+  "forecast.accuracy.fewDeals_other":
+    "{count} Deals, zu wenige für einen Anteil",
+  "forecast.accuracy.landings":
+    "Abgeschlossene Quartale: was die Prognose vier Wochen vor dem Ende sagte, im Vergleich zum Gewonnenen.",
+  "forecast.accuracy.landing": "Prognose {said}, gewonnen {landed}",
+  "forecast.accuracy.saidOn": "Prognose vom {date}",
   "forecast.landingSection": "Wo der Zeitraum landet",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingUnrecorded": "Nicht erfasst",
@@ -19665,8 +19693,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.correctedByYou": "Von dir korrigiert",
   "contact.enriched.confirmed": "Best\u00e4tigt",
   "contact.enriched.confirm": "Wert bestätigen",
-  "contact.enriched.save": "Korrektur speichern",
-  "contact.enriched.cancel": "Abbrechen",
   "contact.graph.loading": "Kontaktnetzwerk wird geladen…",
   "contact.graph.routeDirect":
     "{name} steht bereits im Austausch mit diesem Kontakt.",
