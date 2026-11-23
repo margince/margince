@@ -14,6 +14,7 @@ import {
 import { Badge } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
 import { CellStrip } from "../../design-system/listtable";
+import { FieldGuard } from "../../design-system/rbac";
 import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
@@ -27,7 +28,12 @@ import {
   usePartnerStages,
 } from "../../lib/partnerstages.queries";
 import { unwrap } from "../../lib/problem";
-import { CERT_LABELS, CERT_STATUSES, type Partner } from "./partners.vocab";
+import {
+  CERT_LABELS,
+  CERT_STATUSES,
+  MARGIN_TIER_LABELS,
+  type Partner,
+} from "./partners.vocab";
 
 // #/partners (PartnersScreen) is the flat list, reached from the Companies
 // list header. The Partner tab on a company is in partners.form.tsx.
@@ -105,6 +111,10 @@ export function PartnersScreen() {
         title={pageName}
         state={state}
         unit="unit.partners"
+        emptyNote={t("partner.listEmptyNote", {
+          more: t("record.moreActions"),
+          setUp: t("company.partnerSetUp"),
+        })}
         searchable={false}
         showArchivedToggle={false}
         columns={[
@@ -144,6 +154,24 @@ export function PartnersScreen() {
             cell: (partner: Partner) =>
               t(labelFor(CERT_LABELS, partner.cert_status)),
             phone: "caption",
+          },
+          {
+            key: "tier",
+            header: t("partner.marginTier"),
+            // A withheld tier is not an empty one, so it reads as masked.
+            cell: (partner: Partner) => (
+              <FieldGuard
+                mode={
+                  partner.masked_fields?.includes("margin_tier")
+                    ? "masked"
+                    : "visible"
+                }
+              >
+                {partner.margin_tier
+                  ? t(labelFor(MARGIN_TIER_LABELS, partner.margin_tier))
+                  : null}
+              </FieldGuard>
+            ),
           },
           {
             key: "stage",
