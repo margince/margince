@@ -195,6 +195,7 @@ describe("a human's verdict on a machine's claim", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(screen.getByText("Corrected value is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(input);
     expect(input.getAttribute("aria-invalid")).toBe("true");
     expect(calls).toHaveLength(0);
   });

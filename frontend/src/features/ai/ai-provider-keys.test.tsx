@@ -529,6 +529,7 @@ describe("AiProviderKeysCard", () => {
       within(held).getByRole("button", { name: /^replace$/i }),
     ).toBeDisabled();
     expect(within(held).getByText(/^configured$/i)).toBeTruthy();
+    expect(within(held).queryByRole("button", { name: /remove/i })).toBeNull();
     await user.keyboard("{Escape}");
     const absent = await openSheet(user, "openai");
     expect(
