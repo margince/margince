@@ -63,26 +63,26 @@ func stageMoveFirst(changes []VerdictChange) []int {
 }
 
 // applyVerdictStageMove moves the locked deal and answers the deal's values
-// after the move, for the changes that follow it.
+// after the move, for the changes that follow it, and the id of its correction row.
 func (s *Store) applyVerdictStageMove(
 	ctx context.Context, tx pgx.Tx, in VerdictInput, current VerdictValues, change VerdictChange,
 	active []fieldcatalog.Column,
-) (string, VerdictValues, error) {
+) (string, VerdictValues, ids.UUID, error) {
 	allowed, err := in.Allowed(ctx, tx, change.Correction)
 	if err != nil || !allowed {
-		return VerdictDroppedSwitch, current, err
+		return VerdictDroppedSwitch, current, ids.Nil, err
 	}
 	installationOn, err := config.StoredApplyTx(ctx, tx, config.Bound(), StageAutopilotEnabled)
 	if err != nil || !installationOn {
-		return VerdictDroppedSwitch, current, err
+		return VerdictDroppedSwitch, current, ids.Nil, err
 	}
 	edited, err := humanEditedAfter(ctx, tx, in.DealID, []string{stageIDColumn}, change.NewestCitedAt)
 	if err != nil || edited {
-		return VerdictDroppedHuman, current, err
+		return VerdictDroppedHuman, current, ids.Nil, err
 	}
 	admitted, err := s.stageMoveAdmitted(ctx, tx, in.DealID, current.StageID, change)
 	if err != nil || admitted != VerdictApplied {
-		return admitted, current, err
+		return admitted, current, ids.Nil, err
 	}
 	evidence := verdictEvidence(in, change)
 	moved, refused, err := s.advanceInSavepoint(ctx, tx, in.DealID, AdvanceDealInput{
@@ -91,13 +91,14 @@ func (s *Store) applyVerdictStageMove(
 		WonWithoutContractReason: nil,
 	}, active)
 	if err != nil || refused {
-		return VerdictDroppedStageRefused, current, err
+		return VerdictDroppedStageRefused, current, ids.Nil, err
 	}
-	if _, err := recordStageCorrection(ctx, tx, in.DealID, moved, VerdictStageMoveCorrection); err != nil {
-		return "", current, err
+	correction, err := recordStageCorrection(ctx, tx, in.DealID, moved, VerdictStageMoveCorrection)
+	if err != nil {
+		return "", current, ids.Nil, err
 	}
 	after, err := readVerdictValues(ctx, tx, in.DealID)
-	return VerdictApplied, after, err
+	return VerdictApplied, after, correction, err
 }
 
 // stageMoveAdmitted asks under the row lock whether the target is still a

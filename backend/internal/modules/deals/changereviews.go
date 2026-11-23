@@ -82,7 +82,7 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
  visible AS (SELECT d.id, d.version, d.stage_id, to_jsonb(d) AS fields, (%s) AS writable FROM deal d WHERE (%s) AND d.id = ANY($%d::uuid[]))
  SELECT c.deal_id, c.audit_log_id, CASE WHEN c.correction = ANY($%d::text[]) THEN 'close_date' WHEN c.correction = 'close_lost' THEN 'close_lost' WHEN c.correction = 'deal_amount' THEN 'amount' WHEN c.correction = 'deal_probability' THEN 'probability' WHEN c.correction = 'stage_move' THEN 'stage' WHEN c.correction = 'deal_open' THEN 'deal_open' WHEN c.correction = 'deal_revive' THEN 'deal_revive' END, c.accepted_at IS NOT NULL, c.reversed_at IS NOT NULL,
         d.version, c.reversed_at IS NULL AND %s,
-        c.reversed_at IS NULL AND %s, d.writable
+        c.reversed_at IS NULL AND %s, d.writable, c.note_activity_id, c.stage_history_id
  FROM deal_correction c JOIN visible d ON d.id = c.deal_id JOIN audit_log a ON a.id = c.audit_log_id AND a.entity_type = 'deal' AND a.entity_id = c.deal_id
  JOIN requested r ON r.deal_id = c.deal_id AND r.change_id = c.audit_log_id
  WHERE c.correction = ANY($%d::text[]) OR c.correction IN ('close_lost', 'deal_amount', 'deal_probability', 'stage_move', 'deal_open', 'deal_revive')`, dealsPos, changesPos, writable, scope, dealsPos, closeDatePos, correctionStageStillNewestSQL(stagePos), correctionFieldsStillAppliedSQL("d.fields"), closeDatePos)
@@ -95,7 +95,7 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 	for rows.Next() {
 		var key AppliedChangeKey
 		var review crmcontracts.AppliedDealChangeReview
-		if err := rows.Scan(&key.DealID.UUID, &key.ChangeID, &review.Kind, &review.Accepted, &review.Reversed, &review.Version, &review.CanUndo, &review.CanAccept, &review.Writable); err != nil {
+		if err := rows.Scan(&key.DealID.UUID, &key.ChangeID, &review.Kind, &review.Accepted, &review.Reversed, &review.Version, &review.CanUndo, &review.CanAccept, &review.Writable, &review.NoteActivityId, &review.StageHistoryId); err != nil {
 			return nil, err
 		}
 		review.CanUndo = review.CanUndo && review.CanAccept
@@ -107,9 +107,27 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 // correctionFieldsStillAppliedSQL holds while the deal still carries every
 // value correction c wrote in its audit entry a. Acceptance and Undo both
 // need it, and the pending summary counts by it.
+//
+// The audit row holds the values as the writer spelled them, and the deal's own
+// JSON spells a timestamp or a rate its own way. A close writes both, so the
+// comparison reads the same instant or the same number as equal.
 func correctionFieldsStillAppliedSQL(dealFields string) string {
-	return "NOT EXISTS (SELECT 1 FROM jsonb_each(a.after) f WHERE f.key = ANY(c.fields) AND " +
-		dealFields + "->f.key IS DISTINCT FROM f.value)"
+	return "NOT EXISTS (SELECT 1 FROM jsonb_each(a.after) f WHERE f.key = ANY(c.fields) AND NOT " +
+		sameRecordedValueSQL("("+dealFields+"->f.key)", "f.value") + ")"
+}
+
+// sameRecordedValueSQL holds when two JSON values are one value. Both are
+// matched by pattern before they are cast, because a failed cast would end the
+// whole statement.
+func sameRecordedValueSQL(a, b string) string {
+	const instant = `'^\d{4}-\d\d-\d\d[T ]\d\d:\d\d'`
+	const number = `'^-?\d+(\.\d+)?$'`
+	return storekit.SQLf(`(CASE WHEN %[1]s IS NOT DISTINCT FROM %[2]s THEN true
+ WHEN jsonb_typeof(%[1]s) IN ('string', 'number') AND jsonb_typeof(%[2]s) IN ('string', 'number') THEN
+  CASE WHEN (%[1]s #>> '{}') ~ %[3]s AND (%[2]s #>> '{}') ~ %[3]s THEN (%[1]s #>> '{}')::timestamptz = (%[2]s #>> '{}')::timestamptz
+       WHEN (%[1]s #>> '{}') ~ %[4]s AND (%[2]s #>> '{}') ~ %[4]s THEN (%[1]s #>> '{}')::numeric = (%[2]s #>> '{}')::numeric
+       ELSE false END
+ ELSE false END)`, a, b, instant, number)
 }
 
 // correctionStageStillNewestSQL holds for a correction c that moved no stage,

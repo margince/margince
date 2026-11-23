@@ -135,6 +135,10 @@ func TestMarginceReopensALostDealAndUndoClosesItAgain(t *testing.T) {
 		 WHERE l.deal_id = $1 AND a.subject = 'Margince reopened Acme platform'`, deal); n != 1 {
 		t.Error("the reopen is not on the deal's timeline")
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM deal_correction c JOIN activity a ON a.id = c.note_activity_id
+		 WHERE c.id = $1 AND a.subject = 'Margince reopened Acme platform'`, correction.ID); n != 1 {
+		t.Error("the reopen's correction does not name its note")
+	}
 	e.reopenReceiptsShowTheReasonToTheOwnerOnly(t, deal)
 	if summary, err := e.Deals.PendingChangesOwnedBy(e.Admin(), nil); err != nil || summary.Revived != 1 {
 		t.Errorf("the owner's change summary counts %d reopened deals (%v), want one", summary.Revived, err)

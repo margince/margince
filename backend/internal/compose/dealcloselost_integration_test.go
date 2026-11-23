@@ -11,8 +11,11 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
@@ -24,12 +27,14 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -119,6 +124,10 @@ func TestMarginceClosesADealTheCustomerStoppedAnswering(t *testing.T) {
 	if n := c.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.deal_id = $1 AND a.kind = 'note' AND a.subject = 'Margince closed this deal as lost'`, c.silent); n != 1 {
 		t.Errorf("timeline notes about the close = %d, want 1", n)
+	}
+	if n := c.WsCount(t, `SELECT count(*) FROM deal_correction c JOIN activity a ON a.id = c.note_activity_id
+		WHERE c.deal_id = $1 AND c.correction = 'close_lost' AND a.subject = 'Margince closed this deal as lost'`, c.silent); n != 1 {
+		t.Errorf("close corrections naming the note that reports them = %d, want 1", n)
 	}
 
 	// A day and more later the owner still finds it on Home, with its Undo.
@@ -675,5 +684,57 @@ func TestTheInstallationSwitchStopsTheClose(t *testing.T) {
 	integration.SetAutoApplyEnabled(t, c.Env, false)
 	if got := c.run(t); got != 0 {
 		t.Fatalf("closed %d deals with the installation switch off", got)
+	}
+}
+
+// The deal page reads the close as a receipt that names its History note and
+// the stage move it wrote. The page matches that move against the deal's
+// closing occurrence to tell a close Margince made from one a person made, and
+// Undo stops showing once somebody moves the deal.
+func TestTheDealsChangesNameTheNoteAndTheCloseWhileUndoIsOpen(t *testing.T) {
+	c := setupCloseLost(t)
+	c.run(t)
+	note := c.WsScalar(t, `SELECT a.id::text FROM activity a JOIN activity_link l ON l.activity_id = a.id
+		WHERE l.deal_id = $1 AND a.kind = 'note'`, c.silent)
+	deal, err := c.Deals.GetDeal(c.owner(t), ids.From[ids.DealKind](c.silent), storekit.LiveOnly)
+	if err != nil || deal.ClosingOccurrenceId == nil {
+		t.Fatalf("reading the closed deal: %v, closing occurrence %v", err, deal.ClosingOccurrenceId)
+	}
+	closing := deal.ClosingOccurrenceId.String()
+	h := newMarginceChangeHandlers(c.Pool)
+
+	review := func() crmcontracts.AppliedDealChangeReview {
+		t.Helper()
+		w := httptest.NewRecorder()
+		h.ListDealMarginceChanges(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(c.owner(t)),
+			openapi_types.UUID(c.silent), crmcontracts.ListDealMarginceChangesParams{})
+		var page crmcontracts.DealMarginceChanges
+		if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil {
+			t.Fatal(err)
+		}
+		if len(page.Changes) != 1 || page.Changes[0].Review == nil {
+			t.Fatalf("the deal's changes = %s, want the close with its review", w.Body.String())
+		}
+		return *page.Changes[0].Review
+	}
+	got := review()
+	if got.NoteActivityId == nil || got.NoteActivityId.String() != note {
+		t.Errorf("review names note %v, want %s", got.NoteActivityId, note)
+	}
+	if got.StageHistoryId == nil || got.StageHistoryId.String() != closing || !got.CanUndo {
+		t.Errorf("review names stage move %v, can undo %v; want the deal's closing %s and Undo open", got.StageHistoryId, got.CanUndo, closing)
+	}
+
+	stage, err := ids.Parse(c.WsScalar(t, `SELECT from_stage_id::text FROM deal_stage_history WHERE id = $1`, closing))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Deals.AdvanceDeal(c.owner(t), ids.From[ids.DealKind](c.silent), deals.AdvanceDealInput{
+		ToStageID: ids.StageID{UUID: stage}, WonWithoutContractReason: nil,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if after := review(); after.CanUndo {
+		t.Error("a person moved the deal, and the review still offers Undo")
 	}
 }

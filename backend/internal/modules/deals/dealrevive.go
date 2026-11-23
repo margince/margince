@@ -68,7 +68,7 @@ type ReviveLostDealInput struct {
 	// rests on is Deal Scout's.
 	Arrival func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (EvidenceArrival, bool, error)
 	// Record writes the entry on the deal's timeline, in the same transaction.
-	Record func(ctx context.Context, tx pgx.Tx, deal ids.DealID, name string) error
+	Record func(ctx context.Context, tx pgx.Tx, deal ids.DealID, name string) (ids.UUID, error)
 	// AsOwner binds the owner's agent as of the reopen's transaction, so a
 	// role change or suspension that committed before it stops the reopen.
 	AsOwner OwnerAuthorityTx
@@ -119,11 +119,16 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 		if err := recordRevived(ctx, tx, current.ID, in.DealID.UUID); err != nil {
 			return err
 		}
-		if _, err := recordStageCorrection(ctx, tx, in.DealID, moved, DealReviveCorrection); err != nil {
+		correction, err := recordStageCorrection(ctx, tx, in.DealID, moved, DealReviveCorrection)
+		if err != nil {
 			return err
 		}
 		revived = true
-		return in.Record(ctx, tx, in.DealID, moved.Name)
+		note, err := in.Record(ctx, tx, in.DealID, moved.Name)
+		if err != nil {
+			return err
+		}
+		return linkCorrectionNote(ctx, tx, []ids.UUID{correction}, note)
 	})
 	return revived, err
 }

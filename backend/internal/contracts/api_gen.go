@@ -36573,8 +36573,14 @@ type AppliedDealChangeReview struct {
 	CanAccept bool                        `json:"can_accept"`
 	CanUndo   bool                        `json:"can_undo"`
 	Kind      AppliedDealChangeReviewKind `json:"kind"`
-	Reversed  bool                        `json:"reversed"`
-	Version   int64                       `json:"version"`
+
+	// NoteActivityId The History note that reports this change. Null for a change made before notes were linked.
+	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
+	Reversed       bool                `json:"reversed"`
+
+	// StageHistoryId The stage-history row this change wrote, for a change that moved the stage. It equals the deal's `closing_occurrence_id` while the deal is on the close Margince made.
+	StageHistoryId *openapi_types.UUID `json:"stage_history_id,omitempty"`
+	Version        int64               `json:"version"`
 
 	// Writable Whether this reader may write this deal.
 	Writable bool `json:"writable"`

@@ -57321,6 +57321,15 @@ components:
         can_undo: {type: boolean}
         can_accept: {type: boolean, deprecated: true, description: Whether the deprecated accept route would take this change.}
         writable: {type: boolean, description: Whether this reader may write this deal.}
+        note_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The History note that reports this change. Null for a change made before notes were linked.
+        stage_history_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The stage-history row this change wrote, for a change that moved the stage. It equals the deal's `closing_occurrence_id` while the deal is on the close Margince made.
     CloseDateEstimateBasis:
       type: object
       description: Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values.
