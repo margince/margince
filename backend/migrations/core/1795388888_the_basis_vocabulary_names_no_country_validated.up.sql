@@ -1,3 +1,6 @@
+-- SPDX-License-Identifier: BUSL-1.1
+-- SPDX-FileCopyrightText: 2026 Gradion
+
 -- Settle the two basis checks the migration before this one added NOT VALID.
 -- Its own file, so a scan runs under the lighter lock and not under the
 -- ACCESS EXCLUSIVE that the ALTER held to its commit.

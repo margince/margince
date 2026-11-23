@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	basisListMigration      = "core/1795427014_the_basis_list_names_no_country"
-	basisListCheckMigration = "core/1795427015_the_basis_list_check_is_validated"
+	basisListMigration      = "core/1795388887_the_basis_vocabulary_names_no_country"
+	basisListCheckMigration = "core/1795388888_the_basis_vocabulary_names_no_country_validated"
 	retiredBasis            = "vn_subject_agreement"
 )
 
