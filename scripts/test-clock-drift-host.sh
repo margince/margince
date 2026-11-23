@@ -37,6 +37,7 @@ set -euo pipefail
 [[ "$BACKEND_CLOCK_SKEW" == machine:200 ]]
 [[ "$(cat "$CLOCK_STATE")" == 19000000 ]]
 echo suite >>"$CLOCK_ACTIONS"
+echo "slice $BACKEND_CLOCK_SLICE" >>"$CLOCK_ACTIONS"
 exit "${MOCK_SUITE_STATUS:-0}"
 STUB
 cat >"$fixtures/bin/timeout" <<'STUB'
@@ -77,6 +78,14 @@ run_case() {
 run_case success 0
 run_case 'caller applier cannot double the shift' 0 BACKEND_CLOCK_SKEW=database:200
 grep -q '^suite$' "$CLOCK_ACTIONS"
+slices="$(bash "$root/scripts/backend-clock-drift.sh" slices | wc -l | tr -d ' ')"
+(( slices > 1 ))
+run_case 'every slice gets its own moved window' 0
+[[ "$(grep -c '^slice ' "$CLOCK_ACTIONS")" == "$slices" ]]
+[[ "$(grep -c '^date +200 days$' "$CLOCK_ACTIONS")" == "$slices" ]]
+[[ "$(grep -c '^date -200 days$' "$CLOCK_ACTIONS")" == "$slices" ]]
+grep -q '^slice integration:1/' "$CLOCK_ACTIONS"
+grep -q 'ran 0s at the moved clock' "$fixtures/output"
 run_case 'suite failure stays red' 23 MOCK_SUITE_STATUS=23
 run_case 'timeout restores clock' 124 MOCK_TIMEOUT=1
 run_case 'termination restores clock' 143 MOCK_TERMINATE=1
