@@ -32,6 +32,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -81,6 +82,8 @@ const (
 	eventContractStatusChanged = "contract.status_changed"
 	eventActivityCaptured      = "activity.captured"
 	eventActivityUpdated       = "activity.updated"
+	eventOfferSent             = "offer.sent"
+	eventDealStageChanged      = "deal.stage_changed"
 )
 
 // activityKindMeeting is the activity.kind a meeting carries. Read from the row
@@ -109,6 +112,9 @@ type StageEvidenceTrigger struct {
 	// reading runs in. A seam rather than a call, so a test can drive the
 	// trigger without bootstrapping one.
 	workspace func(context.Context) (ids.WorkspaceID, error)
+	// proposals asks a deal's owner to move it to the proposal stage when a
+	// proposal went out. It retires the question once the deal has moved.
+	proposals *proposalStageSuggester
 	log       *slog.Logger
 	// now is the clock the backlog window is measured on.
 	now func() time.Time
@@ -123,6 +129,7 @@ func NewStageEvidenceTrigger(
 	return &StageEvidenceTrigger{
 		pool: pool, deals: store, own: own, read: read,
 		workspace: identity.NewService(pool).InstallationWorkspace,
+		proposals: newProposalStageSuggester(pool),
 		log:       log, now: time.Now,
 	}
 }
@@ -186,8 +193,34 @@ func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envel
 		return t.onActivityCaptured(ctx, env)
 	case eventActivityUpdated:
 		return t.onActivityUpdated(ctx, env)
+	case eventOfferSent:
+		return t.onOfferSent(ctx, env)
+	case eventDealStageChanged:
+		return t.onDealStageChanged(ctx, env)
 	}
 	return nil
+}
+
+// onOfferSent asks the deal's owner whether the deal moves to the proposal
+// stage. The offer's own event is the proof a proposal went out.
+func (t *StageEvidenceTrigger) onOfferSent(ctx context.Context, env events.Envelope) error {
+	var payload crmcontracts.PublicEventOfferSent
+	if !t.readPayload(ctx, env, &payload) {
+		return nil
+	}
+	snippet := "Offer sent"
+	if payload.Revision != nil {
+		snippet = fmt.Sprintf("Offer sent, revision %d", *payload.Revision)
+	}
+	return t.proposals.Suggest(ctx, ids.From[ids.DealKind](ids.UUID(payload.DealId)), proposalSource{
+		Type: deals.ProposalSourceOffer, ID: env.Entity.ID, Snippet: snippet,
+	})
+}
+
+// onDealStageChanged withdraws the open proposal-stage question the move
+// answered: the deal reached the stage by hand, or closed.
+func (t *StageEvidenceTrigger) onDealStageChanged(ctx context.Context, env events.Envelope) error {
+	return t.proposals.Retire(ctx, ids.From[ids.DealKind](env.Entity.ID))
 }
 
 // queueReading asks the model's half of the ledger to read this activity
@@ -341,6 +374,10 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 	// meeting or not: a criterion settled in prose is settled in an ordinary
 	// email, and the deterministic arm below has nothing to say about one.
 	if err := t.queueReading(ctx, facts.DealID, activityID); err != nil {
+		return err
+	}
+	// A proposal attached under a file name that says so needs no reading.
+	if err := t.proposals.SuggestForAttachedFile(ctx, facts, activityID); err != nil {
 		return err
 	}
 	if facts.Kind != activityKindMeeting {

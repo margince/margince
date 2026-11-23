@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -29,6 +30,16 @@ const (
 )
 
 const criterionKeyField = "key"
+
+// ReservedCriterionKeyPrefix marks the keys Margince offers a reading beside a
+// stage's own criteria, such as ProposalSentCriterionKey. A stage criterion
+// under the same key would be offered twice and read as one, so no stage
+// criterion takes the prefix.
+const ReservedCriterionKeyPrefix = "margince_"
+
+// ProposalSentCriterionKey is the reserved key of the question "did our side
+// send the customer a proposal with this message".
+const ProposalSentCriterionKey = ReservedCriterionKeyPrefix + "proposal_sent"
 
 // criterionRequiredColumn is the requiredness column's one spelling, shared by
 // the patch and the audit image so the two name the same field.
@@ -255,10 +266,10 @@ func criterionAfter(c crmcontracts.StageExitCriterion) map[string]any {
 // validCriterionKey mirrors the column's shape CHECK so a bad key is a 422
 // naming the field rather than a 500 from the constraint.
 func validCriterionKey(key string) error {
-	if !criterionKeyShape.MatchString(key) || len(key) > maxCriterionKey {
+	if !criterionKeyShape.MatchString(key) || len(key) > maxCriterionKey || strings.HasPrefix(key, ReservedCriterionKeyPrefix) {
 		return &values.ParseError{
 			Field: criterionKeyField, Code: "invalid_criterion_key",
-			Message: "key starts with a letter and holds lower-case letters, digits and underscores",
+			Message: "key starts with a letter and holds lower-case letters, digits and underscores, and does not start with margince_",
 		}
 	}
 	return nil

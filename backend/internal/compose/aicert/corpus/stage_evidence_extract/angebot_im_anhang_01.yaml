@@ -1,0 +1,27 @@
+name: our_german_mail_says_the_offer_is_attached
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: budget_confirmed
+      label: Budget is confirmed
+    - key: margince_proposal_sent
+      label: Our side sends the customer a proposal, quote or offer attached to this message
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000012
+      lines:
+        - 'Hallo Frau Weber, anbei das Angebot für das Lager in Hanoi.'
+        - 'Melden Sie sich gern, wenn Sie Fragen haben.'
+expect:
+  outcome: accepted
+  answer:
+    - criterion_key: margince_proposal_sent
+      met: true
+      settled_by: anbei das Angebot
+  judge: none
+  judge_none_reason: >
+    The claim's criterion and direction are checked exactly, and its quote must
+    contain the phrase that hands over the offer. Budget is not mentioned, so
+    any claim on it fails.

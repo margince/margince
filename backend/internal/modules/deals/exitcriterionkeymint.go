@@ -31,7 +31,7 @@ const liveCriterionKeyIndex = "stage_exit_criterion_stage_key_live_ux"
 
 // criterionKeyFromLabel turns a label into the stem of its key. Accents and
 // case fold away through namematch.Fold, and anything but a-z and digits becomes one underscore. A leading digit
-// gets the fallback in front, because a key starts with a letter.
+// gets the fallback in front, because a key starts with a letter. So does a stem starting with the reserved prefix, which keys of its own never take.
 func criterionKeyFromLabel(label string) string {
 	var out strings.Builder
 	pendingGap := false
@@ -54,7 +54,7 @@ func criterionKeyFromLabel(label string) string {
 	switch {
 	case stem == "":
 		return criterionKeyFallback
-	case stem[0] >= '0' && stem[0] <= '9':
+	case stem[0] >= '0' && stem[0] <= '9', strings.HasPrefix(stem, ReservedCriterionKeyPrefix):
 		return criterionKeyFallback + "_" + stem
 	}
 	return stem

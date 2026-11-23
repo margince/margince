@@ -59,9 +59,11 @@ type StageEvidenceReader struct {
 	pool  *pgxpool.Pool
 	deals *deals.Store
 	own   deals.OwnDomainReader
-	brain completer
-	now   func() time.Time
-	log   *slog.Logger
+	// proposals raises the question to move a deal to the proposal stage.
+	proposals *proposalStageSuggester
+	brain     completer
+	now       func() time.Time
+	log       *slog.Logger
 }
 
 // NewStageEvidenceReader builds the engine over the pool and one model lane.
@@ -71,6 +73,7 @@ func NewStageEvidenceReader(
 ) *StageEvidenceReader {
 	return &StageEvidenceReader{
 		pool: pool, deals: store, own: own, brain: brain, now: now, log: log,
+		proposals: newProposalStageSuggester(pool),
 	}
 }
 
@@ -125,6 +128,10 @@ type stageEvidenceReadFacts struct {
 	// at write time would let a criterion archived in between turn a valid
 	// claim into a refusal, or worse, match a key somebody had reused.
 	byKey map[string]ids.ExitCriterionID
+	// proposalAsked says the reading also asked whether a proposal is
+	// attached. That answer is not a criterion of the stage: it raises the
+	// move question and writes nothing to the ledger.
+	proposalAsked bool
 }
 
 // gather reads the deal's criteria and the activity's text in ONE transaction,
@@ -157,10 +164,17 @@ func (r *StageEvidenceReader) gather(
 		facts.activityID = activityID
 		facts.spans = []stageEvidenceSpan{{SourceID: activityID.String(), Lines: text}}
 		criteria, facts.byKey, err = r.criteriaOf(ctx, tx, dealID)
+		if err != nil && !errors.Is(err, errNothingToRead) {
+			return err
+		}
+		facts.proposalAsked, err = proposalQuestionFor(ctx, tx, authorship, activityID)
 		return err
 	})
 	if err != nil {
 		return facts, nil, err
+	}
+	if facts.proposalAsked {
+		criteria = append(criteria, stageEvidenceCriterion{Key: deals.ProposalSentCriterionKey, Label: proposalSentLabel})
 	}
 	if len(criteria) == 0 {
 		return facts, nil, errNothingToRead
@@ -259,6 +273,12 @@ func (r *StageEvidenceReader) record(
 		if claim.Confidence < stageEvidenceFloor {
 			continue
 		}
+		if claim.CriterionKey == deals.ProposalSentCriterionKey {
+			if err := r.suggestMove(ctx, dealID, facts, claim); err != nil {
+				return written, err
+			}
+			continue
+		}
 		landed, err := r.write(ctx, dealID, facts, claim)
 		if err != nil {
 			return written, err
@@ -271,6 +291,20 @@ func (r *StageEvidenceReader) record(
 		r.log.InfoContext(ctx, "stage evidence read", "deal", dealID.String(), "rows", written)
 	}
 	return written, nil
+}
+
+// suggestMove raises the move question when the reading says a proposal is
+// attached. The answer never reaches the ledger: no criterion row carries the
+// reserved key.
+func (r *StageEvidenceReader) suggestMove(
+	ctx context.Context, dealID ids.DealID, facts stageEvidenceReadFacts, claim stageEvidenceClaim,
+) error {
+	if !facts.proposalAsked || claim.Met != stageEvidenceMet {
+		return nil
+	}
+	return r.proposals.Suggest(ctx, dealID, proposalSource{
+		Type: deals.ProposalSourceActivity, ID: facts.activityID, Snippet: claim.Quote,
+	})
 }
 
 // write records one claim, translating the model's answer into the ledger's

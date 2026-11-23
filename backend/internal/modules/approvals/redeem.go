@@ -347,6 +347,10 @@ var unpinnedKinds = map[string]string{
 		"and a record waits in the inbox for days while its owner keeps working it, so " +
 		"every edit and every captured message would cancel the request. The accept re-reads " +
 		"the owner under the record's row lock and refuses when the owner it names has moved.",
+	kindDealProposalStage: "The question is \"this deal may move to the proposal stage\", and no edit to the deal " +
+		"makes that false: the owner keeps working the deal while the question waits, and every edit or " +
+		"captured message would cancel it. The accept re-reads under the deal's row lock that the deal is " +
+		"still open, off legal hold, and that the target is still a later open stage (deals.ApplyProposalStageTx).",
 	kindLinkedInMatch: "The proposal's claim is \"this imported connection is this contact\", and no " +
 		"field edit on the contact can make that claim false — the founder decision is " +
 		"explicitly that editing a contact must not cancel a LinkedIn match waiting to be " +

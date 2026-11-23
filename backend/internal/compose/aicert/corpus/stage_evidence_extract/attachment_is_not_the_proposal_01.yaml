@@ -1,0 +1,23 @@
+name: an_invoice_attached_is_not_a_proposal
+task: stage_evidence_extract
+site: criteria
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  criteria:
+    - key: budget_confirmed
+      label: Budget is confirmed
+    - key: margince_proposal_sent
+      label: Our side sends the customer a proposal, quote or offer attached to this message
+  spans:
+    - source_id: 01a07100-0000-7000-8000-000000000013
+      lines:
+        - 'Hi Ines, attached is the invoice for the pilot month.'
+        - 'Thanks for the quick turnaround on the payment.'
+expect:
+  outcome: abstained
+  answer: []
+  judge: none
+  judge_none_reason: >
+    The right answer is no claim, and the check fails any claim the reply makes,
+    grounded or not. An invoice is attached, and nothing here sends a proposal.

@@ -1,0 +1,310 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+// A proposal that went out on an open deal asks the deal's owner whether to
+// move the deal to the proposal stage. The question is an approval of kind
+// deals.ProposalStageKind, and the owner's accept is the only move. The
+// offer trigger, the mail reading and the attachment-name check all raise it
+// through proposalStageSuggester, so one writer decides what is already open.
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/compose/dealscout"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+)
+
+const (
+	proposalStageActor       = "system:proposal-stage"
+	proposalStageSummaryCode = "approval.proposalStageAsked"
+	// proposalSentLabel is the criterion the reading is asked beside a stage's
+	// own, under deals.ProposalSentCriterionKey.
+	proposalSentLabel = "Our side sends the customer a proposal, quote or offer attached to this message"
+
+	proposalStageWithdrawn = "a proposal no longer asks this: the deal moved, closed or the stage changed"
+	proposalStageReplaced  = "a newer proposal names another stage"
+	activityKindEmail      = "email"
+	directionOutbound      = "outbound"
+)
+
+// proposalSource is what raised the question: an offer sent, or a mail of ours.
+type proposalSource struct {
+	Type    string
+	ID      ids.UUID
+	Snippet string
+}
+
+// proposalStageSuggester raises and retires the questions.
+type proposalStageSuggester struct {
+	db    *database.DB
+	inbox *approvals.Service
+}
+
+func newProposalStageSuggester(pool *pgxpool.Pool) *proposalStageSuggester {
+	db := InstallationDB(pool)
+	return &proposalStageSuggester{db: db, inbox: NewApprovalsService(db)}
+}
+
+// bind makes ctx the system principal the question is staged as. It binds the
+// installation's workspace, which a bus envelope does not carry, and keeps the
+// correlation id of the event that raised the question.
+func (s *proposalStageSuggester) bind(ctx context.Context) (context.Context, error) {
+	workspace, err := s.db.Workspace(ctx)
+	if err != nil {
+		return nil, err
+	}
+	correlation, traced := principal.CorrelationID(ctx)
+	if !traced {
+		correlation = ids.NewV7()
+	}
+	ctx = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: proposalStageActor})
+	return principal.WithCorrelationID(principal.WithWorkspaceID(ctx, workspace.UUID), correlation), nil
+}
+
+// Suggest asks the deal's owner whether to move it, unless there is nothing
+// to ask. A question already open for the same stage absorbs the new source.
+func (s *proposalStageSuggester) Suggest(ctx context.Context, dealID ids.DealID, src proposalSource) error {
+	ctx, err := s.bind(ctx)
+	if err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error { return s.suggestTx(ctx, tx, dealID, src) })
+}
+
+func (s *proposalStageSuggester) suggestTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, src proposalSource) error {
+	move, ok, err := deals.ProposalStageFor(ctx, tx, dealID)
+	if err != nil || !ok {
+		return err
+	}
+	open, err := s.inbox.LockPendingOfKindInTx(ctx, tx, deals.ProposalStageKind, dealID.UUID)
+	if err != nil {
+		return err
+	}
+	for _, pending := range open {
+		var held deals.ProposalStageMove
+		if json.Unmarshal(pending.ProposedChange, &held) == nil && held.ToStageID == move.ToStageID {
+			return nil
+		}
+		if _, err := s.inbox.WithdrawInTx(ctx, tx, pending.ID, proposalStageReplaced); err != nil {
+			return err
+		}
+	}
+	move.SourceType, move.SourceID = src.Type, src.ID
+	return s.stageTx(ctx, tx, move, src)
+}
+
+func (s *proposalStageSuggester) stageTx(ctx context.Context, tx pgx.Tx, move deals.ProposalStageMove, src proposalSource) error {
+	body, err := json.Marshal(move)
+	if err != nil {
+		return fmt.Errorf("compose: encoding the proposal stage question: %w", err)
+	}
+	identity, err := json.Marshal(map[string]string{
+		"deal_id": move.DealID.String(), "to_stage_id": move.ToStageID.String(),
+		"source_type": move.SourceType, "source_id": move.SourceID.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("compose: encoding the proposal stage identity: %w", err)
+	}
+	digest := sha256.Sum256(body)
+	ttl := deals.ProposalStageTTLDays * 24 * time.Hour
+	_, _, err = s.inbox.StageUnlessDeclinedTx(ctx, tx, approvals.StageInput{
+		Kind:           deals.ProposalStageKind,
+		ProposedChange: body,
+		DiffHash:       hex.EncodeToString(digest[:]),
+		TargetType:     "deal",
+		TargetID:       move.DealID,
+		Summary: fmt.Sprintf(systemtext.Copy(proposalStageSummaryCode, textlang.English),
+			move.DealName, move.ToStageName),
+		SystemText: &systemtext.Message{Version: 1, Subject: systemtext.Sentence(proposalStageSummaryCode,
+			systemtext.Text(move.DealName), systemtext.Text(move.ToStageName))},
+		JoinPending: true,
+		Identity:    identity,
+		TTL:         &ttl,
+		Evidence:    []approvals.Evidence{proposalEvidence(move, src)},
+	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return nil
+	}
+	return err
+}
+
+// proposalEvidence is what the owner judges the question on. It is the line of
+// the mail that says a proposal is attached, or the offer that was sent.
+func proposalEvidence(move deals.ProposalStageMove, src proposalSource) approvals.Evidence {
+	sourceType, sourceID := src.Type, src.ID
+	if sourceType == deals.ProposalSourceOffer {
+		sourceType, sourceID = "deal", move.DealID
+	}
+	snippet := textcut.Bytes(src.Snippet, approvals.MaxEvidenceSnippet)
+	if snippet == "" {
+		snippet = move.DealName
+	}
+	return approvals.Evidence{Snippet: snippet, SourceType: sourceType, SourceID: sourceID}
+}
+
+// Retire withdraws the deal's open questions that have nothing left to ask.
+func (s *proposalStageSuggester) Retire(ctx context.Context, dealID ids.DealID) error {
+	ctx, err := s.bind(ctx)
+	if err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		open, err := s.inbox.LockPendingOfKindInTx(ctx, tx, deals.ProposalStageKind, dealID.UUID)
+		if err != nil {
+			return err
+		}
+		for _, pending := range open {
+			var held deals.ProposalStageMove
+			outdated := json.Unmarshal(pending.ProposedChange, &held) != nil
+			if !outdated {
+				if outdated, err = deals.ProposalStageOutdated(ctx, tx, held); err != nil {
+					return err
+				}
+			}
+			if !outdated {
+				continue
+			}
+			if _, err := s.inbox.WithdrawInTx(ctx, tx, pending.ID, proposalStageWithdrawn); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// SuggestForAttachedFile raises the question for a mail of ours whose
+// attachment is named like a proposal. It is the arm that needs no model.
+func (s *proposalStageSuggester) SuggestForAttachedFile(ctx context.Context, mail deals.ActivityAuthorship, activityID ids.UUID) error {
+	if !proposalMailEligible(mail) {
+		return nil
+	}
+	ctx, err := s.bind(ctx)
+	if err != nil {
+		return err
+	}
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		file, err := proposalNamedFile(ctx, tx, activityID)
+		if err != nil || file == "" {
+			return err
+		}
+		return s.suggestTx(ctx, tx, mail.DealID, proposalSource{
+			Type: deals.ProposalSourceActivity, ID: activityID, Snippet: "Attached file: " + file,
+		})
+	})
+}
+
+// proposalMailEligible is whether a mail can announce a proposal: ours,
+// outbound, an email. Participants and the buyer's own mail never do.
+func proposalMailEligible(mail deals.ActivityAuthorship) bool {
+	return mail.Kind == activityKindEmail && mail.Direction == directionOutbound && mail.AuthorSide == deals.AuthorSeller
+}
+
+// proposalNamedFile answers the first live attachment of a mail the whole
+// workspace may read whose file name says it is a proposal, or "" when none.
+func proposalNamedFile(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (string, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	activity := arg(activityID)
+	document := dealscout.ProposalDocumentSQL("at.filename", "at.content_type", arg)
+	var file string
+	err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT at.filename FROM attachment at JOIN activity a ON a.id = at.activity_id
+		 WHERE at.activity_id = $%d AND at.archived_at IS NULL AND NOT at.bytes_withheld
+		   AND %s AND %s
+		 ORDER BY at.created_at, at.id LIMIT 1`, activity, dealscout.WorkspaceEvidence("a"), document), args...).Scan(&file)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("compose: reading the attachments of a mail that may carry a proposal: %w", err)
+	}
+	return file, nil
+}
+
+// proposalMailHasAttachment is whether a mail the whole workspace may read
+// carries a live file, which is what makes the reading ask about a proposal.
+func proposalMailHasAttachment(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (bool, error) {
+	var has bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM attachment at JOIN activity a ON a.id = at.activity_id
+		                WHERE at.activity_id = $1 AND at.archived_at IS NULL AND NOT at.bytes_withheld
+		                  AND `+dealscout.WorkspaceEvidence("a")+`)`, activityID).Scan(&has)
+	if err != nil {
+		return false, fmt.Errorf("compose: reading whether a mail carries a file: %w", err)
+	}
+	return has, nil
+}
+
+// proposalQuestionFor decides whether the reading of this mail also asks about
+// an attached proposal. It does for our own outbound mail with a file, when
+// the deal has a stage to move to.
+func proposalQuestionFor(ctx context.Context, tx pgx.Tx, mail deals.ActivityAuthorship, activityID ids.UUID) (bool, error) {
+	if !proposalMailEligible(mail) {
+		return false, nil
+	}
+	attached, err := proposalMailHasAttachment(ctx, tx, activityID)
+	if err != nil || !attached {
+		return false, err
+	}
+	_, ok, err := deals.ProposalStageFor(ctx, tx, mail.DealID)
+	return ok, err
+}
+
+// proposalStageAcceptEffect moves the deal as the deciding owner, through the
+// stage move every other writer takes, in the transaction that redeems the
+// approval.
+func proposalStageAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
+	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
+		var move deals.ProposalStageMove
+		if err := json.Unmarshal(proposedChange, &move); err != nil {
+			return fmt.Errorf("compose: decoding the proposal stage question: %w", err)
+		}
+		active, err := store.ActiveDealColumns(ctx)
+		if err != nil {
+			return err
+		}
+		reason := ""
+		err = svc.RedeemAndApply(ctx, approvalID, deals.ProposalStageKind, diffHash, func(tx pgx.Tx) error {
+			var applyErr error
+			reason, applyErr = store.ApplyProposalStageTx(ctx, tx, move, approvalID, active)
+			return applyErr
+		})
+		return obsoleteOr(reason, err)
+	}
+}
+
+// proposalStagePrecheck refuses an edited answer, and says before the click
+// when the question no longer applies.
+func proposalStagePrecheck(db *database.DB) approvals.ReleasePrecheck {
+	return func(ctx context.Context, staged, edited json.RawMessage) error {
+		if len(edited) > 0 {
+			return &approvals.InvalidEditError{Cause: errors.New("a proposal stage question is accepted or declined as it stands")}
+		}
+		var move deals.ProposalStageMove
+		if err := json.Unmarshal(staged, &move); err != nil {
+			return fmt.Errorf("compose: decoding the proposal stage question: %w", err)
+		}
+		return db.Tx(ctx, func(tx pgx.Tx) error {
+			reason, err := deals.ProposalStageStillApplies(ctx, tx, move)
+			return obsoleteOr(reason, err)
+		})
+	}
+}

@@ -79,8 +79,9 @@ const kindHeldDraft = "held_draft"
 // rep it was staged for decides it alone, and what filing it means — and a typo
 // across them would leave the kind half-governed with nothing saying so.
 const (
-	kindDealFollowUp   = "deal_follow_up"
-	kindCommitmentTask = approvalsubject.KindCommitmentTask
+	kindDealFollowUp      = "deal_follow_up"
+	kindDealProposalStage = "deal_proposal_stage"
+	kindCommitmentTask    = approvalsubject.KindCommitmentTask
 	// kindTranscriptProposal is retired: nothing stages it and no effect
 	// applies it. It stays governed so the cards already decided under it stay
 	// readable to whoever decided them.
@@ -288,6 +289,8 @@ var decisionGrants = map[string][]DecisionGrant{
 	// Confirming a nightly close-date correction (formulas §11 🟡 tier)
 	// releases an expected_close_date write onto the deal.
 	closeDateCorrectionKind: {{tableDeal, principal.ActionUpdate}},
+	// Accepting moves the deal forward, the write advance_deal takes.
+	kindDealProposalStage: {{tableDeal, principal.ActionUpdate}},
 	// Confirming an overnight follow-up proposal (features/07 §8a) creates
 	// the drafted task activity; the target deal's visibility gates who
 	// may see and decide it (targetVisible), the create grant gates the

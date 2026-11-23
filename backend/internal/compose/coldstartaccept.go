@@ -99,6 +99,8 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithEffect(string(workflow.ActionAssignOwner), assignOwnerReleaseEffect(svc,
 		NewProvider(pool), InstallationDB(pool)))
 	svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
+	svc.WithEffect(deals.ProposalStageKind, proposalStageAcceptEffect(svc, deals.NewStore(InstallationDB(pool), DealsInstallation())))
+	svc.WithPrecheck(deals.ProposalStageKind, proposalStagePrecheck(InstallationDB(pool)))
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool)), time.Now))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck(InstallationDB(pool), time.Now))
 	commitmentTasks := activities.NewStore(InstallationDB(pool))
