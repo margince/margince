@@ -8,9 +8,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -487,6 +490,29 @@ func TestAFailedRunKeepsItsKeyRatherThanInvitingASecondAttempt(t *testing.T) {
 	// it is stored for the window and handed to whoever presents the key next.
 	if got := f.claims.failed[0]; got != "send_email/k-1@"+freshAttempt+": it conflicted with another change" {
 		t.Fatalf("recorded %q — a stored reason must not carry the refusal's own text", got)
+	}
+}
+
+// A lock cycle aborts the handler's whole transaction, so nothing was written
+// and the answer to the caller is to send the same call again. Its key goes back
+// with it, whether the database broke a deadlock or refused a serialization.
+func TestARunTheDatabaseRolledBackGivesItsKeyBack(t *testing.T) {
+	for name, code := range map[string]string{"a broken deadlock": "40P01", "a serialization failure": "40001"} {
+		t.Run(name, func(t *testing.T) {
+			f := newRetryFixture(t)
+			f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
+			f.tool.fail = fmt.Errorf("merging: %w", &pgconn.PgError{Code: code})
+
+			if _, err := f.invoke(t, `{"idempotency_key":"k-1"}`); err == nil {
+				t.Fatal("the handler's failure was swallowed")
+			}
+			if want := []string{"send_email/k-1@" + freshAttempt}; !slices.Equal(f.claims.released, want) {
+				t.Errorf("released = %v, want %v", f.claims.released, want)
+			}
+			if len(f.claims.failed) != 0 {
+				t.Errorf("a rolled-back run was recorded as failed: %v", f.claims.failed)
+			}
+		})
 	}
 }
 

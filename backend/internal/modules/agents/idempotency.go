@@ -45,6 +45,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -281,7 +282,9 @@ func (r *Registry) unitOwnedTool(name string) bool {
 // A FAILED run does not release its key. A handler can fail after its write
 // committed — create_record commits the row and then reads it back — so "the
 // call returned an error" is not "nothing happened", and freeing the key there
-// is how one key creates two records.
+// is how one key creates two records. A lock cycle is the exception: the database
+// aborted the handler's transaction, so nothing it wrote survives and the same
+// call is safe to send again.
 func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserved, attempt string, out json.RawMessage, records int, runErr error) {
 	if res.RetryKey == "" {
 		return
@@ -291,6 +294,10 @@ func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserve
 	if _, asked := errors.AsType[*askInChatError](runErr); asked {
 		// Nothing ran: the call waits for the user, and its retry is the same
 		// call under the same key.
+		r.releaseUnrunKey(ctx, spec, res, attempt)
+		return
+	}
+	if storekit.IsLockCycle(runErr) {
 		r.releaseUnrunKey(ctx, spec, res, attempt)
 		return
 	}
@@ -335,9 +342,9 @@ func safeFailureReason(err error) string {
 	return "the call did not complete"
 }
 
-// releaseUnrunKey gives a key back after a failure that provably happened
-// BEFORE the tool ran — today, a refused approval redemption. Nothing else may
-// use it: for any failure at or after the handler, whether an effect landed is
+// releaseUnrunKey gives a key back after a failure that provably left nothing
+// written: a refused approval redemption, or a lock cycle that aborted the
+// handler's transaction. Nothing else may use it: for any failure at or after the handler, whether an effect landed is
 // exactly what this surface cannot know.
 func (r *Registry) releaseUnrunKey(ctx context.Context, spec mcp.ToolSpec, res reserved, attempt string) {
 	if res.RetryKey == "" {
