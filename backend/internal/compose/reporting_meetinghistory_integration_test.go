@@ -118,10 +118,11 @@ func TestReportingMeetingsHeldCreditsEveryAttendeeAndCountsATeamOnce(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The calendar connector's shape: the importer is the host column, and the
+	// The calendar connector's shape: the hold was recorded before the guest list
+	// arrived, so it kept no credited seats. The importer is the host column, and the
 	// provider's guest list says who organized and who answered.
 	exec(t, `UPDATE activity SET captured_by = 'connector:google_calendar', host_user_id = $2 WHERE id = $1`, meeting.Id, e.Rep3)
-	exec(t, `UPDATE activity_meeting_history SET host_id_at_change = $2 WHERE activity_id = $1`, meeting.Id, e.Rep3)
+	exec(t, `UPDATE activity_meeting_history SET host_id_at_change = $2, credited_seats_at_change = NULL WHERE activity_id = $1`, meeting.Id, e.Rep3)
 	for _, guest := range []struct {
 		seat     ids.UUID
 		address  string
@@ -144,7 +145,7 @@ func TestReportingMeetingsHeldCreditsEveryAttendeeAndCountsATeamOnce(t *testing.
 		t.Fatal(err)
 	}
 	exec(t, `UPDATE activity SET captured_by = 'connector:google_calendar', host_user_id = $2 WHERE id = $1`, skipped.Id, e.Rep3)
-	exec(t, `UPDATE activity_meeting_history SET host_id_at_change = $2 WHERE activity_id = $1`, skipped.Id, e.Rep3)
+	exec(t, `UPDATE activity_meeting_history SET host_id_at_change = $2, credited_seats_at_change = NULL WHERE activity_id = $1`, skipped.Id, e.Rep3)
 	exec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id, response) VALUES ($1, 'organizer', 'rep1@forecast.test', $2, 'declined')`,
 		skipped.Id, e.Rep1)
 	service := newReportingService(e.Pool, clock)

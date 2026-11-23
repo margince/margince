@@ -24,7 +24,7 @@ func LinkedCompanyColumn(ctx context.Context, reference, column string, arg func
 		return "", err
 	}
 	if scope == "" {
-		scope = "TRUE"
+		scope = sqlTrue
 	}
 	return "(SELECT " + linkedCompanyAlias + "." + column + " FROM company " + linkedCompanyAlias +
 		" WHERE " + linkedCompanyAlias + ".id = " + reference + " AND " + scope + ")", nil
