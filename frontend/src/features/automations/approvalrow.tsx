@@ -73,11 +73,11 @@ import "./approvalrow.css";
 // carries the one outcome the row cannot show itself.
 //
 // The row is the CANONICAL 🟡 affordance: per-row approve/reject plus the
-// staged-draft editor, in a dialog. String fields of the proposed_change are editable
-// and go up as edited_payload, which the server RE-ADMITS from scratch
-// (re-tiered, re-RBAC'd, new diff_hash — ADR-0036); an edit can never silently
-// escalate the effect. A 409 version-skew comes back as an honest "the world
-// changed, re-stage" row error; a 409 already-decided drops the stale row
+// staged-draft editor, in a dialog. String fields of the proposed_change are
+// editable and go up as edited_payload. The server admits that payload again
+// from scratch (new tier, RBAC and diff_hash, ADR-0036), so an edit can never
+// silently escalate the effect. A 409 version-skew comes back as a "the world
+// changed, re-stage" row error. A 409 already-decided drops the stale row
 // instead of offering a re-stage retry.
 //
 // It lives beside the approvals queries rather than inside any one screen

@@ -192,12 +192,10 @@ type StagedEditorProps = Readonly<{
  * The staged-draft editor: the string fields of the proposed_change, in
  * the shape the kind declared for them, going up as `edited_payload`.
  *
- * It is handed to the card as its `editor` slot rather than living inside the
- * primitive, and that boundary is the point: an edit re-enters the admission
- * gate from scratch on the server (re-tiered, re-RBAC'd, new diff_hash —
- * ADR-0036), so what it may offer is a question about THIS kind and this
- * contract, which is screen knowledge. The card knows how to draw a decision;
- * it does not know what this installation lets a contact change.
+ * It is handed to the card as its `editor` slot, not built into the card.
+ * The server admits an edit again from scratch (new tier, RBAC and diff_hash).
+ * What it may offer is screen knowledge of the kind; the card only draws a
+ * decision.
  */
 export function StagedEditor(props: StagedEditorProps) {
   const { root, fieldControls, approve, cancel } = useStagedParts(props);

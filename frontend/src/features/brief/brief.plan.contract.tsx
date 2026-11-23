@@ -177,9 +177,8 @@ function ContractRow({
         value={value ?? ""}
         absent={value == null}
         onClose={() => setEditing(false)}
-        // Only THIS half travels. The other is omitted, which the server reads
-        // as "leave it alone" — sending both would let a stale draft overwrite
-        // a note the rep changed in the other field.
+        // Only this half is sent. The server reads an omitted half as "leave
+        // it alone", so a stale draft cannot overwrite the other note.
         onSave={(next) => save.mutateAsync({ [field]: next })}
       >
         {({ control, draft, setDraft, saving }) => (

@@ -36,9 +36,8 @@ export type FieldEditDialogProps = Readonly<{
   /** The stored value. Each opening starts the draft from it. */
   value: string;
   /**
-   * No value is stored, so `value` is only the empty draft: saving it as typed,
-   * empty included, is an edit (a note that says "nothing to name" differs from
-   * one never written).
+   * No value is stored, so `value` is only the empty draft. Saving it as typed,
+   * empty included, is an edit: "nothing to name" differs from never written.
    */
   absent?: boolean;
   /** A function hint speaks for the draft, so it can follow the pick. */

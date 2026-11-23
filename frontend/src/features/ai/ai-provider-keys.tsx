@@ -6,11 +6,9 @@ import {
   useTestProviderKey,
 } from "../../components/ai-provider-key-test";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
-import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { serviceAccountProblem } from "../../design-system/serviceaccountkeyfield";
 import { type FieldLock, lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
@@ -19,14 +17,14 @@ import { useProviderHealth } from "../../lib/ai-provider-health";
 import { providerName } from "../../lib/ai-provider-names";
 import { providerUsage, useRouting } from "../../lib/ai-routing-query";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { problemMessageOf } from "../../lib/problem";
 import { ProviderRecentCalls } from "./ai-call-figures";
 import {
   type CredentialKind,
   credentialKindOf,
-  KeyEntry,
+  KeyEntryDialog,
   keyStateLabel,
   keyStateTone,
+  SaveFailure,
 } from "./ai-provider-key-entry";
 import {
   useProviderKeys,
@@ -266,28 +264,9 @@ function CredentialName({
   );
 }
 
-function credentialTitleKey(kind: CredentialKind): MessageKey {
-  return kind === "service_account"
-    ? "serviceAccountKey.label"
-    : "aiProviderKeys.field";
-}
-
-function SaveFailure({ failure }: Readonly<{ failure: Error | null }>) {
-  const t = useT();
-  if (!failure) return null;
-  return (
-    <Callout
-      tone="danger"
-      kind="outcome"
-      title={t("aiProviderKeys.saveFailed")}
-    >
-      {problemMessageOf(failure, t)}
-    </Callout>
-  );
-}
-
-// The credential controls for ONE vendor, drawn inside its sheet: whether it is
-// keyed, the test, and the paste field that adds, replaces or removes the key.
+// The credential controls for one vendor, drawn inside its sheet. They show
+// whether it is keyed, the test, and the dialog that adds, replaces or removes
+// the key.
 function ProviderConnection({
   status,
   canManage,
@@ -301,9 +280,8 @@ function ProviderConnection({
   const t = useT();
   const [value, setValue] = useState("");
   const [confirming, setConfirming] = useState(false);
-  // Whether this row's paste field is open, in a dialog: the row is a READING
-  // of whether the vendor is keyed, and six open password boxes make a page
-  // nobody can audit at a glance.
+  // Whether this row's paste field is open, in a dialog. The row only reads
+  // whether the vendor is keyed; six open password boxes cannot be audited.
   const [editing, setEditing] = useState(false);
   const formId = useId();
   // Set by a Save press on a service-account key the browser can already tell
@@ -352,20 +330,17 @@ function ProviderConnection({
   const entryHint = keyEntryHint(status, t);
   const adminOnly = canManage ? undefined : t("aiProviderKeys.adminOnly");
   const closeEntry = () => {
-    // Closing DROPS what was typed. The field holds a credential, and one left
-    // in state comes back the next time the dialog opens, on a screenshare or
-    // for whoever is at the desk next.
+    // Closing drops what was typed. A credential left in state would come back
+    // when the dialog opens again.
     setValue("");
     setRefusal(undefined);
     setEditing(false);
   };
-  // A boot-set key that locks the field while its dialog is open closes the
-  // dialog the same way Cancel does, so the typed secret does not wait in state
-  // for the lock to lift.
+  // A lock that engages while the dialog is open closes it like Cancel. The
+  // typed secret must not wait in state for the lock to lift.
   if (editing && lock.disabled) {
     closeEntry();
   }
-  const failureCallout = <SaveFailure failure={failure} />;
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     // The other mutation's failure is no longer the current story; without
@@ -421,11 +396,9 @@ function ProviderConnection({
         variant="primary"
         type="submit"
         form={formId}
-        // `pending` on the control that is waiting, `disabled` only
-        // for the reasons it may not be pressed at all. A button
-        // carrying both is natively disabled, which drops the focus
-        // and announces nothing — see Button's own note on the
-        // precedence.
+        // `pending` marks the control that is waiting, `disabled` only the
+        // reasons it may not be pressed at all. A button with both is natively
+        // disabled, which drops focus and announces nothing.
         pending={save.isPending}
         disabled={!canManage || remove.isPending}
       >
@@ -462,38 +435,26 @@ function ProviderConnection({
           )}
         </div>
         <KeyTestOutcome test={test} keyHeld={status.configured} />
-        <RecordFormDialog
+        <KeyEntryDialog
           open={editing}
-          title={t(credentialTitleKey(kind))}
+          kind={kind}
+          formId={formId}
+          configured={status.configured}
+          value={value}
+          disabled={!canManage || busy}
+          busy={busy}
+          hint={entryHint}
+          refusal={refusal}
+          failure={failure}
+          onChange={(next) => {
+            setRefusal(undefined);
+            setValue(next);
+          }}
+          onSubmit={submit}
           onClose={closeEntry}
-          fieldCount={1}
-          unsaved={value !== ""}
-          closeDisabled={busy}
-          form={
-            <form
-              id={formId}
-              className="form-stack"
-              noValidate
-              onSubmit={submit}
-            >
-              <KeyEntry
-                kind={kind}
-                configured={status.configured}
-                value={value}
-                disabled={!canManage || busy}
-                hint={entryHint}
-                refusal={refusal}
-                onChange={(next) => {
-                  setRefusal(undefined);
-                  setValue(next);
-                }}
-              />
-              {failureCallout}
-            </form>
-          }
           actions={verbs}
         />
-        {!editing && failureCallout}
+        {!editing && <SaveFailure failure={failure} />}
       </div>
       <ConfirmModal
         open={confirming}
