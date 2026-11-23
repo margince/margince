@@ -4,6 +4,7 @@
 package aicert
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -21,8 +22,8 @@ func ruleOnlyRecord(t *testing.T, sc Scenario) Record {
 	return Record{
 		Task: sc.Task, Provider: "openai_compatible", JudgeServedModel: DefaultJudgeModel,
 		Scenarios: []ScenarioRecord{{
-			Scenario: sc.Name, Site: sc.Site, Stamp: stamps[sc.Name], Runs: 3, Passed: 3,
-			JudgeScores: []int{90, 90, 90}, Bands: &RowBands{CertifiedMin: 70, DegradedMin: 50, Floor: 40},
+			Scenario: sc.Name, Site: sc.Site, Stamp: stamps[sc.Name], Runs: 12, Passed: 12,
+			JudgeScores: slices.Repeat([]int{90}, 12), Bands: &RowBands{CertifiedMin: 70, DegradedMin: 50, Floor: 40},
 		}},
 	}
 }
@@ -121,5 +122,22 @@ func TestARecordTheRestampCannotVouchForIsRefused(t *testing.T) {
 				t.Errorf("got %+v, want a refusal containing %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// A lone judge score under the bar is a case this rule extends. The record never
+// ran those extra runs, so its rows are not the ones this rule would keep. Two
+// settled rows keep the pool decided, so only the lone-score row can ask.
+func TestARowThisRuleWouldRunAgainIsFound(t *testing.T) {
+	bands := &RowBands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}
+	row := func(name string, runs int, scores ...int) ScenarioRecord {
+		return ScenarioRecord{Scenario: name, Runs: runs, Passed: runs, JudgeScores: scores, Bands: bands}
+	}
+	settled := []ScenarioRecord{row("a", 12, slices.Repeat([]int{90}, 12)...), row("b", 12, slices.Repeat([]int{90}, 12)...)}
+	if got := wantsMoreRuns(settled); got != "" {
+		t.Errorf("settled rows ask for more runs on %q", got)
+	}
+	if got := wantsMoreRuns(append(slices.Clone(settled), row("lone", 9, 69))); got != "lone" {
+		t.Errorf("a lone score under the bar: got %q, want %q", got, "lone")
 	}
 }

@@ -55,8 +55,9 @@ var gradingRuleOwners = []struct {
 
 // gradingRuleDigest hashes each owner's gofmt'd source with comments and blank
 // lines dropped, so rewording a doc comment does not demand a new rule version.
-// Beyond the named owners it hashes every function of this package they call,
-// however deep, so a helper the rule leans on cannot move unhashed.
+// Beyond the named owners it hashes every function and method of this package
+// that they call, however deep. Constants and other packages are not walked:
+// the owner list names the former, and the latter are named as owners.
 func gradingRuleDigest(t *testing.T) string {
 	t.Helper()
 	fset := token.NewFileSet()
@@ -98,9 +99,10 @@ func gradingRuleDigest(t *testing.T) string {
 				return true
 			}
 			hashed[ident.Name] = true
-			callee := pkgFuncs[ident.Name]
-			write("callee."+ident.Name, callee)
-			pending = append(pending, callee)
+			for i, callee := range pkgFuncs[ident.Name] {
+				write(fmt.Sprintf("callee.%s.%d", ident.Name, i), callee)
+				pending = append(pending, callee)
+			}
 			return true
 		})
 	}
@@ -108,15 +110,15 @@ func gradingRuleDigest(t *testing.T) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// packageFuncs indexes this package's non-test functions by name, for the walk
+// packageFuncs indexes this package's non-test functions and methods by name, for the walk
 // from the owners to what they call.
-func packageFuncs(t *testing.T, fset *token.FileSet) map[string]*ast.FuncDecl {
+func packageFuncs(t *testing.T, fset *token.FileSet) map[string][]*ast.FuncDecl {
 	t.Helper()
 	paths, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatalf("listing the package: %v", err)
 	}
-	funcs := map[string]*ast.FuncDecl{}
+	funcs := map[string][]*ast.FuncDecl{}
 	for _, path := range paths {
 		if strings.HasSuffix(path, "_test.go") {
 			continue
@@ -126,8 +128,8 @@ func packageFuncs(t *testing.T, fset *token.FileSet) map[string]*ast.FuncDecl {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		for _, decl := range file.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil {
-				funcs[fn.Name.Name] = fn
+			if fn, ok := decl.(*ast.FuncDecl); ok {
+				funcs[fn.Name.Name] = append(funcs[fn.Name.Name], fn)
 			}
 		}
 	}

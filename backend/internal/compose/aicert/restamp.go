@@ -11,31 +11,35 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// RestampBasis holds what a re-stamp compares a record's rows against: each
-// scenario's stamp under this build's grading rule, and under the rule the
-// record was graded by. Both are keyed "task/scenario", the name a stamp map is
-// unique by.
+// RestampBasis holds what a re-stamp compares a row against, keyed
+// "task/scenario". One stamp is under this build's grading rule. The other is
+// under the rule the record was graded by.
 type RestampBasis struct {
 	now, was map[string]string
 }
 
-// NewRestampBasis stamps corpus under this build's rule and under oldRule. The
-// two differ in the grader third alone when only the rule moved, which is what
-// Restamp reads off a row.
+// NewRestampBasis stamps corpus under this build's rule and under oldRule. When
+// only the rule moved, the two differ in the grader third alone.
 func NewRestampBasis(ctx context.Context, oldRule string, corpus []Scenario, census *aitasks.Registry) (RestampBasis, error) {
+	if oldRule == gradingRule {
+		return RestampBasis{}, fmt.Errorf("aicert: restamp: %q is this build's rule; name the rule the records were graded by", oldRule)
+	}
 	basis := RestampBasis{now: map[string]string{}, was: map[string]string{}}
 	byTask := map[string][]Scenario{}
 	for _, sc := range corpus {
 		byTask[sc.Task] = append(byTask[sc.Task], sc)
 	}
 	for task, scenarios := range byTask {
-		for rule, into := range map[string]map[string]string{gradingRule: basis.now, oldRule: basis.was} {
-			stamps, err := scenarioStampsUnder(ctx, rule, scenarios, census)
+		for _, pass := range []struct {
+			rule string
+			into map[string]string
+		}{{gradingRule, basis.now}, {oldRule, basis.was}} {
+			stamps, err := scenarioStampsUnder(ctx, pass.rule, scenarios, census)
 			if err != nil {
 				return RestampBasis{}, fmt.Errorf("task %s: %w", task, err)
 			}
 			for name, stamp := range stamps {
-				into[task+"/"+name] = stamp
+				pass.into[task+"/"+name] = stamp
 			}
 		}
 	}
@@ -50,16 +54,13 @@ type Restamped struct {
 	Refusal string
 }
 
-// Restamp grades rec again from its stored rows under this build's rule, when
-// only the rule moved since rec was graded by oldRule. A rule change alters how
-// stored outcomes pool and grade, never what a model was asked or how one run
-// was checked, so the rows are still true. Anything else is refused with the
-// reason, and the record stays stale for a paid run.
+// Restamp grades rec again from its stored rows when only the rule moved since
+// oldRule graded it, and refuses with the reason otherwise.
 //
-// A row proves only the rule moved when its case and prompt thirds equal
-// today's and its grader third equals what oldRule would stamp today. The
-// second half is what rules out a site check or a judge request that moved
-// with the rule: either would put a different digest under oldRule too.
+// A row proves that when its case and prompt thirds equal today's and its grader
+// third equals what oldRule stamps today. A moved site check or judge request
+// would change that digest too. A record this rule would extend is refused,
+// because its rows are not the ones the rule would have kept.
 func (b RestampBasis) Restamp(rec Record) Restamped {
 	if refusal := restampRefusal(rec); refusal != "" {
 		return Restamped{Record: rec, Refusal: refusal}
@@ -91,6 +92,9 @@ func (b RestampBasis) Restamp(rec Record) Restamped {
 	if !changed {
 		return Restamped{Record: rec}
 	}
+	if name := wantsMoreRuns(out.Scenarios); name != "" {
+		return Restamped{Record: rec, Refusal: fmt.Sprintf("this rule would run scenario %q again", name)}
+	}
 	regradeFromRows(&out)
 	return Restamped{Record: out, Changed: true}
 }
@@ -107,6 +111,22 @@ func restampRefusal(rec Record) string {
 		return fmt.Sprintf("measured on wire rule %q, and this build sends %q", rec.WireRule, ai.WireRule(rec.Provider))
 	case len(rec.Scenarios) == 0:
 		return "it holds no scenario rows"
+	}
+	return ""
+}
+
+// wantsMoreRuns names a scenario that the adaptive rounds of this rule would
+// extend, as nextRunCounts would, or answers "".
+func wantsMoreRuns(rows []ScenarioRecord) string {
+	cases := make([]caseStats, len(rows))
+	for i, row := range rows {
+		cases[i] = rowCase(row)
+	}
+	pooled := poolUndecided(cases)
+	for i, row := range rows {
+		if row.Runs < adaptiveMaxRuns && (pooled || caseBorderline(cases[i])) {
+			return row.Scenario
+		}
 	}
 	return ""
 }

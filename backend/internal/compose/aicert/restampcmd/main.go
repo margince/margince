@@ -48,6 +48,9 @@ func main() {
 
 	restamped, refused := 0, 0
 	for _, rec := range records {
+		if rec.Kind == aicert.KindDecision {
+			continue
+		}
 		got := basis.Restamp(rec)
 		switch {
 		case got.Refusal != "":
