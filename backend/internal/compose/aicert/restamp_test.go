@@ -199,3 +199,65 @@ func TestRestampAllReportsEachRecordAndHandsBackTheChangedOnes(t *testing.T) {
 		t.Errorf("report = %v, want a restamp line then a stale line", report)
 	}
 }
+
+// siteCheckRestamp builds the site-check basis from an earlier golden that
+// gives the test scenario's site oldCheck, declared as a reviewed pair.
+func siteCheckRestamp(t *testing.T, sc Scenario, oldCheck string) RestampBasis {
+	t.Helper()
+	old := sc.Task + "/" + sc.Site + " " + oldCheck + "\n"
+	restampableSiteChecks[goldenDigest(old)] = goldenDigest(siteChecksGolden)
+	t.Cleanup(func() { delete(restampableSiteChecks, goldenDigest(old)) })
+	basis, err := NewSiteCheckRestampBasis(wsContext(t), old, []Scenario{sc}, testCensus(t))
+	if err != nil {
+		t.Fatalf("building the basis: %v", err)
+	}
+	return basis
+}
+
+// siteCheckRecord is a record whose one row was stamped while the scenario's
+// site carried check under this build's rule.
+func siteCheckRecord(t *testing.T, sc Scenario, check string) Record {
+	t.Helper()
+	stamps, err := scenarioStampsWith(wsContext(t), gradingRule, map[string]string{sc.Task + "/" + sc.Site: check}, []Scenario{sc}, testCensus(t))
+	if err != nil {
+		t.Fatalf("stamping under the earlier check: %v", err)
+	}
+	rec := ruleOnlyRecord(t, sc)
+	rec.Scenarios[0].Stamp = stamps[sc.Name]
+	return rec
+}
+
+// A record stamped under the earlier hash of an unchanged check reads current
+// under today's hash.
+func TestARecordStampedUnderTheEarlierSiteCheckHashIsRestamped(t *testing.T) {
+	sc := testScenario("basic", wideBands)
+	got := siteCheckRestamp(t, sc, "the-earlier-hash").Restamp(siteCheckRecord(t, sc, "the-earlier-hash"))
+	if got.Refusal != "" || !got.Changed {
+		t.Fatalf("refused or unchanged: %+v", got)
+	}
+	now, err := ScenarioStamps(wsContext(t), []Scenario{sc}, testCensus(t))
+	if err != nil {
+		t.Fatalf("stamping today: %v", err)
+	}
+	if got.Record.Scenarios[0].Stamp != now[sc.Name] {
+		t.Errorf("row stamp %q is not today's %q", got.Record.Scenarios[0].Stamp, now[sc.Name])
+	}
+}
+
+// A record whose stamp matches neither hash was graded by another check, so
+// it stays stale.
+func TestARecordStampedUnderAnotherSiteCheckIsNotRestamped(t *testing.T) {
+	sc := testScenario("basic", wideBands)
+	got := siteCheckRestamp(t, sc, "the-earlier-hash").Restamp(siteCheckRecord(t, sc, "a-check-that-judged-differently"))
+	if got.Refusal == "" || got.Changed {
+		t.Fatalf("a record graded by another check was restamped: %+v", got)
+	}
+}
+
+// An earlier golden no reviewer paired with today's is refused whole.
+func TestAnUnreviewedSiteCheckChangeBuildsNoBasis(t *testing.T) {
+	sc := testScenario("basic", wideBands)
+	if _, err := NewSiteCheckRestampBasis(wsContext(t), "basic/x unreviewed\n", []Scenario{sc}, testCensus(t)); err == nil {
+		t.Fatal("an unreviewed site check change built a restamp basis")
+	}
+}

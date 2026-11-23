@@ -32,23 +32,35 @@ func NewRestampBasis(ctx context.Context, oldRule string, corpus []Scenario, cen
 		return RestampBasis{}, fmt.Errorf("aicert: restamp: no review says %q moved only how rows pool and grade into %q, "+
 			"so its records need new runs; add the pair to restampableRules once a reviewer has checked that", oldRule, gradingRule)
 	}
+	return restampBasisBetween(ctx, corpus, census, func(scenarios []Scenario) (map[string]string, error) {
+		return scenarioStampsUnder(ctx, oldRule, scenarios, census)
+	})
+}
+
+// restampBasisBetween stamps corpus as this build stamps it and as was stamps
+// it, task by task.
+func restampBasisBetween(
+	ctx context.Context, corpus []Scenario, census *aitasks.Registry, was func([]Scenario) (map[string]string, error),
+) (RestampBasis, error) {
 	basis := RestampBasis{now: map[string]string{}, was: map[string]string{}}
 	byTask := map[string][]Scenario{}
 	for _, sc := range corpus {
 		byTask[sc.Task] = append(byTask[sc.Task], sc)
 	}
 	for task, scenarios := range byTask {
-		for _, pass := range []struct {
-			rule string
-			into map[string]string
-		}{{gradingRule, basis.now}, {oldRule, basis.was}} {
-			stamps, err := scenarioStampsUnder(ctx, pass.rule, scenarios, census)
-			if err != nil {
-				return RestampBasis{}, fmt.Errorf("task %s: %w", task, err)
-			}
-			for name, stamp := range stamps {
-				pass.into[task+"/"+name] = stamp
-			}
+		now, err := scenarioStampsUnder(ctx, gradingRule, scenarios, census)
+		if err != nil {
+			return RestampBasis{}, fmt.Errorf("task %s: %w", task, err)
+		}
+		before, err := was(scenarios)
+		if err != nil {
+			return RestampBasis{}, fmt.Errorf("task %s: %w", task, err)
+		}
+		for name, stamp := range now {
+			basis.now[task+"/"+name] = stamp
+		}
+		for name, stamp := range before {
+			basis.was[task+"/"+name] = stamp
 		}
 	}
 	return basis, nil
@@ -93,7 +105,7 @@ func (b RestampBasis) Restamp(rec Record) Restamped {
 				return Restamped{Record: rec, Refusal: fmt.Sprintf("scenario %q: %s moved, so it needs new runs", row.Scenario, moved.Describe())}
 			}
 			if row.Stamp != was {
-				return Restamped{Record: rec, Refusal: fmt.Sprintf("scenario %q: its site check or judge request moved with the rule", row.Scenario)}
+				return Restamped{Record: rec, Refusal: fmt.Sprintf("scenario %q: its site check or judge request is not the one the earlier basis stamps", row.Scenario)}
 			}
 			changed = true
 		}
