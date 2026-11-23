@@ -83,7 +83,8 @@ func thinGroups(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bool, er
 // thinForAnyReader answers, per group, whether the floor holds the group back
 // from some reader while the switch is off. It judges a figure every reader is
 // shown alike. Each live seat of the group is tried as the reader, and so is a
-// reader outside it. Every live team's total counts as one to take from.
+// reader outside it. Every live team's total counts as one to take from. A
+// member of several teams is tried too, with "My teams" as one more total.
 func thinForAnyReader(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bool, error) {
 	allowed, err := individualPerformance(ctx, tx)
 	if err != nil || allowed {
@@ -106,6 +107,10 @@ func thinForAnyReader(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bo
 	if err != nil {
 		return nil, err
 	}
+	managers, err := multiTeamMembers(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
 	teams := make(map[ids.UUID][]floorTeam, len(members))
 	for seat, ofSeat := range members {
 		for _, team := range ofSeat {
@@ -114,15 +119,70 @@ func thinForAnyReader(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bo
 	}
 	out := make([]bool, len(groups))
 	for index, group := range groups {
-		readers := []ids.UUID{ids.Nil}
-		for _, seat := range group {
-			if live[seat] {
-				readers = append(readers, seat)
-			}
+		out[index] = thinForSomeReader(group, live, teams, members, managers)
+	}
+	return out, nil
+}
+
+// thinForSomeReader is the floor of one group for an outside reader, for each
+// of its live seats, and for each member of several teams.
+func thinForSomeReader(
+	group []ids.UUID, live map[ids.UUID]bool, teams map[ids.UUID][]floorTeam,
+	members, managers map[ids.UUID][]ids.UUID,
+) bool {
+	readers := []ids.UUID{ids.Nil}
+	for _, seat := range group {
+		if live[seat] {
+			readers = append(readers, seat)
 		}
-		out[index] = slices.ContainsFunc(readers, func(reader ids.UUID) bool {
-			return belowFloor(reader, [][]ids.UUID{group}, live, teams)[0]
-		})
+	}
+	for _, reader := range readers {
+		if belowFloor(reader, [][]ids.UUID{group}, live, teams)[0] {
+			return true
+		}
+	}
+	for manager, managed := range managers {
+		if belowFloor(manager, [][]ids.UUID{group}, live, withManagedTeams(teams, members, managed))[0] {
+			return true
+		}
+	}
+	return false
+}
+
+// withManagedTeams is teams plus "My teams" of a reader on the managed teams:
+// one total over every seat on any of them.
+func withManagedTeams(teams map[ids.UUID][]floorTeam, members map[ids.UUID][]ids.UUID, managed []ids.UUID) map[ids.UUID][]floorTeam {
+	out := make(map[ids.UUID][]floorTeam, len(teams))
+	for seat, ofSeat := range teams {
+		out[seat] = ofSeat
+		if slices.ContainsFunc(members[seat], func(team ids.UUID) bool { return slices.Contains(managed, team) }) {
+			out[seat] = append(slices.Clone(ofSeat), floorTeam{managed: true})
+		}
+	}
+	return out
+}
+
+// multiTeamMembers answers the live members on more than one live team, with
+// their teams. Their "My teams" total can take more than one team at once.
+func multiTeamMembers(ctx context.Context, tx pgx.Tx) (map[ids.UUID][]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `SELECT tm.user_id, array_agg(tm.team_id ORDER BY tm.team_id) FROM `+teamMembershipFrom()+`
+		 WHERE `+identity.LiveMemberSQL("u")+` AND NOT u.is_agent
+		 GROUP BY tm.user_id HAVING count(*) > 1`)
+	if err != nil {
+		return nil, fmt.Errorf("compose: reading the members on several teams: %w", err)
+	}
+	defer rows.Close()
+	out := map[ids.UUID][]ids.UUID{}
+	for rows.Next() {
+		var user ids.UUID
+		var teams []ids.UUID
+		if err := rows.Scan(&user, &teams); err != nil {
+			return nil, fmt.Errorf("compose: reading the members on several teams: %w", err)
+		}
+		out[user] = teams
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("compose: reading the members on several teams: %w", err)
 	}
 	return out, nil
 }

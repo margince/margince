@@ -166,3 +166,38 @@ func TestAQuietEffectLearnedFromALoneColleaguesDealsFallsBackWhileTheSwitchIsOff
 	}
 	requireOneChance(t, f.chances(deal, today), 10)
 }
+
+// team adds a live team holding members.
+func (f *fixture) team(name string, members ...ids.UUID) {
+	f.t.Helper()
+	team := f.seed(`INSERT INTO team (id, name) VALUES ($1, $2)`, name)
+	for _, member := range members {
+		if _, err := f.owner.Exec(context.Background(), `INSERT INTO team_membership (team_id, user_id) VALUES ($1, $2)`, team, member); err != nil {
+			f.t.Fatalf("seeding the team: %v", err)
+		}
+	}
+}
+
+// Five colleagues across three teams are enough for any one team's total. A
+// member of two of the teams reads both as "My teams". That leaves the third
+// team's one colleague, so the outcomes count for no reader.
+func TestStageOutcomesOneMyTeamsTotalWouldLeaveToOneColleagueMoveNoChance(t *testing.T) {
+	f := newFixture(t)
+	a1, a2, b1, b2, c, lead := f.liveSeat("a1"), f.liveSeat("a2"), f.liveSeat("b1"), f.liveSeat("b2"), f.liveSeat("c"), f.liveSeat("lead")
+	f.team("north", a1, a2, lead)
+	f.team("south", b1, b2, lead)
+	f.team("east", c)
+	f.wonFrom(25, a1, a2, b1, b2, c)
+	today := clocktest.Now(t)
+	f.at = today
+	deal := f.deal(f.env.Rep1, 1_000_000, &today)
+	if f.firstStageEvidence() != 25 {
+		t.Fatal("the stage chances do not show the colleagues' wins while the switch is on")
+	}
+
+	f.showIndividualPerformance(false)
+	requireOneChance(t, f.chances(deal, today), 20)
+	if n := f.firstStageEvidence(); n != 0 {
+		t.Errorf("the stage chances show %d closed entries that a My teams total would leave to one colleague, want none", n)
+	}
+}
