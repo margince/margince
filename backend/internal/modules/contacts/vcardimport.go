@@ -254,17 +254,11 @@ func cardReviewMatch(ctx context.Context, tx pgx.Tx, decision ContactResolution)
 	return firstVisibleReview(ctx, tx, decision)
 }
 
-// nameReviewMatch names the near-match a card is held against.
-//
-// The candidate is named only when the caller may READ it. The dedupe lanes
-// search the whole workspace by design, which is what makes them able to find
-// a duplicate at all, so handing the id back unchecked would turn an upload
-// into a lookup for records outside the caller's scope.
-//
-// The source is checked before the candidate is even named. This arm writes
-// nothing itself, but what it RETURNS becomes a durable proposal carrying the
-// whole card. A narrowed message would reach a review queue instead of a
-// contact record, which is the same leak in a different table.
+// nameReviewMatch names the near-match a card is held against, if the caller
+// may read it. The dedupe lanes search the whole workspace, so an unchecked id
+// would turn an upload into a lookup outside the caller's scope.
+// The source is checked first. What this returns becomes a durable proposal
+// carrying the whole card, so a narrowed message would leak into the queue.
 func nameReviewMatch(ctx context.Context, tx pgx.Tx, source ids.UUID, shown *ReviewMatch, result *VCardResult) error {
 	narrowed, err := sourceIsNarrowed(ctx, tx, source)
 	if err != nil {
