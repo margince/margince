@@ -462,19 +462,26 @@ func TestAParserChangeStalesOnlyTheDriverWhoseStreamItReads(t *testing.T) {
 		moved          map[string][]string
 	}{
 		{"the codex parser", "return 'codex'", "return 'codex2'", map[string][]string{
-			"gpt:cli": {"transcript parser"}, "gemini:cli": nil, "claude:cli": nil}},
+			"gpt:cli": {"transcript parser"}, "gemini:cli": nil, "claude:cli": nil,
+		}},
 		{"a helper only the agy parser calls", "return 'agy'", "return 'agy2'", map[string][]string{
-			"gpt:cli": nil, "gemini:cli": {"transcript parser"}, "claude:cli": nil}},
+			"gpt:cli": nil, "gemini:cli": {"transcript parser"}, "claude:cli": nil,
+		}},
 		{"what every transcript passes through", "return bare", "return bare + bare", map[string][]string{
-			"gpt:cli": {"harness"}, "gemini:cli": {"harness"}, "claude:cli": {"harness"}}},
+			"gpt:cli": {"harness"}, "gemini:cli": {"harness"}, "claude:cli": {"harness"},
+		}},
 		{"a constant after a parser", "CODEX_ONLY_AFTER = 1", "CODEX_ONLY_AFTER = 2", map[string][]string{
-			"gpt:cli": {"harness"}, "gemini:cli": {"harness"}, "claude:cli": {"harness"}}},
+			"gpt:cli": {"harness"}, "gemini:cli": {"harness"}, "claude:cli": {"harness"},
+		}},
 		{"a constant only codex reads", "_CODEX_SKIPPED = {'a'}", "_CODEX_SKIPPED = {'b'}", map[string][]string{
-			"gpt:cli": {"transcript parser"}, "gemini:cli": nil, "claude:cli": nil}},
+			"gpt:cli": {"transcript parser"}, "gemini:cli": nil, "claude:cli": nil,
+		}},
 		{"the comment above the agy parser", "# agy steps", "# agy steps, once", map[string][]string{
-			"gpt:cli": nil, "gemini:cli": {"transcript parser"}, "claude:cli": nil}},
+			"gpt:cli": nil, "gemini:cli": {"transcript parser"}, "claude:cli": nil,
+		}},
 		{"a def inside a docstring is not a parser", "not_real", "still_not_real", map[string][]string{
-			"gpt:cli": nil, "gemini:cli": {"transcript parser"}, "claude:cli": nil}},
+			"gpt:cli": nil, "gemini:cli": {"transcript parser"}, "claude:cli": nil,
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := tree(t)
@@ -613,20 +620,20 @@ func TestEveryCommandLineRouteHasAParserEntry(t *testing.T) {
 			table[name] = candidate
 		}
 	}
-	real := map[string]bool{}
+	routed := map[string]bool{}
 	for name, candidate := range table {
 		for via, route := range candidate.Routes {
 			if !strings.HasSuffix(route.Wire, "-cli") {
 				continue
 			}
-			real[name+":"+via] = true
+			routed[name+":"+via] = true
 			if _, keyed := routeParsers[name+":"+via]; !keyed {
 				t.Errorf("%s:%s reaches the %s wire but routeParsers has no entry, so a parser fix would not stale its verdicts", name, via, route.Wire)
 			}
 		}
 	}
 	for driver := range routeParsers {
-		if !real[driver] {
+		if !routed[driver] {
 			t.Errorf("routeParsers names %s, which is no command-line route in %s", driver, candidatesFile)
 		}
 	}
