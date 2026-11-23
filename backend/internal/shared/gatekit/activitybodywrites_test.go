@@ -25,6 +25,8 @@ func TestAWriterOfAnActivityBodyIsCountedInEverySpelling(t *testing.T) {
 		{`UPDATE activity SET subject = 'the body = gone, they said', body = $2`, 1, 1},
 		{`UPDATE activity SET (body, subject) = ($2, $3) WHERE id = $1`, 1, 1},
 		{`UPDATE activity SET body /* the text */ = $2 WHERE id = $1`, 1, 1},
+		{`WITH a AS (INSERT INTO activity (id, body, body_own_end) VALUES ($1, $2, $3) RETURNING id) INSERT INTO comms_outbound (id, body) VALUES ($4, $5) ON CONFLICT (id) DO UPDATE SET body = EXCLUDED.body`, 1, 0},
+		{`WITH a AS (INSERT INTO activity (id) VALUES ($1) ON CONFLICT (id) DO UPDATE SET body = EXCLUDED.body RETURNING id) SELECT id FROM a`, 1, 1},
 		{`INSERT INTO activity (id, body /* the text */, body_own_end) VALUES ($1, $2, $3)`, 1, 0},
 		{`UPDATE activity a SET ("body", body_own_end) = ($2, $3), language = NULL WHERE a.id = $1`, 1, 0},
 	} {

@@ -25,7 +25,7 @@ func ActivityBodyWrites(statement string) (writers, unpaired int) {
 	var clauses [][]string
 	for _, at := range insertsActivity.FindAllStringIndex(low, -1) {
 		clauses = append(clauses, bareColumns(sqlListAt(low, at[1], false)))
-		if set := upsertSet.FindStringIndex(low[at[1]:]); set != nil {
+		if set := upsertSet.FindStringIndex(low[at[1]:insertEnd(low, at[1])]); set != nil {
 			clauses = append(clauses, assignedColumns(sqlListAt(low, at[1]+set[1], true)))
 		}
 	}
@@ -44,6 +44,23 @@ func ActivityBodyWrites(statement string) (writers, unpaired int) {
 		}
 	}
 	return writers, unpaired
+}
+
+// insertEnd is where the insert ends whose column list opens before pos. That is
+// the parenthesis closing the `with` entry that holds it, or the end of the text.
+func insertEnd(text string, pos int) int {
+	depth := 1
+	for i := pos; i < len(text); i++ {
+		switch text[i] {
+		case '(':
+			depth++
+		case ')':
+			if depth--; depth < 0 {
+				return i
+			}
+		}
+	}
+	return len(text)
 }
 
 // withoutSQLSpans blanks every quoted and commented run, keeping each offset.
