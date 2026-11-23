@@ -166,7 +166,7 @@ func TestAnAmbiguousOrEmptyStockOrderIsNotAdopted(t *testing.T) {
 	original := stockPresets
 	t.Cleanup(func() { stockPresets = original })
 
-	twin := strings.Replace(original["gemini_cloud.yaml"], "draft_reply: [premium, cheap_cloud]", "", 1)
+	twin := strings.Replace(original["gemini_cloud.yaml"], "nl_search: [premium, cheap_cloud]", "", 1)
 	stockPresets = map[string]string{"a.yaml": original["gemini_cloud.yaml"], "b.yaml": twin}
 	if got, ok := installed.WithStockTaskLadders(); ok {
 		t.Errorf("two presets ordering this binding differently adopted %v", got.TaskLadders)
@@ -189,7 +189,7 @@ func TestAnAmbiguousOrEmptyStockOrderIsNotAdopted(t *testing.T) {
 }
 
 // premiumFirstTasks are the tasks the Gemini presets order premium first.
-var premiumFirstTasks = []Task{TaskAgentLoop, TaskDraftReply, TaskNlSearch, TaskVoiceBuild}
+var premiumFirstTasks = []Task{TaskAgentLoop, TaskNlSearch, TaskVoiceBuild}
 
 // taskLaddersBlock is a preset's task_ladders key and every rung order under it.
 var taskLaddersBlock = regexp.MustCompile(`(?m)^ *task_ladders:\n(?: {6}\w+: \[[a-z_, ]+\]\n)+`)

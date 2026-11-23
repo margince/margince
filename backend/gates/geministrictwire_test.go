@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -30,15 +32,7 @@ import (
 // The undo must hand on a value valid under the schema sent, clearing nothing.
 func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
 	t.Parallel()
-	registry := compose.NewRegistry(nil, compose.SendPath{})
-	specs := registry.Specs()
-	if len(specs) < 100 {
-		t.Fatalf("the registry offered %d tools; the census lost its subject", len(specs))
-	}
-	schemas := stepSchemas(t, registry)
-	for _, spec := range specs {
-		schemas[spec.Name] = spec.InputSchema
-	}
+	schemas := wireSchemas(t)
 	padded, branched := 0, 0
 	for name, original := range schemas {
 		strict, err := ai.GeminiStrictSchema(original)
@@ -76,6 +70,138 @@ func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
 	if padded == 0 || branched == 0 {
 		t.Fatalf("%d schemas were padded and %d had branches, so the undo was not exercised", padded, branched)
 	}
+}
+
+// wireSchemas are every schema a Gemini tool call is sent under: each
+// registered tool's arguments, and the runner's step schemas over them.
+func wireSchemas(t *testing.T) map[string]json.RawMessage {
+	t.Helper()
+	registry := compose.NewRegistry(nil, compose.SendPath{})
+	specs := registry.Specs()
+	if len(specs) < 100 {
+		t.Fatalf("the registry offered %d tools; the census lost its subject", len(specs))
+	}
+	schemas := stepSchemas(t, registry)
+	for _, spec := range specs {
+		schemas[spec.Name] = spec.InputSchema
+	}
+	return schemas
+}
+
+// The strict wire's undo cannot round-trip two shapes, and no schema sent
+// today has either. A schema that adds one fails here, naming it, rather than
+// reaching Gemini:
+//
+//   - a key declared both on a node and in one of its anyOf or oneOf branches,
+//     nullable in one and not the other, so the padding is read two ways;
+//   - an anyOf or oneOf branch that requires keys but declares no properties,
+//     beside padded properties of the node, which the branch cannot match.
+//
+// The round-trip gate below also fills a node's own properties beside its
+// branch. No schema sent today declares both, so removing the node-level walk
+// from the undo leaves that gate green; TestGeminiUndoesANodesOwnPaddingBesideItsBranch
+// in modules/ai holds it instead.
+func TestNoWireSchemaHasAShapeTheStrictUndoCannotRoundTrip(t *testing.T) {
+	t.Parallel()
+	for name, raw := range wireSchemas(t) {
+		var schema map[string]any
+		if err := json.Unmarshal(raw, &schema); err != nil {
+			t.Fatal(err)
+		}
+		for _, found := range strictWireMisfits(schema, "$") {
+			t.Errorf("%s: %s; geministrict cannot round-trip it, so change the schema or teach the undo first", name, found)
+		}
+	}
+}
+
+// Each shape the census names is found where it is, and a schema without it
+// passes.
+func TestTheStrictWireMisfitCensusFindsEachShape(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		schema string
+		want   string
+	}{
+		"a key nullable on the node and not in the branch": {
+			`{"type":"object","properties":{"note":{"type":["string","null"]}},"anyOf":[{"type":"object","properties":{"note":{"type":"string"}}}]}`,
+			"note",
+		},
+		"a branch that requires keys and declares none": {
+			`{"type":"object","properties":{"note":{"type":"string"}},"anyOf":[{"required":["id"]}]}`,
+			"requires keys",
+		},
+		"either shape one level down": {
+			`{"type":"object","properties":{"args":{"type":"object","properties":{"note":{"type":"string"}},"oneOf":[{"required":["id"]}]}}}`,
+			"$.properties.args",
+		},
+		"neither shape": {
+			`{"type":"object","properties":{"note":{"type":"string"}},"anyOf":[{"type":"object","properties":{"note":{"type":"string"}},"required":["note"]}]}`,
+			"",
+		},
+	} {
+		var schema map[string]any
+		if err := json.Unmarshal([]byte(tc.schema), &schema); err != nil {
+			t.Fatal(err)
+		}
+		found := strings.Join(strictWireMisfits(schema, "$"), "; ")
+		if (tc.want == "") != (found == "") || !strings.Contains(found, tc.want) {
+			t.Errorf("%s: found %q, want one naming %q", name, found, tc.want)
+		}
+	}
+}
+
+// strictWireMisfits names, by path, each place in schema with a shape the
+// strict undo cannot round-trip, at every depth a schema nests another.
+func strictWireMisfits(schema map[string]any, path string) []string {
+	var found []string
+	props, _ := schema["properties"].(map[string]any)
+	required := stringsOf(schema["required"])
+	paddedOwn := false
+	for key, prop := range props {
+		node, _ := prop.(map[string]any)
+		paddedOwn = paddedOwn || (!slices.Contains(required, key) && !nullable(node))
+	}
+	for i, branch := range branchesOf(schema) {
+		branchProps, declared := branch["properties"].(map[string]any)
+		if !declared && len(stringsOf(branch["required"])) > 0 && paddedOwn {
+			found = append(found, fmt.Sprintf("%s: branch %d requires keys but declares no properties beside padded ones", path, i))
+		}
+		for key, own := range props {
+			ownNode, _ := own.(map[string]any)
+			theirs, ok := branchProps[key].(map[string]any)
+			if ok && nullable(ownNode) != nullable(theirs) {
+				found = append(found, fmt.Sprintf("%s: %s is nullable on the node or in branch %d and not in the other", path, key, i))
+			}
+		}
+	}
+	for key, prop := range props {
+		if node, ok := prop.(map[string]any); ok {
+			found = append(found, strictWireMisfits(node, path+".properties."+key)...)
+		}
+	}
+	for _, key := range []string{"items", "additionalProperties"} {
+		if node, ok := schema[key].(map[string]any); ok {
+			found = append(found, strictWireMisfits(node, path+"."+key)...)
+		}
+	}
+	for i, branch := range branchesOf(schema) {
+		found = append(found, strictWireMisfits(branch, fmt.Sprintf("%s.branch%d", path, i))...)
+	}
+	return found
+}
+
+// branchesOf are a schema's anyOf, oneOf and allOf members that are objects.
+func branchesOf(schema map[string]any) []map[string]any {
+	var out []map[string]any
+	for _, key := range []string{"anyOf", "oneOf", "allOf"} {
+		members, _ := schema[key].([]any)
+		for _, member := range members {
+			if node, ok := member.(map[string]any); ok {
+				out = append(out, node)
+			}
+		}
+	}
+	return out
 }
 
 // stepSchemas are the runner's own step schemas, captured at the model
@@ -133,7 +259,15 @@ func (*stepRecorder) PromptWindow() int { return 0 }
 //craft:ignore naked-any a JSON schema decoded generically holds values of any JSON type, and so does the value it describes
 func leastValue(schema map[string]any, choice, depth int) any {
 	if branches := nonNullBranches(schema); len(branches) > 0 {
-		return leastValue(branches[choice%len(branches)], choice, depth)
+		value := leastValue(branches[choice%len(branches)], choice, depth)
+		branchObject, isObject := value.(map[string]any)
+		if _, own := schema["properties"]; !own || !isObject {
+			return value
+		}
+		// The node's own properties are written beside the branch's.
+		out := leastObject(schema, choice, depth)
+		maps.Copy(out, branchObject)
+		return out
 	}
 	if values, ok := schema["enum"].([]any); ok && len(values) > 0 {
 		return values[0]

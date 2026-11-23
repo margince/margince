@@ -81,7 +81,7 @@ func buildRecord(task ai.Task, taskVerdict string, acc *taskAccumulation, profil
 		CertifiedScope:       acc.certifiedScope,
 		ContextApplied:       acc.contextOwed > 0 && acc.contextServed == acc.contextOwed,
 		ContextScopes:        declaredCompanyContextScopes(task),
-		ContextOwed:          acc.contextOwed,
+		ContextOwed:          new(acc.contextOwed),
 		JudgeScoreP50:        judgeP50,
 		JudgeScoreMin:        judgeMin,
 		LatencyP50:           percentile(sortedLatencies, 0.50),

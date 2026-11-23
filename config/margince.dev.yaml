@@ -66,11 +66,10 @@ seeds:
       cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
       premium:     { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
       frontier:    { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
-    # As gemini_cloud.yaml: the scheduled agents, reply drafts, search plans
-    # and voice builds answer on premium first.
+    # As gemini_cloud.yaml: the scheduled agents, search plans and voice
+    # builds answer on premium first.
     task_ladders:
       agent_loop: [premium, cheap_cloud]
-      draft_reply: [premium, cheap_cloud]
       nl_search: [premium, cheap_cloud]
       voice_build: [premium, cheap_cloud]
     # The embed lane rides the SAME provider as the tiers above, so a dev

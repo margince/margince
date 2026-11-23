@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -96,9 +97,8 @@ type Record struct {
 	// set.
 	ContextScopes []string `json:"context_scopes"`
 	// ContextOwed counts the runs production would send company context with.
-	// Zero means none of the record's rows owed it, so context_applied says
-	// nothing about them; a merge reads it to combine two measurements' claims.
-	ContextOwed int `json:"context_owed,omitempty"`
+	// Nil is a record written before it was counted: unknown, not zero.
+	ContextOwed *int `json:"context_owed,omitempty"`
 	// JudgeScoreP50/JudgeScoreMin are the JUDGE's grade: a model scoring the
 	// reply's prose against a written rubric, pooled across the runs.
 	//
@@ -208,6 +208,9 @@ type ScenarioRecord struct {
 	// Leaks is how many of a privacy case's runs leaked, which its verdict
 	// turns on; absent on a row written before rows kept it.
 	Leaks *int `json:"leaks,omitempty"`
+	// ContextOwed counts this row's runs production would send company context
+	// with. Nil is a row written before it was counted: unknown, not zero.
+	ContextOwed *int `json:"context_owed,omitempty"`
 	// The same reported-outcome counts the task carries, on this scenario's own
 	// runs: they say what came back, never whether it was what was asked for.
 	ReportedAccepted    int `json:"reported_accepted"`
@@ -350,9 +353,10 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 	return tally, true
 }
 
-// meetsCertifiedOnEstimate says more runs alone could certify cases: the pass
+// meetsCertifiedOnEstimate says more runs alone could certify cases. The pass
 // rate reaches certifiedPassPercent and the judge's mean margin over
-// certified_min is not below 0. A site short on either is weak, not short.
+// certified_min is not below 0. No case has a score under its floor, which caps
+// it whatever follows. A site short on any of these is weak, not short.
 func meetsCertifiedOnEstimate(cases []caseStats) bool {
 	runs, passed := 0, 0
 	for _, c := range cases {
@@ -361,7 +365,8 @@ func meetsCertifiedOnEstimate(cases []caseStats) bool {
 	}
 	margins := marginsOver(cases, func(b Bands) int { return b.CertifiedMin })
 	mean, _ := meanAndSD(margins)
-	return passed*100 >= certifiedPassPercent*runs && (len(margins) == 0 || mean >= 0)
+	return passed*100 >= certifiedPassPercent*runs && (len(margins) == 0 || mean >= 0) &&
+		!slices.ContainsFunc(cases, underFloor)
 }
 
 // SiteTooFewRuns is a site's grade when its pool meets the certified bar on

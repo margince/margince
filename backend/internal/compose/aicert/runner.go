@@ -410,6 +410,8 @@ type taskAccumulation struct {
 	// contextServed those served it. The record claims the context only when
 	// every run owed it was served it.
 	contextOwed, contextServed int
+	// owedBy counts contextOwed per scenario, for each row's own count.
+	owedBy map[string]int
 	// certifiedScope is the narrowest scope any run's site covered. A task is
 	// one record but not always one site — cold_start ships a one-shot
 	// extraction beside three multi-turn conversations — so the record may
@@ -448,6 +450,10 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	acc.certifiedScope = aitasks.NarrowerScope(acc.certifiedScope, outcome.CertifiedScope)
 	if outcome.ContextOwed {
 		acc.contextOwed++
+		if acc.owedBy == nil {
+			acc.owedBy = map[string]int{}
+		}
+		acc.owedBy[sc.Name]++
 		if outcome.ContextApplied {
 			acc.contextServed++
 		}

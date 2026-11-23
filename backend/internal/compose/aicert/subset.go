@@ -110,8 +110,8 @@ func mergeIntoCommitted(dir string, measured Record, corpus []Scenario) (Record,
 	merged.Scenarios = rows
 	regradeFromRows(&merged)
 	merged.CertifiedScope = aitasks.NarrowerScope(prior.CertifiedScope, measured.CertifiedScope)
-	merged.ContextApplied = mergedContextClaim(prior, measured)
-	merged.ContextOwed = prior.ContextOwed + measured.ContextOwed
+	merged.ContextApplied = mergedContextClaim(prior, measured, rows)
+	merged.ContextOwed = owedOver(rows)
 
 	// Every row the record pools vouches for these, so each reads the worse run.
 	// That is a judge of the candidate's family, and the oldest row it keeps.
@@ -126,17 +126,35 @@ func mergeIntoCommitted(dir string, measured Record, corpus []Scenario) (Record,
 	return merged, nil
 }
 
-// mergedContextClaim is context_applied over both measurements' rows. A side
-// that owed no context says nothing, so the other side's claim stands.
-func mergedContextClaim(prior, measured Record) bool {
+// mergedContextClaim is context_applied over the merged rows. The rows kept
+// from prior owe what prior's own claim covered; when they owed nothing, only
+// measured's rows speak. A count prior never wrote is unknown, so the claim is
+// never raised over rows whose context nobody counted.
+func mergedContextClaim(prior, measured Record, rows []ScenarioRecord) bool {
+	measuredOwed := owedOver(measured.Scenarios)
+	keptOwed := owedOver(slices.DeleteFunc(slices.Clone(rows), func(row ScenarioRecord) bool {
+		return slices.ContainsFunc(measured.Scenarios, func(m ScenarioRecord) bool { return m.Scenario == row.Scenario })
+	}))
 	switch {
-	case measured.ContextOwed == 0:
-		return prior.ContextApplied
-	case prior.ContextOwed == 0:
+	case keptOwed != nil && *keptOwed == 0:
 		return measured.ContextApplied
+	case measuredOwed != nil && *measuredOwed == 0:
+		return prior.ContextApplied
 	default:
 		return prior.ContextApplied && measured.ContextApplied
 	}
+}
+
+// owedOver sums rows' context counts, nil when any row predates them.
+func owedOver(rows []ScenarioRecord) *int {
+	total := 0
+	for _, row := range rows {
+		if row.ContextOwed == nil {
+			return nil
+		}
+		total += *row.ContextOwed
+	}
+	return &total
 }
 
 // mergeable refuses a committed record whose rows were measured under

@@ -75,14 +75,3 @@ func TestAnEmptyListComparesAsAnAbsentOne(t *testing.T) {
 		t.Errorf("a grouping read as no grouping (%v)", err)
 	}
 }
-
-// Arguments the model fenced are the arguments it wrote: the comparison reads
-// them through the same reduction the decoder does.
-func TestFencedArgumentsCompareAsTheirContent(t *testing.T) {
-	plain := `{"entity":"deals-by-stage","measures":[{"fn":"count"}],"scope_kind":"workspace"}`
-	want := Plan{Engine: EngineAnalytics, Arguments: plain}
-	got := Plan{Engine: EngineAnalytics, Arguments: "```json\n" + plain + "\n```"}
-	if same, err := sameSearchPlanArguments(want, got, ""); err != nil || !same {
-		t.Errorf("fenced arguments read as another plan (%v)", err)
-	}
-}

@@ -8,6 +8,7 @@ package aicert
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -251,48 +252,89 @@ func TestAFilteredRunIsRefusedARecordMeasuredOverAnotherWire(t *testing.T) {
 	}
 }
 
-// A subset that owed no company context says nothing about whether the rows it
-// leaves standing carried it.
-func TestASubsetThatOwedNoContextKeepsTheRecordsClaim(t *testing.T) {
+// withOwed is rec with each row's context count set to owed and the record's
+// set to their sum. Nil leaves every count unwritten, as an older record has it.
+func withOwed(rec Record, owed *int) Record {
+	rec.Scenarios = slices.Clone(rec.Scenarios)
+	rec.ContextOwed = nil
+	for i := range rec.Scenarios {
+		rec.Scenarios[i].ContextOwed = owed
+	}
+	if owed != nil {
+		rec.ContextOwed = new(*owed * len(rec.Scenarios))
+	}
+	return rec
+}
+
+// mergeContext writes committed, merges measured into it, and returns the result.
+func mergeContext(t *testing.T, committed, measured Record) Record {
+	t.Helper()
 	dir := t.TempDir()
-	corpus := mixedCorpus()
-	committed := certifyCorpusWith(t, corpus, "")
-	committed.ContextApplied, committed.ContextOwed = true, 9
 	if err := WriteRecord(dir, committed); err != nil {
 		t.Fatalf("writing the committed record: %v", err)
 	}
-	measured := certifyCorpusWith(t, corpus[:1], "")
-	measured.ContextApplied, measured.ContextOwed = false, 0
-	merged, err := mergeIntoCommitted(dir, measured, corpus)
+	merged, err := mergeIntoCommitted(dir, measured, mixedCorpus())
 	if err != nil {
 		t.Fatalf("merging: %v", err)
 	}
-	if !merged.ContextApplied {
-		t.Error("a subset that owed no context wiped the record's context_applied")
+	return merged
+}
+
+// context_applied over a merge reads only the rows that owed context, and is
+// never raised over rows whose context nobody counted.
+func TestAMergedContextClaimReadsTheRowsThatOwedIt(t *testing.T) {
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	measured := certifyCorpusWith(t, corpus[:1], "")
+
+	// Shaped like an older record: it owed context (it names scopes), was not
+	// served it, and never wrote a count.
+	older := withOwed(committed, nil)
+	older.ContextApplied, older.ContextScopes = false, []string{"identity"}
+	served := withOwed(measured, new(3))
+	served.ContextApplied = true
+	if mergeContext(t, older, served).ContextApplied {
+		t.Error("a subset that carried context raised the claim over older rows nobody counted")
 	}
-	measured.ContextOwed = 3
-	if merged, err = mergeIntoCommitted(dir, measured, corpus); err != nil || merged.ContextApplied {
-		t.Errorf("a subset that owed context and did not carry it kept context_applied (%v)", err)
+
+	unowed := withOwed(committed, new(0))
+	if !mergeContext(t, unowed, served).ContextApplied {
+		t.Error("rows that owed no context kept the claim down after the subset that owed it carried it")
+	}
+
+	carried := withOwed(committed, new(3))
+	carried.ContextApplied = true
+	quiet := withOwed(measured, new(0))
+	if !mergeContext(t, carried, quiet).ContextApplied {
+		t.Error("a subset that owed no context wiped the claim of the rows that did")
+	}
+	missed := withOwed(measured, new(3))
+	missed.ContextApplied = false
+	if mergeContext(t, carried, missed).ContextApplied {
+		t.Error("a subset that owed context and missed it kept the claim")
 	}
 }
 
-// A record that owed no context gains the claim of a subset that owed and
-// carried it.
-func TestARecordThatOwedNoContextTakesTheSubsetsClaim(t *testing.T) {
-	dir := t.TempDir()
+// A measured row replaces a committed one, so its context count is counted
+// once, however often the merge is made.
+func TestAMergeCountsAReplacedRowsContextOnce(t *testing.T) {
 	corpus := mixedCorpus()
-	committed := certifyCorpusWith(t, corpus, "")
-	committed.ContextApplied, committed.ContextOwed = false, 0
+	committed := withOwed(certifyCorpusWith(t, corpus, ""), new(3))
+	measured := withOwed(certifyCorpusWith(t, corpus[:1], ""), new(3))
+	dir := t.TempDir()
 	if err := WriteRecord(dir, committed); err != nil {
 		t.Fatalf("writing the committed record: %v", err)
 	}
-	measured := certifyCorpusWith(t, corpus[:1], "")
-	measured.ContextApplied, measured.ContextOwed = true, 3
-	merged, err := mergeIntoCommitted(dir, measured, corpus)
-	if err != nil {
-		t.Fatalf("merging: %v", err)
-	}
-	if !merged.ContextApplied {
-		t.Error("a record that owed no context kept context_applied false after a subset carried it")
+	for range 2 {
+		merged, err := mergeIntoCommitted(dir, measured, corpus)
+		if err != nil {
+			t.Fatalf("merging: %v", err)
+		}
+		if merged.ContextOwed == nil || *merged.ContextOwed != *committed.ContextOwed {
+			t.Fatalf("merged context_owed = %v, want %d: a replaced row counted twice", merged.ContextOwed, *committed.ContextOwed)
+		}
+		if err := WriteRecord(dir, merged); err != nil {
+			t.Fatalf("writing the merged record: %v", err)
+		}
 	}
 }

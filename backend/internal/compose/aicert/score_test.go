@@ -280,6 +280,12 @@ func TestASiteWithTooFewRunsIsNotCalledWeak(t *testing.T) {
 	if tally, _ := (aicert.Record{Scenarios: []aicert.ScenarioRecord{eightOfNine}}).ForSite("field_extract"); tally.Verdict == aicert.SiteTooFewRuns {
 		t.Error("8 of 9 right reads too_few_runs, want its weak grade")
 	}
+	// Every try right and a mean over the bar, but one score under the floor.
+	// That caps the case below certified, and more runs cannot lift it.
+	underFloor := aicert.ScenarioRecord{Site: "field_extract", Runs: 9, Passed: 9, JudgeScores: []int{95, 95, 30, 95, 95, 95, 95, 95, 95}, Bands: bands}
+	if tally, _ := (aicert.Record{Scenarios: []aicert.ScenarioRecord{underFloor}}).ForSite("field_extract"); tally.Verdict == aicert.SiteTooFewRuns {
+		t.Error("a site with a case under its floor reads too_few_runs, want its weak grade")
+	}
 	four := []aicert.ScenarioRecord{right, right, right, right}
 	if tally, _ := (aicert.Record{Scenarios: four}).ForSite("field_extract"); tally.Verdict != aicert.VerdictCertified {
 		t.Errorf("12 of 12 right reads %q, want certified", tally.Verdict)
