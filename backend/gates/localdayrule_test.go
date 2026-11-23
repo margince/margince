@@ -22,7 +22,7 @@ import (
 // localDaySpellings are the ways code resolves a calendar day or zone.
 var localDaySpellings = regexp.MustCompile(
 	`installationZone\(|TaskDue(Before|From|Order)SQL\(|InstallationZoneSQL|CURRENT_DATE|now\(\)::date|AT TIME ZONE|` +
-		`date_trunc\('day'|Truncate\(24 ?\* ?time\.Hour\)|identity\.TimezoneOf|TimezoneAppliedTx|ZoneAppliedTx|TodaySQL\(`)
+		`date_trunc\('day'|Truncate\(24 ?\* ?time\.Hour\)|TimezoneAppliedTx|ZoneAppliedTx|TodaySQL\(`)
 
 // ruleOwned is the code that implements the rule or owns the stored zone.
 var ruleOwned = []string{

@@ -1,10 +1,8 @@
 {
   "verb": "accept_attachment_extraction",
   "checks": [
-    "company.read",
     "deal.read",
-    "deal.update",
-    "project.read"
+    "deal.update"
   ],
   "takes": [
     "attachment",

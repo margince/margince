@@ -3,7 +3,6 @@
   "checks": [
     "company.read",
     "deal.read",
-    "installation_settings.read",
     "project.read"
   ]
 }

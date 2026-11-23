@@ -137,7 +137,7 @@ func (s *Store) lockClosedDeal(ctx context.Context, tx pgx.Tx, id ids.DealID) (c
 }
 
 func (s *Store) installationZoneIn(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
-	tzName, err := s.installation.Timezone(ctx, tx)
+	tzName, err := s.installation.TimezoneApplied(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("resolve the installation's timezone: %w", err)
 	}

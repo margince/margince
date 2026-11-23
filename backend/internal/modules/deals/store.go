@@ -110,11 +110,9 @@ type Installation struct {
 	// KnownCountry answers whether a code is an assigned ISO 3166-1 alpha-2
 	// country. `contacts` owns the list.
 	KnownCountry KnownCountry
-	// Timezone is the IANA zone a "today" is computed in.
-	Timezone InstallationValue
-	// BaseCurrencyApplied and TimezoneApplied answer the same two values
-	// without the installation_settings gate, for a read that only orders by
-	// them (the deal list's Value sort).
+	// BaseCurrencyApplied and TimezoneApplied answer the base currency and the
+	// zone a "today" is computed in. They skip the installation_settings gate,
+	// so counting days and ordering by value need no settings grant.
 	BaseCurrencyApplied InstallationValue
 	TimezoneApplied     InstallationValue
 	// StampCorrespondence shields the correspondence a concluded deal turns
@@ -186,7 +184,7 @@ func NewStore(db *database.DB, inst Installation) *Store {
 // craft gate's panic-in-domain rule).
 func (i Installation) orRefusing() Installation {
 	for name, f := range map[string]*InstallationValue{
-		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency, "Timezone": &i.Timezone,
+		"Name": &i.Name, "BaseCurrency": &i.BaseCurrency,
 		"IssuerLegalName": &i.IssuerLegalName, "BaseCurrencyApplied": &i.BaseCurrencyApplied,
 		"TimezoneApplied": &i.TimezoneApplied, "Country": &i.Country,
 	} {
@@ -253,7 +251,7 @@ func refusing(field string) InstallationValue {
 	return func(context.Context, pgx.Tx) (string, error) {
 		return "", errors.New("deals: the installation " + field + " seam was not injected; " +
 			"construct this store with installseam.Deals(), which binds identity's " +
-			"NameOf/BaseCurrencyOf/TimezoneOf and contacts's ConfirmedIssuerLegalName")
+			"NameOf/BaseCurrencyOf/TimezoneAppliedTx and contacts's ConfirmedIssuerLegalName")
 	}
 }
 

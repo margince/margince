@@ -3,7 +3,6 @@
   "checks": [
     "activity.read",
     "deal.read",
-    "installation_settings.read",
     "scope:team"
   ]
 }

@@ -2,8 +2,7 @@
   "verb": "record_sales_decision",
   "checks": [
     "activity.create",
-    "activity.read",
-    "installation_settings.read"
+    "activity.read"
   ],
   "takes": [
     "deal",

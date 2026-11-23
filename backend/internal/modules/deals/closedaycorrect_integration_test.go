@@ -40,7 +40,7 @@ func setupClosedDealEnv(t *testing.T) closeDayEnv {
 	// Winning stamps correspondence and starts delivery through seams the
 	// composition injects; neither is under test here.
 	e.store = NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
-		Timezone:                func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
+		TimezoneApplied:         func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
 		BaseCurrency:            func(context.Context, pgx.Tx) (string, error) { return "EUR", nil },
 		StampCorrespondence:     func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
 		StartDeliveryForWonDeal: func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
@@ -184,7 +184,7 @@ func TestACloseDayCorrectionRefusesWhatItCannotHold(t *testing.T) {
 func TestAnOpenDealHasNoCloseDayToCorrect(t *testing.T) {
 	e := setupConfigEnv(t)
 	e.store = NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
-		Timezone: func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
+		TimezoneApplied: func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
 	})
 	deal := seedDealInStage(t, e, openStage(t, e, SemanticOpen))
 	_, err := e.store.CorrectCloseDay(e.asDealWriter(), deal, CorrectCloseDayInput{ClosedOn: clocktest.Now(t).UTC()})
