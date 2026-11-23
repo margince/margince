@@ -80,3 +80,26 @@ func TestAGroupedPageFitsInTheLargestRankedPage(t *testing.T) {
 			elements, maxPerType, elements*maxPerType, largest)
 	}
 }
+
+func TestAGroupedPageNamesTheTypesThatRanOutOfTimeInBranchOrder(t *testing.T) {
+	t.Parallel()
+	hits := []Hit{{Type: "contact", ID: ids.NewV7()}, {Type: "contact", ID: ids.NewV7()}}
+	page := groupedShape{perType: 1}.pageWith(hits, []string{"activity", "company"})
+	if want := []string{"company", "activity"}; !slices.Equal(page.TypesTimedOut, want) {
+		t.Errorf("TypesTimedOut = %v, want %v, the order of searchBranches", page.TypesTimedOut, want)
+	}
+	if slices.Contains(page.TypesWithMore, "activity") || !slices.Equal(page.TypesWithMore, []string{"contact"}) {
+		t.Errorf("TypesWithMore = %v, want [contact] and no type that timed out", page.TypesWithMore)
+	}
+	if whole := (groupedShape{perType: 1}).page(nil); whole.TypesTimedOut == nil || len(whole.TypesTimedOut) != 0 {
+		t.Errorf("a grouped page where every type answered has TypesTimedOut = %#v, want non-nil and empty", whole.TypesTimedOut)
+	}
+}
+
+func TestTheLaneWithARankSampleRunsLast(t *testing.T) {
+	t.Parallel()
+	got := laneOrder([]string{"activity", "contact", "company", "lead"})
+	if want := []string{"contact", "company", "lead", "activity"}; !slices.Equal(got, want) {
+		t.Errorf("laneOrder = %v, want %v", got, want)
+	}
+}
