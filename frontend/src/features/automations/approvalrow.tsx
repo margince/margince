@@ -23,6 +23,7 @@ import {
   type Approval,
   invalidateApprovalViews,
 } from "../../lib/approvals.queries";
+import { useReaderStageNames } from "../../lib/approvalstagenames";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { recordRoute } from "../../lib/entity";
 import { hideHomeRows } from "../../lib/homerows";
@@ -127,6 +128,7 @@ function DecidableApprovalRow({
   extraInvalidateKeys?: readonly QueryKey[];
 }>) {
   const t = useT();
+  const readerStages = useReaderStageNames();
   const plural = usePlural();
   const { locale } = useLocale();
   const viewerId = useViewerId();
@@ -357,7 +359,15 @@ function DecidableApprovalRow({
             <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
           )}
           {/* kind is meta, not the headline — the human reads the summary first */}
-          <span className="t-caption">{approvalLabel(approval, t)}</span>
+          <span className="t-caption">
+            {approvalLabel(
+              {
+                ...approval,
+                proposed_change: readerStages(approval.proposed_change),
+              },
+              t,
+            )}
+          </span>
           <DecisionStatusChip
             approval={approval}
             decided={!!decided}

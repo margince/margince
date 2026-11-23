@@ -33,6 +33,7 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
+import { useReaderStageNames } from "../../lib/approvalstagenames";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { hideHomeRows } from "../../lib/homerows";
 import { fromHere } from "../../lib/navigatefrom";
@@ -232,6 +233,7 @@ export function DecisionsSection({
   const plural = usePlural();
   const { locale } = useLocale();
   const stagedDay = stagedDayFormatter(locale, readerZone);
+  const readerStages = useReaderStageNames();
   const approvalNames = useApprovalNames(
     items.flatMap((item) =>
       item.kind === "single" ? [item.approval] : item.members,
@@ -419,7 +421,10 @@ export function DecisionsSection({
 
           display: resolveDisplay(
             approval.kind,
-            (approval.proposed_change ?? {}) as Record<string, unknown>,
+            (readerStages(approval.proposed_change) ?? {}) as Record<
+              string,
+              unknown
+            >,
             t,
             stagedDay,
             approvalNames,

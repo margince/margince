@@ -7,7 +7,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { deckItems } from "../../lib/brief.decisions.items";
-import { proposal, render, stubApi } from "../../testing/brief.testkit";
+import {
+  jsonResponse,
+  proposal,
+  render,
+  stubApi,
+} from "../../testing/brief.testkit";
 import { DecisionsSection } from "./brief.decisions";
 
 afterEach(() => {
@@ -16,7 +21,25 @@ afterEach(() => {
 });
 
 it("shows the stages a proposal-stage question skips, in the deck", async () => {
-  stubApi({});
+  stubApi({
+    "GET /pipelines": () =>
+      jsonResponse({
+        data: [
+          {
+            id: "pl-1",
+            name: "Sales",
+            is_default: true,
+            stages: [
+              {
+                id: "st-qualified",
+                name: "Qualified",
+                name_translations: { en: "Vetted" },
+              },
+            ],
+          },
+        ],
+      }),
+  });
   const user = userEvent.setup();
   const queue = [
     proposal(
@@ -27,6 +50,7 @@ it("shows the stages a proposal-stage question skips, in the deck", async () => 
         proposed_by: "system:proposal-stage",
         proposed_change: {
           to_stage_name: "Proposal",
+          skipped_stage_ids: ["st-qualified", "st-discovery"],
           skipped_stage_names: ["Qualified", "Discovery"],
         },
       },
@@ -46,5 +70,5 @@ it("shows the stages a proposal-stage question skips, in the deck", async () => 
   expect(
     await screen.findByText(en["approval.field.skipped_stages"]),
   ).toBeTruthy();
-  expect(screen.getByText("Qualified, Discovery")).toBeTruthy();
+  expect(await screen.findByText("Vetted, Discovery")).toBeTruthy();
 });

@@ -9,6 +9,7 @@ import { Row } from "../../../design-system/stack";
 import { AutonomyDot, ProvenanceTag } from "../../../design-system/trust";
 import { useT } from "../../../i18n";
 import { approvalLabel } from "../../../lib/approvalkindlabel";
+import { useReaderStageNames } from "../../../lib/approvalstagenames";
 import { approvalDotTier, useAgentTierMap } from "../../../lib/autonomy";
 import { useOpenApproval } from "../../../lib/openapproval";
 import { useViewerId } from "../../../lib/session";
@@ -32,6 +33,7 @@ export function DealApprovals({
   const tierMap = useAgentTierMap();
   const viewerId = useViewerId();
   const openApproval = useOpenApproval();
+  const readerStages = useReaderStageNames();
   if (approvals.length === 0) {
     return null;
   }
@@ -47,7 +49,15 @@ export function DealApprovals({
               <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
               {/* The same two facts the approvals inbox states, said the same
                 way, not the wire names `advance_deal` and `agent:capture`. */}
-              <span className="t-label">{approvalLabel(approval, t)}</span>
+              <span className="t-label">
+                {approvalLabel(
+                  {
+                    ...approval,
+                    proposed_change: readerStages(approval.proposed_change),
+                  },
+                  t,
+                )}
+              </span>
               <ProvenanceTag
                 provenance={provenanceOf(approval.proposed_by, viewerId)}
               />
