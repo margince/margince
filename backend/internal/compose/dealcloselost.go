@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -189,6 +190,10 @@ func closeDecisions(ctx context.Context, tx pgx.Tx, now time.Time, only []ids.UU
 	if err != nil {
 		return nil, err
 	}
+	backfilled, err := capture.StakeholderBackfillDoneTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
 	var out []closeDecision
 	for _, subject := range subjects {
 		dealFacts := facts[subject.DealID]
@@ -196,7 +201,7 @@ func closeDecisions(ctx context.Context, tx pgx.Tx, now time.Time, only []ids.UU
 		if err != nil || !mailRead(&owner, dealFacts.mailboxes) {
 			continue
 		}
-		if decision, ok := decideClose(subject, dealFacts, threshold, now, zone); ok {
+		if decision, ok := decideClose(subject, dealFacts, threshold, now, zone, !backfilled); ok {
 			out = append(out, decision)
 		}
 	}
@@ -223,8 +228,11 @@ func closeMailRead(
 // decideClose is the rule; it needs the owner's mail read on time. It closes
 // nothing while a wait, an accepted meeting or an owed reply is open. Else a
 // deal closes when the customer refused, or after threshold days of silence.
+// While silenceHeld, no deal closes for silence: the stakeholder mail backfill
+// has not yet filed the mail that decides whether the customer was answering.
+// A refusal does not rest on silence, so it still closes.
 func decideClose(
-	subject assurance.Subject, facts closeFacts, threshold int, now time.Time, zone *time.Location,
+	subject assurance.Subject, facts closeFacts, threshold int, now time.Time, zone *time.Location, silenceHeld bool,
 ) (closeDecision, bool) {
 	owner, err := ids.Parse(subject.Owner)
 	assessed := subject.Viability
@@ -246,7 +254,7 @@ func decideClose(
 		decision.code, decision.reason = deals.LossReasonOther, systemtext.Literal("deal.customer_declined")
 		decision.reasonCode, decision.refusal = "deal.customer_declined", facts.refusal
 		return decision, true
-	case silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
+	case !silenceHeld && silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
 		decision.code = deals.LossReasonWentSilent
 		decision.reason = silenceReason(silentDays, assessed.SilentDays, threshold)
 		decision.reasonCode, decision.reasonDays = silenceReasonParts(silentDays, assessed.SilentDays, threshold)

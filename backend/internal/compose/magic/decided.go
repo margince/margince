@@ -37,6 +37,9 @@ type DecidedReceipt struct {
 	Kind       string
 	Summary    string
 	OccurredAt time.Time
+	// ListedAt is when the receipt joined the list; zero means OccurredAt. The
+	// lane orders and windows by it.
+	ListedAt time.Time
 	// TargetType is empty when the decision named no record.
 	TargetType string
 	TargetID   ids.UUID
@@ -121,7 +124,7 @@ func decidedLine(receipt DecidedReceipt) crmcontracts.MagicLine {
 	line := crmcontracts.MagicLine{
 		Id:         openapi_types.UUID(receipt.ID),
 		ReceiptIds: new([]openapi_types.UUID{openapi_types.UUID(receipt.ID)}),
-		OccurredAt: receipt.OccurredAt,
+		OccurredAt: listedOrOccurred(receipt),
 		Lane:       crmcontracts.MagicLineLaneMagicLaneDone,
 		Summary:    crmcontracts.MagicSentence{Key: sentence, Values: &values},
 		Actor: crmcontracts.MagicActor{
@@ -140,4 +143,12 @@ func decidedLine(receipt DecidedReceipt) crmcontracts.MagicLine {
 	}
 	line.Undo = receipt.Undo
 	return line
+}
+
+// listedOrOccurred is the instant the lane places a receipt at.
+func listedOrOccurred(receipt DecidedReceipt) time.Time {
+	if receipt.ListedAt.IsZero() {
+		return receipt.OccurredAt
+	}
+	return receipt.ListedAt
 }

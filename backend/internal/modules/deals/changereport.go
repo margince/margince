@@ -113,20 +113,20 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 		}
 		query := storekit.SQLf(`
 			WITH waiting AS (
-			  SELECT c.deal_id, c.audit_log_id, c.correction, c.applied_at,
+			  SELECT c.deal_id, c.audit_log_id, c.correction, c.applied_at, `+correctionListedSQL+` AS listed_at,
 			         (%s AND %s) AS undoable
 			    FROM deal_correction c
 			    JOIN deal d ON d.id = c.deal_id
 			    JOIN audit_log a ON a.id = c.audit_log_id AND a.entity_type = 'deal' AND a.entity_id = c.deal_id
 			   WHERE c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL
-			     AND ($%d::timestamptz IS NULL OR c.applied_at >= $%d) AND c.applied_at >= $%d
+			     AND ($%d::timestamptz IS NULL OR `+correctionListedSQL+` >= $%d) AND `+correctionListedSQL+` >= $%d
 			     AND d.owner_id = $%d AND d.archived_at IS NULL%s),
 			bundle AS (
 			  SELECT w.deal_id,
 			         array_agg(w.audit_log_id ORDER BY w.applied_at DESC, w.audit_log_id DESC) AS audits,
 			         coalesce(array_agg(w.audit_log_id ORDER BY w.applied_at DESC, w.audit_log_id DESC) FILTER (WHERE w.undoable), '{}') AS undoable,
 			         array_agg(DISTINCT w.correction) AS kinds,
-			         max(w.applied_at) AS latest
+			         max(w.listed_at) AS latest
 			    FROM waiting w
 			   GROUP BY w.deal_id)
 			SELECT b.deal_id, d.name, d.version, b.audits, b.undoable, b.kinds, b.latest, %s,
@@ -391,7 +391,7 @@ func PendingChangesFingerprintTx(ctx context.Context, tx pgx.Tx, owner ids.UUID,
 		return 0, err
 	}
 	const changes = `FROM deal_correction c JOIN deal d ON d.id = c.deal_id
-		WHERE c.correction = ANY($1) AND c.applied_at >= $2 AND d.owner_id = $3`
+		WHERE c.correction = ANY($1) AND ` + correctionListedSQL + ` >= $2 AND d.owner_id = $3`
 	if lock {
 		if _, err := tx.Exec(ctx, `SELECT 1 `+changes+` FOR SHARE OF c`, heldCorrections, since, owner); err != nil {
 			return 0, fmt.Errorf("deals: holding the changes a morning counts: %w", err)

@@ -53,7 +53,28 @@ func setupCloseLost(t *testing.T) *closeLostEnv {
 	v.GrantRole(t, v.Rep1, "rep")
 	closer := newSilentDealCloser(v.Pool, slog.New(slog.DiscardHandler))
 	closer.now = func() time.Time { return v.now }
-	return &closeLostEnv{viabilityEnv: v, closer: closer}
+	c := &closeLostEnv{viabilityEnv: v, closer: closer}
+	c.setBackfillFinished(t, true)
+	return c
+}
+
+// setBackfillFinished stores the stakeholder mail backfill as finished, or
+// removes its state as on an installation where it has not started. A close
+// for silence waits for it.
+func (c *closeLostEnv) setBackfillFinished(t *testing.T, finished bool) {
+	t.Helper()
+	err := database.WithWorkspaceTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
+		if !finished {
+			_, err := tx.Exec(c.Admin(), `DELETE FROM installation_state WHERE key = $1`, string(storekit.StateStakeholderMailBackfill))
+			return err
+		}
+		at := c.now
+		return storekit.StoreInstallationStateTx(c.Admin(), tx, storekit.StateStakeholderMailBackfill,
+			capture.StakeholderBackfillState{Version: capture.StakeholderBackfillVersion, FinishedAt: &at})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 // run is one nightly check, as the close-date sweep worker runs it.
