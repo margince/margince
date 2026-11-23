@@ -332,7 +332,7 @@ live under **Analytics**; see [Analytics and forecasting](analytics.md).
 
 ## Stage moves Margince makes
 
-Margince may move an open deal to a later stage when the customer's own words meet what the stage asks for. It tells you after, and you can undo the move. See [Deals the customer supports](deals-the-customer-supports.md#when-the-deal-reached-a-later-stage). Also called: stage automation, automatic stage moves.
+Margince may move an open deal to a later stage when the customer's own words meet what the stage asks for. It tells you after, and you can undo the move. See [Deals the customer supports](deals-the-customer-supports.md#when-the-deal-reached-a-later-stage). A sent proposal asks you instead: see [When a proposal goes out](offers-and-products.md#when-a-proposal-goes-out). Also called: stage automation, automatic stage moves.
 
 ## Deals Margince opens and reopens
 
@@ -342,7 +342,7 @@ Margince fills a new deal from the request. The amount is the budget the email s
 
 Private email counts too. Email private only because of a mailbox setting counts in full while **Share quotation requests from private mail** is on. The deal then shows what the customer asked for. Email someone protected still opens the deal, but the deal shows nothing from it.
 
-Both show on **Home** with **Undo**. Undo of a reopen closes the deal as lost again, with its earlier reason. See [Deals the customer supports](deals-the-customer-supports.md#when-a-lost-deals-customer-comes-back). Also called: revive a lost deal, automatic new deal.
+Both show on **Home** and on the deal page with **Undo**. Undo of a reopen closes the deal as lost again, with its earlier reason. See [Deals the customer supports](deals-the-customer-supports.md#when-a-lost-deals-customer-comes-back). Also called: revive a lost deal, automatic new deal.
 
 ## Badges on a deal card
 

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/completedchanges"
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/managermove"
@@ -239,7 +240,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionNotices{store: notices.NewStore(db), users: identity.NewService(db.Pool())},
 		newAttentionNames(db),
 		now,
-		attention.WithZone(attentionZone(pool)),
+		attention.WithZones(attentionZone(pool), dayrule.ActingReaderZone(pool)),
 		attention.WithMeetingsAwaitingOutcome(
 			attentionMeetingsAwaitingOutcome{store: activities.NewStore(db)}),
 		attention.WithNoticeCases(attentionNoticeCases{store: consent.NewStore(db)}),
@@ -282,7 +283,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithDealMoves(attentionDealMoves{cards: newDealStatusService(pool, now).WithManagerStandings(managermove.Standings(newForecastStore(db)))}).
 		WithDealStandings(attentionDealStandings{cards: cards}).
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
-		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
+		WithWeeklyPlans(attentionWeeklyPlan{store: WeeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
 		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
 }
 

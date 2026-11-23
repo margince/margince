@@ -2336,8 +2336,11 @@
       "id"
     ],
     "list_deal_margince_changes": [
+      "change_kind",
       "cursor",
-      "id"
+      "id",
+      "note_activity_id",
+      "stage_history_id"
     ],
     "list_deal_products": [
       "id"

@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -57,7 +58,12 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 		// the argument would get whatever the two happened to add up to, and
 		// be told nothing was cut.
 		asked := agents.CommitmentSweepLimit(in.Limit)
+		zone, dayZone, err := dayrule.ForAssignee(ctx, pool, in.AssigneeID)
+		if err != nil {
+			return agents.CommitmentSweep{}, err
+		}
 		query := activities.ListOpenTasksInput{
+			DayZone:    dayZone,
 			AsOf:       now,
 			AssigneeID: in.AssigneeID, Limit: asked,
 			// The bound cuts before the merge does, so the store has to keep
@@ -78,10 +84,6 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 			return agents.CommitmentSweep{}, err
 		}
 		said, saidMore, err := extractedCommitments(ctx, pool, claims, in, asked)
-		if err != nil {
-			return agents.CommitmentSweep{}, err
-		}
-		zone, err := installationZone(ctx, pool)
 		if err != nil {
 			return agents.CommitmentSweep{}, err
 		}

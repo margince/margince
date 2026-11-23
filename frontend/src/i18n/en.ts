@@ -3,6 +3,7 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
@@ -2832,6 +2833,8 @@ export const en = {
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Enter a search term.",
   "search.empty": "No matches for “{q}”.",
+  "search.timedOut":
+    "{kind} could not be searched for this word in time. Add another word to search them.",
   "search.nearMatches": "Did you mean:",
   "search.group.contact": "Contacts",
   "search.group.company": "Companies",
@@ -3855,6 +3858,8 @@ export const en = {
   "company.lifecycle.opportunity": "Opportunity",
   "company.lifecycle.onboarding": "Onboarding",
   "company.lifecycle.live": "Live",
+  "company.lifecycle.live.help":
+    "Live means the agreed first scope is in use. Only a colleague sets it, never an assistant or an automation.",
   "company.lifecycle.customer": "Customer",
   "company.lifecycle.former_customer": "Former customer",
   "company.lifecycle.disqualified": "Disqualified",
@@ -4805,6 +4810,8 @@ export const en = {
   "approval.kind.legal_review_request": "Legal review requested",
   "approval.kind.task_due_date": "Check a due date",
   "approval.kind.employer_change": "Check a new employer",
+  "approval.kind.deal_proposal_stage": "Move the deal to the proposal stage",
+  "approval.kind.dealProposalStageNamed": "Move to {stage}?",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
@@ -4875,6 +4882,7 @@ export const en = {
   "approval.field.signature": "Signature line",
   "approval.field.to_company": "New employer",
   "approval.field.from_company": "Employer now",
+  "approval.field.skipped_stages": "Skips",
   "approval.field.from_address": "Sent from",
   "approval.field.sender_check": "Sender check",
   "approval.senderCheck.authenticated":
@@ -6727,6 +6735,12 @@ export const en = {
   "deal.movePipelinePick": "Pick a pipeline",
   "deal.movePipelineDone": "Moved to {pipeline}.",
   "deal.reopen": "Reopen",
+  "deal.marginceLine.closed": "Margince closed this deal as lost on {date}.",
+  "deal.marginceLine.opened": "Margince opened this deal on {date}.",
+  "deal.marginceLine.reopened": "Margince reopened this deal on {date}.",
+  "deal.marginceLine.undoOff":
+    "This close can no longer be undone, because the deal changed since. Reopen it instead.",
+  "deal.note.undoAll": "Undo all",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
   "deal.correctCloseDay": "Correct close day",
@@ -22796,6 +22810,8 @@ export const en = {
   "magic.action.approval_coldstart": "Review first approach",
   "magic.action.approval_send_email": "Review message",
   "magic.action.approval_advance_deal": "Review stage change",
+  "magic.action.approval_deal_proposal_stage":
+    "A proposal went out. Move the deal?",
   "magic.action.approval_promote_lead": "Review lead promotion",
   "magic.action.approval_overnight": "Review proposal",
   "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",

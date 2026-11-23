@@ -53945,6 +53945,8 @@ export interface components {
             page: components["schemas"]["PageInfo"];
             /** @description On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole. */
             types_with_more?: string[];
+            /** @description On a `per_type` answer only: the types whose search did not finish within the time budget. `data` holds no hits of these types, and none of them is in `types_with_more`. Empty when every type answered. Absent on a ranked answer, which answers 422 `query_too_broad` instead. */
+            types_timed_out?: string[];
             /** @description Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor. */
             near_matches?: components["schemas"]["SearchNearMatch"][];
         };
@@ -62627,6 +62629,16 @@ export interface components {
             can_accept: boolean;
             /** @description Whether this reader may write this deal. */
             writable: boolean;
+            /**
+             * Format: uuid
+             * @description The History note that reports this change. Null for a change made before notes were linked.
+             */
+            note_activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The stage-history row this change wrote, for a change that moved the stage. It equals the deal's `closing_occurrence_id` while the deal is on the close Margince made.
+             */
+            stage_history_id?: string | null;
         };
         /** @description Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values. */
         CloseDateEstimateBasis: {
@@ -74936,6 +74948,12 @@ export interface operations {
             query?: {
                 /** @description The `next_cursor` of the page before. A token this server did not mint is refused with 422. */
                 cursor?: string;
+                /** @description Only the change that wrote this stage-history row. A client asks for the close the deal is on without paging for it. */
+                stage_history_id?: string;
+                /** @description Only the changes that these History notes report. */
+                note_activity_id?: string[];
+                /** @description Only changes of these correction kinds, such as close_lost, deal_open or deal_revive. */
+                change_kind?: string[];
             };
             header?: never;
             path: {
@@ -86546,7 +86564,7 @@ export interface operations {
                 types?: string[];
                 /** @description Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record. */
                 exclude_ids?: string[];
-                /** @description Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. */
+                /** @description Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. A type the time budget stopped is left out of `data` and named in `types_timed_out`. */
                 per_type?: number;
                 /** @description Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`. */
                 with_employees?: boolean;

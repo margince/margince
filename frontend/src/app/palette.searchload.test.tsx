@@ -332,3 +332,53 @@ describe("when the palette says nothing matched", () => {
     expect(screen.queryByText(/No matches/)).toBeNull();
   });
 });
+
+describe("a grouped answer with a type that ran out of time", () => {
+  const line = /Emails and activities could not be searched for this word/;
+
+  it("shows its hits and one line naming the type", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        json({
+          data: [{ type: "company", id: "o1", title: "Acme GmbH" }],
+          page: { next_cursor: null, has_more: false },
+          types_timed_out: ["activity"],
+        }),
+      ),
+    );
+    renderPalette();
+
+    await user.type(screen.getByRole("searchbox"), "acme");
+    await pause();
+
+    expect(
+      await screen.findByRole("button", { name: /^AG\s*Acme GmbH$/ }),
+    ).toBeTruthy();
+    expect(screen.getByText(line)).toBeTruthy();
+    expect(screen.queryByText(/Search failed/)).toBeNull();
+    expect(screen.queryByText(/No matches/)).toBeNull();
+  });
+
+  it("leaves out No matches when nothing else was found", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        json({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+          types_timed_out: ["activity"],
+        }),
+      ),
+    );
+    renderPalette();
+
+    await user.type(screen.getByRole("searchbox"), "acme");
+    await pause();
+
+    expect(await screen.findByText(line)).toBeTruthy();
+    expect(screen.queryByText(/No matches/)).toBeNull();
+  });
+});

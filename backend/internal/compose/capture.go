@@ -335,13 +335,10 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// and asks its one question through the store that owns tasks.
 		WithDealAttribution(capture.DealAttribution{
 			Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-			Ask: whichDealAsker{
-				tasks: activities.NewStore(InstallationDB(pool)),
-				deals: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-				now:   cfg.clock(),
-			}.Ask,
-			Filer: ActivityDealFiler{},
-			Check: NewDealTopicCheck(pool, cfg.DealTopicBrain), Hooks: mailhooks.New(ComposedExtensions, pool),
+			Ask:        newWhichDealAsker(pool, cfg.clock()).Ask,
+			Filer:      ActivityDealFiler{},
+			Check:      NewDealTopicCheck(pool, cfg.DealTopicBrain),
+			Hooks:      mailhooks.New(ComposedExtensions, pool),
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives

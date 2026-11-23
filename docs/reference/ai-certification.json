@@ -1,11 +1,11 @@
 {
   "totals": {
     "sites": 63,
-    "sites_best_current": 56,
-    "sites_best_partial": 0,
+    "sites_best_current": 55,
+    "sites_best_partial": 1,
     "sites_best_stale": 6,
     "sites_absent": 1,
-    "scenarios": 345,
+    "scenarios": 348,
     "records": 401,
     "bindings": 18,
     "self_judged_records": 0
@@ -964,7 +964,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "partial",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -975,7 +975,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "partial"
           },
           "abandoned": 0,
           "runs": 27,
@@ -2425,7 +2425,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "partial",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2436,7 +2436,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current",
+            "state": "partial",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.8-flash",
@@ -9890,8 +9890,8 @@
             "env": "cloud_frontier"
           },
           "sites": 55,
-          "sites_current": 49,
-          "sites_partial": 0,
+          "sites_current": 48,
+          "sites_partial": 1,
           "sites_stale": 6,
           "runs": 1428,
           "passed": 1381,
@@ -9916,8 +9916,8 @@
             "thinking_level": "low"
           },
           "sites": 52,
-          "sites_current": 48,
-          "sites_partial": 0,
+          "sites_current": 47,
+          "sites_partial": 1,
           "sites_stale": 4,
           "runs": 981,
           "passed": 979,
@@ -10650,7 +10650,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "partial",
           "runs": 27,
           "passed": 27,
           "records": 2,
@@ -12721,8 +12721,8 @@
         "env": "cloud_frontier"
       },
       "sites": 58,
-      "sites_current": 49,
-      "sites_partial": 0,
+      "sites_current": 48,
+      "sites_partial": 1,
       "sites_stale": 9,
       "runs": 1587,
       "passed": 1523,
@@ -12874,8 +12874,8 @@
         "thinking_level": "low"
       },
       "sites": 52,
-      "sites_current": 48,
-      "sites_partial": 0,
+      "sites_current": 47,
+      "sites_partial": 1,
       "sites_stale": 4,
       "runs": 981,
       "passed": 979,
@@ -34665,7 +34665,7 @@
       "key": "stage_evidence_extract/criteria",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
+      "best_state": "partial",
       "recommended": {
         "binding": {
           "provider": "gemini",
@@ -34680,7 +34680,7 @@
           "lower": 0.942655,
           "upper": 1
         },
-        "state": "current"
+        "state": "partial"
       },
       "scenarios": [
         {
@@ -34706,6 +34706,24 @@
           "expects": "abstained",
           "graded_by": "mechanical",
           "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/unknown_criterion_key_01.yaml"
+        },
+        {
+          "name": "an_invoice_attached_is_not_a_proposal",
+          "expects": "abstained",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/attachment_is_not_the_proposal_01.yaml"
+        },
+        {
+          "name": "our_german_mail_says_the_offer_is_attached",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/angebot_im_anhang_01.yaml"
+        },
+        {
+          "name": "our_mail_says_the_quote_is_attached",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/stage_evidence_extract/proposal_attached_01.yaml"
         },
         {
           "name": "talking_about_signing_is_not_signing",
@@ -34745,11 +34763,11 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "partial",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 9,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 27,
           "passed": 27,
           "reliability": 1,
@@ -34778,7 +34796,7 @@
           "band": "certified",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 27,
           "passed": 27,
           "reliability": 1,
@@ -34830,7 +34848,7 @@
           "band": "certified",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 27,
           "passed": 27,
           "reliability": 1,
@@ -34872,7 +34890,7 @@
           "band": "certified",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 27,
           "passed": 27,
           "reliability": 1,
@@ -34910,11 +34928,11 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "partial",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 9,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 27,
           "passed": 27,
           "reliability": 1,
@@ -34942,7 +34960,7 @@
           "band": "certified",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 27,
           "passed": 27,
           "reliability": 1,
@@ -34983,7 +35001,7 @@
           "band": "not_supported",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 45,
           "passed": 27,
           "reliability": 0.6,
@@ -35035,7 +35053,7 @@
           "band": "not_supported",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 27,
           "passed": 21,
           "reliability": 0.7777777777777778,
@@ -35087,7 +35105,7 @@
           "band": "not_supported",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 27,
           "passed": 21,
           "reliability": 0.7777777777777778,
@@ -35139,7 +35157,7 @@
           "band": "certified",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 27,
           "passed": 27,
           "reliability": 1,
@@ -35191,7 +35209,7 @@
           "band": "supported_degraded",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 33,
           "passed": 28,
           "reliability": 0.8484848484848485,
@@ -35243,7 +35261,7 @@
           "band": "not_supported",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 42,
           "passed": 32,
           "reliability": 0.7619047619047619,
@@ -35284,7 +35302,7 @@
           "band": "certified",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 9,
+          "scenarios_total": 12,
           "runs": 30,
           "passed": 29,
           "reliability": 0.9666666666666667,

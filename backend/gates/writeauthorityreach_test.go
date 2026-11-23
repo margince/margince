@@ -95,6 +95,8 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 		"erasure a human asked for, and the clock-driven retention anonymize, are both system " +
 		"cleanup rather than a caller's write, and respecting a caller's grants would leave " +
 		"standing the prose each exists to clear",
+	"internal/modules/deals:ReofferClose":   "puts a close for silence back on its owner's Home. It runs only as the system principal behind auth.RequireSystem, for the stakeholder backfill that proved the close wrong, and it changes the correction's own receipt, not what the deal says. A row probe on the deal would leave a close the owner cannot otherwise write on without its offer",
+	"internal/modules/deals:reofferCloseTx": "the transaction of ReofferClose, decided the same way: system-only, and the deal's own columns are untouched",
 	"internal/modules/deals:HoldClosingOccurrenceTx": "a SELECT ... FOR SHARE, not a mutation. " +
 		"It takes the deal's row lock so the closing it answers cannot move before its caller " +
 		"writes a review against it — the extractor reads the locking SELECT as a write to " +

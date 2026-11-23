@@ -29,6 +29,7 @@ type Harness = Readonly<{
   stored?: string;
   absent?: boolean;
   settle?: (draft: string) => string;
+  check?: (next: string) => string | undefined;
 }>;
 
 function Edited({
@@ -36,6 +37,7 @@ function Edited({
   onDirtyChange,
   control = "text",
   settle,
+  check,
   stored = "Software",
   absent,
 }: Harness) {
@@ -52,6 +54,7 @@ function Edited({
         value={value}
         absent={absent}
         settle={settle}
+        check={check}
         onDirtyChange={onDirtyChange}
         onClose={() => setOpen(false)}
         onSave={async (next) => {
@@ -209,7 +212,26 @@ describe("FieldEditDialog", () => {
     );
     expect(box).toHaveValue("Retail");
     expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(box).toHaveFocus();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("moves focus to the field when a check refuses the value, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => undefined);
+    await user.click(
+      renderEdited({
+        onSave,
+        settle: (draft) => draft.trim(),
+        check: (next) => (next === "" ? "Industry is required." : undefined),
+      }),
+    );
+    const box = await screen.findByRole("textbox", { name: "Industry" });
+    await user.clear(box);
+    await user.click(screen.getByRole("button", { name: en["record.save"] }));
+    expect(await screen.findByText("Industry is required.")).toBeVisible();
+    expect(box).toHaveFocus();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it("closes on Escape without saving an untouched value", async () => {

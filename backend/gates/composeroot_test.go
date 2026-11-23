@@ -34,9 +34,9 @@ const composeRootDir = "internal/compose"
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1382
+	composeRootProductionFiles = 1383
 	composeRootTestFiles       = 1909
-	composeRootProductionLines = 229_770
+	composeRootProductionLines = 230_161
 	composeRootTestLines       = 359_327
 )
 

@@ -8944,6 +8944,21 @@ paths:
           required: false
           schema: { type: string }
           description: The `next_cursor` of the page before. A token this server did not mint is refused with 422.
+        - name: stage_history_id
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+          description: Only the change that wrote this stage-history row. A client asks for the close the deal is on without paging for it.
+        - name: note_activity_id
+          in: query
+          required: false
+          schema: { type: array, maxItems: 100, items: { type: string, format: uuid } }
+          description: Only the changes that these History notes report.
+        - name: change_kind
+          in: query
+          required: false
+          schema: { type: array, maxItems: 10, items: { type: string } }
+          description: Only changes of these correction kinds, such as close_lost, deal_open or deal_revive.
       responses:
         '200':
           description: One page of the deal's changes.
@@ -19387,7 +19402,8 @@ paths:
             `data` holds each type's hits together, best first. The page is the whole answer, so it
             takes no `cursor` and no `limit`; `types_with_more` names the types holding more than
             it carries, and asking again without `per_type`, with `types` set to one of them, pages
-            through the rest.
+            through the rest. A type the time budget stopped is left out of `data` and named in
+            `types_timed_out`.
         - name: with_employees
           in: query
           schema: { type: boolean, default: false }
@@ -74089,6 +74105,14 @@ components:
             On a `per_type` answer only: the types that matched more hits than the page carries
             for them. Absent on a ranked answer, whose `page.has_more` says the same thing for
             the list as a whole.
+        types_timed_out:
+          type: array
+          items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
+          description: >
+            On a `per_type` answer only: the types whose search did not finish within the time
+            budget. `data` holds no hits of these types, and none of them is in `types_with_more`.
+            Empty when every type answered. Absent on a ranked answer, which answers 422
+            `query_too_broad` instead.
         near_matches:
           type: array
           maxItems: 5
@@ -83913,6 +83937,16 @@ components:
         can_undo: { type: boolean }
         can_accept: { type: boolean, deprecated: true, description: Whether the deprecated accept route would take this change. }
         writable: { type: boolean, description: Whether this reader may write this deal. }
+        note_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The History note that reports this change. Null for a change made before notes were linked.
+        stage_history_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The stage-history row this change wrote, for a change that moved the stage. It equals the
+            deal's `closing_occurrence_id` while the deal is on the close Margince made.
 
     CloseDateEstimateBasis:
       type: object

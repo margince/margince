@@ -77,13 +77,10 @@
 package extension
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"regexp"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
@@ -168,63 +165,6 @@ func (n Name) Namespace() (string, error) {
 	}
 	return NamespacePrefix + strings.ReplaceAll(string(n), "-", "_"), nil
 }
-
-// Version is the extension's own version string, expected stable for an
-// unchanged unit: the boot inventory records it and logs a change. It
-// carries no authority (operator decisions bind to digests,
-// never to a version string).
-type Version string
-
-// Validate requires a non-empty, single-line printable string — the
-// inventory writes it into system_log verbatim, so control characters
-// and whitespace framing have no honest reading there.
-func (v Version) Validate() error {
-	if v == "" {
-		return errors.New("extension version is empty — the boot inventory records it")
-	}
-	if strings.TrimSpace(string(v)) != string(v) {
-		return fmt.Errorf("extension version %q carries surrounding whitespace", string(v))
-	}
-	for _, r := range v {
-		if !unicode.IsPrint(r) {
-			return fmt.Errorf("extension version %q carries a non-printable character", string(v))
-		}
-	}
-	return nil
-}
-
-// Description is one operator-facing sentence saying what the unit is for.
-//
-// Required, because the screen that grants a unit's permissions lists every
-// composed unit by name — and a name alone leaves an admin deciding what to
-// grant to something called "de". The author of the unit is the only party who
-// knows the answer, so the declaration is where it has to come from.
-type Description string
-
-// Validate requires a non-empty, single-line printable sentence. The
-// Extensions settings page shows it to an operator as written.
-func (d Description) Validate() error {
-	if strings.TrimSpace(string(d)) == "" {
-		return errors.New("extension description is empty — the access screen lists the unit by it")
-	}
-	if strings.TrimSpace(string(d)) != string(d) {
-		return fmt.Errorf("extension description %q carries surrounding whitespace", string(d))
-	}
-	for _, r := range d {
-		if !unicode.IsPrint(r) {
-			return fmt.Errorf("extension description %q carries a non-printable character", string(d))
-		}
-	}
-	// Runes, not bytes: a German or Vietnamese sentence is well inside the
-	// bound and well past it in UTF-8, and the message says "characters".
-	if n := utf8.RuneCountInString(string(d)); n > maxDescriptionLength {
-		return fmt.Errorf("extension description is %d characters — one sentence, capped at %d", n, maxDescriptionLength)
-	}
-	return nil
-}
-
-// One sentence, not a manual: the screen gives it one line under the unit name.
-const maxDescriptionLength = 200
 
 // Extension is one installed unit's declaration.
 type Extension struct {

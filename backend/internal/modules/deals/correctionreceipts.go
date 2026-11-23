@@ -41,6 +41,9 @@ type CorrectionReceipt struct {
 	EstimateBasis *CorrectionEstimateBasis
 	Basis         string
 	AppliedAt     time.Time
+	// ListedAt is when the correction last joined the owner's list: the close
+	// instant, or the later instant it was offered back. Lists order by it.
+	ListedAt time.Time
 	// Reversed reports that somebody already put this back. The row stays on
 	// the lane saying so, rather than vanishing and leaving the reader
 	// wondering whether their Undo landed.
@@ -131,14 +134,14 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		}
 		query := selected + storekit.SQLf(`
 			 -- A close as lost and a verdict change stay until the owner accepts or undoes them.
-			 WHERE (c.applied_at >= $%d
+			 WHERE (`+correctionListedSQL+` >= $%d
 			        OR (c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL))
 			   AND d.owner_id = $%d
 			   AND d.archived_at IS NULL`, sincePos, heldPos, ownerPos)
 		if scope != "" {
 			query += storekit.SQLf(" AND %s", scope)
 		}
-		query += storekit.SQLf(" ORDER BY c.applied_at DESC LIMIT $%d", limitPos)
+		query += storekit.SQLf(" ORDER BY "+correctionListedSQL+" DESC LIMIT $%d", limitPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("deals: reading last night's corrections: %w", err)
@@ -156,7 +159,7 @@ func scanCorrectionReceipt(rows pgx.CollectableRow) (CorrectionReceipt, error) {
 	var row CorrectionReceipt
 	var lostCode *string
 	if err := rows.Scan(&row.DealID, &row.DealName, &row.AuditLogID,
-		&row.Fields, &row.Basis, &row.AppliedAt, &row.Reversed,
+		&row.Fields, &row.Basis, &row.AppliedAt, &row.ListedAt, &row.Reversed,
 		&row.Version, &row.BeforeClose, &row.AfterClose, &lostCode, &row.Evidence,
 		&row.ActorType, &row.ActorID, &row.OnBehalfOf, &row.Correction,
 		&row.BeforeAmount, &row.AfterAmount, &row.BeforeProbability, &row.AfterProbability,
@@ -213,7 +216,7 @@ func correctionReceiptSelect(ctx context.Context, arg func(any) int) (string, er
 			       CASE WHEN %[1]s AND (%[4]s OR c.correction <> $%[5]d)
 			            THEN coalesce(a.evidence->>'basis', '')
 			            ELSE '' END,
-			       c.applied_at,
+			       c.applied_at, `+correctionListedSQL+`,
 			       c.reversed_at IS NOT NULL, d.version, a.before->>'expected_close_date', a.after->>'expected_close_date',
 			       a.after->>'lost_reason_code',
 			       -- A masked amount takes every key that states it out of the

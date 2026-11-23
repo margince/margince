@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 // The frozen walk, against the real table.
 //
@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,7 +27,7 @@ import (
 // TestAWalkResumesForTheReaderWhoStartedIt is the ordinary case, and the one
 // every refusal below is measured against.
 func TestAWalkResumesForTheReaderWhoStartedIt(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
 	ctx := repCtx(e, e.Rep1)
@@ -59,7 +58,7 @@ func TestAWalkResumesForTheReaderWhoStartedIt(t *testing.T) {
 // this proves the SELECT is too — a walk is one contact's position and reading
 // somebody else's would hand over the order their day was ranked in.
 func TestAColleaguesWalkIsNotResumable(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
 
@@ -83,7 +82,7 @@ func TestAColleaguesWalkIsNotResumable(t *testing.T) {
 // either way — start a fresh snapshot — so there is nothing a distinct answer
 // would buy the honest caller.
 func TestAnExpiredWalkIsRefusedTheSameWayAStolenOneIs(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
 	ctx := repCtx(e, e.Rep1)
@@ -114,7 +113,7 @@ func TestAnExpiredWalkIsRefusedTheSameWayAStolenOneIs(t *testing.T) {
 // reader into an answer they did not ask for — page two of "my tasks"
 // continuing into "the team's deals".
 func TestAWalkIsNotResumableUnderADifferentQuestion(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
 	ctx := repCtx(e, e.Rep1)
@@ -137,7 +136,7 @@ func TestAWalkIsNotResumableUnderADifferentQuestion(t *testing.T) {
 // the honest cut: the walk somebody started most recently is the one they are
 // still on.
 func TestARepsOldestWalksAreSweptAway(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
 	ctx := repCtx(e, e.Rep1)
@@ -188,7 +187,7 @@ func TestARepsOldestWalksAreSweptAway(t *testing.T) {
 // to hold, and writing one against a zero id would be a row every agent shared
 // and any of them could resume into.
 func TestAnAgentHoldsNoWalk(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	clock := &testClock{at: time.Date(2026, 9, 4, 9, 0, 0, 0, time.UTC)}
 	snaps := worklistsnap.New(e.Pool, clock.Now)
 
@@ -201,8 +200,8 @@ func TestAnAgentHoldsNoWalk(t *testing.T) {
 }
 
 // repCtx binds a human rep, which is what a walk is for.
-func repCtx(e *integration.Env, rep ids.UUID) context.Context {
-	return e.As(rep, []ids.UUID{e.Team1}, integration.AdminPerms)
+func repCtx(e *Env, rep ids.UUID) context.Context {
+	return e.As(rep, []ids.UUID{e.Team1}, AdminPerms)
 }
 
 // testClock is the injected clock every expiry assertion moves.

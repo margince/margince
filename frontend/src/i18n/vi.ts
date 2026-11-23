@@ -14,6 +14,7 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "systemJob.proposal_stage": "Hỏi có chuyển deal sau khi gửi đề xuất không",
   "systemJob.legal_review_desk": "Rà soát pháp lý",
   "systemJob.import_identity_links": "Liên kết email đã nhập",
   "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
@@ -2828,6 +2829,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm liên hệ, công ty, deal, dự án, sản phẩm, hoạt động, lead…",
   "search.prompt": "Nhập từ khóa tìm kiếm.",
   "search.empty": "Không có kết quả cho “{q}”.",
+  "search.timedOut":
+    "Không kịp tìm {kind} cho từ này. Hãy thêm một từ khác để tìm lại.",
   "search.nearMatches": "Có phải bạn muốn tìm:",
   "search.group.contact": "Liên hệ",
   "search.group.company": "Công ty",
@@ -3797,6 +3800,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.lifecycle.opportunity": "Cơ hội",
   "company.lifecycle.onboarding": "Đang triển khai",
   "company.lifecycle.live": "Đang vận hành",
+  "company.lifecycle.live.help":
+    "Đang vận hành nghĩa là phạm vi đầu tiên đã thỏa thuận đang được sử dụng. Chỉ đồng nghiệp mới đặt trạng thái này, không phải trợ lý hay tự động hóa.",
   "company.lifecycle.customer": "Khách hàng",
   "company.lifecycle.former_customer": "Khách hàng cũ",
   "company.lifecycle.disqualified": "Đã loại",
@@ -4726,6 +4731,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.legal_review_request": "Yêu cầu rà soát pháp lý",
   "approval.kind.task_due_date": "Kiểm tra hạn",
   "approval.kind.employer_change": "Kiểm tra nơi làm việc mới",
+  "approval.kind.deal_proposal_stage": "Chuyển deal sang giai đoạn đề xuất",
+  "approval.kind.dealProposalStageNamed": "Chuyển sang giai đoạn “{stage}”?",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
@@ -4795,6 +4802,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.field.signature": "Dòng chữ ký",
   "approval.field.to_company": "Nơi làm việc mới",
   "approval.field.from_company": "Nơi làm việc hiện tại",
+  "approval.field.skipped_stages": "Bỏ qua",
   "approval.field.from_address": "Gửi từ",
   "approval.field.sender_check": "Kiểm tra bên gửi",
   "approval.senderCheck.authenticated":
@@ -6581,6 +6589,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.movePipelinePick": "Chọn pipeline",
   "deal.movePipelineDone": "Đã chuyển sang {pipeline}.",
   "deal.reopen": "Mở lại",
+  "deal.marginceLine.closed": "Margince đã đóng deal này là thua vào {date}.",
+  "deal.marginceLine.opened": "Margince đã mở deal này vào {date}.",
+  "deal.marginceLine.reopened": "Margince đã mở lại deal này vào {date}.",
+  "deal.marginceLine.undoOff":
+    "Không thể hoàn tác việc đóng này nữa vì deal đã thay đổi. Hãy mở lại deal.",
+  "deal.note.undoAll": "Hoàn tác tất cả",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",
   "deal.correctCloseDay": "Sửa ngày chốt deal",
@@ -22507,6 +22521,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_coldstart": "Xem xét tiếp cận ban đầu",
   "magic.action.approval_send_email": "Xem xét tin nhắn",
   "magic.action.approval_advance_deal": "Xem xét chuyển giai đoạn",
+  "magic.action.approval_deal_proposal_stage": "Đã gửi đề xuất. Chuyển deal?",
   "magic.action.approval_promote_lead": "Xem xét chuyển đổi lead",
   "magic.action.approval_overnight": "Xem xét đề xuất",
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",

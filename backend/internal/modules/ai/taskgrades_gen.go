@@ -634,7 +634,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/site_triage/openai_compatible_qwen_qwen3.8-27b_cloud_frontier.json
 	{Task: "site_triage", Provider: "openai_compatible", Model: "qwen/qwen3.8-27b", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"deepinfra\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/stage_evidence_extract/gemini_gemini-3.1-flash-lite_cloud_frontier.json
-	{Task: "stage_evidence_extract", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "stage_evidence_extract", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "partial"},
 	// records/stage_evidence_extract/gemini_gemini-3.5-flash_cloud_frontier.json
 	{Task: "stage_evidence_extract", Provider: "gemini", Model: "gemini-3.5-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/stage_evidence_extract/gemini_gemini-3.5-flash-lite_cloud_frontier.json
@@ -642,7 +642,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/stage_evidence_extract/gemini_gemini-3.6-flash_cloud_frontier.json
 	{Task: "stage_evidence_extract", Provider: "gemini", Model: "gemini-3.6-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/stage_evidence_extract/gemini_gemini-3.8-flash_cloud_frontier.json
-	{Task: "stage_evidence_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "current"},
+	{Task: "stage_evidence_extract", Provider: "gemini", Model: "gemini-3.8-flash", Profile: "cloud_frontier", ThinkingLevel: "low", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "partial"},
 	// records/stage_evidence_extract/openai_compatible_google_gemma-4-31b-it_cloud_frontier.json
 	{Task: "stage_evidence_extract", Provider: "openai_compatible", Model: "google/gemma-4-31b-it", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: "{\"only\":[\"crusoe\"],\"ignore\":null,\"quantizations\":[\"bf16\"],\"sort\":\"\",\"require_parameters\":null,\"allow_fallbacks\":null,\"preferred_max_latency_p90\":0,\"reasoning_effort\":\"\"}"}: {Verdict: "certified", State: "stale"},
 	// records/stage_evidence_extract/openai_compatible_mistralai_ministral-14b-2512_eu_hosted.json

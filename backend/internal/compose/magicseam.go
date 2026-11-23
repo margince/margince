@@ -76,7 +76,7 @@ func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time,
 	for _, receipt := range recent {
 		completedchanges.Remember(ctx, receipt)
 		out = append(out, magic.DecidedReceipt{
-			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt,
+			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt, ListedAt: receipt.ListedAt,
 			TargetType: receipt.TargetType, TargetID: receipt.TargetID, TargetLabel: receipt.TargetLabel,
 			Approval: receipt.Source == attention.ReceiptFromApproval,
 			Undo:     decidedUndo(receipt),

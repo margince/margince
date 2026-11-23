@@ -15,10 +15,10 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 282.1 KB |
+| Tool catalog | 282.5 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 73631 |
-| Largest tool | `read_details` (17.7 KB) |
+| Approx. wire tokens | 73723 |
+| Largest tool | `read_details` (18.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 54.4 KB | 19% | Yes, every step |
-| Input schemas | 164.2 KB | 58% | Yes, every step |
+| Input schemas | 164.6 KB | 58% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **218.6 KB** | **77%** | **the recurring cost** |
+| **Description + input schema** | **218.9 KB** | **77%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -87,7 +87,7 @@ descriptions and input schemas are what each step pays for.
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 465 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
-| [`find_records`](#find_records) | Find records | yes |  | 2041 |
+| [`find_records`](#find_records) | Find records | yes |  | 2057 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1012 |
@@ -95,7 +95,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
 | [`read_context`](#read_context) | Get the story so far | yes | [`ui://margince/context.html`](#context_view) | 413 |
-| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4525 |
+| [`read_details`](#read_details) | Read a record's panels and the day's lists | yes |  | 4600 |
 | [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes | [`ui://margince/forecast.html`](#forecast_view) | 978 |
 | [`read_import`](#read_import) | Read an import run or the import format | yes |  | 235 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 797 |
@@ -5196,7 +5196,7 @@ next_cursor to read on.
       "type": "integer"
     },
     "per_type": {
-      "description": "search only: Answer up to this many of each type instead of one ranked list, at most 25 records in all. Takes no cursor or limit; types_with_more names the types holding more.",
+      "description": "search only: Answer up to this many of each type instead of one ranked list, at most 25 records in all. Takes no cursor or limit; types_with_more names the types holding more, and types_timed_out the types that could not be searched in time.",
       "maximum": 20,
       "minimum": 1,
       "type": "integer"
@@ -9333,6 +9333,13 @@ read_attention for what needs the user now, and read_record for a record's own f
       ],
       "type": "string"
     },
+    "change_kind": {
+      "description": "deal_margince_changes only",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "company_id": {
       "description": "deal_suggestions only",
       "format": "uuid",
@@ -9440,6 +9447,13 @@ read_attention for what needs the user now, and read_record for a record's own f
       "description": "company_contracts, contact_overrides, deal_suggestions, field_history, lead_score, legal_reviews, magic, magic_line_records, my_linkedin_reach, notices only",
       "type": "integer"
     },
+    "note_activity_id": {
+      "description": "deal_margince_changes only",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "owner_id": {
       "description": "deal_suggestions, teammate_weekly_plan only",
       "type": "string"
@@ -9499,6 +9513,11 @@ read_attention for what needs the user now, and read_record for a record's own f
     "since": {
       "description": "magic, magic_line_records, team_margince_changes only",
       "format": "date-time",
+      "type": "string"
+    },
+    "stage_history_id": {
+      "description": "deal_margince_changes only",
+      "format": "uuid",
       "type": "string"
     },
     "stage_id": {

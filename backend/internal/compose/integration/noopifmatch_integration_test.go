@@ -3,14 +3,13 @@
 
 //go:build integration
 
-package compose
+package integration
 
 import (
 	"context"
 	"errors"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -43,7 +42,7 @@ type noopUpdate struct {
 // An update that changes nothing still answers its If-Match: a stale version
 // is version skew, and only the version the row holds goes through.
 func TestAnUpdateThatChangesNothingStillRefusesAStaleIfMatch(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	admin := e.Admin()
 
 	for _, tc := range noopUpdates(admin, t, e) {
@@ -59,7 +58,7 @@ func TestAnUpdateThatChangesNothingStillRefusesAStaleIfMatch(t *testing.T) {
 	}
 }
 
-func noopUpdates(admin context.Context, t *testing.T, e *integration.Env) []noopUpdate {
+func noopUpdates(admin context.Context, t *testing.T, e *Env) []noopUpdate {
 	t.Helper()
 	var contactID ids.ContactID
 	var companyID ids.CompanyID
@@ -169,7 +168,7 @@ type openStage struct {
 	stage    ids.StageID
 }
 
-func seedOpenStage(admin context.Context, t *testing.T, e *integration.Env) openStage {
+func seedOpenStage(admin context.Context, t *testing.T, e *Env) openStage {
 	t.Helper()
 	pipeline, err := e.Deals.CreatePipeline(admin, deals.CreatePipelineInput{Name: "Renewals"})
 	if err != nil {

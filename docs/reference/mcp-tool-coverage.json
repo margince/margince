@@ -8272,7 +8272,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4525,
+      "tokens": 4600,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -8652,7 +8652,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 2041,
+      "tokens": 2057,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"

@@ -254,7 +254,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_correction
 
-19 columns · primary key `(id)` · referenced by 0 foreign keys
+21 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -266,7 +266,9 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `correction` | `text` | yes | One of `auto_apply`, `provisional_confirm`, `downgrade_and_review`, `close_lost`, `deal_close_date`, `deal_amount` and 4 more. |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `fields` | `text[]` | yes |  |
+| `note_activity_id` | `uuid` |  | Points at `activity.id`. |
 | `remaining_open_stages` | `text` | yes |  |
+| `reoffered_at` | `timestamp with time zone` |  |  |
 | `reversal_audit_id` | `uuid` |  | Points at `audit_log.id`. |
 | `reversed_at` | `timestamp with time zone` |  |  |
 | `reversed_by` | `text` |  |  |
@@ -284,6 +286,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 |---|---|---|
 | `audit_log_id` | `audit_log` | deleting the parent deletes this row |
 | `deal_id` | `deal` | deleting the parent deletes this row |
+| `note_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `reversal_audit_id` | `audit_log` | deleting the parent keeps this row and clears the link |
 | `run_id` | `close_date_run` | deleting the parent keeps this row and clears the link |
 | `stage_history_id` | `deal_stage_history` | deleting the parent keeps this row and clears the link |
@@ -300,6 +303,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 - `deal_correction_audit_once`: `unique, btree (audit_log_id)`
 - `deal_correction_live`: `btree (deal_id, applied_at DESC) WHERE (reversed_at IS NULL)`
+- `deal_correction_note_ix`: `btree (note_activity_id) WHERE (note_activity_id IS NOT NULL)`
 - `deal_correction_pkey`: `unique, btree (id)`
 - `deal_correction_reversed`: `btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL)`
 - `idx_deal_correction_deal`: `btree (deal_id)`

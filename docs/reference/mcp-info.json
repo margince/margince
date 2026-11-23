@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 288903,
+    "tool_catalog_bytes": 289270,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 73631,
-    "largest_tool_bytes": 18154,
+    "approx_wire_tokens_total": 73723,
+    "largest_tool_bytes": 18455,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 55662,
-      "input_schema_bytes": 168148,
+      "input_schema_bytes": 168515,
       "output_schema_bytes": 52985,
-      "description_plus_input_schema_bytes": 223810
+      "description_plus_input_schema_bytes": 224177
     }
   },
   "tools": {
@@ -4496,7 +4496,7 @@
               "type": "integer"
             },
             "per_type": {
-              "description": "search only: Answer up to this many of each type instead of one ranked list, at most 25 records in all. Takes no cursor or limit; types_with_more names the types holding more.",
+              "description": "search only: Answer up to this many of each type instead of one ranked list, at most 25 records in all. Takes no cursor or limit; types_with_more names the types holding more, and types_timed_out the types that could not be searched in time.",
               "maximum": 20,
               "minimum": 1,
               "type": "integer"
@@ -8548,6 +8548,13 @@
               ],
               "type": "string"
             },
+            "change_kind": {
+              "description": "deal_margince_changes only",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
             "company_id": {
               "description": "deal_suggestions only",
               "format": "uuid",
@@ -8655,6 +8662,13 @@
               "description": "company_contracts, contact_overrides, deal_suggestions, field_history, lead_score, legal_reviews, magic, magic_line_records, my_linkedin_reach, notices only",
               "type": "integer"
             },
+            "note_activity_id": {
+              "description": "deal_margince_changes only",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
             "owner_id": {
               "description": "deal_suggestions, teammate_weekly_plan only",
               "type": "string"
@@ -8714,6 +8728,11 @@
             "since": {
               "description": "magic, magic_line_records, team_margince_changes only",
               "format": "date-time",
+              "type": "string"
+            },
+            "stage_history_id": {
+              "description": "deal_margince_changes only",
+              "format": "uuid",
               "type": "string"
             },
             "stage_id": {
@@ -25238,7 +25257,10 @@
             "id"
           ],
           "query": [
-            "cursor"
+            "change_kind",
+            "cursor",
+            "note_activity_id",
+            "stage_history_id"
           ],
           "route": "GET /v1/deals/{id}/margince-changes"
         },
