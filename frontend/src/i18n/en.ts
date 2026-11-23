@@ -2820,6 +2820,8 @@ export const en = {
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Enter a search term.",
   "search.empty": "No matches for “{q}”.",
+  "search.timedOut":
+    "{kind} could not be searched for this word in time. Add another word to search them.",
   "search.nearMatches": "Did you mean:",
   "search.group.contact": "Contacts",
   "search.group.company": "Companies",
