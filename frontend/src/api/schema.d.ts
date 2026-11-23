@@ -31894,7 +31894,9 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
             capture: {
+                /** @description Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition. */
                 messages_synced?: number;
+                /** @description Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition. */
                 activities_created?: number;
                 contacts_created?: number;
                 companies_created?: number;
@@ -57762,7 +57764,7 @@ export interface components {
              *     no basis is recorded, for a reader whose country has no legitimate-interest basis and
              *     whose record holds neither their consent nor an agreement with them.
              */
-            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement" | "none")[];
+            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "none")[];
             /**
              * @description The kinds of data held about the reader, read from the subject-access export's own
              *     sections. Codes only: the page names each kind and never shows a value.

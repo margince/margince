@@ -307,6 +307,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `childsetaudit_test.go` | H2 | Every writer of a child set moves the parent record's version. |
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
+| `commsbasisnocountry_test.go` | H2 | The communication basis vocabulary is closed and names no market. |
 | `communityhealth_test.go` | H1 | The community-health files GitHub resolves from the repository root. |
 | `companyreaders_test.go` | H2 | `company` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `confidencecolumntype_test.go` | H2 | Every confidence column is numeric(4,3). |
