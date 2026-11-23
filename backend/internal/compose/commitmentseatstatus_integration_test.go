@@ -261,10 +261,10 @@ func seedOwedCommitmentSignal(t *testing.T, e *integration.Env, thread string, a
 	// record, and a commitment signal names the account it is owed on.
 	return integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO signal
 		(id, kind, source_channel, entity_type, entity_id, resolved_company_id,
-		 resolution_state, severity, summary, status, detected_at, source, captured_by, evidence)
+		 resolution_state, severity, summary, status, detected_at, source, source_system, captured_by, evidence)
 		VALUES ($1, 'commitment_made', 'derived', 'company', '`+company.String()+`',
 		        '`+company.String()+`', 'resolved', 'info', 'An old promise', 'open', '`+at+`',
-		        'signal-scan', 'system:signal-scan',
+		        'automation', 'signal-scan', 'system:signal-scan',
 		        jsonb_build_array(jsonb_build_object('source_type', 'activity',
 		                                             'source_id', '`+message.String()+`')))`)
 }

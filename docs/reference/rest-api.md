@@ -110,8 +110,10 @@ when you import. A record is archived, not deleted: an archive operation sets `a
 record stays readable by id. A few operations remove a part of a record, such as
 `removeOfferLineItem`.
 
-On a deal, an offer and a project, `source` is one of the values the contract lists for that field.
-A program that calls the API sends `api`. Any other value is refused with `422 invalid_source`.
+On a deal, an offer, a project and a signal, `source` is one of the values the contract lists for
+that field. A program that calls the API sends `api`. Any other value is refused with
+`422 invalid_source`. A signal that a job or an extension wrote names it in `source_system`, which
+only the server sets.
 
 ## An id from your system
 

@@ -274,7 +274,7 @@ func TestAHumanFiledCommitmentSignalIsNotConverted(t *testing.T) {
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
 			Kind: "commitment_made", CompanyID: company, Summary: "Pricing promised.",
-			Severity: "info", Fingerprint: "filed-" + cited.String(), Source: "manual",
+			Severity: "info", Fingerprint: "filed-" + cited.String(), Producer: "analyst-note",
 			Evidence: []signals.DerivedEvidence{{Snippet: "Pricing promised.", ActivityID: cited}},
 		}, extractClock.Add(-72*time.Hour))
 		return err

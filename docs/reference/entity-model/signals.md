@@ -6,7 +6,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 
 ## signal
 
-30 columns · primary key `(id)` · referenced by 3 foreign keys
+31 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -37,7 +37,8 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | The channel this signal arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. |
+| `source_system` | `text` |  | The producer that wrote the signal, such as `signal-scan` or the name of an extension. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -69,6 +70,7 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 - `signal_resolved_has_entity`: `CHECK (((resolution_state <> 'resolved') OR (entity_type IS NOT NULL)))`
 - `signal_severity_check`: `CHECK ((severity = ANY (ARRAY['info', 'warn', 'urgent'])))`
 - `signal_source_channel_check`: `CHECK ((source_channel = ANY (ARRAY['derived', 'inbound', 'web', 'social', 'deal_room_engagement'])))`
+- `signal_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `signal_status_check`: `CHECK ((status = ANY (ARRAY['open', 'acknowledged', 'resolved', 'dismissed'])))`
 - `signal_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `signal_visibility_check`: `CHECK ((visibility = ANY (ARRAY['workspace', 'owner'])))`
@@ -90,8 +92,9 @@ The 2 tables owned by `signals`, as the migrations build them. [Back to the enti
 **Triggers**
 
 - `signal_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.status = 'open')))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_channel": 20000, "resolution_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"status":20000,"summary":500,"visibility":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_channel": 20000, "resolution_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"status":20000,"summary":500,"visibility":20000}')`
+- `signal_source_channel`: `BEFORE UPDATE FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) EXECUTE FUNCTION move_signal_source_onto_its_channel()`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_system": 20000, "source_channel": 20000, "resolution_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"source_system":20000,"status":20000,"summary":500,"visibility":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "source": 20000, "status": 20000, "raw_ref": 20000, "summary": 500, "severity": 20000, "visibility": 20000, "captured_by": 20000, "entity_type": 20000, "fingerprint": 20000, "source_system": 20000, "source_channel": 20000, "resolution_state": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"entity_type":20000,"fingerprint":20000,"kind":20000,"raw_ref":20000,"resolution_state":20000,"severity":20000,"source":20000,"source_channel":20000,"source_system":20000,"status":20000,"summary":500,"visibility":20000}')`
 - `trg_signal_entity_keys`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_signal_entity_keys()`
 - `trg_signal_updated`: `BEFORE UPDATE FOR EACH ROW WHEN (((NOT (((((old.entity_unkeyed IS DISTINCT FROM new.entity_unkeyed) OR (old.entity_deal_id IS DISTINCT FROM new.entity_deal_id)) OR (old.entity_company_id IS DISTINCT FROM new.entity_company_id)) OR (old.entity_contact_id IS DISTINCT FROM new.entity_contact_id)) OR (old.entity_project_id IS DISTINCT FROM new.entity_project_id))) OR ((to_jsonb(old.*) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id']) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id'])))) EXECUTE FUNCTION set_updated_at_bump_version()`
 

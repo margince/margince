@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package recordsources is the data task that moves deals, offers and projects
-// whose source predates the fixed list of channels onto a channel.
+// Package recordsources holds the data tasks that move records whose source
+// predates the fixed list of channels onto a channel.
 package recordsources
 
 import (
@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -36,6 +37,19 @@ func DataTask() datatask.Task {
 			step("deal_sources", deals.CorrectDealSourcesTx, deals.CountUnlistedDealSources),
 			step("offer_sources", deals.CorrectOfferSourcesTx, deals.CountUnlistedOfferSources),
 			step("project_sources", projects.CorrectProjectSourcesTx, projects.CountUnlistedProjectSources),
+		},
+	}
+}
+
+// SignalDataTask corrects signals, whose older source named the producer. The
+// producer moves to source_system, where the scan's readers select on it.
+func SignalDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795402067_signal_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795402067_signal_source_channels"),
+		Requires: []string{"core/1795402067"},
+		Steps: []datatask.Step{
+			step("signal_sources", signals.CorrectSignalSourcesTx, signals.CountUnlistedSignalSources),
 		},
 	}
 }
