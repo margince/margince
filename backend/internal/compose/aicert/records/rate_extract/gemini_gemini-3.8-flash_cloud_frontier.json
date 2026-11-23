@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p0b1825f712527e19c5357694f0a89944",
+  "prompt_version": "p57b861f9298d3658fb045bd717090f9e",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 12,
@@ -37,7 +37,7 @@
     {
       "scenario": "fx_rates_two_pairs_grounded",
       "site": "fx",
-      "stamp": "5bd1d0ab783425852f4401f19e3a0deb43940e0195c25152ec419ea609ccd9a5057b72758f45e597bf94155c6c58d6a5744d7b0d19c2839f4f9853ad4e3b9c5bf80e1cf276f4ed99e32fef108de6a4719ad52357a2d8d560f84781e8c3885950",
+      "stamp": "5bd1d0ab783425852f4401f19e3a0deb43940e0195c25152ec419ea609ccd9a5057b72758f45e597bf94155c6c58d6a5744d7b0d19c2839f4f9853ad4e3b9c5b5c9e0b63d69f3f6c561590c6e47d41fa8d6da83a0d140fb47f1cd9f24d735281",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
@@ -51,7 +51,7 @@
     {
       "scenario": "fx_rates_json_api_grounded",
       "site": "fx",
-      "stamp": "b0927d489a6600a2e92e3a79d940d96e584f0b26f57a32f12269c16d0b8f0450ffafba992f2677694a143aa24f98de9a98cefdb39bec3b4a508c4b2f4056e246f80e1cf276f4ed99e32fef108de6a4719ad52357a2d8d560f84781e8c3885950",
+      "stamp": "b0927d489a6600a2e92e3a79d940d96e584f0b26f57a32f12269c16d0b8f0450ffafba992f2677694a143aa24f98de9a98cefdb39bec3b4a508c4b2f4056e2465c9e0b63d69f3f6c561590c6e47d41fa8d6da83a0d140fb47f1cd9f24d735281",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,

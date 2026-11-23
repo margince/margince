@@ -46,6 +46,26 @@ Each cause needs a different answer, which is why the report keeps them separate
 
 Section 3 reads the file.
 
+## Re-stamp what only the grading rule moved
+
+If the cause is a bump of `gradingRule` alone, some records need no new runs. Their rows still hold,
+and only the rule that pools them changed:
+
+```bash
+cd backend
+make e2e-ai-restamp FROM=<the rule the records carry>            # lists what it would do
+make e2e-ai-restamp FROM=<the rule the records carry> WRITE=1    # writes it
+```
+
+The tool grades a record again from its stored rows, with no model call, when each row passes three checks:
+
+- the case and prompt parts of its stamp equal this build's;
+- its grader part equals what the rule in `FROM` would stamp today, which shows that the site check and the
+  judge request did not move with the rule;
+- the record's judge is the default judge and its wire rule is this build's.
+
+Every record that fails a check stays stale, and the list names why. Those need the sweep below.
+
 ## 2. Run both preset sweeps
 
 The presets in [`config/presets/`](../../config/presets/README.md) are the two

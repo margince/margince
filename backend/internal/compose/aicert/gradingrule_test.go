@@ -15,6 +15,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -54,11 +55,23 @@ var gradingRuleOwners = []struct {
 
 // gradingRuleDigest hashes each owner's gofmt'd source with comments and blank
 // lines dropped, so rewording a doc comment does not demand a new rule version.
+// Beyond the named owners it hashes every function of this package they call,
+// however deep, so a helper the rule leans on cannot move unhashed.
 func gradingRuleDigest(t *testing.T) string {
 	t.Helper()
+	fset := token.NewFileSet()
+	pkgFuncs := packageFuncs(t, fset)
 	var material strings.Builder
+	hashed := map[string]bool{}
+	var pending []*ast.FuncDecl
+	write := func(label string, node ast.Node) {
+		var src bytes.Buffer
+		if err := format.Node(&src, fset, node); err != nil {
+			t.Fatalf("formatting %s: %v", label, err)
+		}
+		fmt.Fprintf(&material, "%s\n%s\n", label, dropBlankLines(src.String()))
+	}
 	for _, owner := range gradingRuleOwners {
-		fset := token.NewFileSet()
 		file, err := parser.ParseFile(fset, owner.file, nil, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", owner.file, err)
@@ -69,15 +82,56 @@ func gradingRuleDigest(t *testing.T) string {
 				t.Fatalf("%s no longer declares %s; move it in gradingRuleOwners to where it lives now, "+
 					"or bump gradingRule if the grading rule lost it", owner.file, name)
 			}
-			var src bytes.Buffer
-			if err := format.Node(&src, fset, node); err != nil {
-				t.Fatalf("formatting %s.%s: %v", owner.file, name, err)
+			write(owner.file+"."+name, node)
+			hashed[name] = true
+			if fn, ok := node.(*ast.FuncDecl); ok && !strings.HasPrefix(owner.file, "..") {
+				pending = append(pending, fn)
 			}
-			fmt.Fprintf(&material, "%s.%s\n%s\n", owner.file, name, dropBlankLines(src.String()))
 		}
+	}
+	for len(pending) > 0 {
+		fn := pending[0]
+		pending = pending[1:]
+		ast.Inspect(fn, func(n ast.Node) bool {
+			ident, ok := n.(*ast.Ident)
+			if !ok || hashed[ident.Name] || pkgFuncs[ident.Name] == nil {
+				return true
+			}
+			hashed[ident.Name] = true
+			callee := pkgFuncs[ident.Name]
+			write("callee."+ident.Name, callee)
+			pending = append(pending, callee)
+			return true
+		})
 	}
 	sum := sha256.Sum256([]byte(material.String()))
 	return hex.EncodeToString(sum[:])
+}
+
+// packageFuncs indexes this package's non-test functions by name, for the walk
+// from the owners to what they call.
+func packageFuncs(t *testing.T, fset *token.FileSet) map[string]*ast.FuncDecl {
+	t.Helper()
+	paths, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("listing the package: %v", err)
+	}
+	funcs := map[string]*ast.FuncDecl{}
+	for _, path := range paths {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil {
+				funcs[fn.Name.Name] = fn
+			}
+		}
+	}
+	return funcs
 }
 
 // findTopLevelDecl answers the function or the single const/var/type spec named

@@ -135,11 +135,12 @@ func caseBorderline(c caseStats) bool {
 // certified: its pass rate and the scores it has clear the bars. A case with no
 // score is not one. Its runs went ungraded because the judge refused or the
 // candidate was withheld; the runner already re-drives a judge call that failed.
-// More runs would pay for candidates no judge grades.
+// More runs would pay for candidates no judge grades. One score has a
+// zero-width bound, so it cannot rule out that a second would lift the mean.
 func shortOnlyOfScores(c caseStats) bool {
 	return !c.mechanical && len(c.scores) > 0 && len(c.scores) < minJudgeScores &&
 		caseMechanicalBand(c) == VerdictCertified && !underFloor(c) &&
-		judgeUpper(c) >= float64(c.bands.CertifiedMin)
+		(len(c.scores) < 2 || judgeUpper(c) >= float64(c.bands.CertifiedMin))
 }
 
 // poolUndecided says the pooled evidence meets a certified bar on its point

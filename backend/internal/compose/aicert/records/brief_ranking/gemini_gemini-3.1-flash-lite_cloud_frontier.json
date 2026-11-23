@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p068c3bc0bb2bee7bc96dbf36af879ff5",
+  "prompt_version": "p66e3d799f9445b8f4583f321740c3d5e",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 12,
@@ -36,7 +36,7 @@
     {
       "scenario": "reorder_two_candidates_by_momentum",
       "site": "rank",
-      "stamp": "c6d6b67b1edf0e484dec3bf71498f2a06984e82310bad759e8b7c712a839ae22051f94ef07e7ed0bb4164a3652e50fabd5269f4e8188be1205f70b0764da28897d32137817994cb97d8a39d9830fc8b9030709ce721b9a6a3b133dde0703429f",
+      "stamp": "c6d6b67b1edf0e484dec3bf71498f2a06984e82310bad759e8b7c712a839ae22051f94ef07e7ed0bb4164a3652e50fabd5269f4e8188be1205f70b0764da288958b9c392c84459175e3a1335ede632d1170d6ef2d4efd60857271e823a7b750b",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 12,
