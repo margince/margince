@@ -130,9 +130,13 @@ func TestACleanTableRefusesTheRetiredBasisInTheDatabase(t *testing.T) {
 	asTheBasisListWasBefore(t, conn)
 	// A check of the same name on another table is not the migration's to settle.
 	if _, err := conn.Exec(ctx,
-		`CREATE TABLE basis_decoy (kind text,
-		   CONSTRAINT communication_basis_kind CHECK (kind <> 'x') NOT VALID)`); err != nil {
+		`CREATE TABLE basis_decoy (kind text)`); err != nil {
 		t.Fatalf("creating the decoy table: %v", err)
+	}
+	// Added after the table exists: CREATE TABLE records every check as validated.
+	if _, err := conn.Exec(ctx,
+		`ALTER TABLE basis_decoy ADD CONSTRAINT communication_basis_kind CHECK (kind <> 'x') NOT VALID`); err != nil {
+		t.Fatalf("adding the unvalidated decoy check: %v", err)
 	}
 
 	applyMigrationFile(t, conn, basisListMigration+".up.sql")

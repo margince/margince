@@ -1,5 +1,7 @@
--- Restores the retired value to both lists. Either rule may be a different
--- check by now: the validating migration replaces one that a row broke.
+-- Restores the retired value to both lists. The rules are NOT VALID: rollback
+-- restores them for new rows and does not scan the rows already there.
+-- Either rule may be a different check by now: the validating migration
+-- replaces one that a row broke.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE communication_basis
@@ -10,7 +12,7 @@ ALTER TABLE communication_basis
             'subject_initiated_correspondence'::text, 'legitimate_interests'::text,
             'legal_obligation'::text, 'vital_or_security_interest'::text,
             'existing_customer_exception'::text, 'vn_subject_agreement'::text
-        ]));
+        ])) NOT VALID;
 
 ALTER TABLE communication_decision
     DROP CONSTRAINT IF EXISTS communication_decision_basis,
@@ -21,4 +23,4 @@ ALTER TABLE communication_decision
             'legal_obligation'::text, 'vital_or_security_interest'::text,
             'consent'::text, 'existing_customer_exception'::text,
             'vn_subject_agreement'::text
-        ]));
+        ])) NOT VALID;

@@ -3,7 +3,7 @@
 
 package commsauthz
 
-// isoCountryCodes is every ISO 3166-1 alpha-2 code, lower case. A basis value
+// isoCountryCodes holds ISO 3166-1 alpha-2 codes, lower case. A basis value
 // that starts or ends with one names a market.
 var isoCountryCodes = map[string]bool{
 	"ad": true, "ae": true, "af": true, "ag": true, "ai": true, "al": true, "am": true, "ao": true, "aq": true,
