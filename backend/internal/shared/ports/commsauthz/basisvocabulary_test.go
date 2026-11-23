@@ -10,51 +10,64 @@ package commsauthz
 
 import (
 	"go/ast"
+	"go/constant"
 	"go/parser"
 	"go/token"
-	"regexp"
-	"strconv"
+	"go/types"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
-// countryPrefixed matches a value that starts with a two-letter code and an
-// underscore, such as `de_` or `vn_`.
-var countryPrefixed = regexp.MustCompile(`^[a-z]{2}_`)
-
-// basisValues reads the string value of every constant declared with the type
-// Basis, so a constant added later is checked without anyone listing it.
+// basisValues is the value of every constant whose type is Basis, in any file
+// of the package. The type checker decides, so a constant that takes its type
+// from the block it sits in is read too.
 func basisValues(t *testing.T) []string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), "decision.go", nil, 0)
+	fset := token.NewFileSet()
+	paths, err := filepath.Glob("*.go")
 	if err != nil {
-		t.Fatalf("parsing decision.go: %v", err)
+		t.Fatalf("listing the package: %v", err)
 	}
-	var values []string
-	for _, decl := range file.Decls {
-		gen, ok := decl.(*ast.GenDecl)
-		if !ok || gen.Tok != token.CONST {
+	var files []*ast.File
+	for _, path := range paths {
+		if strings.HasSuffix(path, "_test.go") {
 			continue
 		}
-		for _, spec := range gen.Specs {
-			vs, ok := spec.(*ast.ValueSpec)
-			if !ok || len(vs.Values) != 1 {
-				continue
-			}
-			if ident, ok := vs.Type.(*ast.Ident); !ok || ident.Name != "Basis" {
-				continue
-			}
-			lit, ok := vs.Values[0].(*ast.BasicLit)
-			if !ok {
-				t.Fatalf("Basis constant %s is not a string literal", vs.Names[0].Name)
-			}
-			value, err := strconv.Unquote(lit.Value)
-			if err != nil {
-				t.Fatalf("reading Basis constant %s: %v", vs.Names[0].Name, err)
-			}
-			values = append(values, value)
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
 		}
+		files = append(files, file)
+	}
+	// Imports are not resolved: only the constants of this package are read, and
+	// a failed import cannot change the type of one of them.
+	conf := types.Config{Error: func(error) {}}
+	pkg, _ := conf.Check("commsauthz", fset, files, nil)
+	var values []string
+	for _, name := range pkg.Scope().Names() {
+		c, ok := pkg.Scope().Lookup(name).(*types.Const)
+		if !ok || c.Type().String() != "commsauthz.Basis" {
+			continue
+		}
+		values = append(values, constant.StringVal(c.Val()))
 	}
 	return values
+}
+
+// namesACountry reports the word of a basis value that is a country code at
+// either end, or a country name or adjective anywhere.
+func namesACountry(value string) (string, bool) {
+	words := strings.Split(value, "_")
+	for i, word := range words {
+		if countryWords[word] {
+			return word, true
+		}
+		if (i == 0 || i == len(words)-1) && isoCountryCodes[word] {
+			return word, true
+		}
+	}
+	return "", false
 }
 
 func TestNoBasisConstantNamesACountry(t *testing.T) {
@@ -64,18 +77,22 @@ func TestNoBasisConstantNamesACountry(t *testing.T) {
 		t.Fatalf("read %d Basis constants, want at least the 8 the list holds: the reader missed some", len(values))
 	}
 	for _, value := range values {
-		if countryPrefixed.MatchString(value) {
-			t.Errorf("Basis %q starts with a country code; core names no market, so the pack that grants it supplies the citation", value)
+		if word, bad := namesACountry(value); bad {
+			t.Errorf("Basis %q holds %q, which names a country; core names no market, so the pack that grants it supplies the citation", value, word)
 		}
 	}
 }
 
-func TestTheCountryPrefixRuleSeesACountryValue(t *testing.T) {
+func TestTheCountryRuleSeesWhatItMustAndSparesTheRest(t *testing.T) {
 	t.Parallel()
-	if !countryPrefixed.MatchString("vn_subject_agreement") {
-		t.Fatal("the rule does not match a value that starts with a country code")
+	for _, value := range []string{"vn_subject_agreement", "vietnam_subject_agreement", "agreement_de", "german_agreement"} {
+		if _, bad := namesACountry(value); !bad {
+			t.Errorf("%q names a country and the rule missed it", value)
+		}
 	}
-	if countryPrefixed.MatchString("precontract_request") {
-		t.Fatal("the rule matches a neutral value")
+	for _, value := range []string{"precontract_request", "vital_or_security_interest", "existing_customer_exception"} {
+		if word, bad := namesACountry(value); bad {
+			t.Errorf("%q is neutral and the rule read %q as a country", value, word)
+		}
 	}
 }

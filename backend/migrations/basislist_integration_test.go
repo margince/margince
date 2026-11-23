@@ -65,14 +65,16 @@ func basisConstraintCount(t *testing.T, conn *pgx.Conn, validated bool) int {
 	var n int
 	if err := conn.QueryRow(context.Background(),
 		`SELECT count(*) FROM pg_constraint
-		  WHERE conname IN ('communication_basis_kind', 'communication_decision_basis')
+		  WHERE (conrelid, conname) IN (
+		          ('communication_basis'::regclass, 'communication_basis_kind'),
+		          ('communication_decision'::regclass, 'communication_decision_basis'))
 		    AND convalidated = $1`, validated).Scan(&n); err != nil {
 		t.Fatalf("reading the constraint state: %v", err)
 	}
 	return n
 }
 
-func TestAnOldBasisRowStaysAsItWasAndTheUpgradeGoesOn(t *testing.T) {
+func TestAnOldBasisRowStaysAsItWasAndTheListStaysClosed(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -95,12 +97,28 @@ func TestAnOldBasisRowStaysAsItWasAndTheUpgradeGoesOn(t *testing.T) {
 			t.Errorf("%s = %q, want %q: a row is never relabelled as another basis", q, got, retiredBasis)
 		}
 	}
-	if n := basisConstraintCount(t, conn, true) + basisConstraintCount(t, conn, false); n != 0 {
-		t.Errorf("%d basis checks remain although rows break them; they must be dropped so the rows stay updatable", n)
+	if n := basisConstraintCount(t, conn, true); n != 2 {
+		t.Errorf("%d basis checks are validated, want 2: a table holding old rows keeps a check", n)
+	}
+	if n := basisConstraintCount(t, conn, false); n != 0 {
+		t.Errorf("%d basis checks are unvalidated, which would block updates of the old rows", n)
 	}
 	if _, err := conn.Exec(ctx,
 		`UPDATE communication_basis SET revoked_at = now() WHERE contact_id = $1`, contact); err != nil {
 		t.Errorf("a row holding the old value can no longer change: %v", err)
+	}
+	if _, err := conn.Exec(ctx,
+		`INSERT INTO communication_basis (contact_id, kind, captured_by) VALUES ($1, 'not_a_basis', 'test')`,
+		contact); err == nil {
+		t.Error("a table holding old rows accepts an arbitrary basis string")
+	}
+	if _, err := conn.Exec(ctx,
+		`INSERT INTO communication_decision
+		   (delivery_id, decision_set_id, recipient_address, phase, resolved_category,
+		    verdict, reason_code, basis, mode, actor)
+		 VALUES (gen_random_uuid(), gen_random_uuid(), 'b@example.com', 'staging', 'reply_to_inbound',
+		    'allow', 'test', 'not_a_basis', 'enforce', 'test')`); err == nil {
+		t.Error("a decision table holding old rows accepts an arbitrary basis string")
 	}
 }
 
@@ -110,10 +128,24 @@ func TestACleanTableRefusesTheRetiredBasisInTheDatabase(t *testing.T) {
 	headSchema(t, conn)
 	ctx := context.Background()
 	asTheBasisListWasBefore(t, conn)
+	// A check of the same name on another table is not the migration's to settle.
+	if _, err := conn.Exec(ctx,
+		`CREATE TABLE basis_decoy (kind text,
+		   CONSTRAINT communication_basis_kind CHECK (kind <> 'x') NOT VALID)`); err != nil {
+		t.Fatalf("creating the decoy table: %v", err)
+	}
 
 	applyMigrationFile(t, conn, basisListMigration+".up.sql")
 	applyMigrationFile(t, conn, basisListCheckMigration+".up.sql")
 
+	var decoyValidated bool
+	if err := conn.QueryRow(ctx,
+		`SELECT convalidated FROM pg_constraint WHERE conrelid = 'basis_decoy'::regclass`).Scan(&decoyValidated); err != nil {
+		t.Fatalf("reading the decoy check: %v", err)
+	}
+	if decoyValidated {
+		t.Error("the migration validated a check of the same name on another table")
+	}
 	if n := basisConstraintCount(t, conn, false); n != 0 {
 		t.Errorf("%d basis checks are still unvalidated on a table with no old rows", n)
 	}

@@ -3047,7 +3047,7 @@ public.communication_basis acl=margince_owner=arwdDxt/margince_owner,margince_ap
 public.communication_basis.captured_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_basis.captured_by text NOT NULL gen=- def=-
 public.communication_basis.communication_basis_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
-public.communication_basis.communication_basis_kind CHECK ((kind = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'consent'::text, 'existing_customer_exception'::text])))
+public.communication_basis.communication_basis_kind CHECK ((kind = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'existing_customer_exception'::text])))
 public.communication_basis.communication_basis_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
 public.communication_basis.communication_basis_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.communication_basis.communication_basis_pkey PRIMARY KEY (id)

@@ -13,7 +13,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `captured_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
-| `kind` | `text` | yes | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 2 more. |
+| `kind` | `text` | yes | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 1 more. |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `note` | `text` |  |  |
 | `revoked_at` | `timestamp with time zone` |  |  |
@@ -33,7 +33,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `communication_basis_kind`: `CHECK ((kind = ANY (ARRAY['contract', 'precontract_request', 'subject_initiated_correspondence', 'legitimate_interests', 'legal_obligation', 'vital_or_security_interest', 'consent', 'existing_customer_exception'])))`
+- `communication_basis_kind`: `CHECK ((kind = ANY (ARRAY['contract', 'precontract_request', 'subject_initiated_correspondence', 'legitimate_interests', 'legal_obligation', 'vital_or_security_interest', 'existing_customer_exception'])))`
 - `communication_basis_one_subject`: `CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))`
 - `communication_basis_window`: `CHECK (((valid_until IS NULL) OR (valid_until > valid_from)))`
 

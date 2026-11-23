@@ -1,5 +1,5 @@
--- Restores the retired value to both lists. Either rule may be absent: the
--- validating migration drops one that a row broke.
+-- Restores the retired value to both lists. Either rule may be a different
+-- check by now: the validating migration replaces one that a row broke.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE communication_basis
