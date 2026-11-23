@@ -23,14 +23,47 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// Plan nodes are read from EXPLAIN (FORMAT JSON), asserting the access method,
-// the index and the columns it is probed on, never the whole plan text.
+// planNode is the part of an EXPLAIN (FORMAT JSON) node the test asserts.
+// That is the access method, the index and its probe columns, never the plan text.
 type planNode struct {
-	NodeType       string     `json:"Node Type"`
-	IndexName      string     `json:"Index Name"`
-	IndexCond      string     `json:"Index Cond"`
-	ArbiterIndexes []string   `json:"Conflict Arbiter Indexes"`
-	Plans          []planNode `json:"Plans"`
+	NodeType       string
+	IndexName      string
+	IndexCond      string
+	ArbiterIndexes []string
+	Plans          []planNode
+}
+
+// planFromExplain reads Postgres's own key names from the decoded document.
+// They contain spaces, so a tagged struct would break the snake-case JSON lint.
+func planFromExplain(t *testing.T, raw []byte) planNode {
+	t.Helper()
+	var doc []map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil || len(doc) != 1 {
+		t.Fatalf("unreadable EXPLAIN output %s: %v", raw, err)
+	}
+	plan, ok := doc[0]["Plan"].(map[string]any)
+	if !ok {
+		t.Fatalf("EXPLAIN output has no Plan: %s", raw)
+	}
+	return nodeFromExplain(plan)
+}
+
+func nodeFromExplain(m map[string]any) planNode {
+	text := func(key string) string { s, _ := m[key].(string); return s }
+	n := planNode{NodeType: text("Node Type"), IndexName: text("Index Name"), IndexCond: text("Index Cond")}
+	arbiters, _ := m["Conflict Arbiter Indexes"].([]any)
+	for _, a := range arbiters {
+		if s, ok := a.(string); ok {
+			n.ArbiterIndexes = append(n.ArbiterIndexes, s)
+		}
+	}
+	children, _ := m["Plans"].([]any)
+	for _, c := range children {
+		if cm, ok := c.(map[string]any); ok {
+			n.Plans = append(n.Plans, nodeFromExplain(cm))
+		}
+	}
+	return n
 }
 
 func (n planNode) walk(visit func(planNode)) {
@@ -46,21 +79,15 @@ func (fx *autoFixture) explain(t *testing.T, sql string, args ...any) planNode {
 	if err := fx.owner.QueryRow(context.Background(), "EXPLAIN (FORMAT JSON) "+sql, args...).Scan(&raw); err != nil {
 		t.Fatalf("EXPLAIN failed: %v\nstatement: %s", err, sql)
 	}
-	var wrapped []struct {
-		Plan planNode `json:"Plan"`
-	}
-	if err := json.Unmarshal(raw, &wrapped); err != nil || len(wrapped) != 1 {
-		t.Fatalf("unreadable EXPLAIN output %s: %v", raw, err)
-	}
-	return wrapped[0].Plan
+	return planFromExplain(t, raw)
 }
 
 var errRollbackPlanProbe = errors.New("rolling the plan probe back")
 
 // explainGeneric explains the statement as the production pool runs it: cached
-// on the backend that prepared it, under a generic plan, which a hot statement
-// switches to after a few executions. EXPLAIN ANALYZE executes the write, so
-// the transaction is rolled back.
+// on the backend that prepared it, under a generic plan.
+// A hot statement switches to that plan after a few executions.
+// EXPLAIN ANALYZE executes the write, so the transaction is rolled back.
 func (fx *autoFixture) explainGeneric(t *testing.T, sql string, args ...any) planNode {
 	t.Helper()
 	ctx := context.Background()
@@ -82,28 +109,19 @@ func (fx *autoFixture) explainGeneric(t *testing.T, sql string, args ...any) pla
 	if !errors.Is(err, errRollbackPlanProbe) {
 		t.Fatalf("explaining the cached statement failed: %v\nstatement: %s", err, sql)
 	}
-	var wrapped []struct {
-		Plan planNode `json:"Plan"`
-	}
-	if err := json.Unmarshal(raw, &wrapped); err != nil || len(wrapped) != 1 {
-		t.Fatalf("unreadable EXPLAIN output %s: %v", raw, err)
-	}
-	return wrapped[0].Plan
+	return planFromExplain(t, raw)
 }
 
-// wantRunOutcomes is the number of terminal writes the engine has. A new one
-// raises it here on purpose; the workflowrunwriters gate catches a write that
-// bypasses runOutcomeSQL altogether.
+// wantRunOutcomes is the number of terminal writes the engine has.
+// A new one raises it here, and the workflowrunwriters gate catches a write
+// that bypasses runOutcomeSQL.
 const wantRunOutcomes = 5
 
 // TestRunClaimAndOutcomeStatementsReachTheirRowByTheUniqueIndex holds the cost
-// of a firing without reading a clock. A firing touches workflow_run once to
-// claim its row and once to record its outcome. If an outcome statement loses
-// idempotency_key from its index probe, it still uses an index and still passes
-// every functional test, but reads every run its handler ever made. So the plan
-// must probe workflow_run_unique on BOTH columns. The statements come from the
-// engine (claimRunSQL, runOutcomeSQL); the rows are written by the engine's
-// own claim, then ANALYZEd, so the planner has real statistics to choose from.
+// of a firing without reading a clock. An outcome that loses idempotency_key from its index probe still uses an
+// index and passes every functional test, but reads every run its handler made.
+// So the plan must probe workflow_run_unique on both columns.
+// The statements and the rows come from the engine itself.
 func TestRunClaimAndOutcomeStatementsReachTheirRowByTheUniqueIndex(t *testing.T) {
 	fx := setupAutomationDB(t)
 	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil)
@@ -170,7 +188,7 @@ func TestRunClaimAndOutcomeStatementsReachTheirRowByTheUniqueIndex(t *testing.T)
 	}
 }
 
-// scanProblems wants exactly one scan of workflow_run, an Index Scan or Index
+// scanProblems wants one scan of workflow_run, an Index Scan or Index
 // Only Scan of workflow_run_unique whose condition names both columns.
 func scanProblems(plan planNode) []string {
 	var scans []planNode

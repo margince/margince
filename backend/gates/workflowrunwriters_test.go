@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H2
+
 package gates
 
 import (
@@ -19,16 +21,16 @@ import (
 var workflowRunWrite = regexp.MustCompile(`(?i)\b(INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+workflow_run\b`)
 
 // workflowRunWriters lists every non-test file that writes workflow_run, with
-// how many SQL literals it holds. The claim and outcome writes live in
-// engine_run.go; the plan-shape test (automation/runplanshape_integration_test.go)
-// explains each of them. Every other writer is named here with the reason it is
-// not on the (handler, idempotency_key) claim key, so a new raw write turns this
-// red until it is either routed through claimRunSQL / runOutcomeSQL or named.
+// how many SQL literals it holds.
+// The claim and outcome writes live in runoutcomes.go, and the
+// plan-shape test (automation/runplanshape_integration_test.go) explains each.
+// Every other writer is named here with the reason it is not on the claim key.
+// A new raw write fails until it uses claimRunSQL or runOutcomeSQL, or is named.
 var workflowRunWriters = map[string]struct {
 	literals int
 	reason   string
 }{
-	"internal/modules/automation/engine_run.go":           {6, "the claim insert (claimRunSQL) and the five outcome updates (runOutcomeSQL), plan-checked by the automation integration test"},
+	"internal/modules/automation/runoutcomes.go":          {6, "the claim insert (claimRunSQL) and the five outcome updates (runOutcomeSQL), plan-checked by the automation integration test"},
 	"internal/modules/automation/engine_blocked.go":       {3, "park, release and fail the run behind one approval; keyed on detail->>'approval_id', which has no index, and only a still-requires_approval row matches"},
 	"internal/modules/privacy/erasure_approvals.go":       {2, "block the runs behind withdrawn approvals (detail->>'approval_id') and scrub the subject's text from planned/applied; both are erasure sweeps, not claim-keyed"},
 	"internal/modules/automation/runprune.go":             {1, "retention delete by age and status; a bounded batch sweep, not claim-keyed"},
@@ -36,6 +38,7 @@ var workflowRunWriters = map[string]struct {
 }
 
 func TestEveryWorkflowRunWriteIsTheClaimPathOrNamed(t *testing.T) {
+	t.Parallel()
 	found := map[string]int{}
 	n := walkHandWrittenGoFiles(t, "internal", func(path, text string) {
 		if strings.HasSuffix(path, "_test.go") || !strings.Contains(text, "workflow_run") {
