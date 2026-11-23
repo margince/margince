@@ -20,7 +20,7 @@ import { approvalHref } from "../../lib/approvalhref";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import { useApproval } from "../../lib/approvalread";
 import type { Approval } from "../../lib/approvals.queries";
-import { useReaderStageNames } from "../../lib/approvalstagenames";
+import { useReaderApproval } from "../../lib/approvalstagenames";
 import { useViewerZone } from "../../lib/viewerzone";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import { useApprovalNames } from "./approvalresponsibility";
@@ -90,7 +90,7 @@ export function ApprovalDetailModal({
  * contact and describe no change.
  */
 function ApprovalDetailBody({
-  approval,
+  approval: stored,
   locale,
   zone,
 }: Readonly<{
@@ -99,11 +99,8 @@ function ApprovalDetailBody({
   zone: string;
 }>) {
   const t = useT();
-  const readerStages = useReaderStageNames();
-  const change = (readerStages(approval.proposed_change) ?? {}) as Record<
-    string,
-    unknown
-  >;
+  const approval = useReaderApproval()(stored);
+  const change = (approval.proposed_change ?? {}) as Record<string, unknown>;
   const approvalNames = useApprovalNames([approval]);
   const readerZone = useViewerZone();
   const display = resolveDisplay(

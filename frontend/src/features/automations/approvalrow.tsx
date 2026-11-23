@@ -23,7 +23,7 @@ import {
   type Approval,
   invalidateApprovalViews,
 } from "../../lib/approvals.queries";
-import { useReaderStageNames } from "../../lib/approvalstagenames";
+import { useReaderApproval } from "../../lib/approvalstagenames";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { recordRoute } from "../../lib/entity";
 import { hideHomeRows } from "../../lib/homerows";
@@ -128,7 +128,6 @@ function DecidableApprovalRow({
   extraInvalidateKeys?: readonly QueryKey[];
 }>) {
   const t = useT();
-  const readerStages = useReaderStageNames();
   const plural = usePlural();
   const { locale } = useLocale();
   const viewerId = useViewerId();
@@ -359,15 +358,7 @@ function DecidableApprovalRow({
             <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
           )}
           {/* kind is meta, not the headline — the human reads the summary first */}
-          <span className="t-caption">
-            {approvalLabel(
-              {
-                ...approval,
-                proposed_change: readerStages(approval.proposed_change),
-              },
-              t,
-            )}
-          </span>
+          <span className="t-caption">{approvalLabel(approval, t)}</span>
           <DecisionStatusChip
             approval={approval}
             decided={!!decided}
@@ -469,7 +460,11 @@ function DecidableApprovalRow({
 }
 
 /** One staged proposal as a row. A legal review request has its own presentation. */
-export function ApprovalRow(props: Parameters<typeof DecidableApprovalRow>[0]) {
+export function ApprovalRow(
+  rowProps: Parameters<typeof DecidableApprovalRow>[0],
+) {
+  const readerApproval = useReaderApproval();
+  const props = { ...rowProps, approval: readerApproval(rowProps.approval) };
   if (props.approval.kind === "legal_review_request") {
     return (
       <LegalReviewRequestRow

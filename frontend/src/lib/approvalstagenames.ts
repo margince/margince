@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useMemo } from "react";
+import { translate, useLocale } from "../i18n";
 import { stageNames, usePipelines } from "./pipelines.queries";
 
 type Change = Readonly<Record<string, unknown>>;
@@ -38,11 +40,39 @@ export function withReaderStageNames(
   };
 }
 
-/** Returns the function that renders a card's stage names through the pipelines' own translations. */
-export function useReaderStageNames(): (
-  change: Change | null | undefined,
-) => Change | undefined {
+type Localizable = Readonly<{
+  kind: string;
+  proposed_change?: Change | null;
+  summary?: string | null;
+}>;
+
+/**
+ * The approval as this reader should see it. A proposal-stage card gets its
+ * stage names translated, and its headline built here, because the server
+ * sentence is frozen with the name stored when it was raised and every surface
+ * prints that sentence first.
+ */
+export function useReaderApproval(): <A extends Localizable>(approval: A) => A {
   const pipelines = usePipelines().data;
-  const names = stageNames(pipelines ?? []);
-  return (change) => withReaderStageNames(change, names);
+  const { locale } = useLocale();
+  return useMemo(() => {
+    const names = stageNames(pipelines ?? []);
+    return <A extends Localizable>(approval: A): A => {
+      if (approval.kind !== "deal_proposal_stage") return approval;
+      const change = withReaderStageNames(approval.proposed_change, names);
+      const { deal_name: deal, to_stage_name: stage } = change ?? {};
+      const headline =
+        typeof deal === "string" && typeof stage === "string"
+          ? {
+              summary: translate(locale, "approval.proposalStageAsked", {
+                deal,
+                stage,
+              }),
+              system_display: undefined,
+              summary_parts: undefined,
+            }
+          : {};
+      return { ...approval, ...headline, proposed_change: change };
+    };
+  }, [pipelines, locale]);
 }
