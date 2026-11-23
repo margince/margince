@@ -181,7 +181,7 @@ func (r *Router) Complete(ctx context.Context, task Task, req model.Request) (mo
 	if err := r.refuseUnbound(); err != nil {
 		return model.Response{}, RouteInfo{}, err
 	}
-	ladder, ok := taskLadders[task]
+	ladder, ok := r.binding().ladder(task)
 	if !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
 	}

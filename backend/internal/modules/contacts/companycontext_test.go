@@ -29,7 +29,7 @@ func TestAssembleCompanyContextIsCanonicalAndScoped(t *testing.T) {
 		},
 	}
 
-	context := assembleCompanyContext(company, []CompanyContextScope{
+	context := AssembleCompanyContext(company, []CompanyContextScope{
 		CompanyContextProof, CompanyContextOffer, CompanyContextPositioning, CompanyContextOffer,
 	}, generatedAt)
 
@@ -55,7 +55,7 @@ func TestAssembleCompanyContextIsCanonicalAndScoped(t *testing.T) {
 	reordered := company
 	reordered.ProfileFields = []CompanyProfileField{company.ProfileFields[2], company.ProfileFields[0], company.ProfileFields[1]}
 	reordered.Facts = []CompanyFact{company.Facts[2], company.Facts[0], company.Facts[1]}
-	again := assembleCompanyContext(reordered, []CompanyContextScope{
+	again := AssembleCompanyContext(reordered, []CompanyContextScope{
 		CompanyContextOffer, CompanyContextPositioning, CompanyContextProof,
 	}, generatedAt.Add(time.Hour))
 	if context.Fingerprint != again.Fingerprint {
@@ -63,7 +63,7 @@ func TestAssembleCompanyContextIsCanonicalAndScoped(t *testing.T) {
 	}
 
 	reordered.ProfileFields[1].Value = "Enterprise manufacturers"
-	changed := assembleCompanyContext(reordered, wantScopes, generatedAt)
+	changed := AssembleCompanyContext(reordered, wantScopes, generatedAt)
 	if context.Fingerprint == changed.Fingerprint {
 		t.Fatal("fingerprint did not change when a contributing value changed")
 	}
@@ -79,7 +79,7 @@ func TestAssembleCompanyContextFallsBackToAnchorIdentity(t *testing.T) {
 		CompanyCapturedBy: "human:owner",
 	}
 
-	context := assembleCompanyContext(company, []CompanyContextScope{CompanyContextIdentity}, time.Time{})
+	context := AssembleCompanyContext(company, []CompanyContextScope{CompanyContextIdentity}, time.Time{})
 	items := context.Scopes[0].Items
 	if len(items) != 2 || items[0].Key != fieldDisplayName || items[1].Key != "primary_domain" {
 		t.Fatalf("identity items = %#v, want display_name and primary_domain", items)

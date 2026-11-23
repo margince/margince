@@ -62,8 +62,8 @@ func TestAJudgelessRowIsRegradedFromItsCounts(t *testing.T) {
 	if got := row.CaseJudgeBand(); got != aicert.VerdictCertified {
 		t.Errorf("a judge-less row's judge half reads %q, want certified by construction", got)
 	}
-	rec := aicert.Record{Verdict: aicert.VerdictNotSupported, Scenarios: []aicert.ScenarioRecord{row, row}}
+	rec := aicert.Record{Verdict: aicert.VerdictNotSupported, Scenarios: []aicert.ScenarioRecord{row, row, row}}
 	if tally, _ := rec.ForSite("acts"); tally.Verdict != aicert.VerdictCertified {
-		t.Errorf("site verdict = %q, want certified — regraded from its rows, not the stored verdict", tally.Verdict)
+		t.Errorf("site verdict = %q, want certified — 27 of 27 regraded from its rows, not the stored verdict", tally.Verdict)
 	}
 }

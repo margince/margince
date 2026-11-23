@@ -82,7 +82,7 @@ func TestAnAgentLoopStepRoundTripsTheOpenAIWire(t *testing.T) {
 		t.Fatalf("binding the openai_compatible client: %v", err)
 	}
 	prepared, err := agentLoopCases{agent: agentLoopAgent}.Prepare(
-		fixtureJSON(t, agentLoopBaseFixture()), agentLoopExpectationJSON(t, agentLoopFinalStep))
+		fixtureJSON(t, agentLoopBaseFixture(t)), agentLoopExpectationJSON(t, agentLoopFinalStep))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}

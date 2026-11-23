@@ -92,13 +92,18 @@ func TestAICertificationPage(t *testing.T) {
 		t.Fatalf("reading the decision records against this build: %v", err)
 	}
 
-	doc := buildAICertDoc(rows, unclaimed, corpus, records)
+	contextOwed, err := aicert.ContextOwedTasks(context.Background(), corpus, census)
+	if err != nil {
+		t.Fatalf("reading which tasks production sends company context to: %v", err)
+	}
+	doc := buildAICertDoc(rows, unclaimed, corpus, records, contextOwed)
 	doc.Decisions = buildAICertDecisions(decisionRows)
-	doc.Presets = attributeAICertPresets(loadAICertPresets(t), doc, records)
+	doc.Presets = attributeAICertPresets(loadAICertPresets(t), doc, records, rows, corpus)
 	doc.Families = buildAICertFamilies(doc, rows)
 	assertAICertDocCoversEverything(t, doc, rows, corpus, records)
 	assertAICertPresetsAreAttributed(t, doc.Presets, doc)
 	assertAICertPresetsReadTheRecords(t, doc.Presets, records)
+	assertAICertPresetsMatchTheReport(t, doc.Presets, corpus, census, records)
 	assertAICertProfilesAreNamed(t, doc.Presets)
 	encoded, err := marshalAICertDoc(doc)
 	if err != nil {
@@ -304,7 +309,8 @@ func writeAICertGlossary(page *strings.Builder) {
 	page.WriteString("| Scenario | One test case: what the model is given, and what a good answer looks like. |\n")
 	page.WriteString("| Binding | The exact setup a model was tested on: who supplies it, which model, and where it runs. A result counts for that setup only: the same model reached another way has to be tested again. |\n")
 	page.WriteString("| Record | The saved result of one paid test run: one binding, one task. |\n")
-	page.WriteString("| Band | The grade a record gives its setup. `certified`: good enough to ship. `supported_degraded`: it works, but worse. `not_supported`: do not ship it. |\n\n")
+	page.WriteString("| Band | The grade a record gives its setup. `certified`: good enough to ship. `supported_degraded`: it works, but worse. `not_supported`: do not ship it. On a site's own row, `too_few_runs`: every test case of the site was right on its own, on too few tries for the site to have a grade of its own; its task's grade counts them. |\n")
+	page.WriteString("| Judge | The model that scored how good the answers were. Scores from two judges are not on one scale, so compare two records' quality only when they name the same judge. |\n\n")
 	page.WriteString("#### The four states\n\n")
 	page.WriteString("A state says whether a saved result still describes the product as it is\ntoday. It says nothing about how well the model did; that is the band.\n\n")
 	page.WriteString("| State | What it claims |\n|---|---|\n")
@@ -483,14 +489,14 @@ func writeAICertBindings(page *strings.Builder, bindings []aiCertBinding) {
 	page.WriteString("those sites by whether the measurement still describes what this build sends,\n")
 	page.WriteString("and the band columns split the same sites by the verdict each reached. Each\n")
 	page.WriteString("record's own p50 and p95 are in the site tables.\n\n")
-	page.WriteString("| Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `supported_degraded` | `not_supported` |\n")
-	page.WriteString("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+	page.WriteString("| Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `too_few_runs` | `supported_degraded` | `not_supported` |\n")
+	page.WriteString("|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, b := range bindings {
-		fmt.Fprintf(page, "| `%s` | `%s` | `%s` | %d | %d | %d | %d | %d | %d | %s | %s | %d | %d | %d |\n",
+		fmt.Fprintf(page, "| `%s` | `%s` | `%s` | %d | %d | %d | %d | %d | %d | %s | %s | %d | %d | %d | %d |\n",
 			b.Binding.Provider, b.Binding.Model, b.Binding.Env, b.Sites,
 			b.SitesCurrent, b.SitesPartial, b.SitesStale,
 			b.Runs, b.Passed, aicert.ReliabilityCell(b.Passed, b.Runs), latencyCell(b.SlowestP95MS),
-			b.Bands.Certified, b.Bands.SupportedDegraded, b.Bands.NotSupported)
+			b.Bands.Certified, b.Bands.TooFewRuns, b.Bands.SupportedDegraded, b.Bands.NotSupported)
 	}
 	page.WriteString("\n")
 }
@@ -615,16 +621,24 @@ func writeAICertSiteRecords(page *strings.Builder, records []aiCertRecord) {
 		return
 	}
 	fmt.Fprintf(page, "Records (%d):\n\n", len(records))
-	page.WriteString("| Binding | State | Scenarios | Band | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |\n")
-	page.WriteString("|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
+	page.WriteString("| Binding | State | Scenarios | Band | Judge | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |\n")
+	page.WriteString("|---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n")
 	for _, rec := range records {
-		fmt.Fprintf(page, "| `%s`%s | `%s` | %s | `%s` | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
-			rec.Binding.label(), siteThinkingCell(rec), rec.State, coverageCell(rec), rec.Band,
+		fmt.Fprintf(page, "| `%s`%s | `%s` | %s | `%s` | %s | %d | %d | %s | %s | %s | %d | %d | %d | %d |\n",
+			rec.Binding.label(), siteThinkingCell(rec), rec.State, coverageCell(rec), rec.Band, judgeCell(rec.Judge),
 			rec.Runs, rec.Passed, aicert.ReliabilityCell(rec.Passed, rec.Runs),
 			latencyCell(rec.LatencyP50MS), latencyCell(rec.LatencyP95MS),
 			rec.Reported.Accepted, rec.Reported.WrongAnswer, rec.Reported.Invalid, rec.Reported.Abstained)
 	}
 	page.WriteString("\n")
+}
+
+// judgeCell names the judge behind a record's quality scores, or says none was asked.
+func judgeCell(judge string) string {
+	if judge == "" {
+		return "checked mechanically"
+	}
+	return "`" + judge + "`"
 }
 
 // siteThinkingCell names the level a site ran at when it is not the binding's.

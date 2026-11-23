@@ -17978,7 +17978,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird im Schlüsseltresor gespeichert und nie wieder angezeigt.",
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
-    "Ein Ausgangspunkt. Jedes Modell, das der Anbieter bereitstellt, funktioniert.",
+    "Jedes Modell, das der Anbieter bereitstellt, funktioniert. Die Tests haben die Zusammenstellung oben bewertet, nicht ein Modell für jede Stufe.",
+  "firstRun.ai.setupTitle.consumer_class_brokered":
+    "Gemma 4 zum Selbstbetrieb, über OpenRouter",
+  "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
+  "firstRun.ai.setupTitle.gemini_vertex_eu":
+    "Google Gemini in der EU, über Google Cloud",
+  "firstRun.ai.setupTitle.gemma4_local_ollama":
+    "Gemma 4 auf deinem eigenen Server, über Ollama",
+  "firstRun.ai.setupTitle.openrouter_cloud":
+    "Offene Modelle von OpenAI und Mistral, über OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_cloud_eu":
+    "Mistral-Modelle in der EU, über OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_openai": "OpenAI GPT-6, über OpenRouter",
+  "firstRun.ai.setupTitle.qwen3_local_vllm":
+    "Qwen3 auf deinem eigenen Server, über vLLM",
+  "firstRun.ai.setup": "Modelle: {setup}",
+  "firstRun.ai.setupHint":
+    "Die Zusammenstellung, die die Tests für diesen Anbieter bewertet haben, ein Modell pro Stufe. Du kannst jedes davon später in den Einstellungen unter KI ändern.",
+  "firstRun.ai.oneModel": "Stattdessen ein Modell für jede Stufe verwenden",
+  "aiCert.ready": "Bereit",
+  "aiCert.withCare": "Mit Vorsicht nutzbar",
+  "aiCert.notReliable": "Noch nicht zuverlässig",
+  "aiCert.notMeasured": "Nicht gemessen",
+  "aiCert.recheckPending": "{grade}, neue Prüfung ausstehend",
+  "aiCert.title": "Testnote von {model} für diese Funktion",
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.ai.keyFailed": "Schlüssel nicht gespeichert",
   "firstRun.ai.bindFailed": "Anbieter nicht zugeordnet",
