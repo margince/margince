@@ -350,7 +350,7 @@ func TestTheCatalogSaysWhatAskUserFirstAsksOfTheModel(t *testing.T) {
 }
 
 // One sentence tells a model that a refused send goes out only by the user.
-// The tool that checks a contact and the tool that sends then cannot disagree.
+// The tool that checks a contact and the tool that sends both carry it.
 func TestACheckAndASendSayTheSameAboutSendingAnyway(t *testing.T) {
 	for name, copy := range map[string]toolCopy{"read_details": readDetailsCopy, "send_outbound": sendOutboundCopy} {
 		if !strings.Contains(copy.render(), sendAnywayRule) {
