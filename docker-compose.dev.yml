@@ -157,10 +157,6 @@ services:
     # when something needs a segment, and the symptom of it binding is an
     # unrelated-looking migration failure.
     shm_size: 1g
-    # track_activity_query_size=65536 keeps the whole text of a long follow-up or
-    # Home statement in pg_stat_activity. The stock 1 kB cuts it, and the slow
-    # statement report of the integration lane (SlowStatement) then cannot
-    # explain it.
     # synchronous_commit=off can lose the last few commits of a dev database
     # after a container crash, and never corrupts it. fsync stays on here; only
     # the CI integration lane sets PG_FSYNC=off, where the runner is thrown away
@@ -173,8 +169,6 @@ services:
       - max_connections=408
       - -c
       - synchronous_commit=off
-      - -c
-      - track_activity_query_size=65536
       - -c
       - fsync=${PG_FSYNC:-on}
     environment:

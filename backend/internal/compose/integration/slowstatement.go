@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -59,8 +60,12 @@ func watchSlow(ctx context.Context, conn *pgx.Conn, after time.Duration, seen ch
 		  AND pid <> pg_backend_pid() AND now() - query_start > make_interval(secs => $1)
 		  ORDER BY query_start LIMIT 1`, after.Seconds()).Scan(&next.query, &next.seconds, &next.cut, &next.waitsOn, &next.blockers)
 		done()
-		if err == nil && next.seconds > longest.seconds {
+		switch {
+		case err == nil && next.seconds > longest.seconds:
+			next.probeErr = longest.probeErr
 			longest = next
+		case err != nil && !errors.Is(err, pgx.ErrNoRows):
+			longest.probeErr = err.Error()
 		}
 	}
 }
@@ -74,13 +79,19 @@ type slowSeen struct {
 	// statement stalled on a lock looks like one that is slow to run.
 	waitsOn  string
 	blockers int
+	// probeErr is the last check that failed, so a watch that saw nothing
+	// because every check failed does not read as a quiet database.
+	probeErr string
 }
 
 func (s slowSeen) describe(conn *pgx.Conn, limit time.Duration) string {
+	if s.query == "" && s.probeErr != "" {
+		return "no statement was seen running long, and the last check failed: " + s.probeErr
+	}
 	if s.query == "" {
 		return "no statement was seen running long"
 	}
-	head := fmt.Sprintf("ran %.1fs (wait event %q, blocked by %d sessions): %s", s.seconds, s.waitsOn, s.blockers, s.query)
+	head := fmt.Sprintf("ran %.1fs (wait event %q, %d blocking pids): %s", s.seconds, s.waitsOn, s.blockers, s.query)
 	switch {
 	case s.cut:
 		return head + "\n(not explained: the text is cut at track_activity_query_size)"
