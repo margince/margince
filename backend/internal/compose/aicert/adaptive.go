@@ -92,11 +92,18 @@ func nextRunCounts(sets []ScenarioRuns, maxRuns int) []int {
 	counts := make([]int, len(cases))
 	for i, c := range cases {
 		counts[i] = c.runs
-		if c.runs < maxRuns && (everyCase || caseBorderline(c)) {
+		if extendsCase(c, everyCase, maxRuns) {
 			counts[i] = min(c.runs+adaptiveRound, maxRuns)
 		}
 	}
 	return counts
+}
+
+// extendsCase says the rounds give c more runs: it is under the cap, and either
+// the pool or the case is in doubt. A record's rows are read against the same
+// answer, so a rule that would extend one is not what produced them.
+func extendsCase(c caseStats, poolInDoubt bool, maxRuns int) bool {
+	return c.runs < maxRuns && (poolInDoubt || caseBorderline(c))
 }
 
 // caseBorderline says a threshold a case is graded against is still in doubt:

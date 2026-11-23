@@ -270,19 +270,19 @@ func graderRequestDigest(sc Scenario, candidateRequest model.Request) (string, e
 // graderStamp is a scenario's grader third: the rule and the site's own check,
 // and the judge's request for a judged case. A case its check grades alone is
 // never sent to the judge, so a judge prompt edit leaves its record current.
-func graderStamp(gradingRuleName string, sc Scenario, census *aitasks.Registry, candidateRequest model.Request) (string, error) {
-	rule := checkedRule(gradingRuleName, siteCheck(sc.Task, sc.Site))
+func graderStamp(rule string, sc Scenario, census *aitasks.Registry, candidateRequest model.Request) (string, error) {
+	stamped := checkedRule(rule, siteCheck(sc.Task, sc.Site))
 	if !sc.Expect.Judged() {
-		return gradedBy(rule, ""), nil
+		return gradedBy(stamped, ""), nil
 	}
 	graderRequest, err := graderRequestDigest(asGraded(sc, census), candidateRequest)
 	if err != nil {
 		return "", err
 	}
-	return gradedBy(rule, graderRequest), nil
+	return gradedBy(stamped, graderRequest), nil
 }
 
-// checkedRule is gradingRule with the digest of the site's own check, which
+// checkedRule is rule with the digest of the site's own check, which
 // decides right from wrong before any judge is asked.
 func checkedRule(rule, check string) string {
 	if check == "" {

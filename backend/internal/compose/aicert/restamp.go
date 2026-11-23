@@ -11,6 +11,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
+// restampableRules maps a rule to the one that replaced it. The change moved how
+// stored rows pool and grade, and nothing about how scores are collected. A
+// reviewer who read that change adds the pair. Records of any other pair need
+// new runs, because their rows are not what this rule would record.
+var restampableRules = map[string]string{"grading-rule-13": "grading-rule-14"}
+
 // RestampBasis holds what a re-stamp compares a row against, keyed
 // "task/scenario". One stamp is under this build's grading rule. The other is
 // under the rule the record was graded by.
@@ -21,8 +27,9 @@ type RestampBasis struct {
 // NewRestampBasis stamps corpus under this build's rule and under oldRule. When
 // only the rule moved, the two differ in the grader third alone.
 func NewRestampBasis(ctx context.Context, oldRule string, corpus []Scenario, census *aitasks.Registry) (RestampBasis, error) {
-	if oldRule == gradingRule {
-		return RestampBasis{}, fmt.Errorf("aicert: restamp: %q is this build's rule; name the rule the records were graded by", oldRule)
+	if restampableRules[oldRule] != gradingRule {
+		return RestampBasis{}, fmt.Errorf("aicert: restamp: no review says %q moved only how rows pool and grade into %q, "+
+			"so its records need new runs; add the pair to restampableRules once a reviewer has checked that", oldRule, gradingRule)
 	}
 	basis := RestampBasis{now: map[string]string{}, was: map[string]string{}}
 	byTask := map[string][]Scenario{}
@@ -74,6 +81,9 @@ func (b RestampBasis) Restamp(rec Record) Restamped {
 		if now == "" {
 			return Restamped{Record: rec, Refusal: fmt.Sprintf("scenario %q is no longer in the corpus", row.Scenario)}
 		}
+		if row.legacy() {
+			return Restamped{Record: rec, Refusal: fmt.Sprintf("scenario %q predates stored bands", row.Scenario)}
+		}
 		if len(row.Stamp) != stampSegment*3 {
 			return Restamped{Record: rec, Refusal: fmt.Sprintf("scenario %q carries no per-scenario stamp", row.Scenario)}
 		}
@@ -124,9 +134,29 @@ func wantsMoreRuns(rows []ScenarioRecord) string {
 	}
 	pooled := poolUndecided(cases)
 	for i, row := range rows {
-		if row.Runs < adaptiveMaxRuns && (pooled || caseBorderline(cases[i])) {
+		if extendsCase(cases[i], pooled, adaptiveMaxRuns) {
 			return row.Scenario
 		}
 	}
 	return ""
+}
+
+// RestampAll re-stamps each completion record of records. It answers one line
+// per record it changed or refused, and the records to write. A record already
+// current and a decision record, which has its own stamp, say nothing.
+func (b RestampBasis) RestampAll(records []Record) (report []string, changed []Record) {
+	for _, rec := range records {
+		if rec.Kind == KindDecision {
+			continue
+		}
+		got := b.Restamp(rec)
+		switch {
+		case got.Refusal != "":
+			report = append(report, fmt.Sprintf("stale    %s: %s", RecordKey(rec), got.Refusal))
+		case got.Changed:
+			report = append(report, fmt.Sprintf("restamp  %s: %s -> %s", RecordKey(rec), rec.Verdict, got.Record.Verdict))
+			changed = append(changed, got.Record)
+		}
+	}
+	return report, changed
 }

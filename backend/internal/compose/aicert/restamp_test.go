@@ -30,6 +30,8 @@ func ruleOnlyRecord(t *testing.T, sc Scenario) Record {
 
 func restampBasis(t *testing.T, sc Scenario) RestampBasis {
 	t.Helper()
+	restampableRules[olderRule] = gradingRule
+	t.Cleanup(func() { delete(restampableRules, olderRule) })
 	basis, err := NewRestampBasis(wsContext(t), olderRule, []Scenario{sc}, testCensus(t))
 	if err != nil {
 		t.Fatalf("building the basis: %v", err)
@@ -108,6 +110,10 @@ func TestARecordTheRestampCannotVouchForIsRefused(t *testing.T) {
 		"another judge":     {func(r *Record) { r.JudgeServedModel = "another-judge" }, "graded by judge"},
 		"another wire rule": {func(r *Record) { r.WireRule = "wire-older" }, "wire rule"},
 		"a decision record": {func(r *Record) { r.Kind = KindDecision }, "decision record"},
+		"no rows":           {func(r *Record) { r.Scenarios = nil }, "no scenario rows"},
+		"a row from before bands": {func(r *Record) {
+			r.Scenarios[0].Bands = nil
+		}, "predates stored bands"},
 		"a row with no stamp": {func(r *Record) {
 			r.Scenarios[0].Stamp = ""
 		}, "no per-scenario stamp"},
@@ -126,18 +132,69 @@ func TestARecordTheRestampCannotVouchForIsRefused(t *testing.T) {
 }
 
 // A lone judge score under the bar is a case this rule extends. The record never
-// ran those extra runs, so its rows are not the ones this rule would keep. Two
-// settled rows keep the pool decided, so only the lone-score row can ask.
+// ran those extra runs, so Restamp refuses it rather than mark it current.
+func TestARecordThisRuleWouldRunAgainIsRefusedByRestamp(t *testing.T) {
+	sc := testScenario("basic", wideBands)
+	rec := ruleOnlyRecord(t, sc)
+	rec.Scenarios[0].Runs, rec.Scenarios[0].Passed = 9, 9
+	rec.Scenarios[0].JudgeScores = []int{69}
+	got := restampBasis(t, sc).Restamp(rec)
+	if got.Changed || !strings.Contains(got.Refusal, "would run scenario") {
+		t.Errorf("got %+v, want a refusal that the rule would run the case again", got)
+	}
+}
+
+// Settled rows under the cap ask for nothing. A pool that is itself in doubt
+// asks for every row, though no case is borderline on its own.
 func TestARowThisRuleWouldRunAgainIsFound(t *testing.T) {
 	bands := &RowBands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}
 	row := func(name string, runs int, scores ...int) ScenarioRecord {
 		return ScenarioRecord{Scenario: name, Runs: runs, Passed: runs, JudgeScores: scores, Bands: bands}
 	}
-	settled := []ScenarioRecord{row("a", 12, slices.Repeat([]int{90}, 12)...), row("b", 12, slices.Repeat([]int{90}, 12)...)}
-	if got := wantsMoreRuns(settled); got != "" {
-		t.Errorf("settled rows ask for more runs on %q", got)
+	nines := func(n int) []int { return slices.Repeat([]int{90}, n) }
+	for name, tc := range map[string]struct {
+		rows []ScenarioRecord
+		want string
+	}{
+		"settled rows under the cap": {[]ScenarioRecord{row("a", 9, nines(9)...), row("b", 9, nines(9)...)}, ""},
+		"a lone score under the bar": {[]ScenarioRecord{row("a", 9, nines(9)...), row("b", 9, nines(9)...), row("lone", 9, 69)}, "lone"},
+		"a pool in doubt":            {[]ScenarioRecord{row("a", 6, nines(6)...)}, "a"},
+		"rows at the cap":            {[]ScenarioRecord{row("a", 12, nines(12)...)}, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := wantsMoreRuns(tc.rows); got != tc.want {
+				t.Errorf("wantsMoreRuns = %q, want %q", got, tc.want)
+			}
+		})
 	}
-	if got := wantsMoreRuns(append(slices.Clone(settled), row("lone", 9, 69))); got != "lone" {
-		t.Errorf("a lone score under the bar: got %q, want %q", got, "lone")
+}
+
+// A rule no reviewer has declared safe to re-stamp from is refused up front,
+// whatever the stamps say.
+func TestARuleNoReviewerClearedCannotBeRestampedFrom(t *testing.T) {
+	for _, from := range []string{gradingRule, "grading-rule-unknown"} {
+		if _, err := NewRestampBasis(wsContext(t), from, nil, testCensus(t)); err == nil || !strings.Contains(err.Error(), "restampableRules") {
+			t.Errorf("from %q: err = %v, want a refusal naming restampableRules", from, err)
+		}
+	}
+}
+
+// The report names what changed and what stayed stale, and hands back only the
+// records to write. A decision record is not this tool's.
+func TestRestampAllReportsEachRecordAndHandsBackTheChangedOnes(t *testing.T) {
+	sc := testScenario("basic", wideBands)
+	basis := restampBasis(t, sc)
+	changed := ruleOnlyRecord(t, sc)
+	refused := ruleOnlyRecord(t, sc)
+	refused.JudgeServedModel = "another-judge"
+	refused.Provider = "other"
+	decision := ruleOnlyRecord(t, sc)
+	decision.Kind = KindDecision
+	report, write := basis.RestampAll([]Record{changed, refused, decision})
+	if len(write) != 1 || len(report) != 2 {
+		t.Fatalf("report = %v, write = %d records; want 2 lines and 1 record", report, len(write))
+	}
+	if !strings.HasPrefix(report[0], "restamp  ") || !strings.HasPrefix(report[1], "stale    ") {
+		t.Errorf("report = %v, want a restamp line then a stale line", report)
 	}
 }

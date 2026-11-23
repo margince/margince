@@ -14,6 +14,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -21,56 +22,58 @@ import (
 )
 
 func main() {
-	from := flag.String("from", "", "the grading rule the records were graded by, e.g. grading-rule-13 (required)")
-	write := flag.Bool("write", false, "write the re-stamped records; without it the run only reports")
-	dir := flag.String("dir", "internal/compose/aicert/records", "directory of certification records")
-	corpusDir := flag.String("corpus", "internal/compose/aicert/corpus", "directory of certification scenarios")
-	flag.Parse()
-	if *from == "" {
-		fail(errors.New("name the rule the records were graded by with -from"))
+	if err := run(os.Args[1:], os.Stdout); err != nil {
+		fmt.Fprintf(os.Stderr, "restampcmd: %v\n", err)
+		os.Exit(1)
 	}
+}
 
+func run(args []string, stdout io.Writer) error {
+	flags := flag.NewFlagSet("restampcmd", flag.ContinueOnError)
+	from := flags.String("from", "", "the grading rule the records were graded by, e.g. grading-rule-13 (required)")
+	write := flags.Bool("write", false, "write the re-stamped records; without it the run only reports")
+	dir := flags.String("dir", "internal/compose/aicert/records", "directory of certification records")
+	corpusDir := flags.String("corpus", "internal/compose/aicert/corpus", "directory of certification scenarios")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if *from == "" {
+		return errors.New("name the rule the records were graded by with -from")
+	}
 	census, err := compose.NewTaskCensus()
 	if err != nil {
-		fail(fmt.Errorf("building the invocation-site census: %w", err))
+		return fmt.Errorf("building the invocation-site census: %w", err)
 	}
 	corpus, err := aicert.LoadCorpus(*corpusDir, census)
 	if err != nil {
-		fail(err)
+		return err
 	}
 	records, err := aicert.LoadRecords(*dir)
 	if err != nil {
-		fail(err)
+		return err
 	}
 	basis, err := aicert.NewRestampBasis(context.Background(), *from, corpus, census)
 	if err != nil {
-		fail(err)
+		return err
 	}
-
-	restamped, refused := 0, 0
-	for _, rec := range records {
-		if rec.Kind == aicert.KindDecision {
-			continue
-		}
-		got := basis.Restamp(rec)
-		switch {
-		case got.Refusal != "":
-			refused++
-			fmt.Printf("stale    %s: %s\n", aicert.RecordKey(rec), got.Refusal) //nolint:forbidigo // the tool's report, printed to stdout
-		case got.Changed:
-			restamped++
-			fmt.Printf("restamp  %s: %s -> %s\n", aicert.RecordKey(rec), rec.Verdict, got.Record.Verdict) //nolint:forbidigo // the tool's report, printed to stdout
-			if *write {
-				if err := aicert.WriteRecord(*dir, got.Record); err != nil {
-					fail(err)
-				}
-			}
+	report, changed := basis.RestampAll(records)
+	for _, line := range report {
+		fmt.Fprintln(stdout, line)
+	}
+	if *write {
+		if err := writeRecords(*dir, changed); err != nil {
+			return err
 		}
 	}
-	fmt.Printf("%d restamped, %d left stale (written: %t)\n", restamped, refused, *write) //nolint:forbidigo // the tool's report, printed to stdout
+	fmt.Fprintf(stdout, "%d restamped, %d left stale (written: %t)\n", len(changed), len(report)-len(changed), *write)
+	return nil
 }
 
-func fail(err error) {
-	fmt.Fprintf(os.Stderr, "restampcmd: %v\n", err)
-	os.Exit(1)
+func writeRecords(dir string, records []aicert.Record) error {
+	for _, rec := range records {
+		if err := aicert.WriteRecord(dir, rec); err != nil {
+			return err
+		}
+	}
+	return nil
 }

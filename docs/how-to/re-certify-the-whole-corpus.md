@@ -64,8 +64,10 @@ The tool grades a record again from its stored rows, with no model call. A row m
   request did not move.
 - The judge of the record is the default judge, and its wire rule is this build's.
 
-It also refuses a record that the new rule would run again. Do not use the tool after a change to how a
-judge reply becomes a score, or to which runs count. Those rows are not what this build would record.
+It also refuses a record that the new rule would run again, and a rule pair that `restampableRules` does
+not list. A reviewer adds a pair after reading a change that moved only how rows pool and grade. Do not add
+one after a change to how a judge reply becomes a score, or to which runs count. Those rows are not what
+this build would record.
 
 A record that fails a check stays stale, and the list says why. Those need the sweep below.
 
