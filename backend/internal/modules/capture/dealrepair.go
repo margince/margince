@@ -78,6 +78,11 @@ type DealRepair struct {
 	Authority  authz.Resolver
 	Filer      DealFiler
 	Check      DealTopicCheck
+	// Ask raises "Which deal?" for the refile passes; the data task leaves it nil.
+	Ask AskWhichDeal
+	// AdmitClosed reads candidates with one closed deal admitted, for filing
+	// mail on a deal Margince closed for silence.
+	AdmitClosed func(deal ids.UUID) DealCandidates
 }
 
 // BatchTx repairs one page of mail. A second run changes nothing, because

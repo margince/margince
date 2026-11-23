@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance/rules.go backend/internal/compose/assurancebundle.go backend/internal/compose/viabilitytasks/viabilitytasks.go backend/internal/compose/dealcloselost.go frontend/src/features/deals/deal360/dealmarginceline.tsx backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts backend/internal/modules/activities/dealrelevance.go frontend/src/features/records/dealdecline.tsx -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance/rules.go backend/internal/compose/assurancebundle.go backend/internal/compose/viabilitytasks/viabilitytasks.go backend/internal/compose/dealcloselost.go frontend/src/features/deals/deal360/dealmarginceline.tsx backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts backend/internal/modules/activities/dealrelevance.go frontend/src/features/records/dealdecline.tsx backend/internal/modules/deals/closereoffer.go backend/internal/compose/jobs_dealbackfill.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -68,6 +68,15 @@ Margince closes a deal only when all of these hold:
 
 A message from the customer that only its participants can see also keeps the
 deal open. Margince reads only its date.
+
+Margince closes no deal for silence until it has checked, once, the mail of the
+deal's stakeholders from the last 120 days (the value of `deals.silent_close_days`).
+That mail may never have reached the deal, for example because the contact became
+a stakeholder after it arrived. Margince files it by the rules in [Why was my
+email not linked to a deal?](capture.md#why-was-my-email-not-linked-to-a-deal).
+A close for silence from the last 120 days that this mail shows to be wrong comes
+back under **Done for you** with **Undo**, even after its 7 days, and a note on
+the deal says why. A refusal from the customer still closes the deal at once.
 
 Margince closes the deal for its owner. A line under the deal's header says
 that Margince closed it, why, and offers **Undo**. When the customer said no, the

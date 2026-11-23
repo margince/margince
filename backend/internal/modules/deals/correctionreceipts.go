@@ -131,14 +131,14 @@ func (s *Store) RecentCorrectionsOwnedBy(
 		}
 		query := selected + storekit.SQLf(`
 			 -- A close as lost and a verdict change stay until the owner accepts or undoes them.
-			 WHERE (c.applied_at >= $%d
+			 WHERE (`+correctionListedSQL+` >= $%d
 			        OR (c.correction = ANY($%d) AND c.accepted_at IS NULL AND c.reversed_at IS NULL))
 			   AND d.owner_id = $%d
 			   AND d.archived_at IS NULL`, sincePos, heldPos, ownerPos)
 		if scope != "" {
 			query += storekit.SQLf(" AND %s", scope)
 		}
-		query += storekit.SQLf(" ORDER BY c.applied_at DESC LIMIT $%d", limitPos)
+		query += storekit.SQLf(" ORDER BY "+correctionListedSQL+" DESC LIMIT $%d", limitPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("deals: reading last night's corrections: %w", err)

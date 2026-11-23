@@ -27,33 +27,88 @@ import (
 // openDealSQL is what makes a deal a candidate: open and not archived.
 const openDealSQL = `d.status = 'open' AND d.archived_at IS NULL`
 
+// candidateDealSQL is openDealSQL, widened to one named deal that is not
+// archived, whatever its status. A zero admit is the plain open rule, so the
+// open rule is stated once for both forms.
+func candidateDealSQL(admit ids.UUID, arg func(any) int) string {
+	if admit.IsZero() {
+		return openDealSQL
+	}
+	return fmt.Sprintf(`(%s OR (d.id = $%d AND d.archived_at IS NULL))`, openDealSQL, arg(admit))
+}
+
+// CandidatesAdmitting reads candidates as the open-deal reads do, and also
+// admits deal while it is not archived. The capture repair files mail on a
+// deal Margince closed for silence through it.
+func (s *Store) CandidatesAdmitting(deal ids.UUID) *ClosedDealCandidates {
+	return &ClosedDealCandidates{store: s, admit: deal}
+}
+
+// ClosedDealCandidates is capture.DealCandidates with one closed deal admitted.
+type ClosedDealCandidates struct {
+	store *Store
+	admit ids.UUID
+}
+
 // OpenDealsOfProject answers up to two open deals of one project.
 func (s *Store) OpenDealsOfProject(ctx context.Context, tx pgx.Tx, projectID ids.UUID) ([]ids.UUID, error) {
+	return dealsOfProject(ctx, tx, projectID, ids.Nil)
+}
+
+// OpenDealsOfProject is Store.OpenDealsOfProject with the admitted deal.
+func (c *ClosedDealCandidates) OpenDealsOfProject(ctx context.Context, tx pgx.Tx, projectID ids.UUID) ([]ids.UUID, error) {
+	return dealsOfProject(ctx, tx, projectID, c.admit)
+}
+
+func dealsOfProject(ctx context.Context, tx pgx.Tx, projectID, admit ids.UUID) ([]ids.UUID, error) {
 	if denied, err := candidateReadDenied(ctx); denied || err != nil {
 		return nil, err
 	}
-	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d WHERE d.project_id = $1 AND `+openDealSQL+`
-		ORDER BY d.id LIMIT 2`, projectID)
+	args := []any{projectID}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d WHERE d.project_id = $1 AND `+candidateDealSQL(admit, arg)+`
+		ORDER BY d.id LIMIT 2`, args...)
 }
 
 // OpenDealsOfCompany answers up to two open deals of one company.
 func (s *Store) OpenDealsOfCompany(ctx context.Context, tx pgx.Tx, companyID ids.UUID) ([]ids.UUID, error) {
+	return dealsOfCompany(ctx, tx, companyID, ids.Nil)
+}
+
+// OpenDealsOfCompany is Store.OpenDealsOfCompany with the admitted deal.
+func (c *ClosedDealCandidates) OpenDealsOfCompany(ctx context.Context, tx pgx.Tx, companyID ids.UUID) ([]ids.UUID, error) {
+	return dealsOfCompany(ctx, tx, companyID, c.admit)
+}
+
+func dealsOfCompany(ctx context.Context, tx pgx.Tx, companyID, admit ids.UUID) ([]ids.UUID, error) {
 	if denied, err := candidateReadDenied(ctx); denied || err != nil {
 		return nil, err
 	}
-	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d WHERE d.company_id = $1 AND `+openDealSQL+`
-		ORDER BY d.id LIMIT 2`, companyID)
+	args := []any{companyID}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d WHERE d.company_id = $1 AND `+candidateDealSQL(admit, arg)+`
+		ORDER BY d.id LIMIT 2`, args...)
 }
 
 // OpenDealsOfCompanyUpTo answers up to limit open deals of one company, the
 // candidates a deal topic check weighs.
 func (s *Store) OpenDealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int) ([]ids.UUID, error) {
+	return dealsOfCompanyUpTo(ctx, tx, companyID, limit, ids.Nil)
+}
+
+// OpenDealsOfCompanyUpTo is Store.OpenDealsOfCompanyUpTo with the admitted deal.
+func (c *ClosedDealCandidates) OpenDealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int) ([]ids.UUID, error) {
+	return dealsOfCompanyUpTo(ctx, tx, companyID, limit, c.admit)
+}
+
+func dealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int, admit ids.UUID) ([]ids.UUID, error) {
 	if denied, err := candidateReadDenied(ctx); denied || err != nil {
 		return nil, err
 	}
 	var args []any
-	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
-	query := `SELECT d.id FROM deal d WHERE d.company_id = ` + arg(companyID) + ` AND ` + openDealSQL + ` ORDER BY d.id LIMIT ` + arg(limit)
+	argPos := func(v any) int { args = append(args, v); return len(args) }
+	query := fmt.Sprintf(`SELECT d.id FROM deal d WHERE d.company_id = $%d AND %s ORDER BY d.id LIMIT $%d`,
+		argPos(companyID), candidateDealSQL(admit, argPos), argPos(limit))
 	return collectCandidates(ctx, tx, query, args...)
 }
 
@@ -77,19 +132,31 @@ func (s *Store) IsOpenDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.U
 func (s *Store) OpenDealsWithStakeholders(
 	ctx context.Context, tx pgx.Tx, companyID ids.UUID, contacts []ids.UUID,
 ) ([]ids.UUID, error) {
-	return openDealsStaked(ctx, tx, &companyID, contacts, 2)
+	return openDealsStaked(ctx, tx, &companyID, contacts, 2, ids.Nil)
+}
+
+// OpenDealsWithStakeholders is Store.OpenDealsWithStakeholders with the admitted deal.
+func (c *ClosedDealCandidates) OpenDealsWithStakeholders(
+	ctx context.Context, tx pgx.Tx, companyID ids.UUID, contacts []ids.UUID,
+) ([]ids.UUID, error) {
+	return openDealsStaked(ctx, tx, &companyID, contacts, 2, c.admit)
 }
 
 // OpenDealsOfStakeholders answers up to limit open deals, at any company, on
 // which one of contacts is a live stakeholder. A consultant's seat on a client's
 // deal links the mail to that deal, which their employer does not.
 func (s *Store) OpenDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts []ids.UUID, limit int) ([]ids.UUID, error) {
-	return openDealsStaked(ctx, tx, nil, contacts, limit)
+	return openDealsStaked(ctx, tx, nil, contacts, limit, ids.Nil)
+}
+
+// OpenDealsOfStakeholders is Store.OpenDealsOfStakeholders with the admitted deal.
+func (c *ClosedDealCandidates) OpenDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts []ids.UUID, limit int) ([]ids.UUID, error) {
+	return openDealsStaked(ctx, tx, nil, contacts, limit, c.admit)
 }
 
 // openDealsStaked reads the deals a seat of one of contacts sits on, narrowed
 // to company when one is given and to limit rows.
-func openDealsStaked(ctx context.Context, tx pgx.Tx, company *ids.UUID, contacts []ids.UUID, limit int) ([]ids.UUID, error) {
+func openDealsStaked(ctx context.Context, tx pgx.Tx, company *ids.UUID, contacts []ids.UUID, limit int, admit ids.UUID) ([]ids.UUID, error) {
 	if denied, err := candidateReadDenied(ctx); denied || err != nil {
 		return nil, err
 	}
@@ -111,7 +178,7 @@ func openDealsStaked(ctx context.Context, tx pgx.Tx, company *ids.UUID, contacts
 	}
 	limitPos := fmt.Sprintf("$%d", arg(limit))
 	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d
-		 WHERE `+openDealSQL+companyClause+`
+		 WHERE `+candidateDealSQL(admit, arg)+companyClause+`
 		   AND EXISTS (SELECT 1 FROM relationship r
 		                WHERE r.deal_id = d.id AND `+dealseat.CurrentSQL("r")+`
 		                  AND r.contact_id = ANY($1)

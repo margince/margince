@@ -5088,6 +5088,7 @@ public.deal_correction.fields text[] NOT NULL gen=- def=-
 public.deal_correction.id uuid NOT NULL gen=- def=uuidv7()
 public.deal_correction.note_activity_id uuid gen=- def=-
 public.deal_correction.remaining_open_stages text NOT NULL gen=- def=-
+public.deal_correction.reoffered_at timestamp with time zone gen=- def=-
 public.deal_correction.reversal_audit_id uuid gen=- def=-
 public.deal_correction.reversed_at timestamp with time zone gen=- def=-
 public.deal_correction.reversed_by text gen=- def=-
