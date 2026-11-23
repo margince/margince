@@ -836,7 +836,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_trace
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -844,6 +844,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `activity_id` | `uuid` |  |  |
 | `connector` | `text` | yes | At most 96 characters. |
 | `counterparty` | `text` |  | At most 320 characters. |
+| `filing` | `jsonb` |  |  |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `outcome` | `text` | yes |  |
 | `reason` | `text` |  |  |

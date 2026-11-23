@@ -42,13 +42,13 @@ func BenchmarkRawImportsShareMemoryBudget(b *testing.B) {
 	var peak atomic.Uint64
 	peak.Store(initial.HeapAlloc)
 	b.ReportAllocs()
-	b.SetBytes(2 * backfillLookahead * messageBytes)
+	b.SetBytes(4 * backfillFetchWorkers * messageBytes)
 	b.ResetTimer()
 	for range b.N {
 		var walks sync.WaitGroup
 		for range 2 {
 			walks.Go(func() {
-				err := inOrder(b.Context(), backfillLookahead, func(ctx context.Context, _ int) (Message, error) {
+				err := inOrder(b.Context(), connector.BackfillTuning{}, 2*backfillFetchWorkers, func(ctx context.Context, _ int) (Message, error) {
 					return api.GetRaw(ctx, "test", "large")
 				}, func(_ int, msg Message, err error) error {
 					if err != nil {

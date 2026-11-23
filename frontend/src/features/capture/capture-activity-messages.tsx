@@ -11,6 +11,7 @@ import { useLocale, useT } from "../../i18n";
 import { useProviderLabel } from "../../lib/channelproviders";
 import { valueFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
+import { FilingLine } from "./capture-filing";
 
 // Settings › Capture activity: one row per message in the window, each opening
 // the trace drawer that shows every step the pipeline took with it.
@@ -203,6 +204,11 @@ function EntryOutcome({ entry }: Readonly<{ entry: TraceEntry }>) {
         />
       )}
       {caption && <span className="t-caption">{caption}</span>}
+      {entry.filing && (
+        <span className="t-caption">
+          <FilingLine filing={entry.filing} />
+        </span>
+      )}
     </CellStack>
   );
 }
