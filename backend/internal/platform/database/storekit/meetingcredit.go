@@ -24,8 +24,11 @@ type HeldCredit struct {
 	Legacy, Host, Kept string
 }
 
+// sqlTrue is the predicate that admits every row.
+const sqlTrue = "TRUE"
+
 // LiveCredit reads the meeting as it is today, for a figure with no history.
-var LiveCredit = HeldCredit{Legacy: "TRUE", Host: "NULL::uuid"}
+var LiveCredit = HeldCredit{Legacy: sqlTrue, Host: "NULL::uuid"}
 
 // LatestHeldCredit reads the meeting's newest held transition, joined by
 // LatestHeldJoinSQL as `held`.
