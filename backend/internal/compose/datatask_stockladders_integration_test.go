@@ -66,7 +66,7 @@ func TestTheStockLaddersTaskGivesAStockInstallItsPresetsOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, task := range []ai.Task{ai.TaskAgentLoop, ai.TaskDraftReply} {
+	for _, task := range []ai.Task{ai.TaskAgentLoop, ai.TaskDraftReply, ai.TaskNlSearch, ai.TaskVoiceBuild} {
 		if got := stored.Ladder(task); !slices.Equal(got, []ai.Tier{ai.TierPremium, ai.TierCheapCloud}) {
 			t.Errorf("%s walks %v after the task, want premium first", task, got)
 		}
@@ -88,7 +88,7 @@ func TestTheStockLaddersTaskLeavesACustomisedInstallAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, task := range []ai.Task{ai.TaskAgentLoop, ai.TaskDraftReply} {
+	for _, task := range []ai.Task{ai.TaskAgentLoop, ai.TaskDraftReply, ai.TaskNlSearch, ai.TaskVoiceBuild} {
 		if got := stored.Ladder(task); !slices.Equal(got, ai.TaskLadder(task)) {
 			t.Errorf("a customised install walks %s %v, want its contract order", task, got)
 		}

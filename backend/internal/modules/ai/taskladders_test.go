@@ -5,6 +5,7 @@ package ai
 
 import (
 	"maps"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -90,7 +91,7 @@ func TestAStockBindingAdoptsItsPresetsTaskOrderAndACustomOneDoesNot(t *testing.T
 	installed.TaskLadders = nil
 	adopted, ok := installed.WithStockTaskLadders()
 	premiumFirst := []Tier{TierPremium, TierCheapCloud}
-	for _, task := range []Task{TaskAgentLoop, TaskDraftReply} {
+	for _, task := range premiumFirstTasks {
 		if !ok || !slices.Equal(adopted.Ladder(task), premiumFirst) {
 			t.Errorf("a stock Gemini install walks %s %v after adopting (%v), want %v", task, adopted.Ladder(task), ok, premiumFirst)
 		}
@@ -122,7 +123,7 @@ func TestAStockBindingAdoptsItsPresetsTaskOrderAndACustomOneDoesNot(t *testing.T
 	ordered := stock
 	ordered.TaskLadders = map[Task][]Tier{TaskAgentLoop: TaskLadder(TaskAgentLoop)}
 	got, ok := ordered.WithStockTaskLadders()
-	if ok || !slices.Equal(got.Ladder(TaskAgentLoop), TaskLadder(TaskAgentLoop)) || !slices.Equal(got.Ladder(TaskDraftReply), TaskLadder(TaskDraftReply)) {
+	if ok || slices.ContainsFunc(premiumFirstTasks, func(task Task) bool { return !slices.Equal(got.Ladder(task), TaskLadder(task)) }) {
 		t.Errorf("an install ordering one task itself was given %v; it adopts no part of the stock order", got.TaskLadders)
 	}
 }
@@ -171,7 +172,10 @@ func TestAnAmbiguousOrEmptyStockOrderIsNotAdopted(t *testing.T) {
 		t.Errorf("two presets ordering this binding differently adopted %v", got.TaskLadders)
 	}
 
-	unordered := strings.Replace(twin, "agent_loop: [premium, cheap_cloud]", "", 1)
+	unordered := taskLaddersBlock.ReplaceAllString(original["gemini_cloud.yaml"], "")
+	if strings.Contains(unordered, "task_ladders") {
+		t.Fatal("the stand-in preset still orders its tasks")
+	}
 	stockPresets = map[string]string{"a.yaml": unordered}
 	if got, ok := installed.WithStockTaskLadders(); ok {
 		t.Errorf("a preset ordering nothing was adopted as a change: %v", got.TaskLadders)
@@ -183,3 +187,9 @@ func TestAnAmbiguousOrEmptyStockOrderIsNotAdopted(t *testing.T) {
 		t.Errorf("a binding shared with a preset that orders nothing adopted %v", got.TaskLadders)
 	}
 }
+
+// premiumFirstTasks are the tasks the Gemini presets order premium first.
+var premiumFirstTasks = []Task{TaskAgentLoop, TaskDraftReply, TaskNlSearch, TaskVoiceBuild}
+
+// taskLaddersBlock is a preset's task_ladders key and every rung order under it.
+var taskLaddersBlock = regexp.MustCompile(`(?m)^ *task_ladders:\n(?: {6}\w+: \[[a-z_, ]+\]\n)+`)

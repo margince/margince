@@ -86,6 +86,8 @@ export const MODEL_SETUPS = {
       task_ladders: {
         agent_loop: ["premium", "cheap_cloud"],
         draft_reply: ["premium", "cheap_cloud"],
+        nl_search: ["premium", "cheap_cloud"],
+        voice_build: ["premium", "cheap_cloud"],
       },
       tiers: {
         cheap_cloud: {
@@ -126,6 +128,8 @@ export const MODEL_SETUPS = {
       task_ladders: {
         agent_loop: ["premium", "cheap_cloud"],
         draft_reply: ["premium", "cheap_cloud"],
+        nl_search: ["premium", "cheap_cloud"],
+        voice_build: ["premium", "cheap_cloud"],
       },
       tiers: {
         cheap_cloud: {

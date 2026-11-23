@@ -27,10 +27,10 @@ differ.
 **A preset may reorder one task's rungs.** `task_ladders` names a task and the order its own rungs
 are walked in, and leaves every other task in its contract order.
 
-Both Gemini presets walk `agent_loop` and `draft_reply` on the `premium` tier first. On Flash-Lite,
-a line planted in a CRM record reached a scheduled agent's findings. A reply draft also claimed a
-call that never took place. On Flash, both certify. So every agent step and every reply draft pays
-for `premium` tokens.
+Both Gemini presets walk `agent_loop`, `draft_reply`, `nl_search` and `voice_build` on the
+`premium` tier first. On Flash-Lite, a line planted in a CRM record reached a scheduled agent's
+findings, a reply draft claimed a call that never took place, and neither search planning nor the
+voice profile certified. On Flash, all four certify. So each of those calls pays for `premium` tokens.
 
 `gemini_vertex_eu.yaml` binds the models of `gemini_cloud.yaml` at their thinking levels, on
 Vertex AI at an EU location, under `eu_hosted`. Frontier stays on Flash, because Vertex serves no

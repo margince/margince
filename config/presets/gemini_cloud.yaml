@@ -42,11 +42,15 @@ seeds:
     # planted in a CRM record reached the morning brief's saved findings, and
     # on Flash it mostly did not. Reply drafts answer on premium first too: on
     # Flash-Lite a reply or first touch claimed a conversation that never
-    # happened or a benefit nobody stated, and on Flash it certified. Every
-    # agent step and every reply draft pays premium tokens.
+    # happened or a benefit nobody stated, and on Flash it certified. Search
+    # planning and the voice profile follow: on Flash-Lite neither certified,
+    # on Flash both did. Every agent step, reply draft, search plan and voice
+    # build pays premium tokens.
     task_ladders:
       agent_loop: [premium, cheap_cloud]
       draft_reply: [premium, cheap_cloud]
+      nl_search: [premium, cheap_cloud]
+      voice_build: [premium, cheap_cloud]
     # The embed lane rides the SAME provider as the tiers above, so this preset
     # needs one credential rather than two.
     #
