@@ -21,6 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// winProbabilityField is the wire field a clear names to put the deal back on
+// its stage.
+const winProbabilityField = "win_probability"
+
 // halvedProbabilityCandidatesSQL is the open deals whose own probability
 // Margince set. Columns: id.
 const halvedProbabilityCandidatesSQL = `
@@ -90,7 +94,7 @@ func (s *Store) retireIfStillHalved(ctx context.Context, tx pgx.Tx, id ids.UUID,
 	if bySweep == nil || !*bySweep || wrote == nil || *wrote != held {
 		return false, nil
 	}
-	if _, err := s.UpdateDealTx(ctx, tx, ids.From[ids.DealKind](id), UpdateDealInput{Clear: []string{"win_probability"}}, CustomColumns{}); err != nil {
+	if _, err := s.UpdateDealTx(ctx, tx, ids.From[ids.DealKind](id), UpdateDealInput{Clear: []string{winProbabilityField}}, CustomColumns{}); err != nil {
 		return false, fmt.Errorf("deals: clearing a halved probability: %w", err)
 	}
 	return true, nil

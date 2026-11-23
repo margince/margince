@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/compose/halvedprobabilities"
 	"log/slog"
 	"strings"
 	"time"
@@ -22,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/employmentrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/halfvectors"
+	"github.com/margince/margince/backend/internal/compose/halvedprobabilities"
 	"github.com/margince/margince/backend/internal/compose/importscopes"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/invitationsenders"

@@ -71,17 +71,17 @@ func ResolveWinChance(model ChanceModel, in ChanceInput) winprobability.Chance {
 		out.InUse = ChanceInUse(in.Typed, evidence)
 		out.EvidenceN = new(evidence.Resolved)
 		out.WonShare = int(math.Round(evidence.WonShare * 100))
-		out.Effect, out.EffectSignal, out.EffectLearned, out.EffectSample = strongestEffect(model, in.Signals, out.InUse)
+		out.Effect, out.EffectSignal, out.EffectLearned, out.EffectSample = pickEffect(model, in.Signals, out.InUse)
 		out.EffectDays = signalDays(in.Signals, out.EffectSignal)
 	}
 	out.Percent = AppliedProbability(out.InUse, out.Effect)
 	return out
 }
 
-// strongestEffect picks the effect a deal's signals apply. The quiet signal's
+// pickEffect picks the effect a deal's signals apply. The quiet signal's
 // effect is the learned one only with QuietSampleFloor settled deals behind
 // it. With fewer, it is the halving of the chance in use.
-func strongestEffect(model ChanceModel, signals []Signal, inUse int) (effect *float64, signal string, learned bool, sample int) {
+func pickEffect(model ChanceModel, signals []Signal, inUse int) (effect *float64, signal string, learned bool, sample int) {
 	effects := make(map[string]float64, len(model.Effects)+1)
 	maps.Copy(effects, model.Effects)
 	codes := SignalCodes(signals)

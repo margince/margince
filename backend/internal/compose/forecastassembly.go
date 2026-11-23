@@ -5,12 +5,12 @@ package compose
 
 import (
 	"context"
-	"github.com/margince/margince/backend/internal/compose/winchance"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
+	"github.com/margince/margince/backend/internal/compose/winchance"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"

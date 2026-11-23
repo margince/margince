@@ -12,7 +12,6 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"github.com/margince/margince/backend/internal/compose/winchance"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -25,6 +24,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/winchance"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/assurance"

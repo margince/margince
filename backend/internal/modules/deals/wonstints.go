@@ -57,16 +57,16 @@ func wonStints(recordedOnly bool, pipeline ...string) string {
 // deals' stints in it lasted at most, archived wins included. A stage fewer
 // than floor won deals passed through has no entry.
 func StuckAfter(ctx context.Context, tx pgx.Tx, pipelineID ids.UUID, floor int) (map[string]time.Duration, error) {
-	return stuckAfter(ctx, tx, "d.pipeline_id = $1", pipelineID, floor)
+	return stuckPace(ctx, tx, "d.pipeline_id = $1", pipelineID, floor)
 }
 
 // StuckAfterDealPipelines is StuckAfter over every pipeline the given deals sit
 // in, in one read.
 func StuckAfterDealPipelines(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, floor int) (map[string]time.Duration, error) {
-	return stuckAfter(ctx, tx, "d.pipeline_id IN (SELECT pipeline_id FROM deal WHERE id = ANY($1) AND pipeline_id IS NOT NULL)", dealIDs, floor)
+	return stuckPace(ctx, tx, "d.pipeline_id IN (SELECT pipeline_id FROM deal WHERE id = ANY($1) AND pipeline_id IS NOT NULL)", dealIDs, floor)
 }
 
-func stuckAfter[S ids.UUID | []ids.UUID](ctx context.Context, tx pgx.Tx, pipeline string, scope S, floor int) (map[string]time.Duration, error) {
+func stuckPace[S ids.UUID | []ids.UUID](ctx context.Context, tx pgx.Tx, pipeline string, scope S, floor int) (map[string]time.Duration, error) {
 	rows, err := tx.Query(ctx, `
 		WITH stints AS (`+wonStints(true, pipeline)+`)
 		SELECT stage_id, percentile_cont(0.9) WITHIN GROUP (ORDER BY secs)
