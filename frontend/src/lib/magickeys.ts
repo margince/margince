@@ -31,6 +31,7 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.approval_coldstart",
   "magic.action.approval_send_email",
   "magic.action.approval_advance_deal",
+  "magic.action.approval_deal_proposal_stage",
   "magic.action.approval_promote_lead",
   "magic.action.approval_overnight",
   "magic.action.approval_commitment_task",

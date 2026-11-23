@@ -5,6 +5,8 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "systemJob.proposal_stage":
+    "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
   "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.promise_kept":
@@ -4841,6 +4843,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.employer_change": "Neuen Arbeitgeber prüfen",
+  "approval.kind.deal_proposal_stage": "Deal in die Angebotsphase verschieben",
+  "approval.kind.dealProposalStageNamed": "In die Phase „{stage}“ verschieben?",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
@@ -4912,6 +4916,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.signature": "Signaturzeile",
   "approval.field.to_company": "Neuer Arbeitgeber",
   "approval.field.from_company": "Arbeitgeber jetzt",
+  "approval.field.skipped_stages": "Überspringt",
   "approval.field.from_address": "Gesendet von",
   "approval.field.sender_check": "Absenderprüfung",
   "approval.senderCheck.authenticated":
@@ -23016,6 +23021,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_coldstart": "Erstansprache prüfen",
   "magic.action.approval_send_email": "Nachricht prüfen",
   "magic.action.approval_advance_deal": "Phasenwechsel prüfen",
+  "magic.action.approval_deal_proposal_stage":
+    "Ein Angebot ist raus. Deal verschieben?",
   "magic.action.approval_promote_lead": "Lead-Umwandlung prüfen",
   "magic.action.approval_overnight": "Vorschlag prüfen",
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",

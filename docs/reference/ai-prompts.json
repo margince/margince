@@ -5245,8 +5245,8 @@
                 },
                 "criterion_key": {
                   "enum": [
-                    "problem_confirmed",
-                    "budget_confirmed"
+                    "budget_confirmed",
+                    "margince:proposal_sent"
                   ],
                   "type": "string"
                 },
@@ -5292,7 +5292,7 @@
         ],
         "type": "object"
       },
-      "spans_in_scenario": 3,
+      "spans_in_scenario": 2,
       "calls": 1,
       "system_bytes": 1652,
       "system_tokens_estimate": 413,

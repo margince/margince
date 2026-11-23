@@ -332,7 +332,7 @@ live under **Analytics**; see [Analytics and forecasting](analytics.md).
 
 ## Stage moves Margince makes
 
-Margince may move an open deal to a later stage when the customer's own words meet what the stage asks for. It tells you after, and you can undo the move. See [Deals the customer supports](deals-the-customer-supports.md#when-the-deal-reached-a-later-stage). Also called: stage automation, automatic stage moves.
+Margince may move an open deal to a later stage when the customer's own words meet what the stage asks for. It tells you after, and you can undo the move. See [Deals the customer supports](deals-the-customer-supports.md#when-the-deal-reached-a-later-stage). A sent proposal asks you instead: see [When a proposal goes out](offers-and-products.md#when-a-proposal-goes-out). Also called: stage automation, automatic stage moves.
 
 ## Deals Margince opens and reopens
 
