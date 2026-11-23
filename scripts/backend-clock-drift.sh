@@ -12,7 +12,12 @@ cd "$(dirname "$0")/.."
 # link to GitHub after about an hour. The names live here, beside what runs them.
 INTEGRATION_SLICES=6
 slices() {
-	printf '%s\n' unit-uncached unit-cached unit-solo
+	# The unit legs are the prerequisites of `test:` in backend/Makefile, read
+	# from there so a leg added or dropped there changes the slices with it.
+	local leg
+	for leg in $(sed -n 's/^test:[[:space:]]*\([^#]*\).*/\1/p' backend/Makefile); do
+		printf 'unit-%s\n' "${leg#test-}"
+	done
 	local k
 	for ((k = 1; k <= INTEGRATION_SLICES; k++)); do
 		printf 'integration:%s/%s\n' "$k" "$INTEGRATION_SLICES"

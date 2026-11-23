@@ -152,6 +152,11 @@ finish_run() {
 # agent gets real time to renew its lease.
 SLICE_BUDGET=15m
 
+# Real seconds the clock stays right between two slices, so the runner agent
+# can renew its credentials before the next jump. Back-to-back jumps would
+# leave it no window at all.
+SLICE_GAP="${SLICE_GAP:-60}"
+
 run_shifted() {
 	local offset status=0 slice slice_status window timed_out=0
 	local slices
@@ -165,7 +170,14 @@ run_shifted() {
 	trap "finish_run \"\$?\" $offset" EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
+	case "$SLICE_GAP" in '' | *[!0-9]*) echo "clock-drift-host: SLICE_GAP must be whole seconds, got '$SLICE_GAP'" >&2; exit 2 ;; esac
+	local first=1
 	for slice in $slices; do
+		if [[ "$first" -eq 0 && "$SLICE_GAP" -gt 0 ]]; then
+			echo "clock-drift-host: ${SLICE_GAP}s at real time before the next slice."
+			sleep "$SLICE_GAP"
+		fi
+		first=0
 		move "$offset"
 		slice_status=0
 		# A relative timer survives wall-clock changes.
