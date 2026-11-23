@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 import (
 	"errors"
@@ -11,7 +11,6 @@ import (
 	"maps"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/webformlead"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -23,7 +22,7 @@ import (
 )
 
 // seedProduct writes one catalog product and answers its id.
-func seedProduct(t *testing.T, e *integration.Env, name string) ids.UUID {
+func seedProduct(t *testing.T, e *Env, name string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	e.WsExec(t, `INSERT INTO product (id, name, unit_price_minor, currency, source, captured_by, component_kind)
@@ -42,7 +41,7 @@ func productOf(lead crmcontracts.Lead) *ids.UUID {
 // A product retired after it was chosen stays on the lead, and an edit that
 // echoes it back still lands.
 func TestALeadKeepsAProductRetiredSinceItWasChosen(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	product := seedProduct(t, e, "Retiring plan")
 	name := "Asked before it retired"
 	lead, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
@@ -67,7 +66,7 @@ func TestALeadKeepsAProductRetiredSinceItWasChosen(t *testing.T) {
 // A lead names the product it is interested in when it is written. It may
 // change or clear it, and cannot name a product the catalog retired.
 func TestALeadNamesTheProductItIsInterestedIn(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	suite := seedProduct(t, e, "Suite")
 	onboarding := seedProduct(t, e, "Onboarding")
 	retired := seedProduct(t, e, "Retired plan")
@@ -117,11 +116,11 @@ func TestALeadNamesTheProductItIsInterestedIn(t *testing.T) {
 // A web form names the product its leads ask about, as it names their owner.
 // It refuses a product the catalog retired when it is saved, not on a post.
 func TestAWebFormNamesTheProductItsLeadsAskAbout(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	suite := seedProduct(t, e, "Suite")
 	retired := seedProduct(t, e, "Retired plan")
 	e.WsExec(t, `UPDATE product SET archived_at = now() WHERE id = $1`, retired)
-	perms := integration.AdminWithSignals
+	perms := AdminWithSignals
 	perms.Objects = maps.Clone(perms.Objects)
 	perms.Objects["integrations"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	ctx := e.As(e.AdminUser, nil, perms)

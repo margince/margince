@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 // A hand-logged meeting moves the lead status ladder — the whole chain a rep
 // drives from the Log activity composer: the contract request (kind meeting,
@@ -18,7 +18,6 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -29,8 +28,8 @@ import (
 )
 
 func TestManualMeetingClimbsTheLeadLadder(t *testing.T) {
-	e := integration.Setup(t)
-	owner := integration.OwnerConn(t)
+	e := Setup(t)
+	owner := OwnerConn(t)
 	lead := ids.NewV7()
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)
@@ -116,8 +115,8 @@ func TestManualMeetingClimbsTheLeadLadder(t *testing.T) {
 // earn Contacted — through the same real writer and workflow as the meeting
 // above, because the mapping dropping any of it would strand the lead on New.
 func TestManualNoteMarksTheLeadContacted(t *testing.T) {
-	e := integration.Setup(t)
-	owner := integration.OwnerConn(t)
+	e := Setup(t)
+	owner := OwnerConn(t)
 	lead := ids.NewV7()
 	if _, err := owner.Exec(context.Background(),
 		`INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)

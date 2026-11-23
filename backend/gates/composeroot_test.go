@@ -32,12 +32,11 @@ const composeRootDir = "internal/compose"
 // change moves code out. Raising one needs a reason in the pull request.
 const (
 	composeRootProductionFiles = 1375
-	// Raised by 1 for the stakeholder backfill test, which needs the package-private close-lost fixtures.
-	composeRootTestFiles = 1903
+	composeRootTestFiles       = 1902
 	// Raised by 7 for the pass-cap settings reads.
 	composeRootProductionLines = 228_991
-	// Raised by 61 for the pass-cap and personal sweep receipt tests, and by 588 for the stakeholder backfill test.
-	composeRootTestLines = 358_482
+	// Raised by 61 for the pass-cap and personal sweep receipt tests.
+	composeRootTestLines = 357_894
 )
 
 // A read under these floors stopped early or read the wrong place, and would
