@@ -94,27 +94,37 @@ func snippetIsEvidence(entity string) bool {
 	return true
 }
 
-// activityRankSample bounds the mail the activity branch ranks. A common word
-// matches a tenth of all mail, and every match was read, permission-checked
-// and scored before the per-type limit. Sampling is acceptable because, on the
-// corpus this was measured on, the top mail hit was kept for every prefix.
+// activityRankSample bounds the mail the activity branch gates and scores. A
+// common word matches a tenth of all mail, and every match was read,
+// permission-checked and scored before the per-type limit. Sampling is
+// acceptable because, on the corpus this was measured on, the top mail hit was
+// kept for every prefix.
 const activityRankSample = 2000
+
+// activityFoldRows bounds the scored mail the copy grouping reads. The grouping
+// keys every copy by an md5 of its whole body. Its cost grows with the size of
+// the mails it reads, not with the hits a page shows. The best-scored copies go
+// in. A page holds at most 200 mails of one type, and a mail has a handful of
+// copies.
+const activityFoldRows = 1000
 
 // rowSource renders the `FROM` the ranked branch reads its matches from.
 //
 // Mail several mailboxes captured is one hit, through the grouping every
 // timeline uses. where already holds the content gate, so every candidate is
-// readable.
-func (b searchBranch) rowSource(ctx context.Context, where string, arg func(any) int) string {
+// readable. score is the branch's score over alias t: the sampled mail is cut
+// to its best-scored copies before the grouping reads their bodies.
+func (b searchBranch) rowSource(ctx context.Context, where, score string, arg func(any) int) string {
 	rows, mail := b.table, b.table == entityActivity
 	switch {
 	case b.rankSample > 0 && mail:
 		// A scoped copy samples apart from the rest, so copies cannot crowd
 		// distinct mail out; the read stays within twice the sample. One lateral
 		// read per part keeps a single copy of the gate in the statement.
-		rows = fmt.Sprintf("(SELECT sample.* FROM (VALUES (false), (true)) part(scoped)"+
-			" CROSS JOIN LATERAL (SELECT t.* FROM %s t WHERE %s AND %s = part.scoped LIMIT $%d) sample)",
-			b.table, where, connector.ScopedMailCopySQL("t"), arg(b.rankSample))
+		rows = fmt.Sprintf("(SELECT t.* FROM (SELECT sample.* FROM (VALUES (false), (true)) part(scoped)"+
+			" CROSS JOIN LATERAL (SELECT t.* FROM %s t WHERE %s AND %s = part.scoped LIMIT $%d) sample) t"+
+			" ORDER BY %s DESC, t.id LIMIT $%d)",
+			b.table, where, connector.ScopedMailCopySQL("t"), arg(b.rankSample), score, arg(activityFoldRows))
 		where = sqlTrue
 	case b.rankSample > 0:
 		rows = fmt.Sprintf("(SELECT t.* FROM %s t WHERE %s LIMIT $%d)", b.table, where, arg(b.rankSample))

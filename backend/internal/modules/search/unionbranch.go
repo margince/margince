@@ -111,7 +111,7 @@ func branchSelect(ctx context.Context, branch searchBranch, q branchQuery, arm i
 		where = candidates + " AND t.archived_at IS NULL AND " + conjunction(branch.narrowing("t"), scope)
 		score = fmt.Sprintf("(%s + %d * (%s)::int)", score, companyAssociationScore, associated)
 	}
-	source := branch.rowSource(ctx, where, arg)
+	source := branch.rowSource(ctx, where, score, arg)
 	return fmt.Sprintf(
 		`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
 		        %s::float8 AS score, %s, %s AS identifier_match
