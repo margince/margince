@@ -25,7 +25,8 @@ func TestMeetingConversionListsAMeetingUnderEveryCreditedColleagueAndCountsItOnc
 	admin := e.Admin()
 	subject, start, booked := "Shared call", clocktest.Now(t).Add(-72*time.Hour), "booked"
 	logged, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
-		Kind: "meeting", Subject: &subject, OccurredAt: &start, MeetingStatus: &booked, Source: "manual"})
+		Kind: "meeting", Subject: &subject, OccurredAt: &start, MeetingStatus: &booked, Source: "manual",
+	})
 	if err != nil {
 		t.Fatalf("logging the meeting: %v", err)
 	}

@@ -25,7 +25,7 @@ type HeldCredit struct {
 }
 
 // LiveCredit reads the meeting as it is today, for a figure with no history.
-var LiveCredit = HeldCredit{Legacy: "true", Host: "NULL::uuid"}
+var LiveCredit = HeldCredit{Legacy: "TRUE", Host: "NULL::uuid"}
 
 // LatestHeldCredit reads the meeting's newest held transition, joined by
 // LatestHeldJoinSQL as `held`.
