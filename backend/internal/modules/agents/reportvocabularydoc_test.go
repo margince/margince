@@ -80,9 +80,9 @@ func TestTheDocumentPublishesEveryVocabularyTheCatalogCarries(t *testing.T) {
 			}
 		}
 	}
-	if doc.Reports[0].Defaults != catalog[0].Defaults {
+	if doc.Reports[0].Defaults != catalog[0].defaults() {
 		t.Errorf("defaults = %q, want %q — it is the call a caller should make first",
-			doc.Reports[0].Defaults, catalog[0].Defaults)
+			doc.Reports[0].Defaults, catalog[0].defaults())
 	}
 	if doc.Reports[0].Notes != catalog[0].Notes {
 		t.Errorf("notes = %q, want %q", doc.Reports[0].Notes, catalog[0].Notes)
@@ -147,7 +147,7 @@ func TestTheProvenanceNoteIsKeyedOnWhatIsRendered(t *testing.T) {
 	// the predicate deletable with nothing failing.
 	for _, slot := range []string{"group_by", "filters", "aggregates"} {
 		t.Run("named only in "+slot, func(t *testing.T) {
-			only := []ReportCatalogEntry{{Report: "somewhere", Defaults: "count as rows"}}
+			only := []ReportCatalogEntry{{Report: "somewhere", Measures: "count"}}
 			switch slot {
 			case "group_by":
 				only[0].GroupBy = []string{"pipeline_id"}
@@ -168,7 +168,7 @@ func TestTheProvenanceNoteIsKeyedOnWhatIsRendered(t *testing.T) {
 		GroupBy:    []string{"status"},
 		Filters:    []string{"owner_id"},
 		Aggregates: []string{"amount_minor"},
-		Defaults:   "count as rows",
+		Measures:   "count",
 	}}
 	if notes := readDocument(t, silent).Notes; len(notes) != 0 {
 		t.Errorf("a catalog naming no pipeline id still carries %v — advice about a key no plan "+
