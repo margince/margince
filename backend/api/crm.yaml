@@ -74094,6 +74094,7 @@ components:
       required: [router, actions]
       properties:
         router: { type: string }
+        ask_user_first_means: { type: string, description: 'What ask_user_first asks of the model; present when an action here has it.' }
         actions:
           type: array
           items:

@@ -295,3 +295,39 @@ func TestAnUploadVerbRefusesAFileItCannotSend(t *testing.T) {
 		}
 	}
 }
+
+// A model reads ask_user_first bare unless the answer says what it asks, and
+// then it drops the exception. The sentence ends as the tool descriptions' do.
+// An answer with no ask-first action carries none.
+func TestTheCatalogSaysWhatAskUserFirstAsksOfTheModel(t *testing.T) {
+	d := describeRouterActions{verbs: []RouteVerb{shareRecordVerb, revertStageVerb}}
+	answer := func(router string) map[string]any {
+		t.Helper()
+		out, err := d.Handle(context.Background(), json.RawMessage(`{"router":"`+router+`"}`))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var decoded map[string]any
+		if err := json.Unmarshal(out, &decoded); err != nil {
+			t.Fatal(err)
+		}
+		return decoded
+	}
+	means, _ := answer("change_state")[askFirstMeansField].(string)
+	if !strings.HasSuffix(means, askFirstGetYes) {
+		t.Errorf("%s = %q, want a sentence ending %q", askFirstMeansField, means, askFirstGetYes)
+	}
+	if _, present := answer("change_access")[askFirstMeansField]; present {
+		t.Errorf("an answer with no ask-first action carries %s", askFirstMeansField)
+	}
+}
+
+// One sentence tells a model that a refused send goes out only by the user.
+// The tool that checks a contact and the tool that sends then cannot disagree.
+func TestACheckAndASendSayTheSameAboutSendingAnyway(t *testing.T) {
+	for name, copy := range map[string]toolCopy{"read_details": readDetailsCopy, "send_outbound": sendOutboundCopy} {
+		if !strings.Contains(copy.render(), sendAnywayRule) {
+			t.Errorf("%s does not say: %s", name, sendAnywayRule)
+		}
+	}
+}

@@ -144,8 +144,7 @@ func askUserReading(spec mcp.ToolSpec) string {
 // askUserAbout renders the ask-first sentence. consequence is what the client
 // describes to the user before the yes: a write's change, a read's disclosure.
 func askUserAbout(spec mcp.ToolSpec, consequence string) string {
-	ask := "; the user's yes is needed for %s, so tell them " + consequence + " and " +
-		"get it before calling, unless they asked for this call themselves"
+	ask := "; the user's yes is needed for %s, so tell them " + consequence + " and " + askFirstGetYes
 	if len(spec.Actions) == 0 {
 		if !spec.AskUserFirst || spec.Tier == mcp.TierConfirmationRequired {
 			return ""

@@ -75,5 +75,14 @@ func (d describeRouterActions) catalog(router, action string) (json.RawMessage, 
 		})
 	}
 	slices.SortFunc(actions, func(a, b routeActionShape) int { return strings.Compare(a.Action, b.Action) })
-	return json.Marshal(map[string]any{"router": args.Router, "actions": actions})
+	answer := map[string]any{"router": args.Router, "actions": actions}
+	if slices.ContainsFunc(actions, func(a routeActionShape) bool { return a.AskUserFirst }) {
+		answer[askFirstMeansField] = "Where ask_user_first is true, the user's yes is needed, so tell them what the " +
+			"call will change and " + askFirstGetYes
+	}
+	return json.Marshal(answer)
 }
+
+// askFirstMeansField says what ask_user_first asks of the model, beside the
+// actions, because a model reads the flag bare otherwise and drops its exception.
+const askFirstMeansField = "ask_user_first_means"

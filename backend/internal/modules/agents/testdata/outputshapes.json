@@ -5247,6 +5247,9 @@
           "router": {
             "type": "string"
           },
+          "ask_user_first_means": {
+            "type": "string"
+          },
           "actions": {
             "type": "array",
             "items": {
