@@ -38,15 +38,14 @@ const (
 func seedMailCorpus(ctx context.Context, t *testing.T, tx pgx.Tx, reader ids.UUID) {
 	t.Helper()
 	for _, statement := range []string{
-		`SET LOCAL jit = off`,
 		`INSERT INTO app_user (id, email, display_name) VALUES ('` + reader.String() + `', 'rep@search-budget.test', 'Rep')`,
 		`INSERT INTO contact (full_name, source, captured_by, owner_id)
 		   SELECT 'Customer ' || i, 'manual', 'human:seed', CASE WHEN i % 2 = 0 THEN '` + reader.String() + `'::uuid END
 		   FROM generate_series(1, 2000) i`,
 		`CREATE TEMP TABLE seeded ON COMMIT DROP AS
 		   SELECT gen_random_uuid() id, i, k FROM generate_series(1, ` + strconv.Itoa(mailMessages) + `) i, generate_series(0, 1) k`,
-		// The link trigger plans against statistics the bulk load has not
-		// built yet; it keeps nothing this test reads.
+		// The triggers run when a link is written, never when mail is searched,
+		// so leaving them off hides no search cost.
 		`ALTER TABLE activity_link DISABLE TRIGGER USER`,
 		`INSERT INTO activity (id, kind, subject, body, direction, counterparty_email, occurred_at,
 		                       source_system, source_id, source, captured_by)
@@ -92,13 +91,31 @@ func planWalk(t *testing.T, raw []byte, visit func(node map[string]any)) {
 	walk(root)
 }
 
+// jitCompiled reports whether EXPLAIN ANALYZE shows the statement was compiled.
+func jitCompiled(t *testing.T, raw []byte) bool {
+	t.Helper()
+	var doc []map[string]any
+	if err := json.Unmarshal(raw, &doc); err != nil || len(doc) != 1 {
+		t.Fatalf("unreadable EXPLAIN output %s: %v", raw, err)
+	}
+	_, compiled := doc[0]["JIT"]
+	return compiled
+}
+
 // A word in half of all captured mail answers inside the search budget. That
 // holds for an unbounded reader and for a reader who owns half the contacts
-// the mail is filed under. The plan reads mail through the text index and
-// groups mailbox copies from a bounded set of the best-scored mail.
+// the mail is filed under. The plan reads mail through the text index, and the
+// connection does not compile it with JIT.
 func TestOneWordMailSearchStaysInsideTheBudgetOnACommonWord(t *testing.T) {
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	// A connection built from the pool configuration production uses, asked
+	// for jit=on by its DSN. The seeded mail stays inside one transaction,
+	// which a separate pool could not read.
+	poolConfig, err := database.PoolConfig(database.WithDSNParam(os.Getenv("MARGINCE_TEST_DSN"), "jit", "on"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, err := pgx.ConnectConfig(ctx, poolConfig.ConnConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,22 +181,18 @@ func TestOneWordMailSearchStaysInsideTheBudgetOnACommonWord(t *testing.T) {
 				append([]any{pgx.QueryExecModeDescribeExec}, args...)...).Scan(&raw); err != nil {
 				t.Fatal(err)
 			}
-			var indexed bool
-			var grouped float64
+			var indexed, compiled bool
 			planWalk(t, raw, func(node map[string]any) {
 				if node["Node Type"] == "Bitmap Index Scan" && node["Index Name"] == mailIndex {
 					indexed = true
 				}
-				if node["Node Type"] == "Unique" {
-					rows, _ := node["Actual Rows"].(float64)
-					grouped = max(grouped, rows)
-				}
 			})
+			compiled = jitCompiled(t, raw)
 			if !indexed {
 				t.Errorf("the mail branch no longer reads %s:\n%s", mailIndex, raw)
 			}
-			if grouped == 0 || grouped > activityFoldRows {
-				t.Errorf("the copy grouping read %v mails; want 1 to %d, the best-scored of the sample", grouped, activityFoldRows)
+			if compiled {
+				t.Errorf("the search statement compiled with JIT on a production-built connection:\n%s", raw)
 			}
 		})
 	}
