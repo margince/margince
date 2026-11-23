@@ -211,13 +211,11 @@ func (s *Store) FiguresIn(ctx context.Context, dealIDs []ids.UUID, zone *time.Lo
 			len(dealIDs), figuresScanCap)
 	}
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		// The installation's zone, read the same way the nightly corrector
-		// reads it (closedatesweep.go) — CloseIsOverdue below is what
-		// actually answers "is this deal overdue", asked once per row
-		// rather than re-spelled in SQL.
+		// Read ungated: counting overdue days must not need installation_settings.read.
+		// CloseIsOverdue below answers "is this deal overdue", once per row.
 		loc := zone
 		if loc == nil {
-			tzName, err := s.installation.Timezone(ctx, tx)
+			tzName, err := s.installation.TimezoneApplied(ctx, tx)
 			if err != nil {
 				return fmt.Errorf("read the installation's timezone: %w", err)
 			}
