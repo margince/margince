@@ -4,10 +4,11 @@
 package aicert
 
 // The check digest of every shipped site, derived from the source. It covers
-// the case's Evaluate method and everything it reaches in this module, by name.
-// A method call cannot be resolved without types, so the walk takes every
-// method of that name on a type it reached. The digest moves on more edits than
-// it must.
+// the case's Evaluate method and the functions, values and types it names in
+// this module. A method call cannot be resolved without types, so the walk takes
+// every method of that name on a type it reached. A reached type counts by its
+// own declaration. The types of its fields count only where judging code names
+// them, so a field added to a store a case holds moves no digest.
 
 import (
 	"bytes"
@@ -216,16 +217,22 @@ func (x *sourceIndex) checkDigest(t *testing.T, root reflect.Type) string {
 	if pkg == nil {
 		t.Fatalf("case type %s is outside the module", named)
 	}
+	return x.digestOf(t, pkg, named.Name())
+}
+
+// digestOf is the digest of what the Evaluate of typeName in pkg reaches.
+func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string) string {
+	t.Helper()
 	walk := checkWalk{index: x, seen: map[ast.Node]string{}, types: map[string]bool{}, selected: map[string]bool{}}
 	for _, method := range pkg.methods["Evaluate"] {
-		if receiverName(method) == named.Name() {
+		if receiverName(method) == typeName {
 			walk.visit(t, pkg, method)
 		}
 	}
 	if len(walk.seen) == 0 {
-		t.Fatalf("case type %s declares no Evaluate method in %s", named, pkg.path)
+		t.Fatalf("case type %s declares no Evaluate method in %s", typeName, pkg.path)
 	}
-	walk.visitFuncFields(t, pkg, named.Name())
+	walk.visitFuncFields(t, pkg, typeName)
 	walk.resolveMethods(t)
 	var material []string
 	for node, id := range walk.seen {
@@ -273,7 +280,9 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 	w.seen[node] = pkg.path + "." + declName(node)
 	switch d := node.(type) {
 	case *ast.TypeSpec:
+		// The declaration is hashed, and its field types are not followed.
 		w.types[pkg.path+"."+d.Name.Name] = true
+		return
 	case *ast.FuncDecl:
 		if d.Recv != nil {
 			w.visitName(t, pkg, receiverName(d))
@@ -303,6 +312,10 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 // declares in pkg.
 func (w *checkWalk) visitName(t *testing.T, pkg *sourcePackage, name string) {
 	t.Helper()
+	// The blank name declares nothing a check can call.
+	if name == "_" {
+		return
+	}
 	if fn, ok := pkg.funcs[name]; ok {
 		w.visit(t, pkg, fn)
 	}
@@ -445,5 +458,59 @@ func TestAChangedSiteCheckMovesOnlyTheGraderThird(t *testing.T) {
 	after := stamp()
 	if parts := splitStampChange(before, after); !parts.Grader || parts.Case || parts.Prompt {
 		t.Errorf("a new check moved %+v, want the grader third alone", parts)
+	}
+}
+
+// fixtureDigest is the check digest of judgeCase in a package built from src.
+func fixtureDigest(t *testing.T, src string) string {
+	t.Helper()
+	x := newSourceIndex(t)
+	file, err := parser.ParseFile(x.fset, "fixture.go", "package fixture\n"+src, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing the fixture: %v", err)
+	}
+	pkg := &sourcePackage{
+		path: modulePath + "/fixture", files: []*ast.File{file}, funcs: map[string]*ast.FuncDecl{},
+		values: map[string]ast.Node{}, methods: map[string][]*ast.FuncDecl{}, fileOf: map[ast.Node]*ast.File{},
+	}
+	indexDecls(pkg, file)
+	x.pkgs[pkg.path] = pkg
+	return x.digestOf(t, pkg, "judgeCase")
+}
+
+// A case that holds a store in a field and judges through a helper. A blank
+// declaration names the store too, the way an interface check does, and
+// Evaluate discards a result with the same blank name.
+const judgeFixture = `
+type store struct{ rows int }
+var _ = store{}
+type judgeCase struct {
+	want  int
+	cache store
+}
+func (c judgeCase) Evaluate(got int) bool {
+	_, same := sameAnswer(c.want, got)
+	return same
+}
+func sameAnswer(want, got int) (int, bool) { return got, want == got }
+`
+
+func TestAnEditToTheJudgingCodeMovesTheSiteCheck(t *testing.T) {
+	before := fixtureDigest(t, judgeFixture)
+	edited := strings.Replace(judgeFixture, "return got, want == got", "return got, want <= got", 1)
+	if fixtureDigest(t, edited) == before {
+		t.Error("an edit to the helper Evaluate judges through left the digest unchanged")
+	}
+	evaluate := strings.Replace(judgeFixture, "sameAnswer(c.want, got)", "sameAnswer(got, c.want)", 1)
+	if fixtureDigest(t, evaluate) == before {
+		t.Error("an edit to Evaluate left the digest unchanged")
+	}
+}
+
+func TestAFieldOnAStoreTheCaseHoldsMovesNoSiteCheck(t *testing.T) {
+	before := fixtureDigest(t, judgeFixture)
+	edited := strings.Replace(judgeFixture, "type store struct{ rows int }", "type store struct{ rows, pages int }", 1)
+	if fixtureDigest(t, edited) != before {
+		t.Error("a field added to a store the case only holds moved the digest")
 	}
 }
