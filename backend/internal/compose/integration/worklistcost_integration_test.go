@@ -194,8 +194,8 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // read is the assembly a cache miss pays; the cache's own lookup and store are
 // outside it.
 // Both count waiting_customers' private_mail_requests read, the undated tasks'
-// planned, row_names and subject_labels reads, needs_you's duplicate pairs, and
-// the four reads of the reader's own time zone.
+// planned, row_names and subject_labels reads, and needs_you's duplicate pairs.
+// They also count the four reads of the reader's own time zone.
 const (
 	homeReadStatementCeiling = 106
 	homeReadRoundTripCeiling = 73
