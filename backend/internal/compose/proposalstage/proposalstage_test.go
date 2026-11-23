@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package proposalstage
 
 import (
 	"testing"
@@ -12,7 +12,7 @@ import (
 func TestOnlyOurOwnOutboundEmailCanAnnounceAProposal(t *testing.T) {
 	t.Parallel()
 	ours := deals.ActivityAuthorship{Kind: "email", Direction: "outbound", AuthorSide: deals.AuthorSeller}
-	if !proposalMailEligible(ours) {
+	if !MailEligible(ours) {
 		t.Fatal("our own outbound email was refused")
 	}
 	refused := map[string]func(deals.ActivityAuthorship) deals.ActivityAuthorship{
@@ -25,7 +25,7 @@ func TestOnlyOurOwnOutboundEmailCanAnnounceAProposal(t *testing.T) {
 		"a meeting": func(a deals.ActivityAuthorship) deals.ActivityAuthorship { a.Kind = "meeting"; return a },
 	}
 	for name, change := range refused {
-		if proposalMailEligible(change(ours)) {
+		if MailEligible(change(ours)) {
 			t.Errorf("%s was admitted", name)
 		}
 	}

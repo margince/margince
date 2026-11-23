@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package proposalstage_test
 
 // A proposal that went out on an open deal asks the deal's owner whether to
 // move it, and only the owner's accept moves it. The tests drive the trigger
@@ -20,21 +20,53 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/proposalstage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
+// staticDomains is the own-domain seam, answering a fixed list.
+type staticDomains []string
+
+func (d staticDomains) Domains(context.Context, pgx.Tx) ([]string, error) {
+	return []string(d), nil
+}
+
+func (d staticDomains) MeetingParties(context.Context, pgx.Tx) (owndomain.Parties, error) {
+	own := owndomain.New(d)
+	return owndomain.Parties{Trusted: own, Possible: own}, nil
+}
+
+//craft:ignore naked-any the payload goes straight to json.Marshal, and each test passes a different generated event struct
+func evidenceEnvelope(t testing.TB, eventType, entityType string, entity ids.UUID, payload any) kevents.Envelope {
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		panic(err)
+	}
+	return kevents.Envelope{
+		EventID: ids.NewV7(), Type: eventType, Version: 1,
+		OccurredAt: clocktest.Now(t).UTC(),
+		Entity:     kevents.EntityRef{Type: entityType, ID: entity},
+		Payload:    raw,
+		Trace:      kevents.Trace{CorrelationID: ids.NewV7()},
+	}
+}
+
 const proposalOurDomain = "acme-sales.example"
 
 type proposalEnv struct {
 	*integration.Env
-	trigger  *StageEvidenceTrigger
+	trigger  *compose.StageEvidenceTrigger
+	suggest  *proposalstage.Suggester
 	pipeline ids.PipelineID
 	stages   []ids.StageID
 	deal     ids.DealID
@@ -61,7 +93,8 @@ func newProposalEnv(t *testing.T) *proposalEnv {
 		p.stages = append(p.stages, ids.From[ids.StageKind](ids.UUID(stage.Id)))
 	}
 	p.deal = ids.From[ids.DealKind](e.SeedDeal(t, "Hanoi depot", p.pipeline, p.stages[1], &e.AdminUser))
-	p.trigger = NewStageEvidenceTrigger(e.Pool, e.Deals, staticDomains{proposalOurDomain}, nil, slog.Default())
+	p.trigger = compose.NewStageEvidenceTrigger(e.Pool, e.Deals, staticDomains{proposalOurDomain}, nil, slog.Default())
+	p.suggest = proposalstage.New(e.DB(), compose.NewApprovalsService(e.DB()))
 	return p
 }
 
@@ -89,7 +122,7 @@ func (p *proposalEnv) sendOffer(t *testing.T) kevents.Envelope {
 	if _, err := p.Deals.SendOffer(desk, offer, nil); err != nil {
 		t.Fatalf("sending the offer: %v", err)
 	}
-	return evidenceEnvelope("offer.sent", "offer", offer.UUID,
+	return evidenceEnvelope(t, "offer.sent", "offer", offer.UUID,
 		crmcontracts.PublicEventOfferSent{OfferId: created.Id, DealId: created.DealId, FxRateToBase: "1"})
 }
 
@@ -171,7 +204,7 @@ func TestASentOfferAsksToMoveTheDealAndAcceptingMovesIt(t *testing.T) {
 		t.Fatalf("raising the question moved the deal to %s", stage)
 	}
 
-	svc := NewApprovalsServiceWithEffects(p.Pool)
+	svc := compose.NewApprovalsServiceWithEffects(p.Pool)
 	if _, err := svc.Decide(p.Admin(), card.id, true, nil); err != nil {
 		t.Fatalf("accepting: %v", err)
 	}
@@ -196,7 +229,7 @@ func TestADeclinedQuestionIsNotAskedAgainForTheSameOfferButIsForANewOne(t *testi
 	p := newProposalEnv(t)
 	first := p.sendOffer(t)
 	p.handle(t, first)
-	svc := NewApprovalsServiceWithEffects(p.Pool)
+	svc := compose.NewApprovalsServiceWithEffects(p.Pool)
 	if _, err := svc.Decide(p.Admin(), p.pending(t)[0].id, false, nil); err != nil {
 		t.Fatalf("declining: %v", err)
 	}
@@ -247,8 +280,8 @@ func TestMovingTheDealPastTheStageWithdrawsTheQuestion(t *testing.T) {
 	if _, err := p.Deals.AdvanceDeal(p.Admin(), p.deal, deals.AdvanceDealInput{ToStageID: p.stages[5]}); err != nil {
 		t.Fatalf("moving the deal by hand: %v", err)
 	}
-	stale := evidenceEnvelope("deal.stage_changed", "deal", p.deal.UUID, crmcontracts.PublicEventDealStageChanged{})
-	stale.OccurredAt = time.Now().Add(-8 * 24 * time.Hour)
+	stale := evidenceEnvelope(t, "deal.stage_changed", "deal", p.deal.UUID, crmcontracts.PublicEventDealStageChanged{})
+	stale.OccurredAt = clocktest.Now(t).Add(-8 * 24 * time.Hour)
 	p.handle(t, stale)
 	if n := len(p.pending(t)); n != 0 {
 		t.Fatalf("%d questions still open after an 8-day-old stage change; retirement must not be dropped as backlog", n)
@@ -278,7 +311,7 @@ func (p *proposalEnv) outboundMail(t *testing.T, body string, files ...string) i
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, direction, subject, body, occurred_at, source, captured_by)
 			VALUES ('email', 'outbound', 'Your depot', $1, $2, 'manual', 'human:test') RETURNING id`,
-			body, time.Now().Add(-time.Hour)).Scan(&id); err != nil {
+			body, clocktest.Now(t).Add(-time.Hour)).Scan(&id); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'from')`, id, p.AdminUser); err != nil {
@@ -307,7 +340,7 @@ func (p *proposalEnv) outboundMail(t *testing.T, body string, files ...string) i
 
 func (p *proposalEnv) captured(t *testing.T, activity ids.UUID) kevents.Envelope {
 	t.Helper()
-	return evidenceEnvelope("activity.captured", "activity", activity, crmcontracts.PublicEventActivityCaptured{Kind: "email"})
+	return evidenceEnvelope(t, "activity.captured", "activity", activity, crmcontracts.PublicEventActivityCaptured{Kind: "email"})
 }
 
 func TestOurMailWithAnAttachmentNamedLikeAProposalAsksWithoutAModel(t *testing.T) {
@@ -358,9 +391,11 @@ func cmpOr(value, fallback string) string {
 	return fallback
 }
 
-func (p *proposalEnv) read(t *testing.T, brain completer, activity ids.UUID) {
+func (p *proposalEnv) read(t *testing.T, brain interface {
+	Complete(context.Context, model.Request) (model.Response, error)
+}, activity ids.UUID) {
 	t.Helper()
-	reader := NewStageEvidenceReader(p.Pool, p.Deals, staticDomains{proposalOurDomain}, brain, time.Now, slog.Default())
+	reader := compose.NewStageEvidenceReader(p.Pool, p.Deals, staticDomains{proposalOurDomain}, brain, func() time.Time { return clocktest.Now(t) }, slog.Default())
 	if _, err := reader.Read(p.Admin(), p.deal, activity); err != nil {
 		t.Fatalf("reading the mail: %v", err)
 	}
@@ -414,7 +449,7 @@ func TestAnAcceptAfterTheDealMovedOrWasHeldWritesNothing(t *testing.T) {
 			card := p.pending(t)[0]
 			change(t, p)
 			before := p.scalar(t, `SELECT stage_id::text FROM deal WHERE id = $1`, p.deal)
-			svc := NewApprovalsServiceWithEffects(p.Pool)
+			svc := compose.NewApprovalsServiceWithEffects(p.Pool)
 			if _, err := svc.Decide(p.Admin(), card.id, true, nil); err == nil {
 				t.Fatal("the accept went through although the question no longer applies")
 			}
@@ -436,7 +471,7 @@ func TestOnlyTheDealsOwnerSeesAndDecidesTheQuestionAndAReassignmentHandsItOn(t *
 	if card.decide != p.Rep1 {
 		t.Fatalf("the question is put to %s, want the owner Rep1", card.decide)
 	}
-	svc := NewApprovalsServiceWithEffects(p.Pool)
+	svc := compose.NewApprovalsServiceWithEffects(p.Pool)
 	manager := p.As(p.AdminUser, nil, integration.AdminPerms)
 	if _, err := svc.Get(manager, card.id); err == nil {
 		t.Fatal("another manager can read the owner's question")
@@ -487,7 +522,7 @@ func TestAnAcceptWritesNothingWhenTheAnnouncingFileIsGone(t *testing.T) {
 				t.Fatalf("the question does not carry its file: %+v", card.move)
 			}
 			p.WsExec(t, change, mail)
-			svc := NewApprovalsServiceWithEffects(p.Pool)
+			svc := compose.NewApprovalsServiceWithEffects(p.Pool)
 			if _, err := svc.Decide(p.Admin(), card.id, true, nil); err == nil {
 				t.Fatal("the accept went through")
 			}
@@ -501,7 +536,7 @@ func TestAnAcceptWritesNothingWhenTheAnnouncingFileIsGone(t *testing.T) {
 func TestSimultaneousSourcesRaiseOneQuestion(t *testing.T) {
 	p := newProposalEnv(t)
 	mail := p.outboundMail(t, "See attached.", "Angebot_Depot.pdf")
-	sources := []proposalSource{
+	sources := []proposalstage.Source{
 		{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"},
 		{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"},
 		{Type: deals.ProposalSourceActivity, ID: mail, Snippet: "Attached file"},
@@ -511,7 +546,7 @@ func TestSimultaneousSourcesRaiseOneQuestion(t *testing.T) {
 	for _, src := range sources {
 		go func() {
 			<-start
-			errs <- p.trigger.proposals.Suggest(context.Background(), p.deal, src)
+			errs <- p.suggest.Suggest(context.Background(), p.deal, src)
 		}()
 	}
 	close(start)
@@ -543,7 +578,7 @@ func TestAStageMoveInFlightDecidesBeforeAQuestionIsRaised(t *testing.T) {
 	<-moving
 	suggested := make(chan error, 1)
 	go func() {
-		suggested <- p.trigger.proposals.Suggest(context.Background(), p.deal, proposalSource{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"})
+		suggested <- p.suggest.Suggest(context.Background(), p.deal, proposalstage.Source{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"})
 	}()
 	p.waitForLock(t, "%FOR SHARE OF d%")
 	close(release)
@@ -558,13 +593,10 @@ func TestAStageMoveInFlightDecidesBeforeAQuestionIsRaised(t *testing.T) {
 	}
 }
 
-// waitForLock returns once a backend is blocked on a lock in a statement like
-// pattern. The bound is a guard against a hang, not part of what is asserted.
 func (p *proposalEnv) waitForLock(t *testing.T, pattern string) {
 	t.Helper()
-	deadline := time.Now().Add(30 * time.Second)
-	for p.scalar(t, `SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE $1`, pattern) == "0" {
-		if time.Now().After(deadline) {
+	for tries := 0; p.scalar(t, `SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE $1`, pattern) == "0"; tries++ {
+		if tries > 20000 {
 			t.Fatalf("nothing waited on a lock like %q", pattern)
 		}
 		runtime.Gosched()
@@ -578,7 +610,7 @@ func TestASuggestionWaitsForTheDealsLockBeforeScanningForOpenQuestions(t *testin
 	held := make(chan error, 1)
 	go func() {
 		held <- database.WithWorkspaceTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
-			if _, err := tx.Exec(context.Background(), proposalLockSQL, p.deal); err != nil {
+			if _, err := tx.Exec(context.Background(), proposalstage.LockSQL, p.deal); err != nil {
 				return err
 			}
 			close(holding)
@@ -589,7 +621,7 @@ func TestASuggestionWaitsForTheDealsLockBeforeScanningForOpenQuestions(t *testin
 	<-holding
 	suggested := make(chan error, 1)
 	go func() {
-		suggested <- p.trigger.proposals.Suggest(context.Background(), p.deal, proposalSource{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"})
+		suggested <- p.suggest.Suggest(context.Background(), p.deal, proposalstage.Source{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"})
 	}()
 	p.waitForLock(t, "%pg_advisory_xact_lock%")
 	if n := len(p.cards(t)); n != 0 {

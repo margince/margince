@@ -277,6 +277,8 @@ func (s *Store) ApplyProposalStageTx(
 	approval := approvalID.UUID
 	_, refused, err := s.advanceInSavepoint(ctx, tx, deal, AdvanceDealInput{
 		ToStageID: ids.From[ids.StageKind](move.ToStageID), ApprovalID: &approval,
+		// The target is an open stage, so the move claims no win.
+		WonWithoutContractReason: nil,
 	}, active.cols)
 	if err != nil {
 		return "", err

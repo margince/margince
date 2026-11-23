@@ -1,4 +1,5 @@
 {
+  "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.promise_kept": "Closing a commitment a meeting shows kept",

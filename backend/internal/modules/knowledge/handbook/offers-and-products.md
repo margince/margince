@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offers.linetable.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx frontend/src/features/deals/deal360/deallines.tsx frontend/src/features/deals/offers.fromdeal.tsx frontend/src/features/deals/offers.summary.tsx backend/internal/modules/deals/deallines.go backend/internal/modules/deals/deallinefigures.go backend/internal/modules/deals/offerfromdeal.go backend/internal/modules/deals/proposalstage.go backend/internal/compose/proposalstage.go -->
+<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offers.linetable.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx frontend/src/features/deals/deal360/deallines.tsx frontend/src/features/deals/offers.fromdeal.tsx frontend/src/features/deals/offers.summary.tsx backend/internal/modules/deals/deallines.go backend/internal/modules/deals/deallinefigures.go backend/internal/modules/deals/offerfromdeal.go backend/internal/modules/deals/proposalstage.go backend/internal/compose/proposalstage/proposalstage.go -->
 # Offers and the rate card
 
 An **offer** in Margince is the document with prices that you give a buyer. It belongs to a deal. Once it has been sent, you do not edit it; you make a new version of it instead.
@@ -144,15 +144,21 @@ The fixed words the PDF prints, such as its headings, follow the template's own 
 
 ## When a proposal goes out
 
-When a proposal goes out on an open deal, Margince asks the deal's owner **Move to {stage}?** It moves nothing by itself. The question shows on the deal page and on Home, and it names the stages the move skips and the offer or the mail that raised it.
+When a proposal goes out on an open deal, Margince asks the deal's owner **Move to {stage}?** It moves nothing by itself. The question shows on the deal page and on Home. It names the stages the move skips. It also names the offer or the mail that raised it.
 
 Two things raise it:
-- You send an offer from Margince.
-- Our side sends the customer a mail with a file attached that says it is the proposal. The file name can say so ("Angebot", "Proposal", "Báo giá"), or the mail can say so in its own words. Mail only its participants may read raises nothing.
+- You mark an offer as sent in Margince. The offer's status says you sent it. Margince does not check that the customer received it.
+- Our side sends the customer a mail with a file attached that says it is the proposal. The file name can say so in English, German or Vietnamese, or the mail can say so in its own words. Mail only its participants may read raises nothing.
 
-Margince finds the stage in two ways. A stage whose name holds a proposal word (proposal, quote, offer, Angebot, báo giá) is the proposal stage, unless the name also says it was accepted or signed. Or a stage can ask for a criterion such as "Proposal sent"; the proposal then leaves that stage, so the question names the stage after it. A pipeline with neither gets no question, and there is no setting for it.
+Margince finds the stage in two ways. A stage whose name holds a word for a proposal, a quote or an offer is the proposal stage. It is not, if its name also says the offer was accepted or signed. Or a stage can list a step such as "Proposal sent". The proposal then leaves that stage, so the question names the stage after it. A pipeline with neither gets no question, and there is no setting for it.
 
-**Move to {stage}** moves the deal like any other stage move, and **Undo** on the note moves it back. **Not now** closes the question, and Margince does not ask again for the same offer or mail. A later offer or mail can ask again. An unanswered question closes after 14 days, and it closes at once when the deal moves to or past that stage, is closed or archived. A deal on legal hold, a closed deal, a deal already at or past the stage, and a deal with no owner get no question. The switches for stage moves Margince makes do not hide it, because it moves nothing.
+**Move to {stage}** moves the deal like any other stage move, and **Undo** on the note moves it back. **Not now** closes the question. Margince then does not ask again for the same offer or mail, but a later offer or mail can ask again.
+
+A question nobody answers closes after 14 days. It closes at once when the deal moves to or past that stage, or is closed or archived.
+
+A deal gets no question in four cases. It is on legal hold. It is closed. It is already at or past the stage. It has no owner.
+
+The switches for stage moves Margince makes do not hide it, because it moves nothing.
 
 ## What an offer refuses
 

@@ -1,4 +1,5 @@
 {
+  "systemJob.proposal_stage": "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
   "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.promise_kept": "Eine Zusage schließen, die ein Termin als erfüllt zeigt",

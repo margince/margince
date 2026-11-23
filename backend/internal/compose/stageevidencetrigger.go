@@ -40,6 +40,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/proposalstage"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -114,7 +115,7 @@ type StageEvidenceTrigger struct {
 	workspace func(context.Context) (ids.WorkspaceID, error)
 	// proposals asks a deal's owner to move it to the proposal stage when a
 	// proposal went out. It retires the question once the deal has moved.
-	proposals *proposalStageSuggester
+	proposals *proposalstage.Suggester
 	log       *slog.Logger
 	// now is the clock the backlog window is measured on.
 	now func() time.Time
@@ -129,7 +130,7 @@ func NewStageEvidenceTrigger(
 	return &StageEvidenceTrigger{
 		pool: pool, deals: store, own: own, read: read,
 		workspace: identity.NewService(pool).InstallationWorkspace,
-		proposals: newProposalStageSuggester(pool),
+		proposals: proposalstage.New(InstallationDB(pool), NewApprovalsService(InstallationDB(pool))),
 		log:       log, now: time.Now,
 	}
 }
@@ -215,7 +216,7 @@ func (t *StageEvidenceTrigger) onOfferSent(ctx context.Context, env events.Envel
 	if payload.Revision != nil {
 		snippet = fmt.Sprintf("Offer sent, revision %d", *payload.Revision)
 	}
-	return t.proposals.Suggest(ctx, ids.From[ids.DealKind](ids.UUID(payload.DealId)), proposalSource{
+	return t.proposals.Suggest(ctx, ids.From[ids.DealKind](ids.UUID(payload.DealId)), proposalstage.Source{
 		Type: deals.ProposalSourceOffer, ID: env.Entity.ID, Snippet: snippet,
 	})
 }

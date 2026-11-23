@@ -101,18 +101,29 @@ var decidedByTheRequestedDecider = map[string]bool{
 	kindDealProposalStage: true,
 }
 
+// withheldByRequestedDecider is true for a card of a kind in
+// decidedByTheRequestedDecider that p is not the named decider of.
+func withheldByRequestedDecider(p principal.Principal, a row) bool {
+	if !decidedByTheRequestedDecider[a.Kind] {
+		return false
+	}
+	decider := requestedDecider(a)
+	return decider.IsZero() || p.UserID != decider
+}
+
 // withheldFromOtherSeats is the self-only narrowing of decidable, spelled once
-// because the inbox scan and the two target-filtered reads (inbox.listForTarget,
-// Service.PendingForTarget) all apply it. It is true when the staging is bound
-// to one seat and p is not it. A proposal nobody is recorded for is one nobody
-// may read. Held by TestEveryApprovalsGrantFilterAlsoAppliesTheSelfOnlyNarrowing.
+// because the inbox scan and the two target-filtered reads apply it. It is true
+// when the staging is bound to one seat and p is not it.
+//
+// Held by: TestEveryApprovalsGrantFilterAlsoAppliesTheSelfOnlyNarrowing
+// (backend/gates/approvalselfonlyreaders_test.go) — it fails when a reader
+// filters rows with requireDecisionGrants and does not also call this.
 func withheldFromOtherSeats(p principal.Principal, a row) bool {
 	if approvalsubject.Withheld(a.Kind, a.ProposedChange, p.UserID) {
 		return true
 	}
-	if decidedByTheRequestedDecider[a.Kind] {
-		decider := requestedDecider(a)
-		return decider.IsZero() || p.UserID != decider
+	if withheldByRequestedDecider(p, a) {
+		return true
 	}
 	if selfOnlyKinds[a.Kind] || stagedForStagerOnly(a.TargetType, a.TargetID != nil) {
 		return a.OnBehalfOf == nil || p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID

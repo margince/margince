@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/proposalstage"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -60,7 +61,7 @@ type StageEvidenceReader struct {
 	deals *deals.Store
 	own   deals.OwnDomainReader
 	// proposals raises the question to move a deal to the proposal stage.
-	proposals *proposalStageSuggester
+	proposals *proposalstage.Suggester
 	brain     completer
 	now       func() time.Time
 	log       *slog.Logger
@@ -73,7 +74,7 @@ func NewStageEvidenceReader(
 ) *StageEvidenceReader {
 	return &StageEvidenceReader{
 		pool: pool, deals: store, own: own, brain: brain, now: now, log: log,
-		proposals: newProposalStageSuggester(pool),
+		proposals: proposalstage.New(InstallationDB(pool), NewApprovalsService(InstallationDB(pool))),
 	}
 }
 
@@ -167,14 +168,14 @@ func (r *StageEvidenceReader) gather(
 		if err != nil && !errors.Is(err, errNothingToRead) {
 			return err
 		}
-		facts.proposalAsked, err = proposalQuestionFor(ctx, tx, authorship, activityID)
+		facts.proposalAsked, err = proposalstage.QuestionFor(ctx, tx, authorship, activityID)
 		return err
 	})
 	if err != nil {
 		return facts, nil, err
 	}
 	if facts.proposalAsked {
-		criteria = append(criteria, stageEvidenceCriterion{Key: deals.ProposalSentCriterionKey, Label: proposalSentLabel})
+		criteria = append(criteria, stageEvidenceCriterion{Key: deals.ProposalSentCriterionKey, Label: proposalstage.SentLabel})
 	}
 	if len(criteria) == 0 {
 		return facts, nil, errNothingToRead
@@ -307,7 +308,7 @@ func (r *StageEvidenceReader) suggestMove(
 	if !facts.proposalAsked || claim.Met != stageEvidenceMet {
 		return nil
 	}
-	return r.proposals.Suggest(ctx, dealID, proposalSource{
+	return r.proposals.Suggest(ctx, dealID, proposalstage.Source{
 		Type: deals.ProposalSourceActivity, ID: facts.activityID, Snippet: claim.Quote,
 	})
 }

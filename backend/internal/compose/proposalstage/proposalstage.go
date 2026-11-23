@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package proposalstage asks a deal's owner whether to move the deal to the
+// proposal stage after a proposal went out. It also writes the accepted move.
+package proposalstage
 
 // A proposal that went out on an open deal asks the deal's owner whether to
 // move the deal to the proposal stage. The question is an approval of kind
 // deals.ProposalStageKind, and the owner's accept is the only move. The
 // offer trigger, the mail reading and the attachment-name check all raise it
-// through proposalStageSuggester, so one writer decides what is already open.
+// through Suggester, so one writer decides what is already open.
 
 import (
 	"context"
@@ -19,7 +21,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/dealscout"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -36,19 +37,20 @@ import (
 const (
 	proposalStageActor       = "system:proposal-stage"
 	proposalStageSummaryCode = "approval.proposalStageAsked"
-	// proposalSentLabel is the criterion the reading is asked beside a stage's
+	// SentLabel is the criterion the reading is asked beside a stage's
 	// own, under deals.ProposalSentCriterionKey.
-	proposalSentLabel = "Our side sends the customer a proposal, quote or offer attached to this message"
+	SentLabel = "Our side sends the customer a proposal, quote or offer attached to this message"
 
 	proposalStageWithdrawn = "a proposal no longer asks this: the deal moved, closed or the stage changed"
 	proposalStageReplaced  = "a newer proposal names another stage"
 	proposalFileGoneReason = "The mail's attached proposal is gone, withheld or no longer on this deal, so nothing was moved."
+	approvalTargetDeal     = "deal"
 	activityKindEmail      = "email"
 	directionOutbound      = "outbound"
 )
 
-// proposalSource is what raised the question: an offer sent, or a mail of ours.
-type proposalSource struct {
+// Source is what raised the question: an offer sent, or a mail of ours.
+type Source struct {
 	Type    string
 	ID      ids.UUID
 	Snippet string
@@ -59,33 +61,35 @@ type proposalSource struct {
 	Named bool
 }
 
-const proposalLockSQL = `SELECT pg_advisory_xact_lock(hashtextextended('deal_proposal_stage:' || $1::text, 0))`
+const LockSQL = `SELECT pg_advisory_xact_lock(hashtextextended('deal_proposal_stage:' || $1::text, 0))`
 
 // proposalLock serializes everything that raises or retires the questions of
 // one deal. A row lock cannot do it while no question exists yet, and two
 // sources have two identities, so the identity lock does not meet either.
 func proposalLock(ctx context.Context, tx pgx.Tx, dealID ids.DealID) error {
-	if _, err := tx.Exec(ctx, proposalLockSQL, dealID); err != nil {
+	if _, err := tx.Exec(ctx, LockSQL, dealID); err != nil {
 		return fmt.Errorf("compose: locking the proposal questions of a deal: %w", err)
 	}
 	return nil
 }
 
-// proposalStageSuggester raises and retires the questions.
-type proposalStageSuggester struct {
+// Suggester raises and retires the questions.
+type Suggester struct {
 	db    *database.DB
 	inbox *approvals.Service
 }
 
-func newProposalStageSuggester(pool *pgxpool.Pool) *proposalStageSuggester {
-	db := InstallationDB(pool)
-	return &proposalStageSuggester{db: db, inbox: NewApprovalsService(db)}
+// New builds the suggester over the installation's database and the approvals
+// service questions are staged on. Compose passes the service in, because it
+// is assembled from effects this package is registered into.
+func New(db *database.DB, inbox *approvals.Service) *Suggester {
+	return &Suggester{db: db, inbox: inbox}
 }
 
 // bind makes ctx the system principal the question is staged as. It binds the
 // installation's workspace, which a bus envelope does not carry, and keeps the
 // correlation id of the event that raised the question.
-func (s *proposalStageSuggester) bind(ctx context.Context) (context.Context, error) {
+func (s *Suggester) bind(ctx context.Context) (context.Context, error) {
 	workspace, err := s.db.Workspace(ctx)
 	if err != nil {
 		return nil, err
@@ -100,7 +104,7 @@ func (s *proposalStageSuggester) bind(ctx context.Context) (context.Context, err
 
 // Suggest asks the deal's owner whether to move it, unless there is nothing
 // to ask. A question already open for the same stage absorbs the new source.
-func (s *proposalStageSuggester) Suggest(ctx context.Context, dealID ids.DealID, src proposalSource) error {
+func (s *Suggester) Suggest(ctx context.Context, dealID ids.DealID, src Source) error {
 	ctx, err := s.bind(ctx)
 	if err != nil {
 		return err
@@ -108,7 +112,7 @@ func (s *proposalStageSuggester) Suggest(ctx context.Context, dealID ids.DealID,
 	return s.db.Tx(ctx, func(tx pgx.Tx) error { return s.suggestTx(ctx, tx, dealID, src) })
 }
 
-func (s *proposalStageSuggester) suggestTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, src proposalSource) error {
+func (s *Suggester) suggestTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, src Source) error {
 	if err := proposalLock(ctx, tx, dealID); err != nil {
 		return err
 	}
@@ -143,7 +147,7 @@ func (s *proposalStageSuggester) suggestTx(ctx context.Context, tx pgx.Tx, dealI
 	return s.stageTx(ctx, tx, move, src)
 }
 
-func (s *proposalStageSuggester) stageTx(ctx context.Context, tx pgx.Tx, move deals.ProposalStageMove, src proposalSource) error {
+func (s *Suggester) stageTx(ctx context.Context, tx pgx.Tx, move deals.ProposalStageMove, src Source) error {
 	body, err := json.Marshal(move)
 	if err != nil {
 		return fmt.Errorf("compose: encoding the proposal stage question: %w", err)
@@ -161,7 +165,7 @@ func (s *proposalStageSuggester) stageTx(ctx context.Context, tx pgx.Tx, move de
 		Kind:           deals.ProposalStageKind,
 		ProposedChange: body,
 		DiffHash:       hex.EncodeToString(digest[:]),
-		TargetType:     "deal",
+		TargetType:     approvalTargetDeal,
 		TargetID:       move.DealID,
 		Summary: fmt.Sprintf(systemtext.Copy(proposalStageSummaryCode, textlang.English),
 			move.DealName, move.ToStageName),
@@ -180,10 +184,10 @@ func (s *proposalStageSuggester) stageTx(ctx context.Context, tx pgx.Tx, move de
 
 // proposalEvidence is what the owner judges the question on. It is the line of
 // the mail that says a proposal is attached, or the offer that was sent.
-func proposalEvidence(move deals.ProposalStageMove, src proposalSource) approvals.Evidence {
+func proposalEvidence(move deals.ProposalStageMove, src Source) approvals.Evidence {
 	sourceType, sourceID := src.Type, src.ID
 	if sourceType == deals.ProposalSourceOffer {
-		sourceType, sourceID = "deal", move.DealID
+		sourceType, sourceID = approvalTargetDeal, move.DealID
 	}
 	snippet := textcut.Bytes(src.Snippet, approvals.MaxEvidenceSnippet)
 	if snippet == "" {
@@ -193,7 +197,7 @@ func proposalEvidence(move deals.ProposalStageMove, src proposalSource) approval
 }
 
 // Retire withdraws the deal's open questions that have nothing left to ask.
-func (s *proposalStageSuggester) Retire(ctx context.Context, dealID ids.DealID) error {
+func (s *Suggester) Retire(ctx context.Context, dealID ids.DealID) error {
 	ctx, err := s.bind(ctx)
 	if err != nil {
 		return err
@@ -227,8 +231,8 @@ func (s *proposalStageSuggester) Retire(ctx context.Context, dealID ids.DealID) 
 
 // SuggestForAttachedFile raises the question for a mail of ours whose
 // attachment is named like a proposal. It is the arm that needs no model.
-func (s *proposalStageSuggester) SuggestForAttachedFile(ctx context.Context, mail deals.ActivityAuthorship, activityID ids.UUID) error {
-	if !proposalMailEligible(mail) {
+func (s *Suggester) SuggestForAttachedFile(ctx context.Context, mail deals.ActivityAuthorship, activityID ids.UUID) error {
+	if !MailEligible(mail) {
 		return nil
 	}
 	ctx, err := s.bind(ctx)
@@ -240,16 +244,16 @@ func (s *proposalStageSuggester) SuggestForAttachedFile(ctx context.Context, mai
 		if err != nil || file.IsZero() {
 			return err
 		}
-		return s.suggestTx(ctx, tx, mail.DealID, proposalSource{
+		return s.suggestTx(ctx, tx, mail.DealID, Source{
 			Type: deals.ProposalSourceActivity, ID: activityID, Snippet: "Attached file: " + name,
 			File: file, Named: true,
 		})
 	})
 }
 
-// proposalMailEligible is whether a mail can announce a proposal: ours,
+// MailEligible is whether a mail can announce a proposal: ours,
 // outbound, an email. Participants and the buyer's own mail never do.
-func proposalMailEligible(mail deals.ActivityAuthorship) bool {
+func MailEligible(mail deals.ActivityAuthorship) bool {
 	return mail.Kind == activityKindEmail && mail.Direction == directionOutbound && mail.AuthorSide == deals.AuthorSeller
 }
 
@@ -343,11 +347,11 @@ func proposalMailHasAttachment(ctx context.Context, tx pgx.Tx, activityID ids.UU
 	return has, nil
 }
 
-// proposalQuestionFor decides whether the reading of this mail also asks about
+// QuestionFor decides whether the reading of this mail also asks about
 // an attached proposal. It does for our own outbound mail with a file, when
 // the deal has a stage to move to.
-func proposalQuestionFor(ctx context.Context, tx pgx.Tx, mail deals.ActivityAuthorship, activityID ids.UUID) (bool, error) {
-	if !proposalMailEligible(mail) {
+func QuestionFor(ctx context.Context, tx pgx.Tx, mail deals.ActivityAuthorship, activityID ids.UUID) (bool, error) {
+	if !MailEligible(mail) {
 		return false, nil
 	}
 	attached, err := proposalMailHasAttachment(ctx, tx, activityID)
@@ -358,10 +362,10 @@ func proposalQuestionFor(ctx context.Context, tx pgx.Tx, mail deals.ActivityAuth
 	return ok, err
 }
 
-// proposalStageAcceptEffect moves the deal as the deciding owner, through the
+// AcceptEffect moves the deal as the deciding owner, through the
 // stage move every other writer takes, in the transaction that redeems the
 // approval.
-func proposalStageAcceptEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
+func AcceptEffect(svc *approvals.Service, store *deals.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		var move deals.ProposalStageMove
 		if err := json.Unmarshal(proposedChange, &move); err != nil {
@@ -384,9 +388,9 @@ func proposalStageAcceptEffect(svc *approvals.Service, store *deals.Store) appro
 	}
 }
 
-// proposalStagePrecheck refuses an edited answer, and says before the click
+// Precheck refuses an edited answer, and says before the click
 // when the question no longer applies.
-func proposalStagePrecheck(db *database.DB) approvals.ReleasePrecheck {
+func Precheck(db *database.DB) approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, edited json.RawMessage) error {
 		if len(edited) > 0 {
 			return &approvals.InvalidEditError{Cause: errors.New("a proposal stage question is accepted or declined as it stands")}
@@ -404,4 +408,13 @@ func proposalStagePrecheck(db *database.DB) approvals.ReleasePrecheck {
 			return obsoleteOr(reason, err)
 		})
 	}
+}
+
+// obsoleteOr answers the approvals engine's "no longer applies" for a reason,
+// and the error when there is one.
+func obsoleteOr(reason string, err error) error {
+	if err != nil || reason == "" {
+		return err
+	}
+	return &approvals.ObsoleteError{Reason: reason}
 }
