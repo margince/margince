@@ -96,6 +96,13 @@ func stampBirthParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec co
 			return err
 		}
 	}
+	// The meeting's first transition was recorded before its guests. Keep the
+	// credit of the guest list it was born with.
+	if fields.Kind == meetingKind {
+		if _, err := storekit.KeepMeetingCreditTx(ctx, tx, id.UUID); err != nil {
+			return err
+		}
+	}
 	if crowd.leftOut == 0 {
 		return nil
 	}
