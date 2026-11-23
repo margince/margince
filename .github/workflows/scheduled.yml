@@ -1039,6 +1039,7 @@ jobs:
           STORIES_RESULT: ${{ needs['fe-all-stories'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
+          PERF_MEASURE_ONLY: ${{ inputs.perf_measure }}
           PERF_MM_RESULT: ${{ needs['perf-mid-market'].result }}
           PERF_MM_OUTCOME: ${{ needs['perf-mid-market'].outputs.outcome }}
           MOBILE_RESULT: ${{ needs['perf-mobile'].result }}

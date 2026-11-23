@@ -628,10 +628,9 @@ bench-perf: composition ## PERF-3/PERF-7 benchmark harness, writing a record; mi
 # the weekly workflow also runs mid_market, where the PERF-7 SLO binds).
 #
 # BENCH_PERF_GATE=0 measures without failing on a breach: the harness still
-# prints every p50/p95/p99 and says which budget it would have failed. The weekly
-# mid-market job uses it until its budget is set from runner measurements, because
-# a laptop reading is not a safe stand-in: the same laptop reads SMB's search_fts
-# at 35.7ms where a CI run read 6.1ms, so an enforced guess files false breaches.
+# prints every p50/p95/p99 and says which budget it would have failed. The
+# scheduled workflow's measure-only dispatch uses it to read the spread between
+# runners. The weekly run keeps the gate on.
 #
 # MARGINCE_BENCH_RECORD is cleared rather than merely left unset: "writes
 # nothing" must be a property of the target, not of whatever the caller's shell

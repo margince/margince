@@ -266,6 +266,12 @@ fi
 # message, so only a MEASURED breach is reported as one.
 perf_report() {
   local tier="$1" result="$2" outcome="$3" cmd="$4" seed="$5" meaning="$6" record="$7"
+  # A measure-only dispatch runs with the gate off, so its `ok` is no verdict
+  # on the budget and its failures are not the weekly lane's: it must neither
+  # open nor close a perf issue.
+  if [[ "${PERF_MEASURE_ONLY:-}" = "true" ]]; then
+    return
+  fi
   local cannot="the weekly PERF-3/PERF-7 run${tier:+ on the $tier tier} could not complete"
   local breaching="a PERF-3/PERF-7 budget is breaching on main${tier:+ ($tier tier)}"
 

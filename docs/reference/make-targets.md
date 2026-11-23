@@ -296,7 +296,7 @@ Each target that publishes a budget re-renders `performance-budgets.md` from eve
 The weekly scheduled workflow runs `bench-perf` on the SMB tier, which is where unwatched drift gets found, and `bench-perf-check` on the mid-market tier, where the `PERF-7` SLO binds. Rules for the SMB run:
 
 - The merge gate does not run `PERF-3/PERF-7`. A `PERF-7` row measured below mid-market renders `inconclusive`, never `within budget`, so an SMB run in the merge gate cannot answer the mid-market budget.
-- The mid-market run records nothing and holds the same `200 ms` and `300 ms` budgets as SMB. A breach files its own issue, titled with `(mid-market tier)`. Five runs on runners read the `PERF-3` `p95` at `147` to `186 ms`, so a laptop number is no stand-in. Start the `scheduled` workflow with the `perf_measure` input to measure the tier on five runners at once without enforcing; it opens no issue.
+- The mid-market run records nothing and holds the same `200 ms` and `300 ms` budgets as SMB. A breach files its own issue, titled with `(mid-market tier)`. Five runs on runners read the `PERF-3` `p95` at `147` to `186 ms`, so a laptop number is no stand-in. Start the `scheduled` workflow with the `perf_measure` input to measure the tier on five runners at once without enforcing; its run opens and closes no PERF issue, even on the default branch.
 - It writes a record, and the workflow offers it as a pull request, never a push to `main`. A number is published when a maintainer merges that pull request. An SMB record replaces the mid-market one in `bench-perf.json`, so its `PERF-7` row renders `inconclusive`.
 - The write-path regression a timed canary would catch is held, with no timing, by the `seq_scan` count in `lastactivity_integration_test.go`.
 
