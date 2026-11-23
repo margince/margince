@@ -93,10 +93,8 @@ function SurfaceVerb({ action, contact, primary, onAction }: ActionVerbProps) {
   );
 }
 
-// A moment says what to do; it never says what carries it. So the reply verb is
-// drawn as a send and not as an envelope — the envelope told a contact reached
-// only over a chat channel that the button would mail them, which is neither
-// what the action does nor something this card can know.
+// A moment says what to do, never what carries it, so the reply verb is drawn
+// as a send. An envelope would promise mail to a contact reached only by chat.
 function actionIcon(kind: string): ReactNode {
   switch (kind) {
     case "schedule_meeting":
