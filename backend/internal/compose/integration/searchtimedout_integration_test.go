@@ -29,7 +29,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const searchLaneBudget = 300 * time.Millisecond
+// searchLaneBudget is the lane budget of the tests whose slow lane waits on a
+// held lock, so that lane times out whatever the budget. It leaves the other
+// lanes room to answer on a loaded runner. inTimeLaneBudget is for a test where
+// every lane must answer.
+const (
+	searchLaneBudget = 2 * time.Second
+	inTimeLaneBudget = 10 * time.Second
+)
 
 // lockTable holds table in ACCESS EXCLUSIVE mode on owner until the test ends.
 func lockTable(t *testing.T, owner *pgx.Conn, table string) {
@@ -64,7 +71,11 @@ func seedOneWordEverywhere(t *testing.T, e *SearchEnv) {
 }
 
 func boundedStore(e *SearchEnv) *search.Store {
-	return search.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)).Bounded(searchLaneBudget))
+	return boundedStoreWithin(e, searchLaneBudget)
+}
+
+func boundedStoreWithin(e *SearchEnv, budget time.Duration) *search.Store {
+	return search.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)).Bounded(budget))
 }
 
 func typesOf(page search.Page) []string {
@@ -171,7 +182,7 @@ func TestAGroupedSearchWithEveryTypeInTimeNamesNoType(t *testing.T) {
 	seedOneWordEverywhere(t, e)
 	perType := 5
 
-	page, err := boundedStore(e).Search(e.Admin(), search.Input{Query: "quillfeather", PerType: &perType})
+	page, err := boundedStoreWithin(e, inTimeLaneBudget).Search(e.Admin(), search.Input{Query: "quillfeather", PerType: &perType})
 	if err != nil {
 		t.Fatal(err)
 	}
