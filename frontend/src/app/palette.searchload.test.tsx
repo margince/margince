@@ -350,11 +350,11 @@ describe("a grouped answer with a type that ran out of time", () => {
     );
     renderPalette();
 
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
     await pause();
 
     expect(
-      await screen.findByRole("button", { name: /^AG\s*Acme GmbH$/ }),
+      await screen.findByRole("option", { name: /^AG\s*Acme GmbH$/ }),
     ).toBeTruthy();
     expect(screen.getByText(line)).toBeTruthy();
     expect(screen.queryByText(/Search failed/)).toBeNull();
@@ -375,7 +375,7 @@ describe("a grouped answer with a type that ran out of time", () => {
     );
     renderPalette();
 
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
     await pause();
 
     expect(await screen.findByText(line)).toBeTruthy();
