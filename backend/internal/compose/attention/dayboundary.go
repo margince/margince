@@ -46,8 +46,8 @@ func WithZone(z Zone) Option {
 	return func(s *Service) { s.zone = z }
 }
 
-// WithZones is WithZone plus the zone a person's own list measures its day in
-// (dayrule.Zone). A list that combines several people stays on the installation
+// WithZones is WithZone plus the zone a member's own list measures its day in
+// (dayrule.Zone). A list that combines several colleagues stays on the installation
 // zone. With no personal zone bound, a personal list reads the installation's.
 func WithZones(installation, personal Zone) Option {
 	return func(s *Service) { s.zone, s.personalZone = installation, personal }

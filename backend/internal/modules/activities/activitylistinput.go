@@ -263,7 +263,7 @@ type ListActivitiesInput struct {
 	// carries that undated backlog instead.
 	OpenAndDueBy *time.Time
 	// DayZone is the IANA zone a chosen due date is judged in. Empty is the
-	// installation's zone. Only a person's own list sets it (dayrule).
+	// installation's zone. Only a member's own list sets it (dayrule).
 	DayZone string
 	// IncludeEmailRequests adds undated captured requests and undated commitments
 	// to the execution queue, not overdue counts.

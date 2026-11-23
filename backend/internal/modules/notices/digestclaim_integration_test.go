@@ -211,7 +211,7 @@ func (e *noticeEnv) ageDigestClaims(t *testing.T, by time.Duration) {
 	}
 }
 
-// A person who changes zone gets a different date for the same real day. The
+// A member who changes zone gets a different date for the same real day. The
 // date label alone would send a second digest. A new edition waits for the gap,
 // whether the new label is later or earlier.
 func TestAZoneChangeDoesNotFileASecondDigestWithinTheGap(t *testing.T) {

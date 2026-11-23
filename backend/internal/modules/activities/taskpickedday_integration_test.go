@@ -244,10 +244,10 @@ func TestTheSortKeyOfADateOnlyTaskMatchesTheGoDueRule(t *testing.T) {
 	}
 }
 
-// A person's own list counts a chosen date in their own zone. A list that
-// combines people counts it in the installation's. Berlin's day ends at 22:00
+// A member's own list counts a chosen date in their own zone. A list that
+// combines colleagues counts it in the installation's. Berlin's day ends at 22:00
 // UTC and Ho Chi Minh City's at 17:00 UTC. So one bound ends the 16th for the
-// person and not for the installation.
+// member and not for the installation.
 func TestADateOnlyTaskIsJudgedInTheZoneTheListIsReadIn(t *testing.T) {
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	until := time.Date(2026, 6, 16, 17, 0, 0, 0, time.UTC)
@@ -265,7 +265,7 @@ func TestADateOnlyTaskIsJudgedInTheZoneTheListIsReadIn(t *testing.T) {
 
 // The due order ends a chosen date in the same zone the overdue test counts it
 // in. A task dated the 16th ends at 17:00 UTC for Ho Chi Minh City and at 22:00
-// UTC for Berlin. So it sorts before a task timed 17:30 UTC on the person's own
+// UTC for Berlin. So it sorts before a task timed 17:30 UTC on the member's own
 // list, and after it on a combined one.
 func TestTheDueOrderEndsAChosenDateInTheZoneTheListIsReadIn(t *testing.T) {
 	p := newPickedDayEnv(t, "Europe/Berlin")
@@ -298,7 +298,7 @@ func TestTheDueOrderEndsAChosenDateInTheZoneTheListIsReadIn(t *testing.T) {
 // A date-only task ages out of the Worklist on the day the list counts 30 days
 // back from. At 18:30 UTC on 15 June that is 16 May in Berlin and 17 May in Ho
 // Chi Minh City. A task dated 16 May is still listed for the installation.
-// It is gone from the person's own list.
+// It is gone from the member's own list.
 func TestTheThirtyDayAgeOutCountsDaysInTheZoneTheListIsReadIn(t *testing.T) {
 	p := newPickedDayEnv(t, "Europe/Berlin")
 	until := time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC)

@@ -5,8 +5,8 @@
 
 package dayrule_test
 
-// A person in Ho Chi Minh City on an installation in Berlin. At 18:30 UTC on
-// 15 June it is the 15th in Berlin and the 16th for the person.
+// A member in Ho Chi Minh City on an installation in Berlin. At 18:30 UTC on
+// 15 June it is the 15th in Berlin and the 16th for the member.
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-func TestThePersonalSurfaceFollowsThePersonAndTheCombinedOneTheInstallation(t *testing.T) {
+func TestThePersonalSurfaceFollowsTheMemberAndTheCombinedOneTheInstallation(t *testing.T) {
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb WHERE key = 'installation.timezone'`)
 	e.WsExec(t, `UPDATE app_user SET timezone = 'Asia/Ho_Chi_Minh' WHERE id = $1`, e.Rep1)
@@ -35,11 +35,11 @@ func TestThePersonalSurfaceFollowsThePersonAndTheCombinedOneTheInstallation(t *t
 		user    ids.UUID
 		want    string
 	}{
-		{"own list of a person with a zone", occurredday.Personal, e.Rep1, "2026-06-16"},
-		{"own list of a person without a zone", occurredday.Personal, e.Rep2, "2026-06-15"},
-		{"combined screen, same person", occurredday.Combined, e.Rep1, "2026-06-15"},
+		{"own list of a member with a zone", occurredday.Personal, e.Rep1, "2026-06-16"},
+		{"own list of a member without a zone", occurredday.Personal, e.Rep2, "2026-06-15"},
+		{"combined screen, same member", occurredday.Combined, e.Rep1, "2026-06-15"},
 		{"own list with a stored zone nobody can load", occurredday.Personal, e.Rep3, "2026-06-15"},
-		{"own list with no person", occurredday.Personal, ids.Nil, "2026-06-15"},
+		{"own list with no member", occurredday.Personal, ids.Nil, "2026-06-15"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			var goDay time.Time

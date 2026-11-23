@@ -25,14 +25,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-// LocalDayAt is the calendar date at now for one person's brief, and their wall
+// LocalDayAt is the calendar date at now for one member's brief, and their wall
 // clock at that instant. The overnight pass and the on-open read both ask it.
-// A brief is the person's own list, so the day follows their zone.
+// A brief is the member's own list, so the day follows their zone.
 func LocalDayAt(ctx context.Context, tx pgx.Tx, user ids.UUID, now time.Time) (day time.Time, local time.Time, err error) {
 	return dayrule.DayAt(ctx, tx, occurredday.Personal, user, now)
 }
 
-// OvernightFrom is 05:00 on the person's own morning, the earliest the overnight
+// OvernightFrom is 05:00 on the member's own morning, the earliest the overnight
 // pass assembles their run unless their delivery window opens it sooner.
 func OvernightFrom(ctx context.Context, pool *pgxpool.Pool, user ids.UUID, now time.Time) (time.Time, error) {
 	var from time.Time
@@ -44,7 +44,7 @@ func OvernightFrom(ctx context.Context, pool *pgxpool.Pool, user ids.UUID, now t
 	return from, err
 }
 
-// localDay is the date a person's run is filed under now. It is LocalDayAt,
+// localDay is the date a member's run is filed under now. It is LocalDayAt,
 // except that a run younger than occurredday.EditionGap is still the current
 // edition. A zone change moves the date label but not the real day. The label
 // alone would file a second run, or tomorrow's run early.

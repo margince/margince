@@ -3,9 +3,9 @@
 
 // Package dayrule answers "which day is it for this reader on this screen".
 //
-// A person's own lists read the day in that person's zone. A screen that
-// combines several people reads it in the installation's zone. Every reader of
-// a local day goes through here, so one person never gets two answers.
+// A member's own lists read the day in that member's zone. A screen that
+// combines several colleagues reads it in the installation's zone. Every reader of
+// a local day goes through here, so one member never gets two answers.
 package dayrule
 
 import (
@@ -26,8 +26,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Zone is the zone the surface reads the day in. user is the person whose list
-// it is, and Combined ignores it. A person with no zone of their own, or no
+// Zone is the zone the surface reads the day in. user is the member whose list
+// it is, and Combined ignores it. A member with no zone of their own, or no
 // seat any more, reads the installation's zone.
 func Zone(ctx context.Context, tx pgx.Tx, surface occurredday.Surface, user ids.UUID) (*time.Location, error) {
 	if surface == occurredday.Personal && !user.IsZero() {
@@ -35,12 +35,12 @@ func Zone(ctx context.Context, tx pgx.Tx, surface occurredday.Surface, user ids.
 		switch {
 		case err == nil:
 			// A stored zone this build cannot load reads the installation's
-			// day. The person's list still opens.
+			// day. The member's list still opens.
 			if loc, locErr := hours.Location(); locErr == nil {
 				return loc, nil
 			}
 		case !errors.Is(err, apperrors.ErrNotFound):
-			return nil, fmt.Errorf("dayrule: reading the person's zone: %w", err)
+			return nil, fmt.Errorf("dayrule: reading the member's zone: %w", err)
 		}
 	}
 	return identity.ZoneAppliedTx(ctx, tx)
@@ -58,7 +58,7 @@ func DayAt(
 	return storekit.WorkspaceDay(now, loc), now.In(loc), nil
 }
 
-// ActingReaderZone resolves the acting person's own zone for their own list,
+// ActingReaderZone resolves the acting member's own zone for their own list,
 // with the installation's zone as fallback.
 func ActingReaderZone(pool *pgxpool.Pool) func(context.Context) (*time.Location, error) {
 	return func(ctx context.Context) (*time.Location, error) {
@@ -67,7 +67,7 @@ func ActingReaderZone(pool *pgxpool.Pool) func(context.Context) (*time.Location,
 }
 
 // SurfaceOf is the surface of a read narrowed by owners. Only the acting
-// person's own records make their own list. Any other set, or none, is a screen
+// member's own records make their own list. Any other set, or none, is a screen
 // that combines colleagues.
 func SurfaceOf(ctx context.Context, owners *storekit.OwnerSet) occurredday.Surface {
 	user := ActingUser(ctx)
@@ -107,7 +107,7 @@ func zoneIn(ctx context.Context, pool *pgxpool.Pool, surface occurredday.Surface
 	return loc, err
 }
 
-// ActingUser is the signed-in person, or the zero id when nobody is.
+// ActingUser is the signed-in member, or the zero id when nobody is.
 func ActingUser(ctx context.Context) ids.UUID {
 	actor, ok := principal.Actor(ctx)
 	if !ok {

@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestOnlyAReadNarrowedToTheActingPersonIsTheirOwnList(t *testing.T) {
+func TestOnlyAReadNarrowedToTheActingMemberIsTheirOwnList(t *testing.T) {
 	me, other := ids.NewV7(), ids.NewV7()
 	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, UserID: me})
 	for name, c := range map[string]struct {

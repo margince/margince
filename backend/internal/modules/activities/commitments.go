@@ -118,7 +118,7 @@ type ListOpenTasksInput struct {
 	// leaves this false.
 	MostRecentlySlippedFirst bool
 	// DayZone is the IANA zone a chosen due date is judged and ordered in.
-	// Empty is the installation's zone. Only a person's own list sets it.
+	// Empty is the installation's zone. Only a member's own list sets it.
 	DayZone string
 }
 

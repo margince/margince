@@ -24,7 +24,7 @@ type morningDigest struct {
 }
 
 // notificationWindow is the morning a digest covers. surface says whose clock
-// it is: a person's own digest reads their zone, the workspace-wide pass the
+// it is: a member's own digest reads their zone, the workspace-wide pass the
 // installation's.
 func notificationWindow(ctx context.Context, tx pgx.Tx, surface occurredday.Surface, user ids.UUID, now time.Time) (notices.Window, error) {
 	day, _, err := dayrule.DayAt(ctx, tx, surface, user, now)
