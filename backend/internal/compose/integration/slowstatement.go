@@ -53,10 +53,11 @@ func watchSlow(ctx context.Context, conn *pgx.Conn, after time.Duration, seen ch
 		probe, done := context.WithTimeout(context.WithoutCancel(ctx), after/4)
 		var next slowSeen
 		err := conn.QueryRow(probe, `SELECT query, extract(epoch FROM now() - query_start)::float8,
-		  octet_length(query) >= pg_size_bytes(current_setting('track_activity_query_size')) - 1
+		  octet_length(query) >= pg_size_bytes(current_setting('track_activity_query_size')) - 1,
+		  COALESCE(wait_event_type || ':' || wait_event, ''), cardinality(pg_blocking_pids(pid))
 		  FROM pg_stat_activity WHERE datname = current_database() AND state = 'active'
 		  AND pid <> pg_backend_pid() AND now() - query_start > make_interval(secs => $1)
-		  ORDER BY query_start LIMIT 1`, after.Seconds()).Scan(&next.query, &next.seconds, &next.cut)
+		  ORDER BY query_start LIMIT 1`, after.Seconds()).Scan(&next.query, &next.seconds, &next.cut, &next.waitsOn, &next.blockers)
 		done()
 		if err == nil && next.seconds > longest.seconds {
 			longest = next
@@ -68,13 +69,19 @@ type slowSeen struct {
 	query   string
 	seconds float64
 	cut     bool
+	// waitsOn is the wait event the statement sat in when seen, empty while
+	// it ran on the CPU; blockers counts the sessions holding a lock it needs.
+	// A statement stalled on a lock and one that is slow to run look the same
+	// without them.
+	waitsOn  string
+	blockers int
 }
 
 func (s slowSeen) describe(conn *pgx.Conn, limit time.Duration) string {
 	if s.query == "" {
 		return "no statement was seen running long"
 	}
-	head := fmt.Sprintf("ran %.1fs: %s", s.seconds, s.query)
+	head := fmt.Sprintf("ran %.1fs (wait event %q, blocked by %d sessions): %s", s.seconds, s.waitsOn, s.blockers, s.query)
 	switch {
 	case s.cut:
 		return head + "\n(not explained: the text is cut at track_activity_query_size)"
