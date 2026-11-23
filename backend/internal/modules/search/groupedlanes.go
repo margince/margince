@@ -8,28 +8,57 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
+// groupedPage answers a grouped request, whole or partial. It owns the page's
+// one deadline, the handle's budget from now. The lanes and what follows them
+// share it. None starts a fresh statement budget.
+func (s *Store) groupedPage(ctx context.Context, tx pgx.Tx, in Input, query string, types []string, shape groupedShape) (Page, error) {
+	var deadline time.Time
+	if budget := s.db.Budget(); budget > 0 {
+		deadline = time.Now().Add(budget)
+	}
+	lanes, err := s.groupedHits(ctx, tx, in, query, types, shape, deadline)
+	if err != nil {
+		return Page{}, err
+	}
+	page := shape.pageWith(lanes.hits, lanes.timedOut)
+	if len(lanes.answered) == 0 && len(lanes.timedOut) == 0 {
+		// Object RBAC denied every type: nothing was read, so nothing follows.
+		return page, nil
+	}
+	return page, s.finishPage(ctx, tx, in, query, lanes.answered, &page, deadline)
+}
+
+// groupedLanes is what the lanes of one grouped page found. answered holds the
+// types whose ranking finished, timedOut the types the budget stopped; a type
+// object RBAC denied is in neither.
+type groupedLanes struct {
+	hits               []Hit
+	answered, timedOut []string
+}
+
 // groupedHits answers a grouped page one type at a time, so a type the time
 // budget stops costs the page that type alone. Each type runs as its own
-// statement under its own savepoint in the one read transaction: the first
-// cancelled statement aborts a transaction that has no savepoint to return to.
+// statement under its own savepoint in the one read transaction. Without the
+// savepoint, the first cancelled statement would abort the transaction.
 //
-// The page has one deadline, the handle's budget from now, and each lane gets
-// what is left of it. A handle nobody bounded has no budget to run out of, so
-// its lanes run bare and any error fails the page.
-func (s *Store) groupedHits(ctx context.Context, tx pgx.Tx, in Input, query string, types []string, shape groupedShape) (hits []Hit, timedOut []string, err error) {
-	budget := s.db.Budget()
-	deadline := time.Now().Add(budget)
+// Each lane gets what is left of deadline. A handle nobody bounded has no
+// budget to run out of, so its lanes run bare and any error fails the page.
+func (s *Store) groupedHits(ctx context.Context, tx pgx.Tx, in Input, query string, types []string, shape groupedShape, deadline time.Time) (groupedLanes, error) {
+	var lanes groupedLanes
+	bounded := s.db.Budget() > 0
 	for _, entity := range laneOrder(types) {
 		statement, args, admitted, err := groupedLaneStatement(ctx, in, query, entity, shape)
 		if err != nil {
-			return nil, nil, err
+			return groupedLanes{}, err
 		}
 		if !admitted {
 			continue
@@ -39,30 +68,59 @@ func (s *Store) groupedHits(ctx context.Context, tx pgx.Tx, in Input, query stri
 			laneHits, err = rank(ctx, tx, statement, args)
 			return err
 		}
-		if budget <= 0 {
+		if !bounded {
 			if err := run(tx); err != nil {
-				return nil, nil, err
+				return groupedLanes{}, err
 			}
-			hits = append(hits, laneHits...)
+			lanes.hits = append(lanes.hits, laneHits...)
+			lanes.answered = append(lanes.answered, entity)
 			continue
 		}
 		left := time.Until(deadline)
 		if left < time.Millisecond {
-			timedOut = append(timedOut, entity)
+			lanes.timedOut = append(lanes.timedOut, entity)
 			continue
 		}
 		switch err := database.WithDegradableSavepoint(ctx, tx, left, run); {
 		case err == nil:
-			hits = append(hits, laneHits...)
+			lanes.hits = append(lanes.hits, laneHits...)
+			lanes.answered = append(lanes.answered, entity)
 		case laneTimedOut(err):
-			timedOut = append(timedOut, entity)
+			lanes.timedOut = append(lanes.timedOut, entity)
 		default:
-			return nil, nil, err
+			return groupedLanes{}, err
 		}
 	}
 	// One list per type, as the single statement ordered them.
-	slices.SortStableFunc(hits, func(a, b Hit) int { return cmp.Compare(a.Type, b.Type) })
-	return hits, timedOut, nil
+	slices.SortStableFunc(lanes.hits, func(a, b Hit) int { return cmp.Compare(a.Type, b.Type) })
+	return lanes, nil
+}
+
+// nearMatchesBefore is nearMatches inside what is left of the page's deadline.
+// A page that lost a type to the budget is still an answer. A lookup the
+// budget stops gives up its suggestions and leaves the page whole. Any other
+// failure still fails the page. A zero deadline is a ranked page.
+func nearMatchesBefore(ctx context.Context, tx pgx.Tx, deadline time.Time, types []string, query string) ([]NearMatch, error) {
+	if deadline.IsZero() {
+		return nearMatches(ctx, tx, types, query)
+	}
+	left := time.Until(deadline)
+	if left < time.Millisecond {
+		return nil, nil
+	}
+	var near []NearMatch
+	err := database.WithDegradableSavepoint(ctx, tx, left, func(pgx.Tx) (err error) {
+		near, err = nearMatches(ctx, tx, types, query)
+		return err
+	})
+	switch {
+	case err == nil:
+		return near, nil
+	case ctx.Err() == nil && everyPart(err, stoppedByBudget):
+		return nil, nil
+	default:
+		return nil, err
+	}
 }
 
 // groupedLaneStatement builds the grouped statement of one type, with its own
@@ -75,9 +133,8 @@ func groupedLaneStatement(ctx context.Context, in Input, query, entity string, s
 	return statement, args, statement != "", err
 }
 
-// laneOrder puts the types that rank a bounded sample of their rows (mail) last,
-// so the types that answer in milliseconds leave the sample the most of the
-// page's time.
+// laneOrder puts the types that rank a bounded sample of their rows (mail) last.
+// The types that answer in milliseconds then leave the sample most of the time.
 func laneOrder(types []string) []string {
 	sampled := func(entity string) bool {
 		branch, found := branchFor(entity)
@@ -100,10 +157,25 @@ func boolRank(b bool) int {
 // a rollback that failed leaves the transaction unusable, so that fails the
 // page.
 func laneTimedOut(err error) bool {
+	return everyPart(err, func(part error) bool {
+		var tooBroad *QueryTooBroadError
+		return errors.As(part, &tooBroad) && stoppedByBudget(part)
+	})
+}
+
+// stoppedByBudget is whether Postgres cancelled the statement for running past
+// its statement_timeout. The same SQLSTATE also reports an operator cancelling
+// the backend, which is a fault to show and not a type to leave out.
+func stoppedByBudget(err error) bool {
+	var pg *pgconn.PgError
+	return errors.As(err, &pg) && pg.Code == "57014" && strings.Contains(pg.Message, "statement timeout")
+}
+
+// everyPart is whether leaf holds for each error of a join, or for err itself.
+func everyPart(err error, leaf func(error) bool) bool {
 	if joined, ok := err.(interface{ Unwrap() []error }); ok {
 		parts := joined.Unwrap()
-		return len(parts) > 0 && !slices.ContainsFunc(parts, func(part error) bool { return !laneTimedOut(part) })
+		return len(parts) > 0 && !slices.ContainsFunc(parts, func(part error) bool { return !everyPart(part, leaf) })
 	}
-	var tooBroad *QueryTooBroadError
-	return errors.As(err, &tooBroad)
+	return leaf(err)
 }

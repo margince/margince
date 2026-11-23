@@ -233,12 +233,9 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 	var page Page
 	err := s.db.Read(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		if grouped, isGrouped := shape.(groupedShape); isGrouped {
-			hits, timedOut, err := s.groupedHits(ctx, tx, in, query, types, grouped)
-			if err != nil {
-				return err
-			}
-			page = grouped.pageWith(hits, timedOut)
-			return s.finishPage(ctx, tx, in, query, withoutTypes(types, timedOut), &page)
+			var err error
+			page, err = s.groupedPage(ctx, tx, in, query, types, grouped)
+			return err
 		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
@@ -260,7 +257,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return err
 		}
 		page = shape.page(hits)
-		return s.finishPage(ctx, tx, in, query, types, &page)
+		return s.finishPage(ctx, tx, in, query, types, &page, time.Time{})
 	})
 	if err != nil {
 		return Page{}, err
@@ -281,13 +278,13 @@ func rankedStatement(ctx context.Context, in Input, query string, types []string
 }
 
 // finishPage adds what follows the ranking: near matches, the capture-withheld
-// note and the hit decoration. answered is the types whose ranking finished; a
-// type that ran out of time is not read again here, and the page reports
-// nothing for it.
-func (s *Store) finishPage(ctx context.Context, tx pgx.Tx, in Input, query string, answered []string, page *Page) error {
+// note and the hit decoration. answered is the types whose ranking finished.
+// A type that ran out of time is not read again here. deadline is the page's,
+// zero on a ranked page.
+func (s *Store) finishPage(ctx context.Context, tx pgx.Tx, in Input, query string, answered []string, page *Page, deadline time.Time) error {
 	if wantsNearMatches(in, query, *page) {
 		var err error
-		if page.NearMatches, err = nearMatches(ctx, tx, answered, query); err != nil {
+		if page.NearMatches, err = nearMatchesBefore(ctx, tx, deadline, answered, query); err != nil {
 			return err
 		}
 	}
@@ -295,10 +292,6 @@ func (s *Store) finishPage(ctx context.Context, tx pgx.Tx, in Input, query strin
 		return err
 	}
 	return s.decorate(ctx, tx, page.Hits)
-}
-
-func withoutTypes(types, drop []string) []string {
-	return slices.DeleteFunc(slices.Clone(types), func(t string) bool { return slices.Contains(drop, t) })
 }
 
 func rank(ctx context.Context, tx pgx.Tx, statement string, args []any) ([]Hit, error) {
@@ -398,13 +391,8 @@ func rankingFault(ctx context.Context, err error) error {
 // Not a partial list either: a ranking cut short would present an arbitrary
 // prefix as the ranking. A grouped page names each stopped type in
 // types_timed_out instead.
-// It WRAPS the database error rather than replacing it, and that is what keeps
-// the other reader of this statement working. The agent query surface wants the
-// same spent ceiling as a DEGRADED ANSWER — rows dropped, a note, a coverage
-// verdict saying the plan was abandoned — and it recognises one by asking
-// storekit.IsQueryCanceled. A fault that hid the SQLSTATE would turn that
-// surface's honest partial answer into an error, which is the opposite of what
-// #1847 built it for.
+// It WRAPS the database error. The agent query surface reads the SQLSTATE with
+// storekit.IsQueryCanceled and answers a degraded plan.
 type QueryTooBroadError struct{ Err error }
 
 func (e *QueryTooBroadError) Error() string {

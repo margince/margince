@@ -6,10 +6,10 @@
 package integration
 
 // A grouped search runs each record type as its own statement under its own
-// savepoint, so a type the time budget stops is named on the page and the
-// other types answer. The slow type is made slow by an exclusive lock on its
-// table, which holds its statement until the budget cancels it, the same
-// SQLSTATE a slow plan gets, on any corpus size and any machine.
+// savepoint. A type the time budget stops is named on the page, and the other
+// types answer. An exclusive lock on a table holds its statement until the
+// budget cancels it. That gives the SQLSTATE a slow plan gets, on any corpus
+// size and any machine.
 
 import (
 	"context"
@@ -23,8 +23,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const searchLaneBudget = 300 * time.Millisecond
@@ -85,14 +87,90 @@ func TestAGroupedSearchShowsTheTypesThatAnsweredWhenMailRunsOutOfTime(t *testing
 	if err != nil {
 		t.Fatalf("a grouped search failed whole for one slow type: %v", err)
 	}
-	if elapsed := time.Since(started); elapsed > 2*searchLaneBudget {
-		t.Errorf("the page took %s, over twice its %s budget", elapsed, searchLaneBudget)
+	if elapsed := time.Since(started); elapsed > searchLaneBudget+searchLaneBudget/2 {
+		t.Errorf("the page took %s, over 1.5 times its %s budget", elapsed, searchLaneBudget)
 	}
 	if want := []string{"company", "contact", "lead"}; !slices.Equal(typesOf(page), want) {
 		t.Errorf("the types that answered are %v, want %v", typesOf(page), want)
 	}
 	if !slices.Equal(page.TypesTimedOut, []string{"activity"}) {
 		t.Errorf("types_timed_out = %v, want [activity]", page.TypesTimedOut)
+	}
+}
+
+func TestAGroupedSearchWithTwoSlowTypesNamesBothInBranchOrder(t *testing.T) {
+	e := SetupSearch(t)
+	seedOneWordEverywhere(t, e)
+	lockTable(t, e.Owner, "lead")
+	lockTable(t, e.Owner, "activity")
+	perType := 5
+
+	started := time.Now()
+	page, err := boundedStore(e).Search(e.Admin(), search.Input{Query: "quillfeather", PerType: &perType})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if elapsed := time.Since(started); elapsed > searchLaneBudget+searchLaneBudget/2 {
+		t.Errorf("two slow types took %s; they share one %s page budget", elapsed, searchLaneBudget)
+	}
+	// The lead lane spends the whole budget, so the lanes after it have none
+	// left and are named without sending a statement.
+	if want := []string{"lead", "product", "offer_template", "activity"}; !slices.Equal(page.TypesTimedOut, want) {
+		t.Errorf("types_timed_out = %v, want %v", page.TypesTimedOut, want)
+	}
+	if want := []string{"company", "contact"}; !slices.Equal(typesOf(page), want) {
+		t.Errorf("the types that answered are %v, want %v", typesOf(page), want)
+	}
+}
+
+func TestAGroupedSearchFailsWhenATypeFailsForAnotherReasonThanTime(t *testing.T) {
+	e := SetupSearch(t)
+	seedOneWordEverywhere(t, e)
+	ctx := context.Background()
+	if _, err := e.Owner.Exec(ctx, `REVOKE SELECT ON lead FROM margince_app`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if _, err := e.Owner.Exec(ctx, `GRANT SELECT ON lead TO margince_app`); err != nil {
+			t.Errorf("restoring the lead grant: %v", err)
+		}
+	})
+	perType := 5
+
+	page, err := boundedStore(e).Search(e.Admin(), search.Input{Query: "quillfeather", PerType: &perType})
+	if err == nil {
+		t.Fatalf("a type that failed on a missing grant was left out of the page: %+v", page)
+	}
+	var tooBroad *search.QueryTooBroadError
+	if errors.As(err, &tooBroad) {
+		t.Errorf("a permission fault was reported as a time budget: %v", err)
+	}
+}
+
+func TestAnAllDeniedGroupedSearchAnswersAtOnceAndReadsNothing(t *testing.T) {
+	e := SetupSearch(t)
+	seedOneWordEverywhere(t, e)
+	lockTable(t, e.Owner, "contact")
+	ctx, report := auth.WithWithheldReport(principal.WithWorkspaceID(context.Background(), e.WS))
+	companyOnly := principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"company": {Read: true}, "installation_settings": {Read: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	perType := 5
+
+	started := time.Now()
+	page, err := boundedStore(e).Search(companyOnly, search.Input{Query: "quillfeather", Types: []string{"contact"}, PerType: &perType})
+	if err != nil {
+		t.Fatalf("a grouped search of a denied type read the locked contact table: %v", err)
+	}
+	if time.Since(started) > searchLaneBudget/2 || len(page.Hits) != 0 || len(page.TypesTimedOut) != 0 || page.TypesWithMore == nil {
+		t.Errorf("page = %+v after %s, want an empty grouped page at once", page, time.Since(started))
+	}
+	if report.Withheld() {
+		t.Error("a denied search reported a capture-privacy withholding")
 	}
 }
 

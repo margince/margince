@@ -107,3 +107,11 @@ func TestALaneWhoseRollbackFailedFailsThePage(t *testing.T) {
 		t.Error("a lane stopped by the ceiling and rolled back cleanly was not reported as timed out")
 	}
 }
+
+func TestAnOperatorCancelIsNotATimedOutType(t *testing.T) {
+	t.Parallel()
+	cancelled := &pgconn.PgError{Code: "57014", Message: "canceling statement due to user request"}
+	if laneTimedOut(rankingFault(context.Background(), cancelled)) {
+		t.Error("a statement an operator cancelled was reported as a type that ran out of time")
+	}
+}

@@ -256,8 +256,8 @@ export function useSearchCommands(
   };
 }
 
-// The answer is for the words in the box and holds no record, and no type was
-// left out: a type that ran out of time may have had matches.
+// The answer is for the words in the box and holds no record. No type was left
+// out, because a type that ran out of time may have had matches.
 function foundNoRecord(
   answer:
     | Readonly<{
