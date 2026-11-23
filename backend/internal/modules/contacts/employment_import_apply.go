@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -100,10 +99,10 @@ func employmentFingerprint(ctx context.Context, tx pgx.Tx, contact ids.ContactID
 // employmentLinkedRefusal answers a resolve or dismiss of evidence that already
 // created an employment. The evidence has no say over that edge, so the answer
 // names it and how to end it.
-func employmentLinkedRefusal(relationship uuid.UUID) error {
-	return &apperrors.VersionSkewError{Message: "this evidence already created the employment " + relationship.String() +
-		", and resolving or dismissing it does not end that employment: end that relationship with " +
-		"employment_status=former and ended_at, or archive it"}
+func employmentLinkedRefusal(relationship ids.UUID) error {
+	return &apperrors.VersionSkewError{Message: fmt.Sprintf("This evidence already created the employment %s. "+
+		"Resolving or dismissing it does not end that employment. "+
+		"End that relationship with employment_status=former and ended_at, or archive it.", relationship)}
 }
 
 func (s *Store) applyEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact ids.ContactID, e employmentEvidence, req crmcontracts.EmploymentImportRequest, action string) error {
@@ -302,7 +301,7 @@ func retainEmploymentLink(ctx context.Context, tx pgx.Tx, contact ids.ContactID,
 	}
 	if action != employmentApply && (req.Key == nil || e.key == *req.Key) {
 		// employmentImportItem reads a linked outcome whose edge is gone as pending, so a linked item has one.
-		return employmentLinkedRefusal(*prior.RelationshipId)
+		return employmentLinkedRefusal(ids.UUID(*prior.RelationshipId))
 	}
 	return recordEmploymentOutcome(ctx, tx, contact, e, employmentLinked, idArg[ids.CompanyKind](prior.CompanyId), uuidArg(prior.RelationshipId))
 }
