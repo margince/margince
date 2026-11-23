@@ -8,9 +8,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -487,6 +490,56 @@ func TestAFailedRunKeepsItsKeyRatherThanInvitingASecondAttempt(t *testing.T) {
 	// it is stored for the window and handed to whoever presents the key next.
 	if got := f.claims.failed[0]; got != "send_email/k-1@"+freshAttempt+": it conflicted with another change" {
 		t.Fatalf("recorded %q — a stored reason must not carry the refusal's own text", got)
+	}
+}
+
+// A lock cycle aborts the handler's whole transaction, so nothing was written
+// and the answer to the caller is to send the same call again. Its key goes back
+// with it, whether the database broke a deadlock or refused a serialization.
+func TestARunTheDatabaseRolledBackGivesItsKeyBack(t *testing.T) {
+	for name, code := range map[string]string{"a broken deadlock": "40P01", "a serialization failure": "40001"} {
+		t.Run(name, func(t *testing.T) {
+			f := newRetryFixture(t)
+			f.claims.verdict = Claim{State: ClaimFresh, Attempt: freshAttempt}
+			f.tool.fail = fmt.Errorf("merging: %w", &pgconn.PgError{Code: code})
+
+			if _, err := f.invoke(t, `{"idempotency_key":"k-1"}`); err == nil {
+				t.Fatal("the handler's failure was swallowed")
+			}
+			if want := []string{"send_email/k-1@" + freshAttempt}; !slices.Equal(f.claims.released, want) {
+				t.Errorf("released = %v, want %v", f.claims.released, want)
+			}
+			if len(f.claims.failed) != 0 {
+				t.Errorf("a rolled-back run was recorded as failed: %v", f.claims.failed)
+			}
+		})
+	}
+}
+
+// The key goes back only when nothing of the call can have taken effect. That
+// means a lock cycle, no committed write, and no approval spent before the
+// handler ran.
+func TestOnlyAnUncommittedLockCycleGivesTheKeyBack(t *testing.T) {
+	cycle := &pgconn.PgError{Code: "40P01"}
+	never, once := func() bool { return false }, func() bool { return true }
+	approved := reserved{ApprovalID: ids.From[ids.ApprovalKind](ids.NewV7())}
+	for name, tc := range map[string]struct {
+		err       error
+		res       reserved
+		committed func() bool
+		want      bool
+	}{
+		"a lock cycle with nothing committed":           {cycle, reserved{}, never, true},
+		"a lock cycle after an earlier commit":          {cycle, reserved{}, once, false},
+		"a lock cycle on a call that spent an approval": {cycle, approved, never, false},
+		"any other failure":                             {errors.New("the provider refused"), reserved{}, never, false},
+		"no failure":                                    {nil, reserved{}, never, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := releasesKey(tc.err, tc.res, tc.committed); got != tc.want {
+				t.Errorf("releasesKey = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 
