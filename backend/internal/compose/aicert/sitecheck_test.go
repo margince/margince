@@ -223,7 +223,10 @@ func (x *sourceIndex) checkDigest(t *testing.T, root reflect.Type) string {
 // digestOf is the digest of what the Evaluate of typeName in pkg reaches.
 func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string) string {
 	t.Helper()
-	walk := checkWalk{index: x, seen: map[ast.Node]string{}, types: map[string]bool{}, selected: map[string]bool{}}
+	walk := checkWalk{
+		index: x, seen: map[ast.Node]string{}, types: map[string]bool{}, selected: map[string]bool{},
+		fieldTypes: map[string][]string{}, fieldCalls: map[string]map[string]bool{},
+	}
 	for _, method := range pkg.methods["Evaluate"] {
 		if receiverName(method) == typeName {
 			walk.visit(t, pkg, method)
@@ -266,10 +269,16 @@ func receiverName(method *ast.FuncDecl) string {
 // checkWalk collects the declarations a check reaches, each with its id: the
 // types it reached, by "package.Type", and every name it selected on a value.
 type checkWalk struct {
-	index    *sourceIndex
-	seen     map[ast.Node]string
-	types    map[string]bool
-	selected map[string]bool
+	index *sourceIndex
+	seen  map[ast.Node]string
+	types map[string]bool
+	// fieldTypes are the types of the fields of reached types, by field name, as
+	// "package.Type"; an embedded field is named by its type. fieldCalls are the
+	// methods judging code calls through a field, as in c.cache.accept(got). A
+	// field type counts only through the methods called on that field.
+	fieldTypes map[string][]string
+	fieldCalls map[string]map[string]bool
+	selected   map[string]bool
 }
 
 func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
@@ -280,8 +289,10 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 	w.seen[node] = pkg.path + "." + declName(node)
 	switch d := node.(type) {
 	case *ast.TypeSpec:
-		// The declaration is hashed, and its field types are not followed.
+		// The declaration is hashed. Its field types are kept as receivers a
+		// selected method may be called on, and are not hashed for themselves.
 		w.types[pkg.path+"."+d.Name.Name] = true
+		w.noteFieldTypes(t, pkg, d)
 		return
 	case *ast.FuncDecl:
 		if d.Recv != nil {
@@ -291,6 +302,8 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 	file := pkg.fileOf[node]
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch e := n.(type) {
+		case *ast.CallExpr:
+			w.noteFieldCall(e)
 		case *ast.SelectorExpr:
 			if ident, ok := e.X.(*ast.Ident); ok {
 				if imported := importPath(file, ident.Name); imported != "" {
@@ -306,6 +319,77 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 		}
 		return true
 	})
+}
+
+// noteFieldTypes keeps the named type of each field of spec, through a pointer.
+// It loads the package that declares the type, so its methods can be resolved.
+func (w *checkWalk) noteFieldTypes(t *testing.T, pkg *sourcePackage, spec *ast.TypeSpec) {
+	t.Helper()
+	fields, ok := spec.Type.(*ast.StructType)
+	if !ok {
+		return
+	}
+	for _, field := range fields.Fields.List {
+		expr := field.Type
+		if star, isPointer := expr.(*ast.StarExpr); isPointer {
+			expr = star.X
+		}
+		var named, last string
+		switch typed := expr.(type) {
+		case *ast.Ident:
+			named, last = pkg.path+"."+typed.Name, typed.Name
+		case *ast.SelectorExpr:
+			ident, isIdent := typed.X.(*ast.Ident)
+			imported := ""
+			if isIdent {
+				imported = importPath(pkg.fileOf[spec], ident.Name)
+			}
+			if imported == "" || w.index.load(t, imported) == nil {
+				continue
+			}
+			named, last = imported+"."+typed.Sel.Name, typed.Sel.Name
+		default:
+			continue
+		}
+		names := []string{last}
+		if len(field.Names) > 0 {
+			names = names[:0]
+			for _, ident := range field.Names {
+				names = append(names, ident.Name)
+			}
+		}
+		for _, name := range names {
+			w.fieldTypes[name] = append(w.fieldTypes[name], named)
+		}
+	}
+}
+
+// noteFieldCall keeps the method a call selects on a field, as accept in
+// c.cache.accept(got), and the field it goes through.
+func (w *checkWalk) noteFieldCall(call *ast.CallExpr) {
+	method, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return
+	}
+	field, ok := method.X.(*ast.SelectorExpr)
+	if !ok {
+		return
+	}
+	if w.fieldCalls[field.Sel.Name] == nil {
+		w.fieldCalls[field.Sel.Name] = map[string]bool{}
+	}
+	w.fieldCalls[field.Sel.Name][method.Sel.Name] = true
+}
+
+// calledThroughAField answers whether judging code calls method on a field of
+// a reached type whose type is receiver.
+func (w *checkWalk) calledThroughAField(receiver, method string) bool {
+	for field, methods := range w.fieldCalls {
+		if methods[method] && slices.Contains(w.fieldTypes[field], receiver) {
+			return true
+		}
+	}
+	return false
 }
 
 // visitName takes the top-level function, variable, constant or type name
@@ -337,7 +421,7 @@ func (w *checkWalk) resolveMethods(t *testing.T) {
 			}
 			for name := range w.selected {
 				for _, method := range pkg.methods[name] {
-					if w.types[pkg.path+"."+receiverName(method)] {
+					if w.types[pkg.path+"."+receiverName(method)] || w.calledThroughAField(pkg.path+"."+receiverName(method), name) {
 						w.visit(t, pkg, method)
 					}
 				}
@@ -512,5 +596,21 @@ func TestAFieldOnAStoreTheCaseHoldsMovesNoSiteCheck(t *testing.T) {
 	edited := strings.Replace(judgeFixture, "type store struct{ rows int }", "type store struct{ rows, pages int }", 1)
 	if fixtureDigest(t, edited) != before {
 		t.Error("a field added to a store the case only holds moved the digest")
+	}
+}
+
+// A case that judges through a method of a store it holds in a field.
+const fieldMethodFixture = `
+type store struct{ rows int }
+func (s store) accept(got int) bool { return got > s.rows }
+type judgeCase struct{ cache store }
+func (c judgeCase) Evaluate(got int) bool { return c.cache.accept(got) }
+`
+
+func TestAnEditToAMethodTheCaseCallsThroughAFieldMovesTheSiteCheck(t *testing.T) {
+	before := fixtureDigest(t, fieldMethodFixture)
+	edited := strings.Replace(fieldMethodFixture, "return got > s.rows", "return got >= s.rows", 1)
+	if fixtureDigest(t, edited) == before {
+		t.Error("an edit to the field's method Evaluate judges through left the digest unchanged")
 	}
 }

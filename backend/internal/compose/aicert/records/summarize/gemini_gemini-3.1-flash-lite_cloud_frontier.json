@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p83801fd6660d4cbe5b753d86ec8bdf65",
+  "prompt_version": "p07789dacde34ef6402a4c822118baaa2",
   "corpus_version": "v1",
   "verdict": "supported_degraded",
   "runs": 114,
@@ -392,7 +392,7 @@
     {
       "scenario": "meeting_plan_reads_the_thread_that_matters",
       "site": "meeting_plan",
-      "stamp": "60e703f24b4644941ba6c2aefbdbbe2394765deb8229db0bf96c0ffcbafb18322e43167ad63fe3c49ab4d4b6cfee13dcbd23566bac8b8af84f215006718f8a100cab6b9ff05d0534583b4975a6baef78ea842158c953a6ad00e6f33c20fcef7e",
+      "stamp": "60e703f24b4644941ba6c2aefbdbbe2394765deb8229db0bf96c0ffcbafb18322e43167ad63fe3c49ab4d4b6cfee13dcbd23566bac8b8af84f215006718f8a10c9637c57261f98cb8b241008ff977ebe4cab22f3bb4aaeb8b61a7e2de6bc4a3c",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 3,
@@ -415,7 +415,7 @@
     {
       "scenario": "meeting_plan_serves_the_meetings_deal",
       "site": "meeting_plan",
-      "stamp": "024722e0fd5b4e4bb6bc4696082ea6d4709662a56b7a6c8c179592a9869f80838d39711369abfed43af6e8f46ebdd8967e9ba8b5dee09b89d5276302289d3b9925880e0916fe3141307c5cdad8a819541834610a7e2bf61cd40d8acaaaffe1f3",
+      "stamp": "024722e0fd5b4e4bb6bc4696082ea6d4709662a56b7a6c8c179592a9869f80838d39711369abfed43af6e8f46ebdd8967e9ba8b5dee09b89d5276302289d3b99c8a6389fe653dd51d9f08a721820029c8d2214a9c5ae0389e3ae79f70bdc5d12",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
