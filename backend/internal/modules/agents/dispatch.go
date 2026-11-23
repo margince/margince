@@ -408,8 +408,7 @@ func (s *Dispatcher) call(ctx context.Context, params json.RawMessage, fr framin
 			return asked
 		}
 		refusal := toolError(s.explain(served.Tool, err))
-		var inFlight *claimInFlightError
-		if errors.As(err, &inFlight) {
+		if _, inFlight := errors.AsType[*claimInFlightError](err); inFlight {
 			refusal["_meta"] = map[string]any{refusalCodeMeta: httperr.IdempotencyInProgressCode}
 		}
 		if shown := shownAnswer(err); shown != nil {
