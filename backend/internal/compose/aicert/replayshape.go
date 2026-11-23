@@ -51,7 +51,6 @@ func (t *idTable) ordinal(id string) int {
 type answerSettings struct {
 	Model                  string                     `json:"model"`
 	Site                   string                     `json:"site"`
-	Tier                   string                     `json:"tier,omitempty"`
 	ThinkingFloor          string                     `json:"thinking_floor"`
 	ThinkingLevel          string                     `json:"thinking_level"`
 	ContextScopes          []string                   `json:"context_scopes"`
@@ -70,7 +69,7 @@ type attachmentShape struct {
 
 func answerSettingsOf(req model.Request) answerSettings {
 	settings := answerSettings{
-		Model: req.Model, Site: req.Site, Tier: req.Tier, ThinkingFloor: req.ThinkingFloor, ThinkingLevel: req.ThinkingLevel,
+		Model: req.Model, Site: req.Site, ThinkingFloor: req.ThinkingFloor, ThinkingLevel: req.ThinkingLevel,
 		ContextScopes: req.ContextScopes, ContextFingerprint: req.ContextFingerprint,
 		IncludeCompanyContext: req.IncludeCompanyContext, CompanyContextOffering: req.CompanyContextOffering,
 		ProviderOptions: req.ProviderOptions,

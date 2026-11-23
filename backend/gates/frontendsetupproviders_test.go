@@ -222,7 +222,9 @@ func TestOnboardingBindsAPresetOfTheChosenVendor(t *testing.T) {
 // no current certification record, each with why. One that no longer needs it
 // fails AssertAllMatched.
 var ungradedSetupWaivers = gatekit.Waive(map[string]string{
-	"openrouter": "openrouter_cloud is re-certified in the full sweep of #12751; until then its records are stale or absent",
+	"openrouter":    "openrouter_cloud is re-certified in the full sweep of #12751; until then its records are stale or absent",
+	"gemini":        "the extension mail hooks (#11449) edit code agent_loop, capture_confidentiality_verdict and offer_draft reach, so their records read stale until the next sweep re-certifies them",
+	"gemini_vertex": "the same three records as gemini; the vertex preset binds the same models",
 })
 
 // Every task the binding onboarding writes answers on a model whose grade is

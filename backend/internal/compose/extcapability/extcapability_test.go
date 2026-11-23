@@ -264,7 +264,10 @@ func TestRequestCarriesATierAttachmentsAndASchema(t *testing.T) {
 		JSONSchema:  []byte(`{"type":"object"}`),
 	}
 	got, err := extcapability.Request(req)
-	if err != nil || got.Tier != "premium" || len(got.Attachments) != 1 || string(got.ResponseSchema) != `{"type":"object"}` {
+	if pin, pinErr := extcapability.TierPin(req); pinErr != nil || pin != "premium" {
+		t.Fatalf("pin %q, %v", pin, pinErr)
+	}
+	if err != nil || len(got.Attachments) != 1 || string(got.ResponseSchema) != `{"type":"object"}` {
 		t.Fatalf("got %+v, %v", got, err)
 	}
 	for name, bad := range map[string]func(*extension.CompleteRequest){
@@ -281,7 +284,9 @@ func TestRequestCarriesATierAttachmentsAndASchema(t *testing.T) {
 		r := req
 		r.Attachments = []extension.Attachment{{ContentType: "application/pdf", Data: []byte("x")}}
 		bad(&r)
-		if _, err := extcapability.Request(r); !errors.Is(err, extension.ErrInvalid) {
+		_, reqErr := extcapability.Request(r)
+		_, pinErr := extcapability.TierPin(r)
+		if err := errors.Join(reqErr, pinErr); !errors.Is(err, extension.ErrInvalid) {
 			t.Errorf("%s: err = %v, want ErrInvalid", name, err)
 		}
 	}

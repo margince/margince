@@ -65,6 +65,11 @@ func (m Models) Complete(ctx context.Context, name string, req extension.Complet
 	if err != nil {
 		return "", err
 	}
+	tier, err := TierPin(req)
+	if err != nil {
+		return "", err
+	}
+	ctx = ai.WithTierPin(ctx, tier)
 	ctx = withSubject(ctx, task, req)
 	var lane Lane
 	if m.Lane != nil {
@@ -169,19 +174,19 @@ func Request(req extension.CompleteRequest) (model.Request, error) {
 	if err != nil {
 		return model.Request{}, err
 	}
-	tier, err := tierOf(req.Tier)
-	if err != nil {
-		return model.Request{}, err
-	}
 	files, err := attachmentsOf(req.Attachments)
 	if err != nil {
 		return model.Request{}, err
 	}
 	return model.Request{
 		System: req.System, Messages: messages, MaxTokens: req.MaxTokens, Subjects: subjects,
-		Tier: tier, Attachments: files, ResponseSchema: req.JSONSchema,
+		Attachments: files, ResponseSchema: req.JSONSchema,
 	}, nil
 }
+
+// TierPin is the router rung a unit's request is pinned to; empty keeps the
+// task's whole ladder.
+func TierPin(req extension.CompleteRequest) (string, error) { return tierOf(req.Tier) }
 
 // tierOf names the router's rung for the tier a unit asked for.
 func tierOf(tier extension.ModelTier) (string, error) {

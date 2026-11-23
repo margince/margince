@@ -203,7 +203,6 @@ type Request struct {
 	// none. Routing metadata like the two above: the router reads the site's
 	// declared thinking level from it, and refuses a site the task never declares.
 	Site string
-	Tier string // pins one rung of the task's ladder; empty keeps the whole ladder
 	// ThinkingFloor is the least thinking this request asks for (minimal | low |
 	// medium | high); empty asks for none. The router fills it from the site's
 	// declared level, and each adapter maps it to its own wire as a floor: it
