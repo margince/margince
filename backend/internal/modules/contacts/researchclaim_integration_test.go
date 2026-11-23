@@ -292,7 +292,7 @@ func TestAnUnknownFieldTakesTheWholeAcceptanceDown(t *testing.T) {
 
 	if _, err := e.store.SaveResearchClaims(ctx, contactID, []ResearchClaimInput{
 		{Field: "title", Value: "COO", Quote: "Milan Prit, COO.", SourceURL: "https://atomic.test/a"},
-		{Field: "email", Value: "milan@atomic.test", Quote: "Contact Milan at this address.", SourceURL: "https://atomic.test/b"},
+		{Field: "shoe_size", Value: "44", Quote: "Milan wears a size 44.", SourceURL: "https://atomic.test/b"},
 	}); err == nil {
 		t.Fatal("SaveResearchClaims = nil error for a field outside the closed set, want a refusal")
 	}
