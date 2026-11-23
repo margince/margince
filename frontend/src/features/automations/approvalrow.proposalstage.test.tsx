@@ -111,4 +111,19 @@ describe("a proposal-stage question read in German", () => {
     expect(document.body.textContent).not.toContain("Proposal");
     expect(document.body.textContent).not.toContain("Qualified");
   });
+
+  it("keeps the stored name on a card staged before stage ids were carried", async () => {
+    const {
+      skipped_stage_ids: _s,
+      to_stage_id: _t,
+      ...old
+    } = QUESTION.proposed_change ?? {};
+    const { container } = shown(
+      <ApprovalRow approval={{ ...QUESTION, proposed_change: old }} />,
+    );
+    expect(
+      await screen.findByText(/Den Deal in die Phase „Proposal“/),
+    ).toBeInTheDocument();
+    expect(container.textContent).not.toContain("Angebotsphase");
+  });
 });
