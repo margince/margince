@@ -5,7 +5,7 @@ package chatsync
 
 // The cg:chat-links consumer. An event on a deal, project, offer, contract or
 // activity becomes a pending item of the channels linked to those records. The flush (flush.go) turns the items into one post.
-// From the contact stream it takes only retention.restricted.
+// From the contact stream it takes retention.restricted and retention.applied.
 //
 // An activity reaches a channel only when the whole workspace may read it.
 // sharedActivity decides that, both when the item is recorded and again
@@ -53,6 +53,11 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 	ctx = systemContext(ctx, ws.UUID, env)
 	if events.NarrowsActivity(env) {
 		if err := s.withdrawIfNarrowed(ctx, env.Entity.ID); err != nil {
+			return err
+		}
+	}
+	if chatReleasingEvents[env.Type] && (env.Entity.Type == chatlinks.RecordDeal || env.Entity.Type == chatlinks.RecordProject) {
+		if err := s.store.ReleaseArchived(ctx, env.Entity.Type, env.Entity.ID); err != nil {
 			return err
 		}
 	}
@@ -257,6 +262,10 @@ const (
 	fieldCurrency       = "currency"
 	fieldName           = "name"
 )
+
+// chatReleasingEvents may leave a deal or project archived. A retention
+// policy archives a deal under retention.applied, not deal.archived.
+var chatReleasingEvents = map[string]bool{"deal.archived": true, "project.archived": true, "retention.applied": true}
 
 // chatMilestones are the steps every level but silent posts.
 var chatMilestones = map[string]string{

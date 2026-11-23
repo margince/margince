@@ -6,7 +6,6 @@ package chatlinks
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -168,16 +167,7 @@ func (s *Store) Unlink(ctx context.Context, kind string, id ids.UUID) error {
 		if err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `UPDATE chat_link SET archived_at = now()
-			WHERE id = $1 AND archived_at IS NULL`, before.ID)
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("chatlinks: unlinking %s: %w", before.ID, ErrLinkNotFound)
-		}
-		_, err = storekit.Audit(ctx, tx, "archive", chatLinkEntity, before.ID, auditImage(before), nil)
-		return err
+		return retireLink(ctx, tx, before)
 	})
 }
 
