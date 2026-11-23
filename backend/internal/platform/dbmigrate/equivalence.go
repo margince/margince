@@ -96,7 +96,7 @@ var equivalentContent = map[string]map[string][]equivalence{
 		// and refused a stored basis row, then validated both checks. The current
 		// pair keeps every row and validates a check only when no row breaks it.
 		// A database that applied the old pair holds no such row, so both checks
-		// end validated with the same lists; the down halves differ in comments.
+		// end validated with the same lists. The down halves differ in comments.
 		"1795388887": {{
 			applied: "0ab57237649bd663379393576642774b89df7bc0312e6842025d6b905b38351f",
 			source:  "78902b05da28b4f0c85fef69c26058f08ba6867b810e0795eb2ab1b08a0d92b0",
