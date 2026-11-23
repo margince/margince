@@ -293,6 +293,7 @@ func (s *Service) moreTasks(ctx context.Context, page tailPage, walk tailWindow,
 		return tailBatch{}, err
 	}
 	stream := s.taskStream(walk, page.filter)
+	stream.Zone = dayZoneOf(stream.Scope, zone)
 	read, more, err := s.backlog.tasks.TasksAfter(ctx, stream, after, limit)
 	if err != nil {
 		return tailBatch{}, err

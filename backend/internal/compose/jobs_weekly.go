@@ -46,7 +46,7 @@ func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger,
 // Web reads and scheduled measurements bind the same plan and forecast sources.
 func newWeeklyEngine(pool *pgxpool.Pool) *weekly.Engine {
 	return weekly.NewEngine(pool, newTeammatesSeam(pool)).
-		WithPlan(weeklyPlanOutcome{store: weeklyPlanStore(pool)}).
+		WithPlan(weeklyPlanOutcome{store: WeeklyPlanStore(pool)}).
 		WithNumeric(weeklyNumericEvaluator{}).
 		WithForecast(NewWeeklyForecast(newForecastStoreFor(pool))).
 		WithAttention(WeeklyAttention{})

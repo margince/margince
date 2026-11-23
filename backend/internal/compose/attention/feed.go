@@ -114,8 +114,10 @@ type Service struct {
 	horizon                 MeetingHorizon
 	// zone resolves the installation timezone the day boundary is measured in;
 	// nil is UTC, for the reason WithZone gives.
-	zone   Zone
-	failed FailedEffects
+	zone Zone
+	// personalZone resolves the acting reader's own zone, for their own list.
+	personalZone Zone
+	failed       FailedEffects
 	// dsrs is OPTIONAL like the lanes above it, and withheld-by-grant on top:
 	// even where it is bound, only a DSR admin's read succeeds.
 	dsrs DSRs

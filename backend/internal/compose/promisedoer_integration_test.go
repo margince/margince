@@ -78,7 +78,7 @@ func TestAPromiseInMyOwnMailIsMineWhoeverOwnsTheContact(t *testing.T) {
 		"the promiser":      {promiser, 1},
 		"the contact owner": {contactOwner, 0},
 	} {
-		got, err := tasks.CountOpenForViewer(c.reader, now, until, attention.TasksMine, ids.Nil, nil)
+		got, err := tasks.CountOpenForViewer(c.reader, now, until, attention.TasksMine, "", ids.Nil, nil)
 		if err != nil {
 			t.Fatalf("%s's task lane: %v", name, err)
 		}

@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -202,7 +203,8 @@ func digestWindow(seatCtx context.Context, t *testing.T, d *digestEnv) notices.W
 	var window notices.Window
 	if err := database.WithWorkspaceTx(seatCtx, d.Pool, func(tx pgx.Tx) error {
 		var err error
-		window, err = notificationWindow(seatCtx, tx, digestMorning)
+		actor, _ := principal.Actor(seatCtx)
+		window, err = notificationWindow(seatCtx, tx, occurredday.Personal, actor.UserID, digestMorning)
 		return err
 	}); err != nil {
 		t.Fatal(err)

@@ -243,3 +243,98 @@ func TestTheSortKeyOfADateOnlyTaskMatchesTheGoDueRule(t *testing.T) {
 		t.Fatal("the shared table has no end_utc case, so this proves nothing")
 	}
 }
+
+// A member's own list counts a chosen date in their own zone. A list that
+// combines colleagues counts it in the installation's. Berlin's day ends at 22:00
+// UTC and Ho Chi Minh City's at 17:00 UTC. So one bound ends the 16th for the
+// member and not for the installation.
+func TestADateOnlyTaskIsJudgedInTheZoneTheListIsReadIn(t *testing.T) {
+	p := newPickedDayEnv(t, "Europe/Berlin")
+	until := time.Date(2026, 6, 16, 17, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
+
+	onThe15th := p.dated(t, "Dated the 15th", "2026-06-15", "Europe/Berlin")
+	onThe16th := p.dated(t, "Dated the 16th", "2026-06-16", "Europe/Berlin")
+	onThe17th := p.dated(t, "Dated the 17th", "2026-06-17", "Europe/Berlin")
+
+	own := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf, DayZone: "Asia/Ho_Chi_Minh"}
+	wantWindow(t, "own list", p.window(t, own), []ids.UUID{onThe15th, onThe16th}, onThe17th)
+	combined := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf}
+	wantWindow(t, "combined list", p.window(t, combined), []ids.UUID{onThe15th}, onThe16th, onThe17th)
+}
+
+// The due order ends a chosen date in the same zone the overdue test counts it
+// in. A task dated the 16th ends at 17:00 UTC for Ho Chi Minh City and at 22:00
+// UTC for Berlin. So it sorts before a task timed 17:30 UTC on the member's own
+// list, and after it on a combined one.
+func TestTheDueOrderEndsAChosenDateInTheZoneTheListIsReadIn(t *testing.T) {
+	p := newPickedDayEnv(t, "Europe/Berlin")
+	until := time.Date(2026, 6, 18, 0, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
+	dated := p.dated(t, "Dated the 16th", "2026-06-16", "Europe/Berlin")
+	timed := p.timed(t, "Timed 17:30 UTC on the 16th", time.Date(2026, 6, 16, 17, 30, 0, 0, time.UTC))
+
+	order := func(zone string) []ids.UUID {
+		rows, _, err := p.store.ListActivities(p.ctx, ListActivitiesInput{
+			OpenAndDueBy: &until, WorklistAsOf: &asOf, DayZone: zone, Sort: new("due_at"),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := make([]ids.UUID, len(rows))
+		for i, row := range rows {
+			got[i] = ids.UUID(row.Id)
+		}
+		return got
+	}
+	if got := order("Asia/Ho_Chi_Minh"); len(got) != 2 || got[0] != dated || got[1] != timed {
+		t.Errorf("own list order = %v, want the dated task %s first, then %s", got, dated, timed)
+	}
+	if got := order(""); len(got) != 2 || got[0] != timed || got[1] != dated {
+		t.Errorf("combined list order = %v, want the timed task %s first, then %s", got, timed, dated)
+	}
+}
+
+// A date-only task ages out of the Worklist on the day the list counts 30 days
+// back from. At 18:30 UTC on 15 June that is 16 May in Berlin and 17 May in Ho
+// Chi Minh City. A task dated 16 May is still listed for the installation.
+// It is gone from the member's own list.
+func TestTheThirtyDayAgeOutCountsDaysInTheZoneTheListIsReadIn(t *testing.T) {
+	p := newPickedDayEnv(t, "Europe/Berlin")
+	until := time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
+	onThe16th := p.dated(t, "Dated 16 May", "2026-05-16", "Europe/Berlin")
+	onThe17th := p.dated(t, "Dated 17 May", "2026-05-17", "Europe/Berlin")
+
+	own := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf, DayZone: "Asia/Ho_Chi_Minh"}
+	wantWindow(t, "own list", p.window(t, own), []ids.UUID{onThe17th}, onThe16th)
+	combined := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf}
+	wantWindow(t, "combined list", p.window(t, combined), []ids.UUID{onThe16th, onThe17th})
+}
+
+// The open-promise sweep behind review_commitments judges a chosen date in the
+// zone of the screen asking. A task dated the 15th is late for Ho Chi Minh City
+// at 18:30 UTC and still due today for Berlin.
+func TestTheOpenPromiseSweepJudgesLatenessInTheZoneTheCallerReadsIn(t *testing.T) {
+	p := newPickedDayEnv(t, "Europe/Berlin")
+	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
+	task := p.dated(t, "Dated the 15th", "2026-06-15", "Europe/Berlin")
+	for zone, want := range map[string]bool{"Asia/Ho_Chi_Minh": true, "": false} {
+		tasks, _, err := p.store.ListOpenTasks(p.ctx, ListOpenTasksInput{AsOf: asOf, DayZone: zone})
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, got := range tasks {
+			if got.ID == task {
+				found = true
+				if got.Overdue != want {
+					t.Errorf("zone %q: overdue = %t, want %t", zone, got.Overdue, want)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("zone %q: the open task is missing from the sweep", zone)
+		}
+	}
+}
