@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -52,7 +53,7 @@ func stampSeatsPastCap(
 	names := make([]string, 0, len(withheld))
 	responses := make([]string, 0, len(withheld))
 	for _, p := range withheld {
-		address := strings.ToLower(strings.TrimSpace(p.Email))
+		address := correspondence.Fold(p.Email)
 		if address == "" || p.Declined() {
 			continue
 		}

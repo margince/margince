@@ -583,6 +583,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `activity_participant_address_is_canonical`: `CHECK ((address = lower(btrim(address)))) NOT VALID`
 - `activity_participant_identity`: `CHECK (((user_id IS NOT NULL) OR (contact_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL)))`
 - `activity_participant_past_party_cap_unresolved`: `CHECK (((NOT past_party_cap) OR ((user_id IS NULL) AND (contact_id IS NULL))))`
 - `activity_participant_response_check`: `CHECK ((response = ANY (ARRAY['accepted', 'declined', 'tentative', 'needs_action'])))`
@@ -592,6 +593,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `activity_participant_pkey`: `unique, btree (id)`
 - `idx_aparticipant_address`: `btree (lower(address)) WHERE (address IS NOT NULL)`
+- `idx_aparticipant_address_to_lowercase`: `btree (id) WHERE (address <> lower(btrim(address)))`
 - `idx_aparticipant_contact`: `btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)`
 - `idx_aparticipant_one_roster_seat`: `btree (id) WHERE (roster_seat IS NOT NULL)`
 - `idx_aparticipant_sender_domain_reversed`: `btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from') AND (address_domain_folded IS NOT NULL))`
@@ -606,6 +608,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_participant_strength_dates_added`: `AFTER INSERT REFERENCING NEW TABLE AS added FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_added()`
 - `activity_participant_strength_dates_moved`: `AFTER UPDATE REFERENCING OLD TABLE AS moved_from NEW TABLE AS moved_to FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_moved()`
 - `activity_participant_strength_dates_removed`: `AFTER DELETE REFERENCING OLD TABLE AS removed FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_participant_strength_dates_removed()`
+- `address_is_stored_lowercase`: `BEFORE UPDATE FOR EACH ROW WHEN ((new.address <> lower(btrim(new.address)))) EXECUTE FUNCTION store_participant_address_lowercase()`
 - `deleted_participant_clears_reply_settled`: `AFTER DELETE REFERENCING OLD TABLE AS written_participant FOR EACH STATEMENT EXECUTE FUNCTION written_participant_clears_reply_settled()`
 - `home_read_fence_participant`: `AFTER UPDATE FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_participant_removed`: `AFTER DELETE FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION advance_home_read_fence()`

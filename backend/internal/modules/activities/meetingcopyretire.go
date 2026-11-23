@@ -161,7 +161,7 @@ func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survi
 	rows, err := tx.Query(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, address_domain_folded, channel_user_id,
 		                                  role, display_name, roster_seats, response, past_party_cap, relinked_at)
-		SELECT $2, d.user_id, d.contact_id, d.address, d.address_domain_folded, d.channel_user_id,
+		SELECT $2, d.user_id, d.contact_id, lower(btrim(d.address)), d.address_domain_folded, d.channel_user_id,
 		       d.role, d.display_name, NULLIF(`+storekit.RosterSeatsSQL("d")+`, '{}'), d.response, d.past_party_cap, d.relinked_at
 		  FROM activity_participant d
 		 WHERE d.activity_id = $1
