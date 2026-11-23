@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -121,7 +122,7 @@ func TestTheStampsTheLaneFilesAreWrittenWhole(t *testing.T) {
 	if err := json.Unmarshal(body, &written); err != nil {
 		t.Fatal(err)
 	}
-	if len(written) != 2 || written["case1_log"] != stampsAt(t, root, DoorREST)["case1_log"] {
+	if len(written) != 2 || !reflect.DeepEqual(written["case1_log"], stampsAt(t, root, DoorREST)["case1_log"]) {
 		t.Errorf("wrote %v", written)
 	}
 }

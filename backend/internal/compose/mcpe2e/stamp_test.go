@@ -36,12 +36,17 @@ func tree(t *testing.T) string {
 		`{"name":"log_activity","description":"Log one thing."},`+
 		`{"name":"change_deal","description":"Change a deal."},`+
 		`{"name":"read_record","description":"Read one record."}]},`+
-		`"action_catalog":{"change_deal":{"router":"change_deal","actions":[{"action":"move","body":{"properties":{"stage":{"description":"The stage to move to."}}}}]}}}`)
+		`"action_catalog":{"change_deal":{"router":"change_deal","actions":[{"action":"move","body":{"properties":{"stage":{"description":"The stage to move to."}}}}]}},`+
+		`"resources":{"resources":[{"name":"query_vocabulary","uri":"margince://schema/query","description":"What a plan may say."}]},`+
+		`"documents":{"margince://schema/query":{"fields":["name","stage"]}}}`)
 	write(routesFile, `{"routers":{"change_deal":{"field":"action","actions":{"move":"move_deal"}}}}`)
 	write(candidatesFile, `{"judge":{"judge_routes":{"api":{"model":"judge-1"}}}}`)
 	for _, name := range append(append(append([]string{}, harnessFiles...), restTools...), restSkill...) {
 		write(name, "# "+name)
 	}
+	write(transcriptFile, "SERVER = 'x'\n\ndef tool_name(bare):\n    return bare\n\n"+
+		"def from_codex(lines):\n    return 'codex'\n\nCODEX_ONLY_AFTER = 1\n\n"+
+		"def _agy_step(step):\n    return 'agy'\n\ndef from_agy(lines):\n    return _agy_step(lines)\n")
 	write(filepath.Join(ScenarioDir, "case1-log.yaml"), "name: case1_log\nprompt: |\n  Log it.\n"+
 		"must_call:\n  - log_activity\nmust_call_with:\n  - move_deal.stage=won\njudge:\n  - it says so\n")
 	write(filepath.Join(ScenarioDir, "case2-read.yaml"), "name: case2_read\nmust_call: [read_record]\n")
@@ -82,10 +87,10 @@ func TestAToolDescriptionChangeStalesOnlyTheScenariosThatNameIt(t *testing.T) {
 	before := stampsOf(t, root)
 	edit(t, root, mcpInfoFile, "Log one thing.", "Log one thing, once.")
 	after := stampsOf(t, root)
-	if got := before["case1_log"].Moved(after["case1_log"]); !reflect.DeepEqual(got, []string{"tool copy"}) {
+	if got := before["case1_log"].Moved(after["case1_log"], ""); !reflect.DeepEqual(got, []string{"tool copy"}) {
 		t.Errorf("case1_log names log_activity, moved = %v, want [tool copy]", got)
 	}
-	if got := before["case2_read"].Moved(after["case2_read"]); len(got) != 0 {
+	if got := before["case2_read"].Moved(after["case2_read"], ""); len(got) != 0 {
 		t.Errorf("case2_read names no log_activity, moved = %v, want nothing", got)
 	}
 }
@@ -94,7 +99,7 @@ func TestAVerbIsStampedByTheRouterThatFrontsIt(t *testing.T) {
 	root := tree(t)
 	before := stampsOf(t, root)
 	edit(t, root, mcpInfoFile, "Change a deal.", "Change one deal.")
-	if got := before["case1_log"].Moved(stampsOf(t, root)["case1_log"]); !reflect.DeepEqual(got, []string{"tool copy"}) {
+	if got := before["case1_log"].Moved(stampsOf(t, root)["case1_log"], ""); !reflect.DeepEqual(got, []string{"tool copy"}) {
 		t.Errorf("move_deal sits behind change_deal, moved = %v, want [tool copy]", got)
 	}
 }
@@ -106,10 +111,10 @@ func TestAnActionCatalogChangeStalesOnlyTheScenariosThatReachItsRouter(t *testin
 	before := stampsOf(t, root)
 	edit(t, root, mcpInfoFile, "The stage to move to.", "The stage to move to; an agent never sends won.")
 	after := stampsOf(t, root)
-	if got := before["case1_log"].Moved(after["case1_log"]); !reflect.DeepEqual(got, []string{"tool copy"}) {
+	if got := before["case1_log"].Moved(after["case1_log"], ""); !reflect.DeepEqual(got, []string{"tool copy"}) {
 		t.Errorf("case1_log names move_deal behind change_deal, moved = %v, want [tool copy]", got)
 	}
-	if got := before["case2_read"].Moved(after["case2_read"]); len(got) != 0 {
+	if got := before["case2_read"].Moved(after["case2_read"], ""); len(got) != 0 {
 		t.Errorf("case2_read reaches no change_deal, moved = %v, want nothing", got)
 	}
 }
@@ -118,16 +123,17 @@ func TestEachOtherPartNamesItself(t *testing.T) {
 	for _, tc := range []struct {
 		file, from, to, part string
 	}{
-		{mcpInfoFile, "Be careful.", "Be very careful.", "server instructions"},
+		{mcpInfoFile, "Be careful.", "Be very careful.", "server instructions and resources"},
+		{mcpInfoFile, `"stage"]`, `"stage","owner"]`, "server instructions and resources"},
 		{candidatesFile, "judge-1", "judge-2", "judge"},
 		{"e2e/llm/check.py", "check.py", "check.py changed", "harness"},
-		{"e2e/llm/transcript.py", "transcript.py", "transcript.py changed", "harness"},
+		{"e2e/llm/transcript.py", "return bare", "return bare + bare", "harness"},
 		{filepath.Join(ScenarioDir, "case1-log.yaml"), "Log it.", "Log it now.", "scenario"},
 	} {
 		root := tree(t)
 		before := stampsOf(t, root)
 		edit(t, root, tc.file, tc.from, tc.to)
-		if got := before["case1_log"].Moved(stampsOf(t, root)["case1_log"]); !reflect.DeepEqual(got, []string{tc.part}) {
+		if got := before["case1_log"].Moved(stampsOf(t, root)["case1_log"], ""); !reflect.DeepEqual(got, []string{tc.part}) {
 			t.Errorf("editing %s: moved = %v, want [%s]", tc.file, got, tc.part)
 		}
 	}
@@ -141,10 +147,10 @@ func TestAScenarioWithNoJudgedCriterionNamesNoJudge(t *testing.T) {
 }
 
 func TestAVerdictWithoutAStampIsStale(t *testing.T) {
-	if got := Recheck(nil, Stamp{}, true); !reflect.DeepEqual(got, []string{Unstamped}) {
+	if got := Recheck(nil, Stamp{}, true, ""); !reflect.DeepEqual(got, []string{Unstamped}) {
 		t.Errorf("an unstamped verdict: %v, want [%s]", got, Unstamped)
 	}
-	if got := Recheck(&RecordedStamp{}, Stamp{}, false); !reflect.DeepEqual(got, []string{"no scenario"}) {
+	if got := Recheck(&RecordedStamp{}, Stamp{}, false, ""); !reflect.DeepEqual(got, []string{"no scenario"}) {
 		t.Errorf("a verdict whose scenario is gone: %v", got)
 	}
 }
@@ -184,7 +190,7 @@ func TestAnUnknownToolNameStillMovesTheDigestWhenItAppears(t *testing.T) {
 	edit(t, root, filepath.Join(ScenarioDir, "case2-read.yaml"), "[read_record]", "[read_record, made_up]")
 	before := stampsOf(t, root)
 	edit(t, root, mcpInfoFile, `{"name":"read_record"`, `{"name":"made_up","description":"New."},{"name":"read_record"`)
-	if got := before["case2_read"].Moved(stampsOf(t, root)["case2_read"]); !reflect.DeepEqual(got, []string{"tool copy"}) {
+	if got := before["case2_read"].Moved(stampsOf(t, root)["case2_read"], ""); !reflect.DeepEqual(got, []string{"tool copy"}) {
 		t.Errorf("a named tool that starts being served: moved = %v, want [tool copy]", got)
 	}
 }
@@ -420,7 +426,7 @@ func TestTheCatalogsLayoutIsNotToolCopy(t *testing.T) {
 	before := stampsOf(t, root)
 	edit(t, root, mcpInfoFile, `{"name":"read_record","description":"Read one record."}`,
 		"{\n  \"description\": \"Read one record.\",\n  \"name\": \"read_record\"\n}")
-	if got := before["case2_read"].Moved(stampsOf(t, root)["case2_read"]); len(got) != 0 {
+	if got := before["case2_read"].Moved(stampsOf(t, root)["case2_read"], ""); len(got) != 0 {
 		t.Errorf("re-indenting the catalog moved %v, want nothing", got)
 	}
 }
@@ -430,19 +436,119 @@ func TestTheRestDoorIsStampedWithWhatItsModelReads(t *testing.T) {
 	before := stampsAt(t, root, DoorREST)
 	edit(t, root, mcpInfoFile, "Log one thing.", "Log one thing, once.")
 	edit(t, root, mcpInfoFile, "Be careful.", "Be very careful.")
-	if got := before["case1_log"].Moved(stampsAt(t, root, DoorREST)["case1_log"]); len(got) != 0 {
+	if got := before["case1_log"].Moved(stampsAt(t, root, DoorREST)["case1_log"], ""); len(got) != 0 {
 		t.Errorf("MCP copy moved a REST stamp: %v", got)
 	}
 	for _, tc := range []struct{ file, part string }{
 		{"e2e/llm/rest_ops.json", "tool copy"},
 		{"e2e/llm/restmap.py", "tool copy"},
-		{"backend/internal/compose/agentbundle/SKILL.md.tmpl", "server instructions"},
+		{"backend/internal/compose/agentbundle/SKILL.md.tmpl", "server instructions and resources"},
 	} {
 		root := tree(t)
 		before := stampsAt(t, root, DoorREST)
 		edit(t, root, tc.file, "# ", "# edited ")
-		if got := before["case1_log"].Moved(stampsAt(t, root, DoorREST)["case1_log"]); !reflect.DeepEqual(got, []string{tc.part}) {
+		if got := before["case1_log"].Moved(stampsAt(t, root, DoorREST)["case1_log"], ""); !reflect.DeepEqual(got, []string{tc.part}) {
 			t.Errorf("editing %s moved %v of a REST stamp, want [%s]", tc.file, got, tc.part)
 		}
+	}
+}
+
+// A driver's own parser moves that driver's verdicts and no other's. A change
+// to what every driver's transcript passes through moves all of them.
+func TestAParserChangeStalesOnlyTheDriverWhoseStreamItReads(t *testing.T) {
+	for _, tc := range []struct {
+		name, from, to string
+		moved          map[string][]string
+	}{
+		{"the codex parser", "return 'codex'", "return 'codex2'", map[string][]string{
+			"gpt:cli": {"transcript parser"}, "gemini:cli": nil, "claude:cli": nil}},
+		{"a helper only the agy parser calls", "return 'agy'", "return 'agy2'", map[string][]string{
+			"gpt:cli": nil, "gemini:cli": {"transcript parser"}, "claude:cli": nil}},
+		{"what every transcript passes through", "return bare", "return bare + bare", map[string][]string{
+			"gpt:cli": {"harness"}, "gemini:cli": {"harness"}, "claude:cli": {"harness"}}},
+		{"a constant after a parser", "CODEX_ONLY_AFTER = 1", "CODEX_ONLY_AFTER = 2", map[string][]string{
+			"gpt:cli": {"harness"}, "gemini:cli": {"harness"}, "claude:cli": {"harness"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := tree(t)
+			before := stampsOf(t, root)["case1_log"]
+			edit(t, root, transcriptFile, tc.from, tc.to)
+			after := stampsOf(t, root)["case1_log"]
+			for driver, want := range tc.moved {
+				if got := before.Moved(after, driver); !slices.Equal(got, want) {
+					t.Errorf("%s verdict: moved = %v, want %v", driver, got, want)
+				}
+			}
+		})
+	}
+}
+
+// A resource's text is read by the model in the run, so a change to it moves
+// every verdict. A resource the server lists with no text to stamp is a
+// refusal, not a hole.
+func TestAResourceTextChangeStalesEveryVerdict(t *testing.T) {
+	root := tree(t)
+	before := stampsOf(t, root)
+	edit(t, root, mcpInfoFile, `["name","stage"]`, `["name","stage","owner"]`)
+	after := stampsOf(t, root)
+	for _, name := range []string{"case1_log", "case2_read"} {
+		if got := before[name].Moved(after[name], ""); !slices.Equal(got, []string{"server instructions and resources"}) {
+			t.Errorf("%s: moved = %v, want the resources", name, got)
+		}
+	}
+	edit(t, root, mcpInfoFile, `"documents":`, `"documents_gone":`)
+	if _, err := CurrentStamps(root, DoorMCP); err == nil || !strings.Contains(err.Error(), "no resources") {
+		t.Errorf("a surface with no resource text stamped anyway: %v", err)
+	}
+}
+
+// Every resource the published server lists has its text published beside it.
+// The stamp then covers all of them, and a new one cannot slip out of it.
+func TestEveryListedResourceHasItsTextInThePublishedSurface(t *testing.T) {
+	var info struct {
+		Resources struct {
+			Resources []struct {
+				URI string `json:"uri"`
+			} `json:"resources"`
+		} `json:"resources"`
+		Documents map[string]json.RawMessage `json:"documents"`
+	}
+	if err := readJSON(filepath.Join("..", "..", "..", "..", mcpInfoFile), &info); err != nil {
+		t.Fatal(err)
+	}
+	if len(info.Resources.Resources) == 0 {
+		t.Fatal("the published surface lists no resources, so this reads nothing")
+	}
+	for _, resource := range info.Resources.Resources {
+		if _, published := info.Documents[resource.URI]; !published {
+			t.Errorf("%s is listed but has no published text, so a change to it stales no verdict", resource.URI)
+		}
+	}
+}
+
+// A function in the transcript module that names a driver belongs to that
+// driver's parser. One left in the shared part would stale every driver for a
+// fix only one of them needs.
+func TestEveryDriverSpecificTranscriptFunctionHasAnOwner(t *testing.T) {
+	body, err := os.ReadFile(filepath.Join("..", "..", "..", "..", transcriptFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	owned := 0
+	for line := range strings.Lines(string(body)) {
+		name, declares := declaredName(line)
+		if !declares {
+			continue
+		}
+		named := strings.Contains(strings.ToLower(name), "codex") || strings.Contains(strings.ToLower(name), "agy")
+		if named && ownerOf(name) == "" {
+			t.Errorf("%s names a driver but no route owns it, so it sits in the shared part", name)
+		}
+		if ownerOf(name) != "" {
+			owned++
+		}
+	}
+	if owned == 0 {
+		t.Error("no transcript function belongs to a driver, so the split reads nothing")
 	}
 }
