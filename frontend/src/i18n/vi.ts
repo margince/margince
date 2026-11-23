@@ -791,7 +791,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.basisObligation": "Nghĩa vụ pháp lý",
   "approval.preview.basisSecurity": "Lợi ích thiết yếu hoặc an ninh",
   "approval.preview.basisCustomer": "Ngoại lệ dành cho khách hàng hiện có",
-  "approval.preview.basisAgreement": "Sự đồng ý của người nhận",
   "approval.preview.promotionTrigger": "Lý do xác định đủ điều kiện",
   "approval.preview.promotionNote": "Bằng chứng đủ điều kiện",
   "approval.preview.promotionEvidence": "Hoạt động làm bằng chứng",
@@ -11578,8 +11577,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cần để bảo vệ quý khách hoặc tài khoản của quý khách.",
   "privacynotice.basis.existingCustomer":
     "Quý khách là khách hàng của chúng tôi, và chúng tôi giới thiệu sản phẩm tương tự sản phẩm đã mua. Quý khách có thể phản đối bất cứ lúc nào.",
-  "privacynotice.basis.vnAgreement":
-    "Quý khách đã đồng ý nhận quảng cáo của chúng tôi.",
   "privacynotice.category.postalAddress": "Địa chỉ bưu chính",
   "privacynotice.category.socialProfile":
     "Hồ sơ và tài khoản của quý khách trên mạng xã hội và dịch vụ trò chuyện",
