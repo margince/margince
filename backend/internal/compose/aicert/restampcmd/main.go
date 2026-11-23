@@ -11,6 +11,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -26,7 +27,7 @@ func main() {
 	corpusDir := flag.String("corpus", "internal/compose/aicert/corpus", "directory of certification scenarios")
 	flag.Parse()
 	if *from == "" {
-		fail(fmt.Errorf("name the rule the records were graded by with -from"))
+		fail(errors.New("name the rule the records were graded by with -from"))
 	}
 
 	census, err := compose.NewTaskCensus()
