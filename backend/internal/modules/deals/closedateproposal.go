@@ -111,7 +111,7 @@ const (
 	// does not believe, and here is a better one.
 	AskingIsThisDateRight = "is_this_date_right"
 	// AskingIsThisDealAlive is the 🔻 review: the deal has gone quiet, and its
-	// forecast has been notched down while somebody says whether it is real.
+	// win chance carries the quiet effect while somebody says whether it is real.
 	AskingIsThisDealAlive = "is_this_deal_alive"
 )
 

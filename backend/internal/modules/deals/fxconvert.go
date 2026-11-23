@@ -128,6 +128,7 @@ func (r *FXRates) For(ctx context.Context, tx pgx.Tx, currency string) (FXRate, 
 	err = tx.QueryRow(ctx, `
 		SELECT rate, rate_date FROM fx_rate
 		WHERE from_currency = $1 AND to_currency = $2 AND rate_date <= $3::date
+		  AND `+RateVersionSQL("", "")+`
 		ORDER BY rate_date DESC
 		LIMIT 1`,
 		currency, r.base, day.Format(time.DateOnly)).Scan(&rate.Rate, &rate.On)
@@ -371,5 +372,31 @@ func Pow10(exp int64) *big.Int {
 // expression since names. A conversion dropped for a missing rate is worth
 // trying again then.
 func RateStoredSinceSQL(since string) string {
-	return "EXISTS (SELECT 1 FROM fx_rate stored_rate WHERE stored_rate.created_at > " + since + ")"
+	return "EXISTS (SELECT 1 FROM fx_rate stored_rate /* every version */ WHERE stored_rate.created_at > " + since + ")"
+}
+
+// RateSheetRevision is the newest creation time among the current rate rows: the
+// revision of the sheet the caller's snapshot sees. A sheet with no rows answers
+// the epoch, so a handle pinned to it still reads no rate.
+func RateSheetRevision(ctx context.Context, tx pgx.Tx) (time.Time, error) {
+	var revision time.Time
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(max(created_at), 'epoch'::timestamptz) FROM fx_rate WHERE `+RateVersionSQL("", "")).Scan(&revision); err != nil {
+		return time.Time{}, fmt.Errorf("read the rate sheet's revision: %w", err)
+	}
+	return revision, nil
+}
+
+// rateSheetVersion names the newest rate version dated on or before day, for the
+// currencies open deals are held in. A correction appends a row, so the name
+// changes whenever a figure could, and stays put for a currency no deal uses.
+func rateSheetVersion(ctx context.Context, tx pgx.Tx, base string, day time.Time) (string, error) {
+	var version string
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(max(created_at)::text, '') FROM fx_rate /* every version */
+		WHERE to_currency = $1 AND rate_date <= $2
+		  AND from_currency IN (SELECT currency FROM deal WHERE status = 'open' AND archived_at IS NULL)`, base, day).Scan(&version); err != nil {
+		return "", fmt.Errorf("read the rate sheet's newest version: %w", err)
+	}
+	return version, nil
 }

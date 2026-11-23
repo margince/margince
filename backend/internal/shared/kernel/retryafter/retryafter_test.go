@@ -84,3 +84,34 @@ func TestOfIsZeroWhenTheProviderSaidNothing(t *testing.T) {
 		t.Errorf("Of(<a response with no Retry-After>) = %v, want 0", got)
 	}
 }
+
+func TestOpenAIResetIsTheLongestResetUpToTheCeiling(t *testing.T) {
+	for name, tc := range map[string]struct {
+		headers map[string]string
+		want    time.Duration
+	}{
+		"the longest of two resets": {map[string]string{"x-ratelimit-reset-requests": "1s", "x-ratelimit-reset-tokens": "6m0s"}, 6 * time.Minute},
+		"milliseconds":              {map[string]string{"x-ratelimit-reset-tokens": "20ms"}, 20 * time.Millisecond},
+		"capped":                    {map[string]string{"x-ratelimit-reset-requests": "23h0m0s"}, 10 * time.Minute},
+		"unreadable or negative":    {map[string]string{"x-ratelimit-reset-requests": "soon", "x-ratelimit-reset-tokens": "-4s"}, 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			resp := &http.Response{Header: http.Header{}}
+			for header, value := range tc.headers {
+				resp.Header.Set(header, value)
+			}
+			if got := retryafter.OpenAIReset(resp); got != tc.want {
+				t.Errorf("OpenAIReset = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// Of is the reading every other provider gets, and a reset header is not in it.
+func TestOfIgnoresTheOpenAIResetHeaders(t *testing.T) {
+	resp := &http.Response{Header: http.Header{}}
+	resp.Header.Set("x-ratelimit-reset-tokens", "6m0s")
+	if got := retryafter.Of(resp); got != 0 {
+		t.Errorf("Of = %v, want 0", got)
+	}
+}

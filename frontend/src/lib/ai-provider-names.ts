@@ -10,6 +10,7 @@ const PROVIDER_NAMES = {
   openai: "aiProviders.name.openai",
   gemini: "aiProviders.name.gemini",
   gemini_vertex: "aiProviders.name.geminiVertex",
+  azure_openai: "aiProviders.name.azureOpenai",
   jev: "aiProviders.name.jev",
   jev_compatible: "aiProviders.name.jevCompatible",
   gemini_decision: "aiProviders.name.geminiDecision",

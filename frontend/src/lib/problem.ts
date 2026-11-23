@@ -12,6 +12,7 @@ import {
   isRecord,
   problemCode,
   problemFieldErrors,
+  problemRequestId,
 } from "./problembody";
 import {
   heldByColleagueCopy,
@@ -224,7 +225,12 @@ export function problemMessageOf(
     error instanceof ProblemError
       ? problemDetail(error.problem, t, labels)
       : null;
-  return detail ?? fallback ?? t("common.errorNoCause");
+  const message = detail ?? fallback ?? t("common.errorNoCause");
+  const reference =
+    error instanceof ProblemError ? problemRequestId(error.problem) : null;
+  return reference
+    ? `${message} ${t("common.errorReference")}: ${reference}`
+    : message;
 }
 
 // Its counterpart: the one place a failure the reader is not shown reaches the

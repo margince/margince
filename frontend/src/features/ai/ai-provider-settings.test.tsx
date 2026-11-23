@@ -79,6 +79,13 @@ function backend(
               credential_kind: "service_account",
             },
             {
+              provider: "azure_openai",
+              configured: true,
+              env_var: "AZURE_OPENAI_API_KEY",
+              usable: true,
+              optional: false,
+            },
+            {
               provider: "gemini",
               configured: true,
               env_var: "GEMINI_API_KEY",
@@ -204,6 +211,81 @@ describe("a provider's settings on its sheet", () => {
           provider: "openai_compatible",
           body: { base_url: "https://gateway.example" },
         },
+      ]),
+    );
+  });
+
+  // A local server has no key and no vendor list: its sheet is the host alone,
+  // and a blank host is the adapter's own default.
+  it.each([
+    ["ollama", "http://10.0.0.5:11434"],
+    ["vllm", "http://10.0.0.5:8000"],
+  ])(
+    "sets the host of the local provider %s without a key",
+    async (provider, address) => {
+      const puts = backend(
+        routingWith({ [provider]: { base_url: "http://old:1" } }),
+      );
+      const user = userEvent.setup();
+      render(<AiProviderKeysCard />);
+
+      const sheet = await openSheet(user, provider);
+      expect(within(sheet).getByText("No key needed")).toBeInTheDocument();
+      expect(
+        within(sheet).queryByRole("combobox", { name: "Service" }),
+      ).toBeNull();
+      const host = await within(sheet).findByLabelText("Host");
+      expect(host).toHaveValue("http://old:1");
+      await user.clear(host);
+      await user.type(host, address);
+      await user.click(
+        within(sheet).getByRole("button", { name: "Save connection" }),
+      );
+      await waitFor(() =>
+        expect(puts).toEqual([{ provider, body: { base_url: address } }]),
+      );
+
+      await user.clear(host);
+      await user.click(
+        within(sheet).getByRole("button", { name: "Save connection" }),
+      );
+      await waitFor(() => expect(puts[1]).toEqual({ provider, body: {} }));
+    },
+  );
+
+  // An install with no key vault answers the key list with 503. It is the
+  // install that runs only local models, so the hosts must stay reachable.
+  it("still sets a local host when the key list is unavailable", async () => {
+    const puts = backend(routingWith({}));
+    const inner = vi.mocked(fetch);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.method === "GET" && req.url.includes("/ai/provider-keys")) {
+          return jsonResponse({ title: "unavailable", status: 503 }, 503);
+        }
+        return inner(input, init);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    expect(await screen.findByTestId("ai-provider-row-ollama")).toBeVisible();
+    expect(screen.getByTestId("ai-provider-row-vllm")).toBeVisible();
+    expect(screen.queryByTestId("ai-provider-row-anthropic")).toBeNull();
+    const sheet = await openSheet(user, "ollama");
+    await user.type(
+      await within(sheet).findByLabelText("Host"),
+      "http://10.0.0.5:11434",
+    );
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
+    await waitFor(() =>
+      expect(puts).toEqual([
+        { provider: "ollama", body: { base_url: "http://10.0.0.5:11434" } },
       ]),
     );
   });
@@ -478,6 +560,39 @@ describe("a provider's settings on its sheet", () => {
     await waitFor(() =>
       expect(puts).toEqual([
         { provider: "gemini_vertex", body: { location: "europe-west4" } },
+      ]),
+    );
+  });
+
+  it("sets an Azure OpenAI endpoint and region on the provider", async () => {
+    const puts = backend(routingWith({}));
+    const user = userEvent.setup();
+    render(<AiProviderKeysCard />);
+
+    expect(
+      await screen.findByTestId("ai-provider-row-azure_openai"),
+    ).toHaveTextContent("Azure OpenAI");
+    const sheet = await openSheet(user, "azure_openai");
+    // The resource is the customer's own: no listed service to pick from.
+    const host = await within(sheet).findByLabelText("Host");
+    await user.type(host, "https://contoso.openai.azure.com");
+    await user.type(
+      within(sheet).getByLabelText("Azure region"),
+      "Swedencentral",
+    );
+    await user.click(
+      within(sheet).getByRole("button", { name: "Save connection" }),
+    );
+
+    await waitFor(() =>
+      expect(puts).toEqual([
+        {
+          provider: "azure_openai",
+          body: {
+            base_url: "https://contoso.openai.azure.com",
+            location: "swedencentral",
+          },
+        },
       ]),
     );
   });

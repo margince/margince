@@ -34,16 +34,19 @@ var worklistStages = []string{
 }
 
 // worklistOutsideStatements counts BEGIN, COMMIT, the reads before the day is
-// assembled, and the snapshot's plan-mode setup and restore. A lane's deferred
-// savepoint statements count where the exchange that carries them does.
-const worklistOutsideStatements = 9
+// assembled, the reader's own time zone, and the snapshot's plan-mode setup and
+// restore. A lane's deferred savepoint statements count where the exchange that
+// carries them does.
+const worklistOutsideStatements = 10
 
 // The seeded read includes every bound lane and three open tasks, which are
 // undated and so drawn under Upcoming. Lower this pgx-call ceiling when a
 // batch or empty-set shortcut removes calls.
 // waiting_customers reads the private_mail_requests setting once a transaction.
-// needs_you reads the reader's duplicate pairs, a list and a count.
-const worklistExchangeBudget = 76
+// needs_you reads the reader's duplicate pairs and their count in one statement.
+// The reader's own lists judge today in their own time zone, which this_morning,
+// at_risk and the day's assembly read: four exchanges.
+const worklistExchangeBudget = 79
 
 const worklistRoundTripBudget = worklistExchangeBudget
 
@@ -192,9 +195,10 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // outside it.
 // Both count waiting_customers' private_mail_requests read, the undated tasks'
 // planned, row_names and subject_labels reads, and needs_you's duplicate pairs.
+// They also count the four reads of the reader's own time zone.
 const (
-	homeReadStatementCeiling = 103
-	homeReadRoundTripCeiling = 70
+	homeReadStatementCeiling = 106
+	homeReadRoundTripCeiling = 73
 )
 
 // homeStages are the stages Home's read runs. A lane that stops running lowers

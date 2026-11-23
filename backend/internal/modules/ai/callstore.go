@@ -62,7 +62,11 @@ type Call struct {
 	// Kind distinguishes a chat-ladder attempt from an embed-lane call and a
 	// decision-lane attempt — callKindCompletion, callKindEmbedding or
 	// callKindDecision.
-	Kind          string
+	Kind string
+	// Extension names the extension a call ran for, as "<unit>/<task>", and is
+	// empty for the product's own calls. It lets an operator list every call an
+	// installed extension caused.
+	Extension     string
 	CorrelationID *ids.UUID
 	// Subject is the record the call was about, when the site that made it
 	// said so. It travels to the rail's occurrence — what the reader is told
@@ -311,6 +315,7 @@ func aiCallBindings(c Call) []boundColumn {
 		{"served_identity_source", servedSource},
 		{"served_provider", c.ServedProvider},
 		{"config_hash", c.ConfigHash},
+		{"extension", c.Extension},
 		{"subject_type", subjectType},
 		{"subject_id", subjectID},
 		{"decision_choice", decisionChoice},

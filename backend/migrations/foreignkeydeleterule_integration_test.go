@@ -24,8 +24,9 @@ package migrations_test
 
 import (
 	"context"
-	"slices"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // unwrittenDeleteRule finds the foreign keys left on the default: NO ACTION, which is
@@ -51,123 +52,55 @@ SELECT count(*) FROM pg_constraint c
   JOIN pg_namespace n ON n.oid = t.relnamespace
  WHERE c.contype = 'f' AND n.nspname = 'public'`
 
-// TestEveryForeignKeyStatesItsDeleteRule holds the register below against the schema.
+// standardCatalogCounts answers the key total and the `NO ACTION` total from
+// information_schema, which is not built from the pg_constraint rows above.
+const standardCatalogCounts = `
+SELECT count(*), count(*) FILTER (WHERE delete_rule = 'NO ACTION')
+  FROM information_schema.referential_constraints
+ WHERE constraint_schema = 'public'`
+
+// TestEveryForeignKeyStatesItsDeleteRule fails on a key with no stated delete rule.
 //
-// Equality rather than emptiness, because 41 keys say nothing today and each needs a
-// judgement rather than a default: a lookup parent means RESTRICT, an attribution
-// column means SET NULL, and twelve of them are NOT NULL references to app_user where
-// neither is available without either making a user undeletable or making the column
-// nullable. That one is a product call, so the register carries them rather than this
-// gate guessing.
-//
-// What it buys meanwhile is that the number cannot grow in silence: a new key with no
-// clause is a finding, and one that gains a clause fails until its line goes.
+// A row the parent owns `CASCADE`s. An attribution the record outlives is `SET NULL`.
+// A catalog or versioned parent is `RESTRICT`. So is a NOT NULL reference to app_user:
+// a user is deactivated and handed over, never deleted.
 func TestEveryForeignKeyStatesItsDeleteRule(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
 	ctx := context.Background()
 
-	var keys int
+	// The two counts come from different catalogs. pg_constraint is what the rule
+	// below reads; information_schema.referential_constraints is built apart from it.
+	// A query that stops recognising keys makes them disagree instead of passing.
+	var keys, keysByStandardCatalog, unwrittenByStandardCatalog int
 	if err := conn.QueryRow(ctx, foreignKeyCount).Scan(&keys); err != nil {
 		t.Fatalf("counting foreign keys: %v", err)
 	}
-	// The schema declared 475 when this landed. A collapse means the query stopped
-	// recognising them, and every one would then read as answered.
-	if keys < 400 {
-		t.Fatalf("this gate found %d foreign key(s) and expects at least 400 — it has stopped "+
-			"recognising them rather than the schema having given them up", keys)
+	if err := conn.QueryRow(ctx, standardCatalogCounts).Scan(&keysByStandardCatalog, &unwrittenByStandardCatalog); err != nil {
+		t.Fatalf("counting foreign keys in the standard catalog: %v", err)
+	}
+	if keys == 0 || keys != keysByStandardCatalog {
+		t.Fatalf("pg_constraint holds %d foreign key(s) and the standard catalog %d; the query has "+
+			"stopped recognising them", keys, keysByStandardCatalog)
 	}
 
 	rows, err := conn.Query(ctx, unwrittenDeleteRule)
 	if err != nil {
 		t.Fatalf("reading the keys that state no delete rule: %v", err)
 	}
-	defer rows.Close()
-	var unwritten []string
-	for rows.Next() {
-		var one string
-		if err := rows.Scan(&one); err != nil {
-			t.Fatalf("scanning: %v", err)
-		}
-		unwritten = append(unwritten, one)
-	}
-	if err := rows.Err(); err != nil {
+	unwritten, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
 		t.Fatalf("reading the keys that state no delete rule: %v", err)
 	}
-
-	registered := slices.Clone(unwrittenDeleteRules)
-	slices.Sort(registered)
+	if len(unwritten) != unwrittenByStandardCatalog {
+		t.Fatalf("pg_constraint reports %d key(s) with no delete rule and the standard catalog %d",
+			len(unwritten), unwrittenByStandardCatalog)
+	}
 	for _, key := range unwritten {
-		if !slices.Contains(registered, key) {
-			t.Errorf("%s leaves a parent delete to the default and is not in the register.\n"+
-				"Say what the delete does — CASCADE for a row the parent owns, SET NULL for an "+
-				"attribution the record outlives, RESTRICT for a catalog parent nothing may "+
-				"orphan — or add the line and say in the PR which call it is waiting on. "+
-				"Writing NO ACTION is not available: Postgres normalises it away, so it reads "+
-				"here exactly like the omission.", key)
-		}
+		t.Errorf("%s leaves a parent delete to the default. Say what the delete does — CASCADE "+
+			"for a row the parent owns, SET NULL for an attribution the record outlives, RESTRICT "+
+			"for a catalog parent nothing may orphan. Writing NO ACTION is not available: Postgres "+
+			"normalises it away, so it reads here exactly like the omission.", key)
 	}
-	for _, key := range registered {
-		if !slices.Contains(unwritten, key) {
-			t.Errorf("%s is in the register but states a rule now — delete its line, so the "+
-				"register keeps meaning what it says.", key)
-		}
-	}
-}
-
-// unwrittenDeleteRules are the foreign keys that state no ON DELETE clause today.
-//
-// A REGISTER, not a waiver list: the test above fails in both directions, so the set
-// can only shrink and a new one is a finding. Each line is one judgement owed, and
-// they are not all the same judgement — twelve are NOT NULL references to app_user,
-// where SET NULL is unavailable and RESTRICT makes a user undeletable while any row
-// names them. That is the call this issue is waiting on; the rest are derivable from
-// what the parent is.
-var unwrittenDeleteRules = []string{
-	"activity (channel_provider) -> channel_provider",
-	"activity (kind) -> activity_kind",
-	"ai_call (config_hash) -> ai_call_config",
-	"consent_event (consent_text_version_id) -> consent_text_version",
-	"consent_event (lead_id) -> lead",
-	"contact_channel_identity (provider) -> channel_provider",
-	"deal (stage_id, pipeline_id) -> stage",
-	"field_mask (object, field) -> maskable_field",
-	"forecast_snapshot (pipeline_id) -> pipeline",
-	"intro_request (introducer_user_id) -> app_user",
-	"intro_request (requester_user_id) -> app_user",
-	"intro_request (suggested_user_id) -> app_user",
-	"intro_request (through_contact_id) -> contact",
-	"deal_product (product_id) -> product",
-	"lead (product_id) -> product",
-	"lead (product_id) -> product",
-	"lead_manual_signal (set_by) -> app_user",
-	"meeting_invitation (host_user_id) -> app_user",
-	"meeting_proposal (host_user_id) -> app_user",
-	"provider_connection (connected_by) -> app_user",
-	"provider_run (requested_by) -> app_user",
-	"report_definition (audience_team_id) -> team",
-	"report_definition (owner_id) -> app_user",
-	"report_definition_revision (created_by) -> app_user",
-	"report_definition_revision (report_id) -> report_definition",
-	"report_edition (execution_id) -> report_execution",
-	"report_edition (report_id) -> report_definition",
-	"report_execution (owner_id) -> app_user",
-	"report_execution (report_id, report_revision) -> report_definition_revision",
-	"report_execution (schedule_id) -> report_schedule",
-	"report_schedule (owner_id) -> app_user",
-	"report_schedule (report_id, report_revision) -> report_definition_revision",
-	"reporting_framework_revision (created_by) -> app_user",
-	"sales_initiative (owner_id) -> app_user",
-	"sales_target (pipeline_id) -> pipeline",
-	"sales_target_revision (created_by) -> app_user",
-	"sales_target_revision (target_id) -> sales_target",
-	"sdr_handoff (assigned_to) -> app_user",
-	"sdr_handoff (submitted_by) -> app_user",
-	"voice_build (voice_profile_id, result_version) -> voice_profile_version",
-	"voice_learning_signal (voice_profile_id, profile_version) -> voice_profile_version",
-	"voice_profile_delta (voice_profile_id, from_version) -> voice_profile_version",
-	"voice_profile_delta (voice_profile_id, to_version) -> voice_profile_version",
-	"voice_profile_version (voice_profile_id, predecessor_version) -> voice_profile_version",
-	"weekly_plan_commitment (manager_user_id) -> app_user",
 }

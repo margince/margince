@@ -46,3 +46,15 @@ func TestAPrivateMailReachesThePromptByDateOnly(t *testing.T) {
 		t.Error("prompt names a direction for a private message")
 	}
 }
+
+func TestThePromptCarriesTheWinChanceTheDealShowsAndHowItWasMade(t *testing.T) {
+	t.Parallel()
+	in := Input{Probability: 60, ProbabilitySource: "stage", WinChance: 30, WinChanceLine: "Stage typed 60% · quiet 80 days halves it · 30%"}
+	prompt := Prompt(promptfence.New(), in)
+	if want := "Win chance the deal shows: 30% (Stage typed 60% · quiet 80 days halves it · 30%)"; !strings.Contains(prompt, want) {
+		t.Fatalf("prompt lacks %q:\n%s", want, prompt)
+	}
+	if bare := Prompt(promptfence.New(), Input{Probability: 60, ProbabilitySource: "stage"}); strings.Contains(bare, "Win chance") {
+		t.Fatalf("a deal with no chance still names one:\n%s", bare)
+	}
+}

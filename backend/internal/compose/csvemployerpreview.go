@@ -44,7 +44,8 @@ func (r *linkResolver) markEmployerPending(preview contacts.ContactEmployerPrevi
 		return
 	}
 	for _, domain := range preview.Domains {
-		if key, valid := naturalKeyFor(migration.ObjectCompany, domain.Domain); valid && r.pendingNatural[key] {
+		key, valid := naturalKeyFor(migration.ObjectCompany, domain.Domain)
+		if _, planned := r.pendingNatural[key]; valid && planned {
 			return
 		}
 	}
@@ -55,7 +56,7 @@ func (r *linkResolver) markEmployerPending(preview contacts.ContactEmployerPrevi
 	r.markNamesPending(true, preview.CompanyName)
 	r.plannedEmployerNames[name] = true
 	for _, domain := range preview.Domains {
-		r.markNaturalPending(migration.ObjectCompany, domain.Domain)
+		r.markNaturalPending(migration.ObjectCompany, domain.Domain, employerRef(preview.CompanyName))
 		r.plannedEmployerDomains[domain.Domain] = name
 	}
 	clear(r.cache)

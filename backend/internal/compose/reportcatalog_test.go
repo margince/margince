@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -90,55 +91,6 @@ func assertCovers(t *testing.T, report, heading string, engine map[string]string
 		if !slices.Contains(published, name) {
 			t.Errorf("%s: the engine accepts %s %q and the catalog does not publish it", report, heading, name)
 		}
-	}
-}
-
-// A report with default aggregates and no default grouping must not render a
-// sentence that trails off. runAdHocPlan already builds that spec shape, so it
-// is one prebuilt report away from being reachable.
-func TestReportDefaultsRenderEachHalfOnlyWhenItExists(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		spec reportSpec
-		want string
-	}{
-		{
-			name: "aggregates and grouping",
-			spec: reportSpec{defaultBy: []string{"stage_id"}, defaultAggs: []reportAggregate{{Fn: "count", As: "deals"}}},
-			want: "count as deals grouped by stage_id",
-		},
-		{
-			name: "aggregates with no grouping",
-			spec: reportSpec{defaultAggs: []reportAggregate{{Fn: "count", As: "deals"}}},
-			want: "count as deals over the whole set",
-		},
-
-		{
-			name: "sum already named by its field",
-			spec: reportSpec{defaultAggs: []reportAggregate{{Fn: "sum", Field: "open_deal_unpriced", As: "open_deal_unpriced"}}},
-			want: "sum(open_deal_unpriced) over the whole set",
-		},
-		{
-			name: "renamed sum",
-			spec: reportSpec{defaultAggs: []reportAggregate{{Fn: "sum", Field: "amount_minor", As: "total"}}},
-			want: "sum(amount_minor) as total over the whole set",
-		},
-		{
-			name: "grouping with no aggregates",
-			spec: reportSpec{defaultBy: []string{"kind"}},
-			want: "grouped by kind",
-		},
-		{
-			name: "neither",
-			spec: reportSpec{},
-			want: "",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := describeReportDefaults(tc.spec); got != tc.want {
-				t.Errorf("defaults = %q, want %q", got, tc.want)
-			}
-		})
 	}
 }
 
@@ -249,11 +201,9 @@ func TestReportPlanRefusesTrailingContent(t *testing.T) {
 // vocabulary door instead of the report, because `deals-by-stage` answers that
 // goal with no plan at all and a bare key does not say so. 2/3 to 0/3.
 //
-// So the default is the only per-report content left in the description, and a
-// report that shipped without one would silently reopen exactly that failure:
-// describeReportDefaults returns "" for a spec with neither default aggregates
-// nor default grouping, which is a shape runAdHocPlan already builds. Nothing
-// else on this surface tells a caller which report answers their question.
+// So each report's line (measures, dimensions, default starred) is what a
+// caller selects by. A spec with neither default aggregates nor default
+// grouping, a shape runAdHocPlan already builds, would render nothing.
 //
 // Derived from the engine's own catalog, so a report added tomorrow inherits the
 // obligation rather than escaping it.
@@ -267,19 +217,41 @@ func TestEveryReportKeyIsDescribedByItsDefaultAnswer(t *testing.T) {
 	// surface built for one test.
 	described := servedReportArgumentDescription(t)
 	for _, entry := range catalog {
-		if entry.Defaults == "" {
+		if entry.Measures == "" && len(entry.DefaultBy) == 0 {
 			t.Errorf("%s answers nothing by default, so run_report's description reduces it to a bare "+
-				"enum key — which is what sent every certification run to the vocabulary door instead "+
+				"enum key, which sent every certification run to the vocabulary door instead "+
 				"of the report. Give the spec a defaultAggs or a defaultBy.", entry.Report)
 			continue
 		}
-		if !strings.Contains(described, entry.Report) {
-			t.Errorf("%s is in the enum and not in the description", entry.Report)
+		assertReportClause(t, described, entry.Report, prebuiltReports[entry.Report])
+	}
+}
+
+// assertReportClause compares one report's own clause in the served description
+// with its spec: the measures, the dimensions, and the star on the spec's
+// defaultBy. Searching the whole description would find a dimension dropped here
+// in another report's clause.
+func assertReportClause(t *testing.T, described, report string, spec reportSpec) {
+	t.Helper()
+	match := regexp.MustCompile(`(?:^| )` + regexp.QuoteMeta(report) + `: ([^.]*)\. `).FindStringSubmatch(described)
+	if match == nil {
+		t.Errorf("%s has no clause in the description: %s", report, described)
+		return
+	}
+	measures, dimensions, _ := strings.Cut(match[1], "by: ")
+	measures = strings.TrimSuffix(strings.TrimSpace(measures), ";")
+	if want := describeReportMeasures(spec); measures != want {
+		t.Errorf("%s: measures %q, the spec's default aggregates are %q", report, measures, want)
+	}
+	want := make([]string, 0, len(spec.dimensions))
+	for _, name := range allowedReportNames(spec.dimensions) {
+		if slices.Contains(spec.defaultBy, name) {
+			name += "*"
 		}
-		if !strings.Contains(described, entry.Defaults) {
-			t.Errorf("%s: the description does not say what it answers by default: %q",
-				entry.Report, entry.Defaults)
-		}
+		want = append(want, name)
+	}
+	if got := strings.Split(dimensions, ", "); !slices.Equal(got, want) {
+		t.Errorf("%s: dimensions %v, the engine accepts %v with the default starred", report, got, want)
 	}
 }
 

@@ -1,6 +1,7 @@
 // How fe-uat.mjs drives one story page and reads what it drew: the viewport a
 // story's tags ask for, and what the page reports once it rendered.
 
+import { UNROUTED_WARNING } from "../../src/testing/unrouted-session.ts";
 import { FAILURE_EVENTS } from "./story-outcome.mjs";
 
 // The tags fe-uat honours.
@@ -82,4 +83,18 @@ export async function renderPhase(page) {
   return await page.evaluate(
     () => globalThis.__STORYBOOK_PREVIEW__?.currentRender?.phase ?? "unknown",
   );
+}
+
+// The fetch stub answers a read no route covers with an empty list, and a screen
+// that reads anything else then fails on a body it cannot use, with an error that
+// names no route. A failing story carries the routes the stub guessed, so the
+// missing line is in the first message.
+export function unroutedHints(consoleWarnings) {
+  const keys = consoleWarnings
+    .filter((text) => text.startsWith(UNROUTED_WARNING))
+    .map((text) => text.slice(UNROUTED_WARNING.length).trim());
+  if (keys.length === 0) return [];
+  return [
+    `the fetch stub answered ${[...new Set(keys)].join(", ")} with an empty list because the story routes no such request; if the failure reads a body that is not a list, add the route to the story's installFetchStub`,
+  ];
 }

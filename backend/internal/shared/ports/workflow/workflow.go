@@ -70,6 +70,15 @@ type Spec struct {
 	// answers no. A caller re-driving reads this; a false answer means the run
 	// needs a human rather than a button.
 	RedrivableWithoutDuplicating bool
+	// ReplaysAfterFailedApply lets the bus redelivery of an event run Apply again
+	// when its first Apply failed on a fault that is not a refusal.
+	//
+	// Set it only when Apply is idempotent end to end through its own natural
+	// keys, such as a notice's dedupe key. Never set it for an Apply that creates
+	// records through the effect claim (applyCreate). A replay finds the earlier
+	// firing's unconfirmed claim and reports the create as deduplicated.
+	// The record is then lost.
+	ReplaysAfterFailedApply bool
 	// IgnoreUnmatchedEvents leaves a source occurrence available for a later qualifying event.
 	IgnoreUnmatchedEvents bool
 }

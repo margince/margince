@@ -77,6 +77,9 @@ function backendFor(
           signature_enrich: true,
           mail_sync_interval_seconds: syncState,
           confidentiality_pass_cap: passCapState,
+          verdict_pass_cap: 200,
+          classify_pass_cap: 500,
+          owed_classify_pass_cap: 500,
         });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
@@ -191,7 +194,7 @@ describe("MailSharingCard", () => {
     // Every row on the card carries the same refusal, so the count says it reached each one.
     expect(
       screen.getAllByText(/Only an administrator or operations user/),
-    ).toHaveLength(4);
+    ).toHaveLength(7);
   });
 
   // The cap commits on its own beside the sync interval, writes its own wire
@@ -238,6 +241,29 @@ describe("MailSharingCard", () => {
       }),
     );
   });
+
+  it.each([
+    ["capture-verdict-pass-cap", "verdict_pass_cap", "200", "300"],
+    ["capture-classify-pass-cap", "classify_pass_cap", "500", "600"],
+    ["capture-owed-pass-cap", "owed_classify_pass_cap", "500", "700"],
+  ])(
+    "shows the %s row at its stored value and saves a change on Enter",
+    async (testId, field, stored, next) => {
+      const backend = backendFor(SETTINGS_EDITOR);
+      vi.stubGlobal("fetch", backend.fetchMock);
+      const user = userEvent.setup();
+      render(<MailSharingCard />);
+
+      const box = await screen.findByTestId<HTMLInputElement>(testId);
+      expect(box.value).toBe(stored);
+      await user.clear(box);
+      await user.type(box, `${next}{Enter}`);
+
+      await waitFor(() =>
+        expect(backend.getCapturedPatch()).toEqual({ [field]: Number(next) }),
+      );
+    },
+  );
 
   // The sync row commits on its own: pacing the mailboxes withholds nothing,
   // so it needs no Save beside the two switches that do.
@@ -288,6 +314,9 @@ describe("MailSharingCard", () => {
           signature_enrich: true,
           mail_sync_interval_seconds: 120,
           confidentiality_pass_cap: 40,
+          verdict_pass_cap: 200,
+          classify_pass_cap: 500,
+          owed_classify_pass_cap: 500,
         });
       }),
     );

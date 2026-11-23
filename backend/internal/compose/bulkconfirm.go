@@ -80,9 +80,10 @@ func bulkBinding(requestedBy string, change bulkChange) ([]byte, error) {
 		Note        *string                     `json:"note,omitempty"`
 		TagID       *ids.UUID                   `json:"tag_id,omitempty"`
 		Task        *crmcontracts.BulkTask      `json:"task,omitempty"`
+		StageID     *ids.UUID                   `json:"stage_id,omitempty"`
 		Items       []crmcontracts.BulkItem     `json:"items"`
 		UndoOf      *ids.UUID                   `json:"undo_of,omitempty"`
-	}{requestedBy, change.recordType, change.verb, change.ownerID, change.listID, change.note, change.tagID, change.task, items, undoOf})
+	}{requestedBy, change.recordType, change.verb, change.ownerID, change.listID, change.note, change.tagID, change.task, change.stageID, items, undoOf})
 	if err != nil {
 		return nil, fmt.Errorf("hash the previewed change: %w", err)
 	}

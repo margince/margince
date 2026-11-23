@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -182,7 +183,7 @@ func (w *notificationDigestWorker) morningFor(
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		// Candidate routing includes notices up to this tick; each recipient gets their own cutoff.
-		pass.window, err = notificationWindow(ctx, tx, now)
+		pass.window, err = notificationWindow(ctx, tx, occurredday.Combined, ids.UUID{}, now)
 		if err != nil {
 			return err
 		}
@@ -231,7 +232,7 @@ func (w *notificationDigestWorker) digestFor(
 	}
 	if err := database.WithWorkspaceTx(seatCtx, w.pool, func(tx pgx.Tx) error {
 		var err error
-		window, err = notificationWindow(seatCtx, tx, personal.Open)
+		window, err = notificationWindow(seatCtx, tx, occurredday.Personal, seat.UUID, personal.Open)
 		return err
 	}); err != nil {
 		return err

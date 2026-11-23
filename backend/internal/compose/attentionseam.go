@@ -21,8 +21,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/completedchanges"
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/managermove"
 	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -222,7 +224,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionTasks{store: activities.NewStore(db), claims: newContactsStore(db), work: newInquiryWork(db), db: db},
 		attentionReceipts{tasks: activities.NewStore(db).WithRecordZone(installationZoneTx), svc: svc, deals: deals.NewStore(db, DealsInstallation())},
 		attentionBriefing{
-			engine:  briefs.NewBriefEngine(pool, newContactsStore(db)),
+			engine:  briefs.NewBriefEngine(pool, newContactsStore(db)).WithWinChances(chances.WinChances),
 			figures: attentionDealFacts{store: deals.NewStore(db, DealsInstallation())},
 		},
 		nil, // Assigned promises are tasks; taskless claims name no personal owner.
@@ -238,7 +240,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionNotices{store: notices.NewStore(db), users: identity.NewService(db.Pool())},
 		newAttentionNames(db),
 		now,
-		attention.WithZone(attentionZone(pool)),
+		attention.WithZones(attentionZone(pool), dayrule.ActingReaderZone(pool)),
 		attention.WithMeetingsAwaitingOutcome(
 			attentionMeetingsAwaitingOutcome{store: activities.NewStore(db)}),
 		attention.WithNoticeCases(attentionNoticeCases{store: consent.NewStore(db)}),
@@ -256,7 +258,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithTaskBacklog(attentionTasks{store: activities.NewStore(db), work: newInquiryWork(db)}).
 		WithHandledReceipts(completedchanges.Reader{Magic: newMagicService(pool, svc, now)}).
 		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
-			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil), now: now}, nil, asOf)
+			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil).WithWinChances(chances.WinChances), now: now}, nil, asOf)
 		}).
 		WithReceiptDetails(attentionReceiptDetails{magic: newMagicService(pool, svc, now), names: newAttentionNames(db)}).
 		WithSnapshots(attentionSnapshots{pool: pool}).
@@ -278,10 +280,10 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithContactEmployers(newContactsStore(db)).
 		WithMeetingOrganizers(activities.NewStore(db)).WithMeetingRooms(activities.NewStore(db)).
 		// Cached cards keep queue reads from starting model work.
-		WithDealMoves(attentionDealMoves{cards: cards}).
+		WithDealMoves(attentionDealMoves{cards: newDealStatusService(pool, now).WithManagerStandings(managermove.Standings(newForecastStore(db)))}).
 		WithDealStandings(attentionDealStandings{cards: cards}).
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
-		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
+		WithWeeklyPlans(attentionWeeklyPlan{store: WeeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
 		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
 }
 

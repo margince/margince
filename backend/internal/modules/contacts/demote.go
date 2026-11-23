@@ -324,7 +324,7 @@ func unwindContact(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID 
 	if _, err := demotionUnwind(ctx, tx, leadID, contactID, outcome); err != nil {
 		return "", err
 	}
-	if err := archiveContactRows(ctx, tx, contactID, time.Now().UTC(), nil); err != nil {
+	if err := archiveContactRows(ctx, tx, contactID, time.Now().UTC(), nil, nil); err != nil {
 		return "", fmt.Errorf("archive promoted contact: %w", err)
 	}
 	if _, err := tx.Exec(ctx,

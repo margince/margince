@@ -133,7 +133,11 @@ func valueFromAnswer(answer AnalyticsAnswer, c reportdoc.Cell) RenderedValue {
 		if withheld, _ := row[withheldColumn].(bool); withheld {
 			return RenderedValue{Withheld: true}
 		}
-		return RenderedValue{Value: row[c.Column]}
+		value := RenderedValue{Value: row[c.Column]}
+		if analyticsquery.LeavesOut(row, c.Column) {
+			value.Coverage = &crmcontracts.ReportingCoverage{Status: reportingPartial}
+		}
+		return value
 	}
 	return RenderedValue{}
 }

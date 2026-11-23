@@ -4,13 +4,64 @@
 package notices
 
 import (
+	"fmt"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/targettype"
 )
+
+// OwnTargetType is a notice target type that an approval cannot name. The notice
+// points at a pending decision, a correction run, or retained content a privacy
+// review asks someone to check. A notice may also point at anything an approval
+// can, so the schema CHECK on notice.target_type is held equal to this set plus
+// targettype.Type.
+//
+// Held by: TestNoticeTargetTypeIsTheApprovalListAndTheNoticeOwn (backend/gates/approvaltargettypes_test.go)
+type OwnTargetType string
+
+// The notice target types an approval cannot name.
+const (
+	OwnTargetApproval               OwnTargetType = "approval"
+	OwnTargetDataTask               OwnTargetType = "data_task"
+	OwnTargetRetainedEmailSignature OwnTargetType = "retained_email_signature"
+	OwnTargetEmailSignature         OwnTargetType = "email_signature"
+	OwnTargetSignatureTemplate      OwnTargetType = "signature_template"
+	OwnTargetLegalEntity            OwnTargetType = "legal_entity"
+	OwnTargetKnowledgeDocument      OwnTargetType = "knowledge_document"
+	OwnTargetApprovalHistory        OwnTargetType = "approval_history"
+)
+
+var ownTargets = map[string]struct{}{
+	string(OwnTargetApproval): {}, string(OwnTargetDataTask): {}, string(OwnTargetRetainedEmailSignature): {},
+	string(OwnTargetEmailSignature): {}, string(OwnTargetSignatureTemplate): {}, string(OwnTargetLegalEntity): {},
+	string(OwnTargetKnowledgeDocument): {}, string(OwnTargetApprovalHistory): {},
+}
+
+// requireKnownTarget refuses a target type the schema CHECK would refuse.
+// It also holds the list where the CHECK was dropped because an old row broke
+// it. A notice about no record has no type to check.
+func requireKnownTarget(target Target) error {
+	if !target.Named() {
+		return nil
+	}
+	if _, own := ownTargets[target.Type]; own || targettype.Known(target.Type) {
+		return nil
+	}
+	return fmt.Errorf("the target type %q is not one a notice can point at: %w", target.Type, apperrors.ErrInvalidArgument)
+}
+
+// TargetApproval is the target type of a notice that opens a pending decision.
+const TargetApproval = string(OwnTargetApproval)
+
+// TargetDataTask is the target type of a notice about one background
+// correction run; a client opens System health on it.
+const TargetDataTask = string(OwnTargetDataTask)
 
 // TargetRetainedEmailSignature is the target type of a notice about a departed
 // member's signature. The frontend routes this value to the review screen.
-const TargetRetainedEmailSignature = "retained_email_signature"
+const TargetRetainedEmailSignature = string(OwnTargetRetainedEmailSignature)
 
 // Target is the record a notice is about, when it is about one.
 //

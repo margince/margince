@@ -96,7 +96,7 @@
 }
 
 .rmap-box {
-  fill: var(--bgElevated);
+  fill: var(--bgField);
   stroke: var(--borderSubtle);
   stroke-width: 1;
 }

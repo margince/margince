@@ -58,6 +58,10 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:withdrawSignatureNumber":             "a step of the signature retraction pass, decided the same way as archiveSignatureNumber",
 	"internal/modules/contacts:retractUnsupportedPhones":            "a step of the signature retraction pass, decided the same way as archiveSignatureNumber",
 	"internal/modules/contacts:RetractUnsupportedSignaturePhonesTx": "the entry of the signature retraction pass for unsupported numbers, decided the same way as archiveSignatureNumber",
+	"internal/modules/contacts:dropSignatureSupportTx":              "drops a narrowed mail's support and, when the employer street lost its last support, takes the street back through withdrawEmployerStreetTx, for the reason that entry gives",
+	"internal/modules/contacts:withdrawEmployerStreetTx":            "takes back the street a signature filled on its signer's employer when the mail is narrowed or the fill undone, matched by the fill's own audit row. The seat who narrowed the mail may lack write on the company, and a probe would then leave the narrowed mail's content on a record every seat reads",
+	"internal/modules/contacts:withdrawSignatureEmail":              "archives the address a signature read added when its last supporting mail is narrowed or the fill undone, and moves the contact's version for that child row. The seat who narrowed the mail may lack write on the contact, and a probe would then leave the narrowed mail's content on a record every seat reads",
+	"internal/modules/contacts:withdrawSignatureAddress":            "takes back the address parts a signature filled when its mail is narrowed or the fill undone, as the title beside it is. The seat who narrowed the mail may lack write on the contact, and a probe would then leave the narrowed mail's content on a record every seat reads",
 	"internal/modules/contacts:ClearSiteOfferDuplicatesTx":          "the system-only company profile correction selects rows by stored duplicate values and provenance, not caller identity; a row-scope write probe would leave stale mirrors outside that identity’s scope. Each company is locked and audited through the ordinary company update tail",
 	"internal/modules/contacts:clearSiteOfferDuplicate":             "the locked per-company step of ClearSiteOfferDuplicatesTx, reachable only from that system-only correction; it preserves user-authored fields and writes through the ordinary company audit and event tail",
 	"internal/modules/privacy:purgeAnonymizedContactJudgments":      "the retention contact anonymization clears derived judgments inside the transaction that selected and anonymized the contact; a reader-specific write grant would prevent completing that accepted privacy action",
@@ -91,6 +95,8 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 		"erasure a human asked for, and the clock-driven retention anonymize, are both system " +
 		"cleanup rather than a caller's write, and respecting a caller's grants would leave " +
 		"standing the prose each exists to clear",
+	"internal/modules/deals:ReofferClose":   "puts a close for silence back on its owner's Home. It runs only as the system principal behind auth.RequireSystem, for the stakeholder backfill that proved the close wrong, and it changes the correction's own receipt, not what the deal says. A row probe on the deal would leave a close the owner cannot otherwise write on without its offer",
+	"internal/modules/deals:reofferCloseTx": "the transaction of ReofferClose, decided the same way: system-only, and the deal's own columns are untouched",
 	"internal/modules/deals:HoldClosingOccurrenceTx": "a SELECT ... FOR SHARE, not a mutation. " +
 		"It takes the deal's row lock so the closing it answers cannot move before its caller " +
 		"writes a review against it — the extractor reads the locking SELECT as a write to " +

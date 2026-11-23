@@ -72,7 +72,7 @@ const AgentPanel = lazy(async () => ({
 }));
 
 import { looseStyle, usePanelFrame } from "./agentpanelframe";
-import { barLine, causeLine, derive } from "./agentreading";
+import { barLine, causeLine, derive, runRing } from "./agentreading";
 
 /**
  * How far the import has got, drawn as the ring around the orb.
@@ -379,7 +379,7 @@ export function AgentRail({
   const holdsFault = state === "warning" || state === "error";
   const [latest] = ticker;
   const shown = latest !== undefined && !holdsFault ? plain(latest.said) : line;
-  const ring = importRing(state, signals.capture);
+  const ring = importRing(state, signals.capture) ?? runRing(cause, state);
   return (
     <section
       className="arblock"

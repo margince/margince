@@ -169,7 +169,7 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	// retired rendering from this store.
 	lanes.blob = blob
 	// What a unit's Models and Objects reach on a job tick or a bus delivery.
-	compose.BindExtensionModels(modelPath.ExtensionTask)
+	compose.BindExtensionModels(modelPath.ExtensionTasks)
 	laneCtx = originalstore.Bind(laneCtx, compose.InstallationDB(pool), blob)
 	lanes.ctx = laneCtx
 

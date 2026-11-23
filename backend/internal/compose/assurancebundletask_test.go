@@ -14,7 +14,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -25,13 +25,13 @@ import (
 func TestOnlyASeatRefusalIsRetriedUnassigned(t *testing.T) {
 	t.Parallel()
 
-	// A seat that is missing, inactive or archived — deliberately one error.
-	if !unassignableSeat(fmt.Errorf("wrapped: %w", apperrors.ErrNotFound)) {
-		t.Error("a missing or inactive seat did not read as a seat refusal, so the deals of " +
+	// A seat that is missing, inactive, archived or an agent: one error.
+	if !unassignableSeat(fmt.Errorf("wrapped: %w", &auth.AssigneeNotAllowedError{Field: "assignee_id"})) {
+		t.Error("a refused seat did not read as a seat refusal, so the deals of " +
 			"everyone who has left stop being checked")
 	}
-	if !unassignableSeat(&activities.AgentAssigneeError{}) {
-		t.Error("an agent seat did not read as a seat refusal")
+	if unassignableSeat(apperrors.ErrNotFound) {
+		t.Error("a missing record read as a seat refusal")
 	}
 	if unassignableSeat(apperrors.ErrPermissionDenied) {
 		t.Error("a permission refusal read as a seat refusal — it would be retried into a " +

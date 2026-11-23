@@ -92,6 +92,12 @@ var quotedSender = regexp.MustCompile(`(?m)^.*<[^<>\s]+@[^<>\s]+>.*$`)
 
 var printedAddress = regexp.MustCompile(`[\p{L}\p{N}._%+-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+`)
 
+// PrintedAddresses lists the mail addresses text prints, each as a whole token,
+// lowercased.
+func PrintedAddresses(text string) []string {
+	return printedAddress.FindAllString(strings.ToLower(text), -1)
+}
+
 func holdsOtherAddress(folded, email string) bool {
 	for _, address := range printedAddress.FindAllString(folded, -1) {
 		if address != email {

@@ -198,7 +198,7 @@ for which actions wait by default.
 - Fold one tag into another · Create a contact from a card
 
 **Selling**
-- Move a deal forward · Move a deal to the next stage · Correct a close date
+- Move a deal forward · Move a deal to the next stage · Correct a close date · Move the deal to the proposal stage
 - Promote a lead · Disqualify a lead · Reverse a lead promotion
 - Move a project to its next phase
 

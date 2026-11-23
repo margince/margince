@@ -295,9 +295,8 @@ func proveG03OneBaseCurrencyNumber(t *testing.T) {
 	if row["deals"] != float64(6) {
 		t.Errorf("counted %v deals, want all 6 including the unrated one", row["deals"])
 	}
-	// An unrated amount makes the converted total incomplete.
-	if row["base_total"] != nil {
-		t.Errorf("base total = %v, want null for an incomplete conversion", row["base_total"])
+	if row["base_total"] != float64(70_000) {
+		t.Errorf("base total = %v, want the 70000 of the deals that convert", row["base_total"])
 	}
 }
 

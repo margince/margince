@@ -9,6 +9,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+// footerKindUnsubscribeLink names a send that owed a stop link and could be
+// given none.
+const footerKindUnsubscribeLink = "unsubscribe_link"
+
 func (s *Store) footerFindings(lines []DisclosureLine, recipients []string, advertising bool) []commsauthz.FooterFinding {
 	findings := unmeetable(lines)
 	if !advertising || s.unsubscribe == nil {

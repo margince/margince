@@ -166,6 +166,7 @@ func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []
 	noInterests := found && rules.NoLegitimateInterests
 	kept := make([]NoticeUse, 0, len(uses))
 	for _, use := range uses {
+		use.Basis = commsauthz.ReadableBasis(use.Basis)
 		if noInterests && !keptUnderPack(commsauthz.Basis(use.Basis)) {
 			continue
 		}

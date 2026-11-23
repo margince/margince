@@ -5,6 +5,8 @@ package compose
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"slices"
 	"strings"
@@ -14,6 +16,15 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// commitmentLocator names one promise across readings of one source: the same
+// source, the same side, the same party and the same evidence span. The server
+// builds it from what it holds, never from the model's wording. A re-read that
+// paraphrases the summary still finds the promise it read before.
+func commitmentLocator(sourceActivity ids.UUID, kind, party, span string) string {
+	sum := sha256.Sum256([]byte(sourceActivity.String() + "\x00" + kind + "\x00" + party + "\x00" + span))
+	return hex.EncodeToString(sum[:])
+}
 
 func samePromiseBeforeAttributionChanged(c Commitment, offer CommitmentTaskProposal) bool {
 	if c.Span == "" || offer.SourceActivityID != c.SourceActivityID {
@@ -143,6 +154,25 @@ func (d *CommitmentDispatcher) takenUnderEarlierAttribution(ctx context.Context,
 		return false, fmt.Errorf("compose: reading whether the promise was taken over: %w", err)
 	}
 	return taken, nil
+}
+
+// settleEarlierUnnamedClaims retires the claims an earlier reading left for
+// this promise while its promiser was unnamed. Once the named reading has a task
+// or a proposal, those claims would offer the promise to a colleague.
+// That takeover would write a second task, and it refuses a settled claim.
+func (d *CommitmentDispatcher) settleEarlierUnnamedClaims(ctx context.Context, tx pgx.Tx, c Commitment) error {
+	if c.Span == "" || c.Seat == nil || c.Theirs != nil {
+		return nil
+	}
+	if err := lockPromiseSource(ctx, tx, c.SourceActivityID); err != nil {
+		return err
+	}
+	recipients := commitmentRecipients(c)
+	only := make([]ids.UUID, 0, len(recipients))
+	for _, recipient := range recipients {
+		only = append(only, recipient.UUID)
+	}
+	return d.claims.WithdrawUnplacedCopiesTx(extractorContext(ctx, c.Extractor), tx, c.SourceActivityID, earlierUnnamedLocators(c), only)
 }
 
 // lockPromiseSource serializes a takeover and a reading of one message's

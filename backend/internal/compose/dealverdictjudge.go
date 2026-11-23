@@ -171,11 +171,12 @@ func (p dealVerdictPass) applyAsOwner(
 		EvidenceHolds: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			return verdictEvidenceHolds(ctx, tx, c, read, changes)
 		},
-		Record: func(ctx context.Context, tx pgx.Tx, applied []deals.VerdictChange) error {
-			if err := p.recordOnTimeline(ctx, tx, c, read, applied); err != nil {
-				return err
+		Record: func(ctx context.Context, tx pgx.Tx, applied []deals.VerdictChange) (ids.UUID, error) {
+			note, err := p.recordOnTimeline(ctx, tx, c, read, applied)
+			if err != nil {
+				return ids.Nil, err
 			}
-			return tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL()+` FROM deal d WHERE d.id = $1`, c.deal).
+			return note, tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL()+` FROM deal d WHERE d.id = $1`, c.deal).
 				Scan(&written)
 		},
 		AsOwner: func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
@@ -196,7 +197,7 @@ func (p dealVerdictPass) applyAsOwner(
 // origin keeps it out of every recency clock and out of the next verdict.
 func (p dealVerdictPass) recordOnTimeline(
 	ctx context.Context, tx pgx.Tx, c verdictCandidate, read dealVerdictRead, applied []deals.VerdictChange,
-) error {
+) (ids.UUID, error) {
 	subject := systemtext.Literal("deal.updated")
 	lines := make([]string, 0, len(applied))
 	var components []*systemtext.Component
@@ -215,15 +216,15 @@ func (p dealVerdictPass) recordOnTimeline(
 		metadata = systemtext.Sequence(components[0], components[1:]...)
 		metadata.Layout = "lines"
 	}
-	_, _, err := p.notes.LogActivityTx(ctx, tx, activities.LogActivityInput{
+	note, _, err := p.notes.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.updated"), Body: metadata},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: c.deal}},
 	})
 	if err != nil {
-		return fmt.Errorf("compose: writing the verdict on the deal's timeline: %w", err)
+		return ids.Nil, fmt.Errorf("compose: writing the verdict on the deal's timeline: %w", err)
 	}
-	return nil
+	return ids.UUID(note.Id), nil
 }
 
 // verdictChangeLine names one change in plain words.

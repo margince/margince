@@ -23,7 +23,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--bgField);
   font-family: var(--fontFamilyBody);
   white-space: nowrap;
   cursor: pointer;

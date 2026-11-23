@@ -55,7 +55,7 @@ type OpenSuggestedDealInput struct {
 	Prefill func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (DealPrefill, error)
 	// Record writes the entry on the deal's timeline, in the same transaction,
 	// knowing what the prefill carried.
-	Record func(ctx context.Context, tx pgx.Tx, deal, correction ids.UUID, fill DealPrefill) error
+	Record func(ctx context.Context, tx pgx.Tx, deal ids.UUID, fill DealPrefill) (ids.UUID, error)
 	// AsOwner binds the owner's agent as of the opening's transaction, so a
 	// role change or suspension that committed before it stops the opening.
 	AsOwner OwnerAuthorityTx
@@ -122,7 +122,11 @@ func (s *Store) OpenSuggestedDeal(ctx context.Context, in OpenSuggestedDealInput
 			return err
 		}
 		opened = dealID
-		return in.Record(ctx, tx, dealID, correction, fill)
+		note, err := in.Record(ctx, tx, dealID, fill)
+		if err != nil {
+			return err
+		}
+		return linkCorrectionNote(ctx, tx, []ids.UUID{correction}, note)
 	})
 	return opened, err
 }

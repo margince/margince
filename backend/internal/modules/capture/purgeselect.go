@@ -299,6 +299,9 @@ func workspaceMatchClause(kind, value string) (string, []any) {
 // mailbox stop bringing this correspondent in, and a colleague who received the
 // same message keeps their own copy of the answer.
 func ReleaseImportTx(ctx context.Context, tx pgx.Tx, activityID, user ids.UUID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM capture_import WHERE activity_id = $1 AND user_id = $2`, activityID, user); err != nil {
 		return fmt.Errorf("capture: releasing a seat's import of a shared message: %w", err)
@@ -322,6 +325,9 @@ func ReleaseImportTx(ctx context.Context, tx pgx.Tx, activityID, user ids.UUID) 
 // Keyed on the activity alone, which is what makes it right here and wrong for
 // the seat arm: there is no surviving copy to keep a claim on.
 func ReleaseEveryImportTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM capture_import WHERE activity_id = $1`, activityID); err != nil {
 		return fmt.Errorf("capture: releasing every import of a destroyed message: %w", err)

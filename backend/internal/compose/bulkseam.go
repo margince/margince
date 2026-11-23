@@ -68,6 +68,7 @@ func bulkChangeFromCommand(cmd agents.BulkChangeCommand) bulkChange {
 		note:         cmd.Note,
 		tagID:        cmd.TagID,
 		task:         bulkTaskFromCommand(cmd.Task),
+		stageID:      cmd.StageID,
 		confirmToken: cmd.ConfirmToken,
 	}
 }

@@ -43,6 +43,9 @@ func (s *Service) CurrentMoves(ctx context.Context, dealIDs []ids.UUID) (map[ids
 					out[id] = move
 				}
 			}
+			if err := s.withManagerMoves(ctx, tx, current, out); err != nil {
+				return err
+			}
 			return admitCurrentMoves(ctx, tx, out)
 		})
 	})

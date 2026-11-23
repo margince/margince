@@ -148,7 +148,19 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	return nil
 }
 
-const acquisitionActivityEntity = "activity"
+// AcquisitionSource is the kind of record a piece of acquisition evidence cites.
+// The schema CHECK on contact_acquisition_evidence.source_entity_type is held
+// equal to this set. Only a mail is written today; consent reads evidence that
+// cites a deal.
+type AcquisitionSource string
+
+// The kinds of record acquisition evidence cites.
+const (
+	AcquisitionSourceActivity AcquisitionSource = "activity"
+	AcquisitionSourceDeal     AcquisitionSource = "deal"
+)
+
+const acquisitionActivityEntity = string(AcquisitionSourceActivity)
 
 // The named arguments for the contact a write is about and the seat it records
 // as its author.

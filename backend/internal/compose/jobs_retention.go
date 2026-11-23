@@ -31,10 +31,8 @@ func (IdempotencyRetentionArgs) Kind() string { return "idempotency_retention" }
 // workspace, and walks them itself (jobs.FleetWide, ADR-0103).
 func (IdempotencyRetentionArgs) FleetWide() {}
 
-// idempotencyRetentionWorker sweeps EVERY
-// workspace, archived ones included: archiving does not un-store the claim
-// snapshots inside a workspace, and idempotency_key.workspace_id is
-// ON DELETE RESTRICT, so leftovers would also refuse the eventual hard delete.
+// idempotencyRetentionWorker sweeps every workspace, archived ones included:
+// archiving does not un-store the claim snapshots held under it.
 type idempotencyRetentionWorker struct {
 	pool    *pgxpool.Pool
 	sweeper *IdempotencyRetentionSweeper

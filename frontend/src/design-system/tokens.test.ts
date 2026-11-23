@@ -418,6 +418,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       const carries: Record<string, string[]> = {
         "--bgPage": prose,
         "--bgElevated": prose,
+        "--bgField": prose,
         "--bgInset": prose,
         "--bgHover": prose,
         "--bgStrip": prose,
@@ -445,7 +446,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--segmentPressed": ["--textPrimary"],
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],
-        "--textPrimary": ["--bgPage"],
+        "--textPrimary": ["--bgPage", "--textInverse"],
       };
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
@@ -479,6 +480,9 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         // it carries whatever the chip's rule sets, so every role that lands
         // on one is measured over it.
         ...chipInks.map((ink) => [ink, "--bgChip"]),
+        // A control face is translucent in dark, so it composites like a tint.
+        ["--textPrimary", "--bgControl"],
+        ["--accentText", "--bgControl"],
       ] as const;
       const grounds = [
         "--bgPage",

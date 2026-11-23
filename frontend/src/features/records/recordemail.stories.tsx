@@ -7,28 +7,20 @@ import { CalendarDays, MessageCircle, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { IconAction } from "../../design-system/iconaction";
 import { LocaleProvider } from "../../i18n";
-import { EmailVerb, RecordEmailAside, RecordEmailVerb } from "./recordemail";
+import { EmailVerb, RecordEmailVerb } from "./recordemail";
 
-// The box has exactly two states and always offers to write. Both are here, so
-// the difference between them can be judged without arranging a caller that
-// knows a thread is owed. Only the deal page mounts the box, through
-// dealemail.tsx; the header verbs below are what every record page shares.
-//
-// The header VERB is here too, and it is the same write on a different shape: a
-// square whose envelope is its whole label. Judging it needs the neighbours it
-// sits beside, so the verb stories draw the row rather than the button alone —
-// what a reader has to be able to tell at a glance is which of these squares is
-// the one the page is for, and whether the refused one still says why.
+// The header verb is the write every record page shares: a square whose
+// envelope is its whole label. The stories draw the row it sits in. A reader
+// must tell at a glance which square the page is for, and see why a refused
+// one is refused.
 
-const meta: Meta<typeof RecordEmailAside> = {
+const meta: Meta<typeof EmailVerb> = {
   title: "Records/Record 360/Email box",
-  component: RecordEmailAside,
+  component: EmailVerb,
   parameters: { layout: "padded" },
 };
 export default meta;
-type Story = StoryObj<typeof RecordEmailAside>;
-
-const CONTACT = "contact-1";
+type Story = StoryObj<typeof EmailVerb>;
 
 function withClient(children: ReactNode) {
   const client = new QueryClient({
@@ -40,24 +32,6 @@ function withClient(children: ReactNode) {
     </QueryClientProvider>
   );
 }
-
-// No reply target: the box offers a fresh mail to the record's contacts.
-export const NothingToAnswer: Story = {
-  render: () =>
-    withClient(<RecordEmailAside entityType="contact" entityId={CONTACT} />),
-};
-
-// A reply target is supplied: the box offers to continue that thread.
-export const AnswerIsOwed: Story = {
-  render: () =>
-    withClient(
-      <RecordEmailAside
-        entityType="contact"
-        entityId={CONTACT}
-        replyTo="activity-1"
-      />,
-    ),
-};
 
 // The header verb, in the bar it lives in. Square because an envelope is a verb
 // a reader already knows from the glyph. It is named on hover and to a screen

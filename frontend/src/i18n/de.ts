@@ -5,6 +5,8 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "systemJob.proposal_stage":
+    "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
   "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.promise_kept":
@@ -795,6 +797,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.linkIssued": "Link erstellt",
   "approval.preview.linkExpires": "Link läuft ab",
   "approval.preview.recordRevoked": "Widerrufen",
+  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
   "approval.preview.basisKind": "Erfasste Kommunikationsgrundlage",
   "approval.preview.basisFrom": "Grundlage gültig ab",
   "approval.preview.basisUntil": "Grundlage gültig bis",
@@ -808,7 +811,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.basisSecurity":
     "Lebenswichtiges Interesse oder Sicherheitsinteresse",
   "approval.preview.basisCustomer": "Bestandskundenausnahme",
-  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
   "approval.preview.promotionTrigger": "Anlass der Qualifizierung",
   "approval.preview.promotionNote": "Beleg zur Qualifizierung",
   "approval.preview.promotionEvidence": "Belegende Aktivität",
@@ -938,7 +940,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das KI-Budget ist ausgeschöpft. Die Arbeit wird automatisch fortgesetzt, sobald wieder Budget verfügbar ist.",
   "reporting.latestSnapshot": "Letzter Snapshot",
   "reporting.contextDetails": "Berichtsdetails",
-  "reporting.pipelineFilter": "Offene Pipeline · erwarteter Abschluss",
   "reporting.targetRemaining": "{amount} fehlen zum Ziel",
   "reporting.targetExceeded": "{amount} über dem Ziel",
   "reporting.targetPeriodSummary": "{actual} von {target} · {percent} %",
@@ -985,7 +986,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.commissionAmount": "Provision",
   "reporting.hoursUnit": "Stunden",
   "reporting.outOf": "Von insgesamt {total}",
-  "reporting.valueChanges": "Wertänderungen",
   "reporting.movement.new": "Neue Deals",
   "reporting.movement.pulled_in": "In den Zeitraum vorgezogen",
   "reporting.movement.pushed_out": "Aus dem Zeitraum geschoben",
@@ -1082,8 +1082,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.attainment": "{percent} % des Ziels",
   "reporting.remaining": "Verbleibend",
   "reporting.ownerMetric": "{metric} nach Teammitglied",
-  "reporting.quarterStart": "Wähle den ersten Monat des Geschäftsquartals.",
-  "reporting.additional": "Weitere Auswertungen",
   "reporting.settings": "Berichtseinstellungen",
   "reporting.execution.skipped": "Übersprungen",
   "reporting.execution.suspended": "Pausiert",
@@ -1093,7 +1091,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.execution.running": "Wird gespeichert…",
   "reporting.execution.pending": "Geplant",
   "reporting.targetHistory": "Zielverlauf",
-  "reporting.unit": "Einheit",
   "reporting.amountUnit": "Wert",
   "reporting.daysUnit": "Tage",
   "reporting.countUnit": "Anzahl",
@@ -1162,7 +1159,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.status.ok": "Vollständige Daten",
   "retention.scopeReportEdition": "Gespeicherte Berichtsausgaben",
   "reporting.lastCapture": "Letzte erfolgreiche Erfassung {at}",
-  "reporting.allocationDifference": "Teamziel abzüglich verteilter Ziele",
   "reporting.fromDate": "Von",
   "reporting.throughDate": "Bis einschließlich",
   "reporting.chooseDates": "Wähle ein Start- und Enddatum für diesen Zeitraum.",
@@ -1302,10 +1298,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.monthly": "Monatlich",
   "reporting.day": "Ausführungstag",
   "reporting.time": "Ortszeit",
-  "reporting.timezone": "Zeitzone für Berichte",
   "reporting.nextRun": "Nächste Ausführung: {at}",
   "reporting.pause": "Pausiert",
-  "reporting.resume": "Fortsetzen",
   "reporting.compare": "Snapshots vergleichen",
   "reporting.left": "Früherer Snapshot",
   "reporting.right": "Späterer Snapshot",
@@ -1313,12 +1307,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.value": "Ziel",
   "reporting.newTarget": "Ziel festlegen",
   "reporting.revise": "Ziel ändern",
-  "reporting.up": "Nach oben",
-  "reporting.down": "Nach unten",
-  "reporting.periodStart": "Erster Tag des Zielzeitraums",
   "reporting.noComparison":
     "Wähle zwei Snapshots mit gleichem Umfang aus aufeinanderfolgenden abgeschlossenen Zeiträumen.",
-  "reporting.noSource": "Quelldetails sind nicht verfügbar.",
   "reporting.framework": "Berichtseinstellungen",
   "reporting.template": "Standardansicht",
   "reporting.sales": "Vertrieb",
@@ -1487,47 +1477,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Prognose für das Ende des Geschäftsquartals, Stand {date}: {amount}.",
   "reporting.writtenOpen_one": "Offen am {date}: {amount} in {count} Deal.",
   "reporting.writtenOpen_other": "Offen am {date}: {amount} in {count} Deals.",
-  "reporting.writtenSomeFailed":
-    "Einige Zahlen konnten gerade nicht gelesen werden, daher lässt diese Zusammenfassung sie weg.",
-  "reporting.writtenTargetReached":
-    "Der gewonnene Umsatz im Zeitraum {quarter} hat das Ziel von {target} erreicht.",
-  "reporting.writtenNoTarget":
-    "Für {quarter} ist kein Umsatzziel gesetzt, daher gibt es keinen Abstand zu zeigen.",
-  "reporting.writtenFinish": "Erwartetes Ergebnis für {quarter}: {amount}.",
-  "reporting.writtenFinishShort":
-    "Erwartetes Ergebnis für {quarter}: {amount}, {gap} unter dem Ziel von {target}.",
-  "reporting.writtenFinishAhead":
-    "Erwartetes Ergebnis für {quarter}: {amount}, {gap} über dem Ziel von {target}.",
-  "reporting.writtenFinishOnTarget":
-    "Erwartetes Ergebnis für {quarter}: {amount}, genau das Ziel von {target}.",
-  "reporting.writtenCoverage":
-    "Offene Deals mit Abschluss in diesem Quartal decken {ratio}× der noch offenen {remaining}.",
-  "reporting.writtenAccepted_one":
-    "{count} Übergabe angenommen im Zeitraum {period}.",
-  "reporting.writtenAccepted_other":
-    "{count} Übergaben angenommen im Zeitraum {period}.",
-  "reporting.writtenAcceptedNone":
-    "Keine Übergaben angenommen im Zeitraum {period}.",
-  "reporting.writtenQualified_one":
-    "{count} Lead qualifiziert im Zeitraum {period}.",
-  "reporting.writtenQualified_other":
-    "{count} Leads qualifiziert im Zeitraum {period}.",
-  "reporting.writtenQualifiedNone":
-    "Keine Leads qualifiziert im Zeitraum {period}.",
-  "reporting.writtenMeetings_one":
-    "{count} Termin gehalten im Zeitraum {period}.",
-  "reporting.writtenMeetings_other":
-    "{count} Termine gehalten im Zeitraum {period}.",
-  "reporting.writtenMeetingsNone":
-    "Keine Termine gehalten im Zeitraum {period}.",
-  "reporting.writtenLeadsWaiting_one":
-    "{count} Lead wartet noch auf eine erste Antwort.",
-  "reporting.writtenLeadsWaiting_other":
-    "{count} Leads warten noch auf eine erste Antwort.",
-  "reporting.writtenHandoffsWaiting_one":
-    "{count} Übergabe wartet auf eine Entscheidung im Vertrieb.",
-  "reporting.writtenHandoffsWaiting_other":
-    "{count} Übergaben warten auf eine Entscheidung im Vertrieb.",
   "reporting.prepared.prospectingTitle": "Mein Akquisefortschritt",
   "reporting.prepared.prospectingPurpose":
     "Gehaltene Termine, angenommene Übergaben und qualifizierte Leads dieser Woche, gegen die Monatsziele.",
@@ -1633,8 +1582,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.last_quarter": "Letztes abgeschlossenes Quartal",
   "reporting.last_year": "Letztes abgeschlossenes Jahr",
   "reporting.custom": "Eigener Zeitraum",
-  "reporting.start": "Startdatum",
-  "reporting.end": "Enddatum (nicht eingeschlossen)",
   "reporting.bookings_trend": "Gewonnener Umsatz im Verlauf",
   "reporting.stage_distribution": "Offene Pipeline nach Phase",
   "reporting.owner_attainment": "Gewonnener Umsatz nach Mitglied",
@@ -1734,7 +1681,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.metrics": "Kennzahlen",
   "reporting.metric": "Kennzahl",
   "reporting.cancel": "Abbrechen",
-  "reporting.saved": "Bericht gespeichert",
   "reporting.live": "Aktueller Bericht",
   "reporting.opening": "Anfang",
   "reporting.closing": "Ende",
@@ -1757,8 +1703,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.pickAgreed": "Wähle die vereinbarte Zeit",
   "scheduling.openTimes": "Deine freien Zeiten",
   "scheduling.guestPicks": "{name} wählt die Zeit",
-  "scheduling.guestPicksHelp":
-    "Du sendest einen persönlichen Link. Dein Kontakt sieht deine freien Zeiten und bucht eine.",
   "scheduling.guestPicksOne":
     "Dein Kontakt bucht eine der freien Zeiten im Kalender.",
   "scheduling.guest": "Dein Gast",
@@ -1800,32 +1744,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.linkReplaced":
     "Dieser Vorschlag bekommt einen neuen Link, da du den Vorschlag geändert hast. Der vorherige Link bleibt offen, bis du ihn unter „Termine“ beim Kontakt zurückziehst.",
   "scheduling.bookWith": "Termin mit {name} buchen",
-  "scheduling.setupTitle":
-    "Buchung fertig einrichten · {done} von {total} erledigt",
-  "scheduling.stepCalendar": "Ein Kalender, der Einladungen senden kann",
-  "scheduling.stepHours": "Deine Zeiten und Zeitzone",
-  "scheduling.stepLink": "Dein Buchungslink ist aktiv",
-  "scheduling.stepDone": "Erledigt",
-  "scheduling.stepOpen": "Noch zu erledigen",
   "scheduling.calendarTitle": "Kalender",
-  "scheduling.calendarIntro":
-    "Von hier werden Einladungen gesendet, und hier wird deine belegte Zeit gelesen.",
-  "scheduling.availabilityTitle": "Verfügbarkeit",
-  "scheduling.defaultsTitle": "Standardeinstellungen für Termine",
-  "scheduling.defaultsIntro":
-    "Gilt für jeden neuen Termin. Beim Buchen kannst du diese Einstellungen ändern.",
-  "scheduling.videoDefaultGoogle":
-    "Neuen Terminen einen Google-Meet-Link hinzufügen",
-  "scheduling.videoDefaultTeams":
-    "Neuen Terminen einen Microsoft-Teams-Link hinzufügen",
-  "scheduling.videoDefaultGeneric":
-    "Neuen Terminen einen Videocall-Link hinzufügen",
-  "scheduling.videoDefaultHelp":
-    "Wird mit jeder Kalendereinladung erstellt, auch bei Buchungen über deinen Link. Beim Buchen kannst du den Link für einen einzelnen Termin deaktivieren.",
-  "scheduling.videoTeamsHelp":
-    "Benötigt ein Microsoft-365-Geschäfts- oder Schulkonto.",
-  "scheduling.unsaved": "Du hast ungespeicherte Änderungen",
-  "scheduling.discard": "Verwerfen",
   "scheduling.back": "Zurück zu Margince",
   "scheduling.prepare": "Auf diesen Termin vorbereiten",
   "scheduling.timezone": "Zeitzone",
@@ -1852,29 +1771,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wähle hier eine Zeit oder finde einen anderen Termin:",
   "scheduling.proposalReply":
     "Du kannst auch mit einer passenden Zeit antworten.",
-  "scheduling.proposalHelp":
-    "Diese Vorschläge reservieren deinen Kalender nicht. Der persönliche Link gilt für eine Buchung und verfällt nach sieben Tagen oder dem letzten Vorschlag.",
-  "scheduling.createPersonalLink": "Persönlichen Link erstellen",
-  "scheduling.reviewProposal": "Vorschlag erstellen",
-  "scheduling.personalLink": "Persönliche Einladung öffnen",
-  "scheduling.expires": "Gültig bis {date}",
-  "scheduling.reviewEmail": "E-Mail prüfen",
   "scheduling.method": "Wie möchtest du den Termin vereinbaren?",
   "scheduling.propose": "Zeiten vorschlagen",
   "scheduling.sharePersonal": "Persönlichen Link teilen",
-  "scheduling.selectOptions_one":
-    "Wähle zwei oder drei Zeiten · {count} gewählt",
-  "scheduling.selectOptions_other":
-    "Wähle zwei oder drei Zeiten · {count} gewählt",
-  "scheduling.blockingCalendars": "Weitere Kalender, die Zeit blockieren",
-  "scheduling.blockingHelp":
-    "Der Terminkalender blockiert immer Zeit. Die Titel privater Termine bleiben in deinem Kalender.",
   "scheduling.savedRequest":
     "Deine Terminanfrage ist gespeichert. Öffne die Anfrage, um die Einladung zu prüfen, den Termin zu verschieben oder abzusagen.",
   "scheduling.openMeeting": "Termin ansehen",
   "scheduling.emailReminder": "E-Mail-Erinnerung eine Stunde vorher",
-  "scheduling.reminderHelp":
-    "Gilt für künftige Termine. Verwendet dein verbundenes Postfach und prüft vor dem Versand die E-Mail-Berechtigungen.",
   "scheduling.reminder.pending": "E-Mail-Erinnerung geplant.",
   "scheduling.reminder.queued": "E-Mail-Erinnerung zum Versand vorgemerkt.",
   "scheduling.reminder.unavailable":
@@ -1889,7 +1792,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.copyFallback": "Markiere und kopiere den Link unten.",
   "scheduling.preview": "Öffentliche Seite ansehen",
   "scheduling.settings": "Termineinstellungen",
-  "scheduling.save": "Einstellungen speichern",
   "settings.tab.meetings": "Termine",
   "settings.page.meetings.sub":
     "Buchbare Zeiten, Kalender und Buchungseinstellungen.",
@@ -1917,17 +1819,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.findNext": "Nächste freie Zeiten suchen",
   "scheduling.noTimesHorizon":
     "Keine freien Zeiten im Buchungszeitraum. Prüfe die Termineinstellungen und die Kalendereinträge.",
-  "scheduling.allDayBlocks":
-    "Als belegt markierte ganztägige Ereignisse blockieren ebenfalls freie Zeiten.",
-  "scheduling.effectiveHours": "Buchbare Zeiten: {start} bis {end} ({zone}).",
   "scheduling.bookingUntil": "Buchungen bis {date} möglich.",
-  "scheduling.outsideHorizon":
-    "Dieses Datum liegt außerhalb des Buchungszeitraums. Wähle ein früheres Datum oder ändere die Termineinstellungen.",
   "scheduling.provider": "Kalenderanbieter",
-  "scheduling.proposalChanged":
-    "Dieser Link behält die bereits erstellten Angaben. Für deine Änderungen kannst du einen neuen Link erstellen. Der bisherige Link bleibt bis zu seinem Ablauf gültig.",
-  "scheduling.proposalUpdate": "Aktualisierten Vorschlag erstellen",
-  "scheduling.calendar": "Kalender für Einladungen",
   "scheduling.bookContact": "Termin buchen",
   "scheduling.bookPickContact": "Kontakte dieses Unternehmens durchsuchen",
   "scheduling.setupCalendar": "Buchungskalender auswählen",
@@ -1936,10 +1829,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "scheduling.readOnlyCalendar":
     "Dein Kalender ist zum Lesen verbunden. Verbinde den Kalender erneut und erlaube den Zugriff für Einladungen, um Termine zu erstellen, zu verschieben und abzusagen.",
-  "scheduling.disconnectedCalendar":
-    "Verbinde diesen Kalender, bevor du Einladungen sendest. Wenn nur dein Postfach verbunden ist, verbinde den Kalender separat.",
-  "scheduling.expiredCalendar":
-    "Deine Kalenderverbindung ist abgelaufen. Verbinde den Kalender erneut, um Einladungen zu senden.",
   "scheduling.bookRefused": "Ein Admin muss die Terminbuchung erlauben.",
   "scheduling.meetingChanged":
     "Der Termin wurde geändert. Prüfe die aktuellen Details und versuche es erneut.",
@@ -1947,30 +1836,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wähle unter Einstellungen → Termine einen Kalender aus, um verfügbare Zeiten in der Vorschau zu sehen.",
   "scheduling.publicCalendarUnavailable":
     "Die Buchungsseite ist aktiv, aber Kalendereinladungen sind nicht verfügbar. Öffne die Termineinstellungen, um die Verbindung zu prüfen oder die Seite zu pausieren.",
-  "scheduling.manageConnection": "Kalenderverbindungen öffnen",
-  "scheduling.calendarConnected":
-    "Verbunden: {account}. Zugriff für Einladungen erteilt.",
   "scheduling.noWritableCalendar":
     "Kein bearbeitbarer Kalender verfügbar. Wähle einen anderen Anbieter oder prüfe deine Kalenderberechtigungen.",
   "scheduling.finishSetup":
     "Richte den Kalender in den Termineinstellungen ein, um freie Zeiten auszuwählen.",
   "scheduling.readOnlyBadge": "Schreibgeschützter Kalender",
-  "scheduling.accountName":
-    "Der Name auf deiner Buchungsseite stammt aus den Kontoeinstellungen.",
   "scheduling.linkNotCreated":
     "Speichere die Termineinstellungen, um deinen Buchungslink zu erstellen.",
   "scheduling.calendarSetupNeeded":
     "Wähle und speichere zuerst einen Kalender.",
-  "scheduling.noCalendar":
-    "Kein Kalender verbunden. Ein verbundenes Postfach bringt seinen Kalender nicht mit.",
-  "scheduling.hostName": "Dein öffentlicher Name",
   "scheduling.subject": "Termintitel",
   "scheduling.location": "Ort oder Terminlink",
-  "scheduling.duration": "Termindauer",
-  "scheduling.noticeHelp":
-    "24 Stunden bedeutet mindestens einen vollen Tag im Voraus.",
-  "scheduling.anchorBrand":
-    "Unternehmensname und Logo stammen aus deinem Unternehmensprofil.",
   "scheduling.locationExample": "https://meet.google.com/abc-defg-hij",
   "scheduling.locationHelp":
     "Füge deinen Google-Meet-, Zoom- oder Teams-Link ein oder gib eine Adresse an. Das ist der Treffpunkt, nicht deine Buchungsseite.",
@@ -1978,9 +1854,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur Vorschau. Deine Buchungsseite ist aktiv. Aus dieser Vorschau werden keine Einladungen gesendet.",
   "scheduling.previewPaused":
     "Nur Vorschau. Öffentliche Buchungen sind pausiert. Aktiviere deinen Link in den Termineinstellungen, damit Gäste buchen können.",
-  "scheduling.notice": "Vorlauf in Stunden",
-  "scheduling.buffer": "Puffer in Minuten",
-  "scheduling.horizon": "Buchungszeitraum in Tagen",
 
   "scheduling.invite": "Einladung senden",
   "scheduling.contact": "Wen möchtest du treffen?",
@@ -2140,6 +2013,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiAdmin.model": "Von der Richtlinie gewähltes Modell",
   "aiAdmin.decisionSkip.unbound":
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
+  "aiAdmin.certification.certified":
+    "{model} ist für diese Aufgabe zertifiziert.",
+  "aiAdmin.certification.degraded":
+    "{model} wird für diese Aufgabe mit verminderter Qualität unterstützt.",
+  "aiAdmin.certification.notSupported":
+    "{model} ist für diese Aufgabe nicht zertifiziert. Es wird trotzdem verwendet, prüfe also, was es liefert.",
+  "aiAdmin.certification.unrecorded":
+    "{model} wurde für diese Aufgabe mit diesen Einstellungen nicht gemessen.",
+  "aiAdmin.certification.stale": "Der Nachweis stammt aus früheren Prompts.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -3038,6 +2920,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kontakte, Unternehmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib einen Suchbegriff ein.",
   "search.empty": "Keine Treffer für „{q}“.",
+  "search.timedOut":
+    "{kind} konnten für dieses Wort nicht rechtzeitig durchsucht werden. Füge ein weiteres Wort hinzu, um sie zu durchsuchen.",
   "search.nearMatches": "Meintest du:",
   "search.group.contact": "Kontakte",
   "search.group.company": "Unternehmen",
@@ -3052,7 +2936,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "search.group.showAllNamed": "Alle {group} anzeigen",
   "search.kind.contact": "Kontakt",
   "search.kind.company": "Unternehmen",
-  "search.kind.partnerCompany": "Partnerunternehmen",
   "search.kind.deal": "Deal",
   "search.kind.project": "Projekt",
   "search.kind.product": "Produkt",
@@ -3623,6 +3506,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Inhalt konnte nicht geladen werden. Bitte lade die Seite neu.",
   "common.errorNoCause":
     "Die Anfrage ist fehlgeschlagen. Es wurde keine Ursache gemeldet.",
+  "common.errorReference": "Referenz",
   "common.assistantUnavailable":
     "Die KI hat nicht geantwortet. Bitte versuche es noch mal, oder frage deinen Admin nach Einstellungen → KI.",
   "common.providerOutOfCredit":
@@ -4974,6 +4858,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.employer_change": "Neuen Arbeitgeber prüfen",
+  "approval.kind.deal_proposal_stage": "Deal in die Angebotsphase verschieben",
+  "approval.kind.dealProposalStageNamed": "In die Phase „{stage}“ verschieben?",
+  "approval.proposalStageAsked":
+    "Zu {deal} ist ein Angebot rausgegangen. Den Deal in die Phase „{stage}“ verschieben?",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
@@ -5045,6 +4933,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.signature": "Signaturzeile",
   "approval.field.to_company": "Neuer Arbeitgeber",
   "approval.field.from_company": "Arbeitgeber jetzt",
+  "approval.field.skipped_stages": "Überspringt",
   "approval.field.from_address": "Gesendet von",
   "approval.field.sender_check": "Absenderprüfung",
   "approval.senderCheck.authenticated":
@@ -6535,6 +6424,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Leere das Feld, um wieder der Phase zu folgen.",
   "deal.winProbability.reason.stageNamed": "die Phase {name}",
   "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
+  "deal.winChance.typed": "Hinterlegt: {percent} für {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} Deal von hier ist abgeschlossen, {percent} gewonnen.",
+  "deal.winChance.evidence_other":
+    "{count} Deals von hier sind abgeschlossen, {percent} gewonnen.",
+  "deal.winChance.learningOff":
+    "Das Lernen aus abgeschlossenen Deals ist ausgeschaltet.",
+  "deal.winChance.signal.quiet": "seit {days} Tagen still",
+  "deal.winChance.signal.close_pushed": "das Abschlussdatum wurde verschoben",
+  "deal.winChance.signal.no_next_step": "kein nächster Schritt",
+  "deal.winChance.signal.stuck": "seit {days} Tagen festgefahren",
+  "deal.winChance.effect.lowers_one":
+    "{signal} senkt sie (gelernt aus {count} abgeschlossenem Deal).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} senkt sie (gelernt aus {count} abgeschlossenen Deals).",
+  "deal.winChance.effect.raises_one":
+    "{signal} erhöht sie (gelernt aus {count} abgeschlossenem Deal).",
+  "deal.winChance.effect.raises_other":
+    "{signal} erhöht sie (gelernt aus {count} abgeschlossenen Deals).",
+  "deal.winChance.effect.halved":
+    "{signal} halbiert sie, weil noch zu wenige abgeschlossene Deals die echte Wirkung zeigen.",
+  "deal.winChance.result": "Die Gewinnchance beträgt {percent}.",
   "deal.winProbability.band.90_plus": "90 % oder mehr",
   "deal.winProbability.band.60_89": "60 bis 89 %",
   "deal.winProbability.band.30_59": "30 bis 59 %",
@@ -6882,6 +6793,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.movePipelinePick": "Pipeline wählen",
   "deal.movePipelineDone": "Nach {pipeline} verschoben.",
   "deal.reopen": "Wieder öffnen",
+  "deal.marginceLine.closed":
+    "Margince hat diesen Deal am {date} als verloren geschlossen.",
+  "deal.marginceLine.opened": "Margince hat diesen Deal am {date} eröffnet.",
+  "deal.marginceLine.reopened":
+    "Margince hat diesen Deal am {date} wieder geöffnet.",
+  "deal.marginceLine.undoOff":
+    "Das Schließen lässt sich nicht mehr rückgängig machen, weil sich der Deal seitdem geändert hat. Öffne ihn stattdessen wieder.",
+  "deal.note.undoAll": "Alles rückgängig machen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
   "deal.correctCloseDay": "Abschlusstag korrigieren",
@@ -6952,19 +6871,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.bulkStage": "In Phase verschieben",
   "deals.bulkStagePick": "Phase wählen",
   "deals.bulkMove": "Verschieben",
-  "deals.bulkMoveTitle_one": "{count} Deal nach {stage} verschieben?",
-  "deals.bulkMoveTitle_other": "{count} Deals nach {stage} verschieben?",
-  "deals.bulkMoveWill_one": "{count} Deal wird nach {stage} verschoben.",
-  "deals.bulkMoveWill_other": "{count} Deals werden nach {stage} verschoben.",
-  "deals.bulkMoved_one": "{count} Deal nach {stage} verschoben.",
-  "deals.bulkMoved_other": "{count} Deals nach {stage} verschoben.",
-  "deals.bulkAlreadyThere_one": "{count} war schon in {stage}.",
-  "deals.bulkAlreadyThere_other": "{count} waren schon in {stage}.",
-  "deals.bulkNothingToMove_one": "Der ausgewählte Deal ist schon in {stage}.",
-  "deals.bulkNothingToMove_other":
-    "Alle {count} ausgewählten Deals sind schon in {stage}.",
-  "deals.bulkFailed": "{count} nicht übernommen:",
-  "deals.bulkFailedRow": "konnte nicht gespeichert werden",
   "bulk.selected_one": "{count} ausgewählt",
   "bulk.selected_other": "{count} ausgewählt",
   "bulk.selectRow": "{name} auswählen",
@@ -7083,6 +6989,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.stateDone": "Erledigt",
   "bulk.stateOpen": "Offen",
   "bulk.reason.no_change_done": "Bereits in diesem Zustand",
+  "bulk.titleMoveStage": "Ausgewählte {unit} nach {stage} verschieben?",
+  "bulk.confirmMoveStage": "Verschieben",
+  "bulk.stateStageUnnamed": "Eine Phase",
+  "bulk.reason.no_change_stage": "Bereits in dieser Phase",
+  "bulk.refusal.deal_closed":
+    "Gewonnene und verlorene Deals werden einzeln verschoben",
+  "bulk.refusal.stage_not_in_pipeline":
+    "Die Phase gehört zu einer anderen Pipeline",
   "worklist.bulk.selectAll_one": "Den {count} angezeigten Eintrag auswählen",
   "worklist.bulk.selectAll_other":
     "Alle {count} angezeigten Einträge auswählen",
@@ -7184,7 +7098,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "decision.reject": "Ablehnen",
   "decision.draftSubject": "Betreff",
   "decision.draftBody": "Nachricht",
-  "decision.dismiss": "Ausblenden",
   "decision.versionSkew":
     "Der Datensatz wurde nach dem Vormerken geändert. Merke den Datensatz erneut vor, bevor du entscheidest.",
   "decision.fxRateMoved":
@@ -7423,15 +7336,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "plan.contract.unwritten": "Noch nicht geschrieben",
   "plan.contract.nothingToName": "Nichts zu nennen",
   "plan.contract.edit": "Bearbeiten",
-  "plan.contract.save": "Speichern",
-  "plan.contract.cancel": "Abbrechen",
   "plan.contract.crowded": "Woche bereits voll",
   "plan.contract.crowdedBody":
     "Bereits gebucht: {committed}. Geplante Zusagen: {commitments}. Nicht alles wird hineinpassen.",
   "plan.help.ask": "Um Hilfe bitten",
   "plan.help.edit": "Anfrage bearbeiten",
-  "plan.help.send": "Senden",
-  "plan.help.cancel": "Abbrechen",
   "plan.help.asked": "Anfrage: {text}",
   "plan.help.waiting": "Hilfe angefragt · Antwort ausstehend",
   "plan.new.label": "Zusage",
@@ -7764,6 +7673,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.field.kept": "Wert im Datensatz behalten",
   "vcardImport.field.notInCard": "Nicht auf der Karte",
   "vcardImport.next": "Nächste vCard",
+  "vcardImport.backToCompany": "Zurück zum Unternehmen",
+  "vcardImport.forCompany": "Aus diesen Karten angelegte Kontakte arbeiten bei",
+  "vcardImport.companyPhotoTitle": "Fotos werden keinem Unternehmen zugeordnet",
+  "vcardImport.companyPhoto":
+    "Eine aus einem Foto gelesene Karte wartet auf deine Freigabe und wird keinem Unternehmen zugeordnet. Wähle hier eine .vcf-Datei oder importiere das Foto aus der Kontaktliste.",
   "create.quickCapture": "Schnellerfassung",
   "create.quickCaptureSaved": "{name} gespeichert",
   "create.company": "Neues Unternehmen",
@@ -7940,9 +7854,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "evidence.fromProvider": "vom Anbieter",
   "evidence.confirm": "Bestätigen",
   "evidence.correct": "Korrigieren",
-  "evidence.save": "Speichern",
   "evidence.saving": "Wird gespeichert…",
-  "evidence.cancel": "Abbrechen",
   "evidence.correctedValue": "Korrigierter Wert",
   "evidence.confirmedAt": "Von einer Person bestätigt am {when}",
   "evidence.humanSet": "Von einer Person festgelegt",
@@ -8659,6 +8571,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.footer.objection": "Abmeldehinweise",
   "sendPermission.footer.privateLink": "ein persönlicher Abmeldelink",
   "sendPermission.footer.publicLink": "ein funktionierender Abmeldelink",
+  "sendPermission.footer.unsubscribeLink": "ein Abmeldelink für diese Adresse",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
@@ -9495,7 +9408,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.myPipeline": "Meine offenen Deals",
   "analytics.sdrLeads": "Meine Leads in diesem Monat",
   "analytics.sdrReading.leads_promoted": "Qualifizierte Leads",
-  "analytics.sdrReading.leads_qualified": "Qualifizierte Leads",
   "analytics.sdrReading.lead_first_response":
     "Zeit bis zur ersten Antwort, beantwortete Leads",
   "analytics.sdrReading.leads_awaiting_response":
@@ -12083,8 +11995,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nötig, um Sie oder Ihr Konto zu schützen.",
   "privacynotice.basis.existingCustomer":
     "Sie sind unser Kunde, und wir informieren Sie über Produkte wie die, die Sie gekauft haben. Sie können jederzeit widersprechen.",
-  "privacynotice.basis.vnAgreement":
-    "Sie haben zugestimmt, unsere Werbung zu erhalten.",
   "privacynotice.category.postalAddress": "Ihre Postanschrift",
   "privacynotice.category.socialProfile":
     "Ihre Profile und Konten in sozialen Netzwerken und Chat-Diensten",
@@ -12322,12 +12232,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keine Datensätze gesperrt. Jede bisherige Löschung wurde vollständig ausgeführt.",
   "restricted.heldLabel": "Derzeit gesperrte Datensätze",
   "restricted.kind": "Datensatz",
-  "restricted.occurred": "Datum",
   "restricted.deals": "Deal oder Projekt",
   "restricted.noDeal": "Kein Deal hinterlegt",
   "restricted.reason": "Gesperrt wegen",
   "restricted.until": "Gesperrt bis",
-  "restricted.redacted": "Geschwärzt",
   "restricted.since": "Seit {date}",
   "restricted.nothingRedacted": "Nichts entfernt",
   "restricted.redactedCount_one": "{count} Feld entfernt",
@@ -12337,7 +12245,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "restricted.kind.call": "Anruf",
   "restricted.kind.meeting": "Termin",
   "restricted.kind.message": "Nachricht",
-  "restricted.decide": "Entscheidung",
   "restricted.reasonLabel": "Begründung",
   "restricted.reasonHint":
     "Wird mit deinem Namen im Audit-Log festgehalten. Nenne, was du entschieden hast und auf welcher Grundlage.",
@@ -12855,7 +12762,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // Die Einheiten dieser Installation, auf der Einstellungsseite, die bereits
   // die Art von Zugangsdaten trägt, mit der die jeweilige Einheit konfiguriert
   // wird.
-  "extUnits.open": "Öffnen",
 
   // Connected inboxes (Einstellungen → Verbindungen).
   // Die Einheiten dieser Installation, auf der Einstellungsseite, die bereits
@@ -14515,13 +14421,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal360.verdict.drifting": "Verliert Tempo",
   "deal360.verdict.blocked": "Blockiert",
   "deal360.verdict.cold": "Kalt",
-  "recordmail.title": "E-Mail",
-  "recordmail.reply": "Antwort entwerfen",
-  "recordmail.send": "E-Mail schreiben",
   "deal360.rewrite": "Neu erzeugen",
   "deal360.readFull": "Vollständigen Bericht lesen",
   "deal360.openTask": "Aufgabe öffnen",
   "deal360.createTask": "Folgeaufgabe erstellen",
+  "deal360.bringInManager": "Führungskraft einbinden",
+  "deal360.managerAsked": "Führungskraft gefragt",
   "deal360.followUpCreated": "Folgeaufgabe erstellt",
   "deal360.openBrief": "Terminvorbereitung öffnen",
   "deal360.unreadable":
@@ -15089,6 +14994,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.capture_connection": "Connector",
   "audit.kind.capture_exclusion": "Erfassungsausschluss",
   "audit.kind.capture_pending_counterparty": "Neue Absendeadresse zur Prüfung",
+  "audit.kind.capture_personal_sweep": "Bereinigung privater Mails",
   "audit.kind.capture_settings": "Erfassungseinstellungen",
   "audit.kind.chat_link": "Chat-Verknüpfung",
   "audit.kind.commission": "Provision",
@@ -15268,8 +15174,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Was jede Rolle darf und auf welche Datensätze sie zugreifen kann.",
   "settings.page.seats.sub":
     "Belegte Plätze im Verhältnis zum Lizenzumfang dieser Installation.",
-  "settings.page.stageautomation.sub":
-    "Die bisherige Bilanz jedes Phasenübergangs, bevor er Deals automatisch verschiebt.",
   "settings.page.leads.sub":
     "Woher Leads kommen, warum sie disqualifiziert werden und wie schnell sie eine erste Antwort bekommen.",
   "settings.page.products.sub":
@@ -16065,7 +15969,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Füge Schreibproben hinzu, um deine Voice DNA aufzubauen. Nur du siehst sie, und sie lernt nur aus dem, was du hinzufügst. Der erste Aufbau dauert etwa eine Minute.",
   "settings.voice.privacy": "Nur du siehst deine Voice DNA.",
   "settings.voice.status.collecting": "Wird gesammelt",
-  "settings.voice.status.ready": "Bereit",
   "settings.voice.status.stale": "Neuaufbau nötig",
   "settings.voice.bandThin": "dünn",
   "settings.voice.bandGood": "gut",
@@ -16679,7 +16582,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Rolle, die du auswählst, ersetzt alle bisherigen.",
   "users.deactivate": "Deaktivieren",
   "users.reactivate": "Reaktivieren",
-  "users.status.active": "Aktiv",
   "users.status.invited": "Eingeladen",
   "users.status.inviteMailFailed": "Einladungs-E-Mail fehlgeschlagen",
   "users.status.deactivated": "Deaktiviert",
@@ -17174,7 +17076,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aicalls.detail.source": "Quelle der ausgelieferten Identität: {source}",
   "aicalls.detail.attempts": "Versuche",
   "aicalls.detail.request": "Anfrage-Nutzdaten",
-  "aicalls.detail.settings": "Gesendete Anfrage-Einstellungen",
+  "aicalls.detail.settings":
+    "Einstellungen, mit denen dieser Aufruf konfiguriert war",
   "aicalls.detail.servedBy": "bedient von {host}",
   "aicalls.detail.response": "Antwort-Nutzdaten",
   "aicalls.payload.off":
@@ -17272,6 +17175,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Die Abschlusschance, ab der ein offener Deal mit bestätigtem Abschlussdatum als wahrscheinlich zählt.",
   "forecast.landing": "Erwartetes Ergebnis",
+  "forecast.accuracy.title": "Genauigkeit der Prognose",
+  "forecast.accuracy.none":
+    "Noch zu wenige abgeschlossene Deals. Sobald Deals der Prognose abgeschlossen sind, vergleicht dieser Bereich, was sie sagte, mit dem, was geschah.",
+  "forecast.accuracy.calibration_one":
+    "{count} abgeschlossener Deal, gruppiert nach der Chance, die die Prognose ihm {days} Tage vor dem Abschluss gab.",
+  "forecast.accuracy.calibration_other":
+    "{count} abgeschlossene Deals, gruppiert nach der Chance, die die Prognose ihnen {days} Tage vor dem Abschluss gab.",
+  "forecast.accuracy.band_one": "Chance {mean}, gewonnen {won} ({count} Deal)",
+  "forecast.accuracy.band_other":
+    "Chance {mean}, gewonnen {won} ({count} Deals)",
+  "forecast.accuracy.fewDeals_one": "{count} Deal, zu wenig für einen Anteil",
+  "forecast.accuracy.fewDeals_other":
+    "{count} Deals, zu wenige für einen Anteil",
+  "forecast.accuracy.landings":
+    "Abgeschlossene Quartale: was die Prognose vier Wochen vor dem Ende sagte, im Vergleich zum Gewonnenen.",
+  "forecast.accuracy.landing": "Prognose {said}, gewonnen {landed}",
+  "forecast.accuracy.saidOn": "Prognose vom {date}",
   "forecast.landingSection": "Wo der Zeitraum landet",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingUnrecorded": "Nicht erfasst",
@@ -18160,6 +18080,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.jev":
     "Vollständige Endpunkt-URL. Ohne Eintrag wird die API von TypeSafe selbst genutzt.",
   "aiRouting.baseUrl.placeholder.jev": "https://api.typesafe.ai/v1/systemone",
+  "aiRouting.baseUrl.help.azure":
+    "Der Endpunkt der Ressource, ohne Pfad. Der API-Schlüssel geht nur an einen Host auf .openai.azure.com. Pflichtangabe.",
+  "aiRouting.baseUrl.placeholder.azure":
+    "https://meine-ressource.openai.azure.com",
+  "aiRouting.azureRegion.label": "Azure-Region",
+  "aiRouting.azureRegion.placeholder": "swedencentral",
+  "aiRouting.azureRegion.help":
+    "Die Region, in der die Ressource läuft, etwa swedencentral. Eine unbekannte Region wird gesperrt, damit deine Daten dort bleiben, wo ihr es vereinbart habt.",
+  "aiRouting.model.help.azure":
+    "Gib den Namen ein, den du diesem Modell in Azure gegeben hast, nicht den Modellnamen.",
   "aiRouting.baseUrl.help.jevCompatible":
     "Vollständige Endpunkt-URL, unverändert verwendet. Erforderlich.",
   "aiRouting.baseUrl.placeholder.jevCompatible":
@@ -18174,6 +18104,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiRouting.baseUrl.help.anthropic":
     "Basis-URL des Hosts. /v1 wird angehängt. Ohne Eintrag wird die API von Anthropic selbst genutzt.",
   "aiRouting.baseUrl.placeholder.anthropic": "https://api.anthropic.com",
+  "aiRouting.baseUrl.help.ollama":
+    "Host-Adresse, etwa http://localhost:11434. Leer nutzt die Standardadresse.",
+  "aiRouting.baseUrl.placeholder.ollama": "http://localhost:11434",
+  "aiRouting.baseUrl.help.vllm":
+    "Host-Adresse; /v1 wird angehängt. Leer nutzt http://localhost:8000.",
+  "aiRouting.baseUrl.placeholder.vllm": "http://localhost:8000",
   "aiRouting.models.askingLocation":
     "Google wird gefragt, welche Modelle {location} bedient…",
   "aiRouting.models.noKey":
@@ -18380,6 +18316,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wie viele zurückgehaltene Mail-Threads eine Prüfung der Vertraulichkeit je Durchlauf durchgeht, 1 bis 200. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Mails für das Team länger unsichtbar bleiben als der Rhythmus der Durchläufe. Den Rhythmus legt der Systemzustand fest. Standard 40.",
   "captureReview.passCap.refusal":
     "Gib eine ganze Zahl von Threads von 1 bis 200 ein.",
+  "captureReview.verdictCap.label": "Beurteilte Absenderadressen pro Durchlauf",
+  "captureReview.verdictCap.help":
+    "Wie viele ungeklärte Absenderadressen ein Durchlauf der Absenderprüfung dem Modell vorlegt, 1 bis 1000. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Absenderadressen länger ungeklärt bleiben als der Rhythmus der Durchläufe. Standard 200.",
+  "captureReview.verdictCap.refusal":
+    "Gib eine ganze Zahl von Absenderadressen von 1 bis 1000 ein.",
+  "captureReview.classifyCap.label":
+    "Gekennzeichnete Nachrichten pro Durchlauf",
+  "captureReview.classifyCap.help":
+    "Wie viele erfasste Nachrichten ein Durchlauf der Kennzeichnung bearbeitet, 1 bis 2500. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Mails länger ungekennzeichnet bleiben als der Rhythmus der Durchläufe. Standard 500.",
+  "captureReview.classifyCap.refusal":
+    "Gib eine ganze Zahl von Nachrichten von 1 bis 2500 ein.",
+  "captureReview.owedCap.label":
+    "Auf Antwort geprüfte Nachrichten pro Durchlauf",
+  "captureReview.owedCap.help":
+    "Wie viele neue Nachrichten ein Durchlauf der Antwortprüfung beurteilt, 1 bis 2500. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn Mails, die auf deine Antwort warten, spät erscheinen. Standard 500.",
+  "captureReview.owedCap.refusal":
+    "Gib eine ganze Zahl von Nachrichten von 1 bis 2500 ein.",
   "agentConnections.title": "Agent-Verbindungen",
   "agentConnections.sub":
     "Wie lange ein Passport für MCP-Verbindungen gültig ist, bevor eine Erneuerung nötig ist. Eine Änderung gilt ab dem nächsten ausgestellten Passport.",
@@ -18611,6 +18564,27 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Adresse steht schon wieder in deiner Liste.",
   "ownerIdentities.addDescriptionEmpty":
     "Noch keine hinzugefügt. Teammitglieder sehen diese Liste nie.",
+  "unroutedMail.title": "Mails an Adressen, die nicht deine sind",
+  "unroutedMail.sub":
+    "Dein Postfach enthält Mails, die an andere Adressen gingen. Diese Mails werden nicht geprüft, bis du sagst, ob du diese Adresse empfängst. Nur du siehst diese Liste.",
+  "unroutedMail.summary_one":
+    "{count} Mail in deinem Postfach ging an eine Adresse, die nicht deine ist.",
+  "unroutedMail.summary_other":
+    "{count} Mails in deinem Postfach gingen an Adressen, die nicht deine sind.",
+  "unroutedMail.count_one": "{count} Mail",
+  "unroutedMail.count_other": "{count} Mails",
+  "unroutedMail.receive": "Das ist meine Adresse",
+  "unroutedMail.receiveLabel": "Das ist meine Adresse: {value}",
+  "unroutedMail.notMine": "Nicht meine",
+  "unroutedMail.notMineLabel": "Nicht meine: {value}",
+  "unroutedMail.received":
+    "Adresse hinzugefügt. Die Mails werden wie die übrigen geprüft.",
+  "unroutedMail.refused":
+    "Ausgeblendet. Diese Adresse wird nicht mehr gezählt.",
+  "unroutedMail.restored": "Wieder gezählt.",
+  "unroutedMail.removedClaim": "Adresse entfernt.",
+  "unroutedMail.more":
+    "Die Liste ist gekürzt. Beantworte diese Adressen, dann erscheinen die nächsten.",
   "captureValue.refusedAddress":
     "Gib eine einzelne E-Mail-Adresse ein, zum Beispiel name@beispiel.example.",
   "captureValue.refusedDomain":
@@ -19808,6 +19782,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.field.company_name": "Unternehmen",
   "contact.enriched.field.address": "Adresse",
   "contact.enriched.field.website": "Website",
+  "contact.enriched.field.email": "E-Mail",
   "contact.enriched.readFrom": "Am {when} aus {source} gelesen",
   "contact.enriched.source.capture_enrich": "der E-Mail-Signatur",
   "contact.enriched.source.site_read": "der Unternehmenswebsite",
@@ -19821,8 +19796,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.correctedByYou": "Von dir korrigiert",
   "contact.enriched.confirmed": "Best\u00e4tigt",
   "contact.enriched.confirm": "Wert bestätigen",
-  "contact.enriched.save": "Korrektur speichern",
-  "contact.enriched.cancel": "Abbrechen",
   "contact.graph.loading": "Kontaktnetzwerk wird geladen…",
   "contact.graph.routeDirect":
     "{name} steht bereits im Austausch mit diesem Kontakt.",
@@ -20102,7 +20075,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mittel: ihr habt hin und wieder Kontakt. Letzter Kontakt war am {last}.",
   "contact.strength.sentence.strong":
     "Stark: ihr seid regelmäßig in beide Richtungen in Kontakt. Letzter Kontakt war am {last}.",
-  "contact.bandBadge.none": "Kein Kontakt",
   "contact.bandBadge.weak": "Schwach",
   "contact.bandBadge.moderate": "Mittel",
   "contact.bandBadge.strong": "Stark",
@@ -20223,7 +20195,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.action.research": "Recherche",
   "contact.action.importActivities": "Aktivitäten importieren",
 
-  "contact.strip.never": "Nie",
   "contact.strip.today": "Heute",
   "contact.strip.yesterday": "Gestern",
   "contact.strip.days": "{count} Tage",
@@ -21997,6 +21968,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.gap.tab": "Lücke schließen",
   "worklist.gap.title": "Lücke schließen",
   "worklist.gap.loading": "Gereihte Deals werden geladen…",
+  "worklist.gap.requested.title": "Um deine Hilfe gebeten",
+  "worklist.gap.requested.done": "Als erledigt markieren",
+  "worklist.gap.reason.big_deal": "Wert über dem Median des Teams",
+  "worklist.gap.reason.single_contact": "Nur ein Kontakt eingebunden",
+  "worklist.gap.reason.stuck": "Steckt in seiner Phase fest",
   "worklist.gap.empty":
     "Noch kein Team hat eine gereihte Liste. Margince reiht die Deals jedes erfassten Teams einmal am Tag.",
   "worklist.gap.behind":
@@ -22827,6 +22803,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviderSettings.service.otherChat": "Anderer OpenAI-kompatibler Dienst",
   "aiProviderSettings.service.otherDecisions": "Anderer Entscheidungsserver",
   "aiProviderSettings.service.otherAddress": "Andere Adresse",
+  "aiProviderSettings.service.azureResource": "Deine Azure-OpenAI-Ressource",
   "aiProviderSettings.service.learnMore": "Über OpenRouter EU",
   "aiProviderSettings.host.line": "Host: {host}",
   "aiProviderSettings.host.default": "Nutzt die eigene Adresse des Dienstes.",
@@ -22837,6 +22814,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.openai": "OpenAI",
   "aiProviders.name.gemini": "Google Gemini",
   "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
+  "aiProviders.name.azureOpenai": "Azure OpenAI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-kompatibel",
   "aiProviders.name.geminiDecision": "Gemini Decisions API",
@@ -23111,6 +23089,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.create_attachment": "Datei hinzugefügt zu:",
   "magic.action.update_attachment": "Datei geändert zu:",
   "magic.action.archive_attachment": "Datei archiviert zu:",
+  "magic.action.create_deal_suggestion": "Deal vorgeschlagen zu:",
+  "magic.action.update_deal_suggestion": "Deal-Vorschlag geändert zu:",
+  "magic.action.schedule_send": "E-Mail geplant zu:",
+  "magic.action.update_scheduled_send": "Geplante E-Mail geändert zu:",
+  "magic.action.create_invoice": "Rechnung erfasst zu:",
+  "magic.action.update_invoice": "Rechnung geändert zu:",
+  "magic.action.create_payment": "Zahlung erfasst zu:",
+  "magic.action.update_payment": "Zahlung geändert zu:",
   "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
   "magic.action.archive_activity_email": "E-Mail archiviert:",
   "magic.action.archive_activity_meeting": "Termin archiviert:",
@@ -23179,6 +23165,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_coldstart": "Erstansprache prüfen",
   "magic.action.approval_send_email": "Nachricht prüfen",
   "magic.action.approval_advance_deal": "Phasenwechsel prüfen",
+  "magic.action.approval_deal_proposal_stage":
+    "Ein Angebot ist raus. Deal verschieben?",
   "magic.action.approval_promote_lead": "Lead-Umwandlung prüfen",
   "magic.action.approval_overnight": "Vorschlag prüfen",
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
@@ -23406,7 +23394,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.readsBusy": "Liest belegte Zeiten",
   "scheduling.sendsInvites": "Sendet Einladungen",
   "scheduling.syncedAgo": "Synchronisiert {ago}",
-  "scheduling.reconnectNeeded": "Neu verbinden nötig",
   "scheduling.expiredRow":
     "Die Verbindung ist abgelaufen. Margince kann deine belegten Zeiten erst wieder lesen und Einladungen senden, wenn du sie neu verbindest.",
   "scheduling.eventCalendar": "Gebuchte Termine eintragen in",
@@ -23941,6 +23928,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Dokumentenauswertung",
   "aiTask.name.draft_reply": "Antwortentwurf",
   "aiTask.name.enrich": "Ergänzung aus Signaturen",
+  "aiTask.name.extension_task": "KI-Aufgabe einer Erweiterung",
   "aiTask.name.growth_fit": "Bewertung der Unternehmenseignung",
   "aiTask.name.nl_search": "Suche in natürlicher Sprache",
   "aiTask.name.offer_draft": "Angebotsentwurf",
@@ -24315,19 +24303,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.decision.unpriced_other": "{count} Deals ohne Betrag",
   "analytics.decision.fx_one": "{count} Deal ohne Wechselkurs",
   "analytics.decision.fx_other": "{count} Deals ohne Wechselkurs",
-  "reporting.writtenChecksFailed":
-    "Die offenen Prüfungen konnten nicht gelesen werden. Darum steht hier nichts dazu, was Aufmerksamkeit braucht.",
-  "reporting.writtenChecksNone": "Keine offene Prüfung braucht eine Antwort.",
-  "reporting.writtenChecks_one":
-    "{count} offene Prüfung zu {deals} braucht eine Antwort.",
-  "reporting.writtenChecks_other":
-    "{count} offene Prüfungen zu {deals} brauchen eine Antwort.",
-  "reporting.writtenChecksOnly_one":
-    "{count} offene Prüfung braucht eine Antwort.",
-  "reporting.writtenChecksOnly_other":
-    "{count} offene Prüfungen brauchen eine Antwort.",
-  "reporting.writtenChecksDeals_one": "{count} Deal",
-  "reporting.writtenChecksDeals_other": "{count} Deals",
   "analytics.intervention.notPermitted":
     "Prognoseprüfungen stehen dir nicht zur Verfügung.",
   "health.needsFix": "Beheben",
@@ -24749,13 +24724,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ziele unvollständig: Mindestens einem Teammitglied fehlt ein Monatsziel, bisher {subtotal}",
   "progress.goalIncompleteLine":
     "Ziele unvollständig: {set} von {needed} Monaten gesetzt, bisher {subtotal}",
-  "progress.goal.set": "Gesetzt",
-  "progress.goal.zero": "Null",
   "progress.goal.missing": "Kein Ziel gesetzt",
   "progress.goal.incomplete": "Ziele unvollständig",
   "progress.goal.withheld": "Ausgeblendet",
   "progress.goal.other_currency": "In anderer Währung",
-  "progress.goal.changed_outside_plan": "Außerhalb des Plans geändert",
   "progress.goalChanged":
     "Ein Monat dieses Ziels wurde außerhalb der Umsatzziele geändert. Eine Führungskraft sollte den Plan prüfen.",
   "progress.completion": "{percent} % des Ziels",

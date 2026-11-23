@@ -100,6 +100,10 @@ func streamWires(t *testing.T) map[string]streamWire {
 			provider: providerOpenAICompatible, contentType: "text/event-stream",
 			body: compat, withheld: compatWithheld, failed: compatFailed,
 		},
+		"azure_openai": {
+			provider: providerAzureOpenAI, contentType: "text/event-stream",
+			body: compat, withheld: compatWithheld, failed: compatFailed,
+		},
 		"vllm": {
 			provider: providerVLLM, contentType: "text/event-stream",
 			body: compat, withheld: compatWithheld, failed: compatFailed,
