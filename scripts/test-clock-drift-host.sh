@@ -7,6 +7,7 @@ mkdir "$fixtures/bin"
 export CLOCK_STATE="$fixtures/clock" CLOCK_ACTIONS="$fixtures/actions"
 export CLOCK_NTP_STATE="$fixtures/ntp"
 export CLOCK_DRIFT_BASELINE="$fixtures/baseline"
+export SLICE_GAP=0
 export PATH="$fixtures/bin:$PATH"
 
 cat >"$fixtures/bin/date" <<'STUB'
@@ -37,6 +38,7 @@ set -euo pipefail
 [[ "$BACKEND_CLOCK_SKEW" == machine:200 ]]
 [[ "$(cat "$CLOCK_STATE")" == 19000000 ]]
 echo suite >>"$CLOCK_ACTIONS"
+echo "slice $BACKEND_CLOCK_SLICE" >>"$CLOCK_ACTIONS"
 exit "${MOCK_SUITE_STATUS:-0}"
 STUB
 cat >"$fixtures/bin/timeout" <<'STUB'
@@ -51,6 +53,10 @@ shift 3
 if [[ "${MOCK_TERMINATE:-0}" == 1 ]]; then kill -TERM "$PPID"; exit 0; fi
 if [[ "${MOCK_TIMEOUT:-0}" == 1 ]]; then exit 124; fi
 exec "$@"
+STUB
+cat >"$fixtures/bin/sleep" <<'STUB'
+#!/usr/bin/env bash
+echo "sleep $1" >>"$CLOCK_ACTIONS"
 STUB
 chmod +x "$fixtures/bin/"*
 
@@ -77,6 +83,22 @@ run_case() {
 run_case success 0
 run_case 'caller applier cannot double the shift' 0 BACKEND_CLOCK_SKEW=database:200
 grep -q '^suite$' "$CLOCK_ACTIONS"
+# What must run, taken from the Makefile and the shard numbering, not from the script under test.
+want="$(sed -n 's/^test:[[:space:]]*\([^#]*\).*/\1/p' "$root/backend/Makefile" | tr ' ' '\n' | sed '/^$/d; s/^test-/unit-/')"
+run_case 'every slice gets its own moved window' 0
+ran="$(sed -n 's/^slice //p' "$CLOCK_ACTIONS")"
+total="$(printf '%s\n' "$ran" | sed -n 's|^integration:[0-9]*/||p' | sort -n | tail -1)"
+for ((k = 1; k <= total; k++)); do want="$want"$'\n'"integration:$k/$total"; done
+printf '%s\n' "$want" | grep -q '^unit-'
+(( total > 1 ))
+[[ "$(printf '%s\n' "$ran" | sort)" == "$(printf '%s\n' "$want" | sort)" ]] || { echo "slices that ran differ from the Makefile's test legs and every shard:" >&2; diff <(printf '%s\n' "$want" | sort) <(printf '%s\n' "$ran" | sort) >&2 || true; exit 1; }
+slices="$(printf '%s\n' "$ran" | wc -l | tr -d ' ')"
+[[ "$(grep -c '^date +200 days$' "$CLOCK_ACTIONS")" == "$slices" ]]
+[[ "$(grep -c '^date -200 days$' "$CLOCK_ACTIONS")" == "$slices" ]]
+grep -q 'ran 0s at the moved clock' "$fixtures/output"
+run_case 'a real-time gap separates the slices' 0 SLICE_GAP=7
+[[ "$(grep -c '^sleep 7$' "$CLOCK_ACTIONS")" == "$((slices - 1))" ]]
+grep -q '7s at real time before the next slice' "$fixtures/output"
 run_case 'suite failure stays red' 23 MOCK_SUITE_STATUS=23
 run_case 'timeout restores clock' 124 MOCK_TIMEOUT=1
 run_case 'termination restores clock' 143 MOCK_TERMINATE=1
