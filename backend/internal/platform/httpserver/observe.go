@@ -139,13 +139,13 @@ func AccessLog(log *slog.Logger, next http.Handler) http.Handler {
 			}
 		}
 		returned := false
-		defer func() {
+		defer func(ctx context.Context) {
 			status := rec.status
 			if !returned && !rec.wrote {
 				status = http.StatusInternalServerError
 			}
 			cost := meter.Cost()
-			log.InfoContext(r.Context(), "http request",
+			log.InfoContext(ctx, "http request",
 				"method", r.Method,
 				"path", capabilitypath.Redact(r.URL.Path),
 				"route", trace.route,
@@ -154,7 +154,7 @@ func AccessLog(log *slog.Logger, next http.Handler) http.Handler {
 				"db_ms", cost.DBTime.Milliseconds(),
 				"pool_wait_ms", cost.PoolWait.Milliseconds(),
 				"statements", cost.Statements)
-		}()
+		}(r.Context())
 		next.ServeHTTP(rec, r)
 		returned = true
 	})

@@ -191,27 +191,27 @@ func TestResponseRequestIDJoinsTheWriteItCaused(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	post := func(path, body string) *http.Response {
+	post := func(path, body string) (int, http.Header) {
 		t.Helper()
 		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, e.TS.URL+path, strings.NewReader(body))
 		if err != nil {
 			t.Fatal(err)
 		}
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := e.Client.Do(req)
+		resp, err := e.Client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below
 		if err != nil {
 			t.Fatal(err)
 		}
 		apptest.CloseBody(t, resp)
-		return resp
+		return resp.StatusCode, resp.Header
 	}
 
-	created := post("/v1/contacts", `{"source":"manual","full_name":"Grace Hopper","emails":[{"email":"grace@example.com"}]}`)
-	if created.StatusCode != http.StatusCreated {
-		t.Fatalf("create contact status = %d", created.StatusCode)
+	createdStatus, created := post("/v1/contacts", `{"source":"manual","full_name":"Grace Hopper","emails":[{"email":"grace@example.com"}]}`)
+	if createdStatus != http.StatusCreated {
+		t.Fatalf("create contact status = %d", createdStatus)
 	}
-	if !strings.HasPrefix(created.Header.Get("Server-Timing"), "total;dur=") {
-		t.Errorf("signed-in answer Server-Timing = %q, want total;dur=<ms>", created.Header.Get("Server-Timing"))
+	if !strings.HasPrefix(created.Get("Server-Timing"), "total;dur=") {
+		t.Errorf("signed-in answer Server-Timing = %q, want total;dur=<ms>", created.Get("Server-Timing"))
 	}
 
 	owner, err := pgx.Connect(t.Context(), os.Getenv("MARGINCE_TEST_DSN"))
@@ -224,18 +224,18 @@ func TestResponseRequestIDJoinsTheWriteItCaused(t *testing.T) {
 		}
 	})
 	staged := stagedContactCreated(t, owner)
-	if got := created.Header.Get("X-Request-Id"); got == "" || got != staged.env.Trace.CorrelationID.String() {
+	if got := created.Get("X-Request-Id"); got == "" || got != staged.env.Trace.CorrelationID.String() {
 		t.Errorf("X-Request-Id %q, staged event correlation_id %s: want the same id", got, staged.env.Trace.CorrelationID)
 	}
 
-	refused := post("/v1/auth/login", `{"email":"nobody@example.com","password":"wrong-password-entirely"}`)
-	if refused.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("bad login status = %d, want 401", refused.StatusCode)
+	refusedStatus, refused := post("/v1/auth/login", `{"email":"nobody@example.com","password":"wrong-password-entirely"}`)
+	if refusedStatus != http.StatusUnauthorized {
+		t.Fatalf("bad login status = %d, want 401", refusedStatus)
 	}
-	if refused.Header.Get("X-Request-Id") == "" {
+	if refused.Get("X-Request-Id") == "" {
 		t.Error("a 401 carries no X-Request-Id")
 	}
-	if got := refused.Header.Get("Server-Timing"); got != "" {
+	if got := refused.Get("Server-Timing"); got != "" {
 		t.Errorf("failed login Server-Timing = %q, want none", got)
 	}
 }

@@ -193,46 +193,53 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		if err != nil {
 			continue
 		}
-		address := parsed.String()
-		if !signatureStatesAddress(src, address, f.Evidence) {
-			continue
-		}
-		// An address a signature already gave this contact gains this mail's support.
-		restated, err := addSignatureSupportTx(ctx, tx, contactID, fieldEmail, address, address, sourceRef, f.Evidence)
-		if err != nil || restated {
-			if err != nil {
-				return 0, err
-			}
-			continue
-		}
-		free, err := freeSignatureEmail(ctx, tx, address)
+		added, err := applySignatureEmail(ctx, tx, contactID, sourceRef, observedAt, src, parsed.String(), f)
 		if err != nil {
 			return 0, err
 		}
-		if !free {
-			continue
+		if added {
+			landed++
 		}
-		if err := addSignatureEmail(ctx, tx, contactID, address); err != nil {
-			return 0, err
-		}
-		confidence := f.Confidence
-		evidence, snippet := machineProfileField(address, f.Evidence)
-		if _, err := writeContactProfileField(ctx, tx, contactID, contactProfileFieldRow{
-			Field: fieldEmail, Value: evidence, EvidenceSnippet: snippet, SourceRef: sourceRef,
-			Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &confidence, ObservedAt: &observedAt,
-		}, supersedeOnNewerObservation); err != nil {
-			return 0, err
-		}
-		if _, err := addSignatureSupportTx(ctx, tx, contactID, fieldEmail, address, evidence, sourceRef, snippet); err != nil {
-			return 0, err
-		}
-		landed++
 	}
 	if landed == 0 {
 		return 0, nil
 	}
 	return landed, storekit.StampFields(ctx, tx, entityContact, contactID.UUID, sourceRef, enrichCapturedBy,
 		[]storekit.FieldStamp{{Field: fieldEmail}})
+}
+
+// applySignatureEmail adds one parsed address a signature lists, and reports
+// whether it became a new email of the contact.
+func applySignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time,
+	src signatureSource, address string, f SignatureField,
+) (bool, error) {
+	if !signatureStatesAddress(src, address, f.Evidence) {
+		return false, nil
+	}
+	// An address a signature already gave this contact gains this mail's support.
+	restated, err := addSignatureSupportTx(ctx, tx, contactID, fieldEmail, address, address, sourceRef, f.Evidence)
+	if err != nil || restated {
+		return false, err
+	}
+	free, err := freeSignatureEmail(ctx, tx, address)
+	if err != nil || !free {
+		return false, err
+	}
+	if err := addSignatureEmail(ctx, tx, contactID, address); err != nil {
+		return false, err
+	}
+	confidence := f.Confidence
+	evidence, snippet := machineProfileField(address, f.Evidence)
+	if _, err := writeContactProfileField(ctx, tx, contactID, contactProfileFieldRow{
+		Field: fieldEmail, Value: evidence, EvidenceSnippet: snippet, SourceRef: sourceRef,
+		Source: enrichSource, CapturedBy: enrichCapturedBy, Confidence: &confidence, ObservedAt: &observedAt,
+	}, supersedeOnNewerObservation); err != nil {
+		return false, err
+	}
+	if _, err := addSignatureSupportTx(ctx, tx, contactID, fieldEmail, address, evidence, sourceRef, snippet); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // signatureStatesAddress holds when the address is on the sender's own domain

@@ -190,14 +190,9 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		// records this card holds no subject lock on, and taking one here
 		// would order this writer against the eraser the wrong way round.
 		split = decision.Conflict
-		// The review match this caller may be shown, or none. A hidden match
-		// leaves the card's outcome as it would be without that record. The
-		// create below still files the pair, through the create's own writer.
-		var shown *ReviewMatch
-		if decision.Decision.queuesReview() {
-			if shown, err = firstVisibleReview(ctx, tx, decision); err != nil {
-				return err
-			}
+		shown, err := cardReviewMatch(ctx, tx, decision)
+		if err != nil {
+			return err
 		}
 		switch {
 		case entry.ModelRead && decision.Decision == DecisionExactCollision:
@@ -216,29 +211,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			// Named, not merged, and not created either: creating beside a
 			// near-match is how a file of forty cards quietly doubles a
 			// contact list.
-			//
-			// The candidate is named only when the caller may READ it. The
-			// dedupe lanes search the whole workspace by design — that is what
-			// makes them able to find a duplicate at all — so handing the id
-			// back unchecked would turn an upload into a lookup for records
-			// outside the caller's scope.
-			// The source, before the candidate is even named. This arm writes
-			// nothing itself, but what it RETURNS becomes a durable proposal
-			// carrying the whole card — so a narrowed message would reach a
-			// review queue instead of a contact record, which is the same leak
-			// in a different table.
-			narrowed, err := sourceIsNarrowed(ctx, tx, source)
-			if err != nil {
-				return err
-			}
-			if narrowed {
-				result.Outcome = VCardSkipped
-				result.Reason = vcardSourceNarrowed
-				return nil
-			}
-			result.Outcome = VCardNeedsReview
-			result.ContactID = &shown.ContactID
-			return nil
+			return nameReviewMatch(ctx, tx, source, shown, &result)
 		case entry.ModelRead:
 			return proposeModelReadCard(ctx, tx, source, &result)
 		default:
@@ -269,6 +242,42 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		s.raiseCardSplit(ctx, *split)
 	}
 	return result, nil
+}
+
+// cardReviewMatch is the review match this caller may be shown, or none. A
+// hidden match leaves the card's outcome as it would be without that record.
+// The create still files the pair, through the create's own writer.
+func cardReviewMatch(ctx context.Context, tx pgx.Tx, decision ContactResolution) (*ReviewMatch, error) {
+	if !decision.Decision.queuesReview() {
+		return nil, nil //nolint:nilnil // a decision that queues no review shows none.
+	}
+	return firstVisibleReview(ctx, tx, decision)
+}
+
+// nameReviewMatch names the near-match a card is held against.
+//
+// The candidate is named only when the caller may READ it. The dedupe lanes
+// search the whole workspace by design, which is what makes them able to find
+// a duplicate at all, so handing the id back unchecked would turn an upload
+// into a lookup for records outside the caller's scope.
+//
+// The source is checked before the candidate is even named. This arm writes
+// nothing itself, but what it RETURNS becomes a durable proposal carrying the
+// whole card. A narrowed message would reach a review queue instead of a
+// contact record, which is the same leak in a different table.
+func nameReviewMatch(ctx context.Context, tx pgx.Tx, source ids.UUID, shown *ReviewMatch, result *VCardResult) error {
+	narrowed, err := sourceIsNarrowed(ctx, tx, source)
+	if err != nil {
+		return err
+	}
+	if narrowed {
+		result.Outcome = VCardSkipped
+		result.Reason = vcardSourceNarrowed
+		return nil
+	}
+	result.Outcome = VCardNeedsReview
+	result.ContactID = &shown.ContactID
+	return nil
 }
 
 // vcardCandidate is the card as the dedupe lanes read it: the email is the
