@@ -192,7 +192,7 @@ func (s *Suggester) stageTx(ctx context.Context, tx pgx.Tx, move deals.ProposalS
 }
 
 // ownerLanguage is the language the question is written in. The deal's owner is
-// the only person who decides it, so the sentence is frozen in their language,
+// the only member who decides it, so the sentence is frozen in their language,
 // else the installation's. It does not follow a later change of owner.
 func ownerLanguage(ctx context.Context, tx pgx.Tx, owner ids.UUID) (textlang.Lang, error) {
 	if owner.IsZero() {
