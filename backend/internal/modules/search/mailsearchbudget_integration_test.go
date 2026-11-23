@@ -29,8 +29,8 @@ const (
 	// word, which is more than activityRankSample of each copy part.
 	mailMessages = 5000
 	mailIndex    = "idx_activity_search"
-	// mailSlices is how many statements write the corpus.
-	mailSlices = 4
+	// mailWordsPerBody is how many distinct words each body holds besides mailWord.
+	mailWordsPerBody = 100
 )
 
 // seedMailCorpus files mailMessages mails in two mailbox copies each, linked to
@@ -39,29 +39,10 @@ const (
 // again, so their stored vectors are as large as a quoted thread makes them.
 func seedMailCorpus(ctx context.Context, t *testing.T, tx pgx.Tx, reader ids.UUID) {
 	t.Helper()
-	// The corpus takes about 20 seconds to write in one statement, near the
-	// 30-second statement ceiling the session carries. So the text index is built
-	// once from the stored rows, and the mail is written in slices.
-	var searchIndex string
-	if err := tx.QueryRow(ctx, `SELECT pg_get_indexdef($1::regclass)`, mailIndex).Scan(&searchIndex); err != nil {
-		t.Fatalf("reading the definition of %s: %v", mailIndex, err)
-	}
-	mailSlice := `INSERT INTO activity (id, kind, subject, body, direction, counterparty_email, occurred_at,
-		                       source_system, source_id, source, captured_by)
-		 SELECT id, 'email', 'Thread ' || i || CASE WHEN i % 2 = 0 THEN ' ` + mailWord + `' ELSE '' END,
-		        'Hello, ' || (SELECT string_agg(md5(i::text || j), ' ') FROM generate_series(1, 400) j)
-		        || CASE WHEN i % 2 = 0 THEN ' ` + mailWord + ` regards' || repeat(E'\n> ` + mailWord + ` earlier mail ' || (i % 31), 60) ELSE '' END,
-		        'inbound', 'buyer' || (i % 400) || '@customer.test', now() - (i || ' minutes')::interval,
-		        'email', 'msg-' || i || '@customer.test' || CASE k WHEN 0 THEN '' ELSE ' seat seat-' || k END,
-		        'manual', 'human:seed'
-		   FROM seeded WHERE i % ` + strconv.Itoa(mailSlices) + ` = $1`
-	run := func(statement string, args ...any) {
-		if _, err := tx.Exec(ctx, statement, args...); err != nil {
-			t.Fatalf("seeding the mail corpus: %v\n%s", err, statement)
-		}
-	}
 	for _, statement := range []string{
-		`DROP INDEX ` + mailIndex,
+		// Seeding is fixture work, not the read under test, so it runs without
+		// the session's statement ceiling. The test sets the search budget after.
+		`SET LOCAL statement_timeout = 0`,
 		`INSERT INTO app_user (id, email, display_name) VALUES ('` + reader.String() + `', 'rep@search-budget.test', 'Rep')`,
 		`INSERT INTO contact (full_name, source, captured_by, owner_id)
 		   SELECT 'Customer ' || i, 'manual', 'human:seed', CASE WHEN i % 2 = 0 THEN '` + reader.String() + `'::uuid END
@@ -71,20 +52,23 @@ func seedMailCorpus(ctx context.Context, t *testing.T, tx pgx.Tx, reader ids.UUI
 		// The triggers run when a link is written, never when mail is searched,
 		// so leaving them off hides no search cost.
 		`ALTER TABLE activity_link DISABLE TRIGGER USER`,
-	} {
-		run(statement)
-	}
-	for slice := range mailSlices {
-		run(mailSlice, slice)
-	}
-	for _, statement := range []string{
+		`INSERT INTO activity (id, kind, subject, body, direction, counterparty_email, occurred_at,
+		                       source_system, source_id, source, captured_by)
+		 SELECT id, 'email', 'Thread ' || i || CASE WHEN i % 2 = 0 THEN ' ` + mailWord + `' ELSE '' END,
+		        'Hello, ' || (SELECT string_agg(md5(i::text || j), ' ') FROM generate_series(1, ` + strconv.Itoa(mailWordsPerBody) + `) j)
+		        || CASE WHEN i % 2 = 0 THEN ' ` + mailWord + ` regards' || repeat(E'\n> ` + mailWord + ` earlier mail ' || (i % 31), 60) ELSE '' END,
+		        'inbound', 'buyer' || (i % 400) || '@customer.test', now() - (i || ' minutes')::interval,
+		        'email', 'msg-' || i || '@customer.test' || CASE k WHEN 0 THEN '' ELSE ' seat seat-' || k END,
+		        'manual', 'human:seed'
+		   FROM seeded`,
 		`INSERT INTO activity_link (activity_id, entity_type, contact_id)
 		   SELECT s.id, 'contact', c.id FROM seeded s
 		   JOIN (SELECT id, row_number() OVER (ORDER BY id) rn FROM contact) c ON c.rn = s.i % 2000 + 1`,
-		searchIndex,
 		`ANALYZE activity, activity_link, contact`,
 	} {
-		run(statement)
+		if _, err := tx.Exec(ctx, statement); err != nil {
+			t.Fatalf("seeding the mail corpus: %v\n%s", err, statement)
+		}
 	}
 }
 
