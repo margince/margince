@@ -13,6 +13,7 @@ import (
 	"context"
 	"maps"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,6 +24,17 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// dealToday opens the reader's deal at today and leaves the store's clock
+// there. Every surface then reads the chance at the instant the test names,
+// and the deal's own entry into its stage is not yet evidence.
+func (f *fixture) dealToday(today time.Time) ids.DealID {
+	f.t.Helper()
+	f.at = today
+	deal := f.deal(f.env.Rep1, 1_000_000, &today)
+	f.at = today
+	return deal
+}
 
 // liveSeat adds a live member on no team.
 func (f *fixture) liveSeat(name string) ids.UUID {
@@ -82,7 +94,7 @@ func TestALoneColleaguesStageOutcomesMoveNoReadersChanceWhileTheSwitchIsOff(t *t
 	f.wonFrom(20, f.env.Rep2)
 	today := clocktest.Now(t)
 	f.at = today
-	deal := f.deal(f.env.Rep1, 1_000_000, &today)
+	deal := f.dealToday(today)
 
 	// Twenty of the colleague's wins lift the typed 20% to 60%.
 	requireOneChance(t, f.chances(deal, today), 60)
@@ -106,7 +118,7 @@ func TestStageOutcomesOfEnoughColleaguesStillMoveTheChanceWhileTheSwitchIsOff(t 
 	f.wonFrom(21, f.liveSeat("ana"), f.liveSeat("ben"), f.liveSeat("cleo"))
 	today := clocktest.Now(t)
 	f.at = today
-	deal := f.deal(f.env.Rep1, 1_000_000, &today)
+	deal := f.dealToday(today)
 	shown := f.chances(deal, today)
 
 	f.showIndividualPerformance(false)
@@ -190,7 +202,7 @@ func TestStageOutcomesOneMyTeamsTotalWouldLeaveToOneColleagueMoveNoChance(t *tes
 	f.wonFrom(25, a1, a2, b1, b2, c)
 	today := clocktest.Now(t)
 	f.at = today
-	deal := f.deal(f.env.Rep1, 1_000_000, &today)
+	deal := f.dealToday(today)
 	if f.firstStageEvidence() != 25 {
 		t.Fatal("the stage chances do not show the colleagues' wins while the switch is on")
 	}
