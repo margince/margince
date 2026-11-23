@@ -18,9 +18,11 @@ func activitySortFieldsIn(zone string) map[string]storekit.SortField {
 		return activitySortFields
 	}
 	fields := maps.Clone(activitySortFields)
-	fields["due_at"] = storekit.SortField{Kind: storekit.KindTimestamp, CursorField: "task_due_v3",
-		Expr: func(_ context.Context, arg func(any) int) (string, error) {
-			return storekit.TaskDueOrderInSQL("a", storekit.DayZoneSQL(zone, arg)), nil
-		}}
+	fields["due_at"] = storekit.SortField{
+		Kind: storekit.KindTimestamp, CursorField: "task_due_v3",
+		Expr: func(context.Context, func(any) int) (string, error) {
+			return storekit.TaskDueOrderInSQL("a", storekit.DayZoneSQL(zone)), nil
+		},
+	}
 	return fields
 }

@@ -54,7 +54,13 @@ func TestThePersonalSurfaceFollowsThePersonAndTheCombinedOneTheInstallation(t *t
 			if got := goDay.Format(time.DateOnly); got != c.want {
 				t.Errorf("Go day = %s, want %s", got, c.want)
 			}
-			sqlDay := e.WsScalar(t, `SELECT `+occurredday.DaySQL(c.surface, "$1::timestamptz", "$2::uuid")+`::text`, at, c.user)
+			user := "NULL::uuid"
+			args := []any{at}
+			if c.surface == occurredday.Personal {
+				user = "$2::uuid"
+				args = append(args, c.user)
+			}
+			sqlDay := e.WsScalar(t, `SELECT `+occurredday.DaySQL(c.surface, "$1::timestamptz", user)+`::text`, args...)
 			if sqlDay != c.want {
 				t.Errorf("SQL day = %s, want %s: the SQL twin must agree with the Go rule", sqlDay, c.want)
 			}

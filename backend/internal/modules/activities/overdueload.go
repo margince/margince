@@ -86,7 +86,7 @@ func (s *Store) taskLoadByAssignee(ctx context.Context, asOf time.Time, commitme
 		if err != nil {
 			return err
 		}
-		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", identities, storekit.DayZoneSQL("", arg), arg)
+		agedOut := worklistAgeOutClause(asOf, "a.assignee_id", identities, storekit.DayZoneSQL(""), arg)
 		moment := fmt.Sprintf("$%d", instant)
 		due, source := storekit.TaskDueBeforeSQL("a", moment), ""
 		if commitments {

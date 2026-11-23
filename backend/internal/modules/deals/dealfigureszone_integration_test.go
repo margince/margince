@@ -6,11 +6,13 @@
 package deals
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -20,7 +22,13 @@ import (
 func TestADealCloseDateIsOverdueInTheZoneTheScreenReadsIn(t *testing.T) {
 	e := setupConfigEnv(t)
 	at := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
-	store := e.store.SetClock(func() time.Time { return at })
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
+		Timezone:                func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
+		BaseCurrency:            func(context.Context, pgx.Tx) (string, error) { return "EUR", nil },
+		StampCorrespondence:     func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
+		StartDeliveryForWonDeal: func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
+		ContractVisible:         func(context.Context, string, func(any) int) (string, error) { return "FALSE", nil },
+	}).SetClock(func() time.Time { return at })
 	open := openStage(t, e, SemanticOpen)
 	var pipelineID ids.PipelineID
 	if err := store.Tx(e.as(), func(tx pgx.Tx) error {

@@ -34,7 +34,7 @@ func TestABriefIsFiledUnderThePersonsOwnDay(t *testing.T) {
 	if sql != "2026-06-16" {
 		t.Errorf("the SQL day for the person = %s, want 2026-06-16", sql)
 	}
-	sql = b.WsScalar(t, `SELECT `+occurredday.DaySQL(occurredday.Combined, "$1::timestamptz", "$2::uuid")+`::text`, at, b.Rep1)
+	sql = b.WsScalar(t, `SELECT `+occurredday.DaySQL(occurredday.Combined, "$1::timestamptz", "NULL::uuid")+`::text`, at)
 	if sql != "2026-06-15" {
 		t.Errorf("the SQL day for a combined screen = %s, want the installation's 2026-06-15", sql)
 	}

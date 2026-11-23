@@ -200,7 +200,7 @@ func listOpenTasks(ctx context.Context, tx pgx.Tx, in ListOpenTasksInput) ([]Ope
 	if err != nil {
 		return nil, false, err
 	}
-	zoneSQL := storekit.DayZoneSQL(in.DayZone, arg)
+	zoneSQL := storekit.DayZoneSQL(in.DayZone)
 	columns := openTaskColumns(openTasksMoment(in, arg), zoneSQL)
 	rows, err := tx.Query(ctx, `SELECT `+columns+`
 		FROM activity a

@@ -48,7 +48,7 @@ func OpenTasksByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, in Li
 	where = append(where, `EXISTS (SELECT 1 FROM activity_link on_deal
 		WHERE on_deal.activity_id = a.id AND on_deal.deal_id = d.id)`)
 	limit := openTasksLimit(in.Limit)
-	zoneSQL := storekit.DayZoneSQL("", arg)
+	zoneSQL := storekit.DayZoneSQL("")
 	columns := openTaskColumns(openTasksMoment(in, arg), zoneSQL)
 	rows, err := tx.Query(ctx, `SELECT d.id, `+columns+`
 		FROM deal d CROSS JOIN LATERAL (SELECT a.id FROM activity a

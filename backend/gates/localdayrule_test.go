@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H2
+
 package gates
 
 // One shared rule answers "which day is it for this reader". A production file
@@ -13,6 +15,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // localDaySpellings are the ways code resolves a calendar day or zone.
@@ -36,8 +40,8 @@ const (
 )
 
 // allowed maps a path prefix to why it may read the installation's day. A file
-// reaches the rule through dayrule instead when its surface is a person's own.
-var allowed = map[string]string{
+// reaches the rule through dayrule instead when its surface is a member's own.
+var allowed = gatekit.Waive(map[string]string{
 	"internal/compose/accountcoverage.go":                     combined,
 	"internal/compose/attention/dayboundary.go":               override,
 	"internal/compose/attentionlanesseam.go":                  "relationship quiet days count in the installation zone, as the contact record shows them",
@@ -71,6 +75,7 @@ var allowed = map[string]string{
 	"internal/compose/serverassembly.go":                      "binds the installation zone into the stores",
 	"internal/compose/settingswiring.go":                      "the settings page reads and writes the installation zone",
 	"internal/compose/stageevidencetrigger.go":                combined,
+	"internal/compose/winchance/":                             combined,
 	"internal/compose/weekly/":                                "the weekly review job is one pass over all reps, on the installation's week",
 	"internal/compose/weeklyplanseam.go":                      "a plan's week is the installation's week",
 	"internal/modules/activities/activityread.go":             override,
@@ -89,7 +94,7 @@ var allowed = map[string]string{
 	"internal/shared/kernel/dormancy/":                        record,
 	"internal/shared/kernel/employment/":                      record,
 	"internal/shared/kernel/relstrength/":                     utcOnly,
-}
+})
 
 // minimumLocalDayFiles fails the census when the walk finds fewer files than
 // the tree holds. A walk that misses subjects reads a smaller tree and passes.
@@ -97,7 +102,7 @@ const minimumLocalDayFiles = 80
 
 // allowedPrefix is the allow-list entry that covers path, if any.
 func allowedPrefix(path string) (string, bool) {
-	for prefix := range allowed {
+	for _, prefix := range allowed.Subjects() {
 		if path == prefix || (strings.HasSuffix(prefix, "/") && strings.HasPrefix(path, prefix)) {
 			return prefix, true
 		}
@@ -106,8 +111,8 @@ func allowedPrefix(path string) (string, bool) {
 }
 
 func TestEveryLocalDayComputationGoesThroughTheRuleOrIsDeclared(t *testing.T) {
+	t.Parallel()
 	found := 0
-	used := map[string]bool{}
 	walkHandWrittenGoFiles(t, "internal", func(path, text string) {
 		if strings.HasSuffix(path, "_test.go") || strings.HasPrefix(path, "internal/contracts/") {
 			return
@@ -128,19 +133,15 @@ func TestEveryLocalDayComputationGoesThroughTheRuleOrIsDeclared(t *testing.T) {
 				path, localDaySpellings.FindString(text))
 			return
 		}
-		used[prefix] = true
+		allowed.Waived(t, prefix)
 	})
 	if found < minimumLocalDayFiles {
 		t.Fatalf("found %d files that compute a local day, want at least %d: the census is too short", found, minimumLocalDayFiles)
 	}
-	for prefix := range allowed {
-		if !used[prefix] {
-			t.Errorf("the allow-list names %s, which no longer computes a local day. Remove it", prefix)
-		}
-	}
+	allowed.AssertAllMatched(t)
 }
 
-// Files that serve a person's own list and a combined screen from one path must
+// Files that serve a member's own list and a combined screen from one path must
 // pick the surface through the rule.
 var mustPickSurface = []string{
 	"internal/compose/slipping.go", "internal/compose/attentionseam.go",
@@ -150,6 +151,7 @@ var mustPickSurface = []string{
 }
 
 func TestTheReadersThatServeBothSurfacesPickOneThroughTheRule(t *testing.T) {
+	t.Parallel()
 	picked := map[string]bool{}
 	walkHandWrittenGoFiles(t, "internal", func(path, text string) {
 		if !strings.HasSuffix(path, "_test.go") && !strings.HasPrefix(path, "internal/compose/dayrule/") &&
