@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,7 +23,7 @@ import (
 func TestMeetingConversionListsAMeetingUnderEveryCreditedColleagueAndCountsItOnce(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	subject, start, booked := "Shared call", time.Now().UTC().Add(-72*time.Hour), "booked"
+	subject, start, booked := "Shared call", clocktest.Now(t).Add(-72*time.Hour), "booked"
 	logged, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, OccurredAt: &start, MeetingStatus: &booked, Source: "manual"})
 	if err != nil {
@@ -45,14 +46,10 @@ func TestMeetingConversionListsAMeetingUnderEveryCreditedColleagueAndCountsItOnc
 	}
 	e.WsExec(t, `UPDATE activity_participant SET response = 'tentative' WHERE activity_id = $1 AND user_id = $2`, meeting, e.Rep2)
 
-	count := func(report, body string) map[string]string {
-		out := map[string]string{}
-		for _, row := range runPrebuiltReport(admin, t, e, report, body) {
-			out[cell(row, "host_user_id")] += cell(row, "meetings") + cell(row, "activities")
-		}
-		return out
+	byColleague := map[string]string{}
+	for _, row := range runPrebuiltReport(admin, t, e, "meeting-conversion", `{"group_by":["host_user_id"],"aggregates":[{"fn":"count","as":"meetings"}]}`) {
+		byColleague[cell(row, "host_user_id")] = cell(row, "meetings")
 	}
-	byColleague := count("meeting-conversion", `{"group_by":["host_user_id"],"aggregates":[{"fn":"count","as":"meetings"}]}`)
 	if want := fmt.Sprint(map[string]string{e.Rep1.String(): "1", e.Rep2.String(): "1"}); fmt.Sprint(byColleague) != want {
 		t.Errorf("meetings by colleague = %v, want one each for the organizer and the guest, none for the importer", byColleague)
 	}
@@ -60,14 +57,14 @@ func TestMeetingConversionListsAMeetingUnderEveryCreditedColleagueAndCountsItOnc
 		t.Errorf("the total = %v, want the meeting once", total)
 	}
 	for seat, want := range map[ids.UUID]string{e.Rep1: "1", e.Rep2: "1", e.Rep3: ""} {
-		for report, body := range map[string]string{
-			"meeting-conversion": `{"filters":{"host_user_id":"%s"},"aggregates":[{"fn":"count","as":"meetings"}]}`,
-			"activities-by-kind": `{"filters":{"kind":"meeting","host_user_id":"%s"},"group_by":["kind"],"aggregates":[{"fn":"count","as":"activities"}]}`,
+		for report, plan := range map[string]struct{ body, measure string }{
+			"meeting-conversion": {`{"filters":{"host_user_id":"%s"},"aggregates":[{"fn":"count","as":"meetings"}]}`, "meetings"},
+			"activities-by-kind": {`{"filters":{"kind":"meeting","host_user_id":"%s"},"group_by":["kind"],"aggregates":[{"fn":"count","as":"activities"}]}`, "activities"},
 		} {
-			rows := runPrebuiltReport(admin, t, e, report, fmt.Sprintf(body, seat))
+			rows := runPrebuiltReport(admin, t, e, report, fmt.Sprintf(plan.body, seat))
 			got := ""
 			if len(rows) == 1 {
-				got = cell(rows[0], "meetings") + cell(rows[0], "activities")
+				got = cell(rows[0], plan.measure)
 			}
 			if got != want {
 				t.Errorf("%s filtered to %s = %q, want %q", report, seat, got, want)

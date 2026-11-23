@@ -28,12 +28,12 @@ const auditFieldCreditedSeats = "credited_seats"
 // otherAddressSeatSQL holds for participant p of calendar meeting a when the row
 // binds a seat to an address that is nobody's login or declared address. Only a
 // mailbox the seat connected binds it that way. A row a member
-// relinked, and a meeting a person logged, are their choice and stay.
+// relinked, and a meeting a member logged, are their choice and stay.
 const otherAddressSeatSQL = `a.kind = 'meeting' AND a.restricted_at IS NULL AND starts_with(a.captured_by, 'connector:')
 	   AND p.user_id IS NOT NULL AND p.address IS NOT NULL AND p.relinked_at IS NULL
 	   AND p.role IN (` + storekit.MeetingAttendingRolesSQL + `)
 	   AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.email = p.address OR %s)
-	   AND NOT EXISTS (SELECT 1 FROM capture_owner_identity i WHERE i.kind = 'address' AND lower(i.value) = lower(p.address))`
+	   AND NOT EXISTS (SELECT 1 FROM capture_owner_identity i WHERE i.kind = 'address' AND i.value = p.address)`
 
 func otherAddressSeat() string {
 	return fmt.Sprintf(otherAddressSeatSQL, storekit.SeatLoginIsSQL("u", "p.address", "p.address_domain_folded"))
@@ -88,7 +88,7 @@ func UnbindRoleMailboxSeatsTx(ctx context.Context, tx pgx.Tx, activityID, runID 
 		return false, err
 	}
 	rows, err := tx.Query(ctx, `SELECT p.id, p.user_id, p.address FROM activity_participant p JOIN activity a ON a.id = p.activity_id
-		 WHERE a.id = $1 AND `+otherAddressSeat(), activityID)
+		 WHERE a.id = $1 AND `+otherAddressSeat()+` AND `+auth.ParticipantStandsSQL("p", "a"), activityID)
 	if err != nil {
 		return false, fmt.Errorf("activities: reading the seats bound to %s by another address: %w", activityID, err)
 	}

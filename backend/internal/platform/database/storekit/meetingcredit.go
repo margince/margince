@@ -89,15 +89,17 @@ func HeldCreditSnapshotSQL(meeting string) string {
 // KeepMeetingCreditTx adds the live credit to the newest held transition of a
 // meeting. A meeting born held has its guest list written after its first
 // transition. The writer of that list calls this in the same transaction, so
-// the guests it was held with are the ones kept.
-func KeepMeetingCreditTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
-	if _, err := tx.Exec(ctx, `UPDATE activity_meeting_history h SET credited_seats_at_change = `+HeldCreditSnapshotSQL("a")+`
+// the guests it was held with are the ones kept. It answers whether a held
+// transition was there to keep them on.
+func KeepMeetingCreditTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (bool, error) {
+	tag, err := tx.Exec(ctx, `UPDATE activity_meeting_history h SET credited_seats_at_change = `+HeldCreditSnapshotSQL("a")+`
 		FROM activity a
-		WHERE a.id = $1 AND h.activity_id = a.id AND h.id = (
+		WHERE a.id = $1 AND a.restricted_at IS NULL AND h.activity_id = a.id AND h.id = (
 		      SELECT latest.id FROM activity_meeting_history latest
 		       WHERE latest.activity_id = a.id AND latest.status = 'held'
-		       ORDER BY latest.effective_at DESC, latest.id DESC LIMIT 1)`, activityID); err != nil {
-		return fmt.Errorf("storekit: keeping the credit of the held meeting %s: %w", activityID, err)
+		       ORDER BY latest.effective_at DESC, latest.id DESC LIMIT 1)`, activityID)
+	if err != nil {
+		return false, fmt.Errorf("storekit: keeping the credit of the held meeting %s: %w", activityID, err)
 	}
-	return nil
+	return tag.RowsAffected() == 1, nil
 }

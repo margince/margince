@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -485,7 +486,7 @@ func TestATransitionRollsBackWithItsWrite(t *testing.T) {
 // host, and holds it three days after it was booked.
 func seedCreditedGuests(t *testing.T, e *sendEnv) ids.ActivityID {
 	t.Helper()
-	id := bookMeeting(t, e, "Credit snapshot", time.Now().Add(-72*time.Hour))
+	id := bookMeeting(t, e, "Credit snapshot", clocktest.Now(t).Add(-72*time.Hour))
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO activity_participant (activity_id, user_id, role, address)
 		VALUES ($1, $2, 'attendee', 'guest@snapshot.test')`, id.UUID, e.other); err != nil {
@@ -589,7 +590,7 @@ func TestAMeetingIsListedUnderEveryCreditedColleagueAndCountedOnceInTotal(t *tes
 func TestAMeetingLoggedHeldKeepsItsGuestsWhenARowIsLost(t *testing.T) {
 	e := setupSend(t)
 	ctx := context.Background()
-	held, start := string(crmcontracts.ActivityMeetingStatusHeld), time.Now().Add(-48*time.Hour)
+	held, start := string(crmcontracts.ActivityMeetingStatusHeld), clocktest.Now(t).Add(-48*time.Hour)
 	subject := "Born held"
 	out, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
 		Kind: string(crmcontracts.ActivityKindMeeting), Subject: &subject, OccurredAt: &start, MeetingStatus: &held,
@@ -612,14 +613,18 @@ func TestAMeetingLoggedHeldKeepsItsGuestsWhenARowIsLost(t *testing.T) {
 func TestKeepingTheCreditOfAMeetingBornHeldAddsItsGuestList(t *testing.T) {
 	e := setupSend(t)
 	ctx := context.Background()
-	id := bookMeeting(t, e, "Born held by a calendar", time.Now().Add(-48*time.Hour))
+	id := bookMeeting(t, e, "Born held by a calendar", clocktest.Now(t).Add(-48*time.Hour))
 	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
 	if _, err := e.owner.Exec(ctx, `INSERT INTO activity_participant (activity_id, user_id, role, address)
 		VALUES ($1, $2, 'attendee', 'born@snapshot.test')`, id.UUID, e.other); err != nil {
 		t.Fatal(err)
 	}
 	if err := database.WithWorkspaceTx(meetingCtx(e), e.pool, func(tx pgx.Tx) error {
-		return storekit.KeepMeetingCreditTx(meetingCtx(e), tx, id.UUID)
+		kept, err := storekit.KeepMeetingCreditTx(meetingCtx(e), tx, id.UUID)
+		if err == nil && !kept {
+			t.Error("no held transition took the guest list")
+		}
+		return err
 	}); err != nil {
 		t.Fatal(err)
 	}

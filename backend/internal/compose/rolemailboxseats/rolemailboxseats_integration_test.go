@@ -20,7 +20,7 @@ import (
 )
 
 // A stored calendar meeting holds three bound answers. Rep1 answered from their
-// own address, Rep2 through a role mailbox, and Rep3 through a personal address
+// own address, Rep2 through a role mailbox, and Rep3 through a private address
 // the provider attested. After the task Rep2 is credited with nothing. Rep1 and
 // Rep3 still are, and the role mailbox's answer stays on the meeting.
 func TestTheTaskTakesTheSeatOffARoleMailboxAnswerAndLeavesTheRest(t *testing.T) {
@@ -71,7 +71,7 @@ func TestTheTaskTakesTheSeatOffARoleMailboxAnswerAndLeavesTheRest(t *testing.T) 
 		t.Errorf("snapshots keeping the other two seats = %d, want 1", kept)
 	}
 	if bound := keepsTheirBinding(); bound != 3 {
-		t.Errorf("bindings a person made or a seat's own address = %d still bound, want all 3", bound)
+		t.Errorf("bindings a member made or a seat's own address = %d still bound, want all 3", bound)
 	}
 	if kept := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND address = 'info@forecast.test' AND response = 'accepted' AND user_id IS NULL`, meeting); kept != 1 {
 		t.Errorf("the role mailbox's answer rows = %d, want the answer kept with no seat", kept)
@@ -86,15 +86,15 @@ func TestTheTaskTakesTheSeatOffARoleMailboxAnswerAndLeavesTheRest(t *testing.T) 
 
 // seedBindingsTheTaskMustKeep adds three bound rows the task must leave alone
 // and returns how many are still bound. They are a seat whose own login is
-// sales@, a row a member relinked, and an answer on a meeting a person logged.
+// sales@, a row a member relinked, and an answer on a meeting a member logged.
 func seedBindingsTheTaskMustKeep(t *testing.T, e *integration.Env) func() int {
 	t.Helper()
 	sales := ids.NewV7()
-	e.WsExec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'sales@forecast.test', 'Sales Person')`, sales)
+	e.WsExec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'sales@forecast.test', 'Sales Seat')`, sales)
 	calendar, logged := ids.NewV7(), ids.NewV7()
 	for id, stamp := range map[ids.UUID]string{calendar: "connector:google_calendar", logged: "human:x"} {
 		e.WsExec(t, `INSERT INTO activity (id, kind, direction, meeting_status, subject, occurred_at, thread_key, source, captured_by)
-			VALUES ($1, 'meeting', 'outbound', 'held', 'Other call', now() - interval '3 days', $1::text, 'manual', $2)`, id, stamp)
+			VALUES ($1, 'meeting', 'outbound', 'held', 'Other call', now() - interval '3 days', gen_random_uuid()::text, 'manual', $2)`, id, stamp)
 	}
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id, response) VALUES ($1, 'attendee', 'sales@forecast.test', $2, 'accepted')`, calendar, sales)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address, user_id, response, relinked_at) VALUES ($1, 'attendee', 'info@forecast.test', $2, 'accepted', now())`, calendar, e.Rep2)

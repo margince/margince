@@ -50,7 +50,7 @@ func MeetingCreditSQL(meeting, seat string) string {
 // MeetingCreditedSeatsSQL renders a row source of the seats MeetingCreditSQL
 // credits, as `credit(id)`, for a caller that narrows them to a population.
 func MeetingCreditedSeatsSQL(meeting string) string {
-	return meetingCreditedSeatsSQL(meeting, meeting+".host_user_id", "")
+	return creditedSeatRowsSQL(meeting, meeting+".host_user_id", "")
 }
 
 // MeetingCreditedSeatsAtChangeSQL is MeetingCreditedSeatsSQL for a status
@@ -61,7 +61,7 @@ func MeetingCreditedSeatsSQL(meeting string) string {
 // kept is the uuid[] of seats the held transition credited. A later sync of a
 // guest's answer cannot remove them, and the live rule still adds new ones.
 func MeetingCreditedSeatsAtChangeSQL(meeting, legacy, recorded, kept string) string {
-	return meetingCreditedSeatsSQL(meeting, recordedHostSQL(meeting, legacy, recorded), kept)
+	return creditedSeatRowsSQL(meeting, recordedHostSQL(meeting, legacy, recorded), kept)
 }
 
 // MeetingCreditedSeatAtChangeSQL is the one seat a meeting is listed under,
@@ -74,7 +74,7 @@ func recordedHostSQL(meeting, legacy, recorded string) string {
 	return fmt.Sprintf("(CASE WHEN %s THEN %s.host_user_id ELSE %s END)", legacy, meeting, recorded)
 }
 
-func meetingCreditedSeatsSQL(meeting, host, kept string) string {
+func creditedSeatRowsSQL(meeting, host, kept string) string {
 	seats := fmt.Sprintf(`SELECT seat.id FROM (
 	     SELECT %[2]s
 	     UNION SELECT seen.user_id FROM activity_participant seen WHERE seen.activity_id = %[1]s.id AND %[4]s
