@@ -65619,7 +65619,10 @@ type RouterActions struct {
 		// UploadsAFile Whether it takes filename, content_type and content_base64.
 		UploadsAFile *bool `json:"uploads_a_file,omitempty"`
 	} `json:"actions"`
-	Router string `json:"router"`
+
+	// AskUserFirstMeans What ask_user_first asks of the model; present when an action here has it.
+	AskUserFirstMeans *string `json:"ask_user_first_means,omitempty"`
+	Router            string  `json:"router"`
 }
 
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full

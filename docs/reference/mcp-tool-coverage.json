@@ -8272,7 +8272,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4494,
+      "tokens": 4525,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],

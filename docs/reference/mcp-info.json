@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 282994,
+    "tool_catalog_bytes": 283115,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 72154,
-    "largest_tool_bytes": 18033,
+    "approx_wire_tokens_total": 72184,
+    "largest_tool_bytes": 18154,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 55321,
+      "description_bytes": 55442,
       "input_schema_bytes": 162670,
       "output_schema_bytes": 52895,
-      "description_plus_input_schema_bytes": 217991
+      "description_plus_input_schema_bytes": 218112
     }
   },
   "tools": {
@@ -8304,7 +8304,7 @@
           "readOnlyHint": true,
           "title": "Read a record's panels and the day's lists"
         },
-        "description": "Read what the app shows beside a record or on the user's day: a company's dossier, growth fit, scan or brief, a contact's brief, profile fields, consent and proof, whether you may write to them and the privacy mail they would get, a deal's products, win evidence or legal reviews, a contract, a mail draft, scheduled sends and meeting proposals, the Worklist's handled and hidden rows, the team board, weekly plans and reviews, notices, deal and tag suggestions, introduction requests and record history, a disclosure duty, why a send was refused, what a filter, a draft automation, a voice sample, an AI setting or a repair would do, and what a mail backfill would bring in; and a product's translations, the jurisdiction's documents and a site read's logo. Each action reads one panel as the app draws it, for the records the user may open. Without the enrich scope, a brief, dossier or growth fit not written yet answers its plain form from the records, marked deterministic; run_research writes one. Use read_context for the story so far on a record, read_attention for what needs the user now, and read_record for a record's own fields.",
+        "description": "Read what the app shows beside a record or on the user's day: a company's dossier, growth fit, scan or brief, a contact's brief, profile fields, consent and proof, whether you may write to them and the privacy mail they would get, a deal's products, win evidence or legal reviews, a contract, a mail draft, scheduled sends and meeting proposals, the Worklist's handled and hidden rows, the team board, weekly plans and reviews, notices, deal and tag suggestions, introduction requests and record history, a disclosure duty, why a send was refused, what a filter, a draft automation, a voice sample, an AI setting or a repair would do, and what a mail backfill would bring in; and a product's translations, the jurisdiction's documents and a site read's logo. Each action reads one panel as the app draws it, for the records the user may open. Without the enrich scope, a brief, dossier or growth fit not written yet answers its plain form from the records, marked deterministic; run_research writes one. A message the engine refused and held is sent anyway only by the user, in the app: show them the review and its warning. Use read_context for the story so far on a record, read_attention for what needs the user now, and read_record for a record's own fields.",
         "inputSchema": {
           "properties": {
             "action": {
@@ -13245,6 +13245,7 @@
           "route": "DELETE /v1/records/{record_type}/{id}/ownership-request"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_access"
     },
     "change_activities": {
@@ -14363,6 +14364,7 @@
           "route": "DELETE /v1/deals/{id}/documents/{attachmentId}/hide"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_activities"
     },
     "change_attention": {
@@ -15359,6 +15361,7 @@
           "route": "POST /v1/lists/{id}/visit"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_attention"
     },
     "change_capture": {
@@ -16176,6 +16179,7 @@
           "route": "DELETE /v1/capture/senders/{address}/decision"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_capture"
     },
     "change_compliance": {
@@ -16789,6 +16793,7 @@
           "route": "PATCH /v1/data-subject-requests/{id}"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_compliance"
     },
     "change_my_settings": {
@@ -17261,6 +17266,7 @@
           "route": "PATCH /v1/voice-profiles/{id}/sources/{sourceId}"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_my_settings"
     },
     "change_offers": {
@@ -17977,6 +17983,7 @@
           "route": "POST /v1/deals/{id}/lines/estimate"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_offers"
     },
     "change_relationships": {
@@ -20506,6 +20513,7 @@
           "route": "PATCH /v1/analytics/targets/{id}"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_reports"
     },
     "change_settings": {
@@ -23510,6 +23518,7 @@
           "route": "PUT /v1/companies/{id}/partner"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_settings"
     },
     "change_state": {
@@ -23912,6 +23921,7 @@
           "route": "POST /v1/legal-reviews/{id}/withdraw"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "change_state"
     },
     "change_tags": {
@@ -27075,6 +27085,7 @@
           "route": "GET /v1/capture/email-domains"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will surface and get it before calling, unless they asked for this call themselves",
       "router": "read_workspace"
     },
     "run_research": {
@@ -28012,6 +28023,7 @@
           "route": "POST /v1/embeddings/reindex"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "run_research"
     },
     "send_outbound": {
@@ -28719,6 +28731,7 @@
           "route": "PATCH /v1/deal-rooms/{id}/documents/{documentId}"
         }
       ],
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
       "router": "send_outbound"
     }
   }

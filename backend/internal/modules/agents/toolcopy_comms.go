@@ -110,8 +110,7 @@ var sendOutboundCopy = toolCopy{
 		"their sign-in link where the installation can send mail, signature_template and " +
 		"my_signature set the sign-off every later mail carries, and double_opt_in, privacy_notice " +
 		"and details_confirmation mail a contact a link about their data: ask the user first. " +
-		"A message the engine refused and held is sent anyway only by the user, in the app: show " +
-		"them the review and its warning.",
+		sendAnywayRule,
 	Limits: "Every recipient must have granted the consent purpose the call names. A sent message " +
 		"cannot be recalled, and by default nothing holds it: where an installation has raised a " +
 		"send to confirm first, the answer is a staged approval instead. chat_reply cannot start a " +
