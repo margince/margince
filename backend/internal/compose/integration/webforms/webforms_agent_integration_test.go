@@ -43,8 +43,10 @@ func TestAnAgentMakesAServerFormWithoutEverSeeingItsSecret(t *testing.T) {
 	}
 
 	for what, refused := range map[string]integration.AnyMap{
-		"a secret it chose": {"name": "Webflow", "sender": "webflow", "sender_secret": "agent-chosen-secret-1"},
-		"its websites":      {"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}},
+		"a secret it chose":             {"name": "Webflow", "sender": "webflow", "sender_secret": "agent-chosen-secret-1"},
+		"a secret no server form takes": {"name": "Backend", "sender": "server", "sender_secret": "agent-chosen-secret-2"},
+		"its websites":                  {"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}},
+		"websites no server form takes": {"name": "Backend", "sender": "server", "allowed_origins": []string{siteOrigin}},
 	} {
 		if status := d.E.Call(t, "POST", "/v1/web-forms", refused, d.Bearer, nil); status != http.StatusForbidden {
 			t.Errorf("an agent's form with %s → %d, want 403: that stays with its user", what, status)

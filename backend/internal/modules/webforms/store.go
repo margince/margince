@@ -121,13 +121,15 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
 		return Form{}, "", err
 	}
-	if err := in.normalize(); err != nil {
-		return Form{}, "", err
-	}
+	// Before normalize, so an agent hears 403 for what stays with its user, not a
+	// 422 about the same field.
 	if err := refuseAgentSecret(ctx, in.SenderSecret != nil); err != nil {
 		return Form{}, "", err
 	}
 	if err := refuseAgentPromiseChange(ctx, Form{}, in.promises()); err != nil {
+		return Form{}, "", err
+	}
+	if err := in.normalize(); err != nil {
 		return Form{}, "", err
 	}
 	by, err := storekit.CapturedBy(ctx)
