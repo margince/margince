@@ -37619,6 +37619,8 @@ export interface components {
             research_state?: string;
         };
         EmploymentImportReport: {
+            /** @description Whether this apply changed an employment edge or an evidence outcome. False means neither moved; claim processing bookkeeping and the duplicate recheck still run. */
+            changed?: boolean;
             /** @description Retained evidence that requires administrator review. */
             warnings?: string[];
             /** Format: uuid */

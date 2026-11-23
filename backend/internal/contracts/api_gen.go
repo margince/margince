@@ -51847,6 +51847,8 @@ type EmploymentImportItemState string
 
 // EmploymentImportReport defines model for EmploymentImportReport.
 type EmploymentImportReport struct {
+	// Changed Whether this apply changed an employment edge or an evidence outcome. False means neither moved; claim processing bookkeeping and the duplicate recheck still run.
+	Changed   *bool                  `json:"changed,omitempty"`
 	ContactId openapi_types.UUID     `json:"contact_id"`
 	Items     []EmploymentImportItem `json:"items"`
 

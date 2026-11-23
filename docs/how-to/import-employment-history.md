@@ -49,7 +49,7 @@ Use an admin account and the normal API client. Never put credentials into a scr
 the repository.
 
 - `GET /v1/contacts/{id}/employment-import` shows a preview of the retained history and the stored outcomes of one contact. It writes nothing and makes no call that costs money.
-- `POST /v1/contacts/{id}/employment-import` with `{"action":"apply"}` updates that contact. `resolve` and `dismiss` take the `key` from the preview, as it is.
+- `POST /v1/contacts/{id}/employment-import` with `{"action":"apply"}` updates that contact. `resolve` and `dismiss` take the `key` from the preview, as it is. The report has `changed`, which is false when no employment edge and no outcome moved. A `resolve` or `dismiss` of evidence that created an employment gets a 409 naming it. The evidence does not end it. End that relationship, or archive it.
 - `POST /v1/employment-import/backfill` with `{"apply":false,"limit":10}` shows a preview of the first batch. Read the `reports`; by default the call only reads.
 - To apply, send `{"apply":true,"limit":10}`. Send the `next_cursor` it returns as `after` for the next batch, until `has_more` is false. A replay updates the ledger and returns the current outcomes. These endpoints do not cache HTTP answers.
 
