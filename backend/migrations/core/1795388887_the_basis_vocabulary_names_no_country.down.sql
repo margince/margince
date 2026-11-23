@@ -1,10 +1,8 @@
 -- SPDX-License-Identifier: BUSL-1.1
 -- SPDX-FileCopyrightText: 2026 Gradion
 
--- Widens both lists again. Rows the up direction mapped to consent
--- are not restored; this direction exists for a rollback that has not yet run
--- in production. Both are added NOT VALID: a widened list
--- cannot reject a stored row, so nothing validates them.
+-- Widens both lists again. Both are added NOT VALID: a widened list cannot
+-- reject a stored row, so nothing validates them.
 SET LOCAL lock_timeout = '5s';
 
 ALTER TABLE communication_decision DROP CONSTRAINT communication_decision_basis;

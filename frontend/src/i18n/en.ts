@@ -758,6 +758,7 @@ export const en = {
   "approval.preview.linkIssued": "Link issued",
   "approval.preview.linkExpires": "Link expires",
   "approval.preview.recordRevoked": "Revoked",
+  "approval.preview.basisAgreement": "Recipient agreement",
   "approval.preview.basisKind": "Recorded communication basis",
   "approval.preview.basisFrom": "Basis valid from",
   "approval.preview.basisUntil": "Basis valid until",

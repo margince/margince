@@ -781,6 +781,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.linkIssued": "Ngày tạo liên kết",
   "approval.preview.linkExpires": "Ngày hết hạn liên kết",
   "approval.preview.recordRevoked": "Đã thu hồi",
+  "approval.preview.basisAgreement": "Sự đồng ý của người nhận",
   "approval.preview.basisKind": "Căn cứ liên lạc đã ghi nhận",
   "approval.preview.basisFrom": "Căn cứ có hiệu lực từ",
   "approval.preview.basisUntil": "Căn cứ có hiệu lực đến",

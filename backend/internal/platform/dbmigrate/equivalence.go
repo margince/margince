@@ -92,6 +92,19 @@ var equivalentContent = map[string]map[string][]equivalence{
 			applied: "8e277071e58fc236abf58acb178be1c8efbeb0014ef3440f49db0809546e401c",
 			source:  "1822dfeae5b85103a5fb20e819c4f4258c0d3aa4c5b4ef5ea71130c057a53024",
 		}},
+		// The applied pair rewrote decisions holding the retired basis to consent
+		// and refused a stored basis row, then validated both checks. The current
+		// pair keeps every row and validates a check only when no row breaks it.
+		// A database that applied the old pair holds no such row, so both checks
+		// end validated with the same lists. The down halves differ in comments.
+		"1795388887": {{
+			applied: "0ab57237649bd663379393576642774b89df7bc0312e6842025d6b905b38351f",
+			source:  "78902b05da28b4f0c85fef69c26058f08ba6867b810e0795eb2ab1b08a0d92b0",
+		}},
+		"1795388888": {{
+			applied: "d641a312d5aaefa1f060757a73f000fcd7045c7ac855fc6d18f2668a24c928e7",
+			source:  "15cea25a279872b10bc758ef84c7c9379365648ee9ec844d573d84285a14ecd8",
+		}},
 	},
 }
 

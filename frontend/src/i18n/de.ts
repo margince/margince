@@ -797,6 +797,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.linkIssued": "Link erstellt",
   "approval.preview.linkExpires": "Link läuft ab",
   "approval.preview.recordRevoked": "Widerrufen",
+  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
   "approval.preview.basisKind": "Erfasste Kommunikationsgrundlage",
   "approval.preview.basisFrom": "Grundlage gültig ab",
   "approval.preview.basisUntil": "Grundlage gültig bis",
