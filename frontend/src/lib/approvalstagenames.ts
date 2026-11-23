@@ -17,7 +17,7 @@ function nameOf(
 
 /**
  * A proposal-stage change with its stage names in the reader's language. The
- * ids decide the lookup; a card staged before the ids were carried, or on a
+ * ids decide the lookup. A card staged before the ids were carried, or on a
  * retired stage, keeps the name stored when it was raised.
  */
 export function withReaderStageNames(
@@ -48,9 +48,8 @@ type Localizable = Readonly<{
 
 /**
  * The approval as this reader should see it. A proposal-stage card gets its
- * stage names translated, and its headline built here, because the server
- * sentence is frozen with the name stored when it was raised and every surface
- * prints that sentence first.
+ * stage names translated and its headline built here. The server sentence is
+ * frozen in the owner's language, which can differ from this reader's.
  */
 export function useReaderApproval(): <A extends Localizable>(approval: A) => A {
   const pipelines = usePipelines().data;

@@ -18,8 +18,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The server sentence is frozen with the stage name stored when the question
-// was raised, so a German reader has to see the stage's German name instead.
+// The server sentence is frozen with the stored stage name. A German reader
+// has to see the stage's German name instead.
 const QUESTION: Approval = {
   id: "ap-proposal-stage",
   kind: "deal_proposal_stage",

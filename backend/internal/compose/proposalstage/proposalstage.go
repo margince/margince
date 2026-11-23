@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -163,6 +164,11 @@ func (s *Suggester) stageTx(ctx context.Context, tx pgx.Tx, move deals.ProposalS
 	if err != nil {
 		return fmt.Errorf("compose: encoding the proposal stage identity: %w", err)
 	}
+	lang, err := ownerLanguage(ctx, tx, move.OwnerID)
+	if err != nil {
+		return err
+	}
+	stage := move.ToStageNameIn(string(lang))
 	digest := sha256.Sum256(body)
 	ttl := deals.ProposalStageTTLDays * 24 * time.Hour
 	_, _, err = s.inbox.StageUnlessDeclinedTx(ctx, tx, approvals.StageInput{
@@ -171,10 +177,9 @@ func (s *Suggester) stageTx(ctx context.Context, tx pgx.Tx, move deals.ProposalS
 		DiffHash:       hex.EncodeToString(digest[:]),
 		TargetType:     approvalTargetDeal,
 		TargetID:       move.DealID,
-		Summary: fmt.Sprintf(systemtext.Copy(proposalStageSummaryCode, textlang.English),
-			move.DealName, move.ToStageName),
+		Summary:        fmt.Sprintf(systemtext.Copy(proposalStageSummaryCode, lang), move.DealName, stage),
 		SystemText: &systemtext.Message{Version: 1, Subject: systemtext.Sentence(proposalStageSummaryCode,
-			systemtext.Text(move.DealName), systemtext.Text(move.ToStageName))},
+			systemtext.Text(move.DealName), systemtext.Text(stage))},
 		JoinPending: true,
 		Identity:    identity,
 		TTL:         &ttl,
@@ -184,6 +189,20 @@ func (s *Suggester) stageTx(ctx context.Context, tx pgx.Tx, move deals.ProposalS
 		return nil
 	}
 	return err
+}
+
+// ownerLanguage is the language the question is written in. The deal's owner is
+// the only person who decides it, so the sentence is frozen in their language,
+// else the installation's. It does not follow a later change of owner.
+func ownerLanguage(ctx context.Context, tx pgx.Tx, owner ids.UUID) (textlang.Lang, error) {
+	if owner.IsZero() {
+		return textlang.English, nil
+	}
+	lang, err := identity.ReadingLanguageTx(ctx, tx, principal.Principal{UserID: owner})
+	if err != nil || !textlang.Known(string(lang)) {
+		return textlang.English, err
+	}
+	return lang, nil
 }
 
 // proposalEvidence is what the owner judges the question on. It is the line of

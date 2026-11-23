@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -637,5 +638,41 @@ func TestASuggestionWaitsForTheDealsLockBeforeScanningForOpenQuestions(t *testin
 	}
 	if n := len(p.pending(t)); n != 1 {
 		t.Fatalf("%d questions after the lock was released, want 1", n)
+	}
+}
+
+// summaryOfTheQuestion is the sentence the owner reads, frozen when the
+// question was raised.
+func (p *proposalEnv) summaryOfTheQuestion(t *testing.T) string {
+	t.Helper()
+	return p.scalar(t, `SELECT summary FROM approval WHERE kind = $1 AND target_entity_id = $2`, deals.ProposalStageKind, p.deal)
+}
+
+func TestTheQuestionNamesTheStageInTheOwnersLanguage(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		translations string
+		locale       string
+		wantStage    string
+		notStage     string
+	}{
+		{"a German owner and a German stage name", `{"de": "Angebotsphase"}`, "de", "„Angebotsphase“", "Proposal Sent"},
+		{"a German owner and a stage with no German name", `{}`, "de", "„Proposal Sent“", "Angebotsphase"},
+		{"an English owner and a stage with a German name", `{"de": "Angebotsphase"}`, "en", "“Proposal Sent”", "Angebotsphase"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := newProposalEnv(t)
+			p.WsExec(t, `UPDATE deal SET owner_id = $2 WHERE id = $1`, p.deal, p.Rep1)
+			p.WsExec(t, `UPDATE app_user SET locale = $2 WHERE id = $1`, p.Rep1, tc.locale)
+			p.WsExec(t, `UPDATE stage SET name_translations = $2::jsonb WHERE id = $1`, p.stages[4], tc.translations)
+			p.handle(t, p.sendOffer(t))
+			summary := p.summaryOfTheQuestion(t)
+			if !strings.Contains(summary, tc.wantStage) {
+				t.Fatalf("the question reads %q, want it to name the stage as %s", summary, tc.wantStage)
+			}
+			if strings.Contains(summary, tc.notStage) {
+				t.Fatalf("the question reads %q, which holds %q", summary, tc.notStage)
+			}
+		})
 	}
 }

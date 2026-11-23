@@ -35,7 +35,7 @@ const QUESTION: Approval = {
 };
 
 // The admin named the stage "Proposal" and gave it a German and a Vietnamese
-// name; the card has to show the one in the reader's language.
+// name. The card has to show the one in the reader's language.
 const PIPELINES = {
   data: [
     {
