@@ -38,7 +38,6 @@ import {
   RowAnswerActions,
   TimelineActions,
 } from "../../records/timelineactions";
-import { StartDeliveryPrompt } from "../dealproject";
 import { DealNoteUndo } from "./dealnoteundo";
 import { OutcomeReviewPanel } from "./outcomereview";
 
@@ -103,10 +102,7 @@ export function DealHistoryTab({
 
   return (
     <>
-      {/* A closed deal's own record sits above its chronology: the delivery
-          project a won deal is offered once, and the review of how it closed.
-          The Overview holds neither. */}
-      <StartDeliveryPrompt deal={deal} />
+      {/* A closed deal's review of how it closed sits above its chronology. */}
       <OutcomeReviewPanel
         dealId={deal.id}
         status={deal.status}

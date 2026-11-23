@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { currentParams, useUrlParams } from "../../lib/urlstate";
+import { isUuid } from "../../lib/uuid";
 import {
   DEFAULT_VIEW,
   viewFromAddress,
@@ -41,7 +42,10 @@ export function drawerQueue(params: ReadonlyMap<string, string>): Readonly<{
   filter: WorklistFilter;
   owner: string;
 }> {
-  const owner = params.get("owner") ?? "";
+  // An owner the address cannot name opens the reader's own queue: the server
+  // refuses a malformed id, and its Retry could only be refused again.
+  const asked = params.get("owner") ?? "";
+  const owner = isUuid(asked) ? asked : "";
   return {
     scope: requestedScope(params.get("queue_scope")),
     ...viewAndFilter(params, WORKLIST_VIEW_PARAM),
@@ -85,7 +89,7 @@ export function useWorklistAddress(
 ) {
   const [params, setParams] = useUrlParams();
   const [localOwner, setLocalOwner] = useState(
-    opensOn && opensOn !== UNASSIGNED ? opensOn : "",
+    opensOn && isUuid(opensOn) ? opensOn : "",
   );
   const [localSelected, setLocalSelected] = useState("");
   const scopeParam = embedded ? "queue_scope" : "scope";
@@ -108,7 +112,17 @@ export function useWorklistAddress(
     }
     setParams(next);
   };
-  const setScope = (next: WorklistScope) => change(scopeParam, next);
+  // A scope word and a named owner together are refused. So a scope pressed
+  // over a colleague's queue opens the scope's own queue.
+  const setScope = (next: WorklistScope) => {
+    const params = new Map(currentParams());
+    params.set(scopeParam, next);
+    params.delete("owner");
+    params.delete("selected");
+    setLocalSelected("");
+    setLocalOwner("");
+    setParams(params);
+  };
   const setFilter = (next: WorklistFilter) =>
     change("filter", next === "all" ? "" : next);
   // A new view starts on all of it: a filter belongs to one view only.

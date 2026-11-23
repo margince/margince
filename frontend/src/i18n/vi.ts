@@ -2124,7 +2124,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.weekly.learnings.caveat":
     "Các nhận xét này mô tả mối tương quan trong công việc đã ghi nhận, không xác định nguyên nhân dẫn đến kết quả.",
   "brief.plan.open": "Mở kế hoạch tuần",
-  "worklist.source.weekly_commitment": "Cam kết trong tuần",
+  "worklist.source.weekly_commitment": "Cam kết tuần",
   "worklist.untitled.weekly_commitment": "Cam kết trong tuần",
   "worklist.source.awaiting_reply": "Việc tiếp theo",
   "worklist.untitled.awaiting_reply": "Việc tiếp theo",
@@ -3270,6 +3270,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.company": "Công ty",
   "partner.certStatus": "Trạng thái chứng nhận",
   "partner.certStatusAll": "Tất cả trạng thái",
+  "partner.listEmptyNote": "Mở một công ty và chọn {more} → {setUp}.",
   "partner.marginTier": "Mức hoa hồng đối tác",
   "partner.marginTierHint":
     "Tỷ lệ đối tác nhận trên mỗi deal thắng do đối tác mang về. Giới thiệu: đối tác chỉ giới thiệu khách hàng. Hợp tác tích cực: hai bên cùng làm deal. Đối tác tự chốt: đối tác tự bán. Để trống khi thỏa thuận với đối tác trả theo cách khác.",
@@ -5065,6 +5066,28 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.reason.membersOnly": "Giữ lại: thư giữa đồng nghiệp",
   "compose.reason.noCounterparty": "Giữ lại: không có bên đối tác",
   "compose.audience": "Đổi phạm vi hiển thị",
+  "activity.audience.noteTitle": "Ai được đọc ghi chú này?",
+  "activity.audience.noteLegend": "Phạm vi hiển thị ghi chú",
+  "activity.audience.noteScope":
+    "Chỉ áp dụng cho ghi chú này, không áp dụng cho các bản ghi chứa nó.",
+  "activity.audience.callTitle": "Ai được xem cuộc gọi này?",
+  "activity.audience.callLegend": "Phạm vi hiển thị cuộc gọi",
+  "activity.audience.callScope":
+    "Chỉ áp dụng cho cuộc gọi này, không áp dụng cho các bản ghi chứa nó.",
+  "activity.audience.meetingTitle": "Ai được xem cuộc họp này?",
+  "activity.audience.meetingLegend": "Phạm vi hiển thị cuộc họp",
+  "activity.audience.meetingScope":
+    "Chỉ áp dụng cho cuộc họp này, không áp dụng cho các bản ghi chứa nó.",
+  "activity.audience.taskTitle": "Ai được xem việc cần làm này?",
+  "activity.audience.taskLegend": "Phạm vi hiển thị việc cần làm",
+  "activity.audience.taskScope":
+    "Chỉ áp dụng cho việc cần làm này, không áp dụng cho các bản ghi chứa nó.",
+  "activity.audience.workspaceHint":
+    "Ai mở được các hồ sơ gắn với mục này đều đọc được mục này.",
+  "activity.audience.participantsHint":
+    "Chỉ những người có trong mục này đọc được chi tiết. Người khác chỉ thấy rằng hôm đó có một hoạt động.",
+  "activity.audience.selectedHint":
+    "Chỉ những người và nhóm được chọn, cùng những ai đã có trong mục này.",
   "compose.audienceTitle": "Ai được đọc tin nhắn này?",
   "compose.audienceLegend": "Phạm vi hiển thị tin nhắn",
   "email.aMessage": "Một email",
@@ -8603,6 +8626,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.isDone": "Đã hoàn tất",
   "tasks.isOpen": "Chưa hoàn tất",
   "tasks.logged": "Đã ghi nhận",
+  "tasks.heldBy": "Phụ trách:",
   "tasks.origin.no_activity_reminder":
     "Lời nhắc khi không có hoạt động đã tạo việc này: hồ sơ này không có ghi nhận nào trong số ngày đã đặt. Liên hệ lại, rồi đánh dấu việc này là xong.",
   "tasks.origin.check_in_cadence":
@@ -22707,6 +22731,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Khác cho phép mọi thời lượng từ 15 phút đến 8 giờ.",
   "scheduling.lengthMinutes": "Thời lượng tính bằng phút",
   "scheduling.lengthInvalid": "Nhập thời lượng từ 15 đến 480 phút.",
+  "scheduling.lengthRepeated": "Mỗi thời lượng chỉ nhập một lần.",
+  "scheduling.lengthsTooMany": "Nhập tối đa {max} thời lượng bổ sung.",
   "scheduling.video.meetHelp":
     "Mỗi lượt đặt có một liên kết Meet mới, được thêm vào lời mời. Dùng Google Calendar của bạn, {account}.",
   "scheduling.video.teamsHelp":

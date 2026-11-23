@@ -123,11 +123,13 @@ describe("the worklist's routed identity", () => {
     // What the board's per-member arm does. The owner travels as a query
     // parameter rather than as the scope, so this is a second shape of the same
     // question and not a rephrasing of the case above.
-    window.location.hash = "#/worklist/u-colleague";
+    window.location.hash = "#/worklist/3e9f1b2c-5a6d-4e7f-8a9b-0c1d2e3f4a5b";
 
     await waitFor(() =>
       expect(
-        READS.slice(before).some((url) => url.includes("owner=u-colleague")),
+        READS.slice(before).some((url) =>
+          url.includes("owner=3e9f1b2c-5a6d-4e7f-8a9b-0c1d2e3f4a5b"),
+        ),
       ).toBe(true),
     );
   });

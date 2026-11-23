@@ -27,11 +27,7 @@ import {
   whenText,
 } from "../../lib/worklistcopy";
 import { emailNamesRow } from "../../lib/worklistemailrow";
-import {
-  conditionOf,
-  eyebrowKeyFor,
-  kindClass,
-} from "../../lib/worklisteyebrow";
+import { conditionOf, eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import { cardLine, useHappenedClock } from "../../lib/worklisthappened";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
@@ -266,7 +262,7 @@ export function WorklistRow({
     touch,
     pinned,
   });
-  const named = conditionOf(item, t);
+  const kind = conditionOf(item, t) ?? t(eyebrowKeyFor(item));
   return (
     <PanelRow
       // A CLASS and not a data attribute: `PanelRow` takes a className and
@@ -314,9 +310,9 @@ export function WorklistRow({
             The span is PLACEMENT — the grid cell and the
             width the kinds share; `conditionOf` says what a system row
             draws there instead. */}
-        <span className={kindClass(named)} title={named ?? undefined}>
+        <span className="worklist-row-kind" title={kind}>
           <Badge tone={item.band === "now" ? "warning" : undefined}>
-            {named ?? t(eyebrowKeyFor(item))}
+            {kind}
           </Badge>
         </span>
         <div className="worklist-row-text">
