@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/dealscout"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -417,4 +418,32 @@ func obsoleteOr(reason string, err error) error {
 		return err
 	}
 	return &approvals.ObsoleteError{Reason: reason}
+}
+
+// OnOfferSent asks whether the deal moves to the proposal stage. The offer's
+// own event payload is the proof a proposal went out. An unreadable payload is
+// skipped, because redelivering it would never make it readable.
+func (s *Suggester) OnOfferSent(ctx context.Context, offer ids.UUID, eventPayload json.RawMessage) error {
+	var payload crmcontracts.PublicEventOfferSent
+	if json.Unmarshal(eventPayload, &payload) != nil {
+		return nil
+	}
+	snippet := "Offer sent"
+	if payload.Revision != nil {
+		snippet = fmt.Sprintf("Offer sent, revision %d", *payload.Revision)
+	}
+	return s.Suggest(ctx, ids.From[ids.DealKind](ids.UUID(payload.DealId)), Source{
+		Type: deals.ProposalSourceOffer, ID: offer, Snippet: snippet,
+	})
+}
+
+// FromReading raises the question when a mail's reading says a proposal is
+// attached. It does nothing unless the reading was asked and answered yes.
+// The answer never reaches the evidence ledger: no criterion row carries the
+// reserved key.
+func (s *Suggester) FromReading(ctx context.Context, dealID ids.DealID, activityID ids.UUID, answeredYes bool, quote string) error {
+	if !answeredYes {
+		return nil
+	}
+	return s.Suggest(ctx, dealID, Source{Type: deals.ProposalSourceActivity, ID: activityID, Snippet: quote})
 }

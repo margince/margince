@@ -32,7 +32,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -198,33 +197,11 @@ func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envel
 	case eventActivityUpdated:
 		return t.onActivityUpdated(ctx, env)
 	case eventOfferSent:
-		return t.onOfferSent(ctx, env)
+		return t.proposals.OnOfferSent(ctx, env.Entity.ID, env.Payload)
 	case eventDealStageChanged:
-		return t.onDealStageChanged(ctx, env)
+		return t.proposals.Retire(ctx, ids.From[ids.DealKind](env.Entity.ID))
 	}
 	return nil
-}
-
-// onOfferSent asks the deal's owner whether the deal moves to the proposal
-// stage. The offer's own event is the proof a proposal went out.
-func (t *StageEvidenceTrigger) onOfferSent(ctx context.Context, env events.Envelope) error {
-	var payload crmcontracts.PublicEventOfferSent
-	if !t.readPayload(ctx, env, &payload) {
-		return nil
-	}
-	snippet := "Offer sent"
-	if payload.Revision != nil {
-		snippet = fmt.Sprintf("Offer sent, revision %d", *payload.Revision)
-	}
-	return t.proposals.Suggest(ctx, ids.From[ids.DealKind](ids.UUID(payload.DealId)), proposalstage.Source{
-		Type: deals.ProposalSourceOffer, ID: env.Entity.ID, Snippet: snippet,
-	})
-}
-
-// onDealStageChanged withdraws the open proposal-stage question the move
-// answered: the deal reached the stage by hand, or closed.
-func (t *StageEvidenceTrigger) onDealStageChanged(ctx context.Context, env events.Envelope) error {
-	return t.proposals.Retire(ctx, ids.From[ids.DealKind](env.Entity.ID))
 }
 
 // queueReading asks the model's half of the ledger to read this activity

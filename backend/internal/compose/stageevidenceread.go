@@ -280,7 +280,8 @@ func (r *StageEvidenceReader) record(
 			continue
 		}
 		if claim.CriterionKey == deals.ProposalSentCriterionKey {
-			if err := r.suggestMove(ctx, dealID, facts, claim); err != nil {
+			asked := facts.proposalAsked && claim.Met == stageEvidenceMet
+			if err := r.proposals.FromReading(ctx, dealID, facts.activityID, asked, claim.Quote); err != nil {
 				return written, err
 			}
 			continue
@@ -297,20 +298,6 @@ func (r *StageEvidenceReader) record(
 		r.log.InfoContext(ctx, "stage evidence read", "deal", dealID.String(), "rows", written)
 	}
 	return written, nil
-}
-
-// suggestMove raises the move question when the reading says a proposal is
-// attached. The answer never reaches the ledger: no criterion row carries the
-// reserved key.
-func (r *StageEvidenceReader) suggestMove(
-	ctx context.Context, dealID ids.DealID, facts stageEvidenceReadFacts, claim stageEvidenceClaim,
-) error {
-	if !facts.proposalAsked || claim.Met != stageEvidenceMet {
-		return nil
-	}
-	return r.proposals.Suggest(ctx, dealID, proposalstage.Source{
-		Type: deals.ProposalSourceActivity, ID: facts.activityID, Snippet: claim.Quote,
-	})
 }
 
 // write records one claim, translating the model's answer into the ledger's
