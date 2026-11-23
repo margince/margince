@@ -280,6 +280,14 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
+// timed is the one place this file reads the wall clock: the measured runs and
+// the seed-step log both take their duration from it.
+func timed(run func()) time.Duration {
+	start := time.Now()
+	run()
+	return time.Since(start)
+}
+
 func benchRuns(name string, budget time.Duration, spec benchTierSpec, run func() error) (search.QueryStats, error) {
 	for i := 0; i < spec.warmups; i++ {
 		if err := run(); err != nil {
@@ -288,11 +296,12 @@ func benchRuns(name string, budget time.Duration, spec benchTierSpec, run func()
 	}
 	durations := make([]time.Duration, 0, spec.sample)
 	for i := 0; i < spec.sample; i++ {
-		start := time.Now()
-		if err := run(); err != nil {
+		var err error
+		took := timed(func() { err = run() })
+		if err != nil {
 			return search.QueryStats{}, fmt.Errorf("%s run %d: %w", name, i, err)
 		}
-		durations = append(durations, time.Since(start))
+		durations = append(durations, took)
 	}
 	return search.MeasureQuery(name, budget, durations)
 }
@@ -359,9 +368,8 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 	exec := func(sql string, args ...any) {
 		t.Helper()
 		step++
-		start := time.Now()
-		benchExec(t, owner, spec.tier, sql, args...)
-		t.Logf("perfbench seed [%s] step %d: %s", spec.tier, step, time.Since(start).Round(time.Millisecond))
+		took := timed(func() { benchExec(t, owner, spec.tier, sql, args...) })
+		t.Logf("perfbench seed [%s] step %d: %s", spec.tier, step, took.Round(time.Millisecond))
 	}
 	// pgx.Identifier.Sanitize rather than interpolation: ANALYZE takes no
 	// parameter, so the table name is the one thing that has to be formatted in.
