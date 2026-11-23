@@ -2130,6 +2130,8 @@ paths:
         past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
+        A parent that already sits below this company answers 422 `parent_company_below` on
+        `parent_company_id`, with `params.name` naming that company.
 
         Needs the passport permission Change records.
 
@@ -34086,7 +34088,11 @@ components:
         access_scope:
           type: string
           description: Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined.
-        provider: {type: string}
+        provider: {type: string, description: 'The accounting source''s key. Show `provider_name` to a reader.'}
+        provider_name:
+          type: string
+          description: >-
+            The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key.
         last_synced_at: {type: string, format: date-time}
         linked_companies:
           type: integer
@@ -34151,7 +34157,11 @@ components:
         provider:
           type: [string, 'null']
           description: >-
-            Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected.
+            Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected.
+        provider_name:
+          type: [string, 'null']
+          description: >-
+            The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key.
         last_synced_at:
           type: [string, 'null']
           format: date-time
@@ -48181,7 +48191,13 @@ components:
         routine_mail_team_id:
           type: string
           format: uuid
-          description: The selected live team for team or combined scope. Personal scope ignores a retained selection.
+          description: >-
+            The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
+        clear_routine_mail_team:
+          type: boolean
+          writeOnly: true
+          description: >-
+            True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422.
         weekly_delivery_day:
           type: integer
           minimum: 1

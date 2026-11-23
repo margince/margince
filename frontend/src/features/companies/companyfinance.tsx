@@ -12,6 +12,7 @@ import {
 import { formatDateAbbrev, formatMoneyWhole } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { financeProvenance } from "../../lib/financeprovenance";
 import { problemCodeOf } from "../../lib/problem";
 import { BillingContactsPanel } from "../projects/billingcontacts";
 import { RecentInvoices } from "./financeinvoices";
@@ -359,12 +360,12 @@ function FinanceProvenance({ summary }: Readonly<{ summary: FinanceSummary }>) {
   return (
     <p className="t-caption fin-provenance">
       <Landmark size={12} aria-hidden="true" />
-      {summary.last_synced_at
-        ? t("finance.syncedFrom", {
-            provider: summary.provider,
-            when: formatDateAbbrev(summary.last_synced_at, locale, readerZone),
-          })
-        : t("finance.fromNeverSynced", { provider: summary.provider })}
+      {financeProvenance(
+        t,
+        summary.provider_name,
+        summary.last_synced_at &&
+          formatDateAbbrev(summary.last_synced_at, locale, readerZone),
+      )}
     </p>
   );
 }

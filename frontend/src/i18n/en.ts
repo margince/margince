@@ -4417,6 +4417,9 @@ export const en = {
   "finance.moreInvoices": "More invoices in the accounting system",
   "finance.syncedFrom": "From {provider} · synced {when}",
   "finance.fromNeverSynced": "From {provider} · not yet synced",
+  "finance.syncedFromAccounting": "From your accounting system · synced {when}",
+  "finance.fromAccountingNeverSynced":
+    "From your accounting system · not yet synced",
   "finance.status.draft": "Draft",
   "finance.status.open": "Open",
   "finance.status.partiallyPaid": "Partially paid",
@@ -6329,6 +6332,8 @@ export const en = {
   "deal.editDetails": "Edit details",
   "deal.meetNeedsCompany":
     "This deal has no company yet. Add one under Edit details to book a meeting.",
+  "deal.meetCompanyWithheld":
+    "The company on this deal is not shared with you, so a meeting cannot be booked from here.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
   "deal.links.card": "Links",
@@ -7752,6 +7757,9 @@ export const en = {
     "This value was erased at its owner’s request and cannot be stored again.",
   "create.linkedinMalformed":
     "This is not a link. Paste the address of the LinkedIn page.",
+  "create.domainMalformed":
+    "This is not a domain. Enter one such as example.com.",
+  "create.parentCompanyBelow": "{name} is already below this company.",
   "create.linkedinNotLinkedin": "Enter a link to a page on linkedin.com.",
   "create.linkedinNotProfile":
     "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
@@ -9774,6 +9782,8 @@ export const en = {
   "delivery.scope.combined": "My work and selected team",
   "delivery.teamHelp":
     "Choose a team before enabling its view. Access is checked again when mail is sent.",
+  "delivery.noTeam": "No team",
+  "delivery.teamGone": "This team no longer exists. Choose another.",
   "delivery.weekday1": "Monday",
   "delivery.weekday2": "Tuesday",
   "delivery.weekday3": "Wednesday",

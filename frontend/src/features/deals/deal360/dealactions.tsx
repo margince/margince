@@ -192,6 +192,7 @@ export function DealActions({
       <DealBookMeeting
         dealId={deal.id}
         companyId={deal.company_id ?? undefined}
+        companyWithheld={deal.masked_fields?.includes("company_id") ?? false}
         allowed={!logPending && !logRefused}
         pending={logPending}
         reasonId={logRefused}
@@ -286,6 +287,7 @@ export function DealActions({
 function DealBookMeeting({
   dealId,
   companyId,
+  companyWithheld,
   allowed,
   pending,
   reasonId,
@@ -293,6 +295,7 @@ function DealBookMeeting({
 }: Readonly<{
   dealId: string;
   companyId?: string;
+  companyWithheld: boolean;
   allowed: boolean;
   pending: boolean;
   reasonId?: string;
@@ -319,7 +322,13 @@ function DealBookMeeting({
     // A refusal the page already states wins; otherwise the missing company
     // is the one thing standing between the reader and a booking.
     const noCompany = !reasonId && !companyId;
-    const why = noCompany ? t("deal.meetNeedsCompany") : undefined;
+    const why = noCompany
+      ? t(
+          companyWithheld
+            ? "deal.meetCompanyWithheld"
+            : "deal.meetNeedsCompany",
+        )
+      : undefined;
     return (
       <Button
         disabled={pending || !companyId}

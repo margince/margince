@@ -269,6 +269,28 @@ describe("the VAT mark beside the number", () => {
     expect(screen.queryByRole("button", { name: /Check/ })).toBeNull();
   });
 
+  it("offers no ask where the installation consults no register", async () => {
+    const user = userEvent.setup();
+    stubFetch(async (request) =>
+      new URL(request.url).pathname.endsWith("/me")
+        ? jsonResponse(
+            meFixture({
+              allow: { company: ["read", "update"] },
+              settingsAvailability: { vat_register: false },
+            }),
+          )
+        : jsonResponse(CHECKED),
+    );
+    render(mark());
+
+    await user.click(
+      await screen.findByRole("button", { name: "VAT ID: Valid" }),
+    );
+
+    expect(await screen.findByText("WAPIAAAAXk3rN2p9")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Check/ })).toBeNull();
+  });
+
   it("says the register's own word for a verdict this build cannot name", async () => {
     // A server newer than this tab, which is the ordinary state during a
     // deploy. A consultation HAPPENED, so announcing it as "not checked yet"

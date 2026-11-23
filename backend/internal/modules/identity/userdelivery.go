@@ -56,6 +56,9 @@ type Delivery struct {
 	Weekly       *string
 	QuietDay     *bool
 	HourLocal    *int
+
+	// ClearTeam removes TeamID on a save; a nil TeamID there means "leave it".
+	ClearTeam bool
 }
 
 // MyDelivery answers the caller's own delivery settings.
@@ -109,7 +112,7 @@ func (s *Service) SaveMyDelivery(ctx context.Context, in Delivery) (Delivery, er
 			out.RoutineTime = &chosen
 		}
 		if in.TeamID != nil || (in.Scope != nil && out.ScopeChoice() != RoutinePersonal) {
-			if err := validateDeliveryTeam(ctx, tx, out); err != nil {
+			if err := checkChosenTeam(ctx, tx, out); err != nil {
 				return err
 			}
 		}
@@ -194,6 +197,9 @@ func checkDelivery(in Delivery) error {
 	if in.WeeklyDay != nil && (*in.WeeklyDay < 1 || *in.WeeklyDay > 7) {
 		return &values.ParseError{Field: "weekly_delivery_day", Code: "out_of_range", Message: "choose a weekday from 1 to 7"}
 	}
+	if in.ClearTeam && in.TeamID != nil {
+		return &values.ParseError{Field: "clear_routine_mail_team", Code: "mutually_exclusive", Message: "send a team or clear it, not both"}
+	}
 
 	return nil
 }
@@ -227,6 +233,13 @@ func merged(before, patch Delivery) Delivery {
 	}
 	if patch.TeamID != nil {
 		out.TeamID = patch.TeamID
+	}
+	if patch.ClearTeam {
+		out.TeamID = nil
+		if out.ScopeChoice() != RoutinePersonal {
+			personal := RoutinePersonal
+			out.Scope = &personal
+		}
 	}
 	if patch.WeeklyDay != nil {
 		out.WeeklyDay = patch.WeeklyDay

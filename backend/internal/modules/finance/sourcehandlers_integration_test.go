@@ -26,6 +26,7 @@ import (
 const (
 	unreadableProvider = "broken_ledger"
 	otherProvider      = "other_ledger"
+	fixtureSourceName  = "Suite Ledger"
 )
 
 // offeredSources stands at the Sources seam: three providers on offer, one of
@@ -36,7 +37,7 @@ func (offeredSources) Providers() []SourceOption {
 	return []SourceOption{
 		{Provider: unreadableProvider, Description: "A source that cannot be read."},
 		{Provider: otherProvider, Description: "A second ledger."},
-		{Provider: fixtureProviderName, Description: "The suite's own ledger.", Documents: true},
+		{Provider: fixtureProviderName, DisplayName: fixtureSourceName, Description: "The suite's own ledger.", Documents: true},
 	}
 }
 

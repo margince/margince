@@ -86,3 +86,10 @@ func (h Handlers) WithListsAvailable(available bool) Handlers {
 	h.listsAvailable = available
 	return h
 }
+
+// WithVatRegisterAvailable injects whether a VAT check can be queued here.
+// Without it /me reports the register absent, failing closed.
+func (h Handlers) WithVatRegisterAvailable(available bool) Handlers {
+	h.vatRegisterAvailable = available
+	return h
+}

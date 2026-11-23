@@ -4337,6 +4337,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "finance.moreInvoices": "Còn hóa đơn khác trong hệ thống kế toán",
   "finance.syncedFrom": "Từ {provider} · đồng bộ {when}",
   "finance.fromNeverSynced": "Từ {provider} · chưa đồng bộ",
+  "finance.syncedFromAccounting":
+    "Từ hệ thống kế toán của bạn · đồng bộ {when}",
+  "finance.fromAccountingNeverSynced":
+    "Từ hệ thống kế toán của bạn · chưa đồng bộ",
   "finance.status.draft": "Bản nháp",
   "finance.status.open": "Chưa thanh toán",
   "finance.status.partiallyPaid": "Thanh toán một phần",
@@ -7548,6 +7552,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Giá trị này đã bị xóa theo yêu cầu của chủ sở hữu và không thể lưu lại.",
   "create.linkedinMalformed":
     "Đây không phải là đường liên kết. Hãy dán địa chỉ của trang LinkedIn.",
+  "create.domainMalformed":
+    "Đây không phải là tên miền. Hãy nhập một tên miền, ví dụ example.com.",
+  "create.parentCompanyBelow": "{name} đã nằm dưới công ty này.",
   "create.linkedinNotLinkedin":
     "Hãy nhập đường liên kết tới một trang trên linkedin.com.",
   "create.linkedinNotProfile":
@@ -9564,6 +9571,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "delivery.scope.combined": "Việc của tôi và nhóm đã chọn",
   "delivery.teamHelp":
     "Chọn nhóm trước khi bật chế độ xem. Quyền truy cập được kiểm tra lại khi gửi.",
+  "delivery.noTeam": "Không có nhóm",
+  "delivery.teamGone": "Nhóm này không còn tồn tại. Hãy chọn nhóm khác.",
   "delivery.weekday1": "Thứ Hai",
   "delivery.weekday2": "Thứ Ba",
   "delivery.weekday3": "Thứ Tư",
@@ -20900,6 +20909,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.editDetails": "Sửa chi tiết",
   "deal.meetNeedsCompany":
     "Deal này chưa có công ty. Thêm công ty trong “Sửa chi tiết” để đặt lịch họp.",
+  "deal.meetCompanyWithheld":
+    "Công ty của deal này không được chia sẻ với bạn, nên không thể đặt lịch họp từ đây.",
   "deal.committee.card": "Hội đồng mua",
   "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
   "deal.links.card": "Liên kết",

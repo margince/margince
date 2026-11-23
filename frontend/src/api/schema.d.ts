@@ -2359,6 +2359,8 @@ export interface paths {
          *     past 120 characters (`too_long`), the limit of every company name typed by hand.
          *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
          *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
+         *     A parent that already sits below this company answers 422 `parent_company_below` on
+         *     `parent_company_id`, with `params.name` naming that company.
          */
         patch: operations["updateCompany"];
         trace?: never;
@@ -36493,7 +36495,10 @@ export interface components {
             state: components["schemas"]["FinanceSummaryState"];
             /** @description Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined. */
             access_scope: string;
+            /** @description The accounting source's key. Show `provider_name` to a reader. */
             provider?: string;
+            /** @description The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key. */
+            provider_name?: string;
             /** Format: date-time */
             last_synced_at?: string;
             /** @description Readable, live linked companies eligible for the payment overview. */
@@ -36553,8 +36558,10 @@ export interface components {
              *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
              */
             billing_contacts?: components["schemas"]["BillingContact"][];
-            /** @description Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected. */
+            /** @description Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected. */
             provider?: string | null;
+            /** @description The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key. */
+            provider_name?: string | null;
             /**
              * Format: date-time
              * @description When the last successful sync finished. Null when none has.
@@ -51071,9 +51078,11 @@ export interface components {
             routine_mail_scope?: "personal" | "team" | "combined";
             /**
              * Format: uuid
-             * @description The selected live team for team or combined scope. Personal scope ignores a retained selection.
+             * @description The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
              */
             routine_mail_team_id?: string;
+            /** @description True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422. */
+            clear_routine_mail_team?: boolean;
             /** @description Earliest weekday, Monday 1 through Sunday 7. A non-working choice rolls to the next working weekday; later workdays allow catch-up. */
             weekly_delivery_day?: number;
             /** @description Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective. */
@@ -52528,6 +52537,8 @@ export interface components {
             disabled_features?: components["schemas"]["CoreFeature"][];
             /** @description Whether reporting is enabled in this installation. */
             reporting?: boolean;
+            /** @description True when this installation consults the EU VAT register, so `POST /companies/{id}/vat-check` can queue a check. Absent or false means that request answers 404, and a client offers no check. */
+            vat_register?: boolean;
             /** @description True when Live Lists and Shortlists are on (`lists.enabled`, on by default). False when an operator has switched them off: the `/lists` routes answer 404, no agent tool reaches them, and no screen offers them. */
             lists?: boolean;
             /** @description True when an embeddings model is bound, so the reindex surface (`/embeddings/reindex*`) exists. False is the posture under which those routes answer 501: `--ai-fake`, or a routing document that binds no embeddings model. Bound or unbound only — deliberately not which model, which is the reindex status's own answer to a caller who may read it. */

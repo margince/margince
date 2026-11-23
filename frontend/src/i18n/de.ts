@@ -4468,6 +4468,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "finance.moreInvoices": "Weitere Rechnungen im Buchhaltungssystem",
   "finance.syncedFrom": "Aus {provider} · synchronisiert {when}",
   "finance.fromNeverSynced": "Aus {provider} · noch nicht synchronisiert",
+  "finance.syncedFromAccounting":
+    "Aus deinem Buchhaltungssystem · synchronisiert {when}",
+  "finance.fromAccountingNeverSynced":
+    "Aus deinem Buchhaltungssystem · noch nicht synchronisiert",
   "finance.status.draft": "Entwurf",
   "finance.status.open": "Offen",
   "finance.status.partiallyPaid": "Teilweise bezahlt",
@@ -7734,6 +7738,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Wert wurde auf Wunsch der betroffenen Person gelöscht und kann nicht wieder gespeichert werden.",
   "create.linkedinMalformed":
     "Das ist kein Link. Füge die Adresse der LinkedIn-Seite ein.",
+  "create.domainMalformed":
+    "Das ist keine Domain. Gib eine ein, zum Beispiel example.com.",
+  "create.parentCompanyBelow": "{name} steht bereits unter diesem Unternehmen.",
   "create.linkedinNotLinkedin":
     "Gib einen Link zu einer Seite auf linkedin.com ein.",
   "create.linkedinNotProfile":
@@ -9829,6 +9836,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "delivery.scope.combined": "Meine Arbeit und gewähltes Team",
   "delivery.teamHelp":
     "Wähle ein Team, bevor du seine Ansicht aktivierst. Der Zugriff wird beim Versand erneut geprüft.",
+  "delivery.noTeam": "Kein Team",
+  "delivery.teamGone": "Dieses Team gibt es nicht mehr. Wähle ein anderes.",
   "delivery.weekday1": "Montag",
   "delivery.weekday2": "Dienstag",
   "delivery.weekday3": "Mittwoch",
@@ -21460,6 +21469,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.editDetails": "Details bearbeiten",
   "deal.meetNeedsCompany":
     "Dieser Deal hat noch kein Unternehmen. Trage es unter „Details bearbeiten“ ein, um einen Termin zu buchen.",
+  "deal.meetCompanyWithheld":
+    "Das Unternehmen dieses Deals ist nicht mit dir geteilt, daher kann hier kein Termin gebucht werden.",
   "deal.committee.card": "Gremium",
   "deal.committee.change": "Stakeholder ändern oder entfernen",
   "deal.links.card": "Verknüpfungen",

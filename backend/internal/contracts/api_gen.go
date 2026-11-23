@@ -39609,6 +39609,9 @@ type BoughtField struct {
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
 // on a read means they have never chosen, absent on a write means leave it alone.
 type BriefDelivery struct {
+	// ClearRoutineMailTeam True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422.
+	ClearRoutineMailTeam *bool `json:"clear_routine_mail_team,omitempty"`
+
 	// CombineRoutineEmail Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective.
 	CombineRoutineEmail *bool `json:"combine_routine_email,omitempty"`
 
@@ -39630,7 +39633,7 @@ type BriefDelivery struct {
 	// RoutineMailScope Optional chosen scope; team content is checked against live team-review authority at delivery.
 	RoutineMailScope *BriefDeliveryRoutineMailScope `json:"routine_mail_scope,omitempty"`
 
-	// RoutineMailTeamId The selected live team for team or combined scope. Personal scope ignores a retained selection.
+	// RoutineMailTeamId The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
 	RoutineMailTeamId *openapi_types.UUID `json:"routine_mail_team_id,omitempty"`
 
 	// WeeklyDelivery The same, for the weekly review.
@@ -43363,8 +43366,11 @@ type CompanyFinanceSummary struct {
 	// Absent under the same sample floor the median observes: a shape drawn from one invoice would state a payment habit the number beside it refuses to.
 	PaymentBehaviour *[]int `json:"payment_behaviour,omitempty"`
 
-	// Provider Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected.
+	// Provider Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected.
 	Provider *string `json:"provider,omitempty"`
+
+	// ProviderName The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 
 	// RecentInvoices The five most recent invoices (FIN-LIM-4); `truncated` says whether there are more.
 	RecentInvoices *[]FinanceInvoice `json:"recent_invoices,omitempty"`
@@ -48721,7 +48727,12 @@ type CustomerPayments struct {
 	// LinkedCompanies Readable, live linked companies eligible for the payment overview.
 	LinkedCompanies int      `json:"linked_companies" minimum:"0"`
 	Page            PageInfo `json:"page"`
-	Provider        *string  `json:"provider,omitempty"`
+
+	// Provider The accounting source's key. Show `provider_name` to a reader.
+	Provider *string `json:"provider,omitempty"`
+
+	// ProviderName The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 
 	// State Why the figures are what they are — the six cases a company page must keep
 	// apart, because five of them look identical if you only render the numbers.
@@ -68776,6 +68787,9 @@ type SettingsAvailability struct {
 
 	// Reporting Whether reporting is enabled in this installation.
 	Reporting *bool `json:"reporting,omitempty"`
+
+	// VatRegister True when this installation consults the EU VAT register, so `POST /companies/{id}/vat-check` can queue a check. Absent or false means that request answers 404, and a client offers no check.
+	VatRegister *bool `json:"vat_register,omitempty"`
 }
 
 // SettleClaimRequest How a claim finished.

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -82,6 +83,9 @@ func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 	}
 	if in.ParentCompanyID != nil {
 		if err := auth.EnsureReferenceTarget(ctx, tx, "parent_company_id", "company", in.ParentCompanyID.UUID); err != nil {
+			return err
+		}
+		if err := refuseParentBelow(ctx, tx, ids.UUID(current.Id), in.ParentCompanyID.UUID); err != nil {
 			return err
 		}
 		p.Set("parent_company_id", current.ParentCompanyId, *in.ParentCompanyID)
@@ -172,5 +176,41 @@ func setCompanyAssessAgainst(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 		return nil
 	}
 	p.Set("assess_against_entity_id", current.AssessAgainstEntityId, openapi_types.UUID(in.AssessAgainstEntityID.UUID))
+	return nil
+}
+
+// refuseParentBelow names the chosen parent when it already sits below the company.
+// The walk stops at an ancestor hidden from the caller; the cycle trigger still holds there.
+func refuseParentBelow(ctx context.Context, tx pgx.Tx, company, parent ids.UUID) error {
+	var name string
+	args := []any{parent}
+	if err := tx.QueryRow(ctx, "SELECT display_name FROM company WHERE id = "+storekit.Placeholders(args), args...).Scan(&name); err != nil {
+		return fmt.Errorf("contacts: reading the chosen parent company: %w", err)
+	}
+	seen := map[ids.UUID]bool{}
+	for step := parent; !seen[step]; {
+		seen[step] = true
+		var above *ids.UUID
+		args := []any{step}
+		if err := tx.QueryRow(ctx, "SELECT parent_company_id FROM company WHERE id = "+storekit.Placeholders(args), args...).Scan(&above); err != nil {
+			return fmt.Errorf("contacts: reading a parent company's own parent: %w", err)
+		}
+		if above == nil {
+			return nil
+		}
+		if *above == company {
+			return httperr.Validation("parent_company_id", "parent_company_below",
+				"this company is above the chosen parent; choose a company outside its own group").
+				WithParams(map[string]string{"name": name})
+		}
+		visible, err := auth.VisibleTo(ctx, tx, "company", *above)
+		if err != nil {
+			return err
+		}
+		if !visible {
+			return nil
+		}
+		step = *above
+	}
 	return nil
 }
