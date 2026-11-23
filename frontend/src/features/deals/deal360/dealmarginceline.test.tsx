@@ -91,7 +91,7 @@ it("offers Reopen and no Undo once the server no longer allows the Undo", async 
   expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
 });
 
-it("shows no line on a deal a person closed", () => {
+it("shows no line on a deal closed by hand", () => {
   session();
   expect(line([closeReceipt()], "01a00000-0000-7000-8000-0000000000c2")).toBe(
     undefined,

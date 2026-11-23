@@ -20,6 +20,7 @@ import {
 import { GroupedTimelineList } from "../../../design-system/timeline";
 import { TimelineFilterBar } from "../../../design-system/timelinefilterbar";
 import { groupChronology } from "../../../design-system/timelinegroups";
+import { stable } from "../../../format/collate";
 import { useLocale, useT } from "../../../i18n";
 import { useDealChangesWhere } from "../../../lib/marginchanges";
 import { invalidateRecord } from "../../../lib/recordwritekeys";
@@ -65,7 +66,7 @@ export function DealHistoryTab({
   const noteIds = timeline.activities
     .filter((activity) => activity.kind === "note")
     .map((activity) => activity.id)
-    .sort()
+    .sort(stable)
     .slice(0, 100);
   const marginceReceipts = useDealChangesWhere(
     deal.id,

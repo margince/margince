@@ -687,44 +687,33 @@ func TestTheInstallationSwitchStopsTheClose(t *testing.T) {
 	}
 }
 
-// The deal page reads the close as a receipt that names its History note and
-// the stage move it wrote. The page matches that move against the deal's
-// closing occurrence to tell Margince's close from a person's. Undo stops
-// showing once somebody moves the deal.
+// The deal page finds the close by the stage move it wrote. It matches that
+// move against the deal's closing occurrence, and finds the History note that
+// reports it. Undo stops showing once somebody moves the deal.
 func TestTheDealsChangesNameTheNoteAndTheCloseWhileUndoIsOpen(t *testing.T) {
 	c := setupCloseLost(t)
 	c.run(t)
-	note := c.WsScalar(t, `SELECT a.id::text FROM activity a JOIN activity_link l ON l.activity_id = a.id
-		WHERE l.deal_id = $1 AND a.kind = 'note'`, c.silent)
+	note := c.WsScalar(t, `SELECT a.id::text FROM activity a JOIN activity_link l ON l.activity_id = a.id WHERE l.deal_id = $1 AND a.kind = 'note'`, c.silent)
 	deal, err := c.Deals.GetDeal(c.owner(t), ids.From[ids.DealKind](c.silent), storekit.LiveOnly)
 	if err != nil || deal.ClosingOccurrenceId == nil {
 		t.Fatalf("reading the closed deal: %v, closing occurrence %v", err, deal.ClosingOccurrenceId)
 	}
 	closing := deal.ClosingOccurrenceId.String()
-	h := newMarginceChangeHandlers(c.Pool)
-
 	review := func() crmcontracts.AppliedDealChangeReview {
 		t.Helper()
 		w := httptest.NewRecorder()
-		h.ListDealMarginceChanges(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(c.owner(t)),
-			openapi_types.UUID(c.silent), crmcontracts.ListDealMarginceChangesParams{})
+		newMarginceChangeHandlers(c.Pool).ListDealMarginceChanges(w, httptest.NewRequest(http.MethodGet, "/", nil).WithContext(c.owner(t)),
+			openapi_types.UUID(c.silent), crmcontracts.ListDealMarginceChangesParams{StageHistoryId: deal.ClosingOccurrenceId})
 		var page crmcontracts.DealMarginceChanges
-		if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil {
-			t.Fatal(err)
-		}
-		if len(page.Changes) != 1 || page.Changes[0].Review == nil {
-			t.Fatalf("the deal's changes = %s, want the close with its review", w.Body.String())
+		if err := json.Unmarshal(w.Body.Bytes(), &page); err != nil || len(page.Changes) != 1 || page.Changes[0].Review == nil {
+			t.Fatalf("the deal's changes for its closing = %s (%v), want the close with its review", w.Body.String(), err)
 		}
 		return *page.Changes[0].Review
 	}
 	got := review()
-	if got.NoteActivityId == nil || got.NoteActivityId.String() != note {
-		t.Errorf("review names note %v, want %s", got.NoteActivityId, note)
+	if got.NoteActivityId == nil || got.NoteActivityId.String() != note || got.StageHistoryId.String() != closing || !got.CanUndo {
+		t.Errorf("review = %+v, want note %s, closing %s and Undo open", got, note, closing)
 	}
-	if got.StageHistoryId == nil || got.StageHistoryId.String() != closing || !got.CanUndo {
-		t.Errorf("review names stage move %v, can undo %v; want the deal's closing %s and Undo open", got.StageHistoryId, got.CanUndo, closing)
-	}
-
 	stage, err := ids.Parse(c.WsScalar(t, `SELECT from_stage_id::text FROM deal_stage_history WHERE id = $1`, closing))
 	if err != nil {
 		t.Fatal(err)
@@ -735,6 +724,6 @@ func TestTheDealsChangesNameTheNoteAndTheCloseWhileUndoIsOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 	if after := review(); after.CanUndo {
-		t.Error("a person moved the deal, and the review still offers Undo")
+		t.Error("somebody moved the deal, and the review still offers Undo")
 	}
 }

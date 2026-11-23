@@ -115,7 +115,7 @@ export function useDealChangesWhere(
 /**
  * The change the deal's header line is about. A closed deal gets the close
  * Margince made, while the deal is on that close. An open deal gets the newest
- * opening or reopening that can still be undone. A deal a person closed has
+ * opening or reopening that can still be undone. A deal closed by hand has
  * no receipt for its closing occurrence, so it gets none.
  */
 export function currentMarginceChange(

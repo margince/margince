@@ -105,12 +105,9 @@ func readAppliedChangeReviews(ctx context.Context, tx pgx.Tx, keys []AppliedChan
 }
 
 // correctionFieldsUntouchedSQL holds while no later write has touched a field
-// that correction c (with audit entry a) changed. fieldsTouchedSince asks the
-// same question on the write path, so an Undo offered is an Undo accepted.
-//
-// It reads the audit trail, not the deal's values. A value compare cannot see
-// a field edited away and back. Rows from the correction's own transaction are
-// not later writes.
+// that correction c (audit entry a) changed. It reads the audit trail, because
+// a value compare cannot see a field edited away and back. fieldsTouchedSince
+// asks the same on the write path.
 func correctionFieldsUntouchedSQL() string {
 	return "NOT EXISTS (" + laterWriteOnFieldsSQL("c", "a") + ")"
 }

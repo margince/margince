@@ -6,6 +6,7 @@ import { BundleUndo } from "../../../components/marginchanges";
 import { ReceiptVerbs } from "../../../components/receiptverbs";
 import { useT } from "../../../i18n";
 import type { Receipt } from "../../../lib/handled";
+import { valueFor } from "../../../lib/labelfor";
 import {
   type MarginceChangeBundle,
   noteReceipts,
@@ -62,7 +63,9 @@ export function DealNoteUndo({
           version: first.review.version,
           audit_log_ids: audits,
           kinds: open.flatMap((receipt) =>
-            receipt.review ? [BUNDLE_KIND[receipt.review.kind]] : [],
+            receipt.review
+              ? (valueFor(BUNDLE_KIND, receipt.review.kind, undefined) ?? [])
+              : [],
           ),
           latest_at: first.occurred_at,
         },

@@ -82,7 +82,7 @@ describe("DealScreen — the line under the header for a close Margince made", (
     ).toBe(true);
   });
 
-  it("draws no line, and holds no space for one, on a deal a person closed", async () => {
+  it("draws no line, and holds no space for one, on a deal closed by hand", async () => {
     stubWithChanges("01a00000-0000-7000-8000-0000000000c2");
     const { container } = render(<DealScreen id="x" />);
     await screen.findAllByText("Fleet retrofit");

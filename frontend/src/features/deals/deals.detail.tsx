@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { useIdempotencyKey } from "../../api/idempotencykey";
-import { EditAccessRequest } from "../../components/editaccessrequest";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -48,11 +47,11 @@ import {
   type PendingAdvance,
 } from "./deal360/confirmadvance";
 import { DealActions } from "./deal360/dealactions";
+import { dealBand } from "./deal360/dealband";
 import { DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab, DealLatestInbound } from "./deal360/dealhistorytab";
 import { DealLegalTab } from "./deal360/deallegaltab";
 import { marginceLineOf } from "./deal360/dealmarginceline";
-import { ArchivedDealBand } from "./deal360/dealrestore";
 import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
 import { currentReplyTarget } from "./deal360/dealwaiting";
@@ -121,45 +120,6 @@ function DealTabs({
         history: t("tab.history"),
       }}
     />
-  );
-}
-
-// One sentence for why this deal takes no changes, whichever reason applies,
-// said once across the header so every refused control can point at it. An
-// archived deal's band also offers the way back.
-// Absent while the deal is live and the reader's: `undefined`, not an element
-// that renders null, because RecordView reserves space for anything it is
-// handed. A line always reserved would read as a record with nothing said.
-function dealBand({
-  deal,
-  reason,
-  reasonId,
-  marginceLine,
-}: Readonly<{
-  deal: Deal;
-  reason: string | undefined;
-  reasonId: string;
-  // What Margince did to this deal and still offers to take back, or nothing.
-  marginceLine: ReactNode | undefined;
-}>): ReactNode | undefined {
-  if (reason === undefined) {
-    return marginceLine;
-  }
-  const sentence = deal.archived_at ? (
-    <ArchivedDealBand deal={deal} reason={reason} reasonId={reasonId} />
-  ) : (
-    <>
-      <p id={reasonId}>{reason}</p>
-      <EditAccessRequest kind="deal" record={deal} />
-    </>
-  );
-  return marginceLine ? (
-    <>
-      {sentence}
-      {marginceLine}
-    </>
-  ) : (
-    sentence
   );
 }
 
