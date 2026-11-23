@@ -415,8 +415,8 @@ func TestARefusalCloseNamesTheMailItRead(t *testing.T) {
 	}
 	note := c.WsScalar(t, `SELECT a.body FROM activity a JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.deal_id = $1 AND a.subject = 'Margince closed this deal as lost'`, c.supported)
-	if !strings.Contains(note, "linked under Done for you") {
-		t.Fatalf("timeline note = %q, want it to point to Done for you for the mail", note)
+	if !strings.Contains(note, "linked at the top of this deal") {
+		t.Fatalf("timeline note = %q, want it to point to the mail linked at the top of the deal", note)
 	}
 }
 
