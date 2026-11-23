@@ -8,13 +8,12 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // groupedPage answers a grouped request, whole or partial. It owns the page's
@@ -116,7 +115,7 @@ func nearMatchesBefore(ctx context.Context, tx pgx.Tx, deadline time.Time, types
 	switch {
 	case err == nil:
 		return near, nil
-	case ctx.Err() == nil && everyPart(err, stoppedByBudget):
+	case ctx.Err() == nil && everyPart(err, storekit.IsStatementTimeout):
 		return nil, nil
 	default:
 		return nil, err
@@ -159,16 +158,8 @@ func boolRank(b bool) int {
 func laneTimedOut(err error) bool {
 	return everyPart(err, func(part error) bool {
 		var tooBroad *QueryTooBroadError
-		return errors.As(part, &tooBroad) && stoppedByBudget(part)
+		return errors.As(part, &tooBroad) && storekit.IsStatementTimeout(part)
 	})
-}
-
-// stoppedByBudget is whether Postgres cancelled the statement for running past
-// its statement_timeout. The same SQLSTATE also reports an operator cancelling
-// the backend, which is a fault to show and not a type to leave out.
-func stoppedByBudget(err error) bool {
-	var pg *pgconn.PgError
-	return errors.As(err, &pg) && pg.Code == "57014" && strings.Contains(pg.Message, "statement timeout")
 }
 
 // everyPart is whether leaf holds for each error of a join, or for err itself.

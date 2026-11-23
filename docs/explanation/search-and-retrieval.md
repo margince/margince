@@ -125,8 +125,9 @@ for a **grouped** page instead (`groupedShape`).
 
 Each type that passes the gate runs as its own statement, under its own savepoint in one read
 transaction (`groupedHits`). The statement caps the type at `N + 1` rows. The last row is
-dropped and reported in `types_with_more`, and the page takes no cursor or limit. To page through
-the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
+dropped and reported in `types_with_more`, and the page takes no cursor or limit.
+
+To page through the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
 `per_type=8` once one type is picked in its bar. The full results screen with no type set asks with
 `per_type=5`. They show an activity that carries an
 `email_summary` under `Emails`, separate from the calls and notes beside it.
