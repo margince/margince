@@ -145,25 +145,45 @@ func TestUnusedReservedPlacesGoToTheBacklogInOldestFirstOrder(t *testing.T) {
 
 	picks := e.tickPicks(t, sweepTickBudget)
 
-	if len(picks) != sweepTickBudget || picks[0] != fixed {
-		t.Fatalf("got %d picks with the fixed contact first = %v, want %d with the fixed contact first",
-			len(picks), picks[0] == fixed, sweepTickBudget)
+	// The package's tests share one database, so a fixed contact another test
+	// left behind may take a reserved place beside this one.
+	reserved := 0
+	for reserved < len(picks) && e.isFixed(t, picks[reserved]) {
+		reserved++
+	}
+	if len(picks) != sweepTickBudget || !slices.Contains(picks[:reserved], fixed) {
+		t.Fatalf("got %d picks with the fixed contact among the %d reserved = %v, want %d with it reserved",
+			len(picks), reserved, slices.Contains(picks[:reserved], fixed), sweepTickBudget)
 	}
 	var created []string
 	if err := e.owner.QueryRow(e.ctx, `
 		SELECT array_agg(id::text ORDER BY created_at)
 		  FROM (SELECT id, created_at FROM contact
-		         WHERE archived_at IS NULL AND merged_into_id IS NULL AND id <> $1
+		         WHERE archived_at IS NULL AND merged_into_id IS NULL AND id <> ALL($1)
 		           AND NOT EXISTS (SELECT 1 FROM provider_run r WHERE r.contact_id = contact.id)
 		         ORDER BY created_at LIMIT $2) oldest`,
-		fixed, sweepTickBudget-1).Scan(&created); err != nil {
+		picks[:reserved], sweepTickBudget-reserved).Scan(&created); err != nil {
 		t.Fatal(err)
 	}
-	for i, id := range picks[1:] {
+	for i, id := range picks[reserved:] {
 		if id.String() != created[i] {
 			t.Fatalf("backlog place %d is not the %dth oldest contact: the backlog order changed", i, i+1)
 		}
 	}
+}
+
+// isFixed reports whether the contact's newest run is a no_identifiers skip,
+// which is what earns it a reserved place once its record changes.
+func (e *runsEnv) isFixed(t *testing.T, id ids.ContactID) bool {
+	t.Helper()
+	var fixed bool
+	if err := e.owner.QueryRow(e.ctx, `
+		SELECT coalesce((SELECT r.state = 'skipped' AND r.skip_reason = 'no_identifiers'
+		                   FROM provider_run r WHERE r.contact_id = $1
+		                  ORDER BY r.created_at DESC LIMIT 1), false)`, id).Scan(&fixed); err != nil {
+		t.Fatal(err)
+	}
+	return fixed
 }
 
 func TestAContactThatIsNotFixedKeepsItsCooldown(t *testing.T) {
@@ -282,6 +302,14 @@ func (e *runsEnv) recordRun(t *testing.T, id ids.ContactID, state string) {
 		id, e.provider, state, reason, "fp-tick-"+id.String()+"-"+state); err != nil {
 		t.Fatal(err)
 	}
+	// A run counts against today's daily limit, which the package's other
+	// tests share, so it leaves with this test.
+	t.Cleanup(func() {
+		if _, err := e.owner.Exec(e.ctx, `DELETE FROM provider_run WHERE input_fingerprint = $1`,
+			"fp-tick-"+id.String()+"-"+state); err != nil {
+			t.Error(err)
+		}
+	})
 }
 
 func TestTheSettingsCountLeavesOutARestrictedContact(t *testing.T) {
