@@ -21,8 +21,8 @@ const (
 	targetCheck      = "approval_target_entity_type_check"
 	coTargetCheck    = "approval_co_target_entity_type_check"
 	acquisitionCheck = "contact_acquisition_evidence_source_entity_type_check"
-	validateFile     = "core/1795363364_the_target_type_checks_are_validated.up.sql"
-	dropFile         = "core/1795363367_an_approval_with_an_old_type_stays_updatable.up.sql"
+	validateFile     = "core/1795363395_the_target_type_checks_are_validated.up.sql"
+	dropFile         = "core/1795363398_an_approval_with_an_old_type_stays_updatable.up.sql"
 
 	// An expired approval needs no decider, and a complete co-target carries an id and a version.
 	insertApproval = `INSERT INTO approval (kind, status, proposed_by, proposed_change, diff_hash, expires_at,

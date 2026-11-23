@@ -19,7 +19,7 @@ import (
 const (
 	noticeCheck       = "notice_target_type_check"
 	contributionCheck = "report_edition_contribution_source_type_check"
-	noticeValidate    = "core/1795363366_the_notice_and_report_type_checks_are_validated.up.sql"
+	noticeValidate    = "core/1795363397_the_notice_and_report_type_checks_are_validated.up.sql"
 
 	// No app_user or report_edition row exists, so a row the CHECK lets by
 	// meets its foreign key, which is the proof it got that far.
