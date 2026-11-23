@@ -61,19 +61,23 @@ func TestATierVerdictIsTheWorstOfItsRecordsAndSites(t *testing.T) {
 	}{
 		"two records on one site": {
 			[]Scenario{{Site: "a"}},
-			[]ReadinessRow{row("a", VerdictCertified), row("a", VerdictNotSupported)}, VerdictNotSupported,
+			[]ReadinessRow{row("a", VerdictCertified), row("a", VerdictNotSupported)},
+			VerdictNotSupported,
 		},
 		"the same two records in the other order": {
 			[]Scenario{{Site: "a"}},
-			[]ReadinessRow{row("a", VerdictNotSupported), row("a", VerdictCertified)}, VerdictNotSupported,
+			[]ReadinessRow{row("a", VerdictNotSupported), row("a", VerdictCertified)},
+			VerdictNotSupported,
 		},
 		"a pass on one site and a degraded run on another": {
 			[]Scenario{{Site: "a"}, {Site: "b"}},
-			[]ReadinessRow{row("a", VerdictCertified), row("b", VerdictSupportedDegraded)}, VerdictSupportedDegraded,
+			[]ReadinessRow{row("a", VerdictCertified), row("b", VerdictSupportedDegraded)},
+			VerdictSupportedDegraded,
 		},
 		"a site no record measured": {
 			[]Scenario{{Site: "a"}, {Site: "b"}},
-			[]ReadinessRow{row("a", VerdictCertified)}, VerdictNotSupported,
+			[]ReadinessRow{row("a", VerdictCertified)},
+			VerdictNotSupported,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

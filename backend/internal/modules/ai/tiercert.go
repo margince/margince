@@ -54,8 +54,10 @@ func NewTierCertKey(task Task, provider, model string, profile Profile, thinking
 			routing = string(raw)
 		}
 	}
-	return TierCertKey{Task: task, Provider: provider, Model: model, Profile: profile,
-		Thinking: thinking, Floors: spelled.String(), Upstream: routing}
+	return TierCertKey{
+		Task: task, Provider: provider, Model: model, Profile: profile,
+		Thinking: thinking, Floors: spelled.String(), Upstream: routing,
+	}
 }
 
 func tierCertKeyFor(task Task, binding ProviderConfig, profile Profile) TierCertKey {

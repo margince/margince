@@ -244,8 +244,10 @@ type job struct {
 // employment there when contactID is set.
 func (e *dedupeEnv) employee(ctx context.Context, t *testing.T, contactID *ids.ContactID, j job) ids.CompanyID {
 	t.Helper()
-	created, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: j.company, Source: "manual",
-		Domains: []CompanyDomainInput{{Domain: j.domain, IsPrimary: true}}})
+	created, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: j.company, Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: j.domain, IsPrimary: true}},
+	})
 	if err != nil {
 		t.Fatalf("seed company: %v", err)
 	}
@@ -392,8 +394,10 @@ func TestASignatureValueStaysWhileAnotherMailStillStatesIt(t *testing.T) {
 			ctx := e.as()
 			contactID, first := e.signedMail(ctx, t, "Dana Twice", signerMail{})
 			employer := e.employee(ctx, t, &contactID, job{company: "Acme Logistics", domain: "acme-mail.example"})
-			statement := []SignatureField{signed(fieldAddress, signedAddress), signed(fieldEmail, "dana.weber@acme-mail.example"),
-				signed(fieldCompanyName, "Acme Logistics")}
+			statement := []SignatureField{
+				signed(fieldAddress, signedAddress), signed(fieldEmail, "dana.weber@acme-mail.example"),
+				signed(fieldCompanyName, "Acme Logistics"),
+			}
 			e.applySigned(ctx, t, contactID, first, statement...)
 			second := e.mailFrom(ctx, t, contactID, e.senderOf(ctx, t, contactID), signerMail{})
 			e.applySigned(ctx, t, contactID, second, statement...)
