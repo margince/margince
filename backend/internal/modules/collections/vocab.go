@@ -396,6 +396,9 @@ func (s *Store) coreSegmentEngine(ctx context.Context, resource string) (storeki
 	merged.Fields = make(map[string]storekit.Field, len(core.Fields))
 	maps.Copy(merged.Fields, core.Fields)
 	s.bindDealAmount(resource, merged.Fields)
+	if resource == typeDeal {
+		merged.WinChance = s.winChance
+	}
 	if s.catalog == nil {
 		withholdFromCaller(ctx, resource, merged.Fields)
 		return merged, true, nil

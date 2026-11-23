@@ -65,7 +65,7 @@ func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64
 		if err := archiveDealInTx(ctx, tx, id, ifVersion, collectArchiveOptions(opts)); err != nil {
 			return err
 		}
-		if out, err = readDealForCaller(ctx, tx, id, storekit.IncludeArchived, active); err != nil {
+		if out, err = s.readDealStamped(ctx, tx, id, storekit.IncludeArchived, active); err != nil {
 			return fmt.Errorf("read archived deal: %w", err)
 		}
 		return nil

@@ -169,9 +169,7 @@ func (r *Registry) claimFor(ctx context.Context, spec mcp.ToolSpec, res reserved
 		out, err := r.replay(ctx, spec, claim)
 		return false, "", out, claim.Records, err
 	case ClaimInFlight:
-		return false, "", nil, 0, fmt.Errorf(
-			"an earlier %s call with this idempotency_key has not finished yet; wait for it rather than "+
-				"repeating it: %w", spec.Name, apperrors.ErrConflict)
+		return false, "", nil, 0, &claimInFlightError{tool: spec.Name}
 	case ClaimMismatch:
 		return false, "", nil, 0, fmt.Errorf(
 			"this idempotency_key was already used for a DIFFERENT %s call; send a new key to make this "+

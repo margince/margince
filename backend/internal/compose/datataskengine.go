@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/employmentrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/halfvectors"
+	"github.com/margince/margince/backend/internal/compose/halvedprobabilities"
 	"github.com/margince/margince/backend/internal/compose/importscopes"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/invitationsenders"
@@ -144,6 +145,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		keyedIdentifiersDataTask(),
 		mailCopiesDataTask(pool),
 		answeredTasksDataTask(pool),
+		halvedprobabilities.DataTask(halvedProbabilityStore(pool)),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),
 		importscopes.DataTask(),
