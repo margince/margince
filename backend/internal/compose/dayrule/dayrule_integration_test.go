@@ -9,6 +9,7 @@ package dayrule_test
 // 15 June it is the 15th in Berlin and the 16th for the member.
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -107,5 +108,46 @@ func TestForAssigneeFollowsWhoseRecordsTheReadIsAbout(t *testing.T) {
 		if zone.String() != c.zone || dayZone != c.name {
 			t.Errorf("%s: zone %s and store zone %q, want %s and %q", name, zone, dayZone, c.zone, c.name)
 		}
+	}
+}
+
+// One read asks the database for a member's zone once, whichever lane asks,
+// through the pool or inside the read's transaction. A read without the memo
+// asks every time.
+func TestOneReadResolvesEachZoneOnce(t *testing.T) {
+	e := integration.Setup(t)
+	e.WsExec(t, `UPDATE app_user SET timezone = 'Asia/Ho_Chi_Minh' WHERE id = $1`, e.Rep1)
+	reader := e.As(e.Rep1, nil, integration.RepPerms)
+	ask := func(ctx context.Context) int64 {
+		t.Helper()
+		metered, meter := database.WithStatementMeter(ctx)
+		if _, err := dayrule.ActingReaderZone(e.Pool)(metered); err != nil {
+			t.Fatal(err)
+		}
+		return meter.Cost().Statements
+	}
+	askInTx := func(ctx context.Context) int64 {
+		t.Helper()
+		var sent int64
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			metered, meter := database.WithStatementMeter(ctx)
+			_, err := dayrule.Zone(metered, tx, occurredday.Personal, e.Rep1)
+			sent = meter.Cost().Statements
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return sent
+	}
+
+	read := dayrule.WithZonesOncePerRead(reader)
+	if first := ask(read); first == 0 {
+		t.Fatal("the first ask of a read sent no statement, so nothing measures the lookup")
+	}
+	if again, inTx := ask(read), askInTx(read); again != 0 || inTx != 0 {
+		t.Errorf("a later ask of the same read sent %d statements through the pool and %d in a transaction, want none", again, inTx)
+	}
+	if again := ask(reader); again == 0 || ask(reader) == 0 {
+		t.Error("an ask outside any read sent no statement, so the memo outlived its read")
 	}
 }

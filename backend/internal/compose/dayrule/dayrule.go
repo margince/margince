@@ -30,6 +30,17 @@ import (
 // it is, and Combined ignores it. A member with no zone of their own, or no
 // seat any more, reads the installation's zone.
 func Zone(ctx context.Context, tx pgx.Tx, surface occurredday.Surface, user ids.UUID) (*time.Location, error) {
+	if zone, known := rememberedZone(ctx, surface, user); known {
+		return zone, nil
+	}
+	zone, err := readZone(ctx, tx, surface, user)
+	if err == nil {
+		rememberZone(ctx, surface, user, zone)
+	}
+	return zone, err
+}
+
+func readZone(ctx context.Context, tx pgx.Tx, surface occurredday.Surface, user ids.UUID) (*time.Location, error) {
 	if surface == occurredday.Personal && !user.IsZero() {
 		hours, _, err := identity.WorkingHoursOf(ctx, tx, ids.From[ids.UserKind](user))
 		switch {
@@ -42,6 +53,8 @@ func Zone(ctx context.Context, tx pgx.Tx, surface occurredday.Surface, user ids.
 		case !errors.Is(err, apperrors.ErrNotFound):
 			return nil, fmt.Errorf("dayrule: reading the member's zone: %w", err)
 		}
+		// The installation's zone, through the read's memo like any other ask.
+		return Zone(ctx, tx, occurredday.Combined, ids.Nil)
 	}
 	return identity.ZoneAppliedTx(ctx, tx)
 }
@@ -98,6 +111,9 @@ func ForAssignee(ctx context.Context, pool *pgxpool.Pool, assignee *ids.UUID) (z
 }
 
 func zoneIn(ctx context.Context, pool *pgxpool.Pool, surface occurredday.Surface) (*time.Location, error) {
+	if zone, known := rememberedZone(ctx, surface, ActingUser(ctx)); known {
+		return zone, nil
+	}
 	var loc *time.Location
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
