@@ -37,7 +37,7 @@ func (e *Engine) ReadTable(ctx context.Context, tx pgx.Tx, at time.Time) (Table,
 	if err != nil {
 		return Table{}, err
 	}
-	model, err := ReadModel(ctx, tx, forecasting.Period{Zone: zone}.LocalDay(at))
+	model, err := e.ReadModel(ctx, tx, forecasting.Period{Zone: zone}.LocalDay(at))
 	if err != nil || !model.SelfCorrecting {
 		return Table{}, err
 	}

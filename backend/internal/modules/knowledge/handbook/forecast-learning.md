@@ -31,6 +31,11 @@ tomorrow. This keeps a frozen forecast the same when it is worked out again.
 recorded deals from here closed, 55% won · Forecast uses 62%". A stage with none
 says "No recorded deal from here has closed before today".
 
+With **Show individual performance** off, a stage's closed deals count only when
+they belong to enough colleagues. When too few colleagues own them, the deals
+would show one colleague's results. The stage then uses its typed probability
+and shows no closed deals, for every reader and on every screen.
+
 ## One win probability for each deal
 
 Every open deal has one win probability. The deal page, the deal list and its
@@ -61,7 +66,8 @@ most effect counts.
 A quiet customer lowers the probability by what your own closed deals show. It
 needs 20 closed deals that were quiet when the forecast was frozen, and 20 that
 were not. It learns from closed deals only, so deals still open do not count.
-With fewer, the probability is halved.
+With fewer, the probability is halved. With **Show individual performance**
+off, it is halved too when too few colleagues own those closed deals.
 
 When it is halved, the ⓘ says too few closed deals show the real
 effect. Margince no longer lowers the stored probability of a quiet deal each

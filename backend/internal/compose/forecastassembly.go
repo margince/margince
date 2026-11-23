@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
-	"github.com/margince/margince/backend/internal/compose/winchance"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -40,7 +39,7 @@ func assembleForecast(
 	if err != nil {
 		return forecasting.Assembly{}, err
 	}
-	model, err := winchance.ReadModel(ctx, tx, period.LocalDay(asOf))
+	model, err := chances.ReadModel(ctx, tx, period.LocalDay(asOf))
 	if err != nil {
 		return forecasting.Assembly{}, err
 	}

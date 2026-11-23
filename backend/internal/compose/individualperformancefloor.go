@@ -80,6 +80,53 @@ func thinGroups(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bool, er
 	return belowFloor(p.UserID, groups, live, teams), nil
 }
 
+// thinForAnyReader answers, per group, whether the floor holds the group back
+// from some reader while the switch is off. It judges a figure every reader is
+// shown alike. Each live seat of the group is tried as the reader, and so is a
+// reader outside it. Every live team's total counts as one to take from.
+func thinForAnyReader(ctx context.Context, tx pgx.Tx, groups [][]ids.UUID) ([]bool, error) {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil || allowed {
+		return make([]bool, len(groups)), err
+	}
+	distinct := map[ids.UUID]bool{}
+	for _, group := range groups {
+		for _, seat := range group {
+			if !seat.IsZero() {
+				distinct[seat] = true
+			}
+		}
+	}
+	seats := slices.Collect(maps.Keys(distinct))
+	live, err := liveColleagues(ctx, tx, seats)
+	if err != nil {
+		return nil, err
+	}
+	members, err := readableTeamMembers(ctx, tx, seats)
+	if err != nil {
+		return nil, err
+	}
+	teams := make(map[ids.UUID][]floorTeam, len(members))
+	for seat, ofSeat := range members {
+		for _, team := range ofSeat {
+			teams[seat] = append(teams[seat], floorTeam{team: team})
+		}
+	}
+	out := make([]bool, len(groups))
+	for index, group := range groups {
+		readers := []ids.UUID{ids.Nil}
+		for _, seat := range group {
+			if live[seat] {
+				readers = append(readers, seat)
+			}
+		}
+		out[index] = slices.ContainsFunc(readers, func(reader ids.UUID) bool {
+			return belowFloor(reader, [][]ids.UUID{group}, live, teams)[0]
+		})
+	}
+	return out, nil
+}
+
 // floorTeam is one total a reader may take from another: a live team, or the
 // reader's own "My teams".
 type floorTeam struct {
