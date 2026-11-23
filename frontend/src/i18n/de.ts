@@ -8826,6 +8826,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
+  "tasks.move": "Verschieben",
+  "tasks.moveAnyway": "Trotzdem verschieben",
+  "tasks.movePastTitle": "Datum in der Vergangenheit",
+  "tasks.movePastBody": "Mit diesem Datum ist die Aufgabe überfällig.",
+  "tasks.movedTo": "Verschoben auf {when}",
+  "tasks.moveUndoFailed":
+    "Die Aufgabe wurde nicht zurückverschoben. Versuche es erneut.",
   "tasks.remind.menu": "Erinnerung",
   "tasks.remind.inAnHour": "In 1 Stunde",
   "tasks.remind.tomorrowMorning": "Morgen früh",
