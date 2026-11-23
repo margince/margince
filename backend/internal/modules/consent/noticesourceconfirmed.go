@@ -26,8 +26,8 @@ type ConfirmedNoticeSource struct {
 	ConfirmedBy *auditattribution.Attribution
 }
 
-// The confirm is the one audit row on a case that writes source_kind, so its
-// newest such row says when and by whom the standing source was confirmed.
+// A source review's confirm records source_kind in its audit row.
+// The newest such row says when the source was confirmed, and by whom.
 const confirmedNoticeSourceSQL = `
 	SELECT n.id, n.source_kind, n.source_obtained_at, confirm.id, COALESCE(confirm.occurred_at, n.updated_at)
 	  FROM privacy_notice_case n
