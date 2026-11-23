@@ -18,6 +18,7 @@ export function RecordFormDialog({
   actions,
   unsaved,
   closeDisabled,
+  returnFocusTo,
 }: Readonly<{
   open: boolean;
   title: string;
@@ -29,6 +30,8 @@ export function RecordFormDialog({
   unsaved?: boolean;
   /** Holds the X, Escape and the backdrop while the caller's save is out. */
   closeDisabled?: boolean;
+  /** Where focus goes on close, for an opener that is not mounted while the dialog is open. */
+  returnFocusTo?: () => HTMLElement | null;
 }>) {
   const headingId = useId();
   const live = intentForFieldCount(fieldCount);
@@ -45,6 +48,7 @@ export function RecordFormDialog({
       intent={shape}
       unsaved={unsaved}
       closeDisabled={closeDisabled}
+      returnFocusTo={returnFocusTo}
       commitSubmits
     >
       {shape === "form" ? (

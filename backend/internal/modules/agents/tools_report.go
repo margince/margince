@@ -39,9 +39,10 @@ type ReportCatalogEntry struct {
 	GroupBy    []string
 	Filters    []string
 	Aggregates []string
-	// Defaults says what the report answers when the plan arguments are
-	// omitted, which is the call a caller should make first.
-	Defaults string
+	// Measures is the default aggregates as bare terms, "" when there are
+	// none. DefaultBy is the default grouping, a subset of GroupBy.
+	Measures  string
+	DefaultBy []string
 	// Notes says what a filter MEANS when its name alone does not: which
 	// rows `project_id` admits, what unit `days` is in. Empty when every
 	// name is self-evident.
@@ -152,12 +153,12 @@ func reportProperty(catalog []ReportCatalogEntry) string {
 	return `{"enum":[` + strings.Join(keys, ",") + `],` + described + `}`
 }
 
-// describeReportCatalog says what each report ANSWERS, and names where the
-// three plan vocabularies are rather than reciting them.
+// describeReportCatalog says what each report ANSWERS (measures, every
+// dimension, default starred) and names where the `filters` and `aggregates`
+// vocabularies are rather than reciting them.
 //
-// Reciting all three vocabularies for every report cost 3.4KB here — 6% of the
-// served catalog in one tool, held by every client for a whole session and
-// re-sent by every Surface-B run on every step. They are the document's now.
+// Reciting all three vocabularies for every report cost 3.4KB here, held by
+// every client for a whole session. Filters and aggregates are the document's.
 //
 // WHERE THE LINE FALLS is MEASURED rather than reasoned, and the measurement is
 // worth keeping: with the defaults deferred too, leaving an enum of bare keys,
@@ -188,9 +189,7 @@ func describeReportCatalog(catalog []ReportCatalogEntry) string {
 	b.WriteString("The prebuilt report to run. Send `report` ALONE for the default answer listed ")
 	b.WriteString("below — that call takes no other argument and needs nothing read first. ")
 	writeReportDefaults(&b, catalog)
-	b.WriteString("A default is not a report's reach: each slices by dimensions the line above does ")
-	b.WriteString("not name, so a breakdown no default shows is usually still one of these reports. ")
-	b.WriteString("Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, ")
+	b.WriteString("A report's `filters` and `aggregates` are its own, ")
 	b.WriteString("published at ")
 	b.WriteString(ReportVocabularyURI)
 	b.WriteString(" and answered by describe_report_vocabulary; a name outside them is refused with ")
@@ -236,22 +235,43 @@ func catalogNamesAPipelineID(catalog []ReportCatalogEntry) bool {
 	return false
 }
 
-// writeReportDefaults renders what each report answers with no plan — the one
-// thing a caller cannot infer from a report's key.
+// writeReportDefaults renders one list per report: the measures it computes
+// with no plan, then `by:` with every dimension it accepts, the default
+// grouping starred. The legend comes once, ahead of the lines.
 //
-// Keyed on the entries that HAVE a default, so a report with none stays silent
-// rather than rendering a key with an empty clause after it, which would read as
-// a report that answers nothing.
+// A report with neither measures nor dimensions stays silent, so no key
+// renders with an empty clause.
 func writeReportDefaults(b *strings.Builder, catalog []ReportCatalogEntry) {
+	b.WriteString("Per report: default measures; by: every dimension, * = grouped by default. ")
 	for _, entry := range catalog {
-		if entry.Defaults == "" {
+		if entry.Measures == "" && len(entry.GroupBy) == 0 {
 			continue
 		}
 		b.WriteString(entry.Report)
 		b.WriteString(": ")
-		b.WriteString(entry.Defaults)
+		b.WriteString(entry.Measures)
+		if len(entry.GroupBy) > 0 {
+			if entry.Measures != "" {
+				b.WriteString("; ")
+			}
+			b.WriteString("by: ")
+			b.WriteString(strings.Join(starDefaults(entry), ", "))
+		}
 		b.WriteString(". ")
 	}
+}
+
+// starDefaults is the entry's dimensions with each default grouping suffixed
+// `*`, in the entry's own (sorted) order.
+func starDefaults(entry ReportCatalogEntry) []string {
+	out := make([]string, len(entry.GroupBy))
+	for i, name := range entry.GroupBy {
+		out[i] = name
+		if slices.Contains(entry.DefaultBy, name) {
+			out[i] += "*"
+		}
+	}
+	return out
 }
 
 func (t runReport) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
@@ -291,3 +311,20 @@ var errMissingReport = jsonError("a report key is required")
 type jsonError string
 
 func (e jsonError) Error() string { return string(e) }
+
+// defaults renders what the report answers with no plan arguments, for the
+// published document. Each half appears only when it exists, because a spec
+// with aggregates and no grouping is already buildable (runAdHocPlan).
+func (e ReportCatalogEntry) defaults() string {
+	by := strings.Join(e.DefaultBy, ", ")
+	switch {
+	case e.Measures != "" && by != "":
+		return e.Measures + " grouped by " + by
+	case e.Measures != "":
+		return e.Measures + " over the whole set"
+	case by != "":
+		return "grouped by " + by
+	default:
+		return ""
+	}
+}

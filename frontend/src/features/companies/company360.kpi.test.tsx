@@ -31,10 +31,10 @@ afterEach(() => {
 // unchecked. That lets a shape drift off the contract while every test passes.
 type StateStrip360 = NonNullable<Company360["state_strip"]>;
 
-// The header's one lifecycle control, then the details' About reading; a second
-// control fails here. An unassessed stage folds behind "Show N empty fields".
-async function lifecycleControls(): Promise<HTMLElement[]> {
-  const header = await screen.findAllByRole("combobox", { name: "Lifecycle" });
+// The About reading of the stage, the one place it is edited from: the header
+// draws no lifecycle control. An unassessed stage folds behind "Show N empty
+// fields".
+async function lifecycleReading(): Promise<HTMLElement> {
   const unfold = screen.queryByRole("button", {
     name: /^Show \d+ empty fields$/,
   });
@@ -43,11 +43,11 @@ async function lifecycleControls(): Promise<HTMLElement[]> {
   }
   const about = await screen.findByRole("region", { name: "About" });
   const row = within(about).getByText("Lifecycle", { selector: "dt" });
-  expect(header).toHaveLength(1);
+  expect(screen.queryByRole("combobox", { name: "Lifecycle" })).toBeNull();
   if (!(row.nextElementSibling instanceof HTMLElement)) {
     throw new Error("the About section draws no Lifecycle value");
   }
-  return [...header, row.nextElementSibling];
+  return row.nextElementSibling;
 }
 
 describe("company view — where the account stands, and what it is to us", () => {
@@ -56,9 +56,8 @@ describe("company view — where the account stands, and what it is to us", () =
     // the tab would share a label and tell the test nothing.
     //
     // The same override goes into both reads: the 360's own `company` (read by
-    // the rail's grid) and the standalone GET (read by the header). Both draw a
-    // lifecycle control. Two real reads of one row never disagree, so the
-    // fixture must not either.
+    // the rail's grid) and the standalone GET (read by the header). Two real
+    // reads of one row never disagree, so the fixture must not either.
     const withLifecycle: Company = {
       ...company,
       lifecycle: "former_customer",
@@ -70,13 +69,8 @@ describe("company view — where the account stands, and what it is to us", () =
 
     // A classification with one value let an account whose contract had ended
     // read as "Prospect" while it was also a partner. Lifecycle is the editable
-    // control; the types stay read-only badges. findAllBy, not getBy: the
-    // controls appear only once /me answers with the viewer's grants, which
-    // resolves apart from the 360 awaited above. The header's button and the
-    // details' row show the same value, because both read the one row.
-    for (const control of await lifecycleControls()) {
-      expect(control.textContent).toContain("Former customer");
-    }
+    // field, in the details; the types stay read-only badges.
+    expect((await lifecycleReading()).textContent).toContain("Former customer");
     // The design draws no relationship badge beside the name and no type row
     // in the details: the types are a Profile tab field. This account is a
     // former customer and still carries the `customer` type. Printing both
@@ -86,7 +80,7 @@ describe("company view — where the account stands, and what it is to us", () =
     expect(screen.queryByText("Supplier")).toBeNull();
   });
 
-  it("offers the lifecycle control on an account nobody has assessed yet", async () => {
+  it("reads an account nobody has assessed yet as Unknown, in the details only", async () => {
     stub(view(), 200, {
       ...company,
       lifecycle: "unknown",
@@ -99,12 +93,10 @@ describe("company view — where the account stands, and what it is to us", () =
     // Hiding it takes the field away from the account that needs it set, and
     // there is no other way in from here. It reads "Unknown", the stage's own
     // word, never a verdict. Both mount points (header, grid) show it.
-    for (const control of await lifecycleControls()) {
-      expect(control.textContent).toContain("Unknown");
-    }
+    expect((await lifecycleReading()).textContent).toContain("Unknown");
   });
 
-  it("writes lifecycle once and shows the new value on both mount points", async () => {
+  it("writes lifecycle once, from the details dialog, and shows the new value", async () => {
     // What "one write path, two mount points" promises: a save through either
     // control reaches the server once. The other control shows the new value
     // once the record refetches, with no second write and no stale value left.
@@ -156,17 +148,23 @@ describe("company view — where the account stands, and what it is to us", () =
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
-    const [headerControl] = await lifecycleControls();
-    await pickOption(userEvent.setup(), headerControl, "Prospect");
+    await lifecycleReading();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const dialog = await screen.findByRole("dialog", { name: "About" });
+    await pickOption(
+      user,
+      within(dialog).getByRole("combobox", { name: "Lifecycle" }),
+      "Prospect",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(patchCount).toBe(1));
     expect(lastIfMatch).toBe("1");
     // Both read "Prospect": the single write invalidates the one query both
     // read from, and nothing wrote a second time.
     await waitFor(async () => {
-      for (const control of await lifecycleControls()) {
-        expect(control.textContent).toContain("Prospect");
-      }
+      expect((await lifecycleReading()).textContent).toContain("Prospect");
     });
   });
 });

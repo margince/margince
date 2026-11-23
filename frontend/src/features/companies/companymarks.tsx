@@ -10,13 +10,12 @@ import {
 } from "../../lib/partnerstages.queries";
 import { RecordAccess } from "../records/recordaccess";
 import { CompanyDuplicatesEntry } from "./companyduplicates";
-import { CompanyNameLine } from "./companylifecycle";
 
 type Company = components["schemas"]["Company"];
 
 /**
- * The pills under an account's name: whether it is archived, where it stands
- * (the lifecycle, the head's one real control) and who may read it. Archived
+ * The pills under an account's name: whether it is archived, what it is to
+ * the business and who may read it. The lifecycle is edited in the side rail. Archived
  * leads because it outranks the rest: among the verbs it read as one more
  * control, and a reader scanning the name missed it.
  */
@@ -27,7 +26,6 @@ export function CompanyMarks({ company }: Readonly<{ company: Company }>) {
       {company.archived_at && (
         <Badge tone="warning">{t("record.archived")}</Badge>
       )}
-      <CompanyNameLine company={company} />
       <CompanyRoleMarks company={company} />
       <RecordAccess key={company.id} kind="company" record={company} />
       <CompanyDuplicatesEntry
@@ -59,19 +57,18 @@ export function partnerMarkText(company: Company, t: Translator): string {
 /**
  * What the company is to the business: a customer, a partner, or both on one
  * record. Customer reads the relationship type, not the lifecycle. A partner
- * that also buys from us stays a customer whatever stage it is in. The mark is
- * left out where the lifecycle chip already names the customer relationship.
- * So the head never reads "Customer" twice, or "Former customer" against it.
+ * that also buys from us stays a customer whatever stage it is in. A former
+ * customer gets no Customer mark, so the head does not say the opposite of the
+ * lifecycle the side rail shows.
  */
 export function CompanyRoleMarks({ company }: Readonly<{ company: Company }>) {
   const t = useT();
   const types = company.relationship_types ?? [];
   const isPartner = types.includes("partner") || company.partner !== undefined;
-  const lifecycleSaysCustomer =
-    company.lifecycle === "customer" || company.lifecycle === "former_customer";
+  const formerCustomer = company.lifecycle === "former_customer";
   return (
     <>
-      {types.includes("customer") && !lifecycleSaysCustomer && (
+      {types.includes("customer") && !formerCustomer && (
         <Badge tone="success">{t("company.relType.customer")}</Badge>
       )}
       {isPartner && (
