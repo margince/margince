@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -353,7 +354,7 @@ func (g storedGrowthFit) wire(companyID ids.CompanyID, from crmcontracts.Assembl
 }
 
 func (s *GrowthFitService) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (storedGrowthFit, bool, error) {
-	row, found, err := growthFitCache.load(ctx, s.pool, userID, companyID)
+	row, found, err := generatedsummary.Load(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID))
 	if err != nil || !found {
 		return storedGrowthFit{}, false, err
 	}
@@ -373,10 +374,11 @@ func (s *GrowthFitService) save(ctx context.Context, userID ids.UserID, companyI
 	if err != nil {
 		return fmt.Errorf("encode the growth-fit payload: %w", err)
 	}
-	return growthFitCache.save(ctx, s.pool, userID, companyID, entry{
-		Fingerprint: fit.Fingerprint,
-		GeneratedAt: fit.GeneratedAt,
-		GeneratedBy: fit.GeneratedBy,
-		Payload:     payload,
-	})
+	return generatedsummary.Store(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID),
+		generatedsummary.Entry{
+			Fingerprint: fit.Fingerprint,
+			GeneratedAt: fit.GeneratedAt,
+			GeneratedBy: fit.GeneratedBy,
+			Payload:     payload,
+		})
 }

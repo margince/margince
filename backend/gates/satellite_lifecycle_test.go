@@ -171,6 +171,18 @@ var carriedThroughAPort = map[string]portCarry{
 	"intro_request":             {introductionsPkg, "Store.CarryIntrosTx", "refuseUnwiredIntroCarry"},
 }
 
+// carriedByItsStore names the satellites a platform store handles for the
+// merge, by the store function the merge calls in its own transaction.
+var carriedByItsStore = map[string]storeCarry{
+	"generated_summary": {generatedSummaryStoreDir, "ForgetContacts"},
+}
+
+// storeCarry is the store package and the function of it that writes the table.
+type storeCarry struct {
+	pkg     string
+	carrier string
+}
+
 var (
 	// contactSatelliteName matches the CREATE TABLE lines this gate governs:
 	// child tables named for the contact they hang off.
@@ -298,6 +310,11 @@ func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 			if _, ported := carriedThroughAPort[table]; ported && path.name == mergeRelinkPath {
 				continue
 			}
+			if store, stored := carriedByItsStore[table]; stored && path.name == mergeRelinkPath &&
+				reachesName(t, path.pkg, path.from, store.carrier) &&
+				reachedWrites(t, store.pkg, store.carrier)[table] {
+				continue
+			}
 			missing = append(missing, "contact satellite "+table+" is not handled by the "+path.name+
 				" path ("+path.where()+") — "+path.remedy)
 		}
@@ -305,6 +322,11 @@ func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 	sort.Strings(missing)
 	for _, m := range missing {
 		t.Error(m)
+	}
+	for table := range carriedByItsStore {
+		if satellites[table] == nil {
+			t.Errorf("carriedByItsStore names %s, which no migration gives a contact_id column", table)
+		}
 	}
 }
 
@@ -363,6 +385,32 @@ func reachedWrites(t *testing.T, dir, from string) map[string]bool {
 	}
 	walk(from)
 	return writes
+}
+
+// reachesName reports whether `from`, or anything it calls in its package,
+// names the identifier. A store call is named so, and holds no statement here.
+func reachesName(t *testing.T, dir, from, name string) bool {
+	t.Helper()
+	graph := packageCallGraph(t, dir)
+	seen := map[string]bool{}
+	var walk func(string) bool
+	walk = func(current string) bool {
+		fn, known := graph[current]
+		if !known || seen[current] {
+			return false
+		}
+		seen[current] = true
+		if fn.reads[name] {
+			return true
+		}
+		for called := range fn.calls {
+			if walk(called) {
+				return true
+			}
+		}
+		return false
+	}
+	return walk(from)
 }
 
 // TestEveryPortCarriesTheTablesItsRegisterEntryClaims holds carriedThroughAPort

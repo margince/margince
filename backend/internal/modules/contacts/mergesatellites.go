@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -77,9 +78,7 @@ func relinkReaderJudgements(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("carry the nudges a reader had already put down: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM contact_brief WHERE contact_id IN (@source, @target)`,
-		pgx.NamedArgs{auditKeySource: sourceID, mergeTargetKey: targetID}); err != nil {
+	if err := generatedsummary.ForgetContacts(ctx, tx, sourceID, targetID); err != nil {
 		return fmt.Errorf("drop the briefs the merge made stale: %w", err)
 	}
 	return nil

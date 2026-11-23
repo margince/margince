@@ -18,11 +18,9 @@ package companybrief
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -32,7 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -378,32 +376,24 @@ func wireSentences(in []Sentence) []crmcontracts.CompanyBriefSentence {
 	return out
 }
 
-// cached reads this user's brief for this account. The user_id predicate is
-// the whole scope and has to be written out: without it one rep would read
-// another's brief — which was written from records they may not share. It is
-// also sufficient — core 0225 collapsed company_brief's unique key to
-// (user_id, company_id).
+// cached reads this user's brief for this account. The store keys the row on
+// the reader, without which one rep would read a brief written from records
+// they may not share.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (stored, bool, error) {
-	var out stored
-	var payload []byte
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT fingerprint, generated_at, generated_by, payload FROM company_brief
-			WHERE user_id = $1 AND company_id = $2`,
-			userID, companyID).Scan(&out.Fingerprint, &out.GeneratedAt, &out.GeneratedBy, &payload)
-	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return stored{}, false, nil
-	}
-	if err != nil {
+	row, found, err := generatedsummary.Load(ctx, s.pool, userID, generatedsummary.CompanyBrief(companyID))
+	if err != nil || !found {
 		return stored{}, false, err
+	}
+	out := stored{
+		Fingerprint: row.Fingerprint, GeneratedAt: row.GeneratedAt,
+		GeneratedBy: crmcontracts.WrittenBy(row.GeneratedBy),
 	}
 	// The WHOLE envelope, version and sections included. Unmarshalling the
 	// payload into the sentence list alone left Version at zero on every read,
 	// so the version check below could never pass and the cache never once
 	// answered — a model call on every page load, invisible to a build gate
 	// because nothing about the served brief looked wrong.
-	if err := json.Unmarshal(payload, &out); err != nil {
+	if err := json.Unmarshal(row.Payload, &out); err != nil {
 		// A payload this build cannot read is a cache MISS, not a failure:
 		// the brief is derived content, regenerating it costs one call, and
 		// the new row replaces the unreadable one.
@@ -421,20 +411,13 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, companyID ids.Com
 	if err != nil {
 		return fmt.Errorf("encode the brief payload: %w", err)
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO company_brief (user_id, company_id, fingerprint,
-			                       generated_at, generated_by, payload)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (user_id, company_id) DO UPDATE
-			SET fingerprint = EXCLUDED.fingerprint,
-			    generated_at = EXCLUDED.generated_at,
-			    generated_by = EXCLUDED.generated_by,
-			    payload = EXCLUDED.payload`,
-			userID, companyID, brief.Fingerprint,
-			brief.GeneratedAt, brief.GeneratedBy, payload)
-		return err
-	})
+	return generatedsummary.Store(ctx, s.pool, userID, generatedsummary.CompanyBrief(companyID),
+		generatedsummary.Entry{
+			Fingerprint: brief.Fingerprint,
+			GeneratedAt: brief.GeneratedAt,
+			GeneratedBy: string(brief.GeneratedBy),
+			Payload:     payload,
+		})
 }
 
 // actingUser resolves the human this brief belongs to. Acknowledging that

@@ -474,8 +474,6 @@ public.company.source_id exempt bounded imported identities keep the existing in
 public.company.source_system document
 public.company.visibility document
 public.company_address_country.countries document
-public.company_brief.fingerprint document
-public.company_brief.generated_by document
 public.company_domain.captured_by document
 public.company_domain.domain document
 public.company_domain.domain_folded document
@@ -490,8 +488,6 @@ public.company_domain_disposition.evidence exempt carries model reasons and craw
 public.company_domain_disposition.pending_reason note
 public.company_domain_disposition.source document
 public.company_domain_disposition.status document
-public.company_dossier.fingerprint document
-public.company_dossier.generated_by document
 public.company_fact.captured_by document
 public.company_fact.category document
 public.company_fact.evidence_snippet document checked: a site passage of about 600 runes or a fixed marker
@@ -504,8 +500,6 @@ public.company_geocode_state.input_hash document
 public.company_geocode_state.last_outcome document
 public.company_geocode_state.provider document
 public.company_geocode_state.status document
-public.company_growth_fit.fingerprint document
-public.company_growth_fit.generated_by document
 public.company_offered_value.field_key document
 public.company_offered_value.offered_value document checked: the extension surface refuses past 500
 public.company_offered_value.source_system document
@@ -599,8 +593,6 @@ public.contact_acquisition_evidence.request_retracted_by document
 public.contact_acquisition_evidence.source_entity_type document
 public.contact_acquisition_evidence.stated_source document
 public.contact_address_country.countries document
-public.contact_brief.fingerprint document
-public.contact_brief.generated_by document
 public.contact_channel_identity.captured_by document
 public.contact_channel_identity.channel_user_id document
 public.contact_channel_identity.membership_bot_id document
@@ -770,8 +762,6 @@ public.deal_stage_history.lost_reason_code_at_change note
 public.deal_stage_history.provenance document
 public.deal_stage_history.semantic_at_change document
 public.deal_stage_history.valuation_provenance document
-public.deal_status_card.fingerprint document
-public.deal_status_card.generated_by document
 public.deal_suggestion.captured_by document
 public.deal_suggestion.fingerprint document
 public.deal_suggestion.kind document
@@ -872,6 +862,9 @@ public.forecast_snapshot.range_version document
 public.forecast_snapshot.risk_signals_version document
 public.forecast_snapshot.scope_kind document
 public.forecast_snapshot.trigger document
+public.generated_summary.fingerprint document
+public.generated_summary.generated_by document
+public.generated_summary.kind document
 public.geocode_cache.provider document
 public.geocode_cache.query document checked: joined from bounded address columns
 public.geocode_country_cache.country_codes document

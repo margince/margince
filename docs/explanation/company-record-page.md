@@ -103,7 +103,8 @@ under their own subheads, never mixed.
 
 `GET /companies/{id}/brief` (and `POST` for a rewrite a user asks for) still serves a brief, and is
 **deprecated**: no screen renders it. It stays because `POST …/ask` is served from the same handlers and
-the same assembly. It lives in `internal/compose/companybrief`, and owns one table, `company_brief`.
+the same assembly. It lives in `internal/compose/companybrief`. Its cache is a `company_brief` row of
+`generated_summary`, the table that `internal/platform/generatedsummary` owns.
 
 **Built as the caller.** The input of the brief comes from running the 360 itself, as the principal that
 asked, inside the normal gates. The `Assembler` seam is injected, not imported. So the package uses one
@@ -546,7 +547,7 @@ Graph details beyond the card (the strength model, the warm intro resolver, our 
 
 ## View state is not record fact
 
-Three tables behind this page live in a `compose` subpackage each, and all three are written **without an audit
+Three tables behind this page are written by this page's packages, and all three are written **without an audit
 row or outbox event**. This is the ruling for saved views. The waivers in `backend/gates/moduleaudits_test.go` hold the missing
 audit row, and `backend/gates/tableownerregistry_test.go` names each owner:
 
@@ -554,7 +555,7 @@ audit row, and `backend/gates/tableownerregistry_test.go` names each owner:
 |---|---|---|
 | `user_record_view` | `internal/compose/company360` | the visit baseline per user |
 | `suggestion_dismissal` | `internal/compose/company360` | the rep's "not this, not now" |
-| `company_brief` | `internal/compose/companybrief` | the brief cache per user |
+| `generated_summary` | `internal/platform/generatedsummary` | the brief cache per user, with the other generated summaries |
 
 This is the exception to the shape in [write-backbone.md](write-backbone.md) (domain row + `audit_log` +
 `event_outbox`), and it is small by the way it is built.
