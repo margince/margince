@@ -4087,6 +4087,10 @@ func (stubs) GetStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetStatus")
 }
 
+func (stubs) HeadStatus(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "HeadStatus")
+}
+
 func (stubs) GetTagSuggestion(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetTagSuggestion")
 }

@@ -182,6 +182,9 @@ func setCompanyAssessAgainst(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 // refuseParentBelow names the chosen parent when it already sits below the company.
 // The walk stops at an ancestor hidden from the caller; the cycle trigger still holds there.
 func refuseParentBelow(ctx context.Context, tx pgx.Tx, company, parent ids.UUID) error {
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		return err
+	}
 	var name string
 	args := []any{parent}
 	if err := tx.QueryRow(ctx, "SELECT display_name FROM company WHERE id = "+storekit.Placeholders(args), args...).Scan(&name); err != nil {

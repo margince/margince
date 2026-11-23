@@ -339,6 +339,26 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+    head:
+      tags: [Identity]
+      operationId: headStatus
+      security: []
+      x-agent-access: human-only
+      summary: Reachability probe for a monitor that sends HEAD.
+      description: |
+        `getStatus` without a body, for a monitor that probes with HEAD. It answers what
+        `getStatus` answers, and does no more work.
+      responses:
+        '200':
+          description: The api is reachable through the public path.
+          headers:
+            Cache-Control:
+              schema: { type: string, enum: [no-store], x-extensible-enum: true }
+        '503':
+          description: The installation is not bootstrapped yet.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /auth/login:
     post:
@@ -40060,9 +40080,10 @@ components:
       description: |
         Only the members of this list — a Shortlist's chosen records, or the records a Live List's
         filter selects now — narrowed before sorting and paging, so the page is the list's members
-        in the record list's own columns. The list must be one the caller may find and of this
-        record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-        the caller's row scope still applies to every row.
+        in the record list's own columns. A list the caller cannot find, or any list while lists
+        are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+        record type answers `422`. Sharing a list never widens what the read shows: the caller's
+        row scope still applies to every row.
     IncludeArchived:
       name: include_archived
       in: query
@@ -51359,6 +51380,11 @@ components:
       required: [provider, description]
       properties:
         provider: { type: string, description: "The source's key, stored on every mirrored row." }
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit
+            declares none; a client then names it another way, never by the key.
         description: { type: string, description: "What the extension unit supplying it says it is for." }
 
     FinanceConnection:
@@ -51366,7 +51392,12 @@ components:
       required: [id, provider, status, connected_at]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string }
+        provider: { type: string, description: "The source's key. Show `provider_name` to a reader." }
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit
+            declares none; a client then names it another way, never by the key.
         status:
           type: string
           enum: [connecting, active, error]
@@ -53260,6 +53291,8 @@ components:
           type: array
           description: Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
           items: { $ref: '#/components/schemas/ContactNoticeDuty' }
+        privacy_confirmed_source:
+          $ref: '#/components/schemas/ContactConfirmedSource'
         consent:
           type: object
           description: Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger.
@@ -59049,6 +59082,22 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/Project360PhaseTransition' } }
         phase_durations: { type: array, items: { $ref: '#/components/schemas/Project360PhaseDuration' } }
+
+    ContactConfirmedSource:
+      type: object
+      description: |
+        The source a reviewer last confirmed for this contact, from the newest confirmed
+        privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+        privacy_notice_duties section.
+      required: [case_id, source_kind, source_obtained_at, confirmed_at]
+      properties:
+        case_id: { type: string, format: uuid }
+        source_kind: { type: string, description: 'The confirmed kind: one of `AssessNoticeSource.kind`.' }
+        source_obtained_at: { type: [string, 'null'], format: date-time, description: 'The acquisition date the reviewer confirmed; null when they confirmed none.' }
+        confirmed_at: { type: string, format: date-time }
+        confirmed_by:
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          description: Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists.
 
     PrincipalAttribution:
       type: object

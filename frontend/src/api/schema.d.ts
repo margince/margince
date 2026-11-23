@@ -117,7 +117,12 @@ export interface paths {
         post?: never;
         delete?: never;
         options?: never;
-        head?: never;
+        /**
+         * Reachability probe for a monitor that sends HEAD.
+         * @description `getStatus` without a body, for a monitor that probes with HEAD. It answers what
+         *     `getStatus` answers, and does no more work.
+         */
+        head: operations["headStatus"];
         patch?: never;
         trace?: never;
     };
@@ -36450,13 +36455,18 @@ export interface components {
         FinanceSourceOption: {
             /** @description The source's key, stored on every mirrored row. */
             provider: string;
+            /** @description The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key. */
+            provider_name?: string;
             /** @description What the extension unit supplying it says it is for. */
             description: string;
         };
         FinanceConnection: {
             /** Format: uuid */
             id: string;
+            /** @description The source's key. Show `provider_name` to a reader. */
             provider: string;
+            /** @description The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key. */
+            provider_name?: string;
             /**
              * @description `connecting` until the first sync finishes; `error` when the last one failed.
              * @enum {string}
@@ -37841,6 +37851,7 @@ export interface components {
             privacy_source_reviews?: string[];
             /** @description Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld. */
             privacy_notice_duties?: components["schemas"]["ContactNoticeDuty"][];
+            privacy_confirmed_source?: components["schemas"]["ContactConfirmedSource"];
             /** @description Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger. */
             consent?: {
                 state: components["schemas"]["ContactConsentState"][];
@@ -42610,6 +42621,26 @@ export interface components {
         Project360PhaseHistory: {
             data: components["schemas"]["Project360PhaseTransition"][];
             phase_durations: components["schemas"]["Project360PhaseDuration"][];
+        };
+        /**
+         * @description The source a reviewer last confirmed for this contact, from the newest confirmed
+         *     privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+         *     privacy_notice_duties section.
+         */
+        ContactConfirmedSource: {
+            /** Format: uuid */
+            case_id: string;
+            /** @description The confirmed kind: one of `AssessNoticeSource.kind`. */
+            source_kind: string;
+            /**
+             * Format: date-time
+             * @description The acquisition date the reviewer confirmed; null when they confirmed none.
+             */
+            source_obtained_at: string | null;
+            /** Format: date-time */
+            confirmed_at: string;
+            /** @description Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists. */
+            confirmed_by?: components["schemas"]["PrincipalAttribution"];
         };
         /**
          * @description Who a recorded change is attributed to, read from the audit row the change
@@ -65243,9 +65274,10 @@ export interface components {
         /**
          * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
          *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-         *     in the record list's own columns. The list must be one the caller may find and of this
-         *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-         *     the caller's row scope still applies to every row.
+         *     in the record list's own columns. A list the caller cannot find, or any list while lists
+         *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+         *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+         *     row scope still applies to every row.
          */
         ListMembershipFilter: string;
         /** @description Include soft-deleted (archived) rows. Default false. */
@@ -65469,6 +65501,34 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ServiceStatus"];
                 };
+            };
+            /** @description The installation is not bootstrapped yet. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    headStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The api is reachable through the public path. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "no-store";
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description The installation is not bootstrapped yet. */
             503: {
@@ -66601,9 +66661,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -68676,9 +68737,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -71904,9 +71966,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**
@@ -79793,9 +79856,10 @@ export interface operations {
                 /**
                  * @description Only the members of this list — a Shortlist's chosen records, or the records a Live List's
                  *     filter selects now — narrowed before sorting and paging, so the page is the list's members
-                 *     in the record list's own columns. The list must be one the caller may find and of this
-                 *     record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-                 *     the caller's row scope still applies to every row.
+                 *     in the record list's own columns. A list the caller cannot find, or any list while lists
+                 *     are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+                 *     record type answers `422`. Sharing a list never widens what the read shows: the caller's
+                 *     row scope still applies to every row.
                  */
                 list_id?: components["parameters"]["ListMembershipFilter"];
                 /**

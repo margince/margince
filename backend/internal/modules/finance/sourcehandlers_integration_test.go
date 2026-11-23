@@ -178,7 +178,14 @@ func TestTheSourceCardShowsTheLiveConnectionAndWhatIsOnOffer(t *testing.T) {
 		t.Fatalf("connection = %+v, want the fixture's live %s", state.Connection, fixtureProviderName)
 	}
 	if len(state.Available) != 3 || state.Available[2].Description != "The suite's own ledger." {
-		t.Errorf("available = %+v, want every offered source with its description", state.Available)
+		t.Fatalf("available = %+v, want every offered source with its description", state.Available)
+	}
+	if state.Connection.ProviderName == nil || *state.Connection.ProviderName != fixtureSourceName ||
+		state.Available[2].ProviderName == nil || *state.Available[2].ProviderName != fixtureSourceName {
+		t.Errorf("the connected and offered source are named %v and %v, want %q", state.Connection.ProviderName, state.Available[2].ProviderName, fixtureSourceName)
+	}
+	if state.Available[0].ProviderName != nil {
+		t.Errorf("a source that declares no name is named %q, want none", *state.Available[0].ProviderName)
 	}
 
 	bare := Handlers{store: NewStore(a.store.db, a.store.rates)}

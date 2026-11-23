@@ -9,7 +9,7 @@ Counting what another tool covers, it is 84.0%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1134 | 880 | 77.6% |
+| Every operation in the contract | 1135 | 880 | 77.5% |
 | Operations a signed-in user reaches | 1090 | 880 | 80.7% |
 | Operations the web app calls for a signed-in user | 957 | 777 | 81.1% |
 
@@ -54,7 +54,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 | [The user's own account and security](#the-users-own-account-and-security) | My account | 32 | 18 | 5 | 0 | 11 | 2 | 31 | 54.8% | 56.2% |
 | [Agent governance](#agent-governance) | every passport, in no area | 29 | 8 | 0 | 0 | 20 | 1 | 29 | 27.5% | 27.5% |
 | [Operator and system](#operator-and-system) | Admin settings, held as that area | 25 | 17 | 3 | 0 | 8 | 0 | 22 | 68.1% | 68.0% |
-| [Public, with no signed-in user](#public-with-no-signed-in-user) | none: no agent acts here | 44 | 0 | 0 | 0 | 0 | 0 | 34 | n/a | n/a |
+| [Public, with no signed-in user](#public-with-no-signed-in-user) | none: no agent acts here | 45 | 0 | 0 | 0 | 0 | 0 | 34 | n/a | n/a |
 
 ## Business operations
 
@@ -210,7 +210,7 @@ Passport area: none: no agent acts here.
 
 | Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Sign-in and password reset | 9 | 0 | 0 | 0 | 0 | 0 | 7 | n/a | n/a |
+| Sign-in and password reset | 10 | 0 | 0 | 0 | 0 | 0 | 7 | n/a | n/a |
 | Provider sign-in returns | 2 | 0 | 0 | 0 | 0 | 0 | 0 | n/a | n/a |
 | Buyer deal rooms | 10 | 0 | 0 | 0 | 0 | 0 | 9 | n/a | n/a |
 | Booking and meeting pages | 14 | 0 | 0 | 0 | 0 | 0 | 12 | n/a | n/a |
