@@ -311,7 +311,7 @@ func TestEveryContactSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
 				continue
 			}
 			if store, stored := carriedByItsStore[table]; stored && path.name == mergeRelinkPath &&
-				reachesName(t, path.pkg, path.from, store.carrier) &&
+				reachesStoreCall(t, path.pkg, path.from, store) &&
 				reachedWrites(t, store.pkg, store.carrier)[table] {
 				continue
 			}
@@ -387,11 +387,12 @@ func reachedWrites(t *testing.T, dir, from string) map[string]bool {
 	return writes
 }
 
-// reachesName reports whether `from`, or anything it calls in its package,
-// names the identifier. A store call is named so, and holds no statement here.
-func reachesName(t *testing.T, dir, from, name string) bool {
+// reachesStoreCall reports whether `from`, or anything it calls in its package,
+// names both the store package and its carrier in one function.
+func reachesStoreCall(t *testing.T, dir, from string, store storeCarry) bool {
 	t.Helper()
 	graph := packageCallGraph(t, dir)
+	pkgName := store.pkg[strings.LastIndex(store.pkg, "/")+1:]
 	seen := map[string]bool{}
 	var walk func(string) bool
 	walk = func(current string) bool {
@@ -400,7 +401,7 @@ func reachesName(t *testing.T, dir, from, name string) bool {
 			return false
 		}
 		seen[current] = true
-		if fn.reads[name] {
+		if fn.reads[store.carrier] && fn.reads[pkgName] {
 			return true
 		}
 		for called := range fn.calls {

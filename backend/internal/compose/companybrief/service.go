@@ -380,7 +380,7 @@ func wireSentences(in []Sentence) []crmcontracts.CompanyBriefSentence {
 // the reader, without which one rep would read a brief written from records
 // they may not share.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (stored, bool, error) {
-	row, found, err := generatedsummary.Load(ctx, s.pool, userID, generatedsummary.CompanyBrief(companyID))
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.CompanyBrief(companyID))
 	if err != nil || !found {
 		return stored{}, false, err
 	}
@@ -411,7 +411,7 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, companyID ids.Com
 	if err != nil {
 		return fmt.Errorf("encode the brief payload: %w", err)
 	}
-	return generatedsummary.Store(ctx, s.pool, userID, generatedsummary.CompanyBrief(companyID),
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.CompanyBrief(companyID),
 		generatedsummary.Entry{
 			Fingerprint: brief.Fingerprint,
 			GeneratedAt: brief.GeneratedAt,

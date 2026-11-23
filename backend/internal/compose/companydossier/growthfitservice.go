@@ -354,7 +354,7 @@ func (g storedGrowthFit) wire(companyID ids.CompanyID, from crmcontracts.Assembl
 }
 
 func (s *GrowthFitService) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (storedGrowthFit, bool, error) {
-	row, found, err := generatedsummary.Load(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID))
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID))
 	if err != nil || !found {
 		return storedGrowthFit{}, false, err
 	}
@@ -374,7 +374,7 @@ func (s *GrowthFitService) save(ctx context.Context, userID ids.UserID, companyI
 	if err != nil {
 		return fmt.Errorf("encode the growth-fit payload: %w", err)
 	}
-	return generatedsummary.Store(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID),
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.CompanyGrowthFit(companyID),
 		generatedsummary.Entry{
 			Fingerprint: fit.Fingerprint,
 			GeneratedAt: fit.GeneratedAt,

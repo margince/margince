@@ -48,7 +48,7 @@ func TestASummaryIsKeyedOnItsReaderItsKindAndItsRecord(t *testing.T) {
 		{"the colleague's brief", colleague, brief, "the colleague's brief"},
 		{"the brief of another company", reader, generatedsummary.CompanyBrief(other), "another company"},
 	} {
-		got, found, err := generatedsummary.Load(e.ctx, e.pool, c.reader, c.subject)
+		got, found, err := generatedsummary.Read(e.ctx, e.pool, c.reader, c.subject)
 		if err != nil || !found || got.Fingerprint != c.want {
 			t.Errorf("%s read as (%q, %t, %v), want %q", c.name, got.Fingerprint, found, err, c.want)
 		}
@@ -56,7 +56,7 @@ func TestASummaryIsKeyedOnItsReaderItsKindAndItsRecord(t *testing.T) {
 			t.Errorf("%s came back as %+v, which is not what was stored", c.name, got)
 		}
 	}
-	if _, found, err := generatedsummary.Load(e.ctx, e.pool, reader,
+	if _, found, err := generatedsummary.Read(e.ctx, e.pool, reader,
 		generatedsummary.CompanyGrowthFit(company)); err != nil || found {
 		t.Errorf("a kind nobody stored read as found=%t, err=%v", found, err)
 	}
@@ -74,14 +74,14 @@ func TestEachKindReadsBackFromItsOwnRecord(t *testing.T) {
 	e.store(t, reader, generatedsummary.ContactBrief(contact), "contact")
 	e.store(t, reader, generatedsummary.DealStatusCard(deal), "card")
 
-	if got, found, err := generatedsummary.Load(e.ctx, e.pool, reader,
+	if got, found, err := generatedsummary.Read(e.ctx, e.pool, reader,
 		generatedsummary.ContactBrief(contact)); err != nil || !found || got.Fingerprint != "contact" {
 		t.Errorf("the contact brief read as (%q, %t, %v)", got.Fingerprint, found, err)
 	}
 	var cards map[ids.UUID]generatedsummary.Entry
 	if err := database.WithWorkspaceTx(e.ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
-		cards, err = generatedsummary.ReadEach(e.ctx, tx, reader, generatedsummary.KindDealStatusCard,
+		cards, err = generatedsummary.ReadEachTx(e.ctx, tx, reader, generatedsummary.KindDealStatusCard,
 			[]ids.UUID{deal.UUID, quiet.UUID, contact.UUID})
 		return err
 	}); err != nil {
@@ -97,8 +97,10 @@ func TestEachKindReadsBackFromItsOwnRecord(t *testing.T) {
 // survivor's own where the reader holds the same kind on both.
 func TestACompanyMergeCarriesSummariesTheSurvivorLacks(t *testing.T) {
 	e := setup(t)
-	reader := e.reader(t)
+	reader, colleague := e.reader(t), e.reader(t)
 	retired, survivor, bystander := e.company(t), e.company(t), e.company(t)
+	e.store(t, colleague, generatedsummary.CompanyBrief(retired), "the colleague's retired brief")
+	e.store(t, colleague, generatedsummary.CompanyDossier(survivor), "the colleague's survivor dossier")
 	e.store(t, reader, generatedsummary.CompanyBrief(retired), "retired brief")
 	e.store(t, reader, generatedsummary.CompanyDossier(retired), "retired dossier")
 	e.store(t, reader, generatedsummary.CompanyBrief(survivor), "survivor brief")
@@ -107,14 +109,18 @@ func TestACompanyMergeCarriesSummariesTheSurvivorLacks(t *testing.T) {
 	e.inTx(t, func(tx pgx.Tx) error { return generatedsummary.CarryCompany(e.ctx, tx, retired, survivor) })
 
 	for _, c := range []struct {
+		reader  ids.UserID
 		subject generatedsummary.Subject
 		want    string
 	}{
-		{generatedsummary.CompanyBrief(survivor), "survivor brief"},
-		{generatedsummary.CompanyDossier(survivor), "retired dossier"},
-		{generatedsummary.CompanyBrief(bystander), "bystander brief"},
+		{reader, generatedsummary.CompanyBrief(survivor), "survivor brief"},
+		{reader, generatedsummary.CompanyDossier(survivor), "retired dossier"},
+		{reader, generatedsummary.CompanyBrief(bystander), "bystander brief"},
+		// Another reader's row on the survivor blocks neither reader's carry.
+		{colleague, generatedsummary.CompanyBrief(survivor), "the colleague's retired brief"},
+		{colleague, generatedsummary.CompanyDossier(survivor), "the colleague's survivor dossier"},
 	} {
-		got, found, err := generatedsummary.Load(e.ctx, e.pool, reader, c.subject)
+		got, found, err := generatedsummary.Read(e.ctx, e.pool, c.reader, c.subject)
 		if err != nil || !found || got.Fingerprint != c.want {
 			t.Errorf("after the merge a summary read as (%q, %t, %v), want %q", got.Fingerprint, found, err, c.want)
 		}
@@ -141,7 +147,7 @@ func TestForgettingAContactDeletesItsSummariesForAllReaders(t *testing.T) {
 		[]ids.UUID{subject.UUID, second.UUID}); n != 0 {
 		t.Errorf("%d summaries of the forgotten contacts remain", n)
 	}
-	if _, found, err := generatedsummary.Load(e.ctx, e.pool, reader,
+	if _, found, err := generatedsummary.Read(e.ctx, e.pool, reader,
 		generatedsummary.ContactBrief(bystander)); err != nil || !found {
 		t.Errorf("the bystander's brief read as found=%t, err=%v after another contact was forgotten", found, err)
 	}
@@ -178,7 +184,7 @@ func (e env) inTx(t *testing.T, fn func(pgx.Tx) error) {
 
 func (e env) store(t *testing.T, reader ids.UserID, subject generatedsummary.Subject, fingerprint string) {
 	t.Helper()
-	if err := generatedsummary.Store(e.ctx, e.pool, reader, subject, generatedsummary.Entry{
+	if err := generatedsummary.Save(e.ctx, e.pool, reader, subject, generatedsummary.Entry{
 		Fingerprint: fingerprint, GeneratedAt: writtenAt, GeneratedBy: "model", Payload: []byte(`{"n":1}`),
 	}); err != nil {
 		t.Fatalf("storing %q: %v", fingerprint, err)

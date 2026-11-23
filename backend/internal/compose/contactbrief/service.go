@@ -223,7 +223,7 @@ func wireSentences(in []Sentence) []crmcontracts.CompanyBriefSentence {
 // the reader, without which one rep would read a brief written from records
 // they may not share.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, contactID ids.ContactID) (stored, bool, error) {
-	row, found, err := generatedsummary.Load(ctx, s.pool, userID, generatedsummary.ContactBrief(contactID))
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.ContactBrief(contactID))
 	if err != nil || !found {
 		return stored{}, false, err
 	}
@@ -279,7 +279,7 @@ func SaveForLiveContact(
 	if err != nil {
 		return fmt.Errorf("check the contact is live before storing its brief: %w", err)
 	}
-	return generatedsummary.Save(ctx, tx, userID, generatedsummary.ContactBrief(contactID), brief)
+	return generatedsummary.SaveTx(ctx, tx, userID, generatedsummary.ContactBrief(contactID), brief)
 }
 
 // actingUser resolves the human this brief belongs to. That the brief is

@@ -63,7 +63,7 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, dealID ids.DealID
 	if err != nil {
 		return fmt.Errorf("encode the deal status payload: %w", err)
 	}
-	return generatedsummary.Store(ctx, s.pool, userID, generatedsummary.DealStatusCard(dealID),
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.DealStatusCard(dealID),
 		generatedsummary.Entry{
 			Fingerprint: card.Fingerprint,
 			GeneratedAt: card.GeneratedAt,
@@ -92,18 +92,21 @@ func readableCards(
 	where := fmt.Sprintf("d.id = ANY($%d) AND d.archived_at IS NULL", arg(dealIDs))
 	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("scope the deals this reader may see: %w", err)
 	}
 	if scope != "" {
 		where += " AND " + scope
 	}
 	rows, err := tx.Query(ctx, `SELECT d.id FROM deal d WHERE `+where, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read the deals this reader may see: %w", err)
 	}
 	readable, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil || len(readable) == 0 {
-		return nil, err
+	if err != nil {
+		return nil, fmt.Errorf("read the deals this reader may see: %w", err)
 	}
-	return generatedsummary.ReadEach(ctx, tx, userID, generatedsummary.KindDealStatusCard, readable)
+	if len(readable) == 0 {
+		return nil, nil
+	}
+	return generatedsummary.ReadEachTx(ctx, tx, userID, generatedsummary.KindDealStatusCard, readable)
 }

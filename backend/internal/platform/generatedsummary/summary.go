@@ -66,41 +66,41 @@ type Entry struct {
 	Payload     []byte
 }
 
-// recordKeys puts the records in the key column their kind is held in. The
-// other two stay nil, which the table's own CHECK demands of a row.
-func recordKeys(kind Kind, records []ids.UUID) (company, contact, deal []ids.UUID) {
+// keySlot is the key column a kind is held in: company, contact or deal. The
+// table's own CHECK demands that the other two stay empty.
+func keySlot(kind Kind) (int, error) {
 	switch kind {
 	case KindCompanyBrief, KindCompanyDossier, KindCompanyGrowthFit:
-		return records, nil, nil
+		return 0, nil
 	case KindContactBrief:
-		return nil, records, nil
+		return 1, nil
 	case KindDealStatusCard:
-		return nil, nil, records
+		return 2, nil
 	}
-	return nil, nil, nil
+	return 0, fmt.Errorf("generated summary: %q is not a kind of summary", kind)
 }
 
-// Read answers the summary stored for this reader. The reader is part of the
-// key because a summary is written from what that reader may see.
-func Read(ctx context.Context, tx pgx.Tx, reader ids.UserID, subject Subject) (Entry, bool, error) {
-	found, err := ReadEach(ctx, tx, reader, subject.kind, []ids.UUID{subject.record})
-	entry, stored := found[subject.record]
-	return entry, stored, err
-}
-
-// ReadEach answers this reader's summaries of one kind, by the record each is
-// about. A record with no stored summary is absent from the answer.
-func ReadEach(
+// ReadEachTx answers this reader's summaries of one kind, by the record each
+// is about. A record with no stored summary is absent from the answer.
+//
+// The reader is part of the key because a summary is written from what that
+// reader may see.
+func ReadEachTx(
 	ctx context.Context, tx pgx.Tx, reader ids.UserID, kind Kind, records []ids.UUID,
 ) (map[ids.UUID]Entry, error) {
-	company, contact, deal := recordKeys(kind, records)
+	slot, err := keySlot(kind)
+	if err != nil {
+		return nil, err
+	}
+	var keys [3][]ids.UUID
+	keys[slot] = records
 	rows, err := tx.Query(ctx, `
 		SELECT coalesce(company_id, contact_id, deal_id),
 		       fingerprint, generated_at, generated_by, payload
 		  FROM generated_summary
 		 WHERE user_id = $1 AND kind = $2
 		   AND (company_id = ANY($3) OR contact_id = ANY($4) OR deal_id = ANY($5))`,
-		reader, kind, company, contact, deal)
+		reader, kind, keys[0], keys[1], keys[2])
 	if err != nil {
 		return nil, fmt.Errorf("read the generated summaries: %w", err)
 	}
@@ -121,11 +121,16 @@ func ReadEach(
 	return found, nil
 }
 
-// Save replaces the summary stored for this reader.
-func Save(ctx context.Context, tx pgx.Tx, reader ids.UserID, subject Subject, written Entry) error {
-	company, contact, deal := recordKeys(subject.kind, []ids.UUID{subject.record})
+// SaveTx replaces the summary stored for this reader.
+func SaveTx(ctx context.Context, tx pgx.Tx, reader ids.UserID, subject Subject, written Entry) error {
+	slot, err := keySlot(subject.kind)
+	if err != nil {
+		return err
+	}
+	var keys [3]*ids.UUID
+	keys[slot] = &subject.record
 	arguments := []any{
-		reader, subject.kind, onlyKey(company), onlyKey(contact), onlyKey(deal),
+		reader, subject.kind, keys[0], keys[1], keys[2],
 		written.Fingerprint, written.GeneratedAt, written.GeneratedBy, written.Payload,
 	}
 	if _, err := tx.Exec(ctx, `
@@ -142,29 +147,21 @@ func Save(ctx context.Context, tx pgx.Tx, reader ids.UserID, subject Subject, wr
 	return nil
 }
 
-// onlyKey is the one record of a key column, or nil for a column left empty.
-func onlyKey(records []ids.UUID) *ids.UUID {
-	if len(records) == 0 {
-		return nil
-	}
-	return &records[0]
-}
-
-// Load is Read in a transaction of its own.
-func Load(ctx context.Context, pool *pgxpool.Pool, reader ids.UserID, subject Subject) (Entry, bool, error) {
-	var entry Entry
-	var stored bool
+// Read is the reader's one summary of the subject, in its own transaction.
+func Read(ctx context.Context, pool *pgxpool.Pool, reader ids.UserID, subject Subject) (Entry, bool, error) {
+	var found map[ids.UUID]Entry
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
-		entry, stored, err = Read(ctx, tx, reader, subject)
+		found, err = ReadEachTx(ctx, tx, reader, subject.kind, []ids.UUID{subject.record})
 		return err
 	})
+	entry, stored := found[subject.record]
 	return entry, stored, err
 }
 
-// Store is Save in a transaction of its own.
-func Store(ctx context.Context, pool *pgxpool.Pool, reader ids.UserID, subject Subject, written Entry) error {
+// Save is SaveTx in a transaction of its own.
+func Save(ctx context.Context, pool *pgxpool.Pool, reader ids.UserID, subject Subject, written Entry) error {
 	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		return Save(ctx, tx, reader, subject, written)
+		return SaveTx(ctx, tx, reader, subject, written)
 	})
 }

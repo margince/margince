@@ -376,7 +376,7 @@ func wireEvidence(cited []claims.Evidence) ([]crmcontracts.CompanyBriefEvidence,
 
 // cached reads this READER's dossier out of the shared per-reader cache.
 func (s *Service) cached(ctx context.Context, userID ids.UserID, companyID ids.CompanyID) (stored, bool, error) {
-	row, found, err := generatedsummary.Load(ctx, s.pool, userID, generatedsummary.CompanyDossier(companyID))
+	row, found, err := generatedsummary.Read(ctx, s.pool, userID, generatedsummary.CompanyDossier(companyID))
 	if err != nil || !found {
 		return stored{}, false, err
 	}
@@ -397,7 +397,7 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, companyID ids.Com
 	if err != nil {
 		return fmt.Errorf("encode the dossier payload: %w", err)
 	}
-	return generatedsummary.Store(ctx, s.pool, userID, generatedsummary.CompanyDossier(companyID),
+	return generatedsummary.Save(ctx, s.pool, userID, generatedsummary.CompanyDossier(companyID),
 		generatedsummary.Entry{
 			Fingerprint: dossier.Fingerprint,
 			GeneratedAt: dossier.GeneratedAt,

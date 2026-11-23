@@ -80,7 +80,7 @@ func TestAnonymisingAContactDestroysTheCachedBriefToo(t *testing.T) {
 // the contact alone.
 func cacheABrief(t *testing.T, e *integration.Env, subject ids.UUID, fingerprint string) {
 	t.Helper()
-	err := generatedsummary.Store(e.Admin(), e.Pool, ids.From[ids.UserKind](e.AdminUser),
+	err := generatedsummary.Save(e.Admin(), e.Pool, ids.From[ids.UserKind](e.AdminUser),
 		generatedsummary.ContactBrief(ids.From[ids.ContactKind](subject)), briefEntry(fingerprint))
 	if err != nil {
 		t.Fatalf("caching a brief for the subject: %v", err)
@@ -158,23 +158,25 @@ func TestABriefComposedBeforeAnErasureCannotLandAfterIt(t *testing.T) {
 // saveABrief runs the cache write the brief service runs. Service.save itself
 // needs an assembled page and a model lane, and it calls this same function.
 func saveABrief(e *integration.Env, contact ids.UUID) error {
-	return saveABriefIn(e, contact, func(pgx.Tx) error { return nil })
+	return saveABriefIn(e, contact, "fp-late", nil)
 }
 
 func saveABriefWaitingAtMost(e *integration.Env, contact ids.UUID, wait string) error {
-	return saveABriefIn(e, contact, func(tx pgx.Tx) error {
+	return saveABriefIn(e, contact, "fp-racing", func(tx pgx.Tx) error {
 		_, err := tx.Exec(e.Admin(), `SET LOCAL lock_timeout = '`+wait+`'`)
 		return err
 	})
 }
 
-func saveABriefIn(e *integration.Env, contact ids.UUID, prepare func(pgx.Tx) error) error {
+func saveABriefIn(e *integration.Env, contact ids.UUID, fingerprint string, prepare func(pgx.Tx) error) error {
 	return database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if err := prepare(tx); err != nil {
-			return err
+		if prepare != nil {
+			if err := prepare(tx); err != nil {
+				return err
+			}
 		}
 		return contactbrief.SaveForLiveContact(e.Admin(), tx, ids.From[ids.UserKind](e.AdminUser),
-			ids.From[ids.ContactKind](contact), briefEntry("fp-late"))
+			ids.From[ids.ContactKind](contact), briefEntry(fingerprint))
 	})
 }
 
