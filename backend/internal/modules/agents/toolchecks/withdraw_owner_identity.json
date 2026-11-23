@@ -1,6 +1,8 @@
 {
   "verb": "withdraw_owner_identity",
-  "checks": [],
+  "checks": [
+    "contact.read"
+  ],
   "takes": [
     "owner_identity"
   ]
