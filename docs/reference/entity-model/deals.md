@@ -255,7 +255,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_correction
 
-20 columns · primary key `(id)` · referenced by 0 foreign keys
+21 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
