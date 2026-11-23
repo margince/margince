@@ -27,6 +27,11 @@ import (
 // backfillPageSize bounds one provider listing; checkpoints retain its remaining ids.
 const backfillPageSize = 100
 
+// MaxBackfillPageSize is Gmail's ceiling for one listing, and so the largest
+// page a setting may ask for. A saved cursor is checked against it, not the
+// current page size, so lowering the size never strands a run in flight.
+const MaxBackfillPageSize = 500
+
 var _ connector.Backfiller = (*Connector)(nil)
 
 // afterQuery renders Gmail's after: operator. Gmail treats the date in the
@@ -129,7 +134,7 @@ func (w *pageWalk) walk() error {
 			}
 		}
 	}
-	return inOrder(w.ctx, len(keep),
+	return inOrder(w.ctx, w.c.tuning, len(keep),
 		func(ctx context.Context, i int) (Message, error) {
 			return w.getRaw(ctx, keep[i])
 		},
@@ -155,7 +160,7 @@ func (w *pageWalk) walk() error {
 // downloaded in full and judged there, as before.
 func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJudge, ids []string) ([]string, error) {
 	keep := make([]string, 0, len(ids))
-	err := inOrder(w.ctx, len(ids),
+	err := inOrder(w.ctx, w.c.tuning, len(ids),
 		func(ctx context.Context, i int) (Message, error) {
 			return w.getHeaders(ctx, headers, ids[i])
 		},

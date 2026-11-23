@@ -17,6 +17,7 @@ vi.mock("@composition/copy", () => ({
     en: { "extDispactConnector.title": "Dispact" },
     de: { "extDispactConnector.title": "Dispact DE" },
   },
+  extensionOverrides: {},
 }));
 
 // The registry is the ONE place the SPA learns what an installation composed.

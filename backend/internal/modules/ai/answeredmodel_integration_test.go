@@ -183,7 +183,7 @@ func TestATaskStepNamesTheModelTheProviderSwitchedTo(t *testing.T) {
 	f := seedAnsweredCalls(t)
 	reader := NewCallReadStore(f.db)
 	for i, c := range answeredCases {
-		flow, err := reader.TaskFlow(diagnosticsReader(f.ws), f.tasks[i], 24*time.Hour)
+		flow, err := reader.TaskFlow(diagnosticsReader(f.ws), f.tasks[i], TaskLadder(f.tasks[i]), 24*time.Hour)
 		if err != nil {
 			t.Fatal(err)
 		}

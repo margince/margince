@@ -77,7 +77,9 @@ func (d taskDriver) runScenarios(ctx context.Context, scenarios []Scenario, stam
 		return nil, err
 	}
 	for i, sc := range scenarios {
-		d.acc.scenarios = append(d.acc.scenarios, scenarioRow(sc, stamps[sc.Name], sets[i]))
+		row := scenarioRow(sc, stamps[sc.Name], sets[i])
+		row.ContextOwed = new(d.acc.owedBy[sc.Name])
+		d.acc.scenarios = append(d.acc.scenarios, row)
 	}
 	return sets, nil
 }

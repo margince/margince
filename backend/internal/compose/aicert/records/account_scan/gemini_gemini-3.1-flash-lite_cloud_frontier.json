@@ -3,41 +3,43 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "pfbfc0e719932348c71646083217559e0",
+  "prompt_version": "pc0917ac4742e82440a26eba6b2a31719",
   "corpus_version": "v1",
-  "verdict": "certified",
-  "runs": 9,
-  "passed": 9,
-  "reliability": 1,
-  "reported_accepted": 9,
+  "verdict": "supported_degraded",
+  "runs": 15,
+  "passed": 13,
+  "reliability": 0.8666666666666667,
+  "reported_accepted": 13,
   "reported_wrong_answer": 0,
-  "reported_invalid": 0,
+  "reported_invalid": 2,
   "reported_abstained": 0,
   "certified_scope": "full_invocation",
-  "context_applied": false,
+  "context_applied": true,
   "context_scopes": [
     "identity"
   ],
+  "context_owed": 15,
   "judge_score_p50": 93,
-  "judge_score_min": 86,
-  "latency_p50": 1088,
-  "latency_p95": 1332,
-  "mean_tokens": 1809,
-  "mean_tokens_in": 1706,
-  "mean_tokens_out": 103,
+  "judge_score_min": 82,
+  "latency_p50": 1080,
+  "latency_p95": 1393,
+  "mean_tokens": 1941,
+  "mean_tokens_in": 1841,
+  "mean_tokens_out": 100,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 581,
+  "est_cost_microusd": 610,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
-  "ran_at": "2026-11-19T00:47:36Z",
+  "wire_rule": "gemini-wire-5",
+  "ran_at": "2026-11-22T21:28:21Z",
   "scenarios": [
     {
       "scenario": "scan_reads_the_thread_past_an_answered_ask",
       "site": "company_scan",
-      "stamp": "f1f068d4bbf3b8db562bfa284017f85aa71ed5e64aa8154e97d516992e2732a014d0dfc1127679374cc9481ee1fd7298e4ca1e0c299455ec19e1800be0dd79f932bf030121256a085551ebe1c4e7b5fbc6b2e086380ff1d9d56ab04cbe66f403",
+      "stamp": "f1f068d4bbf3b8db562bfa284017f85aa71ed5e64aa8154e97d516992e2732a0f38d4232f7af045b5f0e394cfce5ba385c6d9dd533a7a4330bbd57cd449eda5b796f2117e3caf4442a534ce479d60ed5404866b3c91f320b75f89713a06dd8a8",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -45,7 +47,7 @@
       "judge_scores": [
         96,
         95,
-        93
+        95
       ],
       "bands": {
         "certified_min": 70,
@@ -60,15 +62,15 @@
     {
       "scenario": "scan_finds_the_promise_we_did_not_keep",
       "site": "company_scan",
-      "stamp": "da80f10d083d0102f77c8fc54f297c1e9c8c088bb35663661e3da154a2093fd596d5a78432168deac28a26d6bf70393fce87b50d70a1211b4843a5f37c3ce81143c0bf13c351b71695342ef01f01489519901a2bacdcf9cb5a91f2cc52243ba8",
+      "stamp": "da80f10d083d0102f77c8fc54f297c1e9c8c088bb35663661e3da154a2093fd591c0ec6a2c02b9c51752b4ea6bae5e2b9450c23cfef19e05d2f290f14e7170ead852954dbb80a8dec461a9d859c172822933db8cf69c6fafdfb30fc5bc05ef1b",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        88,
-        88,
-        86
+        82,
+        93,
+        93
       ],
       "bands": {
         "certified_min": 70,
@@ -83,14 +85,20 @@
     {
       "scenario": "scan_finds_the_question_nobody_answered",
       "site": "company_scan",
-      "stamp": "02abd724d62c1287296db7f8dfa7aa23e9754cfe8e3c1d842c0f8beb83667670bfb8292ea61f2f45c6fbe2b0a0da84c1658073dd606aaaaf1d69c58a433722e889f2ea70924210dc2ea1b429ba445ded98d9ca38c5816b124be0662ecc23d844",
+      "stamp": "02abd724d62c1287296db7f8dfa7aa23e9754cfe8e3c1d842c0f8beb83667670a57ad60e478c8e2d89b3faf53c019cb2b2dc26af9ea79553a878f91f20f71fda8a6c506c37f5ad937adfb4666b2849cd0e516102e9362656120647c8d9e89d2c",
       "verdict": "certified",
       "judge_band": "certified",
-      "runs": 3,
-      "passed": 3,
+      "runs": 9,
+      "passed": 7,
       "judge_scores": [
+        96,
+        86,
+        96,
         93,
         96,
+        82,
+        96,
+        93,
         93
       ],
       "bands": {
@@ -98,9 +106,9 @@
         "degraded_min": 50,
         "floor": 40
       },
-      "reported_accepted": 3,
+      "reported_accepted": 7,
       "reported_wrong_answer": 0,
-      "reported_invalid": 0,
+      "reported_invalid": 2,
       "reported_abstained": 0
     }
   ]

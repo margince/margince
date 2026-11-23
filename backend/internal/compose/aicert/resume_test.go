@@ -298,7 +298,7 @@ func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 		Withheld: "SAFETY", Abandoned: true, Leak: true, AnswerConfidence: &ConfidenceRange{Min: 0.6, Max: 0.9},
 		Provider: "openai_compatible", ServedModel: "z-ai/glm-5.2",
 		ServedIdentitySource: "provider_reported", JudgeServedModel: "claude-haiku-4.5",
-		CertifiedScope: "full_invocation", JudgeDegraded: true, ContextApplied: true,
+		CertifiedScope: "full_invocation", JudgeDegraded: true, ContextApplied: true, ContextOwed: true,
 	}
 	assertNoZeroField(t, reflect.ValueOf(want), "runOutcome")
 

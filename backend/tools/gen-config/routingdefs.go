@@ -45,6 +45,11 @@ const routingDefsTemplate = `{
     "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, with or without a certification record, and falls back to its ladder whenever the answer does not stand.",
     "$ref": "#/$defs/decisionsBinding"
   },
+  "task_ladders": {
+    "description": "A task to the order its rungs are walked in under this binding, for a task walked otherwise than the task contract does. The order names exactly the task's own rungs; anything else is refused. A task left out keeps its contract order.",
+    "type": "object",
+    "additionalProperties": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": [__TIERS__]}}
+  },
   "providers": {
     "description": "Provider name to what that provider is configured with, independent of any lane: its host and the broker's upstream pins. Every lane binding a provider reads them from here, so a host is written once. A lane's own base_url or pins (the older spelling) are lifted here when the provider names none.",
     "type": "object",
@@ -399,7 +404,7 @@ func routingDefs() (json.RawMessage, error) {
 	for i, t := range tiers {
 		names[i] = string(t)
 	}
-	raw := strings.Replace(routingDefsTemplate, "__TIERS__", quotedList(names), 1)
+	raw := strings.ReplaceAll(routingDefsTemplate, "__TIERS__", quotedList(names))
 	raw = strings.Replace(raw, "__DECISION_PROVIDERS__", quotedList(ai.DecisionProviders()), 1)
 	raw = strings.Replace(raw, "__PROVIDERS__", quotedList(ai.KnownProviders()), 1)
 	// Validated here so a substitution bug fails generation rather than shipping

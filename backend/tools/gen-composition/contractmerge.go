@@ -296,6 +296,19 @@ func checkOwnership(unit string, steps []string, owners map[string]string) error
 	return nil
 }
 
+// checkTaskNamespace holds the AI task half of the same wall. A task a unit adds
+// is named ext_<unit>_<task>, so the call log and Settings show whose it is.
+func checkTaskNamespace(unit, task string) error {
+	ns, err := extension.Name(unit).Namespace()
+	if err != nil {
+		return err
+	}
+	if !strings.HasPrefix(task, ns+"_") {
+		return fmt.Errorf("task %s is outside the unit's task namespace — an extension declares AI tasks named %s_<task>", task, ns)
+	}
+	return nil
+}
+
 // checkRouteNamespace holds the namespace wall this composer can state for
 // itself: a path item a unit adds lives under /ext/<name>, the route namespace
 // the global constraints fix. Without it a fragment could declare
@@ -323,6 +336,9 @@ func checkOwnership(unit string, steps []string, owners map[string]string) error
 // generators that compile them, which read the merged file — this composer
 // would only be guessing at four different contracts' shapes.
 func checkRouteNamespace(unit string, steps []string) error {
+	if len(steps) >= 2 && steps[0] == "tasks" {
+		return checkTaskNamespace(unit, steps[1])
+	}
 	if len(steps) < 2 || steps[0] != "paths" {
 		return nil
 	}

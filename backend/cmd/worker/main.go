@@ -255,7 +255,7 @@ func registerComposedExtensions() ([]extension.Extension, error) {
 	if err := compose.RegisterExtensions(extensions, composition.Verbs(), composition.Jobs()); err != nil {
 		return nil, err
 	}
-	return extensions, nil
+	return extensions, compose.RegisterExtensionAITasks(extensions, composition.AITasks())
 }
 
 // workerBoot is everything decided before this process touches a network.
@@ -388,6 +388,10 @@ func admitBoot(
 	resolveVault func() (keyvault.Vault, error), cfg workerConfig,
 ) (keyvault.Vault, *licensecheck.Watcher, error) {
 	if err := compose.RequireCompiledInCountry(ctx, pool); err != nil {
+		return nil, nil, err
+	}
+	// Before the boot records the composed set: removing a unit sweeps its objects.
+	if err := compose.BindExtensionObjectsFromConfig(ctx, cfg.settings); err != nil {
 		return nil, nil, err
 	}
 	vault, err := resolveVault()

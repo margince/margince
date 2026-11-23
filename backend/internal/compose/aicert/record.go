@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -95,6 +96,9 @@ type Record struct {
 	// beside it, so a scope added to a task cannot leave a record naming the old
 	// set.
 	ContextScopes []string `json:"context_scopes"`
+	// ContextOwed counts the runs production would send company context with.
+	// Nil is a record written before it was counted: unknown, not zero.
+	ContextOwed *int `json:"context_owed,omitempty"`
 	// JudgeScoreP50/JudgeScoreMin are the JUDGE's grade: a model scoring the
 	// reply's prose against a written rubric, pooled across the runs.
 	//
@@ -138,6 +142,9 @@ type Record struct {
 	// record without them predates the product default being applied here.
 	CandidateUpstream *ai.OpenRouterRouting `json:"candidate_upstream,omitempty"`
 	JudgeUpstream     *ai.OpenRouterRouting `json:"judge_upstream,omitempty"`
+	// WireRule is the provider's wire translation the runs went through
+	// (ai.WireRule), absent for a provider that declares none.
+	WireRule string `json:"wire_rule,omitempty"`
 	// ThinkingLevel is the candidate binding's own `thinking_level`, absent where
 	// it names none. It changes how the model answers, so a record carrying one
 	// speaks only for a preset whose rung sets the same level.
@@ -201,6 +208,9 @@ type ScenarioRecord struct {
 	// Leaks is how many of a privacy case's runs leaked, which its verdict
 	// turns on; absent on a row written before rows kept it.
 	Leaks *int `json:"leaks,omitempty"`
+	// ContextOwed counts this row's runs production would send company context
+	// with. Nil is a row written before it was counted: unknown, not zero.
+	ContextOwed *int `json:"context_owed,omitempty"`
 	// The same reported-outcome counts the task carries, on this scenario's own
 	// runs: they say what came back, never whether it was what was asked for.
 	ReportedAccepted    int `json:"reported_accepted"`
@@ -300,14 +310,14 @@ type RowBands struct {
 }
 
 // ForSite folds every scenario row this record kept for one site's variant.
-// False means this record measured that site not at all — a different thing
-// from measuring it and finding nothing, which is why it is not a zero tally.
+// False means this record did not measure that site, which differs from
+// measuring it and finding nothing, so it is not a zero tally.
 //
-// The verdict is Verdict's rule over the site's scenario rows, the same rule
-// the task's own verdict is. A row with no bands predates rows keeping their
-// bands and scores and cannot be re-graded, and one such row leaves the pool
-// incomplete, so the site reads stored verdicts instead: the record's own when
-// the site's rows are the whole record, else the worst any of its rows holds.
+// The verdict is Verdict's rule over the site's rows, the rule the task's own
+// verdict uses. It is SiteTooFewRuns where that rule could only withhold a grade
+// for want of runs. A row with no bands cannot be re-graded and leaves the pool
+// incomplete. The site then reads stored verdicts: the record's own when its rows
+// are the whole record, else the worst any of its rows holds.
 func (r Record) ForSite(variant string) (SiteTally, bool) {
 	var tally SiteTally
 	var cases []caseStats
@@ -336,9 +346,34 @@ func (r Record) ForSite(variant string) (SiteTally, bool) {
 		tally.Verdict = worst
 	default:
 		tally.Verdict, _ = verdictOver(cases)
+		if tally.Verdict != VerdictNotSupported && tally.Runs < certifiedMinRuns && meetsCertifiedOnEstimate(cases) {
+			tally.Verdict = SiteTooFewRuns
+		}
 	}
 	return tally, true
 }
+
+// meetsCertifiedOnEstimate says more runs alone could certify cases. The pass
+// rate reaches certifiedPassPercent and the judge's mean margin over
+// certified_min is not below 0. No case has a score under its floor, which caps
+// it whatever follows. A site short on any of these is weak, not short.
+func meetsCertifiedOnEstimate(cases []caseStats) bool {
+	runs, passed := 0, 0
+	for _, c := range cases {
+		runs += c.runs
+		passed += c.passed
+	}
+	margins := marginsOver(cases, func(b Bands) int { return b.CertifiedMin })
+	mean, _ := meanAndSD(margins)
+	return passed*100 >= certifiedPassPercent*runs && (len(margins) == 0 || mean >= 0) &&
+		!slices.ContainsFunc(cases, underFloor)
+}
+
+// SiteTooFewRuns is a site's grade when its pool meets the certified bar on
+// its own estimate, on pass rate and judge alike. It holds fewer runs than that
+// grade rests on, and nothing it measured is weak. The task's own verdict pools
+// these runs with its other sites'.
+const SiteTooFewRuns = "too_few_runs"
 
 // sanitizeForPath maps a raw identifier (a provider name, or a served-model
 // string like "accounts/fireworks/models/llama-v3-70b-instruct" that

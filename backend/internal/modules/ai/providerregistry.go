@@ -70,6 +70,10 @@ type providerDescriptor struct {
 	// serviceAccountKey marks an adapter whose key credential is a Google
 	// service-account JSON rather than an API key.
 	serviceAccountKey bool
+	// wireRule versions how the adapter translates a request for its decoder.
+	// A record measured through another translation reads stale (WireRule).
+	// It is empty for an adapter that declares none.
+	wireRule string
 	// measuredBy is the provider whose certification records grade this one:
 	// an adapter sending the same request to the same weights through another
 	// host. Empty means its own records.
@@ -183,7 +187,7 @@ var providerRegistry = []providerDescriptor{
 		priceSource: modelsDevSource("google"),
 		name:        providerGemini, caps: capChat, egress: egressPublicOnly, key: GeminiKey,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, vendorBaseURL: defaultGeminiBaseURL, public: true,
-		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
+		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor, wireRule: geminiWireRule,
 	},
 	{
 		// The Gemini wire served by Vertex AI. Its key is a service-account
@@ -192,7 +196,7 @@ var providerRegistry = []providerDescriptor{
 		name:        providerGeminiVertex, caps: capChat, egress: egressPublicOnly, key: GeminiVertexKey,
 		serviceAccountKey: true, measuredBy: providerGemini, pricedBy: providerGemini,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
-		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor,
+		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor, wireRule: geminiWireRule,
 	},
 	{
 		// TypeSafe's own API: a vendor cloud, so never local and never pinned

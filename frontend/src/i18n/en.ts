@@ -11878,6 +11878,7 @@ export const en = {
   "notifications.action.openDeal": "Open deal",
   "notifications.action.openLead": "Open lead",
   "notifications.action.openProject": "Open project",
+  "notifications.action.openExtensionRecord": "Open record",
   "notifications.action.review": "Review request",
   "notifications.action.systemHealth": "Open System health",
   "notifications.markAllFailed": "Nothing was marked read",
@@ -12764,6 +12765,7 @@ export const en = {
   // headings differ because the two pages mean different things: one is your
   // own account somewhere, the other is the installation's.
   "extUnits.openNamed": "Settings for {name}",
+  "extUnits.openApp": "Open {name}",
   "extUnits.user.title": "Other accounts",
   "extUnits.user.sub":
     "Add-ons this installation offers that sign in as you. Each is private to you, and disconnecting one affects only you.",
@@ -15654,6 +15656,30 @@ export const en = {
     "The sender is mail infrastructure, not a company you work with",
   "captureActivity.reason.transactional_prefix":
     "The sender looks like an automated mailer, not a person",
+  "captureActivity.filing.core": "Filed on its deal by the CRM: {reason}",
+  "captureActivity.filing.core.moved": "The CRM moved its deal link: {reason}",
+  "captureActivity.filing.core.retracted":
+    "The CRM took its deal link back: {reason}",
+  "captureActivity.filing.basis.project": "the mail’s project",
+  "captureActivity.filing.basis.thread": "an earlier mail in the thread",
+  "captureActivity.filing.basis.sole_open_deal": "the company’s only open deal",
+  "captureActivity.filing.basis.stakeholder": "a stakeholder on the deal",
+  "captureActivity.filing.basis.named_stakeholder":
+    "a stakeholder named in the mail",
+  "captureActivity.filing.basis.ambiguous":
+    "several deals fit, a colleague was asked",
+  "captureActivity.filing.ext.linked": "{unit} filed it on a deal: {reason}",
+  "captureActivity.filing.ext.none": "{unit} kept it off every deal: {reason}",
+  "captureActivity.filing.ext.ambiguous":
+    "{unit} narrowed the deals it could belong to: {reason}",
+  "captureActivity.filing.ext.parties_changed":
+    "{unit} changed the contacts and companies it was read for: {reason}",
+  "captureActivity.filing.ext.failed":
+    "{unit} failed, so the mail is left unfiled and tried again later",
+  "captureActivity.filing.ext.ignored": "{unit}’s answer was ignored: {reason}",
+  "captureActivity.filing.ext.moved": "{unit} moved its deal link: {reason}",
+  "captureActivity.filing.ext.retracted":
+    "{unit} took its deal link back: {reason}",
   "captureActivity.outcome.deferred_capped": "Not queued",
   "captureActivity.outcome.deferred_sent": "Sent for a sender check",
   "captureActivity.resolution.pending": "Still waiting",
@@ -16345,6 +16371,9 @@ export const en = {
   "extAccess.brings.objects": "Permission objects",
   "extAccess.brings.routes": "Routes",
   "extAccess.brings.jobs": "Background jobs",
+  "extAccess.brings.needs": "Uses from the core",
+  "extAccess.need.models": "AI models",
+  "extAccess.need.objects": "File storage",
   "extAccess.brings.none": "None",
   "extAccess.noObjects":
     "This unit registers no permission objects, so there is nothing to grant.",
@@ -17777,7 +17806,32 @@ export const en = {
   "firstRun.ai.keyHint": "Stored in the key vault and never shown again.",
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
-    "A starting point. Any model the provider serves works.",
+    "Any model the provider serves works. The tests graded the setup above, not one model on every tier.",
+  "firstRun.ai.setupTitle.consumer_class_brokered":
+    "Gemma 4 you could run yourself, through OpenRouter",
+  "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
+  "firstRun.ai.setupTitle.gemini_vertex_eu":
+    "Google Gemini in the EU, through Vertex AI",
+  "firstRun.ai.setupTitle.gemma4_local_ollama":
+    "Gemma 4 on your own server, through Ollama",
+  "firstRun.ai.setupTitle.openrouter_cloud":
+    "Open models from OpenAI and Mistral, through OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_cloud_eu":
+    "Mistral models in the EU, through OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_openai":
+    "OpenAI GPT-6, through OpenRouter",
+  "firstRun.ai.setupTitle.qwen3_local_vllm":
+    "Qwen3 on your own server, through vLLM",
+  "firstRun.ai.setup": "Models: {setup}",
+  "firstRun.ai.setupHint":
+    "The setup the tests graded for this provider, one model for each tier. You can change any of them later in Settings under AI.",
+  "firstRun.ai.oneModel": "Use one model for every tier instead",
+  "aiCert.ready": "Ready",
+  "aiCert.withCare": "Usable with care",
+  "aiCert.notReliable": "Not reliable yet",
+  "aiCert.notMeasured": "Not measured",
+  "aiCert.recheckPending": "{grade}, re-check pending",
+  "aiCert.title": "Test grade of {model} on this feature",
   "firstRun.ai.embedModel": "Embedding model",
   "firstRun.ai.keyFailed": "Key not stored",
   "firstRun.ai.bindFailed": "Provider not bound",

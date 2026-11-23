@@ -74,7 +74,7 @@ func boundPlan(cfg RoutingConfig, task Task, band string) ([]plannedBinding, boo
 		return []plannedBinding{{tier: TierEmbedLane, config: cfg.Embeddings.ProviderConfig, dimensions: cfg.Embeddings.Dimensions}}, false
 	}
 	// Only the disposition matters in a preview; the response has its own reset clock.
-	ladder, _, err := budgetLadder(task, taskLadders[task], band, time.Time{})
+	ladder, _, err := budgetLadder(task, cfg.Ladder(task), band, time.Time{})
 	if err != nil {
 		return nil, true
 	}
@@ -140,6 +140,15 @@ func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	return out
 }
 
+// leadingTierOf is the rung task is first sent to under cfg, read through the
+// ladder the router walks.
+func leadingTierOf(cfg RoutingConfig, task Task) Tier {
+	if ladder := cfg.Ladder(task); len(ladder) > 0 {
+		return ladder[0]
+	}
+	return ""
+}
+
 // FeatureRoutes describes policy selection, not a promise that a provider will answer.
 func FeatureRoutes(normalConfig, effectiveConfig RoutingConfig, band string) []crmcontracts.AiFeatureRoute {
 	return compareFeatureRoutes(normalConfig, effectiveConfig, BandNormal, band)
@@ -147,7 +156,7 @@ func FeatureRoutes(normalConfig, effectiveConfig RoutingConfig, band string) []c
 
 func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBand, band string) []crmcontracts.AiFeatureRoute {
 	out := make([]crmcontracts.AiFeatureRoute, 0)
-	tasks := append(AllTasks(), TaskEmbeddings)
+	tasks := append(RoutedTasks(), TaskEmbeddings)
 	for _, task := range tasks {
 		if task != TaskEmbeddings && Status(task) != StatusShipped {
 			continue
@@ -156,7 +165,7 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 		effective, blocked := boundPlan(effectiveConfig, task, band)
 		name, summary := taskLabel(task)
 		mode := string(taskExecutionModes[task])
-		leading := string(LeadingTier(task))
+		leading := string(leadingTierOf(effectiveConfig, task))
 		if task == TaskEmbeddings {
 			mode = "embedding"
 			leading = "embeddings"
@@ -174,6 +183,7 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			row.Defaults = &crmcontracts.AiTaskSettings{
 				DecisionTimeoutMs: int(defaults.DecisionTimeout.Milliseconds()), AttemptTimeoutMs: int(defaults.AttemptTimeout.Milliseconds()),
 			}
+			row.Certification = leadCertification(task, normal, normalConfig.Profile)
 		}
 		decisionRoute(&row, effectiveConfig, task, blocked)
 		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) {
@@ -214,4 +224,15 @@ func plannedModels(plan []plannedBinding) []boundModel {
 		out = append(out, boundModel{provider: rung.config.Provider, model: rung.config.Model})
 	}
 	return out
+}
+
+// leadCertification grades the model that answers task first under the normal
+// band, the binding the router reaches for before any failure moves it on.
+func leadCertification(task Task, plan []plannedBinding, profile Profile) *crmcontracts.AiTaskCertification {
+	if len(plan) == 0 {
+		return nil
+	}
+	lead := plan[0].config
+	cert := CertificationFor(task, lead, profile)
+	return &crmcontracts.AiTaskCertification{Grade: cert.Grade, Model: lead.Model, RecheckPending: cert.RecheckPending}
 }

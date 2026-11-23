@@ -87,6 +87,17 @@ type reserved struct {
 	DiffHash string
 }
 
+// WithoutReservedArgs is a call's arguments as its handler decodes them, with
+// the surface's own members popped. It serves a caller that answers a tool
+// without the surface, as a certification case does.
+func WithoutReservedArgs(in json.RawMessage) (json.RawMessage, error) {
+	split, err := splitReserved(in)
+	if err != nil {
+		return nil, err
+	}
+	return split.Args, nil
+}
+
 // splitReserved pops the surface's own arguments and canonicalizes what remains
 // through the shared diffhash spelling, so "the identical call" is a property of
 // content rather than of whitespace or key order.

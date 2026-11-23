@@ -71,6 +71,20 @@ func (s *Store) IsOpenDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.U
 	return open, nil
 }
 
+// IsOpenDealOfProject answers whether deal is an open deal of the project. A
+// seat without the deal read grant learns no deal.
+func (s *Store) IsOpenDealOfProject(ctx context.Context, tx pgx.Tx, deal, project ids.UUID) (bool, error) {
+	if denied, err := candidateReadDenied(ctx); denied || err != nil {
+		return false, err
+	}
+	var open bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal d
+		 WHERE d.id = $1 AND d.project_id = $2 AND `+openDealSQL+`)`, deal, project).Scan(&open); err != nil {
+		return false, fmt.Errorf("deals: checking a hook's deal against the project: %w", err)
+	}
+	return open, nil
+}
+
 // OpenDealsWithStakeholders answers up to two open deals of one company on
 // which one of contacts is a live stakeholder. A caller without the edge grant
 // learns no stakeholder and gets none.

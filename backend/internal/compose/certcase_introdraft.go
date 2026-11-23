@@ -83,7 +83,10 @@ type introDraftCase struct {
 
 // Run issues the one request this site sends, through the production builder.
 func (c *introDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := company360.IntroRequestFor(c.in)
+	req, err := withCertCompanyContext(ctx, ai.TaskDraftReply, company360.IntroRequestFor(c.in))
+	if err != nil {
+		return aitasks.Trace{}, err
+	}
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	res, err := completer.Complete(ctx, req)
 	if err != nil {

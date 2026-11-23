@@ -67,6 +67,9 @@ type RoutingConfig struct {
 	// Decisions is the optional decision-model lane (decisionlane.go). Last and
 	// omitempty, so a config binding none encodes and digests as it always did.
 	Decisions *DecisionsConfig `yaml:"decisions" json:"decisions,omitempty"`
+	// TaskLadders reorders a task's rungs under this config (taskladders.go);
+	// omitempty, so a config reordering none digests as it always did.
+	TaskLadders map[Task][]Tier `yaml:"task_ladders" json:"task_ladders,omitempty"`
 	// sourceHash is the sha256 digest of the raw yaml bytes this config was
 	// parsed from (spec §4) — the routing half of the ai_call_config
 	// dimension key, alongside the generated TaskContractHash. Set by
@@ -258,6 +261,9 @@ func (cfg RoutingConfig) validate() error {
 	if len(cfg.Tiers) == 0 {
 		return errors.New("ai: routing config: no tiers bound")
 	}
+	if err := cfg.validateTaskLadders(); err != nil {
+		return err
+	}
 	// Every tier's routing faults are gathered before refusing, so an editor
 	// that sent several bad values hears about all of them at once.
 	var routingFaults []error
@@ -406,15 +412,14 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 }
 
 // UnboundLadderWarnings reports every task whose entire fallback ladder
-// has no bound tier in cfg.Tiers: a call for that task has nowhere to
+// has no bound tier in cfg.Tiers. A call for that task has nowhere to
 // route and is refused outright, not merely degraded. This is not a
-// startup error — a deployment legitimately narrows to only the
-// workloads it actually runs — but it must be loud: an operator should
-// read the gap off the boot log, not discover it from a refused call at
-// 3am. AllTasks()'s sorted order keeps the result deterministic.
+// startup error, because a deployment legitimately narrows to the
+// workloads it runs. It must be loud, so an operator reads the gap off
+// the boot log and not from a refused call at 3am. RoutedTasks()'s sorted order keeps the result deterministic.
 func (cfg RoutingConfig) UnboundLadderWarnings() []string {
 	var warnings []string
-	for _, task := range AllTasks() {
+	for _, task := range RoutedTasks() {
 		ladder := taskLadders[task]
 		bound := false
 		for _, tier := range ladder {

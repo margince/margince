@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -110,6 +112,9 @@ func (p *companyContextProvider) Prepare(ctx context.Context, task ai.Task, req 
 		return model.Request{}, fmt.Errorf("compose: company context for %s has no fingerprint", task)
 	}
 
+	if !handsRecordIDsToTools(task) {
+		companyContext.CompanyID = ids.CompanyID{}
+	}
 	block, err := renderCompanyContext(companyContext, policy.TokenBudget)
 	if err != nil {
 		return model.Request{}, fmt.Errorf("compose: render company context for %s: %w", task, err)
@@ -136,6 +141,13 @@ func (p *companyContextProvider) Prepare(ctx context.Context, task ai.Task, req 
 	// own, which would put two user turns in a row (chatturns.go says who refuses).
 	req.Messages = alternatingTurns(append([]model.Message{{Role: chatRoleUser, Content: content}}, req.Messages...))
 	return req, nil
+}
+
+// handsRecordIDsToTools says task runs an agent whose tools take record ids, the
+// one place the installation's own company id is of use. Every other site names
+// records by short refs, and a model shown a UUID copies it wrong or cites it.
+func handsRecordIDsToTools(task ai.Task) bool {
+	return slices.ContainsFunc(ai.SitesFor(task), func(site ai.Site) bool { return site.Kind == ai.SiteKindAgentLoop })
 }
 
 // contextFence resolves the boundary the injected block belongs in, declaring

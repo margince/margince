@@ -130,6 +130,11 @@ linters:
   exclusions:
     generated: lax
     rules:
+      # wirerule_test.go hashes the Gemini wire code: a rewrite that keeps
+      # behaviour moves gemini_wire.golden and stales every Gemini record.
+      - path: 'internal/modules/ai/geministrict\.go$'
+        linters: [staticcheck]
+        text: 'QF1001'
       # Generated contract/codegen output is not hand-written; exempt from taste linters.
       - path: '(_gen|\.gen)\.go$'
         linters: [funlen, cyclop, gocognit, maintidx, dupl, revive, staticcheck, goconst, unparam]

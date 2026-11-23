@@ -495,8 +495,8 @@ AICERT_TIMEOUT ?= 90m
 # Cost ceiling: the judge grades a run once, again within 10 points of a band or
 # anywhere below the floor plus 10, and a third time when those two differ by more
 # than 5 — about 1.4 calls a run, more on a model that scores low. A
-# borderline scenario extends from 3 runs to at most 9, so one scenario costs at
-# most 9 candidate and 27 judge calls; a settled one 3 runs and about 4.
+# borderline scenario extends from 3 runs to at most 12, so one scenario costs at
+# most 12 candidate and 36 judge calls; a settled one 3 runs and about 4.
 e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). ROUTING=config/margince.dev.yaml certifies what a deployment binds, per task; or MODEL=prov:model for one candidate. One judge grades the run: JUDGE=claude_cli:claude-sonnet-5-5 by default, through `claude -p` on CLAUDE_CODE_OAUTH_TOKEN (refuses Claude candidates; MAX_THINKING_TOKENS=<n> caps its thinking); JUDGE=openai_compatible:anthropic/claude-sonnet-4.6 JUDGE_UPSTREAM='{}' pays OpenRouter for the same model, JUDGE=gemini:gemini-3.1-flash-lite where the run certifies no Gemini model. BYOK key auto-loaded from .env.local. TASK=x RUNS=<n> BASE_URL=... UPSTREAM='{"quantizations":["bf16"]}' JUDGE_UPSTREAM='{}' (the broker's own routing for the judge) PROFILE=cloud_frontier (ignored under ROUTING) AICERT_TIMEOUT=90m RESUME= to re-pay for every run. PARALLEL=4 runs of a task in flight at once (1 = one after another). SITE=<variant> and SCENARIO=<regexp> measure part of a task and merge its rows into the committed record. Under ROUTING= every distinct rung of a task's ladder is certified, fallback included; STALE_ONLY=0 re-measures records already current
 	$(LOAD_ENV_LOCAL) MARGINCE_AICERT=1 MARGINCE_AICERT_TASK=$(TASK) \
 	  MARGINCE_AICERT_ROUTING=$(if $(ROUTING),$(CURDIR)/../$(ROUTING),$(MARGINCE_AICERT_ROUTING)) \
@@ -904,6 +904,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		echo "gen: approval reading catalog not regenerated (no frontend toolchain); fe-drift checks it"; \
 	fi
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition $(COMPOSITION_FLAGS)
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -validate -contract ../build/composition/api/ai-tasks.yaml
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs
@@ -922,6 +923,8 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		-out-go internal/compose/attention/kinds_gen.go -out-frontend ../frontend/src/lib/worklistkinds.gen.ts
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/attemptlimitcmd -out internal/modules/ai/attemptlimits_gen.go
+	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/taskgradecmd -out internal/modules/ai/taskgrades_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-modelsetups -out ../frontend/src/lib/modelsetups.gen.ts -out-go internal/modules/ai/stockpresets_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-messaging-rules -root ..
 
 # Every file the settings registry is the source of: the settings tables in
@@ -967,7 +970,7 @@ drift: messaging-rules-drift ## Fail when a committed generated file drifted fro
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' '*_gen.json' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md ../frontend/src/lib/worklistkinds.gen.ts '../extensions/*/messagingrules_gen.go'
+	git diff --exit-code -- '*_gen.go' '*_gen.json' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../config/margince.defaults.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md ../frontend/src/lib/worklistkinds.gen.ts ../frontend/src/lib/modelsetups.gen.ts '../extensions/*/messagingrules_gen.go'
 	# Untracked generated outputs are absent from git diff, including files a
 	# generator recreates after a committed deletion.
 	@u="$$(git ls-files --others --exclude-standard -- '../extensions/*/manifest.generated.json' '../extensions/*/messagingrules_gen.go' '*_gen.json')"; \
