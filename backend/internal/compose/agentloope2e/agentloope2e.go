@@ -13,13 +13,14 @@
 package agentloope2e
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -54,27 +55,25 @@ type Scenario struct {
 	Criteria []string `yaml:"criteria"`
 }
 
-// LoadScenarios reads every *.yaml scenario under dir, in name order, and
-// refuses one that cannot be judged or whose name repeats.
+// LoadScenarios reads every *.yaml scenario under dir, in name order. It refuses
+// a folder with none, a *.yml file and a second document in a file. It also
+// refuses a scenario that cannot be judged, and a name that repeats.
 func LoadScenarios(dir string) ([]Scenario, error) {
 	paths, err := filepath.Glob(filepath.Join(dir, "*.yaml"))
 	if err != nil {
 		return nil, err
 	}
+	if stray, _ := filepath.Glob(filepath.Join(dir, "*.yml")); len(stray) > 0 {
+		return nil, fmt.Errorf("agentloope2e: %s must end in .yaml, or the lane would skip it", stray[0])
+	}
+	if len(paths) == 0 {
+		return nil, fmt.Errorf("agentloope2e: no scenario under %s, so the lane would pass without judging anything", dir)
+	}
 	var out []Scenario
 	seen := map[string]bool{}
 	for _, path := range paths {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a scenario file under the lane's own folder
+		sc, err := readScenario(path)
 		if err != nil {
-			return nil, err
-		}
-		var sc Scenario
-		decoder := yaml.NewDecoder(strings.NewReader(string(raw)))
-		decoder.KnownFields(true)
-		if err := decoder.Decode(&sc); err != nil {
-			return nil, fmt.Errorf("agentloope2e: %s: %w", path, err)
-		}
-		if err := sc.validate(); err != nil {
 			return nil, fmt.Errorf("agentloope2e: %s: %w", path, err)
 		}
 		if seen[sc.Name] {
@@ -86,8 +85,26 @@ func LoadScenarios(dir string) ([]Scenario, error) {
 	return out, nil
 }
 
-// safeName is a verdict's file name and its folder entry: one path component.
-var safeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+func readScenario(path string) (Scenario, error) {
+	raw, err := os.ReadFile(path) // #nosec G304 -- a scenario file under the lane's own folder
+	if err != nil {
+		return Scenario{}, err
+	}
+	var sc Scenario
+	decoder := yaml.NewDecoder(bytes.NewReader(raw))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&sc); err != nil {
+		return Scenario{}, err
+	}
+	if err := decoder.Decode(&Scenario{}); !errors.Is(err, io.EOF) {
+		return Scenario{}, errors.New("a scenario file holds one document")
+	}
+	return sc, sc.validate()
+}
+
+// safeName is a verdict's file name: one path component, lower case so that two
+// names never meet on a case-insensitive file system.
+var safeName = regexp.MustCompile(`^[a-z0-9][a-z0-9_.-]*$`)
 
 func (s Scenario) validate() error {
 	switch {
@@ -95,6 +112,8 @@ func (s Scenario) validate() error {
 		return fmt.Errorf("the scenario name %q is not a plain file name, which a verdict is filed under", s.Name)
 	case slices.Contains(s.Worklist, "") || slices.Contains(s.Forbidden, ""):
 		return errors.New("a worklist or forbidden subject may not be empty")
+	case repeats(s.Worklist) || repeats(s.Forbidden):
+		return errors.New("a subject is named twice in one list")
 	case slices.ContainsFunc(s.Worklist, func(subject string) bool { return slices.Contains(s.Forbidden, subject) }):
 		return errors.New("a subject is both on the worklist and forbidden, so no run could pass")
 	case s.Agent != MorningBrief && s.Agent != OvernightSweep:
@@ -107,4 +126,15 @@ func (s Scenario) validate() error {
 		return errors.New("the judge needs at least one criterion, and none may be empty")
 	}
 	return nil
+}
+
+func repeats(subjects []string) bool {
+	seen := map[string]bool{}
+	for _, subject := range subjects {
+		if seen[subject] {
+			return true
+		}
+		seen[subject] = true
+	}
+	return false
 }

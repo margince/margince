@@ -40,6 +40,9 @@ func TestAScenarioThatCannotBeJudgedIsRefused(t *testing.T) {
 		"an agent the lane omits":       {strings.Replace(goodScenario, "morning_brief", "enrichment", 1), "not one the lane covers"},
 		"writes expected, no list":      {strings.Replace(goodScenario, "worklist: [deal_a]", "worklist: []", 1), "names no worklist"},
 		"no writes, but a list":         {goodScenario + "no_writes: true\n", "names a worklist"},
+		"a name in upper case":          {strings.Replace(goodScenario, "name: annotates", "name: Annotates", 1), "not a plain file name"},
+		"a subject named twice":         {strings.Replace(goodScenario, "[deal_a]", "[deal_a, deal_a]", 1), "named twice"},
+		"two documents in one file":     {goodScenario + "---\nname: second\n", "one document"},
 		"a name that leaves the folder": {strings.Replace(goodScenario, "name: annotates", "name: ../../x", 1), "not a plain file name"},
 		"a name with a slash":           {strings.Replace(goodScenario, "name: annotates", "name: nested/case", 1), "not a plain file name"},
 		"an empty subject":              {strings.Replace(goodScenario, "[deal_a]", "[\"\"]", 1), "may not be empty"},
@@ -62,5 +65,19 @@ func TestTwoScenariosMayNotShareAName(t *testing.T) {
 	_, err := LoadScenarios(plant(t, map[string]string{"a.yaml": goodScenario, "b.yaml": goodScenario}))
 	if err == nil || !strings.Contains(err.Error(), "two scenarios are named annotates") {
 		t.Errorf("err = %v", err)
+	}
+}
+
+func TestAFolderThatHoldsNoScenarioIsRefused(t *testing.T) {
+	for name, files := range map[string]map[string]string{
+		"an empty folder":       {},
+		"only a .yml file":      {"a.yml": goodScenario},
+		"a .yml beside a .yaml": {"a.yaml": goodScenario, "b.yml": strings.Replace(goodScenario, "annotates", "other", 1)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := LoadScenarios(plant(t, files)); err == nil {
+				t.Error("a folder the lane would skip was accepted")
+			}
+		})
 	}
 }

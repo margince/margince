@@ -5,12 +5,13 @@ package agentloope2e
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 )
 
@@ -21,12 +22,15 @@ type Criterion struct {
 	Reason string `json:"reason"`
 }
 
-// Run is one run's outcome: whether its end state passed every check, and the
-// judge's answer to each criterion.
+// Run is one run's outcome: the checks its end state failed, and the judge's
+// answer to each criterion.
 type Run struct {
-	ChecksPassed bool        `json:"checks_passed"`
-	Criteria     []Criterion `json:"criteria"`
+	Failures []Failure   `json:"failures"`
+	Criteria []Criterion `json:"criteria"`
 }
+
+// ChecksPassed says the end state failed no check.
+func (r Run) ChecksPassed() bool { return len(r.Failures) == 0 }
 
 // JudgePassed says the judge answered yes to every criterion. A run the judge
 // was never asked about does not pass it.
@@ -56,7 +60,7 @@ func Decide(runs []Run) Outcome {
 	allChecked := len(runs) > 0
 	for _, run := range runs {
 		switch {
-		case !run.ChecksPassed:
+		case !run.ChecksPassed():
 			allChecked = false
 		case run.JudgePassed():
 			out.Passed++
@@ -74,14 +78,30 @@ type Binding struct {
 	Tier     string `json:"tier"`
 }
 
-// Stamp is what one verdict measured. Each part is a digest or a name, so a
-// verdict whose part no longer matches names the part that moved.
+// Key is the binding as one string in which no two bindings meet. Each part is
+// escaped, and the parts are joined by an "@" that the escape never leaves in a
+// part.
+func (b Binding) Key() string {
+	return strings.Join([]string{url.QueryEscape(b.Provider), url.QueryEscape(b.Model), url.QueryEscape(b.Tier)}, "@")
+}
+
+// Stamp is what one verdict measured. Scenario is the digest of the scenario
+// file whole, seed included. Window is the digest of the agent's goal and its
+// allowed tool specs. Harness is the digest of the lane's own files. Binding is
+// the binding's key and Judge is the judge model's name. A verdict whose part no
+// longer matches names the part that moved.
 type Stamp struct {
 	Scenario string `json:"scenario"`
 	Window   string `json:"window"`
 	Harness  string `json:"harness"`
 	Binding  string `json:"binding"`
 	Judge    string `json:"judge"`
+}
+
+// NewStamp builds a stamp, taking the binding and the judge from the same
+// values the verdict records.
+func NewStamp(scenario, window, harness string, binding Binding, judge string) Stamp {
+	return Stamp{Scenario: scenario, Window: window, Harness: harness, Binding: binding.Key(), Judge: judge}
 }
 
 // Moved names the parts of a recorded stamp that no longer match the current
@@ -116,18 +136,21 @@ type Verdict struct {
 	RanAt      string  `json:"ran_at"`
 }
 
-// Path is where a verdict lives under root: one folder per binding. Each part
-// of the binding is escaped. The parts are joined by an "@", which the escape
-// never leaves in a part, so two bindings never share a folder.
+// Path is where a verdict lives under root: one folder per binding.
 func (v Verdict) Path(root string) string {
-	folder := strings.Join([]string{
-		url.QueryEscape(v.Binding.Provider), url.QueryEscape(v.Binding.Model), url.QueryEscape(v.Binding.Tier),
-	}, "@")
-	return filepath.Join(root, folder, v.Scenario+".json")
+	return filepath.Join(root, v.Binding.Key(), v.Scenario+".json")
 }
 
-// Write files a verdict under root with a stable layout.
+// Write files a verdict under root with a stable layout. It refuses a scenario
+// name that is not a plain file name, and a binding with a part missing. Either
+// would file the verdict somewhere no reader looks.
 func (v Verdict) Write(root string) error {
+	if !safeName.MatchString(v.Scenario) {
+		return fmt.Errorf("agentloope2e: the scenario name %q is not a plain file name", v.Scenario)
+	}
+	if v.Binding.Provider == "" || v.Binding.Model == "" || v.Binding.Tier == "" {
+		return errors.New("agentloope2e: a verdict names its provider, model and tier")
+	}
 	path := v.Path(root)
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return err
@@ -139,25 +162,51 @@ func (v Verdict) Write(root string) error {
 	return os.WriteFile(path, append(body, '\n'), 0o600)
 }
 
-// ReadVerdicts reads every verdict under root in path order. A missing root
-// holds none yet.
+// ReadVerdicts reads every verdict under root, in path order. A missing root
+// holds none yet. A file that is not where its own content says it belongs is
+// refused, so a moved or renamed verdict cannot be read as another's.
 func ReadVerdicts(root string) ([]Verdict, error) {
-	var out []Verdict
-	paths, err := filepath.Glob(filepath.Join(root, "*", "*.json"))
+	folders, err := os.ReadDir(root)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
-	sort.Strings(paths)
-	for _, path := range paths {
-		raw, err := os.ReadFile(path) // #nosec G304 -- a verdict file under the lane's own folder
+	var out []Verdict
+	for _, folder := range folders {
+		if !folder.IsDir() {
+			continue
+		}
+		files, err := os.ReadDir(filepath.Join(root, folder.Name()))
 		if err != nil {
 			return nil, err
 		}
-		var v Verdict
-		if err := json.Unmarshal(raw, &v); err != nil {
-			return nil, fmt.Errorf("agentloope2e: %s: %w", path, err)
+		for _, file := range files {
+			if file.IsDir() || filepath.Ext(file.Name()) != ".json" {
+				continue
+			}
+			v, err := readVerdict(root, filepath.Join(root, folder.Name(), file.Name()))
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, v)
 		}
-		out = append(out, v)
 	}
 	return out, nil
+}
+
+func readVerdict(root, path string) (Verdict, error) {
+	raw, err := os.ReadFile(path) // #nosec G304 -- a verdict file under the lane's own folder
+	if err != nil {
+		return Verdict{}, err
+	}
+	var v Verdict
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return Verdict{}, fmt.Errorf("agentloope2e: %s: %w", path, err)
+	}
+	if v.Path(root) != path {
+		return Verdict{}, fmt.Errorf("agentloope2e: %s holds the verdict of %s under %s, so it is in the wrong place", path, v.Scenario, v.Path(root))
+	}
+	return v, nil
 }
