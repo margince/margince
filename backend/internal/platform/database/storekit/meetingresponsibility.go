@@ -70,21 +70,6 @@ func MeetingCreditedSeatAtChangeSQL(meeting, legacy, recorded string) string {
 	return meetingCreditedSeatSQL(meeting, recordedHostSQL(meeting, legacy, recorded))
 }
 
-// MeetingCreditedSeatListSQL lists a meeting under every seat MeetingCreditSQL
-// credits, and under NULL when it credits none. The set-returning call fans a
-// row out only where a statement groups by it. A total counts the meeting once.
-// A per-colleague figure counts it once for each credited colleague.
-func MeetingCreditedSeatListSQL(meeting string) string {
-	return "unnest(COALESCE(NULLIF(ARRAY(SELECT credit.id FROM " + MeetingCreditedSeatsSQL(meeting) +
-		"), '{}'::uuid[]), ARRAY[NULL::uuid]))"
-}
-
-// MeetingLowestCreditedSeatSQL is the lowest seat MeetingCreditSQL credits, NULL
-// when it credits none: one value per meeting where a column cannot be a set.
-func MeetingLowestCreditedSeatSQL(meeting string) string {
-	return "(SELECT credit.id FROM " + MeetingCreditedSeatsSQL(meeting) + " ORDER BY credit.id LIMIT 1)"
-}
-
 func recordedHostSQL(meeting, legacy, recorded string) string {
 	return fmt.Sprintf("(CASE WHEN %s THEN %s.host_user_id ELSE %s END)", legacy, meeting, recorded)
 }

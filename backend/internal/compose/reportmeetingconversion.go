@@ -103,7 +103,7 @@ const (
 var whereHeldMeeting = "t.kind = 'meeting' AND " + meetingoutcome.HeldSQL("t") + " AND t.archived_at IS NULL"
 
 // colCreditedSeat is the colleague filter's null test and value shape; its match is filterPredicates.
-var colCreditedSeat, colCreditedSeats = storekit.MeetingLowestCreditedSeatSQL("t"), storekit.MeetingCreditedSeatListSQL("t")
+var colCreditedSeat, colCreditedSeats = storekit.LatestHeldCredit.LowestSeatSQL("t"), storekit.LatestHeldCredit.SeatListSQL("t")
 
 // activityOwnRowFields names, per report, each dimension or filter read off
 // the base activity's own rows (its participants, its invitations) through a
@@ -129,7 +129,7 @@ func meetingConversionSpec() reportSpec {
 	return reportSpec{
 		entity: datasource.EntityActivity,
 		table:  tableActivity,
-		joins:  []string{fmt.Sprintf(joinAcceptedHandoff, occurredday.StartSQL("t"))},
+		joins:  []string{fmt.Sprintf(joinAcceptedHandoff, occurredday.StartSQL("t")), storekit.LatestHeldJoinSQL("t")},
 		// Row scope for an activity is real per-row discoverability rather than
 		// the identity-table TRUE a deal's is, so this walks it the way
 		// activities-by-kind does. The population default's hardcoded owner_id
@@ -150,7 +150,7 @@ func meetingConversionSpec() reportSpec {
 			fieldMeetingHost:       colCreditedSeat,
 			fieldBecameOpportunity: colBecameOpportunity,
 		},
-		filterPredicates: map[string]string{fieldMeetingHost: storekit.MeetingCreditSQL("t", "%[1]s")},
+		filterPredicates: map[string]string{fieldMeetingHost: storekit.LatestHeldCredit.CreditsSQL("t", "%[1]s")},
 		defaultBy:        []string{fieldBecameOpportunity},
 		// The conversion is a fact about a HANDOFF, so it takes the handoff's
 		// object grant. sdr_handoff gates on `lead` (contacts/sdrhandoff.go), and

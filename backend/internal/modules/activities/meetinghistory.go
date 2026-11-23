@@ -141,12 +141,12 @@ func recordMeetingTransition(ctx context.Context, tx pgx.Tx, in meetingTransitio
 	recordedParameter := fmt.Sprintf("$%d", len(args))
 	args = append(args, meetingoutcome.Held)
 	heldParameter := fmt.Sprintf("$%d", len(args))
-	// A hold snapshots the credited seats, so a later sync of a guest's answer
-	// cannot move a closed week's credit.
+	// A hold keeps the live credit and the seats earlier holds kept. A later
+	// sync or a re-hold then cannot move a closed week's credit.
 	_, err := tx.Exec(ctx, `INSERT INTO activity_meeting_history
         (activity_id,status,scheduled_start,scheduled_precision,actor,source_system,source_id,host_id_at_change,effective_at,customer_eligible_at_change,credited_seats_at_change)
         SELECT `+placeholders+`,a.host_user_id,COALESCE(`+recordedParameter+`::timestamptz,now()),`+CustomerMeetingSQL("a")+`,
-        CASE WHEN $2::text = `+heldParameter+`::text THEN ARRAY(SELECT credit.id FROM `+storekit.MeetingCreditedSeatsSQL("a")+`) END
+        CASE WHEN $2::text = `+heldParameter+`::text THEN `+storekit.HeldCreditSnapshotSQL("a")+` END
         FROM activity a WHERE a.id=`+activityParameter, args...)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {

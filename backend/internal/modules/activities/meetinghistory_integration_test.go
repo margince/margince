@@ -558,7 +558,7 @@ func TestAMeetingIsListedUnderEveryCreditedColleagueAndCountedOnceInTotal(t *tes
 	id := seedCreditedGuests(t, e)
 	ctx := context.Background()
 
-	rows, err := e.owner.Query(ctx, `SELECT `+storekit.MeetingCreditedSeatListSQL("a")+`::text AS seat, count(*) FROM activity a WHERE a.id = $1 GROUP BY 1 ORDER BY 1`, id.UUID)
+	rows, err := e.owner.Query(ctx, `SELECT `+storekit.LiveCredit.SeatListSQL("a")+`::text AS seat, count(*) FROM activity a WHERE a.id = $1 GROUP BY 1 ORDER BY 1`, id.UUID)
 	if err != nil {
 		t.Fatalf("grouping by colleague: %v", err)
 	}
@@ -581,5 +581,73 @@ func TestAMeetingIsListedUnderEveryCreditedColleagueAndCountedOnceInTotal(t *tes
 	}
 	if err := e.owner.QueryRow(ctx, `SELECT count(*) FROM activity a WHERE a.id = $1`, id.UUID).Scan(&total); err != nil || total != 1 {
 		t.Errorf("ungrouped the meeting counts %d (%v), want once", total, err)
+	}
+}
+
+// A meeting logged as held with its guests keeps them in the held transition.
+// The guest list is written first, so losing a guest row later takes no credit.
+func TestAMeetingLoggedHeldKeepsItsGuestsWhenARowIsLost(t *testing.T) {
+	e := setupSend(t)
+	ctx := context.Background()
+	held, start := string(crmcontracts.ActivityMeetingStatusHeld), time.Now().Add(-48*time.Hour)
+	subject := "Born held"
+	out, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{
+		Kind: string(crmcontracts.ActivityKindMeeting), Subject: &subject, OccurredAt: &start, MeetingStatus: &held,
+		AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.other)}, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("logging a held meeting with a guest: %v", err)
+	}
+	id := ids.From[ids.ActivityKind](ids.UUID(out.Id))
+	if _, err := e.owner.Exec(ctx, `DELETE FROM activity_participant WHERE activity_id = $1`, id.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if got := creditedSeats(t, e, id); !slices.Contains(got, e.other.String()) {
+		t.Errorf("after the guest row was lost the credited seats are %v, want the guest kept", got)
+	}
+}
+
+// A guest list written after the first transition, as a calendar import does,
+// is kept by KeepMeetingCreditTx, and a later guest is not.
+func TestKeepingTheCreditOfAMeetingBornHeldAddsItsGuestList(t *testing.T) {
+	e := setupSend(t)
+	ctx := context.Background()
+	id := bookMeeting(t, e, "Born held by a calendar", time.Now().Add(-48*time.Hour))
+	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
+	if _, err := e.owner.Exec(ctx, `INSERT INTO activity_participant (activity_id, user_id, role, address)
+		VALUES ($1, $2, 'attendee', 'born@snapshot.test')`, id.UUID, e.other); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.WithWorkspaceTx(meetingCtx(e), e.pool, func(tx pgx.Tx) error {
+		return storekit.KeepMeetingCreditTx(meetingCtx(e), tx, id.UUID)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.owner.Exec(ctx, `DELETE FROM activity_participant WHERE activity_id = $1`, id.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if got := creditedSeats(t, e, id); !slices.Contains(got, e.other.String()) {
+		t.Errorf("the credited seats are %v, want the guest the meeting was born with", got)
+	}
+}
+
+// Un-holding and holding again keeps what the first holding credited, even when
+// the guest's row was lost in between.
+func TestAReHoldKeepsTheCreditOfTheFirstHold(t *testing.T) {
+	e := setupSend(t)
+	ctx := context.Background()
+	id := seedCreditedGuests(t, e)
+	if _, err := e.owner.Exec(ctx, `DELETE FROM activity_participant WHERE activity_id = $1`, id.UUID); err != nil {
+		t.Fatal(err)
+	}
+	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusBooked)
+	moveTo(t, e, id, crmcontracts.ActivityMeetingStatusHeld)
+	if _, err := e.owner.Exec(ctx, `UPDATE activity_meeting_history SET credited_seats_at_change = NULL
+		WHERE activity_id = $1 AND status = 'held' AND id <> (SELECT id FROM activity_meeting_history
+		 WHERE activity_id = $1 AND status = 'held' ORDER BY effective_at DESC, id DESC LIMIT 1)`, id.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if got := creditedSeats(t, e, id); !slices.Contains(got, e.other.String()) {
+		t.Errorf("after un-holding and holding again the credited seats are %v, want the first hold's guest kept", got)
 	}
 }

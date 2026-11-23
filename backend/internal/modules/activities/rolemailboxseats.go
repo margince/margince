@@ -21,13 +21,19 @@ import (
 // participant rows, in the audit images.
 const auditFieldParticipantSeats = "participant_seats"
 
-// otherAddressSeatSQL holds for participant p of meeting a when the row binds a
-// seat to an address that is not that seat's own login. Only a mailbox the seat
-// connected binds it that way. A row a member relinked stays their choice.
-const otherAddressSeatSQL = `a.kind = 'meeting' AND a.restricted_at IS NULL
+// auditFieldCreditedSeats names the seats a repair took out of a meeting's
+// held snapshots, in the audit images.
+const auditFieldCreditedSeats = "credited_seats"
+
+// otherAddressSeatSQL holds for participant p of calendar meeting a when the row
+// binds a seat to an address that is nobody's login or declared address. Only a
+// mailbox the seat connected binds it that way. A row a member
+// relinked, and a meeting a person logged, are their choice and stay.
+const otherAddressSeatSQL = `a.kind = 'meeting' AND a.restricted_at IS NULL AND starts_with(a.captured_by, 'connector:')
 	   AND p.user_id IS NOT NULL AND p.address IS NOT NULL AND p.relinked_at IS NULL
 	   AND p.role IN (` + storekit.MeetingAttendingRolesSQL + `)
-	   AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.id = p.user_id AND (u.email = p.address OR %s))`
+	   AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.email = p.address OR %s)
+	   AND NOT EXISTS (SELECT 1 FROM capture_owner_identity i WHERE i.kind = 'address' AND lower(i.value) = lower(p.address))`
 
 func otherAddressSeat() string {
 	return fmt.Sprintf(otherAddressSeatSQL, storekit.SeatLoginIsSQL("u", "p.address", "p.address_domain_folded"))
@@ -106,11 +112,42 @@ func UnbindRoleMailboxSeatsTx(ctx context.Context, tx pgx.Tx, activityID, runID 
 	if _, err := tx.Exec(ctx, `UPDATE activity_participant SET user_id = NULL WHERE id = ANY($1)`, rowIDs); err != nil {
 		return false, fmt.Errorf("activities: unbinding the role mailbox seats of %s: %w", activityID, err)
 	}
+	dropped, err := dropRoleCreditTx(ctx, tx, activityID, seats)
+	if err != nil {
+		return false, err
+	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", activityID,
-		map[string]any{auditFieldParticipantSeats: seats}, map[string]any{auditFieldParticipantSeats: []ids.UUID{}},
+		map[string]any{auditFieldParticipantSeats: seats, auditFieldCreditedSeats: dropped},
+		map[string]any{auditFieldParticipantSeats: []ids.UUID{}, auditFieldCreditedSeats: []ids.UUID{}},
 		map[string]any{evidenceDataTaskRun: runID.String()})
 	if err != nil {
 		return false, err
 	}
 	return true, storekit.EmitEvent(ctx, tx, auditID, activityID, crmcontracts.PublicEventActivityUpdated{})
+}
+
+// dropRoleCreditTx takes the seats the role mailbox binding gave credit out of
+// the meeting's held snapshots. A seat the live rule still credits, through its
+// own answer or as host, keeps it. It answers the seats it removed.
+func dropRoleCreditTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID, seats []ids.UUID) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `SELECT s.seat FROM activity a CROSS JOIN unnest($2::uuid[]) AS s(seat)
+		WHERE a.id = $1 AND NOT (`+storekit.MeetingCreditSQL("a", "s.seat")+`)
+		  AND EXISTS (SELECT 1 FROM activity_meeting_history h WHERE h.activity_id = $1 AND s.seat = ANY(h.credited_seats_at_change))`,
+		activityID, seats)
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the snapshot credit of %s: %w", activityID, err)
+	}
+	dropped, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("activities: reading the snapshot credit of %s: %w", activityID, err)
+	}
+	if len(dropped) == 0 {
+		return nil, nil
+	}
+	if _, err := tx.Exec(ctx, `UPDATE activity_meeting_history h SET credited_seats_at_change = ARRAY(
+		    SELECT kept FROM unnest(h.credited_seats_at_change) AS kept WHERE kept <> ALL($2::uuid[]))
+		 WHERE h.activity_id = $1 AND h.credited_seats_at_change && $2::uuid[]`, activityID, dropped); err != nil {
+		return nil, fmt.Errorf("activities: taking role mailbox credit out of the snapshots of %s: %w", activityID, err)
+	}
+	return dropped, nil
 }
