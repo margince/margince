@@ -18,6 +18,7 @@ function unit(name: string, app?: ExtensionDescriptor["app"]) {
     entries: [],
     panels: [],
     secretScope: "",
+    summary: "",
     app,
   } satisfies ExtensionDescriptor;
 }
