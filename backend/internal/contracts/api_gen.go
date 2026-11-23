@@ -51552,6 +51552,8 @@ type EmploymentImportItemState string
 
 // EmploymentImportReport defines model for EmploymentImportReport.
 type EmploymentImportReport struct {
+	// Changed Whether this apply changed an employment edge or an evidence outcome. False means neither moved; claim processing bookkeeping and the duplicate recheck still run.
+	Changed   *bool                  `json:"changed,omitempty"`
 	ContactId openapi_types.UUID     `json:"contact_id"`
 	Items     []EmploymentImportItem `json:"items"`
 
@@ -65619,7 +65621,10 @@ type RouterActions struct {
 		// UploadsAFile Whether it takes filename, content_type and content_base64.
 		UploadsAFile *bool `json:"uploads_a_file,omitempty"`
 	} `json:"actions"`
-	Router string `json:"router"`
+
+	// AskUserFirstMeans What ask_user_first asks of the model; present when an action here has it.
+	AskUserFirstMeans *string `json:"ask_user_first_means,omitempty"`
+	Router            string  `json:"router"`
 }
 
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full

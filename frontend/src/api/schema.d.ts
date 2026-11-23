@@ -37459,6 +37459,8 @@ export interface components {
             research_state?: string;
         };
         EmploymentImportReport: {
+            /** @description Whether this apply changed an employment edge or an evidence outcome. False means neither moved; claim processing bookkeeping and the duplicate recheck still run. */
+            changed?: boolean;
             /** @description Retained evidence that requires administrator review. */
             warnings?: string[];
             /** Format: uuid */
@@ -53840,6 +53842,8 @@ export interface components {
         /** @description The actions of one MCP router whose actions run REST routes. */
         RouterActions: {
             router: string;
+            /** @description What ask_user_first asks of the model; present when an action here has it. */
+            ask_user_first_means?: string;
             actions: {
                 /** @description The value the router's action argument takes. */
                 action: string;

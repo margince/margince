@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -374,17 +375,16 @@ func (r *Registry) redeemPresented(ctx context.Context, spec mcp.ToolSpec, res r
 }
 
 // handle runs an admitted call, seals its answer, and records what a claimed
-// retry key produced — this is the one place that knows both that the tool RAN
-// and what it answered with.
+// retry key produced. Only here is it known that the tool ran and what it said.
 func (r *Registry) handle(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved, attempt string) (json.RawMessage, int, error) {
-	sealed, records, err := r.runAndSeal(ctx, t, spec, res.Args)
-	r.settleRun(ctx, spec, res, attempt, sealed, records, err)
+	work, committed := database.WatchCommits(ctx)
+	sealed, records, err := r.runAndSeal(work, t, spec, res.Args)
+	r.settleRun(ctx, spec, res, attempt, sealed, records, err, committed)
 	return sealed, records, err
 }
 
 // runAndSeal is the call itself: run, seal, charge. It answers the record count
-// as well as the document, because what an answer COST is what its replay
-// costs, and only this frame can see it.
+// too, because what an answer cost is what its replay costs.
 func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, args json.RawMessage) (json.RawMessage, int, error) {
 	ctx, trace := withTrace(ctx)
 	ctx, facts := withEnvelopeFacts(ctx, spec)
