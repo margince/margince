@@ -107,10 +107,11 @@ func TestARecordTheRestampCannotVouchForIsRefused(t *testing.T) {
 		edit func(*Record)
 		want string
 	}{
-		"another judge":     {func(r *Record) { r.JudgeServedModel = "another-judge" }, "graded by judge"},
-		"another wire rule": {func(r *Record) { r.WireRule = "wire-older" }, "wire rule"},
-		"a decision record": {func(r *Record) { r.Kind = KindDecision }, "decision record"},
-		"no rows":           {func(r *Record) { r.Scenarios = nil }, "no scenario rows"},
+		"another judge":                 {func(r *Record) { r.JudgeServedModel = "another-judge" }, "graded by judge"},
+		"a judged record with no judge": {func(r *Record) { r.JudgeServedModel = "" }, "names no judge"},
+		"another wire rule":             {func(r *Record) { r.WireRule = "wire-older" }, "wire rule"},
+		"a decision record":             {func(r *Record) { r.Kind = KindDecision }, "decision record"},
+		"no rows":                       {func(r *Record) { r.Scenarios = nil }, "no scenario rows"},
 		"a row from before bands": {func(r *Record) {
 			r.Scenarios[0].Bands = nil
 		}, "predates stored bands"},

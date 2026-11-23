@@ -6,6 +6,7 @@ package aicert
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -115,6 +116,8 @@ func restampRefusal(rec Record) string {
 	switch {
 	case rec.Kind != "":
 		return "a decision record is stamped by its own rule"
+	case rec.JudgeServedModel == "" && slices.ContainsFunc(rec.Scenarios, func(row ScenarioRecord) bool { return !row.JudgeNone }):
+		return "a judged record names no judge, so it cannot be shown to have been graded by the default one"
 	case gradedElsewhere(rec):
 		return fmt.Sprintf("graded by judge %s, and this build grades with %s", rec.JudgeServedModel, DefaultJudgeModel)
 	case rec.WireRule != ai.WireRule(rec.Provider):

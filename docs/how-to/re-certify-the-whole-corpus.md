@@ -53,11 +53,11 @@ that pools them changed:
 
 ```bash
 cd backend
-make e2e-ai-restamp FROM=<the rule the records carry>            # lists what it would do
-make e2e-ai-restamp FROM=<the rule the records carry> WRITE=1    # writes it
+make e2e-ai-restamp FROM=grading-rule-13            # lists what it would do
+make e2e-ai-restamp FROM=grading-rule-13 WRITE=1    # writes it
 ```
 
-The tool grades a record again from its stored rows, with no model call. A row must pass three checks:
+Replace `grading-rule-13` with the rule the records carry. The tool grades a record again from its stored rows, with no model call. A row must pass three checks:
 
 - Its case and prompt parts of the stamp equal this build's.
 - Its grader part equals what the rule in `FROM` would stamp today. That shows the site check and the judge
