@@ -36,7 +36,8 @@ const composeRootDir = "internal/compose"
 const (
 	composeRootProductionFiles = 1383
 	composeRootTestFiles       = 1909
-	composeRootProductionLines = 230_161
+	// Raised by 107 for the floor of a figure every reader is shown alike.
+	composeRootProductionLines = 230_268
 	composeRootTestLines       = 359_327
 )
 

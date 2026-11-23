@@ -28,7 +28,8 @@ var chances = winchance.New(winchance.Deps{
 		period, _, err := ForecastPeriodAt(ctx, tx, kind, at)
 		return period, err
 	},
-	NoLoneColleague: requireNoLoneColleague,
+	NoLoneColleague:  requireNoLoneColleague,
+	ThinForAnyReader: thinForAnyReader,
 	MayAssertAbout: func(ctx context.Context, tx pgx.Tx, scope forecasting.Scope) (bool, error) {
 		return forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
 	},
