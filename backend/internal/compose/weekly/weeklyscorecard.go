@@ -240,7 +240,7 @@ func scoreLeads(
 		    FROM activity_meeting_history h
 		    JOIN activity m ON m.id = h.activity_id
 		   WHERE m.kind = 'meeting'
-		     AND `+meetingIsTheirsSQL("$%[3]d")+`
+		     AND `+meetingIsTheirsSQL(transitionCredit, "m", "$%[3]d")+`
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
 		     AND NOT `+activities.ReversedCancellationSQL("h")+`

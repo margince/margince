@@ -134,6 +134,7 @@ var columnValueShapes = map[string]analyticsquery.ColumnShape{
 	colRowID: analyticsquery.ShapeID, colOwnerID: analyticsquery.ShapeID, colPipelineID: analyticsquery.ShapeID,
 	colStageID: analyticsquery.ShapeID, colCompanyID: analyticsquery.ShapeID, colPartnerCompanyID: analyticsquery.ShapeID,
 	colProjectID: analyticsquery.ShapeID, colProjectCustomer: analyticsquery.ShapeID, colCreditedSeat: analyticsquery.ShapeID,
+	colCreditedSeats:       analyticsquery.ShapeID,
 	colMeetingCreditedSeat: analyticsquery.ShapeID, activityProjectIDExpr: analyticsquery.ShapeID,
 }
 

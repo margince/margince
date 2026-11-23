@@ -431,6 +431,7 @@ END) NOT VALID
 public.activity_meeting_history.activity_meeting_history_status_check CHECK ((status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text])))
 public.activity_meeting_history.actor text NOT NULL gen=- def=-
 public.activity_meeting_history.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.activity_meeting_history.credited_seats_at_change uuid[] gen=- def=-
 public.activity_meeting_history.customer_eligible_at_change boolean gen=- def=-
 public.activity_meeting_history.effective_at timestamp with time zone NOT NULL gen=- def=-
 public.activity_meeting_history.host_id_at_change uuid gen=- def=-

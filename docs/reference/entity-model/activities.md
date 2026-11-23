@@ -504,13 +504,14 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_meeting_history
 
-13 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `actor` | `text` | yes |  |
+| `credited_seats_at_change` | `uuid[]` |  |  |
 | `customer_eligible_at_change` | `boolean` |  |  |
 | `effective_at` | `timestamp with time zone` | yes |  |
 | `host_id_at_change` | `uuid` |  |  |

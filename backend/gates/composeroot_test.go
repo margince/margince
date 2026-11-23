@@ -40,8 +40,8 @@ const (
 	// for the stock task ladders and the agent loop certification cases.
 	composeRootProductionLines = 229_084
 	// Raised by 613 for the derivation column, stage evidence and sender warning
-	// tests, and 15 for the stock task ladder and agent loop sweep tests.
-	composeRootTestLines = 358_522
+	// tests, and 16 for the stock task ladder, agent loop sweep and meeting credit tests.
+	composeRootTestLines = 358_523
 )
 
 // A read under these floors stopped early or read the wrong place, and would

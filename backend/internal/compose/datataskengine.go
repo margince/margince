@@ -31,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/recordsources"
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
+	"github.com/margince/margince/backend/internal/compose/rolemailboxseats"
 	"github.com/margince/margince/backend/internal/compose/strengthdates"
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
 	"github.com/margince/margince/backend/internal/compose/viabilitytasks"
@@ -162,5 +163,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
 		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(),
+		rolemailboxseats.DataTask(),
 	}
 }

@@ -22,11 +22,7 @@ const fieldWinProbabilityBand = "win_probability_band"
 // Today's RSVPs would answer differently once somebody changed their response,
 // which moves a week that has already been read.
 var colMeetingCreditedSeat = "(CASE WHEN t.kind = 'meeting' THEN " +
-	storekit.MeetingCreditedSeatAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") + " END)"
-
-// heldHostUnrecorded is true for a meeting with no recorded held transition,
-// where the current host is the only host there has ever been.
-const heldHostUnrecorded = "held.host_id_at_change IS NULL"
+	storekit.MeetingCreditedSeatAtChangeSQL("t", storekit.LatestHeldCredit.Legacy, storekit.LatestHeldCredit.Host) + " END)"
 
 // creditedSeatIsFilter narrows to the meetings one colleague is credited for.
 //
@@ -34,9 +30,7 @@ const heldHostUnrecorded = "held.host_id_at_change IS NULL"
 // the set holds them finds it. Comparing the single seat a listing shows
 // answered no for every colleague but the one it happened to pick.
 func creditedSeatIsFilter() string {
-	return "(t.kind = 'meeting' AND EXISTS (SELECT 1 FROM " +
-		storekit.MeetingCreditedSeatsAtChangeSQL("t", heldHostUnrecorded, "held.host_id_at_change") +
-		" WHERE credit.id = %s))"
+	return "(t.kind = 'meeting' AND " + storekit.LatestHeldCredit.CreditsSQL("t", "%s") + ")"
 }
 
 // withCommercialFilters adds the deal list's motion, priority and source
@@ -305,7 +299,7 @@ var prebuiltReports = map[string]reportSpec{
 	"activities-by-kind": {
 		entity: datasource.EntityActivity,
 		table:  tableActivity,
-		joins:  []string{heldTransitionJoin},
+		joins:  []string{storekit.LatestHeldJoinSQL("t")},
 		filterPredicates: map[string]string{
 			fieldHostUserID: creditedSeatIsFilter(),
 		},
@@ -462,17 +456,6 @@ var prebuiltReports = map[string]reportSpec{
 		},
 	},
 }
-
-// heldTransitionJoin is the meeting's own held transition, which recorded the
-// host as it stood then. Its latest one, because a meeting re-held under a new
-// host is credited to that host.
-const heldTransitionJoin = `LEFT JOIN LATERAL (
-        SELECT h.host_id_at_change
-        FROM activity_meeting_history h
-        WHERE h.activity_id = t.id AND h.status = 'held'
-        ORDER BY h.effective_at DESC, h.id DESC
-        LIMIT 1
-      ) held ON true`
 
 const currentStageEntryJoin = `LEFT JOIN LATERAL (
 				SELECT max(h.changed_at) AS entered_at
