@@ -172,7 +172,10 @@ func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envel
 	// from it would place a row against a stage the deal reached long
 	// afterwards, so skipping is nil rather than an error — an error would
 	// redeliver it forever.
-	if t.now().Sub(env.OccurredAt) > stageEvidenceBacklogWindow {
+	//
+	// A stage change only retires a question. An old one is as true as a new
+	// one, because the deal reached that stage whenever it did.
+	if env.Type != eventDealStageChanged && t.now().Sub(env.OccurredAt) > stageEvidenceBacklogWindow {
 		return nil
 	}
 	// Bound HERE rather than at the write, because the READS need it too: the

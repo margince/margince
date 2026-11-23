@@ -57,6 +57,11 @@ type ProposalStageMove struct {
 	SourceType        string     `json:"source_type"`
 	SourceID          ids.UUID   `json:"source_id"`
 	MatchedBy         string     `json:"matched_by"`
+	// SourceAttachmentID is the file of the mail that announced the proposal.
+	// The accept checks it is still there. SourceFileNamed says the file was
+	// taken for a proposal by its name, which the accept checks again.
+	SourceAttachmentID *ids.UUID `json:"source_attachment_id,omitempty"`
+	SourceFileNamed    bool      `json:"source_file_named,omitempty"`
 }
 
 // proposalWords name a proposal in German, English and Vietnamese, folded to
@@ -171,7 +176,9 @@ func pickProposalStage(stages []proposalStageCandidate, current ids.UUID) (propo
 	return *best, true
 }
 
-// ProposalStageFor answers the question a sent proposal puts on a deal. It
+// ProposalStageFor answers the question a sent proposal puts on a deal. It holds
+// the deal row FOR SHARE, so a stage move in flight commits first and one that
+// follows waits for the caller's transaction. It
 // answers false when there is nothing to ask. That is so when the deal is
 // closed, archived or on legal hold, its pipeline is retired, or no later open
 // stage matches.
@@ -183,7 +190,7 @@ func ProposalStageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (Propos
 	err := tx.QueryRow(ctx, `
 		SELECT d.name, d.status, d.legal_hold, d.stage_id, d.pipeline_id, p.archived_at IS NOT NULL
 		  FROM deal d JOIN pipeline p ON p.id = d.pipeline_id
-		 WHERE d.id = $1 AND d.archived_at IS NULL`, dealID).Scan(&name, &status, &hold, &stage, &pipeline, &retired)
+		 WHERE d.id = $1 AND d.archived_at IS NULL FOR SHARE OF d`, dealID).Scan(&name, &status, &hold, &stage, &pipeline, &retired)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ProposalStageMove{}, false, nil
 	}

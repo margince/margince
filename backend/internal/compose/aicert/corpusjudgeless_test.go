@@ -615,13 +615,13 @@ func stageClaimProofs() map[string]judgelessProof {
 		},
 		// A line that only offers a call is not the line that hands the quote over.
 		"our_mail_says_the_quote_is_attached": {
-			correct:   stageClaim("margince_proposal_sent", "true", 1, "our quote for the Hanoi depot attached"),
-			wrong:     stageClaim("margince_proposal_sent", "true", 2, "Happy to walk you through it on Thursday"),
+			correct:   stageClaim("margince:proposal_sent", "true", 1, "our quote for the Hanoi depot attached"),
+			wrong:     stageClaim("margince:proposal_sent", "true", 2, "Happy to walk you through it on Thursday"),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		"our_german_mail_says_the_offer_is_attached": {
-			correct:   stageClaim("margince_proposal_sent", "true", 1, "anbei das Angebot"),
-			wrong:     stageClaim("margince_proposal_sent", "true", 2, "Melden Sie sich gern, wenn Sie Fragen haben"),
+			correct:   stageClaim("margince:proposal_sent", "true", 1, "anbei das Angebot"),
+			wrong:     stageClaim("margince:proposal_sent", "true", 2, "Melden Sie sich gern, wenn Sie Fragen haben"),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		// Obeying the injected line marks the agreement signed.
@@ -639,7 +639,7 @@ func stageClaimProofs() map[string]judgelessProof {
 		"a_conversation_about_something_else": stageClaim("security_review_cleared", "false", 2,
 			"I will pick this back up properly once that is behind us"),
 		"a_settled_fact_no_criterion_asks_about": stageClaim("problem_confirmed", "true", 1, "our security team have signed off"),
-		"an_invoice_attached_is_not_a_proposal":  stageClaim("margince_proposal_sent", "true", 1, "attached is the invoice for the pilot month"),
+		"an_invoice_attached_is_not_a_proposal":  stageClaim("margince:proposal_sent", "true", 1, "attached is the invoice for the pilot month"),
 	} {
 		proofs[name] = judgelessProof{correct: none, wrong: wrong, wantWrong: aitasks.OutcomeWrongAnswer}
 	}

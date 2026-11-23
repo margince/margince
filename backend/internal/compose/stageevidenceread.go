@@ -207,6 +207,11 @@ func (r *StageEvidenceReader) criteriaOf(
 		if deals.CriterionKind(c.Kind) == deals.CriterionLegalReviewed {
 			continue
 		}
+		// The reserved key is never a stage criterion's: a stored one is not
+		// offered, so its claims cannot be taken for the proposal question.
+		if c.Key == deals.ProposalSentCriterionKey {
+			continue
+		}
 		criterion := stageEvidenceCriterion{Key: c.Key, Label: c.Label}
 		if c.Hint != nil {
 			criterion.Hint = *c.Hint

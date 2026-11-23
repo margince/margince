@@ -91,25 +91,28 @@ var decidedByTheSeatStagedFor = map[string]bool{
 	kindTranscriptProposal: true,
 }
 
+// decidedByTheRequestedDecider is narrowing by the member the request names,
+// for a card staged for a record's owner. on_behalf_of stays empty for such a
+// card, so the stager is no help. The owner is requested_decider_id, which
+// FollowDealOwnerInTx moves when the deal changes hands. A card with no
+// decider is withheld from everybody.
+var decidedByTheRequestedDecider = map[string]bool{
+	// A sent proposal asks the deal's owner, and nobody else's manager.
+	kindDealProposalStage: true,
+}
+
 // withheldFromOtherSeats is the self-only narrowing of decidable, spelled once
-// because three reads apply it: the inbox scan through decidable, and the two
-// target-filtered reads (inbox.listForTarget, Service.PendingForTarget) which
-// settle target visibility for the record instead of per row and so cannot call
-// decidable itself. It reports the rows this caller must NOT see — true when the
-// staging is bound to one seat and p is not it.
-//
-// Two routes to the same predicate: a kind whose subject is one member's own
-// business, and a staged create against a table whose rows belong to one human
-// each — where no row exists yet for an ownership probe to ask. Fail-closed on a
-// missing stager: a proposal nobody is recorded for is one nobody may read, not
-// one everybody may.
-//
-// Held by: TestEveryApprovalsGrantFilterAlsoAppliesTheSelfOnlyNarrowing
-// (backend/gates/approvalselfonlyreaders_test.go) — it fails when a reader
-// filters rows with requireDecisionGrants and does not also call this.
+// because the inbox scan and the two target-filtered reads (inbox.listForTarget,
+// Service.PendingForTarget) all apply it. It is true when the staging is bound
+// to one seat and p is not it. A proposal nobody is recorded for is one nobody
+// may read. Held by TestEveryApprovalsGrantFilterAlsoAppliesTheSelfOnlyNarrowing.
 func withheldFromOtherSeats(p principal.Principal, a row) bool {
 	if approvalsubject.Withheld(a.Kind, a.ProposedChange, p.UserID) {
 		return true
+	}
+	if decidedByTheRequestedDecider[a.Kind] {
+		decider := requestedDecider(a)
+		return decider.IsZero() || p.UserID != decider
 	}
 	if selfOnlyKinds[a.Kind] || stagedForStagerOnly(a.TargetType, a.TargetID != nil) {
 		return a.OnBehalfOf == nil || p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID

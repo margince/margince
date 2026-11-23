@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"runtime"
 	"testing"
 	"time"
 
@@ -246,9 +247,11 @@ func TestMovingTheDealPastTheStageWithdrawsTheQuestion(t *testing.T) {
 	if _, err := p.Deals.AdvanceDeal(p.Admin(), p.deal, deals.AdvanceDealInput{ToStageID: p.stages[5]}); err != nil {
 		t.Fatalf("moving the deal by hand: %v", err)
 	}
-	p.handle(t, evidenceEnvelope("deal.stage_changed", "deal", p.deal.UUID, crmcontracts.PublicEventDealStageChanged{}))
+	stale := evidenceEnvelope("deal.stage_changed", "deal", p.deal.UUID, crmcontracts.PublicEventDealStageChanged{})
+	stale.OccurredAt = time.Now().Add(-8 * 24 * time.Hour)
+	p.handle(t, stale)
 	if n := len(p.pending(t)); n != 0 {
-		t.Fatalf("%d questions still open after the deal moved past the stage", n)
+		t.Fatalf("%d questions still open after an 8-day-old stage change; retirement must not be dropped as backlog", n)
 	}
 }
 
@@ -337,14 +340,22 @@ func TestTheOfferAndTheMailCarryingItAskOnce(t *testing.T) {
 type claimReply struct {
 	met, quote string
 	confidence float64
+	key        string
 }
 
 func (c claimReply) Complete(context.Context, model.Request) (model.Response, error) {
 	body, err := json.Marshal(map[string]any{"claims": []map[string]any{{
-		"criterion_key": deals.ProposalSentCriterionKey, "source_id": "s1", "source_lines": []int{1},
+		"criterion_key": cmpOr(c.key, deals.ProposalSentCriterionKey), "source_id": "s1", "source_lines": []int{1},
 		"quote": c.quote, "met": c.met, "commitment": "agreed", "confidence": c.confidence,
 	}}})
 	return model.Response{Text: string(body)}, err
+}
+
+func cmpOr(value, fallback string) string {
+	if value != "" {
+		return value
+	}
+	return fallback
 }
 
 func (p *proposalEnv) read(t *testing.T, brain completer, activity ids.UUID) {
@@ -361,9 +372,9 @@ func TestTheReadingRaisesTheQuestionOnlyForAConfidentYes(t *testing.T) {
 		reply claimReply
 		cards int
 	}{
-		"confident yes":    {claimReply{"true", body, 0.9}, 1},
-		"below the floor":  {claimReply{"true", body, 0.4}, 0},
-		"the text says no": {claimReply{"false", body, 0.9}, 0},
+		"confident yes":    {claimReply{met: "true", quote: body, confidence: 0.9}, 1},
+		"below the floor":  {claimReply{met: "true", quote: body, confidence: 0.4}, 0},
+		"the text says no": {claimReply{met: "false", quote: body, confidence: 0.9}, 0},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -381,7 +392,7 @@ func TestTheReadingRaisesTheQuestionOnlyForAConfidentYes(t *testing.T) {
 
 func TestTheReadingDoesNotAskAboutAMailWithNoAttachment(t *testing.T) {
 	p := newProposalEnv(t)
-	p.read(t, claimReply{"true", "Please find our quote attached.", 0.9}, p.outboundMail(t, "Please find our quote attached."))
+	p.read(t, claimReply{met: "true", quote: "Please find our quote attached.", confidence: 0.9}, p.outboundMail(t, "Please find our quote attached."))
 	if n := len(p.cards(t)); n != 0 {
 		t.Fatalf("a mail with no file raised %d questions", n)
 	}
@@ -414,5 +425,184 @@ func TestAnAcceptAfterTheDealMovedOrWasHeldWritesNothing(t *testing.T) {
 				t.Fatalf("%s history rows name the refused approval", n)
 			}
 		})
+	}
+}
+
+func TestOnlyTheDealsOwnerSeesAndDecidesTheQuestionAndAReassignmentHandsItOn(t *testing.T) {
+	p := newProposalEnv(t)
+	p.WsExec(t, `UPDATE deal SET owner_id = $2 WHERE id = $1`, p.deal, p.Rep1)
+	p.handle(t, p.sendOffer(t))
+	card := p.pending(t)[0]
+	if card.decide != p.Rep1 {
+		t.Fatalf("the question is put to %s, want the owner Rep1", card.decide)
+	}
+	svc := NewApprovalsServiceWithEffects(p.Pool)
+	manager := p.As(p.AdminUser, nil, integration.AdminPerms)
+	if _, err := svc.Get(manager, card.id); err == nil {
+		t.Fatal("another manager can read the owner's question")
+	}
+	if _, err := svc.Decide(manager, card.id, true, nil); err == nil {
+		t.Fatal("another manager decided the owner's question")
+	}
+	newOwner := ids.From[ids.UserKind](p.Rep2)
+	if _, err := p.Deals.UpdateDeal(p.Admin(), p.deal, deals.UpdateDealInput{OwnerID: &newOwner}); err != nil {
+		t.Fatalf("reassigning the deal: %v", err)
+	}
+	if _, err := svc.Decide(p.As(p.Rep1, nil, integration.AdminPerms), card.id, true, nil); err == nil {
+		t.Fatal("the previous owner decided the question after the reassignment")
+	}
+	if _, err := svc.Decide(p.As(p.Rep2, nil, integration.AdminPerms), card.id, true, nil); err != nil {
+		t.Fatalf("the new owner could not decide: %v", err)
+	}
+}
+
+func TestAUserCriterionUnderTheProposalKeysOldSpellingIsNotTheProposalQuestion(t *testing.T) {
+	p := newProposalEnv(t)
+	if _, err := p.Deals.CreateStageExitCriterion(p.Admin(), deals.CreateCriterionInput{
+		StageID: p.stages[1], Key: "margince_proposal_sent", Label: "Quote out", Kind: string(deals.CriterionCustom),
+	}); err != nil {
+		t.Fatalf("seeding the look-alike criterion: %v", err)
+	}
+	p.read(t, claimReply{met: "true", quote: "Please find our quote attached.", confidence: 0.9, key: "margince_proposal_sent"},
+		p.outboundMail(t, "Please find our quote attached.", "scan0001.pdf"))
+	if n := len(p.pending(t)); n != 0 {
+		t.Fatalf("a claim on a user criterion raised %d proposal questions", n)
+	}
+}
+
+func TestAnAcceptWritesNothingWhenTheAnnouncingFileIsGone(t *testing.T) {
+	cases := map[string]string{
+		"the file was removed":           `UPDATE attachment SET archived_at = now() WHERE activity_id = $1`,
+		"the file's bytes were withheld": `UPDATE attachment SET bytes_withheld = true WHERE activity_id = $1`,
+		"the file was renamed":           `UPDATE attachment SET filename = 'photo.png', content_type = 'image/png' WHERE activity_id = $1`,
+		"the mail moved to another deal": `DELETE FROM activity_link WHERE activity_id = $1`,
+	}
+	for name, change := range cases {
+		t.Run(name, func(t *testing.T) {
+			p := newProposalEnv(t)
+			mail := p.outboundMail(t, "See attached.", "Angebot_Depot.pdf")
+			p.handle(t, p.captured(t, mail))
+			card := p.pending(t)[0]
+			if card.move.SourceAttachmentID == nil || !card.move.SourceFileNamed {
+				t.Fatalf("the question does not carry its file: %+v", card.move)
+			}
+			p.WsExec(t, change, mail)
+			svc := NewApprovalsServiceWithEffects(p.Pool)
+			if _, err := svc.Decide(p.Admin(), card.id, true, nil); err == nil {
+				t.Fatal("the accept went through")
+			}
+			if stage := p.scalar(t, `SELECT stage_id::text FROM deal WHERE id = $1`, p.deal); stage != p.stages[1].String() {
+				t.Fatalf("the deal moved to %s", stage)
+			}
+		})
+	}
+}
+
+func TestSimultaneousSourcesRaiseOneQuestion(t *testing.T) {
+	p := newProposalEnv(t)
+	mail := p.outboundMail(t, "See attached.", "Angebot_Depot.pdf")
+	sources := []proposalSource{
+		{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"},
+		{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"},
+		{Type: deals.ProposalSourceActivity, ID: mail, Snippet: "Attached file"},
+	}
+	start := make(chan struct{})
+	errs := make(chan error, len(sources))
+	for _, src := range sources {
+		go func() {
+			<-start
+			errs <- p.trigger.proposals.Suggest(context.Background(), p.deal, src)
+		}()
+	}
+	close(start)
+	for range sources {
+		if err := <-errs; err != nil {
+			t.Fatalf("suggesting: %v", err)
+		}
+	}
+	if n := len(p.pending(t)); n != 1 {
+		t.Fatalf("%d open questions from three simultaneous sources, want 1", n)
+	}
+}
+
+func TestAStageMoveInFlightDecidesBeforeAQuestionIsRaised(t *testing.T) {
+	p := newProposalEnv(t)
+	moving := make(chan struct{})
+	release := make(chan struct{})
+	moved := make(chan error, 1)
+	go func() {
+		moved <- database.WithWorkspaceTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(context.Background(), `UPDATE deal SET stage_id = $2 WHERE id = $1`, p.deal, p.stages[4]); err != nil {
+				return err
+			}
+			close(moving)
+			<-release
+			return nil
+		})
+	}()
+	<-moving
+	suggested := make(chan error, 1)
+	go func() {
+		suggested <- p.trigger.proposals.Suggest(context.Background(), p.deal, proposalSource{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"})
+	}()
+	p.waitForLock(t, "%FOR SHARE OF d%")
+	close(release)
+	if err := <-moved; err != nil {
+		t.Fatalf("the stage move: %v", err)
+	}
+	if err := <-suggested; err != nil {
+		t.Fatalf("suggesting: %v", err)
+	}
+	if n := len(p.cards(t)); n != 0 {
+		t.Fatalf("%d questions raised for a deal that had just reached the stage", n)
+	}
+}
+
+// waitForLock returns once a backend is blocked on a lock in a statement like
+// pattern. The bound is a guard against a hang, not part of what is asserted.
+func (p *proposalEnv) waitForLock(t *testing.T, pattern string) {
+	t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	for p.scalar(t, `SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE $1`, pattern) == "0" {
+		if time.Now().After(deadline) {
+			t.Fatalf("nothing waited on a lock like %q", pattern)
+		}
+		runtime.Gosched()
+	}
+}
+
+func TestASuggestionWaitsForTheDealsLockBeforeScanningForOpenQuestions(t *testing.T) {
+	p := newProposalEnv(t)
+	holding := make(chan struct{})
+	release := make(chan struct{})
+	held := make(chan error, 1)
+	go func() {
+		held <- database.WithWorkspaceTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(context.Background(), proposalLockSQL, p.deal); err != nil {
+				return err
+			}
+			close(holding)
+			<-release
+			return nil
+		})
+	}()
+	<-holding
+	suggested := make(chan error, 1)
+	go func() {
+		suggested <- p.trigger.proposals.Suggest(context.Background(), p.deal, proposalSource{Type: deals.ProposalSourceOffer, ID: ids.NewV7(), Snippet: "Offer sent"})
+	}()
+	p.waitForLock(t, "%pg_advisory_xact_lock%")
+	if n := len(p.cards(t)); n != 0 {
+		t.Fatalf("a question was raised while another writer held the deal's lock: %d", n)
+	}
+	close(release)
+	if err := <-held; err != nil {
+		t.Fatal(err)
+	}
+	if err := <-suggested; err != nil {
+		t.Fatal(err)
+	}
+	if n := len(p.pending(t)); n != 1 {
+		t.Fatalf("%d questions after the lock was released, want 1", n)
 	}
 }

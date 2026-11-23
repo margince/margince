@@ -7,7 +7,7 @@ fixture:
   criteria:
     - key: problem_confirmed
       label: The buyer has stated the problem in their own words
-    - key: margince_proposal_sent
+    - key: margince:proposal_sent
       label: Our side sends the customer a proposal, quote or offer attached to this message
   spans:
     - source_id: 01a07100-0000-7000-8000-000000000011
@@ -17,7 +17,7 @@ fixture:
 expect:
   outcome: accepted
   answer:
-    - criterion_key: margince_proposal_sent
+    - criterion_key: margince:proposal_sent
       met: true
       settled_by: our quote for the Hanoi depot attached
   judge: none

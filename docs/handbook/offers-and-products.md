@@ -147,7 +147,7 @@ The fixed words the PDF prints, such as its headings, follow the template's own 
 When a proposal goes out on an open deal, Margince asks the deal's owner **Move to {stage}?** It moves nothing by itself. The question shows on the deal page and on Home, and it names the stages the move skips and the offer or the mail that raised it.
 
 Two things raise it:
-- You send an offer from Margince.
+- You mark an offer as sent in Margince. The offer's status says you sent it. Margince does not check that the customer received it.
 - Our side sends the customer a mail with a file attached that says it is the proposal. The file name can say so ("Angebot", "Proposal", "Báo giá"), or the mail can say so in its own words. Mail only its participants may read raises nothing.
 
 Margince finds the stage in two ways. A stage whose name holds a proposal word (proposal, quote, offer, Angebot, báo giá) is the proposal stage, unless the name also says it was accepted or signed. Or a stage can ask for a criterion such as "Proposal sent"; the proposal then leaves that stage, so the question names the stage after it. A pipeline with neither gets no question, and there is no setting for it.

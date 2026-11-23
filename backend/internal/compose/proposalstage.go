@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/dealscout"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -41,6 +42,7 @@ const (
 
 	proposalStageWithdrawn = "a proposal no longer asks this: the deal moved, closed or the stage changed"
 	proposalStageReplaced  = "a newer proposal names another stage"
+	proposalFileGoneReason = "The mail's attached proposal is gone, withheld or no longer on this deal, so nothing was moved."
 	activityKindEmail      = "email"
 	directionOutbound      = "outbound"
 )
@@ -50,6 +52,23 @@ type proposalSource struct {
 	Type    string
 	ID      ids.UUID
 	Snippet string
+	// File is the attachment the mail carried. Zero for a mail whose first
+	// live file is looked up when the question is raised. Named says the file
+	// name is what marked it a proposal.
+	File  ids.UUID
+	Named bool
+}
+
+const proposalLockSQL = `SELECT pg_advisory_xact_lock(hashtextextended('deal_proposal_stage:' || $1::text, 0))`
+
+// proposalLock serializes everything that raises or retires the questions of
+// one deal. A row lock cannot do it while no question exists yet, and two
+// sources have two identities, so the identity lock does not meet either.
+func proposalLock(ctx context.Context, tx pgx.Tx, dealID ids.DealID) error {
+	if _, err := tx.Exec(ctx, proposalLockSQL, dealID); err != nil {
+		return fmt.Errorf("compose: locking the proposal questions of a deal: %w", err)
+	}
+	return nil
 }
 
 // proposalStageSuggester raises and retires the questions.
@@ -90,6 +109,16 @@ func (s *proposalStageSuggester) Suggest(ctx context.Context, dealID ids.DealID,
 }
 
 func (s *proposalStageSuggester) suggestTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, src proposalSource) error {
+	if err := proposalLock(ctx, tx, dealID); err != nil {
+		return err
+	}
+	if src.Type == deals.ProposalSourceActivity && src.File.IsZero() {
+		file, err := proposalFirstFile(ctx, tx, src.ID)
+		if err != nil || file.IsZero() {
+			return err
+		}
+		src.File = file
+	}
 	move, ok, err := deals.ProposalStageFor(ctx, tx, dealID)
 	if err != nil || !ok {
 		return err
@@ -108,6 +137,9 @@ func (s *proposalStageSuggester) suggestTx(ctx context.Context, tx pgx.Tx, dealI
 		}
 	}
 	move.SourceType, move.SourceID = src.Type, src.ID
+	if !src.File.IsZero() {
+		move.SourceAttachmentID, move.SourceFileNamed = &src.File, src.Named
+	}
 	return s.stageTx(ctx, tx, move, src)
 }
 
@@ -167,6 +199,9 @@ func (s *proposalStageSuggester) Retire(ctx context.Context, dealID ids.DealID) 
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := proposalLock(ctx, tx, dealID); err != nil {
+			return err
+		}
 		open, err := s.inbox.LockPendingOfKindInTx(ctx, tx, deals.ProposalStageKind, dealID.UUID)
 		if err != nil {
 			return err
@@ -201,12 +236,13 @@ func (s *proposalStageSuggester) SuggestForAttachedFile(ctx context.Context, mai
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		file, err := proposalNamedFile(ctx, tx, activityID)
-		if err != nil || file == "" {
+		file, name, err := proposalNamedFile(ctx, tx, activityID)
+		if err != nil || file.IsZero() {
 			return err
 		}
 		return s.suggestTx(ctx, tx, mail.DealID, proposalSource{
-			Type: deals.ProposalSourceActivity, ID: activityID, Snippet: "Attached file: " + file,
+			Type: deals.ProposalSourceActivity, ID: activityID, Snippet: "Attached file: " + name,
+			File: file, Named: true,
 		})
 	})
 }
@@ -218,25 +254,79 @@ func proposalMailEligible(mail deals.ActivityAuthorship) bool {
 }
 
 // proposalNamedFile answers the first live attachment of a mail the whole
-// workspace may read whose file name says it is a proposal, or "" when none.
-func proposalNamedFile(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (string, error) {
+// workspace may read whose file name says it is a proposal. The id is zero
+// when there is none.
+func proposalNamedFile(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (ids.UUID, string, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	activity := arg(activityID)
 	document := dealscout.ProposalDocumentSQL("at.filename", "at.content_type", arg)
-	var file string
-	err := tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT at.filename FROM attachment at JOIN activity a ON a.id = at.activity_id
+	return firstFile(ctx, tx, fmt.Sprintf(`
+		SELECT at.id, at.filename FROM attachment at JOIN activity a ON a.id = at.activity_id
 		 WHERE at.activity_id = $%d AND at.archived_at IS NULL AND NOT at.bytes_withheld
 		   AND %s AND %s
-		 ORDER BY at.created_at, at.id LIMIT 1`, activity, dealscout.WorkspaceEvidence("a"), document), args...).Scan(&file)
+		 ORDER BY at.created_at, at.id LIMIT 1`, activity, dealscout.WorkspaceEvidence("a"), document), args)
+}
+
+// proposalFirstFile answers the first live file of a mail the whole workspace
+// may read, for a question the reading raised without naming one.
+func proposalFirstFile(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (ids.UUID, error) {
+	id, _, err := firstFile(ctx, tx, `
+		SELECT at.id, at.filename FROM attachment at JOIN activity a ON a.id = at.activity_id
+		 WHERE at.activity_id = $1 AND at.archived_at IS NULL AND NOT at.bytes_withheld
+		   AND `+dealscout.WorkspaceEvidence("a")+`
+		 ORDER BY at.created_at, at.id LIMIT 1`, []any{activityID})
+	return id, err
+}
+
+func firstFile(ctx context.Context, tx pgx.Tx, query string, args []any) (ids.UUID, string, error) {
+	var id ids.UUID
+	var name string
+	err := tx.QueryRow(ctx, query, args...).Scan(&id, &name)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return "", nil
+		return ids.Nil, "", nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("compose: reading the attachments of a mail that may carry a proposal: %w", err)
+		return ids.Nil, "", fmt.Errorf("compose: reading the attachments of a mail that may carry a proposal: %w", err)
 	}
-	return file, nil
+	return id, name, nil
+}
+
+// proposalFileStillThere answers why the mail's proposal can no longer be
+// relied on, or "" while it can. The file must be live and its bytes kept, on
+// a mail the decider may read and that still sits on the deal. A file taken
+// for a proposal by its name must still be named like one.
+func proposalFileStillThere(ctx context.Context, tx pgx.Tx, move deals.ProposalStageMove) (string, error) {
+	if move.SourceAttachmentID == nil {
+		return "", nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	file, activity, deal := arg(*move.SourceAttachmentID), arg(move.SourceID), arg(move.DealID)
+	scope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
+	if scope == "" {
+		scope = "true"
+	}
+	named := "true"
+	if move.SourceFileNamed {
+		named = dealscout.ProposalDocumentSQL("at.filename", "at.content_type", arg)
+	}
+	var there bool
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT EXISTS (SELECT 1 FROM attachment at JOIN activity a ON a.id = at.activity_id
+		 WHERE at.id = $%d AND at.activity_id = $%d AND at.archived_at IS NULL AND NOT at.bytes_withheld
+		   AND a.archived_at IS NULL AND %s AND %s
+		   AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'deal' AND l.deal_id = $%d))`,
+		file, activity, scope, named, deal), args...).Scan(&there); err != nil {
+		return "", fmt.Errorf("compose: rereading the file that announced a proposal: %w", err)
+	}
+	if there {
+		return "", nil
+	}
+	return proposalFileGoneReason, nil
 }
 
 // proposalMailHasAttachment is whether a mail the whole workspace may read
@@ -284,6 +374,9 @@ func proposalStageAcceptEffect(svc *approvals.Service, store *deals.Store) appro
 		reason := ""
 		err = svc.RedeemAndApply(ctx, approvalID, deals.ProposalStageKind, diffHash, func(tx pgx.Tx) error {
 			var applyErr error
+			if reason, applyErr = proposalFileStillThere(ctx, tx, move); applyErr != nil || reason != "" {
+				return applyErr
+			}
 			reason, applyErr = store.ApplyProposalStageTx(ctx, tx, move, approvalID, active)
 			return applyErr
 		})
@@ -304,6 +397,10 @@ func proposalStagePrecheck(db *database.DB) approvals.ReleasePrecheck {
 		}
 		return db.Tx(ctx, func(tx pgx.Tx) error {
 			reason, err := deals.ProposalStageStillApplies(ctx, tx, move)
+			if err != nil || reason != "" {
+				return obsoleteOr(reason, err)
+			}
+			reason, err = proposalFileStillThere(ctx, tx, move)
 			return obsoleteOr(reason, err)
 		})
 	}
