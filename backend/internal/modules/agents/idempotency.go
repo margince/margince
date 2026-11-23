@@ -275,21 +275,15 @@ func (r *Registry) unitOwnedTool(name string) bool {
 // a dropped transport is why the caller retries.
 //
 // A failed run keeps its key, because a handler can fail after its write
-// committed. A lock cycle is the exception: the transaction was aborted and
-// nothing it wrote survives, so the same call is safe.
-func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserved, attempt string, out json.RawMessage, records int, runErr error) {
+// committed. releasesKey names the one case that gives it back.
+func (r *Registry) settleRun(ctx context.Context, spec mcp.ToolSpec, res reserved, attempt string, out json.RawMessage, records int, runErr error, committed func() bool) {
 	if res.RetryKey == "" {
 		return
 	}
 	book, release := context.WithTimeout(context.WithoutCancel(ctx), bookkeepingTimeout)
 	defer release()
-	if _, asked := errors.AsType[*askInChatError](runErr); asked {
-		// Nothing ran: the call waits for the user, and its retry is the same
-		// call under the same key.
-		r.releaseUnrunKey(ctx, spec, res, attempt)
-		return
-	}
-	if storekit.IsLockCycle(runErr) {
+	// A call that waits for the user ran nothing, and its retry is the same call.
+	if _, asked := errors.AsType[*askInChatError](runErr); asked || releasesKey(runErr, res, committed) {
 		r.releaseUnrunKey(ctx, spec, res, attempt)
 		return
 	}
@@ -332,6 +326,15 @@ func safeFailureReason(err error) string {
 		}
 	}
 	return "the call did not complete"
+}
+
+// releasesKey says a failed run gives its key back. The database aborted a
+// transaction in a lock cycle, no transaction of the call committed a write, and
+// no approval was spent. The REST door releases on any refusal without a commit.
+// A tool may reach a provider before it fails, so only a lock cycle proves that
+// the call did not take effect.
+func releasesKey(runErr error, res reserved, committed func() bool) bool {
+	return storekit.IsLockCycle(runErr) && res.ApprovalID.IsZero() && !committed()
 }
 
 // releaseUnrunKey gives a key back after a failure that provably wrote nothing.

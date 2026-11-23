@@ -516,6 +516,33 @@ func TestARunTheDatabaseRolledBackGivesItsKeyBack(t *testing.T) {
 	}
 }
 
+// The key goes back only when nothing of the call can have taken effect. That
+// means a lock cycle, no committed write, and no approval spent before the
+// handler ran.
+func TestOnlyAnUncommittedLockCycleGivesTheKeyBack(t *testing.T) {
+	cycle := &pgconn.PgError{Code: "40P01"}
+	never, once := func() bool { return false }, func() bool { return true }
+	approved := reserved{ApprovalID: ids.From[ids.ApprovalKind](ids.NewV7())}
+	for name, tc := range map[string]struct {
+		err       error
+		res       reserved
+		committed func() bool
+		want      bool
+	}{
+		"a lock cycle with nothing committed":           {cycle, reserved{}, never, true},
+		"a lock cycle after an earlier commit":          {cycle, reserved{}, once, false},
+		"a lock cycle on a call that spent an approval": {cycle, approved, never, false},
+		"any other failure":                             {errors.New("the provider refused"), reserved{}, never, false},
+		"no failure":                                    {nil, reserved{}, never, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := releasesKey(tc.err, tc.res, tc.committed); got != tc.want {
+				t.Errorf("releasesKey = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 // What the caller is told when they present that key again. Not "in flight"
 // (the attempt is over) and not a fresh run (it may have taken effect) — the
 // one thing they can act on.
