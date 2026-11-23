@@ -111,8 +111,8 @@ type Installation struct {
 	// country. `contacts` owns the list.
 	KnownCountry KnownCountry
 	// BaseCurrencyApplied and TimezoneApplied answer the base currency and the
-	// zone a "today" is computed in, without the installation_settings gate, so
-	// counting days and ordering by value need no settings grant.
+	// zone a "today" is computed in. They skip the installation_settings gate,
+	// so counting days and ordering by value need no settings grant.
 	BaseCurrencyApplied InstallationValue
 	TimezoneApplied     InstallationValue
 	// StampCorrespondence shields the correspondence a concluded deal turns

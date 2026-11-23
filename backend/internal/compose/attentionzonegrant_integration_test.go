@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -39,10 +40,11 @@ func TestTheWorklistDayBoundaryNeedsNoSettingsGrant(t *testing.T) {
 		RowScope: principal.RowScopeAll,
 	})
 
-	// 09:00 UTC is still the 23rd in Auckland, whose day ends at 11:00 UTC,
-	// 13 hours before a UTC day would.
-	now := time.Date(2026, 11, 23, 9, 0, 0, 0, time.UTC)
-	endOfDay := time.Date(2026, 11, 24, 0, 0, 0, 0, zone)
+	// Two hours before Auckland's midnight, a UTC day still has over ten hours
+	// to run, so only the installation's zone puts the second task tomorrow.
+	local := clocktest.Now(t).In(zone)
+	endOfDay := time.Date(local.Year(), local.Month(), local.Day()+1, 0, 0, 0, 0, zone)
+	now := endOfDay.Add(-2 * time.Hour)
 	for subject, due := range map[string]time.Time{
 		"Due a second before the installation's midnight": endOfDay.Add(-time.Second),
 		"Due at the installation's midnight":              endOfDay,
