@@ -28181,6 +28181,16 @@ components:
           $ref: '#/components/schemas/AiEmbeddingsBinding'
         decisions:
           $ref: '#/components/schemas/AiDecisionsBinding'
+        task_ladders:
+          type: object
+          additionalProperties:
+            type: array
+            items: {type: string}
+          description: |-
+            A task name to the order its rungs are walked in under this binding, for a task this
+            binding walks otherwise than the task contract does. The order must name exactly the
+            task's own rungs; anything else is refused with a 422. A task left out keeps its
+            contract order.
         providers:
           type: object
           additionalProperties: {$ref: '#/components/schemas/AiProviderSettings'}
@@ -30725,6 +30735,22 @@ components:
         decides: {type: boolean, description: 'The task declares a decision form, so a decision model may answer it first and its decision timeout applies.'}
         overrides: {$ref: '#/components/schemas/AiTaskOverride'}
         defaults: {$ref: '#/components/schemas/AiTaskSettings'}
+        certification: {$ref: '#/components/schemas/AiTaskCertification'}
+    AiTaskCertification:
+      type: object
+      required: [grade, model, recheck_pending]
+      description: |-
+        The certification grade of the model that answers this feature first (the lead of
+        `normal_candidates`), read from the committed certification records by the readiness
+        report's rule: the worst grade over every site the feature ships, and not measured when
+        any site has no record for that model. Absent when no model is bound, and for embeddings.
+      properties:
+        grade:
+          type: string
+          enum: [ready, usable_with_care, not_reliable, not_measured]
+          description: 'ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.'
+        model: {type: string, description: 'The model the grade is for.'}
+        recheck_pending: {type: boolean, description: 'The product has changed since the grade was measured: the grade is the last one there is, and a re-run replaces it.'}
     AiTaskOverride:
       type: object
       additionalProperties: false
@@ -39254,7 +39280,7 @@ components:
           readOnly: true
           description: >-
             The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
-        source: {type: string}
+        source: {type: string, description: 'The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         created_by:
           allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
@@ -39322,7 +39348,7 @@ components:
         project_id: {type: [string, 'null'], format: uuid, description: 'The body of work this deal belongs to; must name the same company as the deal.'}
         owner_id: {type: [string, 'null'], format: uuid}
         expected_close_date: {type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422.'}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
@@ -39782,7 +39808,7 @@ components:
           format: date-time
           readOnly: true
           description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
-        source: {type: string}
+        source: {type: string, description: 'The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
@@ -40079,7 +40105,7 @@ components:
         description: {type: [string, 'null']}
         started_at: {type: [string, 'null'], format: date}
         target_end_date: {type: [string, 'null'], format: date}
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
         source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409.'}
         source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
@@ -55284,7 +55310,7 @@ components:
           items: {$ref: '#/components/schemas/OfferLineItem'}
         money_withheld: {type: boolean, readOnly: true, description: 'True for a reader the deal''s amount is masked from. Such a reader gets zero totals, no lines, no exchange rate and no PDF: the offer states the deal''s amount by another name.'}
         source_commercial_revision: {type: [integer, 'null'], format: int64, readOnly: true, description: 'The deal''s `commercial_revision` the lines were copied from. Such an offer''s lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.'}
-        source: {type: string}
+        source: {type: string, description: 'The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied.}
         version: {$ref: '#/components/schemas/RowVersion'}
         created_at: {type: string, format: date-time}
@@ -55361,7 +55387,7 @@ components:
             Copy the deal's lines at this `commercial_revision` into the offer. Required for a deal in
             `lines` mode, which refuses `line_items`, and refused for any other deal. Another revision
             answers 409 `version_skew`. The currency must be the deal's.
-        source: {type: string}
+        source: {type: string, enum: [api, automation, capture, import, manual, webform], description: 'The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.'}
       additionalProperties: false
     UpdateOfferRequest:
       type: object

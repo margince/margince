@@ -118,18 +118,17 @@ func proveM08WinRateByCountAndValue(t *testing.T) {
 // counting open pipeline here would credit a source for revenue nobody has.
 func proveM12WonRevenueByLeadSource(t *testing.T) {
 	e := setupForecast(t)
-	// Two sources, unequal, plus five LOST outbound deals worth far more than
-	// either won total.
+	// Two sources, unequal, plus five LOST typed deals worth far more.
 	//
 	// The lost cohort is the discriminator and an open deal would not be: this
 	// report's base predicate already excludes open deals before any caller
 	// filter runs, so seeding one proves nothing about the status filter. An
-	// engine that ignored the filter would count the losses and report outbound
+	// engine that ignored the filter would count the losses and report typed deals
 	// as the best source in the business.
 	for range 5 {
-		seedClosedOwnedDeal(t, e, "Referral win", 16_000, "won", "referral", "", e.Rep1)
-		seedClosedOwnedDeal(t, e, "Outbound win", 4_000, "won", "outbound", "", e.Rep1)
-		seedClosedOwnedDeal(t, e, "Outbound loss", 200_000, "lost", "outbound", "went elsewhere", e.Rep1)
+		seedClosedOwnedDeal(t, e, "Web form win", 16_000, "won", "webform", "", e.Rep1)
+		seedClosedOwnedDeal(t, e, "Typed win", 4_000, "won", "manual", "", e.Rep1)
+		seedClosedOwnedDeal(t, e, "Typed loss", 200_000, "lost", "manual", "went elsewhere", e.Rep1)
 	}
 
 	got, err := askTool(e.wideLensCtx(e.Rep1), t, e,
@@ -148,16 +147,16 @@ func proveM12WonRevenueByLeadSource(t *testing.T) {
 		}
 		bySource[source] = row["value"]
 	}
-	if v := bySource["referral"]; v != float64(80_000) {
-		t.Errorf("referral won revenue = %v, want 80000", v)
+	if v := bySource["webform"]; v != float64(80_000) {
+		t.Errorf("web form won revenue = %v, want 80000", v)
 	}
 	// An engine ignoring the status filter answers 1020000 here and reports
-	// outbound as the best source in the business, on a million of losses.
-	if v := bySource["outbound"]; v != float64(20_000) {
-		t.Errorf("outbound won revenue = %v, want 20000 — a lost deal is not won revenue", v)
+	// typed deals as the best source in the business, on a million of losses.
+	if v := bySource["manual"]; v != float64(20_000) {
+		t.Errorf("typed won revenue = %v, want 20000 — a lost deal is not won revenue", v)
 	}
 	if len(bySource) != 2 {
-		t.Errorf("the answer holds %d sources, want exactly referral and outbound — a third "+
+		t.Errorf("the answer holds %d sources, want exactly webform and manual — a third "+
 			"row means the cohort reached deals this fixture did not seed", len(bySource))
 	}
 }

@@ -302,6 +302,30 @@ func TestTheOwnCompanyIDSurvivesTruncationAndIsAbsentWhenUnset(t *testing.T) {
 	}
 }
 
+// The own company's id reaches only an agent, whose tools take record ids. A
+// drafting or reading site names records by short refs, and is never shown it.
+func TestTheOwnCompanyIDReachesOnlyAnAgent(t *testing.T) {
+	companyID := ids.From[ids.CompanyKind](ids.NewV7())
+	reader := &contextReaderStub{result: contacts.CompanyContext{
+		CompanyID: companyID, Fingerprint: "fp",
+		Scopes: []contacts.CompanyContextSection{{
+			Scope: contacts.CompanyContextPositioning,
+			Items: []contacts.CompanyContextItem{{Key: "icp", Value: "Manufacturers", Source: contacts.CompanySourceHuman}},
+		}},
+	}}
+	for task, want := range map[ai.Task]bool{ai.TaskAgentLoop: true, ai.TaskDraftReply: false, ai.TaskOfferDraft: false} {
+		req, err := newCompanyContextProvider(reader).Prepare(context.Background(), task, model.Request{
+			Messages: []model.Message{{Role: chatRoleUser, Content: "hello"}},
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", task, err)
+		}
+		if shown := strings.Contains(req.Messages[0].Content, companyID.String()); shown != want {
+			t.Errorf("%s: the own company id shown = %v, want %v:\n%s", task, shown, want, req.Messages[0].Content)
+		}
+	}
+}
+
 func TestCompanyContextProviderRejectsUndeclaredTask(t *testing.T) {
 	_, err := newCompanyContextProvider(nil).Prepare(context.Background(), ai.Task("future_task"), model.Request{})
 	if err == nil || !strings.Contains(err.Error(), "no company-context policy") {

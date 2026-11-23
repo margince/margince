@@ -1,0 +1,73 @@
+name: overnight_sweep_logs_one_note_per_slipping_deal
+task: agent_loop
+site: overnight_at_risk_sweep
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  trigger_ref: overnight_at_risk_sweep:2026-09-24:d48b383f3e8acec5d620c82b8c9b4202
+  grounding: []
+  tools:
+    - tool: whats_slipping_this_week
+      result:
+        deals:
+          - rank: 1
+            deal_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e61
+            name: "Pump station retrofit"
+            amount_minor: 7400000
+            currency: EUR
+            evidence:
+              - {source: deal.last_activity_at, snippet: "No recorded activity since 2026-08-28 (27 days)."}
+          - rank: 2
+            deal_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e62
+            name: "Office HVAC service"
+            amount_minor: 900000
+            currency: EUR
+            evidence:
+              - {source: deal.expected_close_date, snippet: "Expected close date 2026-09-15 has passed."}
+    - tool: read_record
+      args: {record_type: deal, id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e61}
+      result:
+        record_type: deal
+        id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e61
+        fields: {name: "Pump station retrofit", stage: proposal, amount_minor: 7400000, currency: EUR, last_activity_at: "2026-08-28T13:00:00Z", next_step: null}
+    - tool: read_record
+      args: {record_type: deal, id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e62}
+      result:
+        record_type: deal
+        id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e62
+        fields: {name: "Office HVAC service", stage: negotiation, amount_minor: 900000, currency: EUR, expected_close_date: "2026-09-15", last_activity_at: "2026-09-19T08:30:00Z"}
+    - tool: log_activity
+      result:
+        record_type: activity
+        id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c3f00
+        fields: {kind: note}
+    - tool: catch_me_up_on
+      args: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e61}
+      result:
+        anchor: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e61}
+        sections: []
+    - tool: catch_me_up_on
+      args: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e62}
+      result:
+        anchor: {record_type: deal, record_id: 0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e62}
+        sections: []
+expect:
+  outcome: accepted
+  answer: log_activity
+  near_misses:
+    - list_records
+  rubric: >
+    Grade the notes the run logged with log_activity, read against the list and
+    the records its steps show it read. The goal is ONE note per listed deal:
+    a subject naming the risk and a body stating the finding and the evidence.
+    Pump station retrofit has had no recorded activity since 28 August and no
+    next step; Office HVAC service is past its 15 September expected close date
+    although it saw activity on 19 September. Score high when each note names
+    that deal's own risk and cites the field or record it rests on. Score low
+    when a note invents a cause no record carries (a lost champion, a
+    competitor, a price dispute), gives both deals the same generic risk, or
+    tells someone to advance a stage, send a message or archive a deal.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

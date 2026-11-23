@@ -116,11 +116,12 @@ func TestTheDecisionLegRecordsKeptWrongAndFallbacks(t *testing.T) {
 		t.Fatalf("the LLM leg ran %d runs, want %d: the case must extend for this test to mean anything", got.llm.Runs, adaptiveMaxRuns)
 	}
 	// The last scripted reply repeats, so every run after the third falls back.
+	fallbacks := adaptiveMaxRuns - 2
 	want := DecisionStats{
-		Kept: 2, KeptCorrect: 1, KeptWrong: 1, Fallbacks: 7, FallbackRate: 7.0 / 9,
-		FallbackByReason: map[string]int{"below_floor": 7}, MinKeptConfidence: 0.9,
-		// One kept-correct run, plus seven fallbacks credited with the LLM's 9/9.
-		ServedPassRate: 8.0 / 9,
+		Kept: 2, KeptCorrect: 1, KeptWrong: 1, Fallbacks: fallbacks, FallbackRate: float64(fallbacks) / adaptiveMaxRuns,
+		FallbackByReason: map[string]int{"below_floor": fallbacks}, MinKeptConfidence: 0.9,
+		// One kept-correct run, plus every fallback credited with the LLM's pass rate of 1.
+		ServedPassRate: float64(fallbacks+1) / adaptiveMaxRuns,
 	}
 	if !reflect.DeepEqual(*rec.Decision, want) {
 		t.Errorf("decision stats = %+v, want %+v", *rec.Decision, want)

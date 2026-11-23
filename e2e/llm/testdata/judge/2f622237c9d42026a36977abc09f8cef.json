@@ -1,7 +1,0 @@
-{
-  "verdict": "no",
-  "reason": "The answer names Körber Sensorik and Reply Deutschland as at-risk deals, but the criterion requires naming them specifically as open deals resting on one person or gone cold, and the answer gives no such framing and no indication that the tool flagged them for that reason, so it's unclear it satisfies the criterion's conditions.",
-  "model": "claude-haiku-5-5",
-  "criterion": "Criterion 2. The answer names Körber Sensorik Rollout and Reply Deutschland Verlängerung as the open deals resting on one person or gone cold, and does not list a deal the tool did not flag. Answer no if it names neither, or names deals that are not at risk.",
-  "answer": "We booked about EUR 100k, worked out from the won deals. Körber Sensorik and Reply Deutschland are at risk. Yes, price is the holdup: roughly 70% of customers raise it. Sofia could introduce you to Heike at Nordwind."
-}

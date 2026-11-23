@@ -23,11 +23,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-// dealScoutSource is the provenance of a deal opened from a suggestion.
 const dismissReasonNotADeal = "not_a_deal"
 
+// dealScoutSource stamps the fields a model wrote on a deal opened from a suggestion.
 const dealScoutSource = "agent:dealscout"
 
 // SuggestionEffects are the writes an acceptance makes outside this module:
@@ -284,7 +285,7 @@ func (s *Store) acceptedDealInput(ctx context.Context, tx pgx.Tx, current Sugges
 	birth := CreateDealInput{
 		Name: name, AmountMinor: amount, Currency: currency,
 		PipelineID: pipelineID, StageID: stageID, CompanyID: &company,
-		Source: dealScoutSource, ExpectedClose: current.CloseDate,
+		Source: provenance.RecordSourceAutomation, ExpectedClose: current.CloseDate,
 		CloseDateProvisional: current.CloseDate != nil,
 	}
 	if in.CloseDate != nil {

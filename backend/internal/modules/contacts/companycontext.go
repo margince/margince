@@ -144,7 +144,7 @@ func (s *Store) GetCompanyContext(ctx context.Context, requested []CompanyContex
 		if err := tx.QueryRow(ctx, `SELECT transaction_timestamp()`).Scan(&generatedAt); err != nil {
 			return fmt.Errorf("read company context timestamp: %w", err)
 		}
-		out = assembleCompanyContext(offered.company, requested, generatedAt)
+		out = AssembleCompanyContext(offered.company, requested, generatedAt)
 		out.Confirmed = offered.company.MinimumComplete
 		out.OfferingID, out.OfferingName = offered.id, offered.name
 		return nil
@@ -155,7 +155,10 @@ func (s *Store) GetCompanyContext(ctx context.Context, requested []CompanyContex
 	return out, nil
 }
 
-func assembleCompanyContext(company Company, requested []CompanyContextScope, generatedAt time.Time) CompanyContext {
+// AssembleCompanyContext is the context GetCompanyContext builds from the row it
+// read. A reader holding the company without a database serves it through this
+// too, so the certification lane's block is assembled the way production's is.
+func AssembleCompanyContext(company Company, requested []CompanyContextScope, generatedAt time.Time) CompanyContext {
 	scopes := normalizeCompanyContextScopes(requested)
 	sections := make(map[CompanyContextScope][]CompanyContextItem, len(scopes))
 	selected := make(map[CompanyContextScope]bool, len(scopes))

@@ -261,23 +261,33 @@ func graderRequestDigest(sc Scenario, candidateRequest model.Request) (string, e
 	return canonicalRequestDigest(compose.JudgeRequest(in))
 }
 
-// graderStamp is a scenario's grader third. A case its check grades alone is
-// never sent to the judge, so only the rule reaches it: a judge prompt edit
-// leaves its record current.
+// graderStamp is a scenario's grader third: the rule and the site's own check,
+// and the judge's request for a judged case. A case its check grades alone is
+// never sent to the judge, so a judge prompt edit leaves its record current.
 func graderStamp(sc Scenario, census *aitasks.Registry, candidateRequest model.Request) (string, error) {
+	rule := checkedRule(siteCheck(sc.Task, sc.Site))
 	if !sc.Expect.Judged() {
-		return gradedBy(gradingRule, ""), nil
+		return gradedBy(rule, ""), nil
 	}
 	graderRequest, err := graderRequestDigest(asGraded(sc, census), candidateRequest)
 	if err != nil {
 		return "", err
 	}
-	return gradedBy(gradingRule, graderRequest), nil
+	return gradedBy(rule, graderRequest), nil
+}
+
+// checkedRule is gradingRule with the digest of the site's own check, which
+// decides right from wrong before any judge is asked.
+func checkedRule(check string) string {
+	if check == "" {
+		return gradingRule
+	}
+	return gradingRule + "\ncheck " + check
 }
 
 // gradingRule versions the scoring rule and the judge-opinion policy, so every
 // record graded the old way reads stale; gradingrule_test.go fails an unbumped edit.
-const gradingRule = "grading-rule-10"
+const gradingRule = "grading-rule-13"
 
 // gradedBy is the stamp's grader third: the grader's request digest under the
 // rule that turns its opinions into a verdict, which no request carries.

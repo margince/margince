@@ -1,0 +1,92 @@
+{
+  "scenario": "case42_can_i_answer_on_whatsapp",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "a0c7f3647dac1a51",
+    "tools": "1985530e19ea0a07",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "ran_at": "2026-11-22T02:59:14Z",
+    "graded_commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "graded_at": "2026-11-22T02:59:14Z"
+  },
+  "usage": {
+    "input_tokens": 57703,
+    "output_tokens": 3585,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 420608,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_activities",
+        "describe_router_actions",
+        "find_records",
+        "list_agent_tools",
+        "list_channel_connections",
+        "list_channel_providers",
+        "log_activity",
+        "read_context",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_activities",
+        "find_records",
+        "list_channel_connections",
+        "list_channel_providers",
+        "log_activity",
+        "read_context",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 8.5,
+      "min": 7,
+      "max": 10
+    },
+    "refused": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 239155.5,
+      "min": 182637,
+      "max": 295674
+    },
+    "output_tokens": {
+      "median": 1792.5,
+      "min": 1507,
+      "max": 2078
+    }
+  }
+}

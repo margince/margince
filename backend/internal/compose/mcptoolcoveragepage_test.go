@@ -108,7 +108,8 @@ func writeCoverageTotals(p *strings.Builder, r mcpToolCoverage) {
 				m.Model, r.Totals.Cases-m.CasesRecorded, r.Totals.Cases)
 		}
 		if len(m.BelowBar) > 0 {
-			fmt.Fprintf(p, "> `%s` below its bar on: %s\n\n", m.Model, strings.Join(m.BelowBar, ", "))
+			fmt.Fprintf(p, "<!-- prose:allow sentence a generated list of case names -->\n> `%s` below its bar on: %s\n\n",
+				m.Model, strings.Join(m.BelowBar, ", "))
 		}
 		if len(m.Slow) > 0 {
 			fmt.Fprintf(p, "> `%s` slow on: %s\n\n", m.Model, strings.Join(m.Slow, ", "))

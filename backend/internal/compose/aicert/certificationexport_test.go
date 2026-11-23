@@ -13,6 +13,8 @@ const (
 	CasePassPercent           = casePassPercent
 	VetoPassPercent           = vetoPassPercent
 	ConfidenceZ               = confidenceZ
+	CertifiedMinRuns          = certifiedMinRuns
+	MinJudgeScores            = minJudgeScores
 )
 
 // DefaultRepeats is each case's first round unless told otherwise, and

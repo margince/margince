@@ -246,6 +246,10 @@ type modelCoverage struct {
 	// CallsPerCase and Slow say how directly it finished: scores, never a fail.
 	CallsPerCase string   `json:"calls_per_case"`
 	Slow         []string `json:"slow_cases"`
+	// MedianCalls and MedianTurns are the same medians, bare, for the summary
+	// table; MedianTurns is "-" for a route that reports no turn count.
+	MedianCalls string `json:"median_calls_per_case"`
+	MedianTurns string `json:"median_turns_per_case"`
 }
 
 type mcpToolCoverage struct {
@@ -882,6 +886,7 @@ func summariseModel(cases []caseRow, model string) modelCoverage {
 	sort.Strings(summary.BelowBar)
 	sort.Strings(summary.Slow)
 	summary.CallsPerCase = mcpe2e.CallsPerCase(measured)
+	summary.MedianCalls, summary.MedianTurns = mcpe2e.MedianCalls(measured), mcpe2e.MedianTurns(measured)
 	summary.Route = strings.Join(sortedCopy(routes), " + ")
 	summary.Name, summary.Trust = modelName(model), trustVerdict(summary.CasesHeld, summary.CasesRecorded, len(cases))
 	return summary

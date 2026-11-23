@@ -127,7 +127,14 @@ type filterProposeCase struct {
 }
 
 func (c *filterProposeCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := filterpropose.Request(c.in)
+	// The request a caller with company read sends (withCompanyContextIfReadable):
+	// the context is conditional, and an installation's reps hold that grant.
+	ask := filterpropose.Request(c.in)
+	ask.IncludeCompanyContext = true
+	req, err := withCertCompanyContext(ctx, ai.TaskNlSearch, ask)
+	if err != nil {
+		return aitasks.Trace{}, err
+	}
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	res, err := completer.Complete(ctx, req)
 	if err != nil {

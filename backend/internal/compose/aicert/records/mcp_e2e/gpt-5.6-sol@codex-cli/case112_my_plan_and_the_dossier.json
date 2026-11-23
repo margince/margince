@@ -1,0 +1,78 @@
+{
+  "scenario": "case112_my_plan_and_the_dossier",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "c67fa4062830e050",
+    "tools": "65a390166fea5359",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "ran_at": "2026-11-22T02:47:36Z",
+    "graded_commit": "24405859b1f4fe6f5c16d1e06e82b54398a7f1fa",
+    "graded_at": "2026-11-22T16:00:19Z"
+  },
+  "usage": {
+    "input_tokens": 42690,
+    "output_tokens": 1880,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 290176,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_company_dossier",
+        "read_details",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "get_company_dossier",
+        "read_details",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6,
+      "min": 4,
+      "max": 8
+    },
+    "refused": {
+      "median": 3.5,
+      "min": 2,
+      "max": 5
+    },
+    "prompt_tokens": {
+      "median": 166433,
+      "min": 150991,
+      "max": 181875
+    },
+    "output_tokens": {
+      "median": 940,
+      "min": 686,
+      "max": 1194
+    }
+  }
+}

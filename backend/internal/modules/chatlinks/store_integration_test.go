@@ -151,7 +151,7 @@ func setupLinks(t *testing.T) *linkEnv {
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	company := ids.NewV7()
 	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by) VALUES ($1, 'Acme', $2, 'seed', 'system')`, company, e.rep)
-	e.exec(t, `INSERT INTO project (id, name, owner_id, source, captured_by) VALUES ($1, 'Rollout', $2, 'seed', 'system')`, e.project, e.rep)
+	e.exec(t, `INSERT INTO project (id, name, owner_id, source, captured_by) VALUES ($1, 'Rollout', $2, 'manual', 'system')`, e.project, e.rep)
 	e.exec(t, `INSERT INTO relationship (kind, project_id, company_id, role, source, captured_by)
 		VALUES ('project_company', $1, $2, 'customer', 'manual', 'human:x')`, e.project, company)
 	for _, d := range []struct {
@@ -159,7 +159,7 @@ func setupLinks(t *testing.T) *linkEnv {
 		project *ids.UUID
 	}{{e.deal, &e.project}, {e.second, nil}} {
 		e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, project_id, company_id, source, captured_by)
-			VALUES ($1, 'Acme renewal', 'open', $2, $3, $4, $5, $6, 'seed', 'system')`, d.id, e.rep, pipeline, stage, d.project, company)
+			VALUES ($1, 'Acme renewal', 'open', $2, $3, $4, $5, $6, 'manual', 'system')`, d.id, e.rep, pipeline, stage, d.project, company)
 	}
 	connection := ids.NewV7()
 	e.exec(t, `INSERT INTO channel_connection (id, provider, channel_id, channel_label, address, credential_ref, status, connected_by)

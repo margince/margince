@@ -6,6 +6,7 @@ package mcpe2e
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -228,6 +229,10 @@ func TestTheCommittedTreeStampsEveryScenario(t *testing.T) {
 // on its own, so a change to them moves no verdict and they are not harness.
 var judgeTransport = []string{"e2e/llm/clean.py", "e2e/llm/providers.py"}
 
+// lintOnly are lane modules that check how a scenario is written and grade no
+// run. They stay outside the harness stamp only while no grader imports them.
+var lintOnly = []string{"e2e/llm/scenariolint.py"}
+
 // importLine and fromLine are one import statement of a lane module, at any
 // indentation, since the grader imports some lazily: `import a, b as c` and
 // `from x import y`.
@@ -308,6 +313,82 @@ func TestTheHarnessHoldsEveryModuleTheGraderImports(t *testing.T) {
 		if _, reached := closure[module]; !reached {
 			t.Errorf("judgeTransport exempts %s, which nothing the grader imports reaches any more", module)
 		}
+	}
+	for _, module := range lintOnly {
+		if _, err := os.Stat(filepath.Join(root, module)); err != nil {
+			t.Errorf("lintOnly names %s, which does not exist", module)
+		}
+		if by, reached := closure[module]; reached {
+			t.Errorf("%s imports %s, a lint module, which puts a wording rule into every verdict's harness stamp", by, module)
+		}
+	}
+}
+
+// A file that names check.py, or runs it as a module, and passes --lint
+// anywhere may run check.py's own lint, which skips the wording rules. The
+// rule reads the whole file, so no binding, wrap or env block hides a call.
+var (
+	namesCheckPy = regexp.MustCompile(`check\.py\b|-m\s+check\b`)
+	lintFlag     = regexp.MustCompile(`(?:^|[^\w-])--lint(?:[^\w-]|$)`)
+)
+
+func mayRunCheckPysLint(body string) bool {
+	return namesCheckPy.MatchString(body) && lintFlag.MatchString(body)
+}
+
+func TestTheLintCensusReadsAFileWhole(t *testing.T) {
+	for name, body := range map[string]string{
+		"a plain command":      "python3 e2e/llm/check.py --lint x.yaml\n",
+		"a binding over lines": "CHECK = os.path.join(\n    HERE,\n    \"check.py\",\n)\nrun([CHECK, \"--lint\"])\n",
+		"a YAML env":           "env:\n  CHECKER: e2e/llm/check.py\nrun: python3 \"$CHECKER\" --lint x.yaml\n",
+		"a module run":         "python3 -m check --lint x.yaml\n",
+	} {
+		if !mayRunCheckPysLint(body) {
+			t.Errorf("%s: %q reads clean, want it caught", name, body)
+		}
+	}
+	for name, body := range map[string]string{
+		"the lane's own lint": "python3 e2e/llm/scenariolint.py e2e/llm/scenarios/*.yaml\n",
+		"a grade":             "python3 e2e/llm/check.py --check s.yaml run.jsonl\n",
+		"a longer flag":       "python3 e2e/llm/check.py --check s.yaml\nlinter --lint-all\n",
+		"another module":      "python3 -m checker --lint x\n",
+	} {
+		if mayRunCheckPysLint(body) {
+			t.Errorf("%s: %q is caught, want it clean", name, body)
+		}
+	}
+}
+
+func TestTheLaneLintsThroughScenariolintAlone(t *testing.T) {
+	root := filepath.Join("..", "..", "..", "..")
+	if err := gatekit.DeclareInputs(os.Getenv, "../../../../scripts", "../../../../docs", "../../../../.github",
+		"../../../../e2e", "../../../../Makefile", "../../../Makefile"); err != nil {
+		t.Fatal(err)
+	}
+	// Tracked files only: a __pycache__ or other build leftover is not the
+	// tree, and the test cache's digest does not cover it.
+	out, err := exec.Command("git", "-C", root, "ls-files", "-z", "--",
+		"scripts", "docs", ".github", "e2e", "Makefile", "backend/Makefile").Output()
+	if err != nil {
+		t.Fatalf("asking git for the tracked scripts, docs and workflows: %v", err)
+	}
+	var files []string
+	for path := range strings.SplitSeq(strings.TrimRight(string(out), "\x00"), "\x00") {
+		if filepath.Base(path) == "Makefile" || slices.Contains([]string{".sh", ".md", ".yml", ".yaml", ".py"}, filepath.Ext(path)) {
+			files = append(files, path)
+		}
+	}
+	for _, path := range files {
+		body, err := os.ReadFile(filepath.Join(root, path)) // #nosec G304 -- a file git tracks in this repository
+		if err != nil {
+			t.Fatal(err)
+		}
+		if filepath.Base(path) != "check.py" && mayRunCheckPysLint(string(body)) {
+			t.Errorf("%s names check.py and --lint: check.py's own lint skips scenariolint.py's wording rules; call e2e/llm/scenariolint.py", path)
+		}
+	}
+	if len(files) < 10 {
+		t.Fatalf("read %d files; git listed too little to hold anything", len(files))
 	}
 }
 

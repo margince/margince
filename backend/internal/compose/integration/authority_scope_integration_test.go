@@ -69,7 +69,8 @@ func TestFKTargetsRequireRowScopeVisibility(t *testing.T) {
 
 	// Create paths.
 	if _, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
-		Name: "Sneaky", PipelineID: pipeline, StageID: open, CompanyID: &foreignCompanyID,
+		Source: "manual",
+		Name:   "Sneaky", PipelineID: pipeline, StageID: open, CompanyID: &foreignCompanyID,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("CreateDeal with out-of-scope company → %v, want ErrNotFound", err)
 	}
@@ -77,7 +78,8 @@ func TestFKTargetsRequireRowScopeVisibility(t *testing.T) {
 	// update, so it carries the same gate: a rep may not attribute a deal to a
 	// partner company they cannot read.
 	if _, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
-		Name: "Sneaky Partner", PipelineID: pipeline, StageID: open, PartnerCompanyID: &foreignCompanyID,
+		Source: "manual",
+		Name:   "Sneaky Partner", PipelineID: pipeline, StageID: open, PartnerCompanyID: &foreignCompanyID,
 	}); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("CreateDeal with out-of-scope partner → %v, want ErrNotFound", err)
 	}
@@ -104,7 +106,8 @@ func TestFKTargetsRequireRowScopeVisibility(t *testing.T) {
 		t.Errorf("UpdateDeal attaching own-team company → %v, want ok", err)
 	}
 	if _, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
-		Name: "Partner deal", PipelineID: pipeline, StageID: open, PartnerCompanyID: &visiblePartnerID,
+		Source: "manual",
+		Name:   "Partner deal", PipelineID: pipeline, StageID: open, PartnerCompanyID: &visiblePartnerID,
 	}); err != nil {
 		t.Errorf("CreateDeal naming a visible partner → %v, want ok", err)
 	}

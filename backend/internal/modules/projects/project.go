@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -315,6 +316,8 @@ func projectCheckError(constraint string, dateField string) error {
 		return &ProjectDateRangeError{Field: dateField}
 	case "project_phase_check":
 		return &ProjectPhaseError{}
+	case "project_source_check":
+		return &provenance.RecordSourceError{}
 	default:
 		return nil
 	}

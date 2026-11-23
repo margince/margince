@@ -3,7 +3,12 @@
 
 package compose
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/mcpe2e"
+)
 
 func TestARouteIsNamedForHowTheAssistantWasReached(t *testing.T) {
 	for _, tc := range []struct{ folder, driver, want string }{
@@ -139,5 +144,37 @@ func TestAToolAHeldRunCalledIsDriven(t *testing.T) {
 	}
 	if got := calledInHeldRuns(cases, "read_tags"); len(got) != 0 {
 		t.Errorf("read_tags counted from a failed run: %v", got)
+	}
+}
+
+func TestTheSummaryTableShowsCallsAndTurnsPerJob(t *testing.T) {
+	spread := func(median float64) *mcpe2e.Spread {
+		return &mcpe2e.Spread{Median: median, Min: int(median), Max: int(median)}
+	}
+	run := func(model string, calls float64, turns *mcpe2e.Spread) caseModelRun {
+		return caseModelRun{
+			Model: model, Runs: 2, Passed: 2, PassAt: 2, Held: true,
+			Efficiency: &mcpe2e.Efficiency{Runs: 2, Calls: spread(calls), Turns: turns},
+		}
+	}
+	cases := []caseRow{
+		{Name: "case1_a", ByModel: []caseModelRun{run("claude-sonnet-5-5@claude-cli", 4, spread(5)), run("gpt-5.6-sol@codex-cli", 9, nil)}},
+		{Name: "case2_b", ByModel: []caseModelRun{run("claude-sonnet-5-5@claude-cli", 6, spread(7)), run("gpt-5.6-sol@codex-cli", 11, nil)}},
+	}
+	r := mcpToolCoverage{Cases: cases, Models: []modelCoverage{
+		summariseModel(cases, "claude-sonnet-5-5@claude-cli"), summariseModel(cases, "gpt-5.6-sol@codex-cli"),
+	}}
+	var p strings.Builder
+	writeCoverageAssistants(&p, r)
+	page := p.String()
+	for _, want := range []string{
+		"| Assistant | How we connected it | Jobs tried | Can I trust it? | Calls per job | Turns per job | In plain words |",
+		"| `claude-sonnet-5-5` | Claude Code CLI | 2 of 2 | 🟢 Yes | 5 | 6 |",
+		// codex reports no turn count, which is a dash and never a 0.
+		"| `gpt-5.6-sol` | Codex CLI | 2 of 2 | 🟢 Yes | 10 | - |",
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("the summary table lacks %q:\n%s", want, page)
+		}
 	}
 }

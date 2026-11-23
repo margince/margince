@@ -403,7 +403,9 @@ func assertReplyDraftMatchesProduction(t *testing.T, tc replyDraftParityCase) {
 		t.Fatalf("reading the fixture's voice state: %v", err)
 	}
 	script := replyDraftScript(tc.replies)
-	draft, version, _, productionErr := replyDrafter{brain: script}.completeVoiced(
+	// The model path prepares every call with the installation's company context
+	// before it reaches a model, so production is driven through the same provider.
+	draft, version, _, productionErr := replyDrafter{brain: certContextBrain{task: ai.TaskDraftReply, next: script}}.completeVoiced(
 		context.Background(), ids.NewV7(), tc.fixture.Activity, voice)
 
 	outcome, trace := runReplyDraftCase(t, tc.fixture, tc.register, tc.replies)

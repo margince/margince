@@ -384,7 +384,8 @@ func TestAMorningIsReadAgainWhenAnyChangeItCountsIsAcceptedOrUndone(t *testing.T
 	for i := range 5 {
 		amount, currency := int64(4_000_000), "EUR"
 		created, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
-			Name: fmt.Sprintf("Rollout %d", i), PipelineID: v.pipeline, StageID: v.stage, OwnerID: &owner,
+			Source: "manual",
+			Name:   fmt.Sprintf("Rollout %d", i), PipelineID: v.pipeline, StageID: v.stage, OwnerID: &owner,
 			AmountMinor: &amount, Currency: &currency,
 		})
 		if err != nil {

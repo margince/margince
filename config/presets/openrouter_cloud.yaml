@@ -23,12 +23,12 @@
 # Not loaded automatically — see README.md. Copy the `seeds` block into your own
 # config/margince.yaml, or:
 #
-#     make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
-#       JUDGE=gemini:gemini-3.1-flash-lite
+#     make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml TASK=<task>
 #
-# The judge (so GEMINI_API_KEY too) is OFF this preset on purpose: every model
-# bound here is the leading rung of some task — gpt-oss-120b, the default judge,
-# among them — and the runner refuses a judge that grades itself.
+# The default judge, claude_cli:claude-sonnet-5-5, grades every task but
+# signal_extract, whose frontier rung binds a Claude model the runner will not
+# let a Claude judge grade: run that task alone with
+# JUDGE=gemini:gemini-3.1-flash-lite (so GEMINI_API_KEY too).
 #
 # The measurements behind every `routing:` value here, and what was tried and
 # rejected: docs/explanation/openrouter-upstream-choice.md.

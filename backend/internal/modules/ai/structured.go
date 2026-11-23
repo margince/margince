@@ -102,7 +102,7 @@ func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Re
 func (r *Router) completeStructuredOn(ctx context.Context, lc *logicalCall, task Task, req model.Request,
 	validate Validator, firstReason string,
 ) (model.Response, RouteInfo, error) {
-	ladder := taskLadders[task]
+	ladder, _ := r.binding().ladder(task)
 	resp, info, err := r.serveAttempt(ctx, lc, task, ladder, req, firstReason)
 	if err != nil {
 		return model.Response{}, info, err
@@ -399,7 +399,7 @@ func feedbackFence(req model.Request) (promptfence.Fence, boundaryState) {
 // answers from the default route instead of failing a call the task's own
 // ladder could still serve.
 func (r *Router) completeEscalated(ctx context.Context, lc *logicalCall, task Task, req model.Request) (model.Response, RouteInfo, error) {
-	ladder, ok := taskLadders[task]
+	ladder, ok := r.binding().ladder(task)
 	if !ok || len(ladder) < 2 || !r.anyBound(r.binding(), ladder[1:]) {
 		return r.serveAttempt(ctx, lc, task, ladder, req, attemptReasonSchemaInvalid)
 	}

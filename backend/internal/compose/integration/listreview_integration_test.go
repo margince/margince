@@ -46,7 +46,8 @@ func dealWithHiddenCompany(t *testing.T, e *Env) (collections.CreateListInput, i
 	companyID := ids.From[ids.CompanyKind](company)
 	// Created by the capturer, the one seat that may name the company.
 	deal, err := e.Deals.CreateDeal(e.As(e.Rep1, []ids.UUID{e.Team1}, dealListPerms()), deals.CreateDealInput{
-		Name: "Deal on a hidden account", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+		Source: "manual",
+		Name:   "Deal on a hidden account", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 	})
 	if err != nil {
 		t.Fatal(err)

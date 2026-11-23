@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -59,12 +60,20 @@ func (e *forecastEnv) seedClosedDeal(t *testing.T, name, status, closedAt string
 	e.seedClosedDealWith(t, name, status, "manual", closedAt, amountMinor)
 }
 
-// seedClosedDealFromSource writes a WON deal recorded under a given source,
-// including the empty one a deal may legitimately carry (deal.source is NOT
-// NULL with no CHECK against "").
+// seedClosedDealFromSource writes a WON deal recorded under a given source.
 func (e *forecastEnv) seedClosedDealFromSource(t *testing.T, name, source, closedAt string, amountMinor int64) {
 	t.Helper()
 	e.seedClosedDealWith(t, name, "won", source, closedAt, amountMinor)
+}
+
+// seedOlderDealWithoutSource writes a WON deal as one stored before the source
+// check: its source is the empty text the check refuses today.
+func (e *forecastEnv) seedOlderDealWithoutSource(t *testing.T, name, closedAt string, amountMinor int64) {
+	t.Helper()
+	integration.SeedBeforeSourceCheck(t, e.owner, "deal",
+		`INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, status, closed_at, fx_rate_to_base, source, captured_by)
+		 VALUES ($1, $2, $3, $4, $5, 'EUR', 'won', $6::timestamptz, 1.0, '', 'human:x')`,
+		name, e.pipeline, e.stages[60], amountMinor, closedAt)
 }
 
 // seedLostDealWithReason writes a LOST deal carrying a specific lost reason,
@@ -536,14 +545,13 @@ func (e *forecastEnv) analyticsStatus(ctx context.Context, q analyticsquery.Quer
 }
 
 // A group key that is EMPTY TEXT is not a group key that is ABSENT, and the
-// handle has to keep them apart. `source` is the catalog's first unconstrained
-// text dimension — every earlier one is a uuid, or carries a CHECK that forbids
-// the empty string — so this is the first report where the two can collide.
-// When they did, a bucket reported one deal and the handle it minted in the
-// same response resolved to none.
+// handle has to keep them apart. A deal stored before its source check can
+// hold the empty text until the correction reaches it, so the two can collide
+// here. When they did, a bucket reported one deal and the handle it minted in
+// the same response resolved to none.
 func TestAnEmptyTextGroupKeyIsNotTheSameAsAnAbsentOne(t *testing.T) {
 	e := setupForecast(t)
-	e.seedClosedDealFromSource(t, "No source recorded", "", "2025-03-04T10:00:00Z", 10000)
+	e.seedOlderDealWithoutSource(t, "No source recorded", "2025-03-04T10:00:00Z", 10000)
 	e.seedClosedDealFromSource(t, "Sourced", "manual", "2025-04-04T10:00:00Z", 20000)
 
 	result := e.runReport(e.Admin(), t, "win-loss",

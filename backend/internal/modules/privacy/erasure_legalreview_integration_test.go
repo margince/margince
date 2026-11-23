@@ -33,7 +33,7 @@ func seedReviewedDeal(ctx context.Context, t *testing.T, tx execer, stakeholder 
 	mustExec(ctx, t, tx, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Legal text "+pipeline.String())
 	mustExec(ctx, t, tx, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Review', 1)`, stage, pipeline)
 	mustExec(ctx, t, tx, `INSERT INTO deal (id, name, status, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Reviewed deal', 'open', $2, $3, 'seed', 'system')`, deal, pipeline, stage)
+		VALUES ($1, 'Reviewed deal', 'open', $2, $3, 'manual', 'system')`, deal, pipeline, stage)
 	mustExec(ctx, t, tx, `INSERT INTO relationship (kind, contact_id, deal_id, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, 'manual', 'test')`, stakeholder, deal)
 	mustExec(ctx, t, tx, `INSERT INTO legal_review (id, deal_id, status, note, comments, packet, decided_at, captured_by)
