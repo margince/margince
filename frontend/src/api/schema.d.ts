@@ -62499,6 +62499,16 @@ export interface components {
             can_accept: boolean;
             /** @description Whether this reader may write this deal. */
             writable: boolean;
+            /**
+             * Format: uuid
+             * @description The History note that reports this change. Null for a change made before notes were linked.
+             */
+            note_activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The stage-history row this change wrote, for a change that moved the stage. It equals the deal's `closing_occurrence_id` while the deal is on the close Margince made.
+             */
+            stage_history_id?: string | null;
         };
         /** @description Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values. */
         CloseDateEstimateBasis: {

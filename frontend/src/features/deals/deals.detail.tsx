@@ -26,6 +26,7 @@ import { useTargetApprovals } from "../../lib/approvals.queries";
 import { useDeal } from "../../lib/dealread";
 import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
+import { useDealMarginceChanges } from "../../lib/marginchanges";
 import { fromHere } from "../../lib/navigatefrom";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
@@ -50,6 +51,7 @@ import { DealActions } from "./deal360/dealactions";
 import { DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab, DealLatestInbound } from "./deal360/dealhistorytab";
 import { DealLegalTab } from "./deal360/deallegaltab";
+import { marginceLineOf } from "./deal360/dealmarginceline";
 import { ArchivedDealBand } from "./deal360/dealrestore";
 import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
@@ -132,22 +134,32 @@ function dealBand({
   deal,
   reason,
   reasonId,
+  marginceLine,
 }: Readonly<{
   deal: Deal;
   reason: string | undefined;
   reasonId: string;
+  // What Margince did to this deal and still offers to take back, or nothing.
+  marginceLine: ReactNode | undefined;
 }>): ReactNode | undefined {
   if (reason === undefined) {
-    return undefined;
+    return marginceLine;
   }
-  if (deal.archived_at) {
-    return <ArchivedDealBand deal={deal} reason={reason} reasonId={reasonId} />;
-  }
-  return (
+  const sentence = deal.archived_at ? (
+    <ArchivedDealBand deal={deal} reason={reason} reasonId={reasonId} />
+  ) : (
     <>
       <p id={reasonId}>{reason}</p>
       <EditAccessRequest kind="deal" record={deal} />
     </>
+  );
+  return marginceLine ? (
+    <>
+      {sentence}
+      {marginceLine}
+    </>
+  ) : (
+    sentence
   );
 }
 
@@ -180,6 +192,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
   const pipelineRetired = Boolean(pipelineQuery.data?.archived_at);
+  // Shared through the cache with the Overview's changes card.
+  const marginceReceipts =
+    useDealMarginceChanges(id).data?.pages[0]?.changes ?? [];
   // Every write affordance on this page answers one question, asked once. An
   // archived deal takes no changes, and its verbs stay, refused. One this
   // caller cannot write takes none from them, so its verbs are left out.
@@ -349,6 +364,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 deal,
                 reason: readOnlyReason,
                 reasonId: readOnlyReasonId,
+                marginceLine: marginceLineOf({
+                  deal,
+                  receipts: marginceReceipts,
+                  openStages,
+                  pipelineRetired,
+                  refusedReasonId,
+                }),
               })}
               tabs={
                 <DealTabs

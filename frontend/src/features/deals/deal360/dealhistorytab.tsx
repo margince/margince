@@ -21,6 +21,7 @@ import { GroupedTimelineList } from "../../../design-system/timeline";
 import { TimelineFilterBar } from "../../../design-system/timelinefilterbar";
 import { groupChronology } from "../../../design-system/timelinegroups";
 import { useLocale, useT } from "../../../i18n";
+import { useDealMarginceChanges } from "../../../lib/marginchanges";
 import { invalidateRecord } from "../../../lib/recordwritekeys";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { RecordHistoryTab } from "../../records/history";
@@ -37,6 +38,7 @@ import {
   TimelineActions,
 } from "../../records/timelineactions";
 import { StartDeliveryPrompt } from "../dealproject";
+import { DealNoteUndo } from "./dealnoteundo";
 import { OutcomeReviewPanel } from "./outcomereview";
 
 type Deal = components["schemas"]["Deal"];
@@ -58,6 +60,8 @@ export function DealHistoryTab({
   const [filter, setFilter] = useChronologyFilter(deal.id);
   const [filters, setFilters] = useTimelineFilters(deal.id);
   const timeline = useRecordTimeline("deal", deal.id, { filters });
+  const marginceReceipts =
+    useDealMarginceChanges(deal.id).data?.pages[0]?.changes ?? [];
   const chronology = useRecordChronology({
     onOpenEmail,
     kind: "deal",
@@ -70,11 +74,19 @@ export function DealHistoryTab({
     loadMore: timeline,
     values: { currency: deal.currency ?? null, locale, zone: readerZone },
     renderActions: (activity) => (
-      <TimelineActions
-        activity={activity}
-        entityType="deal"
-        entityId={deal.id}
-      />
+      <>
+        <TimelineActions
+          activity={activity}
+          entityType="deal"
+          entityId={deal.id}
+        />
+        <DealNoteUndo
+          activityId={activity.id}
+          dealId={deal.id}
+          dealName={deal.name}
+          receipts={marginceReceipts}
+        />
+      </>
     ),
   });
 

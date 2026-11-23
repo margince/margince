@@ -12,7 +12,9 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import type { Receipt } from "./handled";
 import { unwrap } from "./problem";
+import { isOpenReceipt } from "./receiptstate";
 import { invalidateHandledChange, worklistKey } from "./workkeys";
 
 export type MarginceChangeSummary =
@@ -56,6 +58,43 @@ export function useDealMarginceChanges(dealId: string) {
       ),
     getNextPageParam: (last) => last.next_cursor,
   });
+}
+
+/**
+ * The change the deal's header line is about: the close Margince made, while
+ * the deal is on that close, or else the newest opening or reopening that can
+ * still be undone. A deal a person closed has no receipt for its closing
+ * occurrence, so it has none.
+ */
+export function currentMarginceChange(
+  deal: Readonly<{ closing_occurrence_id?: string | null }>,
+  receipts: readonly Receipt[],
+): Receipt | undefined {
+  const close = receipts.find(
+    (receipt) =>
+      receipt.kind === "deal_close_lost" &&
+      !receipt.review?.reversed &&
+      receipt.review?.stage_history_id != null &&
+      receipt.review.stage_history_id === deal.closing_occurrence_id,
+  );
+  return (
+    close ??
+    receipts.find(
+      (receipt) =>
+        (receipt.kind === "deal_open" || receipt.kind === "deal_revive") &&
+        isOpenReceipt(receipt),
+    )
+  );
+}
+
+/** The receipts whose change the given History note reports. */
+export function noteReceipts(
+  receipts: readonly Receipt[],
+  activityId: string,
+): Receipt[] {
+  return receipts.filter(
+    (receipt) => receipt.review?.note_activity_id === activityId,
+  );
 }
 
 /** What Margince changed on the reader's team. Only a lead may ask. */
