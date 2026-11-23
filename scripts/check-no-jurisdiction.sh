@@ -20,10 +20,8 @@
 # the part it cannot see, which is the one way a census must not fail.
 # Migrations are scanned too, with SQL's own comment marker understood.
 #
-# THE BASIS VOCABULARY is not matched here. A lowercase enum value would need a
-# list of every market's wording in this script, which is a second copy of what
-# the boundary keeps out of core. TestNoBasisConstantNamesACountry
-# (backend/internal/shared/ports/commsauthz) reads the Go constants themselves.
+# The communication basis vocabulary is held country-neutral by a different
+# gate (backend/gates/commsbasisnocountry_test.go), not by the patterns below.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."

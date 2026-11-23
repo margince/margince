@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// Basis is what makes a message lawful. It is EVIDENCE, not consent: eight of
-// the nine are things that happened and were recorded, and only BasisConsent
+// Basis is what makes a message lawful. It is EVIDENCE, not consent: seven of
+// the eight are things that happened and were recorded, and only BasisConsent
 // is somebody agreeing to something.
 type Basis string
 

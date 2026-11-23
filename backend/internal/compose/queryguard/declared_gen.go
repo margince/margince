@@ -313,7 +313,7 @@ var Declared = map[string][]string{
 	"GET /v1/deals/{id}/documents":                                             {"category", "cursor", "include_hidden", "limit"},
 	"GET /v1/deals/{id}/legal-reviews":                                         {},
 	"GET /v1/deals/{id}/lines":                                                 {},
-	"GET /v1/deals/{id}/margince-changes":                                      {"cursor"},
+	"GET /v1/deals/{id}/margince-changes":                                      {"change_kind", "cursor", "note_activity_id", "stage_history_id"},
 	"GET /v1/deals/{id}/offers":                                                {"cursor", "limit", "status"},
 	"GET /v1/deals/{id}/outcome-reviews":                                       {},
 	"GET /v1/deals/{id}/products":                                              {},

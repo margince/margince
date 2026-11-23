@@ -10,12 +10,9 @@
 // about the archive (STATE-4a). A deal this reader may not write is refused by
 // permission, not state, so the verbs that change it are left out.
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, FileText, Phone } from "lucide-react";
 import { useCallback, useState } from "react";
-import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
-import { ifMatch, requireVersion } from "../../../api/version";
 import {
   type ActivityGate,
   useActivityGate,
@@ -28,16 +25,12 @@ import { searchCompanyContacts } from "../../../components/meetingattendees";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
 import { tipText, VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
-import { useToast } from "../../../design-system/toast";
-import { useLocale, useT } from "../../../i18n";
-import { dealStageMoveKeys } from "../../../lib/activitykeys";
+import { useT } from "../../../i18n";
 import { useCanWriteRecord } from "../../../lib/capability";
-import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { useShortcut } from "../../../lib/shortcuts";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
-import { advanceNote } from "../dealprobability";
 import { archiveDeal } from "../deals.write";
 import { CorrectCloseDayAction } from "./correctcloseday";
 import { useDealCoverage } from "./usedealcoverage";
@@ -45,8 +38,8 @@ import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
 import { AddToShortlistAction } from "../../../components/addtoshortlist";
 import { RequestLegalReviewAction } from "./deallegaltab";
+import { ReopenAction } from "./dealreopen";
 import { MovePipelineAction } from "./movepipeline";
-import { ReopenModal } from "./reopenmodal";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -102,99 +95,6 @@ function activityRefusal(
   return !refusedByArchive && activity.refusalKey
     ? t(activity.refusalKey)
     : undefined;
-}
-
-// Reopens a won/lost deal back to an open-semantic stage — the same advance
-// mutation shape the board drag uses, with status:"open" forced. Split out
-// of DealActions for the same readability reason as the other header actions.
-function ReopenAction({
-  dealId,
-  dealVersion,
-  openStages,
-  pipelineRetired,
-  disabledReasonId,
-}: Readonly<{
-  dealId: string;
-  // The version the header this button sits in was rendered from, so the reopen
-  // pins the deal the reader was looking at. Stated by the caller rather than
-  // read here: this action holds no query of its own to read a fresh one from,
-  // and a fresh one would be the wrong answer anyway.
-  dealVersion: number | undefined;
-  openStages: Stage[];
-  // A retired pipeline takes no stage, so a closed deal on it cannot reopen.
-  pipelineRetired?: boolean;
-  // The id of the sentence saying why this reopen is refused, when it is.
-  // STATE-4a: a control blocked by the record's STATE rather than by a
-  // permission stays visible and says why, because the reason is the
-  // information and hiding the control hides a fact the reader needs.
-  disabledReasonId?: string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const toast = useToast();
-  const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const reopen = useMutation({
-    mutationKey: ["deal-edit", dealId],
-    // Stage and version both ride the variables: a version read out of the
-    // closure would be the one from the render before this dialog opened, and a
-    // reopen that pins the wrong version either fails for no reason the reader
-    // can see or lands on a deal somebody else has since moved.
-    mutationFn: async (input: {
-      toStage: Stage;
-      version: number | undefined;
-    }) => {
-      return unwrap(
-        await api.POST("/deals/{id}/advance", {
-          params: {
-            path: { id: dealId },
-            ...ifMatch(requireVersion(input.version)),
-          },
-          body: { to_stage_id: input.toStage.id, status: "open" },
-        }),
-        t,
-      );
-    },
-    onSuccess: (advanced, input) => {
-      setOpen(false);
-      toast.show(
-        advanceNote(
-          advanced,
-          { toStage: input.toStage, reopens: true },
-          t,
-          locale,
-        ),
-      );
-      for (const queryKey of dealStageMoveKeys(dealId)) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      queryClient.invalidateQueries({ queryKey: ["deals"] });
-    },
-  });
-  if (pipelineRetired) {
-    return null;
-  }
-  return (
-    <>
-      <Button
-        reasonId={disabledReasonId}
-        data-testid="reopen-open"
-        onClick={() => setOpen(true)}
-      >
-        {t("deal.reopen")}
-      </Button>
-      <ReopenModal
-        open={open}
-        onClose={() => setOpen(false)}
-        openStages={openStages}
-        pending={reopen.isPending}
-        error={reopen.error}
-        onConfirm={(toStage) =>
-          reopen.mutate({ toStage, version: dealVersion })
-        }
-      />
-    </>
-  );
 }
 
 function DealArchiveAction({

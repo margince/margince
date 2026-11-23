@@ -3,6 +3,7 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.legal_review_desk": "Legal review desk",
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.promise_kept": "Closing a commitment a meeting shows kept",
@@ -757,6 +758,7 @@ export const en = {
   "approval.preview.linkIssued": "Link issued",
   "approval.preview.linkExpires": "Link expires",
   "approval.preview.recordRevoked": "Revoked",
+  "approval.preview.basisAgreement": "Recipient agreement",
   "approval.preview.basisKind": "Recorded communication basis",
   "approval.preview.basisFrom": "Basis valid from",
   "approval.preview.basisUntil": "Basis valid until",
@@ -769,7 +771,6 @@ export const en = {
   "approval.preview.basisObligation": "Legal obligation",
   "approval.preview.basisSecurity": "Vital or security interest",
   "approval.preview.basisCustomer": "Existing customer exception",
-  "approval.preview.basisAgreement": "Recipient agreement",
   "approval.preview.promotionTrigger": "Qualification trigger",
   "approval.preview.promotionNote": "Qualification evidence",
   "approval.preview.promotionEvidence": "Supporting activity",
@@ -2821,6 +2822,8 @@ export const en = {
     "Search contacts, companies, deals, projects, products, activities, leads…",
   "search.prompt": "Enter a search term.",
   "search.empty": "No matches for “{q}”.",
+  "search.timedOut":
+    "{kind} could not be searched for this word in time. Add another word to search them.",
   "search.nearMatches": "Did you mean:",
   "search.group.contact": "Contacts",
   "search.group.company": "Companies",
@@ -4795,6 +4798,8 @@ export const en = {
   "approval.kind.legal_review_request": "Legal review requested",
   "approval.kind.task_due_date": "Check a due date",
   "approval.kind.employer_change": "Check a new employer",
+  "approval.kind.deal_proposal_stage": "Move the deal to the proposal stage",
+  "approval.kind.dealProposalStageNamed": "Move to {stage}?",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",
@@ -4865,6 +4870,7 @@ export const en = {
   "approval.field.signature": "Signature line",
   "approval.field.to_company": "New employer",
   "approval.field.from_company": "Employer now",
+  "approval.field.skipped_stages": "Skips",
   "approval.field.from_address": "Sent from",
   "approval.field.sender_check": "Sender check",
   "approval.senderCheck.authenticated":
@@ -6352,6 +6358,27 @@ export const en = {
     "Clear the figure to follow the stage again.",
   "deal.winProbability.reason.stageNamed": "the stage {name}",
   "deal.winProbability.reason.stageUnnamed": "the deal’s stage",
+  "deal.winChance.typed": "Typed at {percent} on {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} deal from here has closed, {percent} won.",
+  "deal.winChance.evidence_other":
+    "{count} deals from here have closed, {percent} won.",
+  "deal.winChance.learningOff": "Learning from closed deals is switched off.",
+  "deal.winChance.signal.quiet": "quiet for {days} days",
+  "deal.winChance.signal.close_pushed": "the close date was pushed",
+  "deal.winChance.signal.no_next_step": "no next step",
+  "deal.winChance.signal.stuck": "stuck for {days} days",
+  "deal.winChance.effect.lowers_one":
+    "{signal} lowers it (learned from {count} closed deal).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} lowers it (learned from {count} closed deals).",
+  "deal.winChance.effect.raises_one":
+    "{signal} raises it (learned from {count} closed deal).",
+  "deal.winChance.effect.raises_other":
+    "{signal} raises it (learned from {count} closed deals).",
+  "deal.winChance.effect.halved":
+    "{signal} halves it, because too few closed deals show the real effect yet.",
+  "deal.winChance.result": "The win chance is {percent}.",
   "deal.winProbability.band.90_plus": "90% or more",
   "deal.winProbability.band.60_89": "60 to 89%",
   "deal.winProbability.band.30_59": "30 to 59%",
@@ -6693,6 +6720,12 @@ export const en = {
   "deal.movePipelinePick": "Pick a pipeline",
   "deal.movePipelineDone": "Moved to {pipeline}.",
   "deal.reopen": "Reopen",
+  "deal.marginceLine.closed": "Margince closed this deal as lost on {date}.",
+  "deal.marginceLine.opened": "Margince opened this deal on {date}.",
+  "deal.marginceLine.reopened": "Margince reopened this deal on {date}.",
+  "deal.marginceLine.undoOff":
+    "This close can no longer be undone, because the deal changed since. Reopen it instead.",
+  "deal.note.undoAll": "Undo all",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
   "deal.correctCloseDay": "Correct close day",
@@ -7248,15 +7281,11 @@ export const en = {
   "plan.contract.unwritten": "Not written yet",
   "plan.contract.nothingToName": "Nothing to name",
   "plan.contract.edit": "Edit",
-  "plan.contract.save": "Save",
-  "plan.contract.cancel": "Cancel",
   "plan.contract.crowded": "Week already full",
   "plan.contract.crowdedBody":
     "{committed} items are already booked and {commitments} commitments are planned. Something will not fit.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
-  "plan.help.send": "Send",
-  "plan.help.cancel": "Cancel",
   "plan.help.asked": "Request: {text}",
   "plan.help.waiting": "Help requested · awaiting a response",
   "plan.new.label": "Commitment",
@@ -7799,9 +7828,7 @@ export const en = {
   "evidence.fromProvider": "from provider",
   "evidence.confirm": "Confirm",
   "evidence.correct": "Correct",
-  "evidence.save": "Save",
   "evidence.saving": "Saving…",
-  "evidence.cancel": "Cancel",
   "evidence.correctedValue": "Corrected value",
   "evidence.confirmedAt": "Confirmed by a person {when}",
   "evidence.humanSet": "Set by a person",
@@ -16906,6 +16933,21 @@ export const en = {
   "installationSettings.likelyThreshold.help":
     "The probability from which an open deal with a confirmed close date counts as Likely.",
   "forecast.landing": "Landing",
+  "forecast.accuracy.title": "Forecast accuracy",
+  "forecast.accuracy.none":
+    "Not enough closed deals yet. Once deals the forecast counted have closed, this compares what it said with what happened.",
+  "forecast.accuracy.calibration_one":
+    "{count} closed deal, grouped by the chance the forecast gave it {days} days before it closed.",
+  "forecast.accuracy.calibration_other":
+    "{count} closed deals, grouped by the chance the forecast gave them {days} days before they closed.",
+  "forecast.accuracy.band_one": "Chance {mean}, won {won} ({count} deal)",
+  "forecast.accuracy.band_other": "Chance {mean}, won {won} ({count} deals)",
+  "forecast.accuracy.fewDeals_one": "{count} deal, too few to state a share",
+  "forecast.accuracy.fewDeals_other": "{count} deals, too few to state a share",
+  "forecast.accuracy.landings":
+    "Finished quarters: what the forecast said four weeks before the end against what was won.",
+  "forecast.accuracy.landing": "Said {said}, won {landed}",
+  "forecast.accuracy.saidOn": "Said on {date}",
   "forecast.landingSection": "Where the period lands",
   "forecast.landingRecords": "From the deal records",
   "forecast.landingUnrecorded": "Not recorded",
@@ -19382,8 +19424,6 @@ export const en = {
   "contact.enriched.correctedByYou": "Corrected by you",
   "contact.enriched.confirmed": "Confirmed",
   "contact.enriched.confirm": "Confirm value",
-  "contact.enriched.save": "Save correction",
-  "contact.enriched.cancel": "Cancel",
   "contact.graph.loading": "Loading contact network…",
   "contact.graph.routeDirect": "{name} already corresponds with them.",
   "contact.graph.routeVia":
@@ -22661,6 +22701,8 @@ export const en = {
   "magic.action.approval_coldstart": "Review first approach",
   "magic.action.approval_send_email": "Review message",
   "magic.action.approval_advance_deal": "Review stage change",
+  "magic.action.approval_deal_proposal_stage":
+    "A proposal went out. Move the deal?",
   "magic.action.approval_promote_lead": "Review lead promotion",
   "magic.action.approval_overnight": "Review proposal",
   "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",

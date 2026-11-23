@@ -8940,6 +8940,21 @@ paths:
           required: false
           schema: { type: string }
           description: The `next_cursor` of the page before. A token this server did not mint is refused with 422.
+        - name: stage_history_id
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+          description: Only the change that wrote this stage-history row. A client asks for the close the deal is on without paging for it.
+        - name: note_activity_id
+          in: query
+          required: false
+          schema: { type: array, maxItems: 100, items: { type: string, format: uuid } }
+          description: Only the changes that these History notes report.
+        - name: change_kind
+          in: query
+          required: false
+          schema: { type: array, maxItems: 10, items: { type: string } }
+          description: Only changes of these correction kinds, such as close_lost, deal_open or deal_revive.
       responses:
         '200':
           description: One page of the deal's changes.
@@ -19379,7 +19394,8 @@ paths:
             `data` holds each type's hits together, best first. The page is the whole answer, so it
             takes no `cursor` and no `limit`; `types_with_more` names the types holding more than
             it carries, and asking again without `per_type`, with `types` set to one of them, pages
-            through the rest.
+            through the rest. A type the time budget stopped is left out of `data` and named in
+            `types_timed_out`.
         - name: with_employees
           in: query
           schema: { type: boolean, default: false }
@@ -33940,7 +33956,8 @@ paths:
         Per open stage: the typed chance, how many deals recorded entering the stage in the last
         two years have closed, the estimated share of them won, and the chance the forecast uses.
         Computed over the whole installation, so every reader sees the same chance; only counts
-        are returned. Only moves made in this installation count. Imported moves and
+        are returned. `accuracy` sets what the forecast said about closed deals and finished
+        quarters against what happened. Only moves made in this installation count. Imported moves and
         moves saved before their origin was kept count for nothing. Deals still open are
         counted as open until today, so a stage with many young deals is not read as losing.
       responses:
@@ -45999,8 +46016,8 @@ components:
         capture:
           type: object
           properties:
-            messages_synced: { type: integer, description: 'The number of mail activities from the reader''s own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition: both fields hold this one count.' }
-            activities_created: { type: integer, description: 'The number of mail activities from the reader''s own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition: both fields hold this one count.' }
+            messages_synced: { type: integer, description: "Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition." }
+            activities_created: { type: integer, description: "Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition." }
             contacts_created: { type: integer }
             companies_created: { type: integer }
         review:
@@ -57749,6 +57766,29 @@ components:
         page: { $ref: '#/components/schemas/PageInfo' }
 
     # ---- Deal ----
+    DealWinChance:
+      type: object
+      description: >-
+        The parts of one deal's win chance. `explanation` is the same fact as one English line for
+        a tool or a brief; a screen words it from the fields.
+      required: [typed, in_use, self_correcting, explanation]
+      properties:
+        typed: { type: integer, minimum: 0, maximum: 100, description: "The chance typed on the deal's stage." }
+        in_use: { type: integer, minimum: 0, maximum: 100, description: 'The typed chance moved by the stage outcomes, before any risk effect.' }
+        evidence_n: { type: [integer, 'null'], minimum: 0, description: 'How many deals that entered the stage have closed. Null while learning is off or the probability was set on the deal.' }
+        won_share: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'The percent of those closed deals that were won.' }
+        effect_signal:
+          type: [string, 'null']
+          enum: [close_pushed, no_next_step, quiet, stuck, null]
+          x-extensible-enum: true
+          description: The risk signal that moved the chance. Null when none did.
+        effect_days: { type: [integer, 'null'], minimum: 0, description: 'How many days the signal has held, where it has a length.' }
+        effect_learned:
+          type: [boolean, 'null']
+          description: 'True when the effect comes from this installation''s own closed deals; false when it is the fixed halving used while too few have closed.'
+        effect_sample: { type: [integer, 'null'], minimum: 0, description: 'How many closed deals the learned effect rests on.' }
+        self_correcting: { type: boolean, description: 'False while the installation switched learning off, so every chance stays the typed one.' }
+        explanation: { type: string, description: 'The one-line reason for the chance, in English.' }
     DealLastEmail:
       type: object
       description: The newest workspace-visible email on a deal, as `Deal.last_email` carries it.
@@ -57929,8 +57969,10 @@ components:
           maximum: 100
           readOnly: true
           description: >-
-            The chance this deal is won, in percent: the deal's own probability where somebody set
-            one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving
+            The chance this deal is won, in percent. An open deal that follows its stage reads the
+            stage's typed chance moved by what this installation's closed deals show and by the
+            risk effect of the deal's strongest signal; `win_chance` says how. A probability set on
+            the deal stands as set. Won deals read 100 and lost deals 0 through their stage. Moving
             the deal to another stage sets it back to that stage's probability.
         win_probability_source:
           type: string
@@ -57939,7 +57981,7 @@ components:
           readOnly: true
           description: >-
             Where `win_probability` comes from: `stage` while the deal follows its stage, `human`
-            when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+            when a colleague set it, `margince` when Margince set it on a deal.
         win_probability_set_by_user_id:
           type: [string, 'null']
           format: uuid
@@ -57958,6 +58000,12 @@ components:
           maximum: 100
           readOnly: true
           description: The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
+        win_chance:
+          allOf: [{ $ref: '#/components/schemas/DealWinChance' }]
+          readOnly: true
+          description: >-
+            How `win_probability` of an open deal was made, from the one function every screen,
+            report and tool reads. Absent on a won or lost deal.
         expected_close_date: { type: [string, 'null'], format: date, description: 'An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.' }
         close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.' }
         wait_until: { type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag." }
@@ -69924,6 +69972,60 @@ components:
         signals:
           type: array
           items: { $ref: '#/components/schemas/ForecastRiskSignal' }
+    ForecastAccuracy:
+      type: object
+      description: |
+        How accurate the forecast has been: two comparisons of what it said with what happened,
+        read from the frozen daily forecasts of the whole installation, so every reader sees the
+        same answer. Only counts and sums are returned.
+
+        `calibration` takes each deal that has since been won or lost, and the chance it was
+        weighted by in the last freeze at least `lead_days` before it closed. It groups those
+        chances in bands of ten and gives, per band, the mean chance and the share won. A band
+        with fewer deals than `floor` gives only its count.
+
+        `landings` takes each of the last four finished quarters, and sets what the last freeze
+        at least four weeks before the quarter ended said it would land (won plus weighted open
+        pipeline) against what was won.
+      required: [calibration, landings]
+      additionalProperties: false
+      properties:
+        calibration: { $ref: '#/components/schemas/ForecastCalibration' }
+        landings:
+          type: array
+          items: { $ref: '#/components/schemas/ForecastAccuracyLanding' }
+    ForecastCalibration:
+      type: object
+      required: [deals, floor, lead_days, bands]
+      additionalProperties: false
+      properties:
+        deals: { type: integer, minimum: 0, description: 'How many closed deals the bands hold in all.' }
+        floor: { type: integer, minimum: 1, description: 'The fewest deals a band needs before it states a share.' }
+        lead_days: { type: integer, minimum: 1, description: 'How many days before the close the chance was read.' }
+        bands:
+          type: array
+          items: { $ref: '#/components/schemas/ForecastCalibrationBand' }
+    ForecastCalibrationBand:
+      type: object
+      required: [from_percent, to_percent, deals]
+      additionalProperties: false
+      properties:
+        from_percent: { type: integer, minimum: 0, maximum: 100 }
+        to_percent: { type: integer, minimum: 0, maximum: 100 }
+        deals: { type: integer, minimum: 1 }
+        mean_percent: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'The mean chance of the deals in the band. Null below the floor.' }
+        won_percent: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'The share of the deals that were won. Null below the floor.' }
+    ForecastAccuracyLanding:
+      type: object
+      required: [period_start, period_end, currency, said_minor, landed_minor, said_on]
+      additionalProperties: false
+      properties:
+        period_start: { type: string, format: date }
+        period_end: { type: string, format: date }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        said_minor: { type: integer, format: int64, description: 'Won plus weighted open pipeline in the last freeze at least four weeks before the period ended.' }
+        landed_minor: { type: integer, format: int64, description: 'What was won in the period, as the first freeze after it ended says.' }
+        said_on: { type: string, format: date, description: 'The day of the freeze `said_minor` was read from.' }
     ForecastStageChances:
       type: object
       required: [self_correcting, evidence_cutoff, prior_strength, stages]
@@ -69941,6 +70043,7 @@ components:
         stages:
           type: array
           items: { $ref: '#/components/schemas/ForecastStageChance' }
+        accuracy: { $ref: '#/components/schemas/ForecastAccuracy' }
       additionalProperties: false
     ForecastStageChance:
       type: object
@@ -73842,6 +73945,14 @@ components:
             On a `per_type` answer only: the types that matched more hits than the page carries
             for them. Absent on a ranked answer, whose `page.has_more` says the same thing for
             the list as a whole.
+        types_timed_out:
+          type: array
+          items: { type: string, x-extensible-enum: [contact, company, deal, activity, lead, project, product, offer_template, tag], pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$' }
+          description: >
+            On a `per_type` answer only: the types whose search did not finish within the time
+            budget. `data` holds no hits of these types, and none of them is in `types_with_more`.
+            Empty when every type answered. Absent on a ranked answer, which answers 422
+            `query_too_broad` instead.
         near_matches:
           type: array
           maxItems: 5
@@ -83645,6 +83756,16 @@ components:
         can_undo: { type: boolean }
         can_accept: { type: boolean, deprecated: true, description: Whether the deprecated accept route would take this change. }
         writable: { type: boolean, description: Whether this reader may write this deal. }
+        note_activity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The History note that reports this change. Null for a change made before notes were linked.
+        stage_history_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The stage-history row this change wrote, for a change that moved the stage. It equals the
+            deal's `closing_occurrence_id` while the deal is on the close Margince made.
 
     CloseDateEstimateBasis:
       type: object

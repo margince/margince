@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -85,13 +86,13 @@ func (w *briefGenerateWorker) assembleWorkspace(ctx context.Context, wsID ids.UU
 	sysCtx := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:brief-overnight",
 	})
-	pass, err := w.morningPassFor(sysCtx, wsID, now)
+	reps, err := w.repsDueABrief(sysCtx, now)
 	if err != nil {
 		return err
 	}
 	var failures []error
-	for _, userID := range pass.reps {
-		if err := w.assembleFor(sysCtx, wsID, userID, now, pass.assemblyFrom); err != nil {
+	for _, userID := range reps {
+		if err := w.assembleFor(sysCtx, wsID, userID, now); err != nil {
 			failures = append(failures, fmt.Errorf("brief for user %s: %w", userID, err))
 		}
 	}
@@ -107,23 +108,14 @@ func (w *briefGenerateWorker) assembleWorkspace(ctx context.Context, wsID ids.UU
 	//
 	// Safe to revisit a rep the assembly just served: the claim is what makes a
 	// second message impossible, not the shape of this loop.
-	if err := w.mailTheMorning(sysCtx, wsID, pass, now); err != nil {
+	if err := w.mailTheMorning(sysCtx, wsID, now); err != nil {
 		failures = append(failures, err)
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("brief_generate_workspace: %d failure(s) over %d rep(s): %w",
-			len(failures), len(pass.reps), errors.Join(failures...))
+			len(failures), len(reps), errors.Join(failures...))
 	}
 	return nil
-}
-
-// morningPass is what one workspace tick resolved before it did anything: which
-// local day this is, what hour it is there, and which reps still need a run.
-type morningPass struct {
-	// day is the installation's local date, which every run is filed under.
-	day          time.Time
-	assemblyFrom time.Time
-	reps         []ids.UUID
 }
 
 // mailTheMorning hands every unmailed run of this local day to the mail lane,
@@ -133,12 +125,12 @@ type morningPass struct {
 // its own transaction for the same reason: the candidate read happened before
 // those runs existed.
 func (w *briefGenerateWorker) mailTheMorning(
-	ctx context.Context, wsID ids.UUID, pass morningPass, now time.Time,
+	ctx context.Context, wsID ids.UUID, now time.Time,
 ) error {
 	var awaiting []briefs.BriefRun
 	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
-		awaiting, err = briefs.RunsAwaitingMail(ctx, tx, pass.day, now)
+		awaiting, err = briefs.RunsAwaitingMail(ctx, tx, now)
 		return err
 	}); err != nil {
 		return fmt.Errorf("listing the runs still owed a message: %w", err)
@@ -182,7 +174,7 @@ func (w *briefGenerateWorker) repContext(
 // The MAIL is not here. It is a pass of its own over whatever is still unmailed
 // once the whole workspace is assembled — mailTheMorning says why, and the short
 // version is that a run may be mailed hours after it is written.
-func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.UUID, now, assemblyFrom time.Time) error {
+func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.UUID, now time.Time) error {
 	repCtx, live, err := w.repContext(ctx, wsID, userID)
 	if err != nil {
 		return err
@@ -191,6 +183,10 @@ func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.
 		// A seat archived between the roster read and its turn has no morning
 		// left to assemble, and it must not fail the workspace's pass.
 		return nil
+	}
+	assemblyFrom, err := briefs.OvernightFrom(ctx, w.pool, userID, now)
+	if err != nil {
+		return err
 	}
 	if now.Before(assemblyFrom) {
 		settings, err := w.users.MyDelivery(repCtx)
@@ -224,31 +220,22 @@ func (w *briefGenerateWorker) assembleFor(ctx context.Context, wsID, userID ids.
 	return nil
 }
 
-// morningPassFor lists active full-seat humans without a run for the reporting day.
+// repsDueABrief lists active full-seat humans without a run for their own
+// morning.
 //
 // Agents are excluded: a brief is a colleague's morning, and an agent seat has no
 // morning to prepare. Read seats are excluded because the brief's whole content
 // is deals to act on.
-func (w *briefGenerateWorker) morningPassFor(ctx context.Context, wsID ids.UUID, now time.Time) (morningPass, error) {
-	var pass morningPass
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		// The engine's own day arithmetic, not a second copy of it: this decides
-		// which reps are due, and the store then dates the run it writes. Two
-		// spellings would let the pair disagree about which morning a run belongs
-		// to, which is how a rep gets a brief dated to a day she has not lived.
-		day, local, err := briefs.LocalDayAt(ctx, tx, now)
-		if err != nil {
-			return err
-		}
-		pass = morningPass{day: day, assemblyFrom: time.Date(local.Year(), local.Month(), local.Day(), 5, 0, 0, 0, local.Location())}
-		pass.reps, err = repsWithoutARunFor(ctx, tx, day)
+func (w *briefGenerateWorker) repsDueABrief(ctx context.Context, now time.Time) (reps []ids.UUID, err error) {
+	err = database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		reps, err = repsWithoutARunFor(ctx, tx, now)
 		return err
 	})
-	return pass, err
+	return reps, err
 }
 
 // repsWithoutARunFor is the candidate query: every seat that should have a
-// brief for this local day and does not yet.
+// brief for its own local day and does not yet.
 //
 // The roster half is morningSeatSQL, which the digest pass serves too: a seat
 // one morning message reaches and the other skips is a difference nobody
@@ -257,15 +244,16 @@ func (w *briefGenerateWorker) morningPassFor(ctx context.Context, wsID ids.UUID,
 // The anti-join is an optimisation of the morning, not the correctness of it —
 // uq_brief_run_user_day is what makes a second run impossible, and a rep who
 // gains a run between this read and the snapshot simply joins it.
-func repsWithoutARunFor(ctx context.Context, tx pgx.Tx, day time.Time) ([]ids.UUID, error) {
+func repsWithoutARunFor(ctx context.Context, tx pgx.Tx, now time.Time) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT u.id
 		FROM app_user u
 		WHERE `+morningSeatSQL+`
 		  AND NOT EXISTS (
 			SELECT 1 FROM brief_run br
-			WHERE br.user_id = u.id AND br.local_day = $1)
-		ORDER BY u.id`, day)
+			WHERE br.user_id = u.id AND (br.generated_at > $2
+			   OR br.local_day = `+occurredday.DaySQL(occurredday.Personal, "$1", "u.id")+`))
+		ORDER BY u.id`, now, now.Add(-occurredday.EditionGap))
 	if err != nil {
 		return nil, fmt.Errorf("listing the reps due a brief: %w", err)
 	}

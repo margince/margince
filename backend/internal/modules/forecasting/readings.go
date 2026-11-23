@@ -55,6 +55,8 @@ type Deal struct {
 	EvidenceN        *int
 	Signals          []Signal
 	Effect           *float64
+	// Explanation is the one-line reason for the chance, from ResolveWinChance.
+	Explanation string
 	// StageID is which stage the deal stands in, empty where the reader could
 	// not name one. Frozen onto the contribution so a later conversion read can
 	// ask what happened to deals that REACHED a stage — a question the deal's

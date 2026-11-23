@@ -95,8 +95,6 @@ const (
 	// that June meeting, and without the ordering the report would credit a
 	// meeting for an opportunity that already existed when it happened.
 	colBecameOpportunity = "(hoff.id IS NOT NULL)"
-
-	colCreditedSeat = "credited_seat.id"
 )
 
 // whereHeldMeeting admits a meeting the record says was held. booked is a
@@ -104,9 +102,8 @@ const (
 // of them would answer a question about calendars rather than about work.
 var whereHeldMeeting = "t.kind = 'meeting' AND " + meetingoutcome.HeldSQL("t") + " AND t.archived_at IS NULL"
 
-// joinMeetingCredit computes the credited seat once per meeting, so the
-// report can group by it.
-var joinMeetingCredit = "LEFT JOIN LATERAL (SELECT " + storekit.MeetingCreditedSeatSQL("t") + " AS id) credited_seat ON true"
+// colCreditedSeat is the colleague filter's null test and value shape; its match is filterPredicates.
+var colCreditedSeat, colCreditedSeats = storekit.LatestHeldCredit.LowestSeatSQL("t"), storekit.LatestHeldCredit.SeatListSQL("t")
 
 // activityOwnRowFields names, per report, each dimension or filter read off
 // the base activity's own rows (its participants, its invitations) through a
@@ -114,7 +111,7 @@ var joinMeetingCredit = "LEFT JOIN LATERAL (SELECT " + storekit.MeetingCreditedS
 // applies it to t, so a report listed here must walk activities.
 var activityOwnRowFields = map[string]map[string]string{
 	"meeting-conversion": {
-		fieldMeetingHost: "the credited seat is read off the meeting's own participant and invitation rows",
+		fieldMeetingHost: "the credited seats are read off the meeting's own participant and invitation rows",
 	},
 	"activities-by-kind": {
 		fieldHostUserID: "the credited seat is read off the meeting's own held transition, keyed by activity_id",
@@ -132,7 +129,7 @@ func meetingConversionSpec() reportSpec {
 	return reportSpec{
 		entity: datasource.EntityActivity,
 		table:  tableActivity,
-		joins:  []string{fmt.Sprintf(joinAcceptedHandoff, occurredday.StartSQL("t")), joinMeetingCredit},
+		joins:  []string{fmt.Sprintf(joinAcceptedHandoff, occurredday.StartSQL("t")), storekit.LatestHeldJoinSQL("t")},
 		// Row scope for an activity is real per-row discoverability rather than
 		// the identity-table TRUE a deal's is, so this walks it the way
 		// activities-by-kind does. The population default's hardcoded owner_id
@@ -145,7 +142,7 @@ func meetingConversionSpec() reportSpec {
 		basePlain: "meetings the record says were HELD (a booked one is a plan, and a no-show " +
 			"or a cancellation is a plan that failed)",
 		dimensions: map[string]string{
-			fieldMeetingHost:       colCreditedSeat,
+			fieldMeetingHost:       colCreditedSeats,
 			fieldBecameOpportunity: colBecameOpportunity,
 		},
 		measures: map[string]string{},
@@ -153,7 +150,8 @@ func meetingConversionSpec() reportSpec {
 			fieldMeetingHost:       colCreditedSeat,
 			fieldBecameOpportunity: colBecameOpportunity,
 		},
-		defaultBy: []string{fieldBecameOpportunity},
+		filterPredicates: map[string]string{fieldMeetingHost: storekit.LatestHeldCredit.CreditsSQL("t", "%[1]s")},
+		defaultBy:        []string{fieldBecameOpportunity},
 		// The conversion is a fact about a HANDOFF, so it takes the handoff's
 		// object grant. sdr_handoff gates on `lead` (contacts/sdrhandoff.go), and
 		// a seat holding activity.read alone can see the meeting while having no

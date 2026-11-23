@@ -188,6 +188,12 @@ func scanFigures(rows pgx.Rows, out map[ids.UUID]DealFigures, now time.Time, loc
 // deliberately the same answer here — both mean this reader has nothing to say
 // about that id, and distinguishing them would tell them a deal exists.
 func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]DealFigures, error) {
+	return s.FiguresIn(ctx, dealIDs, nil)
+}
+
+// FiguresIn is Figures with CloseOverdue judged in zone, the day rule's zone for
+// the screen reading it. A nil zone is the installation's.
+func (s *Store) FiguresIn(ctx context.Context, dealIDs []ids.UUID, zone *time.Location) (map[ids.UUID]DealFigures, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, err
 	}
@@ -209,13 +215,15 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 		// reads it (closedatesweep.go) — CloseIsOverdue below is what
 		// actually answers "is this deal overdue", asked once per row
 		// rather than re-spelled in SQL.
-		tzName, err := s.installation.Timezone(ctx, tx)
-		if err != nil {
-			return fmt.Errorf("read the installation's timezone: %w", err)
-		}
-		loc, err := installationZone(tzName)
-		if err != nil {
-			return err
+		loc := zone
+		if loc == nil {
+			tzName, err := s.installation.Timezone(ctx, tx)
+			if err != nil {
+				return fmt.Errorf("read the installation's timezone: %w", err)
+			}
+			if loc, err = installationZone(tzName); err != nil {
+				return err
+			}
 		}
 		args := []any{}
 		arg := func(v any) int { args = append(args, v); return len(args) }
@@ -239,6 +247,10 @@ func (s *Store) Figures(ctx context.Context, dealIDs []ids.UUID) (map[ids.UUID]D
 		}
 		defer rows.Close()
 		if err := scanFigures(rows, out, s.clock(), loc); err != nil {
+			return err
+		}
+		rows.Close()
+		if err := s.restateFigureChances(ctx, tx, out); err != nil {
 			return err
 		}
 		return maskFigures(ctx, tx, out)

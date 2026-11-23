@@ -42,13 +42,13 @@ func countWeekDays(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end t
 		return nil, err
 	}
 	authored := auth.ActivityAuthorSQL("a", seat, arg)
-	credited := storekit.MeetingCreditSQL("a", "$"+strconv.Itoa(seat))
+	credited := meetingIsTheirsSQL(storekit.LatestHeldCredit, "a", "$"+strconv.Itoa(seat))
 	rows, err := tx.Query(ctx, `
 		SELECT width_bucket(`+occurredday.StartSQL("a")+`, `+boundsAt+`::timestamptz[]) AS day,
 		       count(*) FILTER (WHERE a.kind = 'email'),
 		       count(*) FILTER (WHERE a.kind = 'call'),
 		       count(*) FILTER (WHERE a.kind = 'meeting')
-		  FROM activity a
+		  FROM activity a `+storekit.LatestHeldJoinSQL("a")+`
 		 WHERE a.archived_at IS NULL
 		   AND `+occurredday.WithinSQL("a", startAt, endAt)+`
 		   AND (`+orUnbounded(scope)+`)

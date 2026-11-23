@@ -134,7 +134,11 @@ func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals 
 		return capture.DealTopic{}, nil
 	}
 	if sweepPaused(err) || errors.Is(err, ai.ErrSubjectRestricted) {
-		return capture.DealTopic{}, fmt.Errorf("%w: %w", capture.ErrTopicAbstained, err)
+		abstained := fmt.Errorf("%w: %w", capture.ErrTopicAbstained, err)
+		if ai.IsDeferral(err) {
+			abstained = errors.Join(abstained, capture.ErrTopicDeferred)
+		}
+		return capture.DealTopic{}, abstained
 	}
 	if err != nil {
 		return capture.DealTopic{}, err

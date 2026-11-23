@@ -14,6 +14,7 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "systemJob.proposal_stage": "Hỏi có chuyển deal sau khi gửi đề xuất không",
   "systemJob.legal_review_desk": "Rà soát pháp lý",
   "systemJob.import_identity_links": "Liên kết email đã nhập",
   "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
@@ -780,6 +781,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.linkIssued": "Ngày tạo liên kết",
   "approval.preview.linkExpires": "Ngày hết hạn liên kết",
   "approval.preview.recordRevoked": "Đã thu hồi",
+  "approval.preview.basisAgreement": "Sự đồng ý của người nhận",
   "approval.preview.basisKind": "Căn cứ liên lạc đã ghi nhận",
   "approval.preview.basisFrom": "Căn cứ có hiệu lực từ",
   "approval.preview.basisUntil": "Căn cứ có hiệu lực đến",
@@ -791,7 +793,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.basisObligation": "Nghĩa vụ pháp lý",
   "approval.preview.basisSecurity": "Lợi ích thiết yếu hoặc an ninh",
   "approval.preview.basisCustomer": "Ngoại lệ dành cho khách hàng hiện có",
-  "approval.preview.basisAgreement": "Sự đồng ý của người nhận",
   "approval.preview.promotionTrigger": "Lý do xác định đủ điều kiện",
   "approval.preview.promotionNote": "Bằng chứng đủ điều kiện",
   "approval.preview.promotionEvidence": "Hoạt động làm bằng chứng",
@@ -2818,6 +2819,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm liên hệ, công ty, deal, dự án, sản phẩm, hoạt động, lead…",
   "search.prompt": "Nhập từ khóa tìm kiếm.",
   "search.empty": "Không có kết quả cho “{q}”.",
+  "search.timedOut":
+    "Không kịp tìm {kind} cho từ này. Hãy thêm một từ khác để tìm lại.",
   "search.nearMatches": "Có phải bạn muốn tìm:",
   "search.group.contact": "Liên hệ",
   "search.group.company": "Công ty",
@@ -4717,6 +4720,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.legal_review_request": "Yêu cầu rà soát pháp lý",
   "approval.kind.task_due_date": "Kiểm tra hạn",
   "approval.kind.employer_change": "Kiểm tra nơi làm việc mới",
+  "approval.kind.deal_proposal_stage": "Chuyển deal sang giai đoạn đề xuất",
+  "approval.kind.dealProposalStageNamed": "Chuyển sang giai đoạn “{stage}”?",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
@@ -4786,6 +4791,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.field.signature": "Dòng chữ ký",
   "approval.field.to_company": "Nơi làm việc mới",
   "approval.field.from_company": "Nơi làm việc hiện tại",
+  "approval.field.skipped_stages": "Bỏ qua",
   "approval.field.from_address": "Gửi từ",
   "approval.field.sender_check": "Kiểm tra bên gửi",
   "approval.senderCheck.authenticated":
@@ -6206,6 +6212,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.reason.clear": "Xóa con số để theo lại giai đoạn.",
   "deal.winProbability.reason.stageNamed": "giai đoạn {name}",
   "deal.winProbability.reason.stageUnnamed": "giai đoạn của deal",
+  "deal.winChance.typed": "Được đặt ở mức {percent} cho {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} deal từ đây đã đóng, {percent} thắng.",
+  "deal.winChance.evidence_other":
+    "{count} deal từ đây đã đóng, {percent} thắng.",
+  "deal.winChance.learningOff": "Việc học từ các deal đã đóng đang tắt.",
+  "deal.winChance.signal.quiet": "im lặng {days} ngày",
+  "deal.winChance.signal.close_pushed": "ngày chốt đã bị lùi",
+  "deal.winChance.signal.no_next_step": "chưa có bước tiếp theo",
+  "deal.winChance.signal.stuck": "kẹt {days} ngày",
+  "deal.winChance.effect.lowers_one":
+    "{signal} làm giảm tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} làm giảm tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.raises_one":
+    "{signal} làm tăng tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.raises_other":
+    "{signal} làm tăng tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.halved":
+    "{signal} làm tỷ lệ giảm một nửa, vì còn quá ít deal đã đóng cho thấy tác động thật.",
+  "deal.winChance.result": "Tỷ lệ thắng là {percent}.",
   "deal.winProbability.band.90_plus": "Từ 90% trở lên",
   "deal.winProbability.band.60_89": "60 đến 89%",
   "deal.winProbability.band.30_59": "30 đến 59%",
@@ -6548,6 +6575,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.movePipelinePick": "Chọn pipeline",
   "deal.movePipelineDone": "Đã chuyển sang {pipeline}.",
   "deal.reopen": "Mở lại",
+  "deal.marginceLine.closed": "Margince đã đóng deal này là thua vào {date}.",
+  "deal.marginceLine.opened": "Margince đã mở deal này vào {date}.",
+  "deal.marginceLine.reopened": "Margince đã mở lại deal này vào {date}.",
+  "deal.marginceLine.undoOff":
+    "Không thể hoàn tác việc đóng này nữa vì deal đã thay đổi. Hãy mở lại deal.",
+  "deal.note.undoAll": "Hoàn tác tất cả",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",
   "deal.correctCloseDay": "Sửa ngày chốt deal",
@@ -7080,15 +7113,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "plan.contract.unwritten": "Chưa có",
   "plan.contract.nothingToName": "Không có gì để nêu",
   "plan.contract.edit": "Sửa",
-  "plan.contract.save": "Lưu",
-  "plan.contract.cancel": "Hủy",
   "plan.contract.crowded": "Tuần đã kín lịch",
   "plan.contract.crowdedBody":
     "Lịch đã có {committed} mục và kế hoạch có {commitments} cam kết. Sẽ có việc không xếp vừa.",
   "plan.help.ask": "Yêu cầu hỗ trợ",
   "plan.help.edit": "Sửa yêu cầu",
-  "plan.help.send": "Gửi",
-  "plan.help.cancel": "Hủy",
   "plan.help.asked": "Yêu cầu: {text}",
   "plan.help.waiting": "Đã yêu cầu hỗ trợ · đang chờ phản hồi",
   "plan.new.label": "Cam kết",
@@ -7598,9 +7627,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "evidence.fromProvider": "từ nhà cung cấp",
   "evidence.confirm": "Xác nhận",
   "evidence.correct": "Sửa",
-  "evidence.save": "Lưu",
   "evidence.saving": "Đang lưu…",
-  "evidence.cancel": "Hủy",
   "evidence.correctedValue": "Giá trị đã sửa",
   "evidence.confirmedAt": "Xác nhận thủ công lúc {when}",
   "evidence.humanSet": "Do một người nhập",
@@ -16578,6 +16605,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Xác suất mà từ đó một deal đang mở có ngày chốt đã xác nhận được tính là khả năng cao.",
   "forecast.landing": "Dự kiến cuối kỳ",
+  "forecast.accuracy.title": "Độ chính xác của dự báo",
+  "forecast.accuracy.none":
+    "Chưa có đủ deal đã đóng. Khi các deal mà dự báo đã tính được đóng, phần này so sánh điều dự báo nói với điều đã xảy ra.",
+  "forecast.accuracy.calibration_one":
+    "{count} deal đã đóng, nhóm theo tỷ lệ dự báo đã gán cho chúng {days} ngày trước khi đóng.",
+  "forecast.accuracy.calibration_other":
+    "{count} deal đã đóng, nhóm theo tỷ lệ dự báo đã gán cho chúng {days} ngày trước khi đóng.",
+  "forecast.accuracy.band_one": "Tỷ lệ {mean}, thắng {won} ({count} deal)",
+  "forecast.accuracy.band_other": "Tỷ lệ {mean}, thắng {won} ({count} deal)",
+  "forecast.accuracy.fewDeals_one": "{count} deal, quá ít để nêu tỷ lệ",
+  "forecast.accuracy.fewDeals_other": "{count} deal, quá ít để nêu tỷ lệ",
+  "forecast.accuracy.landings":
+    "Các quý đã kết thúc: dự báo nói gì bốn tuần trước khi hết quý so với số đã thắng.",
+  "forecast.accuracy.landing": "Dự báo {said}, thắng {landed}",
+  "forecast.accuracy.saidOn": "Dự báo ngày {date}",
   "forecast.landingSection": "Điểm kết thúc kỳ này",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingUnrecorded": "Chưa ghi nhận",
@@ -19093,8 +19135,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.correctedByYou": "Do bạn sửa",
   "contact.enriched.confirmed": "Đã xác nhận",
   "contact.enriched.confirm": "Xác nhận giá trị",
-  "contact.enriched.save": "Lưu bản sửa",
-  "contact.enriched.cancel": "Hủy",
   "contact.graph.loading": "Đang tải mạng lưới liên hệ…",
   "contact.graph.routeDirect": "{name} đã trao đổi với họ.",
   "contact.graph.routeVia": "{name} trao đổi với {through} ở cùng công ty.",
@@ -22368,6 +22408,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_coldstart": "Xem xét tiếp cận ban đầu",
   "magic.action.approval_send_email": "Xem xét tin nhắn",
   "magic.action.approval_advance_deal": "Xem xét chuyển giai đoạn",
+  "magic.action.approval_deal_proposal_stage": "Đã gửi đề xuất. Chuyển deal?",
   "magic.action.approval_promote_lead": "Xem xét chuyển đổi lead",
   "magic.action.approval_overnight": "Xem xét đề xuất",
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",

@@ -86,7 +86,7 @@ frames. A 0 means no fenced region was found in that call at all.
 | `site_extract` | `profile` | one fenced item | 1 | 1 |
 | `site_fact_extract` | `page_facts` | one fenced item | 1 | 1 |
 | `site_triage` | `triage` | one fenced item | 1 | 1 |
-| `stage_evidence_extract` | `criteria` | several fenced items | 3 | 1 |
+| `stage_evidence_extract` | `criteria` | several fenced items | 2 | 1 |
 | `summarize` | `company_ask` | one fenced item | 1 | 1 |
 | `summarize` | `company_brief` | one fenced item | 1 | 1 |
 | `summarize` | `company_dossier` | one fenced item | 1 | 1 |
@@ -7462,8 +7462,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           },
           "criterion_key": {
             "enum": [
-              "problem_confirmed",
-              "budget_confirmed"
+              "budget_confirmed",
+              "margince:proposal_sent"
             ],
             "type": "string"
           },

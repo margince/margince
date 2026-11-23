@@ -109,6 +109,8 @@ type dealFiling struct {
 	evidence        map[string]any
 	filer           DealFiler
 	topic           *dealTopicState
+	// admit is one closed deal the filing may still write to; zero for none.
+	admit ids.UUID
 }
 
 // fileOnDeal locks the activity row first, as the human relink locks it

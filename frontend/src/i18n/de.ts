@@ -5,6 +5,8 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "systemJob.proposal_stage":
+    "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
   "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.promise_kept":
@@ -795,6 +797,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.linkIssued": "Link erstellt",
   "approval.preview.linkExpires": "Link läuft ab",
   "approval.preview.recordRevoked": "Widerrufen",
+  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
   "approval.preview.basisKind": "Erfasste Kommunikationsgrundlage",
   "approval.preview.basisFrom": "Grundlage gültig ab",
   "approval.preview.basisUntil": "Grundlage gültig bis",
@@ -808,7 +811,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.basisSecurity":
     "Lebenswichtiges Interesse oder Sicherheitsinteresse",
   "approval.preview.basisCustomer": "Bestandskundenausnahme",
-  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
   "approval.preview.promotionTrigger": "Anlass der Qualifizierung",
   "approval.preview.promotionNote": "Beleg zur Qualifizierung",
   "approval.preview.promotionEvidence": "Belegende Aktivität",
@@ -2906,6 +2908,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kontakte, Unternehmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib einen Suchbegriff ein.",
   "search.empty": "Keine Treffer für „{q}“.",
+  "search.timedOut":
+    "{kind} konnten für dieses Wort nicht rechtzeitig durchsucht werden. Füge ein weiteres Wort hinzu, um sie zu durchsuchen.",
   "search.nearMatches": "Meintest du:",
   "search.group.contact": "Kontakte",
   "search.group.company": "Unternehmen",
@@ -4840,6 +4844,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.legal_review_request": "Rechtsprüfung angefragt",
   "approval.kind.task_due_date": "Fälligkeitsdatum prüfen",
   "approval.kind.employer_change": "Neuen Arbeitgeber prüfen",
+  "approval.kind.deal_proposal_stage": "Deal in die Angebotsphase verschieben",
+  "approval.kind.dealProposalStageNamed": "In die Phase „{stage}“ verschieben?",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
@@ -4911,6 +4917,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.field.signature": "Signaturzeile",
   "approval.field.to_company": "Neuer Arbeitgeber",
   "approval.field.from_company": "Arbeitgeber jetzt",
+  "approval.field.skipped_stages": "Überspringt",
   "approval.field.from_address": "Gesendet von",
   "approval.field.sender_check": "Absenderprüfung",
   "approval.senderCheck.authenticated":
@@ -6376,6 +6383,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Leere das Feld, um wieder der Phase zu folgen.",
   "deal.winProbability.reason.stageNamed": "die Phase {name}",
   "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
+  "deal.winChance.typed": "Hinterlegt: {percent} für {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} Deal von hier ist abgeschlossen, {percent} gewonnen.",
+  "deal.winChance.evidence_other":
+    "{count} Deals von hier sind abgeschlossen, {percent} gewonnen.",
+  "deal.winChance.learningOff":
+    "Das Lernen aus abgeschlossenen Deals ist ausgeschaltet.",
+  "deal.winChance.signal.quiet": "seit {days} Tagen still",
+  "deal.winChance.signal.close_pushed": "das Abschlussdatum wurde verschoben",
+  "deal.winChance.signal.no_next_step": "kein nächster Schritt",
+  "deal.winChance.signal.stuck": "seit {days} Tagen festgefahren",
+  "deal.winChance.effect.lowers_one":
+    "{signal} senkt sie (gelernt aus {count} abgeschlossenem Deal).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} senkt sie (gelernt aus {count} abgeschlossenen Deals).",
+  "deal.winChance.effect.raises_one":
+    "{signal} erhöht sie (gelernt aus {count} abgeschlossenem Deal).",
+  "deal.winChance.effect.raises_other":
+    "{signal} erhöht sie (gelernt aus {count} abgeschlossenen Deals).",
+  "deal.winChance.effect.halved":
+    "{signal} halbiert sie, weil noch zu wenige abgeschlossene Deals die echte Wirkung zeigen.",
+  "deal.winChance.result": "Die Gewinnchance beträgt {percent}.",
   "deal.winProbability.band.90_plus": "90 % oder mehr",
   "deal.winProbability.band.60_89": "60 bis 89 %",
   "deal.winProbability.band.30_59": "30 bis 59 %",
@@ -6723,6 +6752,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.movePipelinePick": "Pipeline wählen",
   "deal.movePipelineDone": "Nach {pipeline} verschoben.",
   "deal.reopen": "Wieder öffnen",
+  "deal.marginceLine.closed":
+    "Margince hat diesen Deal am {date} als verloren geschlossen.",
+  "deal.marginceLine.opened": "Margince hat diesen Deal am {date} eröffnet.",
+  "deal.marginceLine.reopened":
+    "Margince hat diesen Deal am {date} wieder geöffnet.",
+  "deal.marginceLine.undoOff":
+    "Das Schließen lässt sich nicht mehr rückgängig machen, weil sich der Deal seitdem geändert hat. Öffne ihn stattdessen wieder.",
+  "deal.note.undoAll": "Alles rückgängig machen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
   "deal.correctCloseDay": "Abschlusstag korrigieren",
@@ -7258,15 +7295,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "plan.contract.unwritten": "Noch nicht geschrieben",
   "plan.contract.nothingToName": "Nichts zu nennen",
   "plan.contract.edit": "Bearbeiten",
-  "plan.contract.save": "Speichern",
-  "plan.contract.cancel": "Abbrechen",
   "plan.contract.crowded": "Woche bereits voll",
   "plan.contract.crowdedBody":
     "Bereits gebucht: {committed}. Geplante Zusagen: {commitments}. Nicht alles wird hineinpassen.",
   "plan.help.ask": "Um Hilfe bitten",
   "plan.help.edit": "Anfrage bearbeiten",
-  "plan.help.send": "Senden",
-  "plan.help.cancel": "Abbrechen",
   "plan.help.asked": "Anfrage: {text}",
   "plan.help.waiting": "Hilfe angefragt · Antwort ausstehend",
   "plan.new.label": "Zusage",
@@ -7780,9 +7813,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "evidence.fromProvider": "vom Anbieter",
   "evidence.confirm": "Bestätigen",
   "evidence.correct": "Korrigieren",
-  "evidence.save": "Speichern",
   "evidence.saving": "Wird gespeichert…",
-  "evidence.cancel": "Abbrechen",
   "evidence.correctedValue": "Korrigierter Wert",
   "evidence.confirmedAt": "Von einer Person bestätigt am {when}",
   "evidence.humanSet": "Von einer Person festgelegt",
@@ -17034,6 +17065,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Die Abschlusschance, ab der ein offener Deal mit bestätigtem Abschlussdatum als wahrscheinlich zählt.",
   "forecast.landing": "Erwartetes Ergebnis",
+  "forecast.accuracy.title": "Genauigkeit der Prognose",
+  "forecast.accuracy.none":
+    "Noch zu wenige abgeschlossene Deals. Sobald Deals der Prognose abgeschlossen sind, vergleicht dieser Bereich, was sie sagte, mit dem, was geschah.",
+  "forecast.accuracy.calibration_one":
+    "{count} abgeschlossener Deal, gruppiert nach der Chance, die die Prognose ihm {days} Tage vor dem Abschluss gab.",
+  "forecast.accuracy.calibration_other":
+    "{count} abgeschlossene Deals, gruppiert nach der Chance, die die Prognose ihnen {days} Tage vor dem Abschluss gab.",
+  "forecast.accuracy.band_one": "Chance {mean}, gewonnen {won} ({count} Deal)",
+  "forecast.accuracy.band_other":
+    "Chance {mean}, gewonnen {won} ({count} Deals)",
+  "forecast.accuracy.fewDeals_one": "{count} Deal, zu wenig für einen Anteil",
+  "forecast.accuracy.fewDeals_other":
+    "{count} Deals, zu wenige für einen Anteil",
+  "forecast.accuracy.landings":
+    "Abgeschlossene Quartale: was die Prognose vier Wochen vor dem Ende sagte, im Vergleich zum Gewonnenen.",
+  "forecast.accuracy.landing": "Prognose {said}, gewonnen {landed}",
+  "forecast.accuracy.saidOn": "Prognose vom {date}",
   "forecast.landingSection": "Wo der Zeitraum landet",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingUnrecorded": "Nicht erfasst",
@@ -19614,8 +19662,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.enriched.correctedByYou": "Von dir korrigiert",
   "contact.enriched.confirmed": "Best\u00e4tigt",
   "contact.enriched.confirm": "Wert bestätigen",
-  "contact.enriched.save": "Korrektur speichern",
-  "contact.enriched.cancel": "Abbrechen",
   "contact.graph.loading": "Kontaktnetzwerk wird geladen…",
   "contact.graph.routeDirect":
     "{name} steht bereits im Austausch mit diesem Kontakt.",
@@ -22976,6 +23022,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_coldstart": "Erstansprache prüfen",
   "magic.action.approval_send_email": "Nachricht prüfen",
   "magic.action.approval_advance_deal": "Phasenwechsel prüfen",
+  "magic.action.approval_deal_proposal_stage":
+    "Ein Angebot ist raus. Deal verschieben?",
   "magic.action.approval_promote_lead": "Lead-Umwandlung prüfen",
   "magic.action.approval_overnight": "Vorschlag prüfen",
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",

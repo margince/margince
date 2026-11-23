@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -53,9 +55,15 @@ func (CapturedDealRefileSweepArgs) FleetWide() {}
 const dealTopicCallsPerPass = 20
 
 type capturedDealRefileWorker struct {
+	pool    *pgxpool.Pool
 	db      *database.DB
 	repair  capture.DealRepair
 	cohorts *contacts.Store
+	// closes reads and offers back the closes for silence the backfill finds
+	// premature; closer notes the offer on the deal's timeline.
+	closes *deals.Store
+	closer silentDealCloser
+	now    func() time.Time
 	// page is how many candidates one pass inspects before it snoozes.
 	page int
 	// calls is how many topic checks one pass asks before it snoozes.
@@ -69,7 +77,9 @@ func newCapturedDealRefileWorker(pool *pgxpool.Pool, topicBrain completer) *capt
 	repair := mailDealRepair(pool)
 	repair.Check = NewDealTopicCheck(pool, topicBrain)
 	return &capturedDealRefileWorker{
-		db: db, repair: repair, cohorts: cohortRepairStore(contacts.NewStore(db)),
+		pool: pool, db: db, repair: repair, cohorts: cohortRepairStore(contacts.NewStore(db)),
+		closes: deals.NewStore(db, DealsInstallation()), closer: newSilentDealCloser(pool, slog.Default()),
+		now:  func() time.Time { return time.Now().UTC() },
 		page: capture.DealRefileLimit, calls: dealTopicCallsPerPass,
 	}
 }
@@ -79,6 +89,7 @@ type dealRefileCursor struct {
 	CohortsDone  bool     `json:"deal_refile_cohorts_done"`
 	RefileDone   bool     `json:"deal_refile_done"`
 	RecheckAfter ids.UUID `json:"deal_recheck_after"`
+	RecheckDone  bool     `json:"deal_recheck_done"`
 }
 
 func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[CapturedDealRefileArgs]) error {
@@ -93,7 +104,9 @@ func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[Capt
 	if job.Args.AsOf.IsZero() || job.Args.Correlation.IsZero() {
 		return jobs.FaultContext(ctx, apperrors.ErrInvalidArgument)
 	}
-	if job.Args.Ceiling.IsZero() {
+	// A workspace with no live activity has a zero ceiling and nothing to
+	// refile, but the backfill must still run its phases to finish.
+	if job.Args.Ceiling.IsZero() && !job.Args.Scope.Backfill {
 		return nil
 	}
 	var cursor dealRefileCursor
@@ -114,6 +127,16 @@ func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[Capt
 			return jobs.FaultContext(ctx, err)
 		}
 	}
+	if cursor.RecheckDone {
+		more, err := w.backfill(passCtx, job.Args)
+		if err != nil {
+			return jobs.FaultContext(ctx, err)
+		}
+		if more {
+			return river.JobSnooze(0)
+		}
+		return nil
+	}
 	// The refile pages run first, then, for the recovery sweep, the recheck
 	// pages. Each phase keeps its own cursor across snoozes.
 	page, afterKey, after := w.refilePage, "deal_refile_after", cursor.After
@@ -124,6 +147,7 @@ func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[Capt
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	backfillDone := false
 	switch {
 	case more:
 		// A crash before metadata is saved replays completed writes under their normal locks.
@@ -131,10 +155,20 @@ func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[Capt
 	case !cursor.RefileDone && job.Args.Scope.Recheck:
 		err = river.MetadataSet(ctx, "deal_refile_done", true)
 	default:
-		return nil
+		if job.Args.Scope.Backfill {
+			if err := river.MetadataSet(ctx, "deal_recheck_done", true); err != nil {
+				return jobs.FaultContext(ctx, err)
+			}
+		}
+		var left bool
+		left, err = w.backfill(passCtx, job.Args)
+		backfillDone = !left
 	}
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
+	}
+	if backfillDone {
+		return nil
 	}
 	return river.JobSnooze(0)
 }
@@ -157,6 +191,14 @@ func (w *capturedDealRefileWorker) repairCohorts(ctx context.Context, contactIDs
 	return changed, nil
 }
 
+// repairAt is the repair with its "Which deal?" question judged at the pass's
+// frozen instant, the same horizon the pass files by.
+func (w *capturedDealRefileWorker) repairAt(asOf time.Time) capture.DealRepair {
+	repair := w.repair
+	repair.Ask = newWhichDealAsker(w.pool, func() time.Time { return asOf }).Ask
+	return repair
+}
+
 func (w *capturedDealRefileWorker) refilePage(ctx context.Context, args CapturedDealRefileArgs, after ids.UUID) (ids.UUID, bool, error) {
 	var scanned []ids.UUID
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -168,7 +210,7 @@ func (w *capturedDealRefileWorker) refilePage(ctx context.Context, args Captured
 		return after, false, err
 	}
 	return w.walk(ctx, scanned, after, "capture_deal_refile_fault", func(activity ids.ActivityID) (bool, error) {
-		return w.repair.Refile(ctx, w.db, activity, args.AsOf)
+		return w.repairAt(args.AsOf).Refile(ctx, w.db, activity, args.AsOf)
 	})
 }
 
@@ -234,7 +276,12 @@ func (w *capturedDealRefileSweepWorker) scheduleWorkspace(ctx context.Context, w
 	var args CapturedDealRefileArgs
 	err := InstallationDB(w.pool).Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		args, err = dealRefilePassArgs(ctx, tx, capture.DealRefileScope{All: true, Recheck: true}, w.now(), ids.Nil)
+		done, err := capture.StakeholderBackfillDoneTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		scope := capture.DealRefileScope{All: true, Recheck: true, Backfill: !done}
+		args, err = dealRefilePassArgs(ctx, tx, scope, w.now(), ids.Nil)
 		return err
 	})
 	if err != nil {

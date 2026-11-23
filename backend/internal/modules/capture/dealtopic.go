@@ -57,6 +57,10 @@ type DealTopic struct {
 // no suggested deal, and a later pass asks again.
 var ErrTopicAbstained = errors.New("capture: the deal topic check gave no answer")
 
+// ErrTopicDeferred joins ErrTopicAbstained when the model is blocked or its
+// budget is spent: the same mail will get an answer later.
+var ErrTopicDeferred = errors.New("capture: the deal topic check is deferred")
+
 // DealTopicCheck asks a model which of deals the mail is about. Compose
 // injects it; a nil check abstains.
 type DealTopicCheck interface {
@@ -87,6 +91,9 @@ type topicAnswer struct {
 	digest   string
 	topic    DealTopic
 	answered bool
+	// deferred marks an abstention that will pass: the model is blocked or its
+	// budget is spent. A pass that must not skip the mail retries it.
+	deferred bool
 }
 
 // topicQuestion is what a filing could not settle without the model.
@@ -138,7 +145,7 @@ func checkedFiling(
 func askTopic(check DealTopicCheck, q topicQuestion) (topicAnswer, error) {
 	topic, err := check.Check(q.decider, q.mail, q.deals, q.digest)
 	if errors.Is(err, ErrTopicAbstained) {
-		return topicAnswer{digest: q.digest}, nil
+		return topicAnswer{digest: q.digest, deferred: errors.Is(err, ErrTopicDeferred)}, nil
 	}
 	if err != nil {
 		return topicAnswer{}, err
@@ -171,8 +178,14 @@ func settleSuggestion(verdict DealVerdict, answer topicAnswer) DealVerdict {
 // still to ask comes back as a question, with no verdict to write.
 func decideFiling(f dealFiling, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, *topicQuestion, error) {
 	verdict, err := decideDeal(f.decider, tx, facts, candidates)
-	if err != nil || !verdict.Basis.NeedsTopicCheck() || len(verdict.Candidates) == 0 {
+	if err != nil {
 		return verdict, nil, err
+	}
+	if !f.admit.IsZero() {
+		verdict = confirmAdmitted(verdict, f.admit)
+	}
+	if !verdict.Basis.NeedsTopicCheck() || len(verdict.Candidates) == 0 {
+		return verdict, nil, nil
 	}
 	if f.topic == nil {
 		return settleSuggestion(verdict, topicAnswer{}), nil, nil
@@ -209,4 +222,21 @@ func FileOnDealChecked(ctx context.Context, db TxRunner, mail ids.ActivityID, ru
 		return question, err
 	})
 	return verdict, err
+}
+
+// confirmAdmitted holds a filing on the one closed deal a repair admits to the
+// topic check, whichever rung found it. A verdict for any other deal files
+// nothing, and so does a check that does not confirm this one.
+func confirmAdmitted(verdict DealVerdict, admit ids.UUID) DealVerdict {
+	if verdict.Outcome != DealLinked {
+		return verdict
+	}
+	if verdict.Deal != admit {
+		return DealVerdict{Outcome: DealNone, Basis: verdict.Basis}
+	}
+	if !verdict.Basis.NeedsTopicCheck() {
+		verdict.Basis = DealBasisSoleOpenDeal
+	}
+	verdict.Candidates = []ids.UUID{admit}
+	return verdict
 }

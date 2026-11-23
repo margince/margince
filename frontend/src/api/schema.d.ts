@@ -23030,7 +23030,8 @@ export interface paths {
          * @description Per open stage: the typed chance, how many deals recorded entering the stage in the last
          *     two years have closed, the estimated share of them won, and the chance the forecast uses.
          *     Computed over the whole installation, so every reader sees the same chance; only counts
-         *     are returned. Only moves made in this installation count. Imported moves and
+         *     are returned. `accuracy` sets what the forecast said about closed deals and finished
+         *     quarters against what happened. Only moves made in this installation count. Imported moves and
          *     moves saved before their origin was kept count for nothing. Deals still open are
          *     counted as open until today, so a stage with many young deals is not read as losing.
          */
@@ -31893,9 +31894,9 @@ export interface components {
             /** Format: date-time */
             generated_at: string;
             capture: {
-                /** @description The number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition: both fields hold this one count. */
+                /** @description Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition. */
                 messages_synced?: number;
-                /** @description The number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition: both fields hold this one count. */
+                /** @description Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition. */
                 activities_created?: number;
                 contacts_created?: number;
                 companies_created?: number;
@@ -41550,6 +41551,32 @@ export interface components {
             data: components["schemas"]["Relationship"][];
             page: components["schemas"]["PageInfo"];
         };
+        /** @description The parts of one deal's win chance. `explanation` is the same fact as one English line for a tool or a brief; a screen words it from the fields. */
+        DealWinChance: {
+            /** @description The chance typed on the deal's stage. */
+            typed: number;
+            /** @description The typed chance moved by the stage outcomes, before any risk effect. */
+            in_use: number;
+            /** @description How many deals that entered the stage have closed. Null while learning is off or the probability was set on the deal. */
+            evidence_n?: number | null;
+            /** @description The percent of those closed deals that were won. */
+            won_share?: number | null;
+            /**
+             * @description The risk signal that moved the chance. Null when none did.
+             * @enum {string|null}
+             */
+            effect_signal?: "close_pushed" | "no_next_step" | "quiet" | "stuck" | null;
+            /** @description How many days the signal has held, where it has a length. */
+            effect_days?: number | null;
+            /** @description True when the effect comes from this installation's own closed deals; false when it is the fixed halving used while too few have closed. */
+            effect_learned?: boolean | null;
+            /** @description How many closed deals the learned effect rests on. */
+            effect_sample?: number | null;
+            /** @description False while the installation switched learning off, so every chance stays the typed one. */
+            self_correcting: boolean;
+            /** @description The one-line reason for the chance, in English. */
+            explanation: string;
+        };
         /** @description The newest workspace-visible email on a deal, as `Deal.last_email` carries it. */
         DealLastEmail: {
             /** Format: date-time */
@@ -41667,10 +41694,10 @@ export interface components {
             readonly won_without_contract_reason?: "imported" | "purchase_order" | "verbal" | "renewal_by_email" | "other" | null;
             /** @description Required when the reason is `other`, which explains nothing on its own. */
             readonly won_without_contract_detail?: string | null;
-            /** @description The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability. */
+            /** @description The chance this deal is won, in percent. An open deal that follows its stage reads the stage's typed chance moved by what this installation's closed deals show and by the risk effect of the deal's strongest signal; `win_chance` says how. A probability set on the deal stands as set. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability. */
             readonly win_probability?: number;
             /**
-             * @description Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+             * @description Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
              * @enum {string}
              */
             readonly win_probability_source?: "stage" | "human" | "margince";
@@ -41683,6 +41710,8 @@ export interface components {
             readonly win_probability_set_by_name?: string | null;
             /** @description The probability of the deal's current stage, so a client can show it beside a probability set on the deal. */
             readonly stage_win_probability?: number;
+            /** @description How `win_probability` of an open deal was made, from the one function every screen, report and tool reads. Absent on a won or lost deal. */
+            readonly win_chance?: components["schemas"]["DealWinChance"];
             /**
              * Format: date
              * @description An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.
@@ -51176,6 +51205,64 @@ export interface components {
             close_provisional: boolean;
             signals: components["schemas"]["ForecastRiskSignal"][];
         };
+        /**
+         * @description How accurate the forecast has been: two comparisons of what it said with what happened,
+         *     read from the frozen daily forecasts of the whole installation, so every reader sees the
+         *     same answer. Only counts and sums are returned.
+         *
+         *     `calibration` takes each deal that has since been won or lost, and the chance it was
+         *     weighted by in the last freeze at least `lead_days` before it closed. It groups those
+         *     chances in bands of ten and gives, per band, the mean chance and the share won. A band
+         *     with fewer deals than `floor` gives only its count.
+         *
+         *     `landings` takes each of the last four finished quarters, and sets what the last freeze
+         *     at least four weeks before the quarter ended said it would land (won plus weighted open
+         *     pipeline) against what was won.
+         */
+        ForecastAccuracy: {
+            calibration: components["schemas"]["ForecastCalibration"];
+            landings: components["schemas"]["ForecastAccuracyLanding"][];
+        };
+        ForecastCalibration: {
+            /** @description How many closed deals the bands hold in all. */
+            deals: number;
+            /** @description The fewest deals a band needs before it states a share. */
+            floor: number;
+            /** @description How many days before the close the chance was read. */
+            lead_days: number;
+            bands: components["schemas"]["ForecastCalibrationBand"][];
+        };
+        ForecastCalibrationBand: {
+            from_percent: number;
+            to_percent: number;
+            deals: number;
+            /** @description The mean chance of the deals in the band. Null below the floor. */
+            mean_percent?: number | null;
+            /** @description The share of the deals that were won. Null below the floor. */
+            won_percent?: number | null;
+        };
+        ForecastAccuracyLanding: {
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            currency: string;
+            /**
+             * Format: int64
+             * @description Won plus weighted open pipeline in the last freeze at least four weeks before the period ended.
+             */
+            said_minor: number;
+            /**
+             * Format: int64
+             * @description What was won in the period, as the first freeze after it ended says.
+             */
+            landed_minor: number;
+            /**
+             * Format: date
+             * @description The day of the freeze `said_minor` was read from.
+             */
+            said_on: string;
+        };
         ForecastStageChances: {
             /** @description The installation setting `forecast_self_correcting`. False means every chance in use is the typed one. */
             self_correcting: boolean;
@@ -51187,6 +51274,7 @@ export interface components {
             /** @description How many closed deals the typed chance counts as. */
             prior_strength: number;
             stages: components["schemas"]["ForecastStageChance"][];
+            accuracy?: components["schemas"]["ForecastAccuracy"];
         };
         ForecastStageChance: {
             /** Format: uuid */
@@ -53747,6 +53835,8 @@ export interface components {
             page: components["schemas"]["PageInfo"];
             /** @description On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole. */
             types_with_more?: string[];
+            /** @description On a `per_type` answer only: the types whose search did not finish within the time budget. `data` holds no hits of these types, and none of them is in `types_with_more`. Empty when every type answered. Absent on a ranked answer, which answers 422 `query_too_broad` instead. */
+            types_timed_out?: string[];
             /** @description Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor. */
             near_matches?: components["schemas"]["SearchNearMatch"][];
         };
@@ -62409,6 +62499,16 @@ export interface components {
             can_accept: boolean;
             /** @description Whether this reader may write this deal. */
             writable: boolean;
+            /**
+             * Format: uuid
+             * @description The History note that reports this change. Null for a change made before notes were linked.
+             */
+            note_activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The stage-history row this change wrote, for a change that moved the stage. It equals the deal's `closing_occurrence_id` while the deal is on the close Margince made.
+             */
+            stage_history_id?: string | null;
         };
         /** @description Observed sales history recorded when this estimate was made, not a reconstruction from current pipeline values. */
         CloseDateEstimateBasis: {
@@ -74718,6 +74818,12 @@ export interface operations {
             query?: {
                 /** @description The `next_cursor` of the page before. A token this server did not mint is refused with 422. */
                 cursor?: string;
+                /** @description Only the change that wrote this stage-history row. A client asks for the close the deal is on without paging for it. */
+                stage_history_id?: string;
+                /** @description Only the changes that these History notes report. */
+                note_activity_id?: string[];
+                /** @description Only changes of these correction kinds, such as close_lost, deal_open or deal_revive. */
+                change_kind?: string[];
             };
             header?: never;
             path: {
@@ -86328,7 +86434,7 @@ export interface operations {
                 types?: string[];
                 /** @description Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record. */
                 exclude_ids?: string[];
-                /** @description Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. */
+                /** @description Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. A type the time budget stopped is left out of `data` and named in `types_timed_out`. */
                 per_type?: number;
                 /** @description Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`. */
                 with_employees?: boolean;

@@ -7396,7 +7396,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4494,
+      "tokens": 4570,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -7444,7 +7444,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 3289,
+      "tokens": 3340,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -7757,7 +7757,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 2041,
+      "tokens": 2057,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
