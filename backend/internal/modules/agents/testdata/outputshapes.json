@@ -18185,6 +18185,12 @@
               ]
             }
           },
+          "types_timed_out": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "types_with_more": {
             "type": "array",
             "items": {

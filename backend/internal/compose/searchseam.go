@@ -35,7 +35,7 @@ func recordSearchSeam(pool *pgxpool.Pool) agents.RecordSearch {
 		}
 		out := agents.RecordSearchPage{
 			Hits: make([]agents.RecordSearchHit, 0, len(page.Hits)), NextCursor: page.NextCursor,
-			TypesWithMore: page.TypesWithMore,
+			TypesWithMore: page.TypesWithMore, TypesTimedOut: page.TypesTimedOut,
 		}
 		for _, hit := range page.Hits {
 			found := agents.RecordSearchHit{
