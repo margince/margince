@@ -294,3 +294,47 @@ func TestTheDueOrderEndsAChosenDateInTheZoneTheListIsReadIn(t *testing.T) {
 		t.Errorf("combined list order = %v, want the timed task %s first, then %s", got, timed, dated)
 	}
 }
+
+// A date-only task ages out of the Worklist on the day the list counts 30 days
+// back from. At 18:30 UTC on 15 June that is 16 May in Berlin and 17 May in Ho
+// Chi Minh City. A task dated 16 May is still listed for the installation.
+// It is gone from the person's own list.
+func TestTheThirtyDayAgeOutCountsDaysInTheZoneTheListIsReadIn(t *testing.T) {
+	p := newPickedDayEnv(t, "Europe/Berlin")
+	until := time.Date(2026, 6, 20, 0, 0, 0, 0, time.UTC)
+	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
+	onThe16th := p.dated(t, "Dated 16 May", "2026-05-16", "Europe/Berlin")
+	onThe17th := p.dated(t, "Dated 17 May", "2026-05-17", "Europe/Berlin")
+
+	own := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf, DayZone: "Asia/Ho_Chi_Minh"}
+	wantWindow(t, "own list", p.window(t, own), []ids.UUID{onThe17th}, onThe16th)
+	combined := ListActivitiesInput{OpenAndDueBy: &until, WorklistAsOf: &asOf}
+	wantWindow(t, "combined list", p.window(t, combined), []ids.UUID{onThe16th, onThe17th})
+}
+
+// The open-promise sweep behind review_commitments judges a chosen date in the
+// zone of the screen asking. A task dated the 15th is late for Ho Chi Minh City
+// at 18:30 UTC and still due today for Berlin.
+func TestTheOpenPromiseSweepJudgesLatenessInTheZoneTheCallerReadsIn(t *testing.T) {
+	p := newPickedDayEnv(t, "Europe/Berlin")
+	asOf := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
+	task := p.dated(t, "Dated the 15th", "2026-06-15", "Europe/Berlin")
+	for zone, want := range map[string]bool{"Asia/Ho_Chi_Minh": true, "": false} {
+		tasks, _, err := p.store.ListOpenTasks(p.ctx, ListOpenTasksInput{AsOf: asOf, DayZone: zone})
+		if err != nil {
+			t.Fatal(err)
+		}
+		found := false
+		for _, got := range tasks {
+			if got.ID == task {
+				found = true
+				if got.Overdue != want {
+					t.Errorf("zone %q: overdue = %t, want %t", zone, got.Overdue, want)
+				}
+			}
+		}
+		if !found {
+			t.Errorf("zone %q: the open task is missing from the sweep", zone)
+		}
+	}
+}

@@ -3,8 +3,15 @@
 
 package occurredday
 
+import "time"
+
 // The one rule for "which day is it for this reader", in SQL. Its Go twin is
 // compose/dayrule, and a shared table in that package holds the two equal.
+
+// EditionGap is the shortest time between two editions of a person's brief or
+// digest. A zone change gives the same real day a different date. No new edition
+// is filed while the last one is younger than this.
+const EditionGap = 20 * time.Hour
 
 // Surface says whose clock a screen reads the day on.
 type Surface int
@@ -21,12 +28,14 @@ const (
 )
 
 // ZoneSQL is the zone name a surface reads the day in. user is a SQL expression
-// for the person's app_user id, and Combined ignores it.
+// for the person's app_user id, and Combined ignores it. A stored zone the
+// database does not know falls back to the installation's, as dayrule.Zone does.
 func ZoneSQL(surface Surface, user string) string {
 	if surface != Personal {
 		return InstallationZoneSQL
 	}
-	return `COALESCE(NULLIF((SELECT pz.timezone FROM app_user pz WHERE pz.id = ` + user + `), ''), ` + InstallationZoneSQL + `)`
+	return `COALESCE((SELECT pz.timezone FROM app_user pz WHERE pz.id = ` + user + `
+		AND EXISTS (SELECT 1 FROM pg_timezone_names zn WHERE zn.name = pz.timezone)), ` + InstallationZoneSQL + `)`
 }
 
 // DaySQL is the calendar day at asOf on a surface, a date.

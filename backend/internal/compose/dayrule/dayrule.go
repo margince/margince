@@ -34,7 +34,11 @@ func Zone(ctx context.Context, tx pgx.Tx, surface occurredday.Surface, user ids.
 		hours, _, err := identity.WorkingHoursOf(ctx, tx, ids.From[ids.UserKind](user))
 		switch {
 		case err == nil:
-			return hours.Location()
+			// A stored zone this build cannot load reads the installation's
+			// day. The person's list still opens.
+			if loc, locErr := hours.Location(); locErr == nil {
+				return loc, nil
+			}
 		case !errors.Is(err, apperrors.ErrNotFound):
 			return nil, fmt.Errorf("dayrule: reading the person's zone: %w", err)
 		}
@@ -76,6 +80,21 @@ func SurfaceOf(ctx context.Context, owners *storekit.OwnerSet) occurredday.Surfa
 // ZoneForOwners is the zone the day is read in for a read narrowed by owners.
 func ZoneForOwners(ctx context.Context, pool *pgxpool.Pool, owners *storekit.OwnerSet) (*time.Location, error) {
 	return zoneIn(ctx, pool, SurfaceOf(ctx, owners))
+}
+
+// ForAssignee is the zone for a read of one assignee's records, or of everyone's
+// when assignee is nil. name is the IANA zone to hand a store that judges due
+// dates itself, empty when the screen reads the installation's zone.
+func ForAssignee(ctx context.Context, pool *pgxpool.Pool, assignee *ids.UUID) (zone *time.Location, name string, err error) {
+	var owners *storekit.OwnerSet
+	if assignee != nil {
+		owners = &storekit.OwnerSet{IDs: []ids.UUID{*assignee}}
+	}
+	surface := SurfaceOf(ctx, owners)
+	if zone, err = zoneIn(ctx, pool, surface); err == nil && surface == occurredday.Personal {
+		name = zone.String()
+	}
+	return zone, name, err
 }
 
 func zoneIn(ctx context.Context, pool *pgxpool.Pool, surface occurredday.Surface) (*time.Location, error) {

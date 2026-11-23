@@ -26,6 +26,7 @@ func TestThePersonalSurfaceFollowsThePersonAndTheCombinedOneTheInstallation(t *t
 	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb WHERE key = 'installation.timezone'`)
 	e.WsExec(t, `UPDATE app_user SET timezone = 'Asia/Ho_Chi_Minh' WHERE id = $1`, e.Rep1)
 	e.WsExec(t, `UPDATE app_user SET timezone = NULL WHERE id = $1`, e.Rep2)
+	e.WsExec(t, `UPDATE app_user SET timezone = 'Not/AZone' WHERE id = $1`, e.Rep3)
 	at := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
 
 	for _, c := range []struct {
@@ -37,6 +38,7 @@ func TestThePersonalSurfaceFollowsThePersonAndTheCombinedOneTheInstallation(t *t
 		{"own list of a person with a zone", occurredday.Personal, e.Rep1, "2026-06-16"},
 		{"own list of a person without a zone", occurredday.Personal, e.Rep2, "2026-06-15"},
 		{"combined screen, same person", occurredday.Combined, e.Rep1, "2026-06-15"},
+		{"own list with a stored zone nobody can load", occurredday.Personal, e.Rep3, "2026-06-15"},
 		{"own list with no person", occurredday.Personal, ids.Nil, "2026-06-15"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
@@ -74,6 +76,30 @@ func TestTheActingReadersZoneIsTheirOwnWithTheInstallationAsFallback(t *testing.
 		}
 		if loc.String() != want {
 			t.Errorf("zone for %s = %s, want %s", user, loc, want)
+		}
+	}
+}
+
+func TestForAssigneeFollowsWhoseRecordsTheReadIsAbout(t *testing.T) {
+	e := integration.Setup(t)
+	e.WsExec(t, `UPDATE setting SET value = '"Europe/Berlin"'::jsonb WHERE key = 'installation.timezone'`)
+	e.WsExec(t, `UPDATE app_user SET timezone = 'Asia/Ho_Chi_Minh' WHERE id = $1`, e.Rep1)
+	reader := e.As(e.Rep1, nil, integration.RepPerms)
+	for name, c := range map[string]struct {
+		assignee *ids.UUID
+		zone     string
+		name     string
+	}{
+		"the reader's own records": {&e.Rep1, "Asia/Ho_Chi_Minh", "Asia/Ho_Chi_Minh"},
+		"a colleague's records":    {&e.Rep2, "Europe/Berlin", ""},
+		"everyone's records":       {nil, "Europe/Berlin", ""},
+	} {
+		zone, dayZone, err := dayrule.ForAssignee(reader, e.Pool, c.assignee)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if zone.String() != c.zone || dayZone != c.name {
+			t.Errorf("%s: zone %s and store zone %q, want %s and %q", name, zone, dayZone, c.zone, c.name)
 		}
 	}
 }

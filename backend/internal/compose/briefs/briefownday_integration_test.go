@@ -44,3 +44,45 @@ func TestABriefIsFiledUnderThePersonsOwnDay(t *testing.T) {
 		t.Errorf("a person with no zone reads the installation's day, got %s", sql)
 	}
 }
+
+func (b *briefEnv) runsFiled(t *testing.T) int {
+	t.Helper()
+	return b.WsCount(t, `SELECT count(*) FROM brief_run WHERE user_id = $1`, b.Rep1)
+}
+
+// A zone change moves the date label without moving the real day. West to east
+// would file tomorrow's run early, east to west a second run for today. Either
+// way one edition covers the real day, and a later day still gets its own.
+func TestAZoneChangeFilesOneBriefPerRealDayInBothDirections(t *testing.T) {
+	for name, c := range map[string]struct{ from, to string }{
+		"moving east": {"America/Los_Angeles", "Asia/Ho_Chi_Minh"},
+		"moving west": {"Asia/Ho_Chi_Minh", "America/Los_Angeles"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			b := setupBrief(t)
+			b.WsExec(t, `UPDATE app_user SET timezone = $2 WHERE id = $1`, b.Rep1, c.from)
+			first := time.Date(2026, 6, 15, 20, 0, 0, 0, time.UTC)
+			run, err := b.engine.SnapshotRun(b.repCtx, first)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			b.WsExec(t, `UPDATE app_user SET timezone = $2 WHERE id = $1`, b.Rep1, c.to)
+			again, err := b.engine.SnapshotRun(b.repCtx, first.Add(time.Hour))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if again.ID != run.ID || b.runsFiled(t) != 1 {
+				t.Fatalf("a zone change an hour later filed another run: %d runs, want the one edition", b.runsFiled(t))
+			}
+
+			next, err := b.engine.SnapshotRun(b.repCtx, first.Add(48*time.Hour))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if next.ID == run.ID || b.runsFiled(t) != 2 {
+				t.Fatalf("two days later no new run was filed: %d runs, want one per real day", b.runsFiled(t))
+			}
+		})
+	}
+}

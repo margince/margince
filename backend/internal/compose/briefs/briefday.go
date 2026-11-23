@@ -13,6 +13,7 @@ package briefs
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -43,11 +44,27 @@ func OvernightFrom(ctx context.Context, pool *pgxpool.Pool, user ids.UUID, now t
 	return from, err
 }
 
-// localDay is LocalDayAt for the callers in this package, which need only the
-// date.
+// localDay is the date a person's run is filed under now. It is LocalDayAt,
+// except that a run younger than occurredday.EditionGap is still the current
+// edition. A zone change moves the date label but not the real day. The label
+// alone would file a second run, or tomorrow's run early.
 func localDay(ctx context.Context, tx pgx.Tx, user ids.UUID, now time.Time) (time.Time, error) {
 	day, _, err := LocalDayAt(ctx, tx, user, now)
-	return day, err
+	if err != nil {
+		return time.Time{}, err
+	}
+	var current time.Time
+	err = tx.QueryRow(ctx, `
+		SELECT local_day FROM brief_run
+		 WHERE user_id = $1 AND generated_at > $2 AND generated_at <= $3
+		 ORDER BY generated_at DESC LIMIT 1`, user, now.Add(-occurredday.EditionGap), now).Scan(&current)
+	switch {
+	case err == nil:
+		return current, nil
+	case errors.Is(err, pgx.ErrNoRows):
+		return day, nil
+	}
+	return time.Time{}, err
 }
 
 // insertRunIfDayFree writes the run unless this rep already has one for the

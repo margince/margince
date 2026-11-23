@@ -251,8 +251,9 @@ func repsWithoutARunFor(ctx context.Context, tx pgx.Tx, now time.Time) ([]ids.UU
 		WHERE `+morningSeatSQL+`
 		  AND NOT EXISTS (
 			SELECT 1 FROM brief_run br
-			WHERE br.user_id = u.id AND br.local_day = `+occurredday.DaySQL(occurredday.Personal, "$1", "u.id")+`)
-		ORDER BY u.id`, now)
+			WHERE br.user_id = u.id AND (br.generated_at > $2
+			   OR br.local_day = `+occurredday.DaySQL(occurredday.Personal, "$1", "u.id")+`))
+		ORDER BY u.id`, now, now.Add(-occurredday.EditionGap))
 	if err != nil {
 		return nil, fmt.Errorf("listing the reps due a brief: %w", err)
 	}
