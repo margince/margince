@@ -112,7 +112,7 @@ func (r DealRepair) StakeholderBackfillCandidatesTx(
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	query := stakeholderMailSQL(``) + ` AND ` + windowSQL("a", "$1", "$2") + `
+	query := stakeholderMailSQL(``) + ` AND ` + windowSQL("$1", "$2") + `
  AND a.id > $3 AND a.id <= $4 ORDER BY a.id LIMIT $5`
 	return collectIDs(ctx, tx, query, asOf, windowDays, after, ceiling, limit)
 }
@@ -126,18 +126,18 @@ func (r DealRepair) SilentCloseCandidatesTx(
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	query := stakeholderMailSQL(` AND seat.deal_id = $1`) + ` AND ` + windowSQL("a", "$2", "$3") + `
+	query := stakeholderMailSQL(` AND seat.deal_id = $1`) + ` AND ` + windowSQL("$2", "$3") + `
  AND a.id > $4 ORDER BY a.id LIMIT $5`
 	return collectIDs(ctx, tx, query, deal, closedAt, windowDays, after, limit)
 }
 
-// windowSQL holds the activity under alias to the days before the moment at
+// windowSQL holds the activity under alias a to the days before the moment at
 // and not after it. A day entry counts from the start of its date, as every
 // other reader of occurred_at asks. at and days are placeholders.
-func windowSQL(alias, at, days string) string {
+func windowSQL(at, days string) string {
 	moment := at + "::timestamptz"
-	return occurredday.BegunSQL(alias, moment) + " AND " +
-		occurredday.FromSQL(alias, moment+" - make_interval(days => "+days+")")
+	return occurredday.BegunSQL("a", moment) + " AND " +
+		occurredday.FromSQL("a", moment+" - make_interval(days => "+days+")")
 }
 
 func collectIDs(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]ids.UUID, error) {
@@ -158,7 +158,7 @@ func (r DealRepair) BackfillStakeholderMail(
 	}
 	plan := refilePlan{
 		eligible: func(arg func(any) int) string {
-			return windowSQL("a", fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(windowDays)))
+			return windowSQL(fmt.Sprintf("$%d", arg(asOf)), fmt.Sprintf("$%d", arg(windowDays)))
 		},
 		candidates: r.Candidates, ask: r.Ask,
 	}
@@ -177,7 +177,7 @@ func (r DealRepair) FileOnSilentClose(
 	}
 	plan := refilePlan{
 		eligible: func(arg func(any) int) string {
-			return windowSQL("a", fmt.Sprintf("$%d", arg(closedAt)), fmt.Sprintf("$%d", arg(windowDays)))
+			return windowSQL(fmt.Sprintf("$%d", arg(closedAt)), fmt.Sprintf("$%d", arg(windowDays)))
 		},
 		candidates: r.AdmitClosed(deal), admit: deal,
 	}

@@ -22,6 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// auditAppliedChange keys the audit image of a change Margince applied.
+const auditAppliedChange = "applied_change"
+
 // SilentClose is one close for silence that Margince made and its owner has
 // neither undone nor accepted, and that is still the deal's newest move.
 type SilentClose struct {
@@ -111,7 +114,7 @@ func reofferCloseTx(ctx context.Context, tx pgx.Tx, closed SilentClose, record f
 		return false, nil
 	}
 	change := func(offered bool) map[string]any {
-		return map[string]any{"applied_change": map[string]any{"id": closed.CorrectionID.String(), "offered_again": offered}}
+		return map[string]any{auditAppliedChange: map[string]any{"id": closed.CorrectionID.String(), "offered_again": offered}}
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "deal", closed.Deal.UUID, change(false), change(true))
 	if err != nil {
