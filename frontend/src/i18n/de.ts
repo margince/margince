@@ -11832,6 +11832,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die erfasste Quelle der Daten dieses Kontakts hat noch niemand bestätigt.",
   "notice.source.onRecord": "Erfasst",
   "notice.source.needsConfirmation": "Quelle muss bestätigt werden",
+  "notice.source.confirmedSource": "{source} am {date}",
+  "notice.source.confirmedBy": "Bestätigt von {actor} am {date}",
+  "notice.source.confirmedByYou": "Von dir am {date} bestätigt",
+  "notice.source.confirmedAt": "Bestätigt am {date}",
+  "notice.source.saved": "Quelle bestätigt",
   "notice.source.contactExplanation":
     "Wer für den Datenschutz zuständig ist, bestätigt, woher die Daten stammen.",
   "notice.rule.art13": "Information nach Art. 13",

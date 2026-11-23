@@ -11510,6 +11510,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa ai xác nhận nguồn đã ghi nhận của thông tin liên hệ này.",
   "notice.source.onRecord": "Đã ghi nhận",
   "notice.source.needsConfirmation": "Cần xác nhận nguồn",
+  "notice.source.confirmedSource": "{source} ngày {date}",
+  "notice.source.confirmedBy": "{actor} đã xác nhận ngày {date}",
+  "notice.source.confirmedByYou": "Bạn đã xác nhận ngày {date}",
+  "notice.source.confirmedAt": "Đã xác nhận ngày {date}",
+  "notice.source.saved": "Đã xác nhận nguồn",
   "notice.source.contactExplanation":
     "Bộ phận phụ trách quyền riêng tư sẽ xác nhận thông tin của họ đến từ đâu.",
   "notice.rule.art13": "Thông báo theo Điều 13",

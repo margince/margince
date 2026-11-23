@@ -106,6 +106,7 @@ export function ContactRail({
     useCanWriteRecord("contact", view.contact) && !view.contact.archived_at;
   const listsOn = useListsAvailable();
   const reviews = view.privacy_source_reviews ?? [];
+  const confirmedSource = view.privacy_confirmed_source;
   const sections: DetailSection[] = [
     ...about.sections,
     {
@@ -114,12 +115,17 @@ export function ContactRail({
       edit: mayManageConsent ? { onEdit: manageConsent.open } : undefined,
       rows: consentRows,
     },
-    ...(reviews.length > 0
+    ...(reviews.length > 0 || confirmedSource
       ? [
           {
             key: "source",
             label: t("history.field.source"),
-            children: <ContactSourceReview reviews={reviews} />,
+            children: (
+              <ContactSourceReview
+                reviews={reviews}
+                confirmed={confirmedSource}
+              />
+            ),
           },
         ]
       : []),

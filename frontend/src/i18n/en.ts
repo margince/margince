@@ -11795,6 +11795,11 @@ export const en = {
     "Nobody has confirmed the recorded source of this contact’s details yet.",
   "notice.source.onRecord": "On record",
   "notice.source.needsConfirmation": "Source needs confirmation",
+  "notice.source.confirmedSource": "{source} on {date}",
+  "notice.source.confirmedBy": "Confirmed by {actor} on {date}",
+  "notice.source.confirmedByYou": "Confirmed by you on {date}",
+  "notice.source.confirmedAt": "Confirmed on {date}",
+  "notice.source.saved": "Source confirmed",
   "notice.source.contactExplanation":
     "A privacy officer confirms where their details came from.",
   "notice.rule.art13": "Art. 13 notice",

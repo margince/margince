@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { expect, screen, userEvent } from "storybook/test";
+import { act, useState } from "react";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { DateFormatsProvider } from "../../app/dateformats";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
@@ -135,12 +135,17 @@ export const ThresholdRefused: Story = {
 export const EscapeAsksBeforeDiscarding: Story = {
   render: () => <ProfileForm />,
   play: async () => {
-    const zone = await screen.findByLabelText("Company time zone");
-    await userEvent.clear(zone);
-    await userEvent.type(zone, "Europe/Vienna");
-    await userEvent.keyboard("{Escape}");
-    await expect(
-      await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
-    ).toBeTruthy();
+    const user = userEvent.setup();
+    const drawer = within(await screen.findByRole("dialog"));
+    const zone = drawer.getByRole("textbox", { name: "Company time zone" });
+    await user.clear(zone);
+    await user.type(zone, "Europe/Vienna");
+    // Awaited: Escape reaches the drawer through a window listener, and the
+    // question it opens may suspend on the catalog inside the press's act.
+    await act(() => user.keyboard("{Escape}"));
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await waitFor(() => expect(question).toBeVisible());
   },
 };

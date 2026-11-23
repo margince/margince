@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { act, useState } from "react";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { StoryProviders } from "../../testing/story-utils";
 import {
@@ -88,12 +88,19 @@ export const EditDrawer: Story = { render: () => <EditProfile /> };
 export const EscapeAsksBeforeDiscarding: Story = {
   render: () => <EditProfile />,
   play: async () => {
-    const name = await screen.findByRole("textbox", { name: "Company name" });
-    await userEvent.type(name, " Group");
-    await userEvent.keyboard("{Escape}");
-    await expect(
-      await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
-    ).toBeTruthy();
+    const user = userEvent.setup();
+    const drawer = within(await screen.findByRole("dialog"));
+    await user.type(
+      drawer.getByRole("textbox", { name: "Company name" }),
+      " Group",
+    );
+    // Awaited: Escape reaches the drawer through a window listener, and the
+    // question it opens may suspend on the catalog inside the press's act.
+    await act(() => user.keyboard("{Escape}"));
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await waitFor(() => expect(question).toBeVisible());
   },
 };
 
