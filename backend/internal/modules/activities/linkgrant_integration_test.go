@@ -49,7 +49,7 @@ func (e *promiseEnv) seedDealTask(t *testing.T) (taskID, contactID, dealID ids.U
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, $2, 'open', $3, $4, $5, 'seed', 'system')`, dealID, grantedDealName, e.other, pipeline, stage)
+		VALUES ($1, $2, 'open', $3, $4, $5, 'manual', 'system')`, dealID, grantedDealName, e.other, pipeline, stage)
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, $2, $3, 'seed', 'system')`, contactID, visibleContactNam, e.rep)
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, assignee_id, is_done, source, captured_by)

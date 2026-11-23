@@ -1,0 +1,107 @@
+{
+  "scenario": "case5_before_the_meeting",
+  "criteria": [
+    1,
+    2,
+    3,
+    5
+  ],
+  "passed": 2,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "d27e96ea330020e6",
+    "tools": "23049cd9100732dc",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "ran_at": "2026-11-22T03:26:27Z",
+    "graded_commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "graded_at": "2026-11-22T03:26:27Z"
+  },
+  "usage": {
+    "input_tokens": 126202,
+    "output_tokens": 8118,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 769280,
+    "runs_measured": 3,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_worklist",
+        "list_records",
+        "prep_for_meeting",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "search_context",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "list_records",
+        "prep_for_meeting",
+        "read_context",
+        "read_record",
+        "search_context",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "list_records",
+        "prep_for_meeting",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "review_commitments",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 20,
+      "min": 16,
+      "max": 24
+    },
+    "refused": {
+      "median": 6,
+      "min": 4,
+      "max": 10
+    },
+    "prompt_tokens": {
+      "median": 272606,
+      "min": 258078,
+      "max": 364798
+    },
+    "output_tokens": {
+      "median": 2909,
+      "min": 2189,
+      "max": 3020
+    }
+  }
+}

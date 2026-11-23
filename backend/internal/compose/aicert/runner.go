@@ -406,9 +406,12 @@ type taskAccumulation struct {
 	// graded by the candidate itself" said of a set no judge ever saw.
 	anyRunGraded bool
 	identitySet  bool
-	// contextServed counts the runs served the company context, so the record
-	// claims it only when every run was.
-	contextServed int
+	// contextOwed counts the runs production prepends company context to, and
+	// contextServed those served it. The record claims the context only when
+	// every run owed it was served it.
+	contextOwed, contextServed int
+	// owedBy counts contextOwed per scenario, for each row's own count.
+	owedBy map[string]int
 	// certifiedScope is the narrowest scope any run's site covered. A task is
 	// one record but not always one site — cold_start ships a one-shot
 	// extraction beside three multi-turn conversations — so the record may
@@ -445,8 +448,15 @@ func (acc *taskAccumulation) addRun(task ai.Task, sc Scenario, runIndex int, out
 	}
 	acc.identitySet = acc.identitySet || served
 	acc.certifiedScope = aitasks.NarrowerScope(acc.certifiedScope, outcome.CertifiedScope)
-	if outcome.ContextApplied {
-		acc.contextServed++
+	if outcome.ContextOwed {
+		acc.contextOwed++
+		if acc.owedBy == nil {
+			acc.owedBy = map[string]int{}
+		}
+		acc.owedBy[sc.Name]++
+		if outcome.ContextApplied {
+			acc.contextServed++
+		}
 	}
 	// A run no judge saw says nothing about the judge. Capturing its empty
 	// identity would let one truncated run at the END of a set erase the grader

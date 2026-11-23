@@ -207,3 +207,63 @@ func TestARelinkWaitsForTheJudgeBeforeItLocksTheMeeting(t *testing.T) {
 		t.Fatalf("relinking the meeting: %v", err)
 	}
 }
+
+// A writer naming two meetings takes the lower key first. With a holder on
+// the higher key, the writer must already hold the lower one while it waits.
+func TestAWriterTakesTheMeetingLocksInKeyOrder(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := context.Background()
+	first, second := ids.NewV7(), ids.NewV7()
+	var lowKey, highKey int64
+	var highID ids.UUID
+	if err := e.Pool.QueryRow(ctx, `
+		SELECT min(k), max(k), (array_agg(id ORDER BY k DESC))[1] FROM (
+		  SELECT id, hashtextextended('margince:meeting-attendees:' || id::text, 0) AS k
+		  FROM unnest($1::uuid[]) id) keys`, []ids.UUID{first, second}).Scan(&lowKey, &highKey, &highID); err != nil {
+		t.Fatal(err)
+	}
+	holder := beginTx(t, e)
+	var holderPID int32
+	if err := holder.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holderPID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := holder.Exec(ctx, `SELECT pg_advisory_xact_lock($1)`, highKey); err != nil {
+		t.Fatal(err)
+	}
+	writer := beginTx(t, e)
+	locked, returned := make(chan error, 1), make(chan struct{})
+	go func() {
+		defer close(returned)
+		// The higher id is named first, so only the helper's sort puts the lower key first.
+		locked <- storekit.LockMeetingAttendeeWrites(ctx, writer, highID, first, second)
+	}()
+	testdb.AwaitQueuedBehind(t, integration.OwnerConn(t), holderPID, 1, returned, "the attendee writer")
+	var free bool
+	if err := holder.QueryRow(ctx, `SELECT pg_try_advisory_xact_lock($1)`, lowKey).Scan(&free); err != nil {
+		t.Fatal(err)
+	}
+	if free {
+		t.Error("the writer waits on the higher key without holding the lower one: it locks out of key order")
+	}
+	if err := holder.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-locked; err != nil {
+		t.Fatalf("taking the meeting locks: %v", err)
+	}
+}
+
+// beginTx opens a transaction on the test pool that the test's end rolls back.
+func beginTx(t *testing.T, e *integration.Env) pgx.Tx {
+	t.Helper()
+	tx, err := e.Pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
+	return tx
+}

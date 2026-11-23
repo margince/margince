@@ -25,11 +25,11 @@ func TestACallRecordsTheExtensionItWasMadeFor(t *testing.T) {
 	calls := []Call{
 		{
 			LogicalCallID: extensionCall, Attempt: 1, IsTerminal: true, Kind: callKindCompletion,
-			Task: TaskExtensionTask, Tier: TierCheapCloud, RequestFingerprint: "fp-extension", Extension: "books/summarise",
+			Task: TaskExtensionTask, Tier: TierCheapCloud, Extension: "books/summarise",
 		},
 		{
 			LogicalCallID: coreCall, Attempt: 1, IsTerminal: true, Kind: callKindCompletion,
-			Task: TaskSummarize, Tier: TierCheapCloud, RequestFingerprint: "fp-core",
+			Task: TaskSummarize, Tier: TierCheapCloud,
 		},
 	}
 	for _, c := range calls {

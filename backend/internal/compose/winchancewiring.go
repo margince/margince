@@ -22,13 +22,16 @@ import (
 var chances = winchance.New(winchance.Deps{
 	RiskSubjects: func(ctx context.Context, tx pgx.Tx, at time.Time, only []ids.UUID) ([]assurance.Subject, assurance.Config, error) {
 		subjects, err := assuranceEvidenceSubjects(ctx, tx, at, AssuranceCoverage(ctx, tx, at), only)
-		return subjects, AssuranceConfig(), err
+		return subjects, assurance.DefaultConfig(), err
 	},
 	PeriodAt: func(ctx context.Context, tx pgx.Tx, kind forecasting.PeriodKind, at time.Time) (forecasting.Period, error) {
 		period, _, err := ForecastPeriodAt(ctx, tx, kind, at)
 		return period, err
 	},
 	NoLoneColleague: requireNoLoneColleague,
+	MayAssertAbout: func(ctx context.Context, tx pgx.Tx, scope forecasting.Scope) (bool, error) {
+		return forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
+	},
 })
 
 // WinChanceEngine is the win chance reader the composition wires everywhere.

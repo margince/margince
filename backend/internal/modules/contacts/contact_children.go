@@ -273,6 +273,8 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	// the record it was read from. The query cannot tell those apart, and a
 	// reader is owed the same answer either way.
 	var createdFrom *ids.UUID
+	var warnedAt *time.Time
+	var warnedFor *string
 
 	dests := []any{
 		&id, &p.FullName, &p.FirstName, &p.LastName, &p.Title, &ownerID, &visibility,
@@ -281,7 +283,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
-		&mark, &greetingRegister, &createdFrom,
+		&mark, &greetingRegister, &warnedAt, &warnedFor, &createdFrom,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -312,6 +314,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		g := crmcontracts.ContactGreetingRegister(*greetingRegister)
 		p.GreetingRegister = &g
 	}
+	p.ImpersonationWarning = impersonationWarningOf(warnedAt, warnedFor)
 	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	p.ImportedFrom = provenance.ImportedFrom(sourceSystem)
 	return p, nil

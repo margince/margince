@@ -260,7 +260,7 @@ func (h Handlers) consumeAuthCode(r *http.Request, tx pgx.Tx, clientID, code, ve
 		JOIN oauth_client c ON c.client_id = a.client_id
 		WHERE a.code_hash = $1 AND a.consumed_at IS NULL AND a.expires_at > now()
 		  AND `+liveClientPredicate,
-		hashOAuthCode(code)).
+		hashToken(code)).
 		Scan(&out.UserID, &out.Scopes, &challenge, &out.ClientID, &redirectURI,
 			&out.Resource, &out.Areas)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -282,7 +282,7 @@ func (h Handlers) consumeAuthCode(r *http.Request, tx pgx.Tx, clientID, code, ve
 	}
 	tag, err := tx.Exec(r.Context(), `
 		UPDATE oauth_authorization_code SET consumed_at = now()
-		WHERE code_hash = $1 AND consumed_at IS NULL`, hashOAuthCode(code))
+		WHERE code_hash = $1 AND consumed_at IS NULL`, hashToken(code))
 	if err != nil {
 		return redeemedCode{}, err
 	}

@@ -89,6 +89,20 @@ describe("a different seat signing in", () => {
     expect(client.getQueryData(["me", "sessions"])).toBeUndefined();
   });
 
+  // A second clear, from a reader that commits late, would drop the next
+  // seat's reads in flight, and each would be asked twice.
+  it("clears the cache once however many readers watch the session", () => {
+    const client = new QueryClient();
+    const views = [
+      signedIn(client, seat("seat-a")),
+      signedIn(client, seat("seat-a")),
+    ];
+    const clears = vi.spyOn(client, "removeQueries");
+    act(() => client.setQueryData(["me"], seat("seat-b")));
+    for (const view of views) view.rerender();
+    expect(clears).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps record caches when the same seat's grants change", () => {
     const client = new QueryClient();
     const view = signedIn(client, seat("seat-a"));

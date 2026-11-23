@@ -18,6 +18,7 @@ function unit(name: string, object: string): ExtensionDescriptor {
   return {
     name,
     title: "",
+    summary: "",
     verbs: [],
     entries: [],
     panels: [{ slot: "record_panel.deal", export: "DealPanel", object }],

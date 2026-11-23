@@ -233,7 +233,8 @@ func TestAMultiselectCustomFieldSplitsDealsByCombinationWithoutDoubleCounting(t 
 		{"amer"},
 	} {
 		if _, err := store.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: fmt.Sprintf("Regional deal %d", i), PipelineID: pipeline, StageID: open,
+			Source: "manual",
+			Name:   fmt.Sprintf("Regional deal %d", i), PipelineID: pipeline, StageID: open,
 			CustomFields: map[string]any{column: regions},
 		}); err != nil {
 			t.Fatalf("seed deal %d: %v", i, err)

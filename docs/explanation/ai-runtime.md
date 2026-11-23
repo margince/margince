@@ -150,8 +150,8 @@ embeddings:    {provider: gemini}
 - `/readyz` names the AI state (`configured` | `fake` | `unconfigured`). So an operator reads the gap
   off the boot log, not off a refused call at `3am`.
 - **The models that can serve a task** are the ladder plus its closure under `degrade_to`, and readers
-  tend to forget the second half. `ai.LeadingTier` is the rung that answers when nothing has gone wrong (the
-  first rung of the ladder). `ai.ServableTiers` is every rung that can end up answering: the ladder,
+  tend to forget the second half. The first rung of `RoutingConfig.Ladder(task)` is the rung that answers when
+  nothing has gone wrong, in the order `task_ladders` gives. `ai.ServableTiers` is every rung that can end up answering: the ladder,
   then every tier that `degrade_to` reaches from it, step after step.
 - An example: `draft_reply` has the ladder `[cheap_cloud, premium]`, and `cheap_cloud` moves down to
   `local_small`. So the model bound at `local_small` serves `draft_reply` when the budget runs low, while
@@ -353,9 +353,9 @@ Every call ends at the Router (`internal/modules/ai`). In one pass it:
 
 **Company context** is the installation's own profile (offer, ICP, voice: what the onboarding steps
 confirm). It goes into task prompts as data under rules, not as free text. A request holds typed
-`ContextScopes`, a `ContextFingerprint`, and byte and token estimates (`ports/model`). All of them go into
-the `ai_call` trace and key the answer cache (the same prompt with different context is a different call).
-They also show up as `/metrics` counters per task.
+`ContextScopes`, a `ContextFingerprint`, and byte and token estimates (`ports/model`). The scopes and the
+fingerprint go into the `ai_call` trace and key the answer cache (the same prompt with different
+context is a different call). The estimates show up as `/metrics` counters per task.
 
 The whole lane sits behind the `company_context.rollout` switch in `margince.yaml`, which can turn it
 off. Its steps are ordered `off < read < tasks < onboarding` (default `onboarding` = all the way on;
@@ -393,8 +393,8 @@ Every attempt writes one `ai_call` row (migration `0100`), not one row per final
   *claim* a source of higher trust than its adapter has proved.
 - **The config snapshot** for each call is keyed by hash in `ai_call_config` (task contract hash + routing config hash).
   It holds the fixed facts of the build and the deployment, never a key or a prompt.
-- **Company context provenance** goes on the same row (migration `0102`): the context scopes,
-  fingerprint and size that shaped the prompt. So "what did the model know about us" can be answered per
+- **Company context provenance** goes on the same row (migration `0102`): the context scopes and
+  fingerprint that shaped the prompt. So "what did the model know about us" can be answered per
   attempt.
 - Embedding calls are traced too. A new one keeps no payload, as the `embed` row of
   [ai-egress.md](../reference/ai-egress.md) says. The privacy retention check removes their rows after

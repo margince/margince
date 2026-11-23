@@ -613,11 +613,11 @@ func TestAResetKeepsAConnectedAITool(t *testing.T) {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO oauth_refresh_token (grant_id, token_hash, expires_at)
-			VALUES ($1, 'reset-refresh', now() + interval '1 day')`, grantID); err != nil {
+			VALUES ($1, encode(sha256('reset-refresh'), 'hex'), now() + interval '1 day')`, grantID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO passport (token_hash, granted_by, on_behalf_of, scopes, expires_at, oauth_grant_id)
-			VALUES ('reset-passport', $1, $1, ARRAY['read'], now() + interval '1 hour', $2)`, e.AdminUser, grantID); err != nil {
+			VALUES (encode(sha256('reset-passport'), 'hex'), $1, $1, ARRAY['read'], now() + interval '1 hour', $2)`, e.AdminUser, grantID); err != nil {
 			return err
 		}
 		tables, err := resetTargetTables(ctx, tx)
@@ -632,7 +632,7 @@ func TestAResetKeepsAConnectedAITool(t *testing.T) {
 	for table, query := range map[string]string{
 		"oauth_client":        `SELECT count(*) FROM oauth_client WHERE client_id = 'reset-kept'`,
 		"oauth_grant":         `SELECT count(*) FROM oauth_grant WHERE client_id = 'reset-kept'`,
-		"oauth_refresh_token": `SELECT count(*) FROM oauth_refresh_token WHERE token_hash = 'reset-refresh'`,
+		"oauth_refresh_token": `SELECT count(*) FROM oauth_refresh_token WHERE token_hash = encode(sha256('reset-refresh'), 'hex')`,
 	} {
 		if got := e.WsCount(t, query); got != 1 {
 			t.Errorf("%s rows after a reset = %d, want the connection kept", table, got)

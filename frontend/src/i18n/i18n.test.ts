@@ -28,6 +28,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "docs.kind.drive",
   "docs.kind.web",
   "docs.add.urlPlaceholder",
+  // A model setup named only by its vendor's product name.
+  "firstRun.ai.setupTitle.gemini_cloud",
   // ui-copy-style-vi.md retires the Vietnamese phrase for a best case.
   "progress.scenario.best",
   // Product and protocol names, an example address and an example header name.
@@ -58,6 +60,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contact.chapter.wayInAnswer",
   "contact.chapter.withDetail",
   "merge.recordDetail",
+  "explain.col.inCurrency",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",
@@ -69,9 +72,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
-  // Audit filter examples in the stored spelling the filter matches.
-  "settings.auditActorExample",
-  "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
   // The product's own name, as the agent that made a change.

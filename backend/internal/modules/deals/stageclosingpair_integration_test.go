@@ -142,7 +142,8 @@ func TestADealTakesNoStageInARetiredPipeline(t *testing.T) {
 	}
 	owner := ids.From[ids.UserKind](e.admin)
 	if _, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Late", PipelineID: pipelineID, StageID: to, OwnerID: &owner, OwnerExact: true,
+		Source: "manual",
+		Name:   "Late", PipelineID: pipelineID, StageID: to, OwnerID: &owner, OwnerExact: true,
 	}); !errors.As(err, &retired) {
 		t.Errorf("a deal was born in a retired pipeline: %v", err)
 	}

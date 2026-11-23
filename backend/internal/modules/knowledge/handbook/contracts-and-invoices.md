@@ -195,7 +195,7 @@ past customer the card is titled "Finance · historical".
 ### The overdue warning
 
 When a company has overdue invoices, a warning stands at the top of its page,
-over every tab. It reads, for example, "€12,400.00 overdue on 3 invoices" and
+over every tab. It reads, for example, "€12,400 overdue on 3 invoices" and
 "The oldest is 41 days past due."
 
 If your accounting system tells Margince how many payment reminders it has
@@ -206,7 +206,7 @@ A disputed invoice still counts as **Open** on the **Finance** tab. It is left
 out of the warning and of every overdue figure, its reminders too.
 
 If the last sync is old or failed, the warning still shows the last figures.
-It then reads "€12,400.00 was overdue on 3 invoices" and "As of the last
+It then reads "€12,400 was overdue on 3 invoices" and "As of the last
 accounting sync on {date}." An invoice paid since then leaves the warning at
 the next good sync. The payment line under **How it
 stands** follows the same rule.

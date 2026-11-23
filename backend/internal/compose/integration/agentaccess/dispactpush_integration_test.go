@@ -67,7 +67,7 @@ func setupDispactPush(t *testing.T) *connectorEnv {
 		{`INSERT INTO pipeline (id, name) VALUES ($1, 'Chat')`, []any{pipeline}},
 		{`INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, []any{stage, pipeline}},
 		{`INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-			VALUES ($1, 'Acme renewal', 'open', $2, $3, $4, 'seed', 'system')`, []any{deal, admin, pipeline, stage}},
+			VALUES ($1, 'Acme renewal', 'open', $2, $3, $4, 'manual', 'system')`, []any{deal, admin, pipeline, stage}},
 		{`INSERT INTO chat_link (connection_id, provider, channel_slug, channel_name, deal_id, verbosity, linked_by)
 			VALUES ($1, 'dispact', $2, 'Acme', $3, 'important', $4)`, []any{connection, pushSlug, deal, admin}},
 	} {

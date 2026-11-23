@@ -19,6 +19,7 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   CRITERION_KIND_LABEL,
@@ -67,9 +68,7 @@ export function StageExitCriteria({
   // stages: position is what the reader is promised, and a list that depended
   // on the server's order would reorder itself the day a caching layer or a
   // second reader hands them back differently.
-  const criteria = [...(query.data ?? [])].sort(
-    (a, b) => a.position - b.position,
-  );
+  const criteria = inPositionOrder(query.data ?? []);
   const settled = !query.isPending && !query.isError;
   return (
     <div className="stage-criteria">

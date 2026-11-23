@@ -1206,7 +1206,7 @@ export const en = {
   "reporting.questionBoundPeriod":
     "This question has filters. Its periods keep the dates they had when it was placed: a fiscal year starting in {month}, in {zone}.",
   "reporting.fiscalQuarterNote":
-    "This quarter follows the fiscal year that starts in {month}.",
+    "Quarters and years here follow the fiscal year that starts in {month}.",
   "reporting.previewChart": "Preview",
   "reporting.previewLoading": "Loading the preview…",
   "reporting.previewEmpty":
@@ -1516,9 +1516,11 @@ export const en = {
     "It was set in a currency that is no longer the base currency. Set the goal again to compare.",
   "reporting.this_week": "This week",
   "reporting.this_month": "This month",
-  "reporting.last_month": "Last month",
+  "reporting.last_month": "Last completed month",
   "reporting.last_week": "Last completed week",
   "reporting.this_quarter": "This fiscal quarter",
+  "reporting.last_quarter": "Last completed quarter",
+  "reporting.last_year": "Last completed year",
   "reporting.custom": "Custom interval",
   "reporting.bookings_trend": "Sales won over time",
   "reporting.stage_distribution": "Open pipeline by stage",
@@ -2095,7 +2097,7 @@ export const en = {
   "brief.weekly.learnings.caveat":
     "These observations describe associations in recorded work; they do not establish what caused the outcome.",
   "brief.plan.open": "Open weekly plan",
-  "worklist.source.weekly_commitment": "Weekly commitment",
+  "worklist.source.weekly_commitment": "Commitment",
   "worklist.untitled.weekly_commitment": "Weekly commitment",
   "worklist.source.awaiting_reply": "Follow-up",
   "worklist.untitled.awaiting_reply": "Follow-up",
@@ -2305,6 +2307,7 @@ export const en = {
   "systemJob.sign_in_policy_read": "Sign-in policy read",
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
+  "systemJob.stage_evidence_reread": "Deal stage evidence reread",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
@@ -2642,6 +2645,10 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_cleared":
+    "Impersonation warning cleared",
+  "history.field.impersonation_warning_carried":
+    "Impersonation warning kept from merged contact",
   "history.field.reason": "Reason",
   "history.field.recorded_at_level": "Recorded at level",
   "history.field.relationship_types": "Relationship types",
@@ -2682,6 +2689,10 @@ export const en = {
   "history.value.meeting_status.no_show": "No-show",
   "history.value.meeting_status.canceled": "Canceled",
   "history.value.relationship_mark.vendor_marketing": "Vendor marketing",
+  "history.value.impersonation.punycode_domain": "Coded mail domain",
+  "history.value.impersonation.display_name_other_domain":
+    "Other domain in sender name",
+  "history.value.impersonation.unrecorded": "Sign not recorded",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -2714,6 +2725,7 @@ export const en = {
   "shell.searchEverything": "Search or ask Margince",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
+  "shell.backToSetup": "Back to setup",
   "shell.license.none": "No license",
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
@@ -3264,6 +3276,7 @@ export const en = {
   "partner.company": "Company",
   "partner.certStatus": "Certification status",
   "partner.certStatusAll": "All statuses",
+  "partner.listEmptyNote": "Open a company and choose {more} → {setUp}.",
   "partner.marginTier": "Margin tier",
   "partner.marginTierHint":
     "The share the partner earns on each won deal they sourced. Intro: they only introduced the client. Active collaboration: the deal was worked together. Partner closed: they sold it themselves. Leave it unset when their agreement pays differently.",
@@ -3918,6 +3931,7 @@ export const en = {
   "co.overview.for": "for {name}",
   "co.overview.noDate": "No date",
   "co.overview.allDeals": "All deals",
+  "co.overview.allContacts": "All contacts",
   "co.overview.noWork": "No open deal or project",
   "co.overview.project": "Project",
   "co.overview.ends": "ends {date}",
@@ -4941,7 +4955,6 @@ export const en = {
   "co.deals.col.close": "Close",
   "co.deals.col.status": "Status",
   "co.rail.contacts.empty": "No contacts yet.",
-  "co.rail.contacts.add": "Add contact",
 
   "co.commercial.title": "Commercial",
   "linkedinImport.title": "LinkedIn connections",
@@ -5131,6 +5144,28 @@ export const en = {
   "compose.reason.membersOnly": "Held: mail between colleagues",
   "compose.reason.noCounterparty": "Held: no counterparty",
   "compose.audience": "Change visibility",
+  "activity.audience.noteTitle": "Who may read this note?",
+  "activity.audience.noteLegend": "Note visibility",
+  "activity.audience.noteScope":
+    "Applies to this note only, not to the records it is filed on.",
+  "activity.audience.callTitle": "Who may see this call?",
+  "activity.audience.callLegend": "Call visibility",
+  "activity.audience.callScope":
+    "Applies to this call only, not to the records it is filed on.",
+  "activity.audience.meetingTitle": "Who may see this meeting?",
+  "activity.audience.meetingLegend": "Meeting visibility",
+  "activity.audience.meetingScope":
+    "Applies to this meeting only, not to the records it is filed on.",
+  "activity.audience.taskTitle": "Who may see this task?",
+  "activity.audience.taskLegend": "Task visibility",
+  "activity.audience.taskScope":
+    "Applies to this task only, not to the records it is filed on.",
+  "activity.audience.workspaceHint":
+    "Anyone who can open the records this is filed against can read it.",
+  "activity.audience.participantsHint":
+    "Only the people on it can read its details. Others see only that it happened that day.",
+  "activity.audience.selectedHint":
+    "Only the people and teams you name, plus anyone already on it.",
   "compose.audienceTitle": "Who may read this message?",
   "compose.audienceLegend": "Message visibility",
   // The canonical email row and its detail. "Team" never means the whole
@@ -5239,6 +5274,7 @@ export const en = {
   "email.thread.details": "Details",
   "email.thread.textForwarded":
     "The text below is the forwarded mail, not words the sender wrote.",
+  "email.thread.noText": "This message has no text.",
   "email.thread.textPartial":
     "Part of the text of this mail could not be read.",
   "email.thread.textUnassessed": "Email text not verified",
@@ -5840,6 +5876,9 @@ export const en = {
   "lead.source.referral": "Referral",
   "lead.source.import": "Import",
   "lead.source.crawl": "Web research",
+  "lead.source.api": "Integration",
+  "lead.source.automation": "Automation",
+  "lead.source.capture": "Captured from a conversation",
   "lead.source.siteread": "From company website",
   "lead.source.unknown": "Unknown source",
   "leadSources.removeOnlyTitle":
@@ -7285,7 +7324,7 @@ export const en = {
   "plan.contract.edit": "Edit",
   "plan.contract.crowded": "Week already full",
   "plan.contract.crowdedBody":
-    "{committed} items are already booked and {commitments} commitments are planned. Something will not fit.",
+    "Already booked: {committed}. Commitments planned: {commitments}. Something will not fit.",
   "plan.help.ask": "Ask for help",
   "plan.help.edit": "Edit request",
   "plan.help.asked": "Request: {text}",
@@ -8767,6 +8806,22 @@ export const en = {
   "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
+  "tasks.remind.menu": "Remind me",
+  "tasks.remind.inAnHour": "In 1 hour",
+  "tasks.remind.tomorrowMorning": "Tomorrow morning",
+  "tasks.remind.beforeDue": "1 hour before it is due",
+  "tasks.remind.pick": "Pick a time",
+  "tasks.remind.remove": "Remove reminder",
+  "tasks.remind.current": "Reminder set for {when}",
+  "tasks.remind.set": "Reminder set for {when}.",
+  "tasks.remind.removed": "Reminder removed.",
+  "tasks.remind.failed": "The reminder was not saved. Try again.",
+  "tasks.remind.pickTitle": "Remind me at",
+  "tasks.remind.day": "Day",
+  "tasks.remind.time": "Time",
+  "tasks.remind.save": "Set reminder",
+  "tasks.remind.needsTime": "Enter a day and a time.",
+  "tasks.remind.past": "Pick a time that is still ahead.",
   "tasks.log.action": "Log what happened",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
@@ -8789,6 +8844,7 @@ export const en = {
   "tasks.isDone": "Completed",
   "tasks.isOpen": "Open",
   "tasks.logged": "Logged",
+  "tasks.heldBy": "Held by",
   "tasks.origin.no_activity_reminder":
     "Created by the no-activity reminder: nothing was logged on this record for its set number of days. Get in touch, then mark the task done.",
   "tasks.origin.check_in_cadence":
@@ -8918,7 +8974,7 @@ export const en = {
   "analytics.prospect.upcomingTitle": "Meetings coming up",
   "analytics.prospect.cohortTitle": "What happened to your handoffs",
   "analytics.prospect.cohortPeriods":
-    "Shown for a week or a month. Choose one of those periods to see it.",
+    "Not shown for this fiscal quarter or a custom interval. Choose another period to see it.",
   "analytics.prospect.cohortCaption_one":
     "{count} handoff you submitted {period}, as it stands now",
   "analytics.prospect.cohortCaption_other":
@@ -9595,6 +9651,7 @@ export const en = {
   "explain.col.stage": "Stage",
   "explain.col.owner": "Owner",
   "explain.col.pipeline": "Pipeline",
+  "explain.col.inCurrency": "{label} ({currency})",
 
   "settings.profileTitle": "Profile",
   "unsaved.title": "Discard unsaved changes?",
@@ -10516,7 +10573,6 @@ export const en = {
   "settings.tierWait": "Enrichment from the web: waits in Approvals.",
   "settings.tierAdvance":
     "Advance or close a deal, or file activities under a project: runs immediately if the agent has that permission.",
-  "settings.locked": "Locked",
   "settings.purposes": "Consent purposes",
   "settings.purposesSub":
     "What this installation asks consent for, and which purposes need double opt-in.",
@@ -11766,6 +11822,7 @@ export const en = {
   "notifications.action.openDeal": "Open deal",
   "notifications.action.openLead": "Open lead",
   "notifications.action.openProject": "Open project",
+  "notifications.action.openExtensionRecord": "Open record",
   "notifications.action.review": "Review request",
   "notifications.action.systemHealth": "Open System health",
   "notifications.markAllFailed": "Nothing was marked read",
@@ -12647,6 +12704,7 @@ export const en = {
   // headings differ because the two pages mean different things: one is your
   // own account somewhere, the other is the installation's.
   "extUnits.openNamed": "Settings for {name}",
+  "extUnits.openApp": "Open {name}",
   "extUnits.user.title": "Other accounts",
   "extUnits.user.sub":
     "Add-ons this installation offers that sign in as you. Each is private to you, and disconnecting one affects only you.",
@@ -15535,6 +15593,30 @@ export const en = {
     "The sender is mail infrastructure, not a company you work with",
   "captureActivity.reason.transactional_prefix":
     "The sender looks like an automated mailer, not a person",
+  "captureActivity.filing.core": "Filed on its deal by the CRM: {reason}",
+  "captureActivity.filing.core.moved": "The CRM moved its deal link: {reason}",
+  "captureActivity.filing.core.retracted":
+    "The CRM took its deal link back: {reason}",
+  "captureActivity.filing.basis.project": "the mail’s project",
+  "captureActivity.filing.basis.thread": "an earlier mail in the thread",
+  "captureActivity.filing.basis.sole_open_deal": "the company’s only open deal",
+  "captureActivity.filing.basis.stakeholder": "a stakeholder on the deal",
+  "captureActivity.filing.basis.named_stakeholder":
+    "a stakeholder named in the mail",
+  "captureActivity.filing.basis.ambiguous":
+    "several deals fit, a colleague was asked",
+  "captureActivity.filing.ext.linked": "{unit} filed it on a deal: {reason}",
+  "captureActivity.filing.ext.none": "{unit} kept it off every deal: {reason}",
+  "captureActivity.filing.ext.ambiguous":
+    "{unit} narrowed the deals it could belong to: {reason}",
+  "captureActivity.filing.ext.parties_changed":
+    "{unit} changed the contacts and companies it was read for: {reason}",
+  "captureActivity.filing.ext.failed":
+    "{unit} failed, so the mail is left unfiled and tried again later",
+  "captureActivity.filing.ext.ignored": "{unit}’s answer was ignored: {reason}",
+  "captureActivity.filing.ext.moved": "{unit} moved its deal link: {reason}",
+  "captureActivity.filing.ext.retracted":
+    "{unit} took its deal link back: {reason}",
   "captureActivity.outcome.deferred_capped": "Not queued",
   "captureActivity.outcome.deferred_sent": "Sent for a sender check",
   "captureActivity.resolution.pending": "Still waiting",
@@ -16225,6 +16307,9 @@ export const en = {
   "extAccess.brings.objects": "Permission objects",
   "extAccess.brings.routes": "Routes",
   "extAccess.brings.jobs": "Background jobs",
+  "extAccess.brings.needs": "Uses from the core",
+  "extAccess.need.models": "AI models",
+  "extAccess.need.objects": "File storage",
   "extAccess.brings.none": "None",
   "extAccess.noObjects":
     "This unit registers no permission objects, so there is nothing to grant.",
@@ -16277,6 +16362,16 @@ export const en = {
   "users.teamParent": "Part of {name}",
   "users.teamRename": "Rename",
   "users.teamArchive": "Archive",
+  "users.teamRestore": "Restore",
+  "users.teamArchivedBadge": "Archived",
+  "users.showArchivedTeams": "Show archived teams",
+  "users.showArchivedTeamsSub":
+    "An archived team gives its members no access until you restore it.",
+  "users.archiveTeamTitle": "Archive “{name}”?",
+  "users.archiveTeamBody_one":
+    "The team has {count} member. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
+  "users.archiveTeamBody_other":
+    "The team has {count} members. They lose the access the team gives: records shared with it, and a team lead’s team records. You can restore it under “Show archived teams”.",
   "users.teamRenameTitle": "Rename team",
   "users.teamRenameSave": "Save name",
   "users.teamRenamed": "Team renamed to “{name}”",
@@ -16528,9 +16623,14 @@ export const en = {
   "settings.companyManualSub":
     "Website reading is not enabled for this installation. These 3 answers create usable company context without a model call or external request.",
   "settings.companyCreateWorkspace": "Create company context",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Any action",
+  "settings.auditAnyActor": "Anyone",
+  "settings.auditActorDelegated":
+    "Includes what an AI assistant did on their behalf.",
+  "settings.auditAnyEntity": "Any type",
+  "settings.auditEntityIdHint":
+    "Paste the full record ID. Use Copy record ID on a row.",
+  "settings.auditRangeReversed": "Pick a To date on or after the From date.",
   "product.title": "Products",
   "product.settingsSub": "Price list entries that offer lines copy from.",
   "product.readOnly": "Read-only. Your role cannot change products.",
@@ -16917,9 +17017,9 @@ export const en = {
   "installationSettings.fiscalImpactKept_other":
     "{count} reports have a card that filters on a period. They keep their dates.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} report reads this quarter, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
+    "{count} report reads this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. It follows the new start.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} reports read this quarter, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
+    "{count} reports read this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
   "installationSettings.fiscalImpactLoading":
     "Counting the saved work this change concerns…",
   "installationSettings.forwardMeasure": "Projection basis",
@@ -17656,7 +17756,32 @@ export const en = {
   "firstRun.ai.keyHint": "Stored in the key vault and never shown again.",
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
-    "A starting point. Any model the provider serves works.",
+    "Any model the provider serves works. The tests graded the setup above, not one model on every tier.",
+  "firstRun.ai.setupTitle.consumer_class_brokered":
+    "Gemma 4 you could run yourself, through OpenRouter",
+  "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
+  "firstRun.ai.setupTitle.gemini_vertex_eu":
+    "Google Gemini in the EU, through Vertex AI",
+  "firstRun.ai.setupTitle.gemma4_local_ollama":
+    "Gemma 4 on your own server, through Ollama",
+  "firstRun.ai.setupTitle.openrouter_cloud":
+    "Open models from OpenAI and Mistral, through OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_cloud_eu":
+    "Mistral models in the EU, through OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_openai":
+    "OpenAI GPT-6, through OpenRouter",
+  "firstRun.ai.setupTitle.qwen3_local_vllm":
+    "Qwen3 on your own server, through vLLM",
+  "firstRun.ai.setup": "Models: {setup}",
+  "firstRun.ai.setupHint":
+    "The setup the tests graded for this provider, one model for each tier. You can change any of them later in Settings under AI.",
+  "firstRun.ai.oneModel": "Use one model for every tier instead",
+  "aiCert.ready": "Ready",
+  "aiCert.withCare": "Usable with care",
+  "aiCert.notReliable": "Not reliable yet",
+  "aiCert.notMeasured": "Not measured",
+  "aiCert.recheckPending": "{grade}, re-check pending",
+  "aiCert.title": "Test grade of {model} on this feature",
   "firstRun.ai.embedModel": "Embedding model",
   "firstRun.ai.keyFailed": "Key not stored",
   "firstRun.ai.bindFailed": "Provider not bound",
@@ -22080,6 +22205,15 @@ export const en = {
   "contact.follow.stopped": "You stopped following this contact.",
   "contact.follow.setAside": "You set this contact aside until {date}.",
   "contact.follow.resume": "Resume following",
+  "contact.impersonation.title":
+    "This sender may be pretending to be someone else",
+  "contact.impersonation.clear": "Looks fine",
+  "contact.impersonation.reason.punycodeDomain":
+    "The mail domain uses a coded spelling that can look like another domain.",
+  "contact.impersonation.reason.displayNameOtherDomain":
+    "The sender name holds an address on a domain other than the one the mail came from.",
+  "contact.impersonation.reason.unrecorded":
+    "The check did not record which sign it found.",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "Task was not reopened. Retry.",
   // The frame states the fact and the source follows it, rather than the
@@ -22889,6 +23023,8 @@ export const en = {
     "Other takes any length from 15 minutes to 8 hours.",
   "scheduling.lengthMinutes": "Length in minutes",
   "scheduling.lengthInvalid": "Enter a length from 15 to 480 minutes.",
+  "scheduling.lengthRepeated": "Name each length once.",
+  "scheduling.lengthsTooMany": "Name at most {max} extra lengths.",
   "scheduling.video.meetHelp":
     "A new Meet link is created for every booking and added to the invitation. Uses your Google Calendar, {account}.",
   "scheduling.video.teamsHelp":
@@ -22909,9 +23045,9 @@ export const en = {
   "scheduling.locationLabel": "Link or address",
   "scheduling.locationRequired": "Enter a link or an address.",
   "scheduling.usesHours":
-    "Uses your hours: {days}, {from} to {until} {zone} time, at least {notice} ahead.",
+    "Uses your hours: {days}, {from} to {until} ({zone}), at least {notice} ahead.",
   "scheduling.usesHoursAnyNotice":
-    "Uses your hours: {days}, {from} to {until} {zone} time.",
+    "Uses your hours: {days}, {from} to {until} ({zone}).",
   "scheduling.dayRange": "{from} to {until}",
   "scheduling.changeHours": "Change hours",
   "scheduling.saveLink": "Save link",

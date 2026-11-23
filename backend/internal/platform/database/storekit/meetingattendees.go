@@ -51,19 +51,12 @@ func lockMeetingAttendees(ctx context.Context, tx pgx.Tx, lock string, activityI
 	if len(present) == 0 {
 		return nil
 	}
-	rows, err := tx.Query(ctx, `SELECT DISTINCT hashtextextended('margince:meeting-attendees:' || id::text, 0) AS k
-		FROM unnest($1::uuid[]) id ORDER BY k`, present)
-	if err != nil {
-		return fmt.Errorf("keying a meeting's attendee locks: %w", err)
-	}
-	keys, err := pgx.CollectRows(rows, pgx.RowTo[int64])
-	if err != nil {
-		return fmt.Errorf("keying a meeting's attendee locks: %w", err)
-	}
-	for _, key := range keys {
-		if _, err := tx.Exec(ctx, `SELECT `+lock+`($1)`, key); err != nil {
-			return fmt.Errorf("locking a meeting's attendees: %w", err)
-		}
+	// One round trip: a volatile call in the select list runs after ORDER BY,
+	// so the locks are taken in key order.
+	if _, err := tx.Exec(ctx, `SELECT `+lock+`(k) FROM (
+		SELECT DISTINCT hashtextextended('margince:meeting-attendees:' || id::text, 0) AS k
+		FROM unnest($1::uuid[]) id) keys ORDER BY k`, present); err != nil {
+		return fmt.Errorf("locking a meeting's attendees: %w", err)
 	}
 	return nil
 }

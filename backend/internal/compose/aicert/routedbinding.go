@@ -52,7 +52,7 @@ type boundRung struct {
 // the router walks them: the first answers, and a failed call falls to the next.
 func boundLadder(routing ai.RoutingConfig, task ai.Task) []boundRung {
 	var rungs []boundRung
-	for _, tier := range ai.TaskLadder(task) {
+	for _, tier := range routing.Ladder(task) {
 		binding, bound := routing.Tiers[tier]
 		if bound && binding.Provider != "" && binding.Model != "" {
 			rungs = append(rungs, boundRung{Tier: tier, Binding: binding})
@@ -94,7 +94,7 @@ func taskCandidates(cfg RunnerConfig, task ai.Task) ([]candidate, []skippedCandi
 	rungs := boundLadder(*cfg.Routing, task)
 	if len(rungs) == 0 {
 		return nil, nil, fmt.Errorf("aicert: task %s: no rung of its ladder %v is bound in the supplied routing, so there is no model to certify it against — and production could not serve it either",
-			task, ai.TaskLadder(task))
+			task, cfg.Routing.Ladder(task))
 	}
 	var cands []candidate
 	var skipped []skippedCandidate

@@ -95,7 +95,11 @@ capture:
   gmail_mailbox_quota: 6000
   gmail_project_quota: 1200000
   history_concurrency: 1
+  history_fetch_workers: 0
   history_hold: false
+  history_lookahead: 0
+  history_page_delay: 0s
+  history_page_size: 0
   mail_sharing: true
   mail_sync_interval_seconds: 120
   max_backfill_months: 0

@@ -70,8 +70,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Print(renderReadiness(aicert.Census{Sites: census.All(), Scopes: census.Scopes()}, stamps, perScenario, records)) //nolint:forbidigo // this IS the report — reportcmd's whole job is printing it to stdout, not application logging
-	fmt.Print(renderDecisions(decisionRows))                                                                              //nolint:forbidigo // the report's second table, printed for the same reason
+	contextOwed, err := aicert.ContextOwedTasks(context.Background(), corpus, census)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "reportcmd: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Print(renderReadiness(aicert.Census{Sites: census.All(), Scopes: census.Scopes()}, stamps, perScenario, records, contextOwed)) //nolint:forbidigo // this IS the report — reportcmd's whole job is printing it to stdout, not application logging
+	fmt.Print(renderDecisions(decisionRows))                                                                                           //nolint:forbidigo // the report's second table, printed for the same reason
 
 	reports, err := presetReports(context.Background(), *presetDir, corpus, census, records)
 	if err != nil {

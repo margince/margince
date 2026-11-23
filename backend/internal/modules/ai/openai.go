@@ -378,7 +378,7 @@ func (c *openaiClient) postRaw(ctx context.Context, path string, payload []byte)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
-	resp, err := sendModelRequest(c.http, httpReq)
+	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: openai: %w", err)
 	}

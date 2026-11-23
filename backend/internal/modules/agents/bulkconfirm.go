@@ -58,6 +58,9 @@ const (
 	verbCreateTask = "create_task"
 )
 
+// verbMoveStage shares its spelling with the generated verb enums.
+const verbMoveStage = "move_stage"
+
 func bulkVerbWords(verb string) string {
 	switch verb {
 	case "reassign_owner":
@@ -74,7 +77,7 @@ func bulkVerbWords(verb string) string {
 		return "Remove the tag from"
 	case verbCreateTask:
 		return "File a task under"
-	case "move_stage":
+	case verbMoveStage:
 		return "Move to the new stage"
 	case "complete":
 		return "Mark done"

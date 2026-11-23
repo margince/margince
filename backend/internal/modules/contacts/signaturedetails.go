@@ -112,6 +112,9 @@ type signatureSource struct {
 	parties map[string]bool
 }
 
+// vouched holds for an authenticated mail with a known sender domain.
+func (s signatureSource) vouched() bool { return s.authenticated && s.senderDomain != "" }
+
 func readSignatureSourceTx(ctx context.Context, tx pgx.Tx, activity ids.UUID) (signatureSource, error) {
 	var src signatureSource
 	var sender string
@@ -176,7 +179,7 @@ func applySignatureDetailsTx(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, observedAt time.Time,
 	src signatureSource, fields []SignatureField,
 ) (int, error) {
-	if len(fields) == 0 || !src.authenticated || src.senderDomain == "" {
+	if len(fields) == 0 || !src.vouched() {
 		return 0, nil
 	}
 	// The subject before the email row, the order Art. 17 erasure takes them in.
@@ -188,21 +191,16 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	}
 	landed := 0
 	for _, f := range fields {
-		// An address that does not parse is declined, as an unparseable number is.
-		parsed, err := values.ParseEmail(strings.TrimSpace(f.Value))
-		if err != nil {
-			continue
-		}
-		address := parsed.String()
-		if !signatureStatesAddress(src, address, f.Evidence) {
+		address, ok := signatureAddress(src, f)
+		if !ok {
 			continue
 		}
 		// An address a signature already gave this contact gains this mail's support.
 		restated, err := addSignatureSupportTx(ctx, tx, contactID, fieldEmail, address, address, sourceRef, f.Evidence)
-		if err != nil || restated {
-			if err != nil {
-				return 0, err
-			}
+		if err != nil {
+			return 0, err
+		}
+		if restated {
 			continue
 		}
 		free, err := freeSignatureEmail(ctx, tx, address)
@@ -233,6 +231,18 @@ func applySignatureEmails(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 	}
 	return landed, storekit.StampFields(ctx, tx, entityContact, contactID.UUID, sourceRef, enrichCapturedBy,
 		[]storekit.FieldStamp{{Field: fieldEmail}})
+}
+
+// signatureAddress is the address a signature field states for the sender, if
+// it parses and signatureStatesAddress holds. An unparseable one is declined,
+// as an unparseable number is.
+func signatureAddress(src signatureSource, f SignatureField) (string, bool) {
+	parsed, err := values.ParseEmail(strings.TrimSpace(f.Value))
+	if err != nil {
+		return "", false
+	}
+	address := parsed.String()
+	return address, signatureStatesAddress(src, address, f.Evidence)
 }
 
 // signatureStatesAddress holds when the address is on the sender's own domain
@@ -307,7 +317,7 @@ func withdrawSignatureEmail(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 // domains. The company must hold no address a user stated.
 func fillEmployerStreetTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, sourceRef string, src signatureSource, fields []SignatureField) error {
 	line, employerName := signatureValue(fields, fieldAddress), signatureValue(fields, fieldCompanyName)
-	if line == "" || employerName == "" || !src.workspace || !src.authenticated || src.senderDomain == "" ||
+	if line == "" || employerName == "" || !src.workspace || !src.vouched() ||
 		!quotesValue(signatureEvidence(fields, fieldAddress), line) {
 		return nil
 	}

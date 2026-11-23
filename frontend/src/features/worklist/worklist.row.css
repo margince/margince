@@ -131,18 +131,16 @@
    No interval above it: the badge's own 20px box and the title's 21px line box
    put the two texts on the same centre, which is what "beside the title" means
    to a reader running down the column. */
+/* The kind badge is `nowrap`, and a kind in another language or a named
+   condition can be longer than the track. It clips with an ellipsis rather
+   than wrapping, because a reader runs DOWN the column and a second line
+   breaks the scan; the cell's `title` holds the full kind. */
 .worklist-row-kind {
   min-width: 0;
-}
-
-/* A named condition is longer than a category word and the badge is `nowrap`,
-   so it ran out of its cell and under the title. Clipped, never wrapped — see
-   `eyebrowClass` for why the column cannot grow a second line. */
-.worklist-row-kind-named {
   overflow: hidden;
 }
 
-.worklist-row-kind-named > * {
+.worklist-row-kind > * {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;

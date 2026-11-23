@@ -73,8 +73,8 @@ func stampSeatsPastCap(
 		return 0, err
 	}
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, address, role, display_name, address_domain_folded, roster_seat, response)
-		SELECT DISTINCT ON (u.id) $1, u.id, inp.address, inp.role, inp.display_name, inp.domain_folded, $6::uuid, NULLIF(inp.response, '')
+		INSERT INTO activity_participant (activity_id, user_id, address, role, display_name, address_domain_folded, roster_seats, response)
+		SELECT DISTINCT ON (u.id) $1, u.id, inp.address, inp.role, inp.display_name, inp.domain_folded, `+storekit.RosterOfSeatSQL("$6")+`, NULLIF(inp.response, '')
 		  FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $7::text[]) WITH ORDINALITY AS inp(address, role, display_name, domain_folded, response, ord)
 		  JOIN app_user u ON `+seatMatch+`
 		 WHERE NOT EXISTS (

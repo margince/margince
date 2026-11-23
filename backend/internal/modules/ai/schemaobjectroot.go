@@ -23,14 +23,13 @@ const objectRootKey = "value"
 func completeOnOpenAIWire(ctx context.Context, req model.Request,
 	complete func(context.Context, model.Request) (model.Response, error),
 ) (model.Response, error) {
-	ctx, attempt := trackHTTPAttempt(ctx)
 	sent, wrapped := objectRooted(req.ResponseSchema)
 	req.ResponseSchema = sent
 	resp, err := complete(ctx, req)
 	if err == nil && wrapped {
 		resp.Text = unwrapObjectRoot(resp.Text)
 	}
-	return reportSchemaDowngrade(resp, err, strictDowngrade(sent), attempt)
+	return resp, err
 }
 
 // objectRooted returns raw itself when its root already describes an object,

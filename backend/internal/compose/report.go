@@ -196,6 +196,9 @@ type reportSpec struct {
 	// silently included those deals under a null key would still disclose that
 	// somebody's partner brought them.
 	referenceScopes map[string]string
+	// drillColumns are shown on the drill-through's rows and nowhere else: never
+	// grouped by. A reference among them is blanked like a dimension's.
+	drillColumns map[string]string
 	// customFields are the reportable custom fields this spec was extended
 	// with in one installation, keyed by their SQL expression. Empty on every
 	// prebuilt entry; analyticsCatalog fills it per request.

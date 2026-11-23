@@ -47,6 +47,8 @@ var attendeeSweeps = gatekit.Waive(map[string]string{
 		"on every activity of a cohort. The row keeps naming the same party",
 	"internal/modules/activities:storeParticipantDomains": "folds the domain of stored addresses by row id, over whatever " +
 		"activities a batch spans. It restates the address the row already carries",
+	"internal/modules/activities:CopyRosterSeatsTx": "copies a row's one roster seat into its seat set by row id, " +
+		"over whatever meetings a batch spans. Readers take both columns as one set, so no attendee set changes",
 	"internal/modules/activities:storeParticipantEvidenceRows": "clears domain evidence by row id, across any activity a " +
 		"company change reaches. The attendee set stays the same",
 	"internal/compose/integration:LinkActivitySender":                             "an integration fixture, written before any judge runs",

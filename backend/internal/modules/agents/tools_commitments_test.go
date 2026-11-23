@@ -67,25 +67,31 @@ func TestAPromiseIsJudgedAgainstTheInstantItWasSweptAt(t *testing.T) {
 	}
 }
 
-// Whole days ELAPSED, not calendar days crossed — the second needs a timezone
-// this build does not store anywhere.
-func TestDaysOverdueCountsWholeElapsedDays(t *testing.T) {
+// Calendar days in the zone, as the record cards count them: due at 23:00 and
+// read at 01:00 is one day late.
+func TestDaysOverdueCountsCalendarDaysInTheZone(t *testing.T) {
+	bangkok := time.FixedZone("UTC+7", 7*60*60)
+	lateEvening := time.Date(2026, time.June, 9, 23, 0, 0, 0, bangkok)
 	for _, tc := range []struct {
 		name        string
 		dueAt       *time.Time
+		loc         *time.Location
 		wantDays    int
 		wantOverdue bool
 	}{
-		{"an undated promise is overdue by nothing", nil, 0, false},
-		{"an upcoming promise is overdue by nothing", at(time.Hour), 0, false},
-		{
-			"hours late is late by no whole days, which is not the same as not late",
-			at(-2 * time.Hour), 0, true,
-		},
-		{"one day and a bit late is one day late", at(-25 * time.Hour), 1, true},
-		{"a week late is seven days late", at(-7 * 24 * time.Hour), 7, true},
+		{"an undated promise is overdue by nothing", nil, time.UTC, 0, false},
+		{"an upcoming promise is overdue by nothing", at(time.Hour), time.UTC, 0, false},
+		{"earlier today is late by no days, which is not the same as not late", at(-2 * time.Hour), time.UTC, 0, true},
+		{"yesterday is one day late", at(-25 * time.Hour), time.UTC, 1, true},
+		{"a week ago is seven days late", at(-7 * 24 * time.Hour), time.UTC, 7, true},
+		{"23:00 read at 01:00 in Bangkok is one day late", &lateEvening, bangkok, 1, true},
+		{"the same pair shares a UTC date", &lateEvening, time.UTC, 0, true},
 	} {
-		days, overdue := daysOverdue(tc.dueAt, sweptAt())
+		asOf := sweptAt()
+		if tc.dueAt == &lateEvening {
+			asOf = lateEvening.Add(2 * time.Hour)
+		}
+		days, overdue := daysOverdue(tc.dueAt, asOf, tc.loc)
 		if overdue != tc.wantOverdue || days != tc.wantDays {
 			t.Errorf("%s: daysOverdue = (%d, %v), want (%d, %v)",
 				tc.name, days, overdue, tc.wantDays, tc.wantOverdue)

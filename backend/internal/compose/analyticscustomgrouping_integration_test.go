@@ -30,7 +30,8 @@ func TestGroupingByACustomFieldCountsEveryDealOnce(t *testing.T) {
 	fixture := territoryDeals(t, e)
 	optIn(t, e, fixture.catalog, fixture.field)
 	if _, err := fixture.deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "No territory yet", PipelineID: fixture.pipeline, StageID: fixture.open,
+		Source: "manual",
+		Name:   "No territory yet", PipelineID: fixture.pipeline, StageID: fixture.open,
 	}); err != nil {
 		t.Fatal(err)
 	}

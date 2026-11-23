@@ -1,0 +1,86 @@
+{
+  "scenario": "case99_they_raised_money",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gpt:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "stamp": {
+    "scenario": "aba6fbb15fbb54f7",
+    "tools": "1e9833108e9e886b",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:44:11Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:57Z"
+  },
+  "usage": {
+    "input_tokens": 56525,
+    "output_tokens": 2786,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 480000,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_attention",
+        "create_signal",
+        "describe_router_actions",
+        "find_records",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "change_attention",
+        "create_signal",
+        "describe_router_actions",
+        "find_records",
+        "read_context",
+        "read_record",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 268262.5,
+      "min": 220768,
+      "max": 315757
+    },
+    "output_tokens": {
+      "median": 1393,
+      "min": 1238,
+      "max": 1548
+    }
+  }
+}

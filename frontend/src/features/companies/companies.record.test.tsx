@@ -186,8 +186,8 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
     render(<CompanyScreen id="o-1" />);
     await openProfile();
 
-    await waitFor(() => expect(screen.getByText("€48,000.00")).toBeTruthy());
-    expect(screen.getByText("€12,000.00")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("€48,000")).toBeTruthy());
+    expect(screen.getByText("€12,000")).toBeTruthy();
     expect(screen.getByText("12")).toBeTruthy();
     expect(screen.getByText("3")).toBeTruthy();
   });
@@ -217,7 +217,7 @@ describe("CompanyScreen — hierarchy roll-up in the rail (P-7)", () => {
         ),
       ).toBeTruthy(),
     );
-    expect(screen.queryByText("€0.00")).toBeNull();
+    expect(screen.queryByText("€0")).toBeNull();
   });
 
   it.each([

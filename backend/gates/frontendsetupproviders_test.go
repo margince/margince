@@ -149,3 +149,106 @@ func TestOnboardingOffersOnlyProvidersTheServerServes(t *testing.T) {
 		}
 	}
 }
+
+// setupPreset matches the preset a provider's block names. Its own pattern, so
+// a block that loses the field reads as missing rather than as no provider.
+var setupPreset = regexp.MustCompile(`(?s)(\w+):\s*\{\s*label:[^}]*?setup:\s*"([^"]+)"`)
+
+const presetsDir = "../config/presets"
+
+// readSetupPresets is each offered provider's graded preset, as the routing
+// the product parses from the file.
+func readSetupPresets(t *testing.T) map[string]ai.RoutingConfig {
+	t.Helper()
+	raw, err := gatekit.ReadFile(setupProvidersFile)
+	if err != nil {
+		t.Fatalf("read %s: %v", setupProvidersFile, err)
+	}
+	body := string(raw)
+	if i := strings.Index(body, "const PRESETS"); i >= 0 {
+		body = body[i:]
+	}
+	named := map[string]string{}
+	for _, m := range setupPreset.FindAllStringSubmatch(body, -1) {
+		named[m[1]] = m[2]
+	}
+	presets := map[string]ai.RoutingConfig{}
+	for _, o := range readSetupOffers(t) {
+		file, ok := named[o.id]
+		if !ok {
+			t.Errorf("onboarding offers %s with no `setup:` preset, so it would bind one model on every tier, a setup no test graded", o.id)
+			continue
+		}
+		preset, err := gatekit.ReadFile(presetsDir + "/" + file + ".yaml")
+		if err != nil {
+			t.Errorf("onboarding binds %s to preset %s, which is not under %s: %v", o.id, file, presetsDir, err)
+			continue
+		}
+		cfg, err := ai.ParsePreset(preset)
+		if err != nil {
+			t.Errorf("preset %s does not parse: %v", file, err)
+			continue
+		}
+		presets[o.id] = cfg
+	}
+	return presets
+}
+
+// The preset a provider binds serves on that provider alone, at models the
+// sheet prices. The key the reader pastes is that vendor's. An unpriced tier
+// would report every call it answers as UNPRICED.
+func TestOnboardingBindsAPresetOfTheChosenVendor(t *testing.T) {
+	t.Parallel()
+	sheet := seedSheet()
+	offers := map[string]setupOffer{}
+	for _, o := range readSetupOffers(t) {
+		offers[o.id] = o
+	}
+	for id, cfg := range readSetupPresets(t) {
+		for tier, binding := range cfg.Tiers {
+			if binding.Provider != offers[id].provider {
+				t.Errorf("onboarding binds %s's %s tier to provider %s; the key it asks for is %s's",
+					id, tier, binding.Provider, offers[id].provider)
+			}
+			if sheet[binding.Provider+"/"+binding.Model] != ai.LaneChat {
+				t.Errorf("onboarding binds %s's %s tier to %s/%s, which SeedModelRates does not price as a chat model",
+					id, tier, binding.Provider, binding.Model)
+			}
+		}
+	}
+}
+
+// ungradedSetupWaivers names the providers whose preset may bind a model with
+// no current certification record, each with why. One that no longer needs it
+// fails AssertAllMatched.
+var ungradedSetupWaivers = gatekit.Waive(map[string]string{
+	"openrouter":    "openrouter_cloud is re-certified in the full sweep of #12751; until then its records are stale or absent",
+	"gemini":        "the extension mail hooks (#11449) edit code agent_loop, capture_confidentiality_verdict and offer_draft reach, so their records read stale until the next sweep re-certifies them",
+	"gemini_vertex": "the same three records as gemini; the vertex preset binds the same models",
+})
+
+// Every task the binding onboarding writes answers on a model whose grade is
+// current. So a new installation gets a setup measured on the product as it
+// ships, read by the same lookup Settings shows.
+func TestOnboardingBindsOnlyModelsWithACurrentGrade(t *testing.T) {
+	t.Parallel()
+	for id, cfg := range readSetupPresets(t) {
+		var ungraded []string
+		for _, row := range ai.FeatureRoutes(cfg, cfg, ai.BandNormal) {
+			cert := row.Certification
+			switch {
+			case cert == nil:
+			case cert.Grade == ai.CertGradeNotMeasured:
+				ungraded = append(ungraded, row.Task+" on "+cert.Model+" (no record for every site)")
+			case cert.RecheckPending:
+				ungraded = append(ungraded, row.Task+" on "+cert.Model+" (record stale)")
+			}
+		}
+		if len(ungraded) > 0 && !ungradedSetupWaivers.Waived(t, id) {
+			t.Errorf("onboarding binds %s to models with no current grade: %s — certify its preset "+
+				"(`make e2e-ai ROUTING=config/presets/<its setup>.yaml`), then `make gen` rewrites the grade table",
+				id, strings.Join(ungraded, "; "))
+		}
+	}
+	ungradedSetupWaivers.AssertAllMatched(t)
+}

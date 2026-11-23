@@ -45,7 +45,7 @@ func TestTheAccountReachAdmitsEachArmWithinItsBounds(t *testing.T) {
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, company_id, source, captured_by)
-		VALUES ($1, 'Reach deal', 'open', $2, $3, $4, $5, 'seed', 'system')`, deal, e.rep, pipeline, stage, account)
+		VALUES ($1, 'Reach deal', 'open', $2, $3, $4, $5, 'manual', 'system')`, deal, e.rep, pipeline, stage, account)
 
 	mail := func(subject string) ids.UUID {
 		id := ids.NewV7()

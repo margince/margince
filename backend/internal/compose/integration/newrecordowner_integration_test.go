@@ -77,7 +77,8 @@ func bornRecords(t *testing.T, e *Env) []bornRecord {
 		kind: "deal",
 		create: func(t *testing.T, e *Env, owner ids.UserID) (ids.UUID, error) {
 			out, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-				Name: bornRecordName, PipelineID: pipeline, StageID: open, OwnerID: &owner,
+				Source: "manual",
+				Name:   bornRecordName, PipelineID: pipeline, StageID: open, OwnerID: &owner,
 			})
 			return ids.UUID(out.Id), err
 		},

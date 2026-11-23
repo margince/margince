@@ -33,7 +33,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/bearer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -143,7 +142,7 @@ func (s *AnalyticsShareStore) Issue(
 	if err != nil {
 		return Share{}, "", err
 	}
-	raw, digest, err := bearer.Mint()
+	raw, digest, err := storekit.MintToken()
 	if err != nil {
 		return Share{}, "", err
 	}
@@ -326,7 +325,7 @@ func (s *AnalyticsShareStore) Resolve(
 	out, err := scanShare(tx.QueryRow(ctx, `
 		SELECT `+shareColumns+`
 		FROM analytics_share
-		WHERE token_hash = $1`, bearer.Digest(rawToken)))
+		WHERE token_hash = $1`, storekit.TokenHash(rawToken)))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Share{}, apperrors.ErrNotFound
 	}

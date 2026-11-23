@@ -23,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -293,7 +292,7 @@ func scanAssuranceSubject(
 	assessed := deals.AssessViability(evidence, asOf, zone)
 	out.Viability = &assurance.SubjectViability{
 		Outcome: assessed.Outcome, Reasons: assessed.Reasons, SilentDays: assessed.SilentDays,
-		NextChange: assessed.NextChange, Fingerprint: fingerprint,
+		Fingerprint: fingerprint,
 	}
 	return out, nil
 }
@@ -343,7 +342,9 @@ func customerRefusalAnyAudienceSQL(alias, deal, asOf string) string {
 // night the mail is read, but the answers stay. A deal somebody answered is not
 // asked again before its answer ends. The answer was about one silence:
 // once the customer moved the deal after it, a later silence is a new one. A
-// reminder holds at most as long as any answer may hide a finding.
+// reminder holds at most as long as any answer may hide a finding. The outcomes
+// are literals: a bound outcome reads as a partial-index predicate to the plan
+// reuse check.
 func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 	capped := assurance.LiveRemindAtSQL("r", fmt.Sprintf("$%d", arg(assurance.MaxSuppressionDays())))
 	return fmt.Sprintf(`(SELECT CASE
@@ -408,17 +409,6 @@ func sourceChecked(coverage []assurance.SourceCoverage, source string) bool {
 		}
 	}
 	return false
-}
-
-// AssuranceConfig is the check's configuration, with a receipt lifetime taken
-// from the job catalog: one cadence plus one run's deadline. A receipt older
-// than that has outlived the check that should have replaced it.
-func AssuranceConfig() assurance.Config {
-	cfg := assurance.DefaultConfig()
-	if spec, ok := jobs.SpecFor(AssuranceSweepArgs{}.Kind()); ok {
-		cfg.ReceiptLifetime = spec.Cadence.Fixed + spec.Timeout.Duration()
-	}
-	return cfg
 }
 
 // AssuranceCoverage answers which sources the run could reach.

@@ -101,7 +101,7 @@ command -v python3 >/dev/null || { echo "python3 is required to read the scenari
 # that does not compile, a writes:, passport: or setup: value the lane cannot
 # act on. A typo in the last scenario would otherwise stop the lane after every
 # earlier case was paid for, or switch a check off without a word.
-python3 "$ROOT/e2e/llm/check.py" --lint "$SCENARIO_DIR"/*.yaml || exit 1
+python3 "$ROOT/e2e/llm/scenariolint.py" "$SCENARIO_DIR"/*.yaml || exit 1
 
 # A name SCENARIO lists that no scenario carries would run nothing for it and
 # report the sweep as complete, so every listed name is matched before a boot.

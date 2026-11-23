@@ -581,6 +581,26 @@ describe("TimelineActions", () => {
     ).toBeTruthy();
   });
 
+  it("names a note a note in its visibility dialog", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    stubRoutes();
+    render(
+      <TimelineActions
+        activity={{ ...activity202, id: "a7", kind: "note" }}
+        entityType="deal"
+        entityId="d1"
+      />,
+    );
+    await openRowMenu(user);
+    await user.click(
+      await screen.findByRole("button", { name: "Change visibility" }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Who may read this note?" }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/this message/)).toBeNull();
+  });
+
   // `selected` is the API's third audience. Choosing it without a way to name
   // anybody is a choice the reader cannot complete. These claims pin that the
   // dialog offers it with that way.

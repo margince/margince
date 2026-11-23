@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
-import { EmailText } from "./emailtext";
+import { EmailReading, EmailText } from "./emailtext";
 
 const meta = {
   title: "Components/Text and data display/Email text",
@@ -31,5 +31,23 @@ export const QuotedHistory: Story = {
     if (summary) await userEvent.click(summary);
     await expect(summary).toHaveAttribute("aria-expanded", "true");
     await expect(canvas.getByText(/Can we meet on Tuesday/)).toBeVisible();
+  },
+};
+
+export const NoText: Story = {
+  args: { body: "" },
+  render: () => (
+    <EmailReading
+      activityId="01a05500-0000-7000-8000-0000000000a1"
+      language={null}
+      body=""
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("This message has no text.")).toBeVisible();
+    await expect(
+      canvas.queryByRole("button", { name: "Show in my language" }),
+    ).toBeNull();
   },
 };

@@ -31,7 +31,7 @@ func triageDecisionRow(logical ids.UUID, terminal bool, sentinel string) Call {
 func triageLadderRow(logical ids.UUID, attempt int, reason string) Call {
 	return Call{
 		LogicalCallID: logical, Attempt: attempt, IsTerminal: true, Kind: callKindCompletion, Task: TaskSiteTriage,
-		Tier: TierCheapCloud, Provider: providerGemini, ModelID: "gemini-3.1-flash-lite", RequestFingerprint: "fp-triage",
+		Tier: TierCheapCloud, Provider: providerGemini, ModelID: "gemini-3.1-flash-lite",
 		AttemptReason: reason, TokensIn: 900, TokensOut: 40,
 	}
 }

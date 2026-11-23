@@ -71,7 +71,8 @@ func setupClosedDealEnv(t *testing.T) closeDayEnv {
 	owner := ids.From[ids.UserKind](e.admin)
 	amount, currency := int64(10000), "JPY"
 	deal, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Imported win", PipelineID: pipelineID, StageID: open, OwnerID: &owner, OwnerExact: true,
+		Source: "manual",
+		Name:   "Imported win", PipelineID: pipelineID, StageID: open, OwnerID: &owner, OwnerExact: true,
 		AmountMinor: &amount, Currency: &currency,
 	})
 	if err != nil {

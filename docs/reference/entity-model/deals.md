@@ -6,7 +6,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## close_date_run
 
-14 columns · primary key `(id)` · referenced by 2 foreign keys
+12 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -14,8 +14,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `as_of` | `date` | yes |  |
 | `checked` | `integer`, default `0` | yes |  |
 | `corrected` | `integer`, default `0` | yes |  |
-| `cursor_created_at` | `timestamp with time zone` |  |  |
-| `cursor_id` | `uuid` |  |  |
 | `eligible` | `integer`, default `0` | yes |  |
 | `finished_at` | `timestamp with time zone` |  |  |
 | `staged` | `integer`, default `0` | yes |  |
@@ -28,7 +26,6 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 **Rules**
 
 - `close_date_run_counts_are_tallies`: `CHECK (((eligible >= 0) AND (checked >= 0) AND (corrected >= 0) AND (staged >= 0)))`
-- `close_date_run_cursor_is_whole`: `CHECK (((cursor_created_at IS NULL) = (cursor_id IS NULL)))`
 - `close_date_run_finish_matches_status`: `CHECK (((status = 'running') = (finished_at IS NULL)))`
 - `close_date_run_status_check`: `CHECK ((status = ANY (ARRAY['running', 'complete', 'incomplete'])))`
 
@@ -131,7 +128,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean`, default `false` | yes | True while a litigation or investigation hold is preserving this record. |
 | `search_tsv` | `tsvector`, generated as `((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(description, ''::text))), 'B'::"char"))` |  | Computed by the database. It cannot be written directly. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | The channel this record arrived by, one of the values `CreateDealRequest.source` lists. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -172,6 +169,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `deal_partner_attribution_pairing`: `CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL)))`
 - `deal_priority_check`: `CHECK (((priority IS NULL) OR (priority = ANY (ARRAY['low', 'medium', 'high']))))`
 - `deal_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `deal_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `deal_source_id_length`: `CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))`
 - `deal_source_id_needs_a_source`: `CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))`
 - `deal_status_check`: `CHECK ((status = ANY (ARRAY['open', 'won', 'lost'])))`
@@ -210,6 +208,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 - `deal_last_activity`: `AFTER UPDATE OF company_id FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION trg_deal_last_activity()`
 - `deal_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `deal_source_channel`: `BEFORE UPDATE FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) EXECUTE FUNCTION move_source_onto_its_channel()`
 - `home_read_fence_deal_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "source": 20000, "status": 20000, "priority": 20000, "captured_by": 20000, "description": 20000, "lost_reason": 2000, "source_system": 20000, "commercial_mode": 20000, "lost_reason_code": 2000, "commercial_motion": 20000, "lost_reason_basis": 2000, "acquisition_source": 20000, "partner_attribution": 20000, "win_probability_set_by": 20000, "won_without_contract_detail": 20000, "won_without_contract_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"acquisition_source":20000,"captured_by":20000,"commercial_mode":20000,"commercial_motion":20000,"description":20000,"lost_reason":2000,"lost_reason_basis":2000,"lost_reason_code":2000,"name":120,"partner_attribution":20000,"priority":20000,"source":20000,"source_system":20000,"status":20000,"win_probability_set_by":20000,"won_without_contract_detail":20000,"won_without_contract_reason":2000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "source": 20000, "status": 20000, "priority": 20000, "captured_by": 20000, "description": 20000, "lost_reason": 2000, "source_system": 20000, "commercial_mode": 20000, "lost_reason_code": 2000, "commercial_motion": 20000, "lost_reason_basis": 2000, "acquisition_source": 20000, "partner_attribution": 20000, "win_probability_set_by": 20000, "won_without_contract_detail": 20000, "won_without_contract_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"acquisition_source":20000,"captured_by":20000,"commercial_mode":20000,"commercial_motion":20000,"description":20000,"lost_reason":2000,"lost_reason_basis":2000,"lost_reason_code":2000,"name":120,"partner_attribution":20000,"priority":20000,"source":20000,"source_system":20000,"status":20000,"win_probability_set_by":20000,"won_without_contract_detail":20000,"won_without_contract_reason":2000}')`
@@ -902,7 +901,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
+| `source` | `text` | yes | The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -926,6 +925,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 - `offer_number_rev_unique`: `UNIQUE (offer_number, revision)`
 - `offer_number_shape`: `CHECK ((offer_number ~ '^A-[0-9]+$'))`
 - `offer_revision_check`: `CHECK ((revision >= 1))`
+- `offer_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `offer_source_commercial_revision_js_safe`: `CHECK (((source_commercial_revision >= 0) AND (source_commercial_revision <= '9007199254740991'::bigint)))`
 - `offer_status_check`: `CHECK ((status = ANY (ARRAY['draft', 'sent', 'accepted', 'rejected', 'expired', 'superseded'])))`
 - `offer_tax_minor_js_safe`: `CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))`
@@ -943,6 +943,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `offer_source_channel`: `BEFORE UPDATE FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) EXECUTE FUNCTION move_source_onto_its_channel()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "status": 20000, "language": 20000, "intro_text": 20000, "terms_text": 20000, "captured_by": 20000, "offer_number": 20000, "pdf_asset_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"intro_text":20000,"language":20000,"offer_number":20000,"pdf_asset_ref":20000,"source":20000,"status":20000,"terms_text":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "status": 20000, "language": 20000, "intro_text": 20000, "terms_text": 20000, "captured_by": 20000, "offer_number": 20000, "pdf_asset_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"intro_text":20000,"language":20000,"offer_number":20000,"pdf_asset_ref":20000,"source":20000,"status":20000,"terms_text":20000}')`
 - `trg_offer_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

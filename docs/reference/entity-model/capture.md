@@ -6,11 +6,10 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_alias_refused
 
-3 columns · primary key `(user_id, value)` · referenced by 0 foreign keys
+2 columns · primary key `(user_id, value)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `refused_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `value` | `text` | yes |  |
 
@@ -35,14 +34,13 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_alias_sighting
 
-5 columns · primary key `(id)` · referenced by 0 foreign keys
+4 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `value` | `text` | yes |  |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 
 **Points at**
@@ -81,7 +79,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_auto_enrich_state
 
-7 columns · primary key `(company_id)` · referenced by 0 foreign keys
+6 columns · primary key `(company_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -90,7 +88,6 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `last_attempt_at` | `timestamp with time zone` |  |  |
 | `last_outcome` | `text` |  | One of `queued`, `applied`, `empty`, `failed`, `exhausted`. |
 | `next_attempt_at` | `timestamp with time zone`, default `now()` |  |  |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
@@ -209,7 +206,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-36 columns · primary key `(id)` · referenced by 5 foreign keys
+35 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -234,7 +231,6 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `provider` | `text` | yes | The mail/calendar/meeting-notes provider (A51 email+calendar parity). |
 | `provider_scopes` | `text[]` |  |  |
 | `reader_team_id` | `uuid` |  | Points at `team.id`. |
-| `scopes` | `text[]`, default `'{}'::text[]` | yes | The granted provider scopes. |
 | `share_acknowledged_at` | `timestamp with time zone` |  |  |
 | `signature_enrich_enabled` | `boolean` |  | This mailbox's own answer to reading contact details out of its mail, or null to follow the tenant default (`CaptureSettings.signature_enrich`). |
 | `silence_dismissed_since` | `timestamp with time zone` |  |  |
@@ -283,8 +279,8 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Triggers**
 
 - `home_read_fence_shared_mailbox_readers`: `AFTER UPDATE OF reader_team_id, mail_posture FOR EACH ROW WHEN (((old.reader_team_id IS DISTINCT FROM new.reader_team_id) OR (old.mail_posture IS DISTINCT FROM new.mail_posture))) EXECUTE FUNCTION advance_home_read_fence()`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scopes": 20000, "status": 20000, "provider": 20000, "watch_ref": 20000, "mail_posture": 20000, "account_label": 120, "credential_ref": 20000, "provider_scopes": 20000, "history_baseline_tz": 20000, "history_baseline_set_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"account_label":120,"credential_ref":20000,"history_baseline_set_by":20000,"history_baseline_tz":20000,"mail_posture":20000,"provider":20000,"provider_scopes":20000,"scopes":20000,"status":20000,"watch_ref":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scopes": 20000, "status": 20000, "provider": 20000, "watch_ref": 20000, "mail_posture": 20000, "account_label": 120, "credential_ref": 20000, "provider_scopes": 20000, "history_baseline_tz": 20000, "history_baseline_set_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"account_label":120,"credential_ref":20000,"history_baseline_set_by":20000,"history_baseline_tz":20000,"mail_posture":20000,"provider":20000,"provider_scopes":20000,"scopes":20000,"status":20000,"watch_ref":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"status": 20000, "provider": 20000, "watch_ref": 20000, "mail_posture": 20000, "account_label": 120, "credential_ref": 20000, "provider_scopes": 20000, "history_baseline_tz": 20000, "history_baseline_set_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"account_label":120,"credential_ref":20000,"history_baseline_set_by":20000,"history_baseline_tz":20000,"mail_posture":20000,"provider":20000,"provider_scopes":20000,"status":20000,"watch_ref":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "watch_ref": 20000, "mail_posture": 20000, "account_label": 120, "credential_ref": 20000, "provider_scopes": 20000, "history_baseline_tz": 20000, "history_baseline_set_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"account_label":120,"credential_ref":20000,"history_baseline_set_by":20000,"history_baseline_tz":20000,"mail_posture":20000,"provider":20000,"provider_scopes":20000,"status":20000,"watch_ref":20000}')`
 
 ## capture_counterparty_hold
 
@@ -366,21 +362,14 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_freemail_domain
 
-5 columns · primary key `(id)` · referenced by 0 foreign keys
+4 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `created_by` | `uuid` |  | Points at `app_user.id`. |
 | `domain` | `text` | yes |  |
 | `kind` | `text` | yes | One of `extra`, `never`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-
-**Points at**
-
-| Columns | Table | When the parent goes |
-|---|---|---|
-| `created_by` | `app_user` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -597,7 +586,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_pending_counterparty
 
-22 columns · primary key `(id)` · referenced by 0 foreign keys
+21 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -618,7 +607,6 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `proposal_id` | `uuid` |  | Points at `approval.id`. |
 | `resolved_at` | `timestamp with time zone` |  |  |
 | `resolved_by_owner` | `boolean`, default `false` | yes |  |
-| `served_model` | `text` |  |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `unsure`, `real`, `noise`, `suppressed`, `rejected`. |
 | `withheld_from_workspace` | `boolean`, default `false` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -654,12 +642,12 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "email": 20000, "domain": 20000, "status": 20000, "served_model": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"domain":20000,"email":20000,"kind":20000,"served_model":20000,"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "email": 20000, "domain": 20000, "status": 20000, "served_model": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"domain":20000,"email":20000,"kind":20000,"served_model":20000,"status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "email": 20000, "domain": 20000, "status": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"domain":20000,"email":20000,"kind":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "email": 20000, "domain": 20000, "status": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"domain":20000,"email":20000,"kind":20000,"status":20000}')`
 
 ## capture_sender_override
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+6 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -669,8 +657,6 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `overruled_kind` | `text` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `captured_by` | `text` |  | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -732,7 +718,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_sync_state
 
-10 columns · primary key `(connection_id)` · referenced by 0 foreign keys
+8 columns · primary key `(connection_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -744,8 +730,6 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `last_success_at` | `timestamp with time zone` |  |  |
 | `last_synced_at` | `timestamp with time zone` |  |  |
 | `next_sync_at` | `timestamp with time zone`, default `now()` | yes |  |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -766,7 +750,6 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_error_class":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"last_error_class": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"last_error_class":20000}')`
-- `trg_capture_sync_state_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## capture_test_mailbox_sent
 
@@ -853,7 +836,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_trace
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+13 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -861,6 +844,7 @@ The 25 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `activity_id` | `uuid` |  |  |
 | `connector` | `text` | yes | At most 96 characters. |
 | `counterparty` | `text` |  | At most 320 characters. |
+| `filing` | `jsonb` |  |  |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `outcome` | `text` | yes |  |
 | `reason` | `text` |  |  |

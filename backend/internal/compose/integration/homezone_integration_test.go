@@ -93,14 +93,16 @@ func TestAnAtRiskDealsQuietDaysCountOnTheDayItWasAdmittedOn(t *testing.T) {
 	closeOn := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Hanoi deal", PipelineID: pipeline, StageID: open, OwnerID: &owner, OwnerExact: true, ExpectedClose: &closeOn,
+		Name: "Hanoi deal", Source: "manual", PipelineID: pipeline, StageID: open, OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Created at 05:30 on the 15th in Hanoi and 00:30 on the 15th in Berlin: one
-	// quiet day on the Hanoi calendar, none on Berlin's.
-	e.WsExec(t, `UPDATE deal SET created_at = $2 WHERE id = $1`, ids.UUID(deal.Id), time.Date(2026, 6, 14, 22, 30, 0, 0, time.UTC))
+	// quiet day on the Hanoi calendar, none on Berlin's. The close date is set
+	// here because the create refuses a date before the real today.
+	e.WsExec(t, `UPDATE deal SET created_at = $2, expected_close_date = $3 WHERE id = $1`,
+		ids.UUID(deal.Id), time.Date(2026, 6, 14, 22, 30, 0, 0, time.UTC), closeOn)
 
 	got, shown := ownWorklist(t, e, e.Rep1)["deal_at_risk/Hanoi deal"]
 	if !shown {

@@ -65,7 +65,7 @@ func TestTheRetiredHalvingIsClearedOnlyWhereItStillStands(t *testing.T) {
 	}
 	owner := ids.From[ids.UserKind](e.admin)
 	another := func() ids.DealID {
-		created, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{Name: "Quiet", PipelineID: pipeline, StageID: from, OwnerID: &owner, OwnerExact: true})
+		created, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{Name: "Quiet", Source: "manual", PipelineID: pipeline, StageID: from, OwnerID: &owner, OwnerExact: true})
 		if err != nil {
 			t.Fatal(err)
 		}

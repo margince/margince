@@ -402,7 +402,7 @@ it("carries the date range across tabs and keeps the sales pipeline", async () =
   await pickOption(
     user,
     screen.getByRole("combobox", { name: "Date range" }),
-    "Last month",
+    "Last completed month",
   );
   await user.click(screen.getByRole("button", { name: "Performance" }));
   expect(
@@ -410,7 +410,7 @@ it("carries the date range across tabs and keeps the sales pipeline", async () =
   ).toHaveTextContent("Sales");
   expect(
     screen.getByRole("combobox", { name: "Date range" }),
-  ).toHaveTextContent("Last month");
+  ).toHaveTextContent("Last completed month");
 });
 
 it("requires confirmation before archiving and explains the schedule effect", async () => {
@@ -463,7 +463,7 @@ it("restores the selected period and close window after reopening performance", 
   await pickOption(
     user,
     await screen.findByRole("combobox", { name: "Date range" }),
-    "Last month",
+    "Last completed month",
   );
   await pickOption(
     user,
@@ -478,7 +478,7 @@ it("restores the selected period and close window after reopening performance", 
   );
   expect(
     await screen.findByRole("combobox", { name: "Date range" }),
-  ).toHaveTextContent("Last month");
+  ).toHaveTextContent("Last completed month");
   expect(
     screen.getByRole("combobox", { name: "Expected close window" }),
   ).toHaveTextContent("Fiscal quarter");

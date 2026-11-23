@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -58,8 +59,8 @@ func stampGuestsPastCap(
 		return out, nil
 	}
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, address, role, display_name, address_domain_folded, roster_seat, response, past_party_cap)
-		SELECT $1, inp.address, inp.role, inp.display_name, inp.domain_folded, $6::uuid, NULLIF(inp.response, ''), true
+		INSERT INTO activity_participant (activity_id, address, role, display_name, address_domain_folded, roster_seats, response, past_party_cap)
+		SELECT $1, inp.address, inp.role, inp.display_name, inp.domain_folded, `+storekit.RosterOfSeatSQL("$6")+`, NULLIF(inp.response, ''), true
 		  FROM unnest($2::text[], $3::text[], $4::text[], $5::text[], $7::text[]) AS inp(address, role, display_name, domain_folded, response)
 		ON CONFLICT DO NOTHING`,
 		activityID, addresses, roles, names, storedDomainsOf(addresses), rosterSeat, responses)
@@ -112,8 +113,8 @@ func recordGuestsLeftOut(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 	return tag.RowsAffected() > 0, nil
 }
 
-// settleAnswers brings the answers on this calendar's rows in line with its
-// roster. A current roster replaces a stored answer; a stored original only
+// settleAnswers brings the answers on the rows this calendar lists in line with
+// its roster. A current roster replaces a stored answer; a stored original only
 // fills a row that holds none. An empty answer never erases one.
 func settleAnswers(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, roster MeetingRoster, listed []connector.MessageParticipant,
@@ -151,20 +152,22 @@ func settleAnswers(
 	if len(addresses) == 0 {
 		return 0, nil
 	}
-	// A current roster takes a listed row whose calendar seat disconnected; it
-	// never binds a seat, so a row taken over grants nothing new.
+	// A seat's own answer makes the row its calendar's alone: that calendar
+	// decides the answer while it is connected, whatever another copy shows.
 	ownAnswer := `(@current AND @owner_response<>'' AND (ap.user_id=@seat OR (ap.user_id IS NULL AND ap.address=@owner_address AND @owner_address<>'')))`
+	lists := storekit.RosterListsSQL("ap", "@seat")
+	alone := storekit.RosterSeatsSQL("ap") + ` = ARRAY[@seat::uuid]`
 	tag, err := tx.Exec(ctx, `
  UPDATE activity_participant ap SET response=CASE WHEN `+ownAnswer+` THEN @owner_response ELSE inp.response END,
- roster_seat=@seat
+ `+storekit.StoreRosterSeatsSQL(`CASE WHEN `+ownAnswer+` THEN ARRAY[@seat::uuid] ELSE `+storekit.RosterSeatsSQL("ap")+` END`)+`
  FROM unnest(@addresses::text[],@responses::text[]) AS inp(address,response)
  WHERE ap.activity_id=@activity
- AND ((inp.address<>'' AND ap.address=inp.address AND (ap.roster_seat=@seat OR (@current AND `+rosterOwnerGoneSQL("ap")+`))) OR `+ownAnswer+`)
+ AND ((inp.address<>'' AND ap.address=inp.address AND `+lists+`) OR `+ownAnswer+`)
  AND (ap.response IS DISTINCT FROM CASE WHEN `+ownAnswer+` THEN @owner_response ELSE inp.response END
-  OR (`+ownAnswer+` AND ap.roster_seat IS DISTINCT FROM @seat))
+  OR (`+ownAnswer+` AND NOT `+alone+`))
  AND (@current OR ap.response IS NULL)`, pgx.StrictNamedArgs{
 		capturedActivityObject: activityID, rosterSeatArg: roster.Seat, rosterAddressesArg: addresses, "responses": responses, "current": roster.Current,
-		"owner_address": ownerAddress, "owner_response": ownerResponse, calendarProvidersArg: calendarProviderNames(),
+		"owner_address": ownerAddress, "owner_response": ownerResponse,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("capture: recording the answers a calendar lists: %w", err)

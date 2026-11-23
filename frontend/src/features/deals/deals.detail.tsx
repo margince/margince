@@ -28,6 +28,7 @@ import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { useDealChangesWhere } from "../../lib/marginchanges";
 import { fromHere } from "../../lib/navigatefrom";
 import { useOpenEmail } from "../../lib/openemail";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import type { RecordTabId } from "../../lib/recordtaborder";
 import { scrollPageToTop } from "../../lib/reveal";
@@ -63,7 +64,6 @@ import { DealFiles } from "./dealfiles";
 import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
-import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
 import { DealPulsePills } from "./deals.pulsepills";
@@ -259,7 +259,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
         gone={<RecordGone kind="deal" />}
       >
         {(deal) => {
-          const stages = stagesInOrder(pipelineQuery.data?.stages ?? []);
+          const stages = inPositionOrder(pipelineQuery.data?.stages ?? []);
           const openStages = stages.filter(
             (stage) => stage.semantic === "open",
           );

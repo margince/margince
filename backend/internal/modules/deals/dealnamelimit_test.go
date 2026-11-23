@@ -18,7 +18,7 @@ func TestADealNameOverItsLimitIsRefusedAtTheField(t *testing.T) {
 	long := strings.Repeat("n", values.TextLabelCharacters+1)
 	s := &Store{}
 
-	_, createErr := s.readyDealCreate(systemFilterCtx(), CreateDealInput{Name: long})
+	_, createErr := s.readyDealCreate(systemFilterCtx(), CreateDealInput{Source: "manual", Name: long})
 	_, updateErr := s.dealUpdatePatch(systemFilterCtx(), nil, crmcontracts.Deal{Name: "Before"},
 		UpdateDealInput{Name: &long})
 
@@ -29,7 +29,7 @@ func TestADealNameOverItsLimitIsRefusedAtTheField(t *testing.T) {
 
 func TestADealNameAtItsLimitIsAccepted(t *testing.T) {
 	name := strings.Repeat("n", values.TextLabelCharacters)
-	if _, err := (&Store{}).readyDealCreate(systemFilterCtx(), CreateDealInput{Name: name}); err != nil {
+	if _, err := (&Store{}).readyDealCreate(systemFilterCtx(), CreateDealInput{Source: "manual", Name: name}); err != nil {
 		t.Fatalf("a name of exactly the limit was refused: %v", err)
 	}
 }

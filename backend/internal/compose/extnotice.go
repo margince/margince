@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
+	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -43,7 +44,7 @@ func (c extensionCore) Notices() extension.NoticeRepo { return extensionNoticeDo
 type extensionNoticeDoor struct{ core extensionCore }
 
 // validateNotice refuses what the contract does not admit before any query runs.
-func validateNotice(in extension.NoticeRequest) error {
+func validateNotice(unit string, in extension.NoticeRequest) error {
 	if (in.Member == "") == (in.Role == "") {
 		return fmt.Errorf("%w: name exactly one of member and role", extension.ErrInvalid)
 	}
@@ -52,8 +53,8 @@ func validateNotice(in extension.NoticeRequest) error {
 			return fmt.Errorf("%w: member is not an id", extension.ErrInvalid)
 		}
 	}
-	if types := extension.NoticeRecordTypes(); !slices.Contains(types, in.Record.Type) {
-		return fmt.Errorf("%w: record type must be %s", extension.ErrInvalid, strings.Join(types, ", "))
+	if types := extension.NoticeRecordTypes(); !slices.Contains(types, in.Record.Type) && !recordkinds.DeclaredBy(unit, in.Record.Type) {
+		return fmt.Errorf("%w: record type must be %s, or a record kind this unit declared", extension.ErrInvalid, strings.Join(types, ", "))
 	}
 	if _, err := ids.Parse(in.Record.ID); err != nil {
 		return fmt.Errorf("%w: record id is not an id", extension.ErrInvalid)
@@ -78,7 +79,7 @@ func (d extensionNoticeDoor) Send(ctx context.Context, in extension.NoticeReques
 	if !extensionNotices.Allow(d.core.unit) {
 		return extension.NoticeSent{}, extension.ErrRateLimited
 	}
-	if err := validateNotice(in); err != nil {
+	if err := validateNotice(d.core.unit, in); err != nil {
 		return extension.NoticeSent{}, err
 	}
 	record, _ := ids.Parse(in.Record.ID)
@@ -137,7 +138,7 @@ func (d extensionNoticeDoor) actingMemberCanOpen(ctx context.Context, in extensi
 	if err != nil {
 		return extension.ErrForbidden
 	}
-	if !seat.Permissions.Allows(in.Record.Type, principal.ActionRead) {
+	if !auth.Allows(principal.WithActor(ctx, seat), in.Record.Type, principal.ActionRead) {
 		return extension.ErrNotFound
 	}
 	if err := auth.EnsureVisibleLive(principal.WithActor(ctx, seat), d.core.tx, in.Record.Type, record); err != nil {
@@ -193,7 +194,7 @@ func (d extensionNoticeDoor) deliver(ctx context.Context, in extension.NoticeReq
 		if err != nil {
 			return 0, err
 		}
-		if !seat.Permissions.Allows(in.Record.Type, principal.ActionRead) {
+		if !auth.Allows(principal.WithActor(ctx, seat), in.Record.Type, principal.ActionRead) {
 			continue
 		}
 		// The recipient's own row scope, judged now. A notice is a pointer, and

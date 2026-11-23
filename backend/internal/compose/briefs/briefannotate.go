@@ -170,7 +170,7 @@ func (e *BriefEngine) annotateItem(ctx context.Context, tx pgx.Tx, runID ids.UUI
 	if err := auth.EnsureVisible(ctx, tx, "deal", dealID); err != nil {
 		return err
 	}
-	if err := citationsWithin(ann, evidence); err != nil {
+	if err := CitationsWithin(ann, evidence); err != nil {
 		return err
 	}
 
@@ -184,7 +184,7 @@ func (e *BriefEngine) annotateItem(ctx context.Context, tx pgx.Tx, runID ids.UUI
 	return err
 }
 
-// citationsWithin refuses a finding that is not grounded in what the run
+// CitationsWithin refuses a finding that is not grounded in what the run
 // actually recorded for that item.
 //
 // A FINDING MUST CITE SOMETHING. An empty citation list is not "a claim with no
@@ -198,7 +198,7 @@ func (e *BriefEngine) annotateItem(ctx context.Context, tx pgx.Tx, runID ids.UUI
 // whose unverifiable citations were silently pruned still reads to the rep as
 // grounded — the prose still says "he wrote yesterday" — and the pruning is
 // invisible to everyone including the agent that would need to correct it.
-func citationsWithin(ann ItemAnnotation, evidence []ids.UUID) error {
+func CitationsWithin(ann ItemAnnotation, evidence []ids.UUID) error {
 	if len(ann.CitedEvidence) == 0 {
 		return httperr.Validation("cited_evidence", "required",
 			fmt.Sprintf("item %s carries a finding that cites nothing; "+

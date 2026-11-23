@@ -30,13 +30,14 @@ const composeRootDir = "internal/compose"
 // The ceilings sit a little above the size the package was when this gate
 // landed, so branches already open could still merge. Lower one whenever a
 // change moves code out. Raising one needs a reason in the pull request.
+//
+// The ceilings below hold develop and main together: each side's additions
+// stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1375
-	composeRootTestFiles       = 1902
-	// Raised by 7 for the pass-cap settings reads.
-	composeRootProductionLines = 228_991
-	// Raised by 61 for the pass-cap and personal sweep receipt tests.
-	composeRootTestLines = 357_894
+	composeRootProductionFiles = 1383
+	composeRootTestFiles       = 1909
+	composeRootProductionLines = 230_161
+	composeRootTestLines       = 359_327
 )
 
 // A read under these floors stopped early or read the wrong place, and would

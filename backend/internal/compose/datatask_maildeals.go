@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/mailhooks"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -54,5 +55,6 @@ func mailDealRepair(pool *pgxpool.Pool) capture.DealRepair {
 	return capture.DealRepair{
 		Candidates: store, Authority: identity.NewService(pool), Filer: ActivityDealFiler{},
 		AdmitClosed: func(deal ids.UUID) capture.DealCandidates { return store.CandidatesOnly(deal) },
+		Hooks:       mailhooks.New(ComposedExtensions, pool),
 	}
 }

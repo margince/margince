@@ -1,7 +1,7 @@
 import type { EvidenceMarkSource } from "../../design-system/evidencemark";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { confidenceLevel } from "../../design-system/trust";
-import { formatDate, formatDateTime } from "../../format/format";
+import { formatDateAbbrev, formatDateTimeAbbrev } from "../../format/format";
 import { type Locale, translate, useLocale } from "../../i18n";
 import { type SourceOpenerFor, useSourceOpener } from "../../lib/opensource";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -64,7 +64,7 @@ export function derivedSource(
     origin:
       row.source === "meeting" && row.source_occurred_at
         ? translate(locale, "evidence.fromMeeting", {
-            date: formatDate(row.source_occurred_at, locale, recordZone),
+            date: formatDateAbbrev(row.source_occurred_at, locale, recordZone),
           })
         : undefined,
     openOrigin:
@@ -72,7 +72,9 @@ export function derivedSource(
         ? openerFor?.({ id: row.source_activity_id, kind: "meeting" })
         : undefined,
     sourceUrl: row.source_url,
-    at: observed ? formatDateTime(observed, locale, recordZone) : undefined,
+    at: observed
+      ? formatDateTimeAbbrev(observed, locale, recordZone)
+      : undefined,
   };
 }
 

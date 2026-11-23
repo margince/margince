@@ -826,3 +826,29 @@ it("removes unoffered booking rows and keeps the default duration", async () => 
   expect(screen.queryByRole("cell", { name: "45 min" })).toBeNull();
   expect(screen.getByRole("cell", { name: "30 min" })).toBeTruthy();
 });
+
+it("refuses a repeated extra length with a message that names the repeat", async () => {
+  const user = userEvent.setup();
+  const server = mount({ video_call: true, location: "" });
+  await user.click(
+    (await screen.findAllByRole("button", { name: /More actions for/ }))[0],
+  );
+  await user.click(screen.getByRole("button", { name: "Edit link" }));
+  const offered = await screen.findByRole("textbox", {
+    name: "Additional meeting lengths",
+  });
+  await user.clear(offered);
+  await user.type(offered, "45, 45, 60");
+  await user.click(screen.getByRole("button", { name: "Save link" }));
+  expect(await screen.findByText("Name each length once.")).toBeTruthy();
+  expect(
+    screen.queryByText("Enter a length from 15 to 480 minutes."),
+  ).toBeNull();
+  expect(server.profileWrites).toHaveLength(0);
+});
+
+it("marks only the link's own length as the main link", async () => {
+  mount({ video_call: true, location: "", offered_lengths: [45, 60] });
+  await screen.findByRole("cell", { name: "45 min" });
+  expect(screen.getAllByText("(main link)")).toHaveLength(1);
+});

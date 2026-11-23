@@ -1025,6 +1025,7 @@
     "claimRecord": "sharing",
     "claimTaskReminderDelivery": "activities",
     "clearActivityDisposition": "activities",
+    "clearContactImpersonationWarning": "contacts",
     "clearDealManagerRequest": "deals",
     "clearLeadManualSignal": "leads",
     "clearVoiceCorpus": "voice",

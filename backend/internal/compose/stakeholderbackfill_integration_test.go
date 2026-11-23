@@ -435,7 +435,7 @@ func TestTheClosePhaseFilesOnTheClosedDealAndNoOtherDeal(t *testing.T) {
 	b.WsExec(t, `UPDATE deal_correction SET applied_at = $2 WHERE deal_id = $1`, b.silent, b.now.AddDate(0, 0, -10))
 	pipeline := ids.From[ids.PipelineKind](ids.MustParse(b.WsScalar(t, `SELECT pipeline_id::text FROM deal WHERE id = $1`, b.supported)))
 	open := ids.From[ids.StageKind](ids.MustParse(b.WsScalar(t, `SELECT stage_id::text FROM deal WHERE id = $1`, b.supported)))
-	created, err := b.Deals.CreateDeal(b.Admin(), deals.CreateDealInput{Name: "Opened after the close", PipelineID: pipeline, StageID: open})
+	created, err := b.Deals.CreateDeal(b.Admin(), deals.CreateDealInput{Name: "Opened after the close", Source: "manual", PipelineID: pipeline, StageID: open})
 	if err != nil {
 		t.Fatal(err)
 	}

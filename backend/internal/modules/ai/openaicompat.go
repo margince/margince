@@ -475,7 +475,7 @@ func (c *openAICompatClient) postFor(ctx context.Context, deployment, path strin
 	if err := c.authorize(httpReq); err != nil {
 		return nil, err
 	}
-	resp, err := sendModelRequest(c.http, httpReq)
+	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("ai: openai-compat: %w", err)
 	}

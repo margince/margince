@@ -50,7 +50,11 @@ func logResolvedBindings(t *testing.T, routing ai.RoutingConfig) {
 		if ai.Status(task) != ai.StatusShipped {
 			continue
 		}
-		lead := ai.LeadingTier(task)
+		ladder := routing.Ladder(task)
+		if len(ladder) == 0 {
+			continue
+		}
+		lead := ladder[0]
 		if b, ok := routing.Tiers[lead]; ok {
 			t.Logf("routed: %-34s %-12s %s:%s", task, lead, b.Provider, b.Model)
 		}

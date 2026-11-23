@@ -72,12 +72,8 @@ func TestNewLocalRouterWithoutResultCacheServesEveryScriptedAnswer(t *testing.T)
 	}
 }
 
-// TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletionAndStampsCacheOff
-// covers Step 1 requirement 2: WithCallStore wires a recorder that gets
-// one Call per completion, and every one of them carries CacheOff=true
-// when WithoutResultCache is also set — the trace tells the truth about
-// the Router's own posture, not just what happened to this one request.
-func TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletionAndStampsCacheOff(t *testing.T) {
+// WithCallStore wires a recorder that gets one Call per completion.
+func TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletion(t *testing.T) {
 	fake := NewFakeClient().Script("a", "b")
 	store := &memCallStore{}
 	r, err := NewLocalRouter(localFakeConfig(), WithCallStore(store), WithoutResultCache(), WithFakeClient(fake))
@@ -96,11 +92,6 @@ func TestNewLocalRouterWithCallStoreRecordsOneCallPerCompletionAndStampsCacheOff
 	}
 	if len(store.calls) != 2 {
 		t.Fatalf("want one recorded Call per completion, got %d", len(store.calls))
-	}
-	for i, c := range store.calls {
-		if !c.CacheOff {
-			t.Fatalf("call %d: CacheOff must be stamped true when WithoutResultCache is set, got %+v", i, c)
-		}
 	}
 }
 

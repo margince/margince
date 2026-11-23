@@ -510,6 +510,32 @@ func TestTheAccuracyViewSetsAQuartersFrozenLandingAgainstWhatWasWon(t *testing.T
 	}
 }
 
+// The landings are the workspace's frozen totals. GET /forecast shows those
+// only to a seat that may assert about the workspace. A seat reading only its
+// own or its team's rows may not. A mask never reaches a seat reading every
+// row, so a masked seat is one of these too.
+func TestTheAccuracyViewShowsLandingsOnlyToASeatThatMaySeeTheFrozenWorkspace(t *testing.T) {
+	f := newFixture(t)
+	within := day(time.May, 15)
+	f.freezeQuarter(within, day(time.May, 20), forecasting.Readings{WonMinor: 100, WeightedMinor: 400}, "")
+	f.freezeQuarter(within, day(time.July, 2), forecasting.Readings{WonMinor: 350}, "")
+	if got := f.mustAccuracy(clocktest.Now(t)).Landings; len(got) != 1 {
+		t.Fatalf("a seat reading every row got %d landings, want the one quarter", len(got))
+	}
+	allRows := f.reader
+	for _, scope := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam} {
+		p, ok := principal.Actor(allRows)
+		if !ok {
+			t.Fatal("the fixture reader carries no principal")
+		}
+		p.Permissions.RowScope = scope
+		f.reader = principal.WithActor(allRows, p)
+		if got := f.mustAccuracy(clocktest.Now(t)).Landings; len(got) != 0 {
+			t.Errorf("a seat with row scope %q got %d workspace landings, want none: %+v", scope, len(got), got)
+		}
+	}
+}
+
 // With individual performance off, a landing that one colleague's deals make
 // up is withheld. The totals would give that colleague's pipeline away.
 func TestTheAccuracyViewWithholdsALandingOfOneColleague(t *testing.T) {

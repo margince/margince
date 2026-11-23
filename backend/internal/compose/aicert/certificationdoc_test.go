@@ -106,6 +106,9 @@ type aiCertBands struct {
 	Certified         int `json:"certified"`
 	SupportedDegraded int `json:"supported_degraded"`
 	NotSupported      int `json:"not_supported"`
+	// TooFewRuns counts sites right on every case with too few runs to grade
+	// alone (aicert.SiteTooFewRuns); a preset's task grade never reads it.
+	TooFewRuns int `json:"too_few_runs"`
 }
 
 // aiCertSite is one shipped invocation site: what it is scored against, how
@@ -156,6 +159,9 @@ type aiCertRecord struct {
 	Binding aiCertBindingRef `json:"binding"`
 	State   string           `json:"state"`
 	Band    string           `json:"band"`
+	// Judge is the model that scored the record's answers, empty where every
+	// case was checked mechanically: two judges' scores are not one scale.
+	Judge string `json:"judge,omitempty"`
 	// ScenariosMeasured is null for a record written before per-scenario stamps,
 	// which can only be judged whole. Zero would claim it measured nothing.
 	ScenariosMeasured   *int                        `json:"scenarios_measured"`
@@ -206,14 +212,14 @@ const unclaimedReason = "it names no scenario of any site its task ships, so no 
 // as the census yielded them — so a reader diffing two regenerations sees what
 // moved rather than where a map walk landed.
 func buildAICertDoc(rows []aicert.ReadinessRow, unclaimed []aicert.Record,
-	corpus []aicert.Scenario, records []aicert.Record,
+	corpus []aicert.Scenario, records []aicert.Record, contextOwed map[string]bool,
 ) aiCertDoc {
 	scenarios := scenariosBySite(corpus)
 	tasks, byTask := aiCertTaskGroups(rows)
 	doc := aiCertDoc{Bindings: foldAICertBindings(rows), Sites: []aiCertSite{}, Unclaimed: []aiCertUnclaimed{}}
 	for _, task := range tasks {
 		for _, siteKey := range siteKeysOf(byTask[task]) {
-			doc.Sites = append(doc.Sites, buildAICertSite(siteKey, byTask[task], scenarios[siteKey]))
+			doc.Sites = append(doc.Sites, buildAICertSite(siteKey, byTask[task], scenarios[siteKey], contextOwed[task]))
 		}
 	}
 	for _, rec := range unclaimed {
@@ -244,7 +250,7 @@ func buildAICertDoc(rows []aicert.ReadinessRow, unclaimed []aicert.Record,
 	return doc
 }
 
-func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aicert.Scenario) aiCertSite {
+func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aicert.Scenario, contextOwed bool) aiCertSite {
 	var mine []aicert.ReadinessRow
 	for _, row := range taskRows {
 		if row.SiteKey() == siteKey {
@@ -265,7 +271,9 @@ func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aic
 		if !row.Certified {
 			continue
 		}
-		site.MissingContextScopes = foldContextScopes(site.MissingContextScopes, row.Record)
+		if contextOwed {
+			site.MissingContextScopes = foldContextScopes(site.MissingContextScopes, row.Record)
+		}
 		site.Records = append(site.Records, buildAICertRecord(row, len(site.Scenarios)))
 	}
 	site.Recommended = pickAICertRecord(site.Records)
@@ -278,7 +286,7 @@ func buildAICertSite(siteKey string, taskRows []aicert.ReadinessRow, cases []aic
 // test cases three fields above the list of them.
 func buildAICertRecord(row aicert.ReadinessRow, siteScenarios int) aiCertRecord {
 	rec := aiCertRecord{
-		Binding: bindingRefOf(row.Record), State: row.Status(), Band: row.Tally.Verdict,
+		Binding: bindingRefOf(row.Record), State: row.Status(), Band: row.Tally.Verdict, Judge: row.Record.JudgeServedModel,
 		ScenariosTotal: siteScenarios, Runs: row.Tally.Runs, Passed: row.Tally.Passed,
 		Reliability:         ratio(row.Tally.Passed, row.Tally.Runs),
 		ReliabilityInterval: aicert.ReliabilityIntervalOf(row.Tally.Passed, row.Tally.Runs),
@@ -434,6 +442,8 @@ func countAICertSiteInto(fold *aiCertBinding, row aicert.ReadinessRow) {
 		fold.Bands.SupportedDegraded++
 	case aicert.VerdictNotSupported:
 		fold.Bands.NotSupported++
+	case aicert.SiteTooFewRuns:
+		fold.Bands.TooFewRuns++
 	}
 	fold.Runs += row.Tally.Runs
 	fold.Passed += row.Tally.Passed

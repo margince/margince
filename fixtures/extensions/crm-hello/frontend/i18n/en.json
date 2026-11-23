@@ -1,4 +1,5 @@
 {
+  "extCrmHello.captureReason.kept_core_answer": "Kept the answer core had reached",
   "extCrmHello.panel": "crm-hello sees deal {deal}.",
   "extCrmHello.sub": "The tier's smoke fixture. It has nothing to set.",
   "extCrmHello.title": "crm-hello"

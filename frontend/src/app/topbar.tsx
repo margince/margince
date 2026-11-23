@@ -16,6 +16,7 @@ import { IconAction } from "../design-system/iconaction";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { useOpenableApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { stepBackOutOf } from "../lib/historydepth";
 import { useFirstScreenSettled } from "../lib/journeymarks";
@@ -48,10 +49,12 @@ import {
   NAV,
   type NavSection,
   navLabelKey,
+  parentScreenOf,
   recordKindOf,
   reservedPageTitle,
 } from "./nav";
 import { NotificationBell } from "./notificationbell";
+import { ONBOARDING_ENTRY } from "./onboarding-gate";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
 import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
@@ -110,12 +113,18 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   const t = useT();
   const { locale } = useLocale();
   const navItem = NAV.find((item) => item.screen === route.screen);
-  const labelKey = navLabelKey(navItem, useReadsTeamProgress());
+  const readsTeam = useReadsTeamProgress();
+  const labelKey = navLabelKey(navItem, readsTeam);
+  const parentLabelKey = navLabelKey(
+    NAV.find((item) => item.screen === parentScreenOf(route)),
+    readsTeam,
+  );
   const subject = useRouteSubject(route);
   const inSection = sectionHead(section, route);
   const unit =
     route.screen === EXTENSION_SCREEN ? findExtension(route.id) : null;
   const filtersCrumbs = useFiltersCrumbs(route);
+  const onApp = useOpenableApp(route) !== null;
 
   if (belowList(route)) {
     // A record's trail leads back to the list it was opened from. The list
@@ -142,6 +151,11 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
       { label: subject },
     ];
   }
+  if (onApp) {
+    // An app is a destination of the drawer, not a page under Settings, so
+    // its trail is its own name and nothing above it.
+    return [{ label: subject }];
+  }
   if (inSection) {
     return [
       {
@@ -153,6 +167,16 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   }
   if (filtersCrumbs) {
     return filtersCrumbs;
+  }
+  const parent = parentScreenOf(route);
+  if (parent) {
+    return [
+      {
+        label: resolveTitle(parent, parentLabelKey, t),
+        href: listAddress(parent),
+      },
+      { label: resolveTitle(route.screen, labelKey, t) },
+    ];
   }
   return [{ label: resolveTitle(route.screen, labelKey, t) }];
 }
@@ -297,7 +321,8 @@ export function TopBar({
   collapsed: boolean;
   onToggle?: () => void;
   onOpenSearch: () => void;
-  /** The onboarding gate holds the reader: the outbox and the bell stay out. */
+  /** The onboarding gate holds the reader: a way back to setup stands where
+   *  the outbox and the bell would. */
   held?: boolean;
 }>) {
   const t = useT();
@@ -367,8 +392,16 @@ export function TopBar({
             />
           </Suspense>
         )}
-        {!held && <OutboxButton />}
-        {!held && <NotificationBell />}
+        {held ? (
+          <AppLink className="btn btn-ghost" href={routeHash(ONBOARDING_ENTRY)}>
+            {t("shell.backToSetup")}
+          </AppLink>
+        ) : (
+          <>
+            <OutboxButton />
+            <NotificationBell />
+          </>
+        )}
         <AccountMenu />
       </div>
     </header>

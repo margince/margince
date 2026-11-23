@@ -17,11 +17,15 @@ package compose
 // and the defect it guards is exactly the kind a new spec reintroduces.
 
 import (
+	"context"
 	"maps"
 	"os"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // runSpec passes the caller's FILTER keys to the vocabulary gate.
@@ -149,4 +153,45 @@ func TestEveryGrantedNameIsInTheReportsVocabulary(t *testing.T) {
 			}
 		}
 	}
+}
+
+// A drill-through row prints a reference's id. The deal read masks it from a
+// caller without the referenced table's read grant, and so does this.
+func TestADrillThroughServesAReferenceOnlyWithItsReadGrant(t *testing.T) {
+	t.Parallel()
+	judged := 0
+	for _, report := range slices.Sorted(maps.Keys(prebuiltReports)) {
+		spec := prebuiltReports[report]
+		columns, _ := derivationColumns(spec)
+		for _, column := range columns {
+			expr, _ := derivationColumnExpr(spec, column)
+			table, isReference := spec.referenceScopes[expr]
+			if !isReference || table == string(spec.entity) || spec.grants[column] != "" {
+				continue
+			}
+			judged++
+			without, _ := derivationColumns(grantedSpec(readerOf(string(spec.entity)), spec))
+			if slices.Contains(without, column) {
+				t.Errorf("%s serves %s to a caller without %s.read", report, column, table)
+			}
+			with, _ := derivationColumns(grantedSpec(readerOf(string(spec.entity), table), spec))
+			if !slices.Contains(with, column) {
+				t.Errorf("%s withholds %s from a caller holding %s.read", report, column, table)
+			}
+		}
+	}
+	if judged == 0 {
+		t.Fatal("no drill-through returned a reference column; this gate proves nothing")
+	}
+}
+
+func readerOf(objects ...string) context.Context {
+	grants := map[string]principal.ObjectGrant{}
+	for _, object := range objects {
+		grants[object] = principal.ObjectGrant{Read: true}
+	}
+	return principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, UserID: ids.NewV7(),
+		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
+	})
 }

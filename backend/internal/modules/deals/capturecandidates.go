@@ -117,13 +117,51 @@ func dealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limi
 // IsOpenDealOfCompanies answers whether deal is an open deal of one of the
 // companies. A seat without the deal read grant learns no deal.
 func (s *Store) IsOpenDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.UUID, companies []ids.UUID) (bool, error) {
+	return isDealOfCompanies(ctx, tx, deal, companies, ids.Nil)
+}
+
+// IsOpenDealOfCompanies is Store.IsOpenDealOfCompanies narrowed to its one deal.
+func (c *ClosedDealCandidates) IsOpenDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.UUID, companies []ids.UUID) (bool, error) {
+	return isDealOfCompanies(ctx, tx, deal, companies, c.admit)
+}
+
+func isDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.UUID, companies []ids.UUID, admit ids.UUID) (bool, error) {
 	if denied, err := candidateReadDenied(ctx); denied || err != nil {
 		return false, err
 	}
+	args := []any{deal, companies}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	query := `SELECT EXISTS (SELECT 1 FROM deal d
+		 WHERE d.id = $1 AND d.company_id = ANY($2) AND ` + candidateDealSQL(admit, arg) + `)`
 	var open bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal d
-		 WHERE d.id = $1 AND d.company_id = ANY($2) AND `+openDealSQL+`)`, deal, companies).Scan(&open); err != nil {
+	if err := tx.QueryRow(ctx, query, args...).Scan(&open); err != nil {
 		return false, fmt.Errorf("deals: checking the chosen deal of a logged activity: %w", err)
+	}
+	return open, nil
+}
+
+// IsOpenDealOfProject answers whether deal is an open deal of the project. A
+// seat without the deal read grant learns no deal.
+func (s *Store) IsOpenDealOfProject(ctx context.Context, tx pgx.Tx, deal, project ids.UUID) (bool, error) {
+	return isDealOfProject(ctx, tx, deal, project, ids.Nil)
+}
+
+// IsOpenDealOfProject is Store.IsOpenDealOfProject narrowed to its one deal.
+func (c *ClosedDealCandidates) IsOpenDealOfProject(ctx context.Context, tx pgx.Tx, deal, project ids.UUID) (bool, error) {
+	return isDealOfProject(ctx, tx, deal, project, c.admit)
+}
+
+func isDealOfProject(ctx context.Context, tx pgx.Tx, deal, project, admit ids.UUID) (bool, error) {
+	if denied, err := candidateReadDenied(ctx); denied || err != nil {
+		return false, err
+	}
+	args := []any{deal, project}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	query := `SELECT EXISTS (SELECT 1 FROM deal d
+		 WHERE d.id = $1 AND d.project_id = $2 AND ` + candidateDealSQL(admit, arg) + `)`
+	var open bool
+	if err := tx.QueryRow(ctx, query, args...).Scan(&open); err != nil {
+		return false, fmt.Errorf("deals: checking a hook's deal against the project: %w", err)
 	}
 	return open, nil
 }

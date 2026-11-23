@@ -92,7 +92,7 @@ const commands: Command[] = [
 // about a control it never meant.
 function destinationRows(): HTMLElement[] {
   return screen
-    .getAllByRole("button")
+    .getAllByRole("option")
     .filter((button) => !button.classList.contains("palette-ask"));
 }
 
@@ -105,7 +105,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    expect(document.activeElement).toBe(screen.getByRole("searchbox"));
+    expect(document.activeElement).toBe(screen.getByRole("combobox"));
     expect(screen.getByText("Deals")).toBeTruthy();
     expect(screen.getByText("Record")).toBeTruthy(); // type tag rendered
   });
@@ -118,7 +118,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("searchbox"), "pipeline");
+    await userEvent.type(screen.getByRole("combobox"), "pipeline");
     const rows = destinationRows();
     expect(rows[0].textContent).toContain("Deals");
     expect(rows[0].textContent).not.toContain("pipeline");
@@ -130,7 +130,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("searchbox"), "COMPANY");
+    await userEvent.type(screen.getByRole("combobox"), "COMPANY");
     const rows = destinationRows();
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain("Brandt Automotive");
@@ -143,7 +143,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    const input = screen.getByRole("searchbox");
+    const input = screen.getByRole("combobox");
     await userEvent.keyboard("{ArrowUp}"); // clamps at 0
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}"); // clamps at end
     await userEvent.keyboard("{ArrowUp}{ArrowUp}"); // back to index 0
@@ -163,7 +163,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("searchbox"), "zzz nothing matches");
+    await userEvent.type(screen.getByRole("combobox"), "zzz nothing matches");
     await userEvent.click(screen.getByText("Ask your documents"));
     // The screen the reader was on is still the screen they are on.
     // Two dials: presence opens it, the question rides beside it. An empty
@@ -183,7 +183,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    await userEvent.type(screen.getByRole("combobox"), "deals");
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
   });
@@ -194,7 +194,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
-    const input = screen.getByRole("searchbox");
+    const input = screen.getByRole("combobox");
     await userEvent.type(input, "deals");
 
     fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
@@ -209,7 +209,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("searchbox"), "deals");
+    await userEvent.type(screen.getByRole("combobox"), "deals");
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
     expect(onClose).toHaveBeenCalled();
@@ -222,7 +222,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     );
     const overlay = baseElement.querySelector<HTMLElement>(".palette-overlay");
     if (!overlay) throw new Error("the palette draws no overlay");
-    fireEvent.pointerDown(screen.getByRole("searchbox"));
+    fireEvent.pointerDown(screen.getByRole("combobox"));
     fireEvent.pointerUp(overlay);
     fireEvent.click(overlay);
     expect(onClose).not.toHaveBeenCalled();
@@ -238,7 +238,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     const view = renderSignedIn(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
-    await userEvent.type(screen.getByRole("searchbox"), "deal");
+    await userEvent.type(screen.getByRole("combobox"), "deal");
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalled();
     view.rerender(
@@ -247,7 +247,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     view.rerender(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
-    expect((screen.getByRole("searchbox") as HTMLInputElement).value).toBe("");
+    expect((screen.getByRole("combobox") as HTMLInputElement).value).toBe("");
   });
 
   // The palette is a dialog and had none of a dialog's keyboard behaviour: it
@@ -263,7 +263,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     const user = userEvent.setup();
     // Where the arrow keys put a reader — and where Escape used to do nothing,
     // because the handler belonged to the input this focus has left.
-    const row = screen.getByRole("button", { name: /Deals/ });
+    const row = screen.getByRole("option", { name: /Deals/ });
     row.focus();
     expect(document.activeElement).toBe(row);
     await user.keyboard("{Escape}");
@@ -281,7 +281,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       );
       const user = userEvent.setup();
       const dialog = screen.getByRole("dialog");
-      screen.getByRole("searchbox").focus();
+      screen.getByRole("combobox").focus();
 
       // Backwards off the first stop was the reported failure: one Shift+Tab
       // and focus was on the page behind.
@@ -332,7 +332,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
     await waitFor(() =>
       expect(screen.getByText("Dana Buyer at Acme")).toBeTruthy(),
     );
@@ -355,7 +355,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
 
     expect(await screen.findByText(/Search failed/)).toBeTruthy();
     // The notice heads the list, so it names what still works, not where.
@@ -371,8 +371,8 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     // "acme" and no builtin command carries that word — the claim is that a
     // failed RECORD search leaves the command list working, not that it leaves
     // the previous query matching something it never matched.
-    await user.clear(screen.getByRole("searchbox"));
-    await user.type(screen.getByRole("searchbox"), "Deals");
+    await user.clear(screen.getByRole("combobox"));
+    await user.type(screen.getByRole("combobox"), "Deals");
     expect(
       destinationRows().some((row) => row.textContent?.includes("Deals")),
     ).toBe(true);
@@ -392,7 +392,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "zzzzqqq");
+    await user.type(screen.getByRole("combobox"), "zzzzqqq");
 
     expect(await screen.findByText("No matches for “zzzzqqq”.")).toBeTruthy();
     expect(screen.queryByText(/See all results/)).toBeNull();
@@ -410,7 +410,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "zzzzqqq");
+    await user.type(screen.getByRole("combobox"), "zzzzqqq");
 
     expect(screen.getByText("See all results for “zzzzqqq”")).toBeTruthy();
     expect(screen.queryByText(/No matches/)).toBeNull();
@@ -432,8 +432,8 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     const { container } = renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "brandt");
-    const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
+    await user.type(screen.getByRole("combobox"), "brandt");
+    const row = await screen.findByRole("option", { name: /Brandt GmbH/ });
     expect(
       [...container.querySelectorAll(".palette-group")].map(
         (heading) => heading.textContent,
@@ -475,9 +475,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     const { container } = renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
 
-    const email = await screen.findByRole("button", { name: /Acme renewal/ });
+    const email = await screen.findByRole("option", { name: /Acme renewal/ });
     expect(
       [...container.querySelectorAll(".palette-group")].map(
         (heading) => heading.textContent,
@@ -523,8 +523,8 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "brandt");
-    const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
+    await user.type(screen.getByRole("combobox"), "brandt");
+    const row = await screen.findByRole("option", { name: /Brandt GmbH/ });
     expect(row.querySelector(".sub")?.textContent).toBe("Partner");
   });
 
@@ -550,10 +550,10 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
 
     // The name starts with the initials the mark prints (WCAG 2.5.3).
-    const row = await screen.findByRole("button", {
+    const row = await screen.findByRole("option", {
       name: /^JW\s*Jonas Weiß Works at Acme GmbH$/,
     });
     expect(row.querySelector(".sub")?.textContent).toBe("Works at Acme GmbH");
@@ -584,14 +584,14 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "acme");
+    await user.type(screen.getByRole("combobox"), "acme");
 
-    const company = await screen.findByRole("button", { name: "Acme GmbH" });
+    const company = await screen.findByRole("option", { name: "Acme GmbH" });
     expect(
       company.querySelector(".palette-mark .avatar-img")?.getAttribute("src"),
     ).toBe(logo);
     // A deal is not a contact or a company, and keeps the row's glyph.
-    const deal = screen.getByRole("button", { name: "Acme renewal" });
+    const deal = screen.getByRole("option", { name: "Acme renewal" });
     expect(deal.querySelector(".palette-mark")).toBeNull();
   });
 
@@ -618,8 +618,8 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "dana");
-    const row = await screen.findByRole("button", { name: /Dana Buyer/ });
+    await user.type(screen.getByRole("combobox"), "dana");
+    const row = await screen.findByRole("option", { name: /Dana Buyer/ });
     expect(row.querySelector(".sub")).toBeNull();
   });
 
@@ -640,7 +640,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "scrub");
+    await user.type(screen.getByRole("combobox"), "scrub");
     await waitFor(() =>
       expect(screen.getByText("Floor scrubber")).toBeTruthy(),
     );
@@ -678,7 +678,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "roll");
+    await user.type(screen.getByRole("combobox"), "roll");
     expect(await screen.findByText("ACME-CRM · Acme GmbH")).toBeTruthy();
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
     expect(
@@ -711,7 +711,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
-    await user.type(screen.getByRole("searchbox"), "key");
+    await user.type(screen.getByRole("combobox"), "key");
     await waitFor(() => expect(screen.getByText("Key Account")).toBeTruthy());
 
     await user.click(screen.getByText("Key Account"));
@@ -836,7 +836,7 @@ describe("useBuiltinCommands", () => {
     // Typed by its OLD name, which the palette keeps as a keyword: the page is
     // "Company profile" now, and a reader who learnt "General" should still
     // find it rather than concluding it was removed.
-    await user.type(screen.getByRole("searchbox"), "general");
+    await user.type(screen.getByRole("combobox"), "general");
     await waitFor(() => {
       expect(destinationRows()[0].textContent).toContain("Company profile");
     });
@@ -853,7 +853,7 @@ describe("useBuiltinCommands", () => {
         capture_settings: ["read"],
       },
     });
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
     await user.type(box, "capture");
     await screen.findByText("Mail capture");
     await user.clear(box);
@@ -868,7 +868,7 @@ describe("useBuiltinCommands", () => {
     async (role) => {
       const user = userEvent.setup();
       renderProbeWithCompany({ roles: [role], allow: INSTALLATION_WRITER });
-      await user.type(screen.getByRole("searchbox"), "company");
+      await user.type(screen.getByRole("combobox"), "company");
       await screen.findByText("Company profile");
       expect(screen.queryByText("Read a company")).toBeNull();
     },
@@ -877,7 +877,7 @@ describe("useBuiltinCommands", () => {
   it("reaches Company profile by its refresh button's words for an admin", async () => {
     const user = userEvent.setup();
     renderProbeWithCompany({ roles: ["admin"], allow: INSTALLATION_WRITER });
-    await user.type(screen.getByRole("searchbox"), "website");
+    await user.type(screen.getByRole("combobox"), "website");
     await waitFor(() => {
       expect(destinationRows()[0].textContent).toContain("Company profile");
     });
@@ -890,7 +890,7 @@ describe("useBuiltinCommands", () => {
   it("does not send ops to Company profile for the website", async () => {
     const user = userEvent.setup();
     renderProbeWithCompany({ roles: ["ops"], allow: INSTALLATION_WRITER });
-    const box = screen.getByRole("searchbox");
+    const box = screen.getByRole("combobox");
     await user.type(box, "company");
     await screen.findByText("Company profile");
     await user.clear(box);
@@ -941,7 +941,7 @@ describe("useBuiltinCommands", () => {
     async (typed, label, hash) => {
       const user = userEvent.setup();
       renderProbe();
-      await user.type(screen.getByRole("searchbox"), typed);
+      await user.type(screen.getByRole("combobox"), typed);
       const rows = destinationRows();
       expect(rows[0].textContent).toContain(label);
       await user.keyboard("{Enter}");
@@ -954,7 +954,7 @@ describe("useBuiltinCommands", () => {
     renderProbe();
     // Its own title, not a fourth spelling of it: "views" appears in no other
     // command, so matching on it proves the row carries the screen's own words.
-    await user.type(screen.getByRole("searchbox"), "views");
+    await user.type(screen.getByRole("combobox"), "views");
     const rows = destinationRows();
     expect(rows[0].textContent).toContain("Filters and views");
     await user.keyboard("{Enter}");
@@ -964,7 +964,7 @@ describe("useBuiltinCommands", () => {
   it("reaches it by its route id too, so the domain word finds it", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("searchbox"), "filters");
+    await user.type(screen.getByRole("combobox"), "filters");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/filters");
   });
@@ -975,7 +975,7 @@ describe("useBuiltinCommands", () => {
   it("reaches the scheduled queue, which no rail row names", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("searchbox"), "scheduled");
+    await user.type(screen.getByRole("combobox"), "scheduled");
     const rows = destinationRows();
     expect(rows[0].textContent).toContain("Scheduled messages");
     await user.keyboard("{Enter}");
@@ -989,7 +989,7 @@ describe("useBuiltinCommands", () => {
   it("finds it under the words the composer's control uses", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("searchbox"), "Schedule send");
+    await user.type(screen.getByRole("combobox"), "Schedule send");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/scheduled");
   });

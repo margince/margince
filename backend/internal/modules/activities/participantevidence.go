@@ -55,7 +55,7 @@ func storeParticipantEvidenceRows(ctx context.Context, tx pgx.Tx, rows pgx.Rows)
 	if err := lockParticipantEvidenceParents(ctx, tx, keys); err != nil {
 		return nil, 0, err
 	}
-	// Match the parent cascade's lock order before the trigger takes its snapshot.
+	// Match the parent copy trigger's lock order before the stamp trigger takes its snapshot.
 	tag, err := tx.Exec(ctx, `UPDATE activity_participant ap SET domain_evidence_parent_version=NULL,
  domain_evidence_at=NULL,domain_evidence_precision=NULL,domain_evidence_visible=NULL
  WHERE id=ANY(@ids) AND `+storekit.ParticipantEvidenceMissingSQL("ap"), pgx.StrictNamedArgs{participantEvidenceIDsParam: keys})

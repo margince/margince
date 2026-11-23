@@ -51,13 +51,19 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 		start, end = monday.AddDate(0, 0, -7), monday
 	case reportingThisQuarter:
 		start = quarterStart(day, calendar.FiscalStartMonth)
+	case reportingLastQuarter:
+		end = quarterStart(day, calendar.FiscalStartMonth)
+		start = end.AddDate(0, -3, 0)
+	case reportingLastYear:
+		end = fiscalPeriodStart(reportperiod.GrainYear, day, calendar.FiscalStartMonth)
+		start = end.AddDate(-1, 0, 0)
 	case reportingCustom:
 		if selection.Interval == nil {
 			return crmcontracts.ReportingWindow{}, intervalError("choose the reporting interval")
 		}
 		start, end = selection.Interval.StartAt.In(zone), selection.Interval.EndAt.In(zone)
 	default:
-		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period: this_week, this_month, last_month, last_week, this_quarter or custom")
+		return crmcontracts.ReportingWindow{}, invalid("choose a supported reporting period: this_week, last_week, this_month, last_month, this_quarter, last_quarter, last_year or custom")
 	}
 	if !end.After(start) {
 		return crmcontracts.ReportingWindow{}, intervalError("choose an end date after the start date")
@@ -74,10 +80,15 @@ func Interval(selection crmcontracts.ReportingSelection, calendar Calendar, at t
 	return crmcontracts.ReportingWindow{StartAt: start, EndAt: end}, nil
 }
 
-// quarterStart is the first instant of day's fiscal quarter. Its callers
-// validate fiscalStart through location, which is all Containing refuses.
+// quarterStart is the first instant of day's fiscal quarter.
 func quarterStart(day time.Time, fiscalStart int) time.Time {
-	start, _, _ := reportperiod.Containing(reportperiod.GrainQuarter, day, day.Location(), fiscalStart)
+	return fiscalPeriodStart(reportperiod.GrainQuarter, day, fiscalStart)
+}
+
+// fiscalPeriodStart is the first instant of day's fiscal period of grain. Its
+// callers validate fiscalStart through location, which is all Containing refuses.
+func fiscalPeriodStart(grain reportperiod.Grain, day time.Time, fiscalStart int) time.Time {
+	start, _, _ := reportperiod.Containing(grain, day, day.Location(), fiscalStart)
 	return start
 }
 

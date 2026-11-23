@@ -18,9 +18,9 @@ import {
   snoozedDueAt,
   TaskCompleteCheck,
   TaskQuickActions,
-  TaskWriteFailure,
   useTaskUpdate,
 } from "../../components/taskactions";
+import { TaskWriteFailure } from "../../components/taskwritefailure";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordView } from "../../design-system/recordview";

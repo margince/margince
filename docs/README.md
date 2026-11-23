@@ -18,8 +18,7 @@ start.
 **Do you design something a user can see?** [DESIGN.md](../DESIGN.md) holds the look of the app, and
 the research behind it. The plan to add it to the app, one pull request per step, is [how-to/adopt-the-design.md](how-to/adopt-the-design.md). It goes on in
 [how-to/adopt-the-design-records.md](how-to/adopt-the-design-records.md) for the record pages and
-[how-to/adopt-the-design-surfaces.md](how-to/adopt-the-design-surfaces.md) for the rest. The list of
-web app parts is in
+[how-to/adopt-the-design-surfaces.md](how-to/adopt-the-design-surfaces.md) for the rest. The list of web app parts is in
 [frontend/src/design-system/README.md](../frontend/src/design-system/README.md).
 
 **AI in Margince?** Start at [reference/which-ai-you-can-use.md](reference/which-ai-you-can-use.md): which AI to use, and its grade. How we test it: [explanation/ai-certification.md](explanation/ai-certification.md) and [explanation/how-we-test-your-ai-assistant.md](explanation/how-we-test-your-ai-assistant.md).
@@ -159,8 +158,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [design-a-bench-case.md](how-to/design-a-bench-case.md): add a screen to the daily-use speed test
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
-- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
-- [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
+- [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`. Also [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
+- Extension text: [the work](reference/extensions-can-override-core-s-translati.md). Extension use of core's AI models and files: [the work](reference/extensions-can-use-core-s-ai-models-s3-a.md), [what it can use](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md). Extension apps: [the work](reference/extensions-can-appear-as-apps-in-the-hom.md), [why](explanation/extension-apps-in-the-drawer.md).
 - [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
   extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job

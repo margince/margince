@@ -138,7 +138,12 @@ export function BookingLinksCard({ profile }: Readonly<{ profile: Profile }>) {
               header: t("scheduling.col.link"),
               grow: true,
               fold: "title",
-              render: (row) => <LinkCell profile={row} />,
+              render: (row) => (
+                <LinkCell
+                  profile={row}
+                  main={row.duration_minutes === profile.duration_minutes}
+                />
+              ),
             },
             {
               key: "length",
@@ -222,13 +227,23 @@ function videoText(t: Translator, profile: Profile): string {
   return VIDEO_APP_NAME[PROVIDER_VIDEO_APP[profile.provider]];
 }
 
-function LinkCell({ profile }: Readonly<{ profile: Profile }>) {
+// Each extra length is a row of its own; only the link's own length is the
+// main link.
+function LinkCell({
+  profile,
+  main,
+}: Readonly<{ profile: Profile; main: boolean }>) {
   const t = useT();
   return (
     <CellStack>
       <span className="t-name meeting-link-title">
-        {profile.title}{" "}
-        <span className="t-caption">{t("scheduling.mainLink")}</span>
+        {profile.title}
+        {main && (
+          <>
+            {" "}
+            <span className="t-caption">{t("scheduling.mainLink")}</span>
+          </>
+        )}
       </span>
       <span className="t-caption meeting-link-url">
         {profile.public_url ?? t("scheduling.publicUrlMissing")}
@@ -258,6 +273,11 @@ function LinkActions({
   onReplace,
 }: Readonly<{ profile: Profile; onEdit: () => void; onReplace: () => void }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const length = plural("scheduling.minutes", profile.duration_minutes, {
+    count: formatNumber(profile.duration_minutes, locale),
+  });
   const copy = useCopyBookingLink(profile.public_url ?? "", {
     copy: t("scheduling.copyLink"),
     copied: t("scheduling.copied"),
@@ -270,7 +290,9 @@ function LinkActions({
         {copy.label}
       </Button>
       <OverflowMenu
-        label={t("scheduling.linkActions", { name: profile.title })}
+        label={t("scheduling.linkActions", {
+          name: `${profile.title}, ${length}`,
+        })}
       >
         <Button onClick={onEdit}>{t("scheduling.editLink")}</Button>
         <Button onClick={() => navigate({ screen: "book", id: "preview" })}>

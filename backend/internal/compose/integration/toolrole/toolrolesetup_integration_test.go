@@ -391,8 +391,8 @@ func setupSeeders(s sweepSeed) map[string]func() string {
 		// A model call is written by the model path, which the sweep's calls
 		// never reach for every role.
 		"ai_call": func() string {
-			return s.ownerScalar(`INSERT INTO ai_call (task, tier, provider, model_id, request_fingerprint, logical_call_id)
-				VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'sweep-model', 'print', gen_random_uuid()) RETURNING id::text`)
+			return s.ownerScalar(`INSERT INTO ai_call (task, tier, provider, model_id, logical_call_id)
+				VALUES ('cold_start', 'cheap_cloud', 'anthropic', 'sweep-model', gen_random_uuid()) RETURNING id::text`)
 		},
 	}
 }

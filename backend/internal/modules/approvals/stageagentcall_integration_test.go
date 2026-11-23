@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -61,7 +62,7 @@ func (e *stagingEnv) seedPassport(t *testing.T) ids.UUID {
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO passport (id, label, on_behalf_of, granted_by, token_hash, scopes, expires_at)
 		VALUES ($1, $2, $3, $3, $4, $5, now() + interval '30 days')`,
-		id, "agent "+id.String(), e.rep, "hash-"+id.String(), []string{"read", "enrich"}); err != nil {
+		id, "agent "+id.String(), e.rep, storekit.TokenHash(id.String()), []string{"read", "enrich"}); err != nil {
 		t.Fatalf("seeding a passport: %v", err)
 	}
 	return id

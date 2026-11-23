@@ -174,7 +174,7 @@ func (s *Store) reconcile(ctx context.Context, tx pgx.Tx, desc provider.Descript
 		// Nothing was bought, so nothing is owed: release the whole hold.
 		if _, err := tx.Exec(ctx, `
 			UPDATE provider_run_reservation
-			   SET actual_credits = 0, reconciled_at = now()
+			   SET actual_credits = 0
 			 WHERE run_id = $1`, runID); err != nil {
 			return fmt.Errorf("integrations: releasing the reservation: %w", err)
 		}
@@ -219,7 +219,7 @@ func (s *Store) reconcile(ctx context.Context, tx pgx.Tx, desc provider.Descript
 		}
 		if _, err := tx.Exec(ctx, `
 			UPDATE provider_run_reservation
-			   SET actual_credits = $3, reconciled_at = now()
+			   SET actual_credits = $3
 			 WHERE run_id = $1 AND pool = $2`, runID, pool, actual); err != nil {
 			return fmt.Errorf("integrations: reconciling %s: %w", pool, err)
 		}

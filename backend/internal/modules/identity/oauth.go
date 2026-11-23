@@ -13,9 +13,7 @@ package identity
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -456,11 +454,6 @@ func parseOAuthScopes(raw string) (scopes []string, offline bool, err error) {
 		scopes = []string{string(principal.ScopeRead)}
 	}
 	return scopes, offline, nil
-}
-
-func hashOAuthCode(code string) string {
-	sum := sha256.Sum256([]byte(code))
-	return hex.EncodeToString(sum[:])
 }
 
 func randomToken() (string, error) {

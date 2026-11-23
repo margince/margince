@@ -4,7 +4,11 @@ import {
   useFinanceSummary,
 } from "../../components/financesummary";
 import { Callout } from "../../design-system/callout";
-import { formatDate, formatMoney, formatNumber } from "../../format/format";
+import {
+  formatDateAbbrev,
+  formatMoneyWhole,
+  formatNumber,
+} from "../../format/format";
 import {
   type Locale,
   type PluralTranslator,
@@ -40,7 +44,9 @@ export function OverdueWarning({
   const lines: string[] = [];
   if (reading.asOf) {
     lines.push(
-      t("co.overdue.asOf", { date: formatDate(reading.asOf, locale, zone) }),
+      t("co.overdue.asOf", {
+        date: formatDateAbbrev(reading.asOf, locale, zone),
+      }),
     );
   }
   if (reading.oldestDays) {
@@ -77,7 +83,11 @@ function warningTitle(
   t: ReturnType<typeof useT>,
   plural: PluralTranslator,
 ): string {
-  const amount = formatMoney(reading.amountMinor, reading.currency, locale);
+  const amount = formatMoneyWhole(
+    reading.amountMinor,
+    reading.currency,
+    locale,
+  );
   if (reading.count == null) {
     return t(
       reading.asOf ? "co.overdue.amountOnlyAsOf" : "co.overdue.amountOnly",

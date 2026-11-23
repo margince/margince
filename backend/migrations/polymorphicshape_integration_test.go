@@ -52,7 +52,7 @@ func TestAForecastShareGoesWithItsScope(t *testing.T) {
 		_, err := owner.Exec(context.Background(), `
 			INSERT INTO analytics_share
 			  (kind, target, scope_kind, scope_id, token_hash, created_by, expires_at, captured_by)
-			VALUES ('live', 'forecast', $1, $2, gen_random_uuid()::text, $3, now() + interval '1 day', 'human:seed')`,
+			VALUES ('live', 'forecast', $1, $2, encode(sha256(gen_random_uuid()::text::bytea), 'hex'), $3, now() + interval '1 day', 'human:seed')`,
 			scopeKind, team, user)
 		return err
 	}
@@ -202,7 +202,7 @@ WITH p AS (
   INSERT INTO deal (pipeline_id, stage_id, name, source, captured_by)
   SELECT s.pipeline_id, s.id, 'Shape deal', 'manual', 'test' FROM s RETURNING id
 ), c AS (
-  INSERT INTO assurance_cycle (scope, opened_by) VALUES ('shape', 'human:seed') RETURNING id
+  INSERT INTO assurance_cycle (scope) VALUES ('shape') RETURNING id
 ), e AS (
   INSERT INTO assurance_exception (logical_key, type, subject_kind, subject_id, severity, captured_by)
   SELECT 'shape', 'stale_close_date', 'deal', d.id, 'low', 'human:seed' FROM d RETURNING id

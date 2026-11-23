@@ -35,7 +35,7 @@ var entityDeskPerms = func() principal.Permissions {
 // sendOneProductOffer creates and sends an offer with one line for product.
 func sendOneProductOffer(ctx context.Context, t *testing.T, e *Env, dealID ids.UUID, product ids.ProductID) crmcontracts.Offer {
 	t.Helper()
-	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{LineItems: productLine(product)})
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Source: "manual", LineItems: productLine(product)})
 	sent, err := e.Deals.SendOffer(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)), nil)
 	if err != nil {
 		t.Fatalf("send: %v", err)

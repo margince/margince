@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -116,7 +117,7 @@ func seedTaskPassport(t *testing.T, e *integration.Env, label string) ids.UUID {
 	if _, err := e.Pool.Exec(context.Background(), `
 		INSERT INTO passport (id, label, on_behalf_of, granted_by, token_hash, scopes, expires_at)
 		VALUES ($1, $2, $3, $3, $4, $5, now() + interval '30 days')`,
-		id, label, e.Rep1, "hash-"+id.String(), []string{"read", "write"}); err != nil {
+		id, label, e.Rep1, storekit.TokenHash(id.String()), []string{"read", "write"}); err != nil {
 		t.Fatalf("seeding the %s passport: %v", label, err)
 	}
 	return id
@@ -142,7 +143,7 @@ func TestATaskHandleOutlivesItsConnectionsRefresh(t *testing.T) {
 	refreshed := ids.NewV7()
 	if _, err := e.Pool.Exec(context.Background(), `INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes,
 		token_hash, expires_at, oauth_grant_id) VALUES ($1, $2, $2, 'oauth:claude', ARRAY['read'], $3, now() + interval '1 day', $4)`,
-		refreshed, e.Rep1, "hash-"+refreshed.String(), grant); err != nil {
+		refreshed, e.Rep1, storekit.TokenHash(refreshed.String()), grant); err != nil {
 		t.Fatalf("seeding the refreshed passport: %v", err)
 	}
 	if got, err := tasks.Load(as(refreshed, grant), held.ID); err != nil || got.ID != held.ID {

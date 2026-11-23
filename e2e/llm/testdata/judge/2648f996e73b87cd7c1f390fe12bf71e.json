@@ -1,7 +1,0 @@
-{
-  "verdict": "yes",
-  "reason": "The answer gives 179,000 and 164,500, and its two causes (a 5,000 repricing and a 9,500 loss) sum to the 14,500 difference, though I could not check these figures against the tool's actual output because it is not shown here.",
-  "model": "claude-haiku-5-5",
-  "criterion": "Criterion 3. The answer gives the opening and closing open-pipeline figures (EUR 179,000 and EUR 164,500) and the causes add up to the difference between them, as the tool reports them. Answer no if it gives figures that do not match those, names causes that are not in the tool's answer, or says it cannot explain the change.",
-  "answer": "Open pipeline fell from EUR 179,000 to EUR 164,500. Vorort Systeme Ausbau was repriced down by EUR 5,000, from EUR 31,000 to EUR 26,000, and valantic Migrationsprojekt (EUR 9,500) was lost, which is why the open number dropped."
-}

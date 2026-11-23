@@ -35,7 +35,8 @@ func TestTheDataTaskCompletesOnlyTasksTheViabilityDecisionAnswers(t *testing.T) 
 	pastDeal := func(name string, rep ids.UUID, chance int) ids.UUID {
 		owner, closes := ids.From[ids.UserKind](rep), now
 		created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: name, PipelineID: pipeline, StageID: open, OwnerID: &owner, ExpectedClose: &closes,
+			Source: "manual",
+			Name:   name, PipelineID: pipeline, StageID: open, OwnerID: &owner, ExpectedClose: &closes,
 		})
 		if err == nil {
 			_, err = e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](ids.UUID(created.Id)), deals.UpdateDealInput{WinProbability: new(chance)})

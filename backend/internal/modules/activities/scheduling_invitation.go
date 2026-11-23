@@ -5,10 +5,6 @@ package activities
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/mail"
@@ -78,16 +74,6 @@ type schedulingArgs []any
 func (a *schedulingArgs) add(value any) string {
 	*a = append(*a, value)
 	return fmt.Sprintf("$%d", len(*a))
-}
-
-func invitationToken() (string, string, error) {
-	var entropy [32]byte
-	if _, err := rand.Read(entropy[:]); err != nil {
-		return "", "", err
-	}
-	token := base64.RawURLEncoding.EncodeToString(entropy[:])
-	hash := sha256.Sum256([]byte(token))
-	return token, hex.EncodeToString(hash[:]), nil
 }
 
 func invitationView(row invitationRow) crmcontracts.MeetingInvitation {
@@ -186,7 +172,7 @@ func (s *Store) reserveAndQueueInvitation(ctx context.Context, host ids.UserID, 
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}
-	token, hash, err := invitationToken()
+	token, hash, err := storekit.MintToken()
 	if err != nil {
 		return crmcontracts.MeetingInvitation{}, err
 	}

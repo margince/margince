@@ -14,10 +14,12 @@ import {
 import type { MessageKey } from "../i18n/en";
 import { screenEnabled, type Withheld } from "../lib/corefeatures";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
+import { EXTENSION_APP_SCREEN, type UnitApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import type { Route, Screen } from "../lib/router";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
+import { appItems } from "./navapps";
 import {
   opensReservedPage,
   type ReservedPageScreen,
@@ -248,6 +250,16 @@ const RESERVED_PAGE_TITLES: Readonly<Record<ReservedPageScreen, MessageKey>> = {
   contacts: "vcardImport.title",
 };
 
+// Off-rail screens that belong to a rail destination: the rail marks the
+// destination, and the trail leads back to it.
+const PARENT_SCREENS: Readonly<Partial<Record<Screen, Screen>>> = {
+  partners: "companies",
+};
+
+export function parentScreenOf(route: Route): Screen | undefined {
+  return PARENT_SCREENS[route.screen];
+}
+
 // The trail, the agent's subject and the rail read a reserved page's name here.
 export function reservedPageTitle(route: Route): MessageKey | undefined {
   const page = reservedPageOf(route);
@@ -312,17 +324,9 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
 // It prints no heading: the navigation landmark names it, and its GROUPS are the
 // level-2 headings the sidebar promises.
 //
-// It carries the product's OWN destinations and nothing else. A composed unit
-// had a group of its own here once; it does not any more. An installation
-// enabling a unit is not the same as the product growing a twelfth
-// destination, and the rail is the one surface where that distinction is
-// visible to every contact who uses the app.
-//
-// The unit's screen is still reachable at `#/ext/<unit>`. What changed is
-// where it is OFFERED: Settings, on the page that holds the unit's credential,
-// features/automations/extension-units.tsx. That also puts the offer under the
-// right permission, because the two settings pages are already split by whose
-// thing each surface is.
+// It carries the product's own destinations, a fork's, then the apps that
+// composed units declare (navapps.ts). Vanilla declares none, so its rows are
+// the ones rail.test.tsx pins.
 // Which of the three headings a fork screen names, keyed by the heading it
 // declares. A fork says "records" and this is what that means to the rail — the
 // mapping lives here rather than in app/custom.ts because the group KEYS are
@@ -379,6 +383,7 @@ function primaryLevel(
   route: Route,
   disabled: readonly Withheld[],
   readsTeam: boolean,
+  apps: readonly UnitApp[],
 ): NavTrailLevel {
   return {
     groups: NAV_GROUPS.map((group) => ({
@@ -392,6 +397,10 @@ function primaryLevel(
             icon: item.icon,
           })),
         ...forkItems(group.headingKey),
+        ...appItems(
+          group.headingKey ? CUSTOM_NAV_GROUPS[group.headingKey] : undefined,
+          apps,
+        ),
       ],
     })).filter((group) => group.items.length > 0),
     ancestor: opensAPageBelow(route),
@@ -412,6 +421,7 @@ function opensAPageBelow(route: Route): boolean {
   return (
     recordKindOf(route) !== undefined ||
     reservedPageTitle(route) !== undefined ||
+    parentScreenOf(route) !== undefined ||
     opensAFocusedFiltersPage(route)
   );
 }
@@ -435,8 +445,14 @@ function activeRowFor(route: Route): string {
   //
   // Falling back to the segment for `#/x` with no key: that address resolves to
   // no screen and marks no row, which is the honest answer for one.
-  if (route.screen === CUSTOM_SCREEN) {
+  // An app's row is keyed by its unit in the same way. Unlike `ext`, an app is
+  // a destination of the drawer and not a page under Settings.
+  if (route.screen === CUSTOM_SCREEN || route.screen === EXTENSION_APP_SCREEN) {
     return route.id ?? route.screen;
+  }
+  const parent = parentScreenOf(route);
+  if (parent) {
+    return parent;
   }
   // One list is a page of the library that lists it, and has no row of its own.
   if (route.screen === "lists") {
@@ -452,9 +468,10 @@ export function railTrail(
   section?: NavSection,
   disabled: readonly Withheld[] = [],
   readsTeam = false,
+  apps: readonly UnitApp[] = [],
 ): readonly NavTrailLevel[] {
   return navTrail(
-    primaryLevel(route, disabled, readsTeam),
+    primaryLevel(route, disabled, readsTeam, apps),
     route,
     activeRowFor(route),
     section,

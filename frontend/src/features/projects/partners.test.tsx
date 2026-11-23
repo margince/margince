@@ -593,6 +593,43 @@ describe("PartnersScreen", () => {
     ).toBeTruthy();
   });
 
+  it("shows each partner's margin tier, and a withheld tier as masked", async () => {
+    stubFetch(async () =>
+      jsonResponse({
+        data: [
+          partner,
+          {
+            ...partner,
+            company_id: "o-2",
+            margin_tier: null,
+            masked_fields: ["margin_tier"],
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<PartnersScreen />);
+
+    expect(
+      await screen.findByRole("columnheader", { name: "Margin tier" }),
+    ).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("o-2")).toBeTruthy());
+    expect(screen.getAllByLabelText("Masked value")).toHaveLength(1);
+  });
+
+  it("says how to add a partner when there is none", async () => {
+    stubFetch(async () =>
+      jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
+    );
+    render(<PartnersScreen />);
+
+    expect(
+      await screen.findByText(
+        "Open a company and choose More actions → Set up partner program.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("navigates to the company's 360 on row click", async () => {
     const user = userEvent.setup();
     stubFetch(async () =>

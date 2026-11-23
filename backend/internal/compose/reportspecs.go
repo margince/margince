@@ -238,16 +238,14 @@ var prebuiltReports = map[string]reportSpec{
 		}),
 		listPredicates: deals.CommercialFilterPredicates("t"),
 		filterScopes:   projectFilterScope,
-		// Both company references, which a normal deal read masks per row
-		// when the caller cannot open them. company_id is a FILTER here
-		// and not a dimension, and it needs the scope for that alone: a count
-		// filtered to one company answers whether that company exists and has
-		// a deal, which is the disclosure whether or not the id is printed.
+		// A normal deal read masks both companies per row. The company_id scope
+		// narrows a count filtered to one company and blanks the drill column.
 		referenceScopes: map[string]string{
 			colPartnerCompanyID: tableCompany,
 			colCompanyID:        tableCompany,
 		},
-		defaultBy: moneyDefaultBy(fieldStageID),
+		drillColumns: dealCompanyDrillColumn,
+		defaultBy:    moneyDefaultBy(fieldStageID),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "amount_minor_sum"},
@@ -446,10 +444,10 @@ var prebuiltReports = map[string]reportSpec{
 			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
 		filterScopes: projectFilterScope,
-		// partner_company_id points at a company a normal deal read masks
-		// per row when the caller cannot open it, so grouping by it must not
-		// name one they could not have seen.
-		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany},
+		// A normal deal read masks both companies per row. company_id is never
+		// grouped here; its scope blanks the drill column.
+		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany, colCompanyID: tableCompany},
+		drillColumns:    dealCompanyDrillColumn,
 		defaultBy:       moneyDefaultBy(fieldWinProbabilityBand),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},

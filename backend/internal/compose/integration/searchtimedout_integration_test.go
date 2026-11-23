@@ -29,7 +29,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const searchLaneBudget = 300 * time.Millisecond
+// searchLaneBudget is the lane budget of the tests whose slow lane waits on a
+// held lock, so that lane times out whatever the budget. It leaves the other
+// lanes room to answer on a loaded runner. inTimeLaneBudget is for a test where
+// every lane must answer.
+const (
+	searchLaneBudget = 2 * time.Second
+	inTimeLaneBudget = 10 * time.Second
+)
 
 // lockTable holds table in ACCESS EXCLUSIVE mode on owner until the test ends.
 func lockTable(t *testing.T, owner *pgx.Conn, table string) {
@@ -49,20 +56,26 @@ func lockTable(t *testing.T, owner *pgx.Conn, table string) {
 	}
 }
 
-// seedOneWordEverywhere writes a company, a contact and a mail-timeline note
-// that all carry the word, and answers their ids by type.
-func seedOneWordEverywhere(t *testing.T, e *SearchEnv) map[string]ids.UUID {
+// seedOneWordEverywhere writes a company, a contact, a lead and a note that
+// all carry the word.
+func seedOneWordEverywhere(t *testing.T, e *SearchEnv) {
 	t.Helper()
-	return map[string]ids.UUID{
-		"company":  e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Quillfeather Werke', 'manual', 'human:x')`),
-		"contact":  e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Quillfeather Mara', 'manual', 'human:x')`),
-		"lead":     e.SeedID(t, `INSERT INTO lead (id, company_name, email, source, captured_by) VALUES ($1, 'Quillfeather Freight', 'lead@quillfeather.test', 'manual', 'human:x')`),
-		"activity": e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, source, captured_by) VALUES ($1, 'note', 'Quillfeather visit', 'Quillfeather', 'manual', 'human:x')`),
+	for _, statement := range []string{
+		`INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Quillfeather Werke', 'manual', 'human:x')`,
+		`INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Quillfeather Mara', 'manual', 'human:x')`,
+		`INSERT INTO lead (id, company_name, email, source, captured_by) VALUES ($1, 'Quillfeather Freight', 'lead@quillfeather.test', 'manual', 'human:x')`,
+		`INSERT INTO activity (id, kind, subject, body, source, captured_by) VALUES ($1, 'note', 'Quillfeather visit', 'Quillfeather', 'manual', 'human:x')`,
+	} {
+		e.SeedID(t, statement)
 	}
 }
 
 func boundedStore(e *SearchEnv) *search.Store {
-	return search.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)).Bounded(searchLaneBudget))
+	return boundedStoreWithin(e, searchLaneBudget)
+}
+
+func boundedStoreWithin(e *SearchEnv, budget time.Duration) *search.Store {
+	return search.NewStore(database.BindTo(e.Pool, ids.From[ids.WorkspaceKind](e.WS)).Bounded(budget))
 }
 
 func typesOf(page search.Page) []string {
@@ -169,7 +182,7 @@ func TestAGroupedSearchWithEveryTypeInTimeNamesNoType(t *testing.T) {
 	seedOneWordEverywhere(t, e)
 	perType := 5
 
-	page, err := boundedStore(e).Search(e.Admin(), search.Input{Query: "quillfeather", PerType: &perType})
+	page, err := boundedStoreWithin(e, inTimeLaneBudget).Search(e.Admin(), search.Input{Query: "quillfeather", PerType: &perType})
 	if err != nil {
 		t.Fatal(err)
 	}

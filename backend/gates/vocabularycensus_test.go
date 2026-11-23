@@ -56,8 +56,9 @@ import (
 // enforces, after every later migration widened or narrowed it.
 const vocabularyCatalog = "migrations/testdata/head_catalog.txt"
 
-// catalogCheckLine reads one CHECK constraint line of the catalog.
-var catalogCheckLine = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.[a-z0-9_]+ CHECK (.*)$`)
+// catalogCheckLine reads one CHECK constraint line of the catalog. A check not
+// yet validated binds new rows all the same, so its suffix is set aside.
+var catalogCheckLine = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.[a-z0-9_]+ CHECK (.*?)(?: NOT VALID)?$`)
 
 // catalogTextColumn reads one text column line of the catalog.
 var catalogTextColumn = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*) text\b`)

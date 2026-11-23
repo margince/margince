@@ -52,6 +52,9 @@ func DescribeSchema(schema Schema) string {
 	for _, name := range schema.EntityNames() {
 		entity := schema.Entities[name]
 		out.WriteString(name)
+		if entity.Rows != "" {
+			out.WriteString("\n  rows:     " + entity.Rows)
+		}
 		out.WriteString("\n  group by: ")
 		out.WriteString(strings.Join(entity.FieldNames(KindDimension), ", "))
 		out.WriteString("\n  measure:  ")

@@ -97,7 +97,8 @@ func setupDealVerdict(t *testing.T) *dealVerdictEnv {
 	pipeline, open, _ := integration.DealFixture(t, e)
 	owner, amount, currency := ids.From[ids.UserKind](e.Rep1), int64(4_000_000), "EUR"
 	created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Support rollout", PipelineID: pipeline, StageID: open, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Support rollout", PipelineID: pipeline, StageID: open, OwnerID: &owner,
 		AmountMinor: &amount, Currency: &currency,
 	})
 	if err != nil {
@@ -334,7 +335,8 @@ func TestACitedNoteMovedAwayWhileTheModelReadsStopsTheWrite(t *testing.T) {
 	v := setupDealVerdict(t)
 	owner := ids.From[ids.UserKind](v.Rep1)
 	other, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
-		Name: "Another deal", PipelineID: v.pipeline, StageID: v.stage, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Another deal", PipelineID: v.pipeline, StageID: v.stage, OwnerID: &owner,
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -31,7 +31,7 @@ func seedLinkedSubjects(ctx context.Context, t *testing.T, tx pgx.Tx) linkedSubj
 	mustExec(ctx, t, tx, `INSERT INTO pipeline (id, name) VALUES ($1, 'Erase links')`, pipeline)
 	mustExec(ctx, t, tx, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	mustExec(ctx, t, tx, `INSERT INTO deal (id, name, status, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Linked deal', 'open', $2, $3, 'seed', 'system')`, s.deal, pipeline, stage)
+		VALUES ($1, 'Linked deal', 'open', $2, $3, 'manual', 'system')`, s.deal, pipeline, stage)
 	for _, c := range []ids.UUID{s.erased, s.retained} {
 		mustExec(ctx, t, tx, `INSERT INTO contact (id, full_name, source, captured_by)
 			VALUES ($1, 'Linked Subject', 'manual', 'test')`, c)

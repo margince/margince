@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -180,12 +181,18 @@ func (r *Router) Complete(ctx context.Context, task Task, req model.Request) (mo
 	if err := r.refuseUnbound(); err != nil {
 		return model.Response{}, RouteInfo{}, err
 	}
-	ladder, ok := taskLadders[task]
+	ladder, ok := r.binding().ladder(task)
 	if !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
 	}
 	if err := r.admitSubjects(ctx, task, req); err != nil {
 		return model.Response{}, RouteInfo{}, err
+	}
+	if pin := tierPinOf(ctx); pin != "" {
+		if !slices.Contains(ladder, Tier(pin)) {
+			return model.Response{}, RouteInfo{}, fmt.Errorf("ai: task %s has no %q tier", task, pin)
+		}
+		ladder = []Tier{Tier(pin)}
 	}
 	return r.serveCompletion(ctx, task, ladder, req)
 }
@@ -238,14 +245,12 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	if req.SecretStripper == nil {
 		req.SecretStripper = r.stripper
 	}
-	// Wrapped HERE, which is the one place a request's stripper is settled —
-	// so what it removed reaches the trace row without four adapters each
-	// having to thread a report back, and a fifth records its strips by
-	// existing. striprecorder.go says why that matters.
-	strips := newStripRecorder(req.SecretStripper)
-	req.SecretStripper = strips
 	req = r.withTaskThinking(lc, task, req)
 	key, keyErr := cacheKey(wsID, task, req)
+	if pin := tierPinOf(ctx); keyErr == nil && pin != "" {
+		// A pinned rung answers differently from the whole ladder.
+		key += "|tier=" + pin
+	}
 	if keyErr == nil {
 		// The site's own defect, found with the key's: before any provider.
 		req, keyErr = withSiteThinking(req, task)
@@ -262,14 +267,11 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// with no tenant there is no row to write and no occurrence to
 	// announce.
 	start := r.now()
-	trace := r.newAttemptTrace(ctx, task, key, reason, req)
+	trace := newAttemptTrace(ctx, task, reason, req)
 	defer func() {
 		if refusedUncalled(err) {
 			return
 		}
-		// BEFORE finalize, which is what buffers the row: a field set after it
-		// would be written to a copy nobody reads.
-		trace.SecretsRemoved, trace.SecretKinds = strips.report()
 		r.finalizeAttempt(ctx, b, lc, &trace, req, resp, err, start)
 	}()
 	if budgetErr != nil {

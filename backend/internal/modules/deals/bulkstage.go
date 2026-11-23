@@ -22,6 +22,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// bulkStageField is the request field a bulk stage move names its stage in.
+const bulkStageField = "stage_id"
+
 // BulkStageRefusal maps to 422: a bulk stage move leaves this deal alone.
 type BulkStageRefusal struct {
 	code    string
@@ -32,14 +35,18 @@ func (e *BulkStageRefusal) Error() string { return e.message }
 
 // FieldFault names the stage the change asked for.
 func (e *BulkStageRefusal) FieldFault() (field, code, message string) {
-	return "stage_id", e.code, e.message
+	return bulkStageField, e.code, e.message
 }
 
 var (
-	errBulkStageClosedDeal = &BulkStageRefusal{"deal_closed",
-		"A won or lost deal is reopened on its own, where its close day and exchange rate are asked for."}
-	errBulkStageNotOpen = &BulkStageRefusal{"stage_not_open",
-		"A bulk stage move lands on an open stage. Closing a deal asks for its own reason, one deal at a time."}
+	errBulkStageClosedDeal = &BulkStageRefusal{
+		"deal_closed",
+		"A won or lost deal is reopened on its own, where its close day and exchange rate are asked for.",
+	}
+	errBulkStageNotOpen = &BulkStageRefusal{
+		"stage_not_open",
+		"A bulk stage move lands on an open stage. Closing a deal asks for its own reason, one deal at a time.",
+	}
 )
 
 // BulkStageMove is what one bulk stage move did to a deal. Moved is false when
@@ -58,7 +65,7 @@ func (s *Store) CheckBulkStage(ctx context.Context, stage ids.StageID) error {
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		return auth.NameMissingReference("stage_id", requireOpenStageLocked(ctx, tx, stage))
+		return auth.NameMissingReference(bulkStageField, requireOpenStageLocked(ctx, tx, stage))
 	})
 }
 
