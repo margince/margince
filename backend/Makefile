@@ -150,7 +150,7 @@ TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(T
 
 .DEFAULT_GOAL := help
 
-.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift policy-refresh help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: preflight-gates mcp-inaccessible perfdoc config-gen extdoc-gen extdoc-check messaging-rules-drift policy-refresh help check check-static build fetch-test-deps test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report e2e-ai-restamp ai-probe ai-eval test-db-up test-it test-roles test-integration-serial lint lint-base lint-strict lint-modules lint-tool arch-lint vet gen gen-workflow mcp-apps-vocab drift generators-twice composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -512,6 +512,9 @@ e2e-ai: composition ## Certify AI tasks (paid: real model + network; opt-in). RO
 
 e2e-ai-report: ## Print the certification readiness report — every shipped site, its band, and whether its record is current, stale or absent — from internal/compose/aicert/{corpus,records}/.
 	$(GO) run ./internal/compose/aicert/reportcmd
+
+e2e-ai-restamp: ## Grade stored certification records again after a grading-rule bump that moved no prompt, with no new runs. FROM=<old rule> (required); WRITE=1 writes, otherwise it only reports.
+	$(GO) run ./internal/compose/aicert/restampcmd -from '$(FROM)' $(if $(WRITE),-write)
 
 # ai-probe drives ONE invocation site against input an operator supplies, through
 # the same certification case `make e2e-ai` drives. It answers a different

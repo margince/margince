@@ -104,6 +104,12 @@ func FoldScenarioStamps(stamps map[string]string) string {
 // (backend/internal/compose/aicert/promptversion_test.go), so the two can never
 // disagree about what a scenario's stamp is.
 func ScenarioStamps(ctx context.Context, scenarios []Scenario, census *aitasks.Registry) (map[string]string, error) {
+	return scenarioStampsUnder(ctx, gradingRule, scenarios, census)
+}
+
+// scenarioStampsUnder is ScenarioStamps with the grading rule named, so a
+// re-stamp can ask what a stamp was under the rule a record was graded by.
+func scenarioStampsUnder(ctx context.Context, rule string, scenarios []Scenario, census *aitasks.Registry) (map[string]string, error) {
 	if census == nil {
 		return nil, errors.New("aicert: stamp: no census supplied — a stamp covers the request each site's own code builds, and only the census says which case builds it")
 	}
@@ -123,7 +129,7 @@ func ScenarioStamps(ctx context.Context, scenarios []Scenario, census *aitasks.R
 		if err != nil {
 			return nil, err
 		}
-		grader, err := graderStamp(sc, census, request)
+		grader, err := graderStamp(rule, sc, census, request)
 		if err != nil {
 			return nil, err
 		}
@@ -264,30 +270,30 @@ func graderRequestDigest(sc Scenario, candidateRequest model.Request) (string, e
 // graderStamp is a scenario's grader third: the rule and the site's own check,
 // and the judge's request for a judged case. A case its check grades alone is
 // never sent to the judge, so a judge prompt edit leaves its record current.
-func graderStamp(sc Scenario, census *aitasks.Registry, candidateRequest model.Request) (string, error) {
-	rule := checkedRule(siteCheck(sc.Task, sc.Site))
+func graderStamp(rule string, sc Scenario, census *aitasks.Registry, candidateRequest model.Request) (string, error) {
+	stamped := checkedRule(rule, siteCheck(sc.Task, sc.Site))
 	if !sc.Expect.Judged() {
-		return gradedBy(rule, ""), nil
+		return gradedBy(stamped, ""), nil
 	}
 	graderRequest, err := graderRequestDigest(asGraded(sc, census), candidateRequest)
 	if err != nil {
 		return "", err
 	}
-	return gradedBy(rule, graderRequest), nil
+	return gradedBy(stamped, graderRequest), nil
 }
 
-// checkedRule is gradingRule with the digest of the site's own check, which
+// checkedRule is rule with the digest of the site's own check, which
 // decides right from wrong before any judge is asked.
-func checkedRule(check string) string {
+func checkedRule(rule, check string) string {
 	if check == "" {
-		return gradingRule
+		return rule
 	}
-	return gradingRule + "\ncheck " + check
+	return rule + "\ncheck " + check
 }
 
 // gradingRule versions the scoring rule and the judge-opinion policy, so every
 // record graded the old way reads stale; gradingrule_test.go fails an unbumped edit.
-const gradingRule = "grading-rule-13"
+const gradingRule = "grading-rule-14"
 
 // gradedBy is the stamp's grader third: the grader's request digest under the
 // rule that turns its opinions into a verdict, which no request carries.

@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "pbf6f026c38fc9bf119dfb943e7effc1b",
+  "prompt_version": "pfea02adb574a639d20b125d55cf6d90c",
   "corpus_version": "v1",
   "verdict": "supported_degraded",
   "runs": 42,
@@ -36,7 +36,7 @@
     {
       "scenario": "progress_summary_judges_nothing_against_a_goal_nobody_set",
       "site": "progress_summary",
-      "stamp": "5c8999533281b4c65b2f503d0e467de23ae1e8b80f9fb951f6c5ca49021a4511d45db74bc8196e476bc564fa1ab836fee5869a72e4a964a59382aa690afcbd9c9fc4d9d9cc30eadd0877cbda935a93eca1f68074acd47b00746ece0b671a1bfb",
+      "stamp": "5c8999533281b4c65b2f503d0e467de23ae1e8b80f9fb951f6c5ca49021a4511d45db74bc8196e476bc564fa1ab836fee5869a72e4a964a59382aa690afcbd9cdc4fd7139c342f551b73976fadda0afd4ce99f51c3ee81d4a14a03ea238ec77f",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 9,
@@ -65,7 +65,7 @@
     {
       "scenario": "progress_summary_names_what_is_missing_to_the_goal",
       "site": "progress_summary",
-      "stamp": "579b1fb7da37495ed3e71582fe92fb5478a017cd545f7cc6fc76dfe962a1943d82664798c451ab9dbbc0ce4c175cc67b5cccc5d6c4cc25d6a5ec55f7ce2d513724846d3e3fec370ce02daf1060e6e7f2a3c13ac3c44b9c3acfba30f14544aab6",
+      "stamp": "579b1fb7da37495ed3e71582fe92fb5478a017cd545f7cc6fc76dfe962a1943d82664798c451ab9dbbc0ce4c175cc67b5cccc5d6c4cc25d6a5ec55f7ce2d5137bb4e74038c50cbdea79d7785c55dfb47dc34130ba796b694bbc52bef4cc7023f",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 12,
@@ -97,7 +97,7 @@
     {
       "scenario": "sales_assessment_acknowledges_an_open_decision",
       "site": "sales_assessment",
-      "stamp": "2d9c7a9743ffb10f5c808f4d91aa94cc22ef4248eb52ba0da2e41040d6111df160799b9dfc96a934b8665953e6e4d37c0d829da7e02c74919bc599f288feee79ed75128e112a10daa2fd72a37c698bdb2b3be7600a3f1710dd979a360f342031",
+      "stamp": "2d9c7a9743ffb10f5c808f4d91aa94cc22ef4248eb52ba0da2e41040d6111df160799b9dfc96a934b8665953e6e4d37c0d829da7e02c74919bc599f288feee7926effdfa1efa5c67e2c398579c7791b20a5b18bef938b20767d280f3c21d9d34",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 9,
@@ -126,7 +126,7 @@
     {
       "scenario": "sales_assessment_names_the_deal_no_decision_covers",
       "site": "sales_assessment",
-      "stamp": "d665af1f0806ddecf480613517aa4a29a596634aa4d6bf4e71f7592fd193a3e8d20725e5ad044f41cad1f8986a6477df3d8029f68f5f63fbe70aa92976baf064def782bb75d9802468228b9fef98f5c676de889ed31eaafe79c515695d608a8d",
+      "stamp": "d665af1f0806ddecf480613517aa4a29a596634aa4d6bf4e71f7592fd193a3e8d20725e5ad044f41cad1f8986a6477df3d8029f68f5f63fbe70aa92976baf064cfedade4ef3ea09c703333fe6cb9abb9cf359990cd59c167ab40098b9c7ffa08",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 12,

@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "pf7bf43f45d94ebc47e766192e30f9836",
+  "prompt_version": "pf5049d06506efa462c08f4e9892009d8",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 15,
@@ -37,7 +37,7 @@
     {
       "scenario": "the_card_shows_a_line_in_the_built_voice",
       "site": "demo_draft",
-      "stamp": "0610384120c70261a9918583e8896854004c7cd1397c6a23977ff26f92b6011dba832293ffe4ac702ba0ee3829c9cda4fc49242d12a57cc6afd7726d83f0718f052ff3eb8eb013ed3a2dfaaeeb0a6dcc39f71fed5ab3f4bb8ecdf06a734ad347",
+      "stamp": "0610384120c70261a9918583e8896854004c7cd1397c6a23977ff26f92b6011dba832293ffe4ac702ba0ee3829c9cda4fc49242d12a57cc6afd7726d83f0718fa3881cb58ccf923d3c1256531fb03bd5e165fc58c216b26c6da4efc5c6554378",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -60,7 +60,7 @@
     {
       "scenario": "owner_voice_candidate_from_authored_messages",
       "site": "derive",
-      "stamp": "43165cb652b7210dac9780d46dbfde4708f5c02219a5299813eff70f19aa51bec0bea4551611a654e3cec42deeac7af756c85650b33817d2b6196120f53270bb5f85a1926e42aeed3fab9fe1083feedc3f3562398b9fe6742b3f9f104d77a9d2",
+      "stamp": "43165cb652b7210dac9780d46dbfde4708f5c02219a5299813eff70f19aa51bec0bea4551611a654e3cec42deeac7af756c85650b33817d2b6196120f53270bbeec5973be6365f8c9251c7073f3691c36f50a93b43c92295fd500f56c96b9e19",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
@@ -86,7 +86,7 @@
     {
       "scenario": "held_out_draft_sits_close_to_the_author",
       "site": "eval_draft",
-      "stamp": "46ec2c902cbc6795e25bd99d5abc744c41b930c92bb8dc7fcf7a020b6261acdd7154cc87dd9db2d066146248fe7d68851e6a78a4cad2e8b509206c1d2eda8df277b7759b9bce26023a9852a3605deb9601af2727768f9162652dbc929fe1a0f4",
+      "stamp": "46ec2c902cbc6795e25bd99d5abc744c41b930c92bb8dc7fcf7a020b6261acdd7154cc87dd9db2d066146248fe7d68851e6a78a4cad2e8b509206c1d2eda8df28fc29619def86779d5beb80c47a9d76d83d556e8974d870762ce2377c20af69a",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -109,7 +109,7 @@
     {
       "scenario": "judge_ranks_the_author_rhythm_above_generic_ai_prose",
       "site": "eval_scores",
-      "stamp": "fb7cc7459d3940c77497d9a60a598879287a5d4803a11f94a2619184e525661486fcc04f0909381b3b66ca33dbee3333bc8a57f4fc10a5ce237356cd333ac3f2a38d2dfe44ac9028dd7dc76b318dab0f1a314cc00ab530010a76eea8c90d327d",
+      "stamp": "fb7cc7459d3940c77497d9a60a598879287a5d4803a11f94a2619184e525661486fcc04f0909381b3b66ca33dbee3333bc8a57f4fc10a5ce237356cd333ac3f208edfc14d54366d6e5a63d4e9688874e723b5d13b374f28ca1c8395516d6aaf7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
