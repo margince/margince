@@ -54,7 +54,6 @@ func reportToolCatalog(selected ...corefeatures.Availability) []agents.ReportCat
 			// object — so it is listed with them.
 			Filters:    catalogFilterNames(spec),
 			Aggregates: allowedReportNames(spec.measures),
-			Defaults:   describeReportDefaults(spec),
 			Measures:   describeReportMeasures(spec),
 			DefaultBy:  slices.Clone(spec.defaultBy),
 			Notes:      spec.notes,
@@ -75,48 +74,18 @@ func catalogFilterNames(spec reportSpec) []string {
 	return names
 }
 
-// describeReportDefaults renders what a report answers with no plan arguments,
-// which is the call a caller should make first and the one they cannot see from
-// the vocabularies alone.
-func describeReportDefaults(spec reportSpec) string {
-	aggs := renderDefaultAggregates(spec, true)
-	// Each half is rendered only if it EXISTS. runAdHocPlan already builds a spec
-	// with default aggregates and no default grouping (report.go), so an `&&`
-	// guard here would ship "count as deals grouped by " to an agent the first
-	// time such a report joined the prebuilt catalog.
-	switch {
-	case len(aggs) > 0 && len(spec.defaultBy) > 0:
-		return strings.Join(aggs, ", ") + " grouped by " + strings.Join(spec.defaultBy, ", ")
-	case len(aggs) > 0:
-		return strings.Join(aggs, ", ") + " over the whole set"
-	case len(spec.defaultBy) > 0:
-		return "grouped by " + strings.Join(spec.defaultBy, ", ")
-	default:
-		return ""
-	}
-}
-
 // describeReportMeasures is the default aggregates as bare function(field)
-// terms, joined, for the tool description: an alias names an output column the
-// answer already carries, and a caller choosing a report never reads it. The
-// published document keeps the aliases through describeReportDefaults.
+// terms. An alias names an output column the answer already carries.
 func describeReportMeasures(spec reportSpec) string {
-	return strings.Join(renderDefaultAggregates(spec, false), ", ")
-}
-
-func renderDefaultAggregates(spec reportSpec, withAlias bool) []string {
-	aggs := make([]string, 0, len(spec.defaultAggs))
+	terms := make([]string, 0, len(spec.defaultAggs))
 	for _, agg := range spec.defaultAggs {
-		rendered := agg.Fn
+		term := agg.Fn
 		if agg.Field != "" {
-			rendered += "(" + agg.Field + ")"
+			term += "(" + agg.Field + ")"
 		}
-		if withAlias && agg.As != "" && agg.As != agg.Field {
-			rendered += " as " + agg.As
-		}
-		aggs = append(aggs, rendered)
+		terms = append(terms, term)
 	}
-	return aggs
+	return strings.Join(terms, ", ")
 }
 
 // strictDecodeReportPlan decodes the tool's plan arguments, refusing a key the

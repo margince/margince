@@ -186,16 +186,9 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 		t.Errorf("it does not say the default call needs nothing read first, so naming the document "+
 			"beside the argument reads as a prerequisite: %s", described)
 	}
-	// EACH REPORT'S DEFAULT SURVIVES, and this is the half the first pass got
-	// wrong. The certification lane found it: with only the enum of keys, every
-	// run of "how much open pipeline in each stage" opened the vocabulary door
-	// instead of the report, because `deals-by-stage` answers that goal with no
-	// plan at all and a bare key does not say so.
-	//
-	// Each report is ONE list: the measures, then `by:` with every dimension it
-	// accepts and the default grouping starred. Derived from the fixture, so
-	// renaming a name there cannot leave this passing while the description
-	// recites the old one.
+	// Every report's measures and dimensions reach the description. Without
+	// them a bare key sent every certification run to the vocabulary door.
+	// The expectations derive from the fixture, so a rename cannot slip past.
 	for _, entry := range twoReportCatalog() {
 		if entry.Measures != "" && !strings.Contains(described, entry.Measures) {
 			t.Errorf("%s: the description does not say what it computes by default: %s",
@@ -224,7 +217,7 @@ func TestRunReportNamesTheDocumentWithoutOrderingARead(t *testing.T) {
 	if strings.Contains(described, "A default is not a report's reach") {
 		t.Errorf("the description still says a default is not a report's reach, which the list makes false: %s", described)
 	}
-	// A report with NO measure still lists its dimensions, with no empty clause
+	// A report with no measure still lists its dimensions, with no empty clause
 	// before them; one with neither stays silent.
 	silent := []ReportCatalogEntry{{Report: "answers-nothing", GroupBy: []string{"phase"}}, {Report: "bare"}}
 	bare := describeReportCatalog(silent)
@@ -267,5 +260,26 @@ func TestAnEmptyCatalogDescribesNoDocument(t *testing.T) {
 	}
 	if !strings.Contains(described, "No prebuilt report") {
 		t.Errorf("it does not say the catalog is empty: %s", described)
+	}
+}
+
+// The document's defaults line renders each half only when it exists.
+// A report with aggregates and no grouping must not trail off.
+func TestReportDefaultsRenderEachHalfOnlyWhenItExists(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		entry ReportCatalogEntry
+		want  string
+	}{
+		{"measures and grouping", ReportCatalogEntry{Measures: "count, sum(amount_minor)", DefaultBy: []string{"stage_id"}}, "count, sum(amount_minor) grouped by stage_id"},
+		{"measures only", ReportCatalogEntry{Measures: "count"}, "count over the whole set"},
+		{"grouping only", ReportCatalogEntry{DefaultBy: []string{"kind"}}, "grouped by kind"},
+		{"neither", ReportCatalogEntry{}, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.entry.defaults(); got != tc.want {
+				t.Errorf("defaults = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }

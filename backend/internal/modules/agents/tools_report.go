@@ -39,12 +39,8 @@ type ReportCatalogEntry struct {
 	GroupBy    []string
 	Filters    []string
 	Aggregates []string
-	// Defaults says what the report answers when the plan arguments are
-	// omitted, which is the call a caller should make first.
-	Defaults string
-	// Measures and DefaultBy are the same default split for the tool
-	// description: bare measures ("" when none), and the default grouping, a
-	// subset of GroupBy.
+	// Measures is the default aggregates as bare terms, "" when there are
+	// none. DefaultBy is the default grouping, a subset of GroupBy.
 	Measures  string
 	DefaultBy []string
 	// Notes says what a filter MEANS when its name alone does not: which
@@ -241,11 +237,10 @@ func catalogNamesAPipelineID(catalog []ReportCatalogEntry) bool {
 
 // writeReportDefaults renders one list per report: the measures it computes
 // with no plan, then `by:` with every dimension it accepts, the default
-// grouping starred. The legend is said once, ahead of the lines, because it
-// would otherwise repeat on every report.
+// grouping starred. The legend comes once, ahead of the lines.
 //
-// Keyed on entries that HAVE a measure, a dimension or both, so a report with
-// neither stays silent rather than rendering a key with an empty clause.
+// A report with neither measures nor dimensions stays silent, so no key
+// renders with an empty clause.
 func writeReportDefaults(b *strings.Builder, catalog []ReportCatalogEntry) {
 	b.WriteString("Per report: default measures; by: every dimension, * = grouped by default. ")
 	for _, entry := range catalog {
@@ -316,3 +311,20 @@ var errMissingReport = jsonError("a report key is required")
 type jsonError string
 
 func (e jsonError) Error() string { return string(e) }
+
+// defaults renders what the report answers with no plan arguments, for the
+// published document. Each half appears only when it exists, because a spec
+// with aggregates and no grouping is already buildable (runAdHocPlan).
+func (e ReportCatalogEntry) defaults() string {
+	by := strings.Join(e.DefaultBy, ", ")
+	switch {
+	case e.Measures != "" && by != "":
+		return e.Measures + " grouped by " + by
+	case e.Measures != "":
+		return e.Measures + " over the whole set"
+	case by != "":
+		return "grouped by " + by
+	default:
+		return ""
+	}
+}

@@ -776,7 +776,6 @@ var probeReportCatalog = []ReportCatalogEntry{{
 	GroupBy:    []string{"pipeline_id", "stage_id", "status"},
 	Filters:    []string{"owner_id", "pipeline_id", "status"},
 	Aggregates: []string{"amount_minor"},
-	Defaults:   "count as deals grouped by stage_id",
 	Measures:   "count",
 	DefaultBy:  []string{"stage_id"},
 }}

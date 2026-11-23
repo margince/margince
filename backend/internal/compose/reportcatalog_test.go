@@ -94,70 +94,6 @@ func assertCovers(t *testing.T, report, heading string, engine map[string]string
 	}
 }
 
-// A report with default aggregates and no default grouping must not render a
-// sentence that trails off. runAdHocPlan already builds that spec shape, so it
-// is one prebuilt report away from being reachable.
-func TestReportDefaultsRenderEachHalfOnlyWhenItExists(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		spec reportSpec
-		want string
-	}{
-		{
-			name: "aggregates and grouping",
-			spec: reportSpec{defaultBy: []string{"stage_id"}, defaultAggs: []reportAggregate{{Fn: "count", As: "deals"}}},
-			want: "count as deals grouped by stage_id",
-		},
-		{
-			name: "aggregates with no grouping",
-			spec: reportSpec{defaultAggs: []reportAggregate{{Fn: "count", As: "deals"}}},
-			want: "count as deals over the whole set",
-		},
-
-		{
-			name: "sum already named by its field",
-			spec: reportSpec{defaultAggs: []reportAggregate{{Fn: "sum", Field: "open_deal_unpriced", As: "open_deal_unpriced"}}},
-			want: "sum(open_deal_unpriced) over the whole set",
-		},
-		{
-			name: "renamed sum",
-			spec: reportSpec{defaultAggs: []reportAggregate{{Fn: "sum", Field: "amount_minor", As: "total"}}},
-			want: "sum(amount_minor) as total over the whole set",
-		},
-		{
-			name: "grouping with no aggregates",
-			spec: reportSpec{defaultBy: []string{"kind"}},
-			want: "grouped by kind",
-		},
-		{
-			name: "neither",
-			spec: reportSpec{},
-			want: "",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := describeReportDefaults(tc.spec); got != tc.want {
-				t.Errorf("defaults = %q, want %q", got, tc.want)
-			}
-		})
-	}
-}
-
-// The tool description's measures carry no alias: the answer names its own
-// columns, and the published document keeps the aliases.
-func TestReportMeasuresCarryNoAlias(t *testing.T) {
-	spec := reportSpec{defaultAggs: []reportAggregate{
-		{Fn: "count", As: "deals"},
-		{Fn: "sum", Field: "amount_minor", As: "total"},
-	}}
-	if got, want := describeReportMeasures(spec), "count, sum(amount_minor)"; got != want {
-		t.Errorf("measures = %q, want %q", got, want)
-	}
-	if got := describeReportDefaults(spec); !strings.Contains(got, " as total") {
-		t.Errorf("the document's defaults lost the alias: %q", got)
-	}
-}
-
 // An unknown report key is a CLIENT mistake about a static catalog, not a
 // missing tenant record. It used to answer the row-scope not-found sentence,
 // which told a caller their permissions might be at fault and named nothing
@@ -266,7 +202,7 @@ func TestReportPlanRefusesTrailingContent(t *testing.T) {
 // goal with no plan at all and a bare key does not say so. 2/3 to 0/3.
 //
 // So each report's line (measures, dimensions, default starred) is what a
-// caller selects by, and a report with neither default aggregates nor default
+// caller selects by. A spec with neither default aggregates nor default
 // grouping, a shape runAdHocPlan already builds, would render nothing.
 //
 // Derived from the engine's own catalog, so a report added tomorrow inherits the
@@ -283,22 +219,18 @@ func TestEveryReportKeyIsDescribedByItsDefaultAnswer(t *testing.T) {
 	for _, entry := range catalog {
 		if entry.Measures == "" && len(entry.DefaultBy) == 0 {
 			t.Errorf("%s answers nothing by default, so run_report's description reduces it to a bare "+
-				"enum key — which is what sent every certification run to the vocabulary door instead "+
+				"enum key, which sent every certification run to the vocabulary door instead "+
 				"of the report. Give the spec a defaultAggs or a defaultBy.", entry.Report)
 			continue
-		}
-		if !strings.Contains(described, entry.Report) {
-			t.Errorf("%s is in the enum and not in the description", entry.Report)
 		}
 		assertReportClause(t, described, entry.Report, prebuiltReports[entry.Report])
 	}
 }
 
-// assertReportClause reads ONE report's own clause out of the served
-// description and compares it with what the engine's spec says: its measures
-// exactly, its dimensions exactly, and the star on exactly spec.defaultBy.
-// Searching the whole description would find a dimension dropped here in
-// another report's clause.
+// assertReportClause compares one report's own clause in the served description
+// with its spec: the measures, the dimensions, and the star on the spec's
+// defaultBy. Searching the whole description would find a dimension dropped here
+// in another report's clause.
 func assertReportClause(t *testing.T, described, report string, spec reportSpec) {
 	t.Helper()
 	match := regexp.MustCompile(`(?:^| )` + regexp.QuoteMeta(report) + `: ([^.]*)\. `).FindStringSubmatch(described)

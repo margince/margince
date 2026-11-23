@@ -174,7 +174,7 @@ func (r ReportVocabularyResource) document() reportVocabularyDoc {
 			GroupBy:    closedList(entry.GroupBy),
 			Filters:    closedList(entry.Filters),
 			Aggregates: closedList(entry.Aggregates),
-			Defaults:   entry.Defaults,
+			Defaults:   entry.defaults(),
 			Notes:      entry.Notes,
 		})
 	}
