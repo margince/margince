@@ -62,7 +62,7 @@ jobs:
   # Split over one runner per leg, as ci.yml's deterministic-gates and
   # backend-lint split it. On one runner the legs shared four cores, and
   # internal/compose and ./gates ran past their test timeouts.
-  # TestMainHealthRunsEveryCheckLeg holds the legs to CHECK_LEGS.
+  # TestMainHealthSplitsTheCheckLegsAsCIDoes holds the split to ci.yml's.
   gates:
     name: backend gate (main, ${{ matrix.part }})
     timeout-minutes: 45
@@ -82,8 +82,11 @@ jobs:
           - part: solo
             legs: test-solo
             tree-gates: "off"
-          - part: static
-            legs: lint-base lint-strict lint-modules vet arch-lint
+          - part: lint-baseline
+            legs: lint-base vet arch-lint
+            tree-gates: "off"
+          - part: lint-strict
+            legs: lint-strict lint-modules
             tree-gates: "off"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

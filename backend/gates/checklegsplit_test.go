@@ -44,8 +44,11 @@ var matrixRef = regexp.MustCompile(`^\$\{\{\s*matrix\.([a-z_-]+)\s*\}\}$`)
 
 type stepRuns struct {
 	Jobs map[string]struct {
-		Needs    stringList     `yaml:"needs"`
-		Steps    []workflowStep `yaml:"steps"`
+		Needs stringList `yaml:"needs"`
+		Steps []struct {
+			workflowStep `yaml:",inline"`
+			If           string `yaml:"if"`
+		} `yaml:"steps"`
 		Strategy struct {
 			Matrix struct {
 				Include []map[string]string `yaml:"include"`
@@ -112,36 +115,76 @@ func TestOneBackendLegRunsTheTreeGates(t *testing.T) {
 	}
 }
 
-// main-health runs the no-database gate against main's tip, one runner per
-// leg. A leg its matrix leaves out is never checked on main, and the health
-// check still reports the backend gate green.
-func TestMainHealthRunsEveryCheckLeg(t *testing.T) {
+// main-health runs the no-database gate against main's tip. On one runner the
+// legs share its cores and the slow packages pass their test timeouts, so its
+// matrix splits the legs exactly as ci.yml's two backend jobs do. A leg it left
+// out, or a step it skipped by `if:`, would leave main unchecked and green.
+func TestMainHealthSplitsTheCheckLegsAsCIDoes(t *testing.T) {
 	t.Parallel()
-	all, _ := backendCheckLegs(t)
-
-	raw, err := gatekit.ReadFile(mainHealthWorkflow) // #nosec G304 -- a fixed repo-relative path
-	if err != nil {
-		t.Fatalf("reading %s: %v", mainHealthWorkflow, err)
+	ci := readStepRuns(t, aggregateWorkflow)
+	want := append(legPartitions(t, ci, aggregateWorkflow, testLegsJob, "check-backend", "CHECK_LEGS"),
+		legPartitions(t, ci, aggregateWorkflow, staticLegsJob, "check-static", "STATIC_LEGS")...)
+	health := readStepRuns(t, mainHealthWorkflow)
+	got := legPartitions(t, health, mainHealthWorkflow, mainHealthGatesJob, "check-backend", "CHECK_LEGS")
+	slices.Sort(want)
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Errorf("%s job %q runs the legs on runners %q; ci.yml runs them on %q. Give main-health one matrix "+
+			"entry per ci.yml runner, or its legs share a runner and time out again.", mainHealthWorkflow, mainHealthGatesJob, got, want)
 	}
-	var wf stepRuns
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
-		t.Fatalf("%s: %v", mainHealthWorkflow, err)
-	}
-	ran, ok := legsRunBy(t, wf, mainHealthGatesJob, "check-backend", "CHECK_LEGS", all)
-	if !ok {
-		t.Fatalf("%s job %q has no `make check-backend` step, so this test cannot tell which legs it runs", mainHealthWorkflow, mainHealthGatesJob)
-	}
-	for _, leg := range all {
-		if !slices.Contains(ran, leg) {
-			t.Errorf("CHECK_LEGS leg %q runs in a local `make check` but in no leg of %s job %q (%v). "+
-				"Add it to a matrix entry, or main's health check passes without it.", leg, mainHealthWorkflow, mainHealthGatesJob, ran)
-		}
-	}
-	trees, _ := legsRunBy(t, wf, mainHealthGatesJob, "check-backend", "CHECK_TREE_GATES", []string{"on"})
+	trees, _ := legsRunBy(t, health, mainHealthGatesJob, "check-backend", "CHECK_TREE_GATES", []string{"on"})
 	if !slices.ContainsFunc(trees, func(v string) bool { return v != "off" }) {
 		t.Errorf("every leg of %s job %q passes CHECK_TREE_GATES=off (%v), so main's health check runs no drift "+
 			"or composition check", mainHealthWorkflow, mainHealthGatesJob, trees)
 	}
+}
+
+func readStepRuns(t *testing.T, path string) stepRuns {
+	t.Helper()
+	raw, err := gatekit.ReadFile(path) // #nosec G304 -- a fixed repo-relative path
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	var wf stepRuns
+	if err := yaml.Unmarshal(raw, &wf); err != nil {
+		t.Fatalf("%s: %v", path, err)
+	}
+	return wf
+}
+
+// legPartitions answers the legs of each runner a job's `make <target>` step
+// runs on, one sorted, space-joined entry per matrix include entry. The step
+// must take its legs from the matrix and run on every entry.
+func legPartitions(t *testing.T, wf stepRuns, path, job, target, variable string) []string {
+	t.Helper()
+	for _, step := range wf.Jobs[job].Steps {
+		value, set, found, err := legsOverride(step.Run, target, variable)
+		if err != nil {
+			t.Fatalf("%s job %q: %v", path, job, err)
+		}
+		if !found {
+			continue
+		}
+		key := matrixRef.FindStringSubmatch(value)
+		if !set || key == nil {
+			t.Fatalf("%s job %q runs `make %s` without %s from its matrix, so every leg shares one runner", path, job, target, variable)
+		}
+		if step.If != "" {
+			t.Fatalf("%s job %q runs `make %s` only if %q, so a matrix entry can skip its legs", path, job, target, step.If)
+		}
+		var runners []string
+		for i, entry := range wf.Jobs[job].Strategy.Matrix.Include {
+			legs := strings.Fields(entry[key[1]])
+			if len(legs) == 0 {
+				t.Errorf("%s job %q matrix include entry %d sets no %s, so that runner checks nothing", path, job, i, key[1])
+			}
+			slices.Sort(legs)
+			runners = append(runners, strings.Join(legs, " "))
+		}
+		return runners
+	}
+	t.Fatalf("%s job %q has no `make %s` step", path, job, target)
+	return nil
 }
 
 // backendCheckLegs reads CHECK_LEGS and the legs check-static runs, both
