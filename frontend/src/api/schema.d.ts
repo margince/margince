@@ -37459,6 +37459,8 @@ export interface components {
             research_state?: string;
         };
         EmploymentImportReport: {
+            /** @description Whether this apply changed an employment or an evidence outcome. False means the request was reconciled and nothing moved. */
+            changed?: boolean;
             /** @description Retained evidence that requires administrator review. */
             warnings?: string[];
             /** Format: uuid */

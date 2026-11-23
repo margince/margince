@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -36,6 +37,7 @@ func (s *Store) ApplyEmploymentImport(ctx context.Context, contact ids.ContactID
 			return crmcontracts.EmploymentImportReport{}, err
 		}
 	}
+	var changed bool
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		// Attach writers lock the contact before its employment identity. Keep
 		// that order so an import cannot deadlock against a manual attachment.
@@ -49,9 +51,18 @@ func (s *Store) ApplyEmploymentImport(ctx context.Context, contact ids.ContactID
 		if err != nil {
 			return err
 		}
+		before, err := employmentFingerprint(ctx, tx, contact)
+		if err != nil {
+			return err
+		}
 		if err := s.applyEmploymentEvidence(ctx, tx, contact, episodes, req, action); err != nil {
 			return err
 		}
+		after, err := employmentFingerprint(ctx, tx, contact)
+		if err != nil {
+			return err
+		}
+		changed = before != after
 		if req.Key == nil {
 			args := []any{contact}
 			_, err := tx.Exec(ctx, storekit.SQLf(`UPDATE contact_provider_claim SET employment_processed_at=now(), employment_processing_error=NULL, employment_retry_count=0 WHERE contact_id=$%d AND claim_key IN ('current_employment','job_history')`, len(args)), args...)
@@ -62,7 +73,36 @@ func (s *Store) ApplyEmploymentImport(ctx context.Context, contact ids.ContactID
 	if err != nil {
 		return crmcontracts.EmploymentImportReport{}, err
 	}
-	return s.PreviewEmploymentImport(ctx, contact)
+	report, err := s.PreviewEmploymentImport(ctx, contact)
+	report.Changed = &changed
+	return report, err
+}
+
+// employmentFingerprint digests what an import can change for one contact: its
+// employment edges and the outcome recorded for each piece of evidence. An
+// apply whose before and after digests match changed nothing.
+func employmentFingerprint(ctx context.Context, tx pgx.Tx, contact ids.ContactID) (string, error) {
+	var digest string
+	args := []any{contact, employmentKind}
+	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT md5(concat_ws('#',
+ (SELECT string_agg(concat_ws('|', id, version, employment_status, ended_at, is_current_primary, archived_at), ';' ORDER BY id)
+  FROM relationship WHERE contact_id=$%d AND kind=$%d),
+ (SELECT string_agg(concat_ws('|', id, state, company_id, relationship_id), ';' ORDER BY id)
+  FROM provider_employment_resolution WHERE contact_id=$%d)))`, 1, 2, 1), args...).Scan(&digest)
+	return digest, err
+}
+
+// employmentLinkedRefusal answers a resolve or dismiss of evidence that already
+// created an employment. The evidence has no say over that edge, so the answer
+// names it and how to end it.
+func employmentLinkedRefusal(relationship *uuid.UUID) error {
+	edge := "an employment"
+	if relationship != nil {
+		edge = "the employment " + relationship.String()
+	}
+	return &apperrors.VersionSkewError{Message: "this evidence already created " + edge + ", and resolving or " +
+		"dismissing it does not end that employment: end it with update_record on the relationship " +
+		"(employment_status=former, ended_at), or archive it"}
 }
 
 func (s *Store) applyEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact ids.ContactID, e employmentEvidence, req crmcontracts.EmploymentImportRequest, action string) error {
@@ -260,7 +300,7 @@ func retainEmploymentLink(ctx context.Context, tx pgx.Tx, contact ids.ContactID,
 		}
 	}
 	if action != employmentApply && (req.Key == nil || e.key == *req.Key) {
-		return apperrors.ErrVersionSkew
+		return employmentLinkedRefusal(prior.RelationshipId)
 	}
 	return recordEmploymentOutcome(ctx, tx, contact, e, employmentLinked, idArg[ids.CompanyKind](prior.CompanyId), uuidArg(prior.RelationshipId))
 }

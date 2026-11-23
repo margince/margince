@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"strings"
 	"testing"
 	"time"
 
@@ -415,5 +416,45 @@ func TestEmploymentImportEndsTheOlderUndatedRoleAtTheSameCompany(t *testing.T) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// An apply of evidence already linked answers OK, so the caller cannot tell it
+// from one that did something. changed says which. A resolve or dismiss of
+// evidence that created an employment names that employment and how to end it.
+// The evidence has no say over the edge.
+func TestEmploymentImportSaysWhenItChangedNothingAndWhyALinkedRoleStays(t *testing.T) {
+	e := Setup(t)
+	store := contacts.NewStore(e.DB())
+	subject := seedMergeSubject(t, e, "Linked evidence")
+	contact := ids.From[ids.ContactKind](subject)
+	employmentPurchase(t, e, subject, []provider.Claim{{Key: provider.ClaimCurrentEmployment, Value: []byte(`{"company_name":"Linked Co","company_domain":"linked-evidence.example","job_title":"Lead"}`)}})
+
+	first, err := store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Changed == nil || !*first.Changed {
+		t.Fatalf("the first apply created an employment and said changed=%v", first.Changed)
+	}
+	again, err := store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.Changed == nil || *again.Changed {
+		t.Fatalf("a replay that moved nothing said changed=%v", again.Changed)
+	}
+
+	item := first.Items[0]
+	dismiss := crmcontracts.EmploymentImportRequestActionDismiss
+	_, err = store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{Action: &dismiss, Key: &item.Key})
+	var skew *apperrors.VersionSkewError
+	if !errors.As(err, &skew) {
+		t.Fatalf("dismissing linked evidence answered %v, want a version-skew refusal with a message", err)
+	}
+	for _, says := range []string{item.RelationshipId.String(), "update_record", "employment_status=former"} {
+		if !strings.Contains(skew.Message, says) {
+			t.Errorf("the refusal %q does not say %q", skew.Message, says)
+		}
 	}
 }
