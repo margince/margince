@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -47,10 +48,9 @@ type Scenario struct {
 	Canary string `yaml:"canary"`
 	// NoWrites is a case where the right answer is to write nothing.
 	NoWrites bool `yaml:"no_writes"`
-	// Rubric is what the judge scores the written text against.
-	Rubric string `yaml:"rubric"`
-	// CertifiedMin is the judge score a run must reach.
-	CertifiedMin int `yaml:"certified_min"`
+	// Criteria are the yes/no questions the judge answers of what the agent
+	// wrote, in the form the MCP end-to-end lane's judge takes.
+	Criteria []string `yaml:"criteria"`
 }
 
 // LoadScenarios reads every *.yaml scenario under dir, in name order, and
@@ -95,8 +95,8 @@ func (s Scenario) validate() error {
 		return errors.New("a scenario that expects no writes names a worklist")
 	case !s.NoWrites && len(s.Worklist) == 0:
 		return errors.New("a scenario that expects writes names no worklist")
-	case s.Rubric == "" || s.CertifiedMin <= 0:
-		return errors.New("the judge needs a rubric and a certified_min above zero")
+	case len(s.Criteria) == 0 || slices.Contains(s.Criteria, ""):
+		return errors.New("the judge needs at least one criterion, and none may be empty")
 	}
 	return nil
 }

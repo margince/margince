@@ -8,15 +8,29 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
 
+// Criterion is the judge's answer to one yes/no question about a run.
+type Criterion struct {
+	Text   string `json:"criterion"`
+	Met    bool   `json:"met"`
+	Reason string `json:"reason"`
+}
+
 // Run is one run's outcome: whether its end state passed every check, and the
-// judge's score when the judge was asked.
+// judge's answer to each criterion.
 type Run struct {
-	ChecksPassed bool `json:"checks_passed"`
-	JudgeScore   int  `json:"judge_score"`
+	ChecksPassed bool        `json:"checks_passed"`
+	Criteria     []Criterion `json:"criteria"`
+}
+
+// JudgePassed says the judge answered yes to every criterion. A run the judge
+// was never asked about does not pass it.
+func (r Run) JudgePassed() bool {
+	return len(r.Criteria) > 0 && !slices.ContainsFunc(r.Criteria, func(c Criterion) bool { return !c.Met })
 }
 
 // smokeRuns is the number of runs a verdict needs before it is more than a
@@ -25,7 +39,8 @@ const smokeRuns = 12
 
 // Outcome is the verdict on a case from its runs.
 type Outcome struct {
-	Runs   int  `json:"runs"`
+	Runs int `json:"runs"`
+	// Passed counts the runs that passed their checks and the judge.
 	Passed int  `json:"passed"`
 	Pass   bool `json:"pass"`
 	// Smoke says the runs are too few to certify anything.
@@ -33,15 +48,16 @@ type Outcome struct {
 }
 
 // Decide applies the pass bar: every run passes its checks, and at least two
-// thirds, rounded up, reach certifiedMin on the judge. A run that failed a
-// check does not count as a judge pass whatever it scored.
-func Decide(runs []Run, certifiedMin int) Outcome {
+// thirds of them, rounded up, also pass the judge. A run that failed a check
+// does not count as a judge pass whatever the judge said.
+func Decide(runs []Run) Outcome {
 	out := Outcome{Runs: len(runs), Smoke: len(runs) < smokeRuns}
 	allChecked := len(runs) > 0
 	for _, run := range runs {
-		if !run.ChecksPassed {
+		switch {
+		case !run.ChecksPassed:
 			allChecked = false
-		} else if run.JudgeScore >= certifiedMin {
+		case run.JudgePassed():
 			out.Passed++
 		}
 	}

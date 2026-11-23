@@ -11,27 +11,42 @@ import (
 	"testing"
 )
 
-func passing(scores ...int) []Run {
-	out := make([]Run, len(scores))
-	for i, score := range scores {
-		out[i] = Run{ChecksPassed: true, JudgeScore: score}
+func yes() []Criterion {
+	return []Criterion{{Text: "names the evidence", Met: true, Reason: "it does"}}
+}
+
+func no() []Criterion {
+	return []Criterion{{Text: "names the evidence", Met: false, Reason: "it does not"}}
+}
+
+// runsOf builds one run per answer: true for a run whose judge said yes.
+func runsOf(judged ...bool) []Run {
+	out := make([]Run, len(judged))
+	for i, said := range judged {
+		out[i] = Run{ChecksPassed: true, Criteria: no()}
+		if said {
+			out[i].Criteria = yes()
+		}
 	}
 	return out
 }
 
 func TestDecideAppliesThePassBar(t *testing.T) {
+	failedCheck := append(runsOf(true, true), Run{ChecksPassed: false, Criteria: yes()})
+	unjudged := []Run{{ChecksPassed: true}, {ChecksPassed: true}, {ChecksPassed: true}}
 	for name, tc := range map[string]struct {
 		runs []Run
 		pass bool
 	}{
-		"three clean runs, all at the bar":           {passing(80, 75, 90), true},
-		"two of three at the bar":                    {passing(80, 40, 90), true},
-		"only one of three at the bar":               {passing(80, 40, 30), false},
-		"one run failed a check, whatever it scored": {append(passing(80, 90), Run{ChecksPassed: false, JudgeScore: 100}), false},
+		"three clean runs, the judge says yes to all":     {runsOf(true, true, true), true},
+		"two of three the judge passes":                   {runsOf(true, false, true), true},
+		"only one of three the judge passes":              {runsOf(true, false, false), false},
+		"one run failed a check, whatever the judge said": {failedCheck, false},
+		"a judge that was never asked passes no run":      {unjudged, false},
 		"no runs": {nil, false},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := Decide(tc.runs, 70)
+			got := Decide(tc.runs)
 			if got.Pass != tc.pass || got.Runs != len(tc.runs) {
 				t.Errorf("Decide = %+v, want pass %v over %d runs", got, tc.pass, len(tc.runs))
 			}
@@ -39,11 +54,18 @@ func TestDecideAppliesThePassBar(t *testing.T) {
 	}
 }
 
+func TestOneNoAmongManyYesesFailsTheRunsJudgement(t *testing.T) {
+	run := Run{ChecksPassed: true, Criteria: append(yes(), Criterion{Text: "no invented figure", Met: false, Reason: "it quotes one"})}
+	if run.JudgePassed() {
+		t.Error("a run with one criterion unmet passed the judge")
+	}
+}
+
 func TestFewRunsAreASmokeResult(t *testing.T) {
-	if !Decide(passing(90, 90, 90), 70).Smoke {
+	if !Decide(runsOf(true, true, true)).Smoke {
 		t.Error("three runs were not called a smoke result")
 	}
-	if Decide(passing(slices.Repeat([]int{90}, smokeRuns)...), 70).Smoke {
+	if Decide(runsOf(slices.Repeat([]bool{true}, smokeRuns)...)).Smoke {
 		t.Errorf("%d runs were still called a smoke result", smokeRuns)
 	}
 }
@@ -63,7 +85,7 @@ func TestAVerdictRoundTripsUnderItsBindingFolder(t *testing.T) {
 	root := t.TempDir()
 	v := Verdict{
 		Scenario: "annotates", Agent: MorningBrief, Binding: Binding{Provider: "gemini", Model: "gemini-3.8-flash", Tier: "premium"},
-		Judge: "claude-sonnet-5-5", Runs: passing(80, 90, 85), Outcome: Decide(passing(80, 90, 85), 70),
+		Judge: "claude-haiku-5-5", Runs: runsOf(true, true, true), Outcome: Decide(runsOf(true, true, true)),
 		Stamp: Stamp{Scenario: "s"}, RanAt: "2026-11-23T10:00:00Z",
 	}
 	if err := v.Write(root); err != nil {
