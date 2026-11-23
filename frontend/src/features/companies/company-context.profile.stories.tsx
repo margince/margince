@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { StoryProviders } from "../../testing/story-utils";
 import {
@@ -54,13 +54,15 @@ export const ManualSetupDark: Story = {
   globals: { theme: "dark" },
 };
 
+const SAVED_PROFILE: CompanyInput = {
+  display_name: "Havbris AS",
+  website: "havbris.example",
+  offer_summary: "Coastal ferry maintenance contracts.",
+  icp: "Municipal ferry operators.",
+};
+
 function EditProfile() {
-  const [form, setForm] = useState<CompanyInput>({
-    display_name: "Havbris AS",
-    website: "havbris.example",
-    offer_summary: "Coastal ferry maintenance contracts.",
-    icp: "Municipal ferry operators.",
-  });
+  const [form, setForm] = useState<CompanyInput>(SAVED_PROFILE);
   return (
     <StoryProviders>
       <CompanyProfileDialog
@@ -69,8 +71,9 @@ function EditProfile() {
         pending={false}
         error={null}
         refusedAt={undefined}
+        dirty={JSON.stringify(form) !== JSON.stringify(SAVED_PROFILE)}
         onChange={setForm}
-        onClose={() => undefined}
+        onClose={() => setForm(SAVED_PROFILE)}
         onSubmit={() => undefined}
       />
     </StoryProviders>
@@ -79,6 +82,20 @@ function EditProfile() {
 
 /** The profile's one edit drawer, opened from the Products and services row. */
 export const EditDrawer: Story = { render: () => <EditProfile /> };
+
+// A changed draft and Escape: the drawer asks before it throws the draft away.
+// Cancel discards at once.
+export const EscapeAsksBeforeDiscarding: Story = {
+  render: () => <EditProfile />,
+  play: async () => {
+    const name = await screen.findByRole("textbox", { name: "Company name" });
+    await userEvent.type(name, " Group");
+    await userEvent.keyboard("{Escape}");
+    await expect(
+      await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+    ).toBeTruthy();
+  },
+};
 
 export const EditDrawerDark: Story = {
   ...EditDrawer,
