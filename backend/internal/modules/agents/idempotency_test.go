@@ -811,3 +811,39 @@ func TestAnExtensionToolRefusesTheRetryKeyItNeverAdvertised(t *testing.T) {
 		t.Fatalf("the unkeyed call ran %d times, want 1", ext.runs)
 	}
 }
+
+func TestAnInFlightRefusalCarriesItsCodeAndAnyOtherConflictDoesNot(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		state ClaimState
+		want  any
+	}{
+		{"the first attempt has not finished", ClaimInFlight, "idempotency_key_in_progress"},
+		{"the key is held against different arguments", ClaimMismatch, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newRetryFixture(t)
+			f.claims.verdict = Claim{State: tc.state}
+			s := NewDispatcher(f.registry, func(context.Context) (context.Context, error) { return f.ctx, nil }, "t", "0")
+			params, err := json.Marshal(map[string]any{
+				"name": "send_email", "arguments": map[string]any{"idempotency_key": "k-1"},
+			})
+			if err != nil {
+				t.Fatalf("encoding the call: %v", err)
+			}
+
+			resp := s.handle(f.ctx, rpcRequest{
+				JSONRPC: "2.0", ID: json.RawMessage(`1`), Method: methodToolsCall, Params: params,
+			}, legacyFraming)
+
+			result, ok := resp.Result.(map[string]any)
+			if !ok || result["isError"] != true {
+				t.Fatalf("result = %#v, want an isError refusal", resp.Result)
+			}
+			meta, _ := result["_meta"].(map[string]any)
+			if got := meta[refusalCodeMeta]; got != tc.want {
+				t.Fatalf("refusal code = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
