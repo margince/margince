@@ -21,7 +21,7 @@ import { GroupedTimelineList } from "../../../design-system/timeline";
 import { TimelineFilterBar } from "../../../design-system/timelinefilterbar";
 import { groupChronology } from "../../../design-system/timelinegroups";
 import { useLocale, useT } from "../../../i18n";
-import { useDealMarginceChanges } from "../../../lib/marginchanges";
+import { useDealChangesWhere } from "../../../lib/marginchanges";
 import { invalidateRecord } from "../../../lib/recordwritekeys";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { RecordHistoryTab } from "../../records/history";
@@ -60,8 +60,18 @@ export function DealHistoryTab({
   const [filter, setFilter] = useChronologyFilter(deal.id);
   const [filters, setFilters] = useTimelineFilters(deal.id);
   const timeline = useRecordTimeline("deal", deal.id, { filters });
-  const marginceReceipts =
-    useDealMarginceChanges(deal.id).data?.pages[0]?.changes ?? [];
+  // The changes the notes on screen report, asked for by note so one older
+  // than a page of the deal's changes still finds its Undo.
+  const noteIds = timeline.activities
+    .filter((activity) => activity.kind === "note")
+    .map((activity) => activity.id)
+    .sort()
+    .slice(0, 100);
+  const marginceReceipts = useDealChangesWhere(
+    deal.id,
+    { noteActivityIds: noteIds },
+    noteIds.length > 0,
+  );
   const chronology = useRecordChronology({
     onOpenEmail,
     kind: "deal",

@@ -62,8 +62,9 @@ func stageMoveFirst(changes []VerdictChange) []int {
 	return order
 }
 
-// applyVerdictStageMove moves the locked deal and answers the deal's values
-// after the move, for the changes that follow it, and the id of its correction row.
+// applyVerdictStageMove moves the locked deal. It answers the deal's values
+// after the move, for the changes that follow it, and the id of its correction
+// row.
 func (s *Store) applyVerdictStageMove(
 	ctx context.Context, tx pgx.Tx, in VerdictInput, current VerdictValues, change VerdictChange,
 	active []fieldcatalog.Column,

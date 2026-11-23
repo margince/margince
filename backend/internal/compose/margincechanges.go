@@ -104,7 +104,7 @@ func (h marginceChangeHandlers) ListDealMarginceChanges(w http.ResponseWriter, r
 		httperr.Write(w, r, httperr.Validation("cursor", "invalid_cursor", "start again from the first page"))
 		return
 	}
-	rows, more, err := h.deals.DealChanges(r.Context(), ids.From[ids.DealKind](ids.UUID(id)), after, dealChangesPage)
+	rows, more, err := h.deals.DealChanges(r.Context(), ids.From[ids.DealKind](ids.UUID(id)), after, dealChangesPage, dealChangeFilter(params))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -127,6 +127,23 @@ func (h marginceChangeHandlers) ListDealMarginceChanges(w http.ResponseWriter, r
 		out.NextCursor = &next
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// dealChangeFilter reads the narrowing a client asked the deal's list for.
+func dealChangeFilter(params crmcontracts.ListDealMarginceChangesParams) deals.DealChangeFilter {
+	var only deals.DealChangeFilter
+	if params.StageHistoryId != nil {
+		only.StageHistoryID = new(ids.UUID(*params.StageHistoryId))
+	}
+	if params.NoteActivityId != nil {
+		for _, note := range *params.NoteActivityId {
+			only.NoteActivityID = append(only.NoteActivityID, ids.UUID(note))
+		}
+	}
+	if params.ChangeKind != nil {
+		only.Kinds = *params.ChangeKind
+	}
+	return only
 }
 
 // GetTeamMarginceChanges answers what Margince changed on the caller's team's

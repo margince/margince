@@ -206,7 +206,7 @@ func TestAVerdictReceiptNamesTheMessageItReadAndWhenItCame(t *testing.T) {
 	reader := v.As(v.Rep1, []ids.UUID{v.Team1}, integration.AdminPerms)
 	now, h := clocktest.Now(t), newMarginceChangeHandlers(v.Pool)
 	handled, err := newAttentionService(v.Pool, approvals.NewService(v.DB()), func() time.Time { return now }).HandledForYou(reader, nil)
-	rows, _, readErr := h.deals.DealChanges(reader, ids.From[ids.DealKind](v.deal), nil, 10)
+	rows, _, readErr := h.deals.DealChanges(reader, ids.From[ids.DealKind](v.deal), nil, 10, deals.DealChangeFilter{})
 	onDeal, drawErr := h.changeReceipts(reader, rows)
 	if err != nil || readErr != nil || drawErr != nil {
 		t.Fatal(err, readErr, drawErr)

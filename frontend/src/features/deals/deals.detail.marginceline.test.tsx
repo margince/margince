@@ -8,6 +8,7 @@ const CLOSING = "01a00000-0000-7000-8000-0000000000c1";
 
 afterEach(() => {
   cleanup();
+  asked.length = 0;
   vi.unstubAllGlobals();
   window.location.hash = "";
   localStorage.clear();
@@ -38,6 +39,8 @@ function closedByMargince(stageHistoryId: string) {
   };
 }
 
+const asked: string[] = [];
+
 function stubWithChanges(stageHistoryId: string | null) {
   const d = {
     ...deal({ id: "x", status: "lost", stage_id: "s3" }),
@@ -49,6 +52,7 @@ function stubWithChanges(stageHistoryId: string | null) {
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input instanceof Request ? input.url : input);
       if (url.includes("/deals/x/margince-changes")) {
+        asked.push(url);
         return jsonResponse(
           stageHistoryId ? closedByMargince(stageHistoryId) : { changes: [] },
         );
@@ -71,6 +75,11 @@ describe("DealScreen — the line under the header for a close Margince made", (
     expect(
       await within(callout).findByRole("button", { name: "Undo" }),
     ).toBeTruthy();
+    // The close is asked for by the stage move it wrote, so it is found
+    // behind any number of later changes.
+    expect(
+      asked.some((url) => url.includes(`stage_history_id=${CLOSING}`)),
+    ).toBe(true);
   });
 
   it("draws no line, and holds no space for one, on a deal a person closed", async () => {

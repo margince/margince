@@ -29,8 +29,9 @@ type correctionWrite struct {
 }
 
 // commitCorrection writes a correction's patch, its audit row, its event and
-// its deal_correction row, and answers that row's id, in the caller's transaction under the deal's row
-// lock. The close-date sweep and the nightly verdict both write through it.
+// its deal_correction row, in the caller's transaction under the deal's row
+// lock. It answers the correction row's id. The close-date sweep and the
+// nightly verdict both write through it.
 func commitCorrection(ctx context.Context, tx pgx.Tx, lock storekit.RowLock, w correctionWrite) (ids.UUID, error) {
 	if err := applyDealPatchLocked(ctx, tx, w.patch, lock); err != nil {
 		return ids.Nil, fmt.Errorf("apply %s patch: %w", w.correction, err)

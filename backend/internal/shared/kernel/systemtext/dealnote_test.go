@@ -10,8 +10,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// A note stored with the words the catalog held before they said "here" still
-// binds to its descriptor, so a reader sees today's words in their language.
+// A note stored with the old catalog words still binds to its descriptor. A
+// reader sees today's words in their language.
 func TestAStoredDealNoteShowsTheCurrentWordsInEveryLanguage(t *testing.T) {
 	stored := "No reply for 120 days. Undo it from Home if the deal is still alive, and add a note on why."
 	body := Sequence(Sentence("deal.customer_declined"), Sentence("deal.lost_undo"))

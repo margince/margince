@@ -78,7 +78,7 @@ func (e *scoutEnv) backdate(t *testing.T, company ids.UUID, since, at time.Time)
 // owner and as a colleague: both see the reopen, only the owner its reason.
 func (e *scoutEnv) reopenReceiptsShowTheReasonToTheOwnerOnly(t *testing.T, deal ids.DealID) {
 	t.Helper()
-	owned, _, err := e.Deals.DealChanges(e.Admin(), deal, nil, 10)
+	owned, _, err := e.Deals.DealChanges(e.Admin(), deal, nil, 10, deals.DealChangeFilter{})
 	if err != nil || len(owned) != 1 {
 		t.Fatalf("the owner reads %d changes (%v), want the reopen", len(owned), err)
 	}
@@ -86,7 +86,7 @@ func (e *scoutEnv) reopenReceiptsShowTheReasonToTheOwnerOnly(t *testing.T, deal 
 		!strings.Contains(summary, "new_opportunity") {
 		t.Errorf("the owner's receipt = %q, want the reopen with its reason", summary)
 	}
-	seen, _, err := e.Deals.DealChanges(e.rep(e.Rep1, e.Team1), deal, nil, 10)
+	seen, _, err := e.Deals.DealChanges(e.rep(e.Rep1, e.Team1), deal, nil, 10, deals.DealChangeFilter{})
 	if err != nil || len(seen) != 1 {
 		t.Fatalf("a colleague reads %d changes (%v), want the reopen", len(seen), err)
 	}

@@ -145,6 +145,9 @@ func (s *Store) revertCorrectionTx(
 	if correction.Reversed() {
 		return correction, &CorrectionReversalError{Reason: alreadyTakenBack}
 	}
+	if err := refuseIfFieldsTouched(ctx, tx, correction); err != nil {
+		return correction, err
+	}
 	evidence = reversalEvidence(evidence, correction.ID)
 	switch correction.Correction {
 	case CloseLostCorrection:

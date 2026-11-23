@@ -10,6 +10,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { Receipt } from "./handled";
@@ -60,30 +61,79 @@ export function useDealMarginceChanges(dealId: string) {
   });
 }
 
+/** What a deal page asks its change list for, so the change it is about is
+ * found whatever page it would sit on. */
+export type DealChangeWhere = Readonly<{
+  stageHistoryId?: string;
+  noteActivityIds?: readonly string[];
+  changeKinds?: readonly string[];
+}>;
+
 /**
- * The change the deal's header line is about: the close Margince made, while
- * the deal is on that close, or else the newest opening or reopening that can
- * still be undone. A deal a person closed has no receipt for its closing
- * occurrence, so it has none.
+ * The deal's changes that match `where`, every page of them. The filtered list
+ * is a handful of rows. The pages are followed to the end, so the answer does
+ * not depend on how many other changes the deal has.
+ */
+export function useDealChangesWhere(
+  dealId: string,
+  where: DealChangeWhere,
+  enabled: boolean,
+): Receipt[] {
+  const read = useInfiniteQuery({
+    queryKey: ["deals", dealId, "margince-changes", "where", where],
+    enabled,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET("/deals/{id}/margince-changes", {
+          params: {
+            path: { id: dealId },
+            query: {
+              ...(pageParam ? { cursor: pageParam } : {}),
+              ...(where.stageHistoryId
+                ? { stage_history_id: where.stageHistoryId }
+                : {}),
+              ...(where.noteActivityIds
+                ? { note_activity_id: [...where.noteActivityIds] }
+                : {}),
+              ...(where.changeKinds
+                ? { change_kind: [...where.changeKinds] }
+                : {}),
+            },
+          },
+        }),
+      ),
+    getNextPageParam: (last) => last.next_cursor,
+  });
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = read;
+  useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  return read.data?.pages.flatMap((page) => page.changes ?? []) ?? [];
+}
+
+/**
+ * The change the deal's header line is about. A closed deal gets the close
+ * Margince made, while the deal is on that close. An open deal gets the newest
+ * opening or reopening that can still be undone. A deal a person closed has
+ * no receipt for its closing occurrence, so it gets none.
  */
 export function currentMarginceChange(
   deal: Readonly<{ closing_occurrence_id?: string | null }>,
   receipts: readonly Receipt[],
 ): Receipt | undefined {
-  const close = receipts.find(
-    (receipt) =>
-      receipt.kind === "deal_close_lost" &&
-      !receipt.review?.reversed &&
-      receipt.review?.stage_history_id != null &&
-      receipt.review.stage_history_id === deal.closing_occurrence_id,
-  );
-  return (
-    close ??
-    receipts.find(
+  if (deal.closing_occurrence_id) {
+    return receipts.find(
       (receipt) =>
-        (receipt.kind === "deal_open" || receipt.kind === "deal_revive") &&
-        isOpenReceipt(receipt),
-    )
+        receipt.kind === "deal_close_lost" &&
+        !receipt.review?.reversed &&
+        receipt.review?.stage_history_id === deal.closing_occurrence_id,
+    );
+  }
+  return receipts.find(
+    (receipt) =>
+      (receipt.kind === "deal_open" || receipt.kind === "deal_revive") &&
+      isOpenReceipt(receipt),
   );
 }
 

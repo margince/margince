@@ -689,8 +689,8 @@ func TestTheInstallationSwitchStopsTheClose(t *testing.T) {
 
 // The deal page reads the close as a receipt that names its History note and
 // the stage move it wrote. The page matches that move against the deal's
-// closing occurrence to tell a close Margince made from one a person made, and
-// Undo stops showing once somebody moves the deal.
+// closing occurrence to tell Margince's close from a person's. Undo stops
+// showing once somebody moves the deal.
 func TestTheDealsChangesNameTheNoteAndTheCloseWhileUndoIsOpen(t *testing.T) {
 	c := setupCloseLost(t)
 	c.run(t)

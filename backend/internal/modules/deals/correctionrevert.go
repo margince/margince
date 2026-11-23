@@ -451,3 +451,42 @@ func (s *Store) restoresAPastDate(
 
 // provisionalField is the column saying nobody has confirmed the deal's date.
 const provisionalField = "close_date_provisional"
+
+// fieldsTouchedSince asks whether any later write changed a field the
+// correction changed. The review's can_undo asks the same through
+// laterWriteOnFieldsSQL, so an Undo offered is an Undo accepted. A value
+// compare would miss a field edited away and back to what the correction wrote.
+func fieldsTouchedSince(ctx context.Context, tx pgx.Tx, c DealCorrection) (bool, error) {
+	var touched bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (`+laterWriteOnFieldsSQL("c", "a")+`)
+		  FROM deal_correction c JOIN audit_log a ON a.id = c.audit_log_id WHERE c.id = $1`, c.ID).Scan(&touched)
+	if err != nil {
+		return false, fmt.Errorf("deals: reading the later writes on a corrected field: %w", err)
+	}
+	return touched, nil
+}
+
+// movedSinceReason is the refusal a stage correction gives once the deal moved
+// after it. Other corrections have none.
+var movedSinceReason = map[string]string{
+	CloseLostCorrection:        closeMovedSince,
+	VerdictStageMoveCorrection: stageMoveMovedSince,
+	DealReviveCorrection:       reviveMovedSince,
+}
+
+// refuseIfFieldsTouched refuses an Undo once a later write changed a field the
+// correction changed. A stage move after a stage correction keeps the
+// moved-since answer, which the stage path words for its own change.
+func refuseIfFieldsTouched(ctx context.Context, tx pgx.Tx, c DealCorrection) error {
+	touched, err := fieldsTouchedSince(ctx, tx, c)
+	if err != nil || !touched {
+		return err
+	}
+	if reason, stage := movedSinceReason[c.Correction]; stage {
+		if _, err := stageMoveToReverse(ctx, tx, c, reason); err != nil {
+			return err
+		}
+	}
+	return &CorrectionReversalError{Reason: "a field of this change has been changed since, so taking it back would overwrite that"}
+}

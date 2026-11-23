@@ -74818,6 +74818,12 @@ export interface operations {
             query?: {
                 /** @description The `next_cursor` of the page before. A token this server did not mint is refused with 422. */
                 cursor?: string;
+                /** @description Only the change that wrote this stage-history row. A client asks for the close the deal is on without paging for it. */
+                stage_history_id?: string;
+                /** @description Only the changes that these History notes report. */
+                note_activity_id?: string[];
+                /** @description Only changes of these correction kinds, such as close_lost, deal_open or deal_revive. */
+                change_kind?: string[];
             };
             header?: never;
             path: {

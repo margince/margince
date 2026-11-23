@@ -185,8 +185,8 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 }
 
 // applyVerdictChanges writes each change on the locked deal, the stage move
-// first, sets its outcome and answers the changes that applied with the ids of
-// their correction rows.
+// first, and sets its outcome. It answers the changes that applied, with the
+// ids of their correction rows.
 func (s *Store) applyVerdictChanges(
 	ctx context.Context, tx pgx.Tx, lock storekit.RowLock, in VerdictInput, current VerdictValues,
 	active []fieldcatalog.Column, outcomes []string,

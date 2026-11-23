@@ -8940,6 +8940,21 @@ paths:
           required: false
           schema: { type: string }
           description: The `next_cursor` of the page before. A token this server did not mint is refused with 422.
+        - name: stage_history_id
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+          description: Only the change that wrote this stage-history row. A client asks for the close the deal is on without paging for it.
+        - name: note_activity_id
+          in: query
+          required: false
+          schema: { type: array, maxItems: 100, items: { type: string, format: uuid } }
+          description: Only the changes that these History notes report.
+        - name: change_kind
+          in: query
+          required: false
+          schema: { type: array, maxItems: 10, items: { type: string } }
+          description: Only changes of these correction kinds, such as close_lost, deal_open or deal_revive.
       responses:
         '200':
           description: One page of the deal's changes.

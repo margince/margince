@@ -26,7 +26,7 @@ import { useTargetApprovals } from "../../lib/approvals.queries";
 import { useDeal } from "../../lib/dealread";
 import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
-import { useDealMarginceChanges } from "../../lib/marginchanges";
+import { useDealChangesWhere } from "../../lib/marginchanges";
 import { fromHere } from "../../lib/navigatefrom";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
@@ -192,9 +192,17 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
   const pipelineRetired = Boolean(pipelineQuery.data?.archived_at);
-  // Shared through the cache with the Overview's changes card.
-  const marginceReceipts =
-    useDealMarginceChanges(id).data?.pages[0]?.changes ?? [];
+  // Asked for by what the header line is about, so it is found however many
+  // other changes the deal has. A closed deal asks for the close it is on, an
+  // open one for the opening or reopening Margince may still take back.
+  const closingOccurrence = dealQuery.data?.closing_occurrence_id;
+  const marginceReceipts = useDealChangesWhere(
+    id,
+    closingOccurrence
+      ? { stageHistoryId: closingOccurrence }
+      : { changeKinds: ["deal_open", "deal_revive"] },
+    dealQuery.isSuccess,
+  );
   // Every write affordance on this page answers one question, asked once. An
   // archived deal takes no changes, and its verbs stay, refused. One this
   // caller cannot write takes none from them, so its verbs are left out.
