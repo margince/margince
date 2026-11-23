@@ -11,13 +11,14 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // A DSN that asks for JIT does not get it: row-scope predicates price a search
 // statement past jit_above_cost, and compiling it took seconds.
 func TestAPoolFromADSNThatAsksForJITRunsWithJITOff(t *testing.T) {
 	ctx := context.Background()
-	pool, err := database.NewPool(ctx, database.WithDSNParam(os.Getenv("MARGINCE_TEST_APP_DSN"), "jit", "on"))
+	pool, err := testdb.OwnPool(ctx, database.WithDSNParam(os.Getenv("MARGINCE_TEST_APP_DSN"), "jit", "on"))
 	if err != nil {
 		t.Fatal(err)
 	}

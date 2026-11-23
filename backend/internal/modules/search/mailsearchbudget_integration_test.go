@@ -8,10 +8,10 @@ package search
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -138,6 +138,11 @@ func TestOneWordMailSearchStaysInsideTheBudgetOnACommonWord(t *testing.T) {
 	})
 	reader := ids.NewV7()
 	seedMailCorpus(ctx, t, tx, reader)
+	// The budget is the ceiling a request handle carries. A search over it is
+	// cancelled, and rank reports it as too broad.
+	if _, err := tx.Exec(ctx, fmt.Sprintf("SET LOCAL statement_timeout = %d", database.CallerPredicateBudget.Milliseconds())); err != nil {
+		t.Fatal(err)
+	}
 
 	rep := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:rep", UserID: reader,
@@ -163,14 +168,9 @@ func TestOneWordMailSearchStaysInsideTheBudgetOnACommonWord(t *testing.T) {
 				t.Fatalf("no statement for the search: %q, %v", statement, err)
 			}
 
-			began := time.Now()
 			hits, err := rank(caller, tx, statement, args)
-			took := time.Since(began)
 			if err != nil || len(hits) == 0 {
-				t.Fatalf("the search found %d hits: %v", len(hits), err)
-			}
-			if took >= database.CallerPredicateBudget {
-				t.Errorf("a one-word mail search took %s, over the %s budget", took, database.CallerPredicateBudget)
+				t.Fatalf("the search found %d hits within the budget: %v", len(hits), err)
 			}
 
 			// Explained the way rank runs it: unnamed, so planned with the words.
