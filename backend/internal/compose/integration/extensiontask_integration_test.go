@@ -81,8 +81,8 @@ func TestErasureFindsAnExtensionCallBySubject(t *testing.T) {
 	contactID := seedSubject(t, e)
 	record := func(subject ids.Ref) ids.UUID {
 		id := ids.NewV7()
-		e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, request_fingerprint, subject_type, subject_id)
-			VALUES ($1, $1, 'ext_reports_weekly', 'fp-ext', $2, $3)`, id, subject.Type, subject.ID)
+		e.WsExec(t, `INSERT INTO ai_call (id, logical_call_id, task, subject_type, subject_id)
+			VALUES ($1, $1, 'ext_reports_weekly', $2, $3)`, id, subject.Type, subject.ID)
 		e.WsExec(t, `INSERT INTO ai_call_payload (ai_call_id, request_payload, response_payload)
 			VALUES ($1, '{"messages":[{"role":"user","content":"a summary that names nobody"}]}'::jsonb, '{}'::jsonb)`, id)
 		return id
