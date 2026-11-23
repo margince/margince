@@ -38,7 +38,7 @@ func TestADealCloseDateIsOverdueInTheZoneTheScreenReadsIn(t *testing.T) {
 	}
 	closeOn := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
 	deal, err := store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Closes on the 15th", PipelineID: pipelineID, StageID: open, ExpectedClose: &closeOn,
+		Name: "Closes on the 15th", Source: "manual", PipelineID: pipelineID, StageID: open, ExpectedClose: &closeOn,
 	})
 	if err != nil {
 		t.Fatal(err)

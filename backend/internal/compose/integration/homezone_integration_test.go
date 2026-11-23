@@ -93,7 +93,7 @@ func TestAnAtRiskDealsQuietDaysCountOnTheDayItWasAdmittedOn(t *testing.T) {
 	closeOn := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
 	owner := ids.From[ids.UserKind](e.Rep1)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Hanoi deal", PipelineID: pipeline, StageID: open, OwnerID: &owner, OwnerExact: true, ExpectedClose: &closeOn,
+		Name: "Hanoi deal", Source: "manual", PipelineID: pipeline, StageID: open, OwnerID: &owner, OwnerExact: true, ExpectedClose: &closeOn,
 	})
 	if err != nil {
 		t.Fatal(err)
