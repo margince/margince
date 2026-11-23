@@ -62,12 +62,22 @@ type binding struct {
 	decisions *decisionLane
 	// public is the anonymous profile of this binding's models and providers.
 	public PublicProfile
+	// ladders is the config's reordering of a task's rungs, nil for none.
+	ladders map[Task][]Tier
 	// generation identifies THIS binding among the ones this Router has
 	// served, and it is what the result cache scopes its entries to. It is
 	// deliberately not derived from the config: rebinding to an identical
 	// config still rebuilds every client, and two runs of the same config
 	// are still two different sets of provider connections.
 	generation uint64
+}
+
+// ladder is task's rungs under this binding, and false for no task.
+func (b *binding) ladder(task Task) ([]Tier, bool) {
+	if _, known := taskLadders[task]; !known {
+		return nil, false
+	}
+	return RoutingConfig{TaskLadders: b.ladders}.Ladder(task), true
 }
 
 // binding returns the configuration this call must serve itself from. Load it
@@ -96,6 +106,7 @@ func (r *Router) binding() *binding {
 // may stand a fake in for it; every site must still hand one over.
 func (b binding) withConfig(cfg RoutingConfig, decisions *decisionLane) binding {
 	b.decisions = decisions
+	b.ladders = cfg.TaskLadders
 	// ParseRouting defaults 0→defaultEmbedDimensions, but a programmatic
 	// RoutingConfig built without it (a hand-assembled test fixture) reaches
 	// construction with Dimensions still 0 — default here too so a bound embed

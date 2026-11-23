@@ -156,9 +156,38 @@ func toContractAiRouting(cfg ai.RoutingConfig) (crmcontracts.AiRouting, error) {
 			// the document as though an operator had chosen it.
 			Dimensions: optionalInt(cfg.Embeddings.Dimensions),
 		},
-		Decisions: decisionsToWire(cfg.Decisions, host),
-		Providers: providersToWire(cfg.Providers),
+		Decisions:   decisionsToWire(cfg.Decisions, host),
+		Providers:   providersToWire(cfg.Providers),
+		TaskLadders: taskLaddersToWire(cfg.TaskLadders),
 	}, nil
+}
+
+// taskLaddersToWire and taskLaddersFromWire carry a binding's reordered task
+// ladders; nil in either direction is "every task in its contract order".
+func taskLaddersToWire(ladders map[ai.Task][]ai.Tier) *map[string][]string {
+	if len(ladders) == 0 {
+		return nil
+	}
+	out := make(map[string][]string, len(ladders))
+	for task, order := range ladders {
+		for _, tier := range order {
+			out[string(task)] = append(out[string(task)], string(tier))
+		}
+	}
+	return &out
+}
+
+func taskLaddersFromWire(ladders *map[string][]string) map[ai.Task][]ai.Tier {
+	if ladders == nil || len(*ladders) == 0 {
+		return nil
+	}
+	out := make(map[ai.Task][]ai.Tier, len(*ladders))
+	for task, order := range *ladders {
+		for _, tier := range order {
+			out[ai.Task(task)] = append(out[ai.Task(task)], ai.Tier(tier))
+		}
+	}
+	return out
 }
 
 // decisionsToWire and decisionsFromWire carry the decision lane. The pointer is
@@ -202,10 +231,11 @@ func fromContractAiRouting(req crmcontracts.AiRouting, sent map[string]json.RawM
 	}
 	lane, laneErr := tierFromWire(ai.EmbeddingsRoutingPath, embeddings, sent)
 	cfg := ai.RoutingConfig{
-		Profile:    ai.Profile(req.Profile),
-		Embeddings: ai.EmbeddingsConfig{ProviderConfig: lane},
-		Decisions:  decisionsFromWire(req.Decisions),
-		Providers:  providersFromWire(req.Providers),
+		Profile:     ai.Profile(req.Profile),
+		Embeddings:  ai.EmbeddingsConfig{ProviderConfig: lane},
+		Decisions:   decisionsFromWire(req.Decisions),
+		Providers:   providersFromWire(req.Providers),
+		TaskLadders: taskLaddersFromWire(req.TaskLadders),
 	}
 	if req.Embeddings.Dimensions != nil {
 		cfg.Embeddings.Dimensions = *req.Embeddings.Dimensions

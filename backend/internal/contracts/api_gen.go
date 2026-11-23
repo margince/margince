@@ -35218,6 +35218,12 @@ type AiEmbeddingsBindingThinkingLevel string
 type AiFeatureRoute struct {
 	BudgetExempt bool `json:"budget_exempt"`
 
+	// Certification The certification grade of the model that answers this feature first (the lead of
+	// `normal_candidates`), read from the committed certification records by the readiness
+	// report's rule: the worst grade over every site the feature ships, and not measured when
+	// any site has no record for that model. Absent when no model is bound, and for embeddings.
+	Certification *AiTaskCertification `json:"certification,omitempty"`
+
 	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
 	Decides           *bool             `json:"decides,omitempty"`
 	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
@@ -35807,6 +35813,12 @@ type AiRouting struct {
 	// the map, so an entry it leaves out is removed.
 	Providers *map[string]AiProviderSettings `json:"providers,omitempty"`
 
+	// TaskLadders A task name to the order its rungs are walked in under this binding, for a task this
+	// binding walks otherwise than the task contract does. The order must name exactly the
+	// task's own rungs; anything else is refused with a 422. A task left out keeps its
+	// contract order.
+	TaskLadders *map[string][]string `json:"task_ladders,omitempty"`
+
 	// Tiers Tier name to the model bound on it. Empty means no models are bound.
 	Tiers map[string]AiTierBinding `json:"tiers"`
 }
@@ -35929,6 +35941,21 @@ type AiStatus struct {
 
 // AiTask AI task key from the task catalog, used to localize its display name.
 type AiTask string
+
+// AiTaskCertification The certification grade of the model that answers this feature first (the lead of
+// `normal_candidates`), read from the committed certification records by the readiness
+// report's rule: the worst grade over every site the feature ships, and not measured when
+// any site has no record for that model. Absent when no model is bound, and for embeddings.
+type AiTaskCertification struct {
+	// Grade ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.
+	Grade string `json:"grade"`
+
+	// Model The model the grade is for.
+	Model string `json:"model"`
+
+	// RecheckPending The product has changed since the grade was measured: the grade is the last one there is, and a re-run replaces it.
+	RecheckPending bool `json:"recheck_pending"`
+}
 
 // AiTaskFlow defines model for AiTaskFlow.
 type AiTaskFlow struct {

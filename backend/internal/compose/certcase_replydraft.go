@@ -276,7 +276,8 @@ type replyDraftCase struct {
 // last, and then it is the deterministic text a human sees.
 func (c *replyDraftCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
 	recorder := &replyDraftRecorder{completer: completer}
-	_, _, _, err := replyDrafter{brain: recorder}.completeVoiced(ctx, c.anchor, c.activity, c.voice)
+	brain := certContextBrain{task: ai.TaskDraftReply, next: recorder}
+	_, _, _, err := replyDrafter{brain: brain}.completeVoiced(ctx, c.anchor, c.activity, c.voice)
 	trace := aitasks.Trace{Requests: recorder.requests}
 	if recorder.failed != nil {
 		return trace, fmt.Errorf("%s: the model call did not complete: %w", replyDraftSite, recorder.failed)

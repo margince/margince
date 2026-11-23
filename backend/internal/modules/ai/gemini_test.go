@@ -132,8 +132,12 @@ func TestGeminiStructuredOutputRidesResponseFormat(t *testing.T) {
 	if format.Text.MimeType != "APPLICATION_JSON" {
 		t.Fatalf("responseFormat.text.mimeType = %q, want APPLICATION_JSON", format.Text.MimeType)
 	}
-	if !bytes.Equal(bytes.TrimSpace(format.Text.Schema), bytes.TrimSpace(schema)) {
-		t.Fatalf("responseFormat.text.schema not verbatim: %s", format.Text.Schema)
+	strict, err := GeminiStrictSchema(schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(bytes.TrimSpace(format.Text.Schema), strict) {
+		t.Fatalf("responseFormat.text.schema = %s, want the strict form of the caller's schema %s", format.Text.Schema, strict)
 	}
 }
 

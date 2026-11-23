@@ -24,6 +24,15 @@ this installation goes, so an operator must choose it; it is never inherited.
 binding, because that file is the dev posture and has to stand alone. A test fails when the two
 differ.
 
+**A preset may reorder one task's rungs.** `task_ladders` names a task and the order its own rungs
+are walked in, and leaves every other task in its contract order.
+
+Both Gemini presets walk `agent_loop`, `nl_search` and `voice_build` on the `premium` tier
+first. On Flash all three certify, and on Flash-Lite none does: there a line planted in a CRM
+record reached a scheduled agent's findings. Each of those calls pays for `premium` tokens.
+`draft_reply` keeps its contract order: Flash-Lite drafts read `supported_degraded`, and on Flash the
+account drafts fail two privacy cases.
+
 `gemini_vertex_eu.yaml` binds the models of `gemini_cloud.yaml` at their thinking levels, on
 Vertex AI at an EU location, under `eu_hosted`. Frontier stays on Flash, because Vertex serves no
 Pro model in the EU. A location outside the EU member states (London and Zürich included)

@@ -28,6 +28,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "docs.kind.drive",
   "docs.kind.web",
   "docs.add.urlPlaceholder",
+  // A model setup named only by its vendor's product name.
+  "firstRun.ai.setupTitle.gemini_cloud",
   // ui-copy-style-vi.md retires the Vietnamese phrase for a best case.
   "progress.scenario.best",
   // Product and protocol names, an example address and an example header name.

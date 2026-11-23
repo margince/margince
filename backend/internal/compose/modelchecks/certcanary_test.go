@@ -153,6 +153,9 @@ func assertNoCanaryInAnySystemPrompt(t *testing.T, census *aitasks.Registry, sc 
 	}
 
 	completer := &testmodel.Recorder{}
+	if walking, ok := prepared.(aitasks.ToolWalkingCase); ok {
+		completer.Replies = walking.WalkReplies()
+	}
 	if _, runErr := prepared.Run(context.Background(), completer); runErr != nil {
 		// A case may refuse the stand-in reply, or stop the loop it drives.
 		// That is its validator working and says nothing about where the
