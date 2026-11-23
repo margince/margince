@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { REPORTING_FIXTURE_ZONE } from "../testing/reporting.fixtures";
+import { analyticsContextFixture as context } from "../testing/reporting.fixtures";
 import { readsTeamProgress } from "./progressreader";
 
 type AnalyticsContext = components["schemas"]["AnalyticsContext"];
@@ -12,20 +12,6 @@ type Scope = AnalyticsContext["default_scope"];
 const own: Scope = { kind: "owner", id: "u1", label: "Alex Brandt" };
 const team: Scope = { kind: "team", id: "t1", label: "Sales DACH" };
 const managed: Scope = { kind: "managed_teams", label: "My teams" };
-
-function context(defaultScope: Scope, allowed: Scope[]): AnalyticsContext {
-  return {
-    default_scope: defaultScope,
-    allowed_scopes: allowed,
-    capabilities: {
-      view_manager_forecast: false,
-      submit_manager_forecast: false,
-    },
-    as_of: "2026-03-15T09:00:00Z",
-    timezone: REPORTING_FIXTURE_ZONE,
-    base_currency: "EUR",
-  };
-}
 
 describe("readsTeamProgress", () => {
   it("names a manager who opens on their teams by the team", () => {

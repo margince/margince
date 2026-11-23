@@ -169,7 +169,7 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 		if task != TaskEmbeddings {
 			degrades := DegradesOnOutage(task)
 			row.DegradesOnOutage = &degrades
-			decides, defaults := TaskDecides(task), TaskDefaults()
+			decides, defaults := TaskDecides(task), TaskDefaults(task, plannedModels(effective))
 			row.Decides = &decides
 			row.Defaults = &crmcontracts.AiTaskSettings{
 				DecisionTimeoutMs: int(defaults.DecisionTimeout.Milliseconds()), AttemptTimeoutMs: int(defaults.AttemptTimeout.Milliseconds()),
@@ -206,3 +206,12 @@ func unusedTiers(cfg RoutingConfig) []string {
 // DegradesOnOutage says the task answers from the record's own facts once no
 // model can, rather than failing: what ai-tasks.yaml declares as on_outage.
 func DegradesOnOutage(task Task) bool { return taskDegradesOnOutage[task] }
+
+// plannedModels is the provider and model each planned rung reaches.
+func plannedModels(plan []plannedBinding) []boundModel {
+	out := make([]boundModel, 0, len(plan))
+	for _, rung := range plan {
+		out = append(out, boundModel{provider: rung.config.Provider, model: rung.config.Model})
+	}
+	return out
+}

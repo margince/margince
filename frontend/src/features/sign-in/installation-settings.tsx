@@ -23,13 +23,7 @@ import { useCanWrite } from "../../lib/capability";
 // Installation facts are readable by every role; only admin/ops may change them.
 // Each row opens the shared sparse-patch form with its own field focused.
 import { useCurrencyNote } from "../../lib/installation-settings.currency";
-import {
-  type FieldLabels,
-  fieldCheckSentence,
-  percentLimit,
-  refusalSentences,
-  unwrap,
-} from "../../lib/problem";
+import { type FieldLabels, percentLimit, unwrap } from "../../lib/problem";
 // Shared with every upload form, which reads the ceiling off this same record.
 // One query, one key: two hooks on one key would let whichever mounted first
 // decide how a failure behaves for the other.
@@ -37,6 +31,7 @@ import {
   INSTALLATION_SETTINGS_KEY,
   useInstallationSettings,
 } from "../../lib/uploadlimit";
+import { wholeNumberFault } from "../../lib/wholenumber";
 import {
   LANGUAGE_DEPENDENT_QUERY_PREFIXES,
   SETTINGS_IN_SERVER_TEXT,
@@ -50,6 +45,7 @@ import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
 } from "./installation-settings.profile";
+import { installationRefusal } from "./installation-settings.refusal";
 import { RegionalSettingsRows } from "./installation-settings.regional";
 
 export { fiscalYearStartSummary } from "./installation-settings.profile";
@@ -77,13 +73,12 @@ const EDITABLE_FACTS = [
   "forecast_likely_threshold",
 ] as const;
 
-// Which fact the reader pressed Edit on. The dialog always edits all of them —
-// one record, one sparse PATCH, one Save — so this decides nothing about what
-// is written, only where focus lands when the dialog opens.
+// Which fact the reader pressed Edit on. The dialog edits every fact of its
+// tab in one sparse PATCH, so this decides only where focus lands.
 export type EditedFact = (typeof EDITABLE_FACTS)[number];
 
 // The server's bounds on the Likely threshold, in percent.
-const LIKELY_THRESHOLD = { min: "1", max: "100" } as const;
+const LIKELY_THRESHOLD = { min: 1, max: 100 } as const;
 
 function factLabels(t: ReturnType<typeof useT>, locale: Locale): FieldLabels {
   return {
@@ -108,12 +103,9 @@ function thresholdFault(
   locale: Locale,
 ): string | undefined {
   const label = labels.forecast_likely_threshold;
-  if (!Number.isInteger(percent)) {
-    return fieldCheckSentence("not_integer", locale, label);
-  }
-  return percent < 1 || percent > 100
-    ? fieldCheckSentence("out_of_range", locale, label, LIKELY_THRESHOLD)
-    : undefined;
+  return label === undefined
+    ? undefined
+    : wholeNumberFault(String(percent), locale, label, LIKELY_THRESHOLD);
 }
 
 // Exported for the onboarding's preferences act, which writes the same sparse
@@ -285,7 +277,7 @@ function InstallationSettingsForm({
       return sentence === undefined ? [] : [[fact, sentence] as const];
     }),
   );
-  const blanket = refusalSentences(update.error, t, labels).rest;
+  const blanket = installationRefusal(update.error, t, labels, part).rest;
   const edit = (next: InstallationSettings) => {
     for (const fact of EDITABLE_FACTS) {
       if (next[fact] !== draft[fact]) faults.edited(fact);
@@ -325,7 +317,7 @@ function InstallationSettingsForm({
     }
     update.mutate(patch, {
       onError: (error) =>
-        faults.show(refusalSentences(error, t, labels).byField),
+        faults.show(installationRefusal(error, t, labels, part).byField),
     });
   };
 
@@ -415,10 +407,15 @@ function InstallationSettingsForm({
               label={t("installationSettings.baseCurrency")}
               description={currencyNote(settings)}
               value={settings.base_currency}
-              control={editVerb(
-                "base_currency",
-                t("installationSettings.baseCurrency"),
-              )}
+              // A frozen currency has nothing to edit; the note says why.
+              control={
+                settings.base_currency_locked
+                  ? undefined
+                  : editVerb(
+                      "base_currency",
+                      t("installationSettings.baseCurrency"),
+                    )
+              }
             />
             <RegionalSettingsRows settings={settings} editVerb={editVerb} />
             <SettingRow
@@ -458,6 +455,7 @@ function InstallationSettingsForm({
       )}
       {editing !== null && (
         <InstallationProfileDialog
+          part={part}
           settings={settings}
           draft={draft}
           focus={editing}

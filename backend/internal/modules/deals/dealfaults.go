@@ -91,6 +91,10 @@ const (
 // point at.
 const partnerAttributionField = "partner_attribution"
 
+// wonWithoutContractReasonField is why a deal was won with no signed contract,
+// as the wire field and the deal column both name it.
+const wonWithoutContractReasonField = "won_without_contract_reason"
+
 // PartnerAttributionUnpairedError maps to 422: an attribution describes a
 // partner, so a deal that names none has nothing to attribute.
 type PartnerAttributionUnpairedError struct{}

@@ -1,5 +1,10 @@
 import type { components } from "../../../api/schema";
 import type { CreateField } from "../../../components/create";
+import {
+  DEAL_MOTION_LABEL,
+  DEAL_PRIORITY_LABEL,
+  withUnset,
+} from "../../../format/dealvocab";
 import type { MessageKey } from "../../../i18n/en";
 import { acquisitionOptions } from "../../../lib/acquisitionsources.queries";
 
@@ -66,19 +71,9 @@ export function dealCommercialFields(
   ];
 }
 
-export const MOTION_OPTIONS: { value: string; label: MessageKey }[] = [
-  { value: "", label: "deal.motionUnset" },
-  { value: "new_business", label: "deal.motionNewBusiness" },
-  { value: "renewal", label: "deal.motionRenewal" },
-  { value: "upsell", label: "deal.motionUpsell" },
-  { value: "cross_sell", label: "deal.motionCrossSell" },
-  { value: "expansion", label: "deal.motionExpansion" },
-  { value: "existing_business", label: "deal.motionExistingBusiness" },
-];
+export const MOTION_OPTIONS = withUnset(DEAL_MOTION_LABEL, "deal.motionUnset");
 
-export const PRIORITY_OPTIONS: { value: string; label: MessageKey }[] = [
-  { value: "", label: "deal.priorityUnset" },
-  { value: "high", label: "deal.priorityHigh" },
-  { value: "medium", label: "deal.priorityMedium" },
-  { value: "low", label: "deal.priorityLow" },
-];
+export const PRIORITY_OPTIONS = withUnset(
+  DEAL_PRIORITY_LABEL,
+  "deal.priorityUnset",
+);

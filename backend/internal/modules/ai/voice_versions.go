@@ -48,7 +48,7 @@ type VoiceProfileVersion struct {
 	CapturedBy              string
 	Version                 int64
 	CreatedAt               time.Time
-	UpdatedAt               *time.Time
+	UpdatedAt               time.Time
 	ArchivedAt              *time.Time
 	ActivatedAt             *time.Time
 }
@@ -244,9 +244,6 @@ func recordVoiceVersionTransition(ctx context.Context, tx pgx.Tx, result VoicePr
 		auditAction = "update"
 	}
 	var classification string
-	// updated_at is stamped with the outcome. The column is null while a delta
-	// row has never been touched, which is what a reader takes it to mean, so
-	// an update that left it null would say the decision never happened.
 	if err := tx.QueryRow(ctx, `
 			UPDATE voice_profile_delta SET activation_outcome = $3, updated_at = now()
 			WHERE voice_profile_id = $1 AND to_version = $2

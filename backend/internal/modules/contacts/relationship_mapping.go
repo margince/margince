@@ -133,6 +133,7 @@ func wireRelationship(rel relationshipRow) crmcontracts.Relationship {
 		UpdatedAt:  rel.UpdatedAt,
 		ArchivedAt: rel.ArchivedAt,
 		Role:       rel.Role,
+		CanArchive: rel.CanArchive,
 	}
 	version := crmcontracts.RowVersion(rel.Version)
 	out.Version = &version

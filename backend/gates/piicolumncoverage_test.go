@@ -57,8 +57,8 @@ import (
 // a failing gate: the gate's message says to clear the column, or to say here
 // why it stays.
 var erasureColumnBaseline = map[string][]string{
-	// Raw originals are deleted in full after their positive subject match is recorded.
-	// The preparatory metadata write leaves these columns for that deletion.
+	"legal_review": {"captured_by", "packet", "status"},
+	// Raw originals are deleted in full after their positive subject match is recorded; the preparatory metadata write leaves these columns for that deletion.
 	"raw_capture": {"parts_slim_outcome", "payload", "source_id", "source_system"},
 	// Audit identity and authority remain immutable when retained payloads are removed.
 	"audit_log": {"action", "actor_id", "actor_type", "authorization_rule", "entity_type"},
@@ -78,8 +78,8 @@ var erasureColumnBaseline = map[string][]string{
 	// The hash identifies the promise; the version and actor identify its reader.
 	// Retained work needs this provenance after the summary and quotation are cleared.
 	"activity_commitment_admission": {"locator", "rule_version", "captured_by"},
-	// Metric/type enums, generated UUID grouping and opaque context/contribution hashes contain no subject prose.
-	"report_edition_contribution": {"group_key", "metric", "source_type", "context_id", "contribution_key"},
+	// Metric/type enums and opaque context/contribution hashes contain no subject prose.
+	"report_edition_contribution": {"metric", "source_type", "context_id", "contribution_key"},
 	// Closed publication access class (private/team/workspace), never subject-authored content.
 	"report_edition": {"publication_audience"},
 	// A revision's selection is the report's public structure: metrics, period,
@@ -289,9 +289,9 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"contact": {
 		"captured_by",
-		// A closed vocabulary and the principal that chose it; neither holds
-		// anything a subject wrote.
-		"relationship_mark",
+		// Closed vocabularies and the principals that set or cleared them; none
+		// holds anything a subject wrote.
+		"quarantine_cleared_by", "quarantine_reason", "relationship_mark",
 		"relationship_mark_set_by",
 		"source",
 		// Which system the record was imported FROM — a system's name, not the

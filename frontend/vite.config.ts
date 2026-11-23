@@ -5,6 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
+import { policyTargets } from "./scripts/browser-targets.ts";
 import {
   chunkBudgets,
   entryChunks,
@@ -13,7 +14,10 @@ import {
 } from "./scripts/vite-entry-chunks.ts";
 import { buildRevision, serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
+import { precompress } from "./scripts/vite-precompress.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
+import { screenChunks } from "./scripts/vite-screen-chunks.ts";
+import { startupStyles } from "./scripts/vite-startup-styles.ts";
 import {
   CostSequencer,
   compilerTests,
@@ -48,6 +52,14 @@ const unitScreenDirs =
         return existsSync(link) ? [realpathSync(link)] : [];
       })
     : [];
+// fonts.css names each face by its package, and the dev server serves it from
+// the pnpm store's real path, outside every folder fs.allow lists below.
+const fontsourceDir = join(frontendRoot, "node_modules", "@fontsource");
+const fontFileDirs = existsSync(fontsourceDir)
+  ? readdirSync(fontsourceDir).map((pkg) =>
+      realpathSync(join(fontsourceDir, pkg, "files")),
+    )
+  : [];
 const compositionDir = composedComposition
   ? resolve(composedComposition)
   : join(frontendRoot, "src", "composition");
@@ -117,6 +129,9 @@ const testExclude = ["**/node_modules/**", "e2e/**", "census/**"];
 
 export default defineConfig({
   build: {
+    // The oldest browsers .browserslistrc supports. Without it Vite lowers to
+    // its own default, which no Margince decision chose.
+    target: policyTargets(),
     // nginx.conf's font-src 'self' refuses a font inlined as a data: URL.
     assetsInlineLimit: (file) =>
       /\.(?:woff2?|ttf|otf)$/.test(file) ? false : undefined,
@@ -150,13 +165,20 @@ export default defineConfig({
   // name — so both views would be permanently unadvertised in every dev stack.
   plugins: [
     preloadEntries([...entries.startup, ...entries.analyticsPreparation]),
+    // The faces both sign-in and Home draw: body and labels in Geist, headings in Outfit.
+    startupStyles(entries.startup, [
+      "geist-latin-400-normal.woff2",
+      "geist-latin-500-normal.woff2",
+      "outfit-latin-700-normal.woff2",
+    ]),
     bootstrap.plugin,
     analyticsPreparation.plugin,
     startup.plugin,
     analytics.plugin,
     home.plugin,
-    // Home's chunk is what a cold load on Home waits for.
-    chunkBudgets({ home: 820_000 }),
+    // Home's chunk is what a cold load on Home waits for. Settings' shell is
+    // what every settings page waits for; each page's code loads on its own.
+    chunkBudgets({ home: 820_000, settings: 51_500 }),
     react(),
     tailwindcss(),
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.
@@ -164,6 +186,8 @@ export default defineConfig({
     serveMcpApps(),
     thirdPartyNotices(),
     pwa({ release }),
+    screenChunks(join(frontendRoot, "src", "App.screencode.ts")),
+    precompress(),
   ],
   // The release this bundle was built from, compiled IN.
   //
@@ -292,6 +316,7 @@ export default defineConfig({
         // A unit an installation imports sits in build/ or in the
         // installation's own folder, and the link above resolves to there.
         ...unitScreenDirs,
+        ...fontFileDirs,
       ],
     },
     // Everything the api owns is reachable through this origin, so

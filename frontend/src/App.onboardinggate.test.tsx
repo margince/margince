@@ -1,12 +1,15 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { createQueryClient } from "./app/queryclient";
 import { LocaleProvider } from "./i18n";
 import { parseHash, routeHash } from "./lib/router";
+import { resetToSignedOut } from "./lib/session";
+import { readStored, STORAGE_KEYS, writeStored } from "./lib/storage";
 import { memoryStorage, teardownApp, wizardRow } from "./testing/appharness";
 import { type GrantSpec, meFixture } from "./testing/mefixture";
 // The screens these cases open, loaded while the file is collected. A screen's
@@ -332,6 +335,7 @@ describe("onboarding gate", () => {
     session: {
       seat?: "full" | "read";
       roles?: string[];
+      // Absent, the grants are a User's: a voice to train and mail to connect.
       allow?: GrantSpec;
       onboarding?: boolean;
     } = {},
@@ -346,7 +350,10 @@ describe("onboarding gate", () => {
               meFixture({
                 roles: session.roles ?? ["admin"],
                 seat: session.seat,
-                allow: session.allow,
+                allow: session.allow ?? {
+                  voice_profile: ["read", "create"],
+                  activity: ["create"],
+                },
               }),
             ),
             { status: 200, headers: { "Content-Type": "application/json" } },
@@ -506,17 +513,20 @@ describe("onboarding gate", () => {
     "walks a non-admin with %s through the member journey, unasked",
     async (_, journey) => {
       window.location.hash = "#/contacts";
-      stubCompany(403, journey, { roles: ["rep"] });
+      stubCompany(403, journey, {
+        roles: ["rep"],
+        allow: { voice_profile: ["read", "create"] },
+      });
       mount();
       expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
-      expect(window.location.hash).toBe("#/onboarding/company");
+      expect(window.location.hash).toBe("#/onboarding/voice");
       expect(companyReads()).toHaveLength(0);
     },
   );
 
-  // Sign out lives on Settings > Account, so a reader stuck mid-journey can
-  // still leave; the rest of settings waits for the journey to finish.
-  it("lets a non-admin mid-journey reach Settings > Account and Sign out", async () => {
+  // The band links to Settings > Account, so a reader mid-journey can fix
+  // their language or password there and find the way back to setup.
+  it("lets a non-admin mid-journey open Settings > Account and return to setup", async () => {
     window.location.hash = "#/settings/account";
     stubCompany(
       403,
@@ -526,10 +536,15 @@ describe("onboarding gate", () => {
       },
     );
     mount();
-    expect(
-      await screen.findByRole("button", { name: "Sign out" }),
-    ).toBeTruthy();
+    const back = await screen.findByRole("link", { name: "Back to setup" });
     expect(window.location.hash).toBe("#/settings/account");
+    expect(screen.queryByRole("button", { name: /^Notifications/ })).toBeNull();
+    await userEvent.setup().click(back);
+    await waitFor(() =>
+      expect(window.location.hash).toMatch(/^#\/onboarding\//),
+    );
+    expect(await screen.findByRole("link", { name: "Account" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
   });
 
   it("still sends a non-admin mid-journey away from any other settings page", async () => {
@@ -547,21 +562,55 @@ describe("onboarding gate", () => {
     );
   });
 
-  // ops holds automation:update, so its journey names the configured model:
-  // the model read follows the grant, not the admin role.
-  it("walks an ops seat with no row through the member journey, model named", async () => {
+  // ops holds automation:update, yet its journey reads no site, so the band
+  // names no model: what it shows follows the journey, not the grant.
+  it("walks an ops seat with no row through the member journey, no model chip", async () => {
     window.location.hash = "#/contacts";
     stubCompany(
       403,
       { row: { code: "not_found" }, status: 404 },
-      { roles: ["ops"], allow: { automation: ["update"] } },
+      {
+        roles: ["ops"],
+        allow: { automation: ["update"], voice_profile: ["read", "create"] },
+      },
     );
     mount();
     expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
-    expect(window.location.hash).toBe("#/onboarding/company");
+    expect(window.location.hash).toBe("#/onboarding/voice");
     expect(companyReads()).toHaveLength(0);
+    expect(
+      screen.queryByRole("button", { name: /^Active model and cost:/ }),
+    ).toBeNull();
+  });
+
+  // Read-only may neither train a voice nor connect a mailbox, so setup
+  // holds no step for it and Home opens.
+  it("leaves a Read-only member with no journey row on its route", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      {
+        roles: ["read_only"],
+        allow: { voice_profile: ["read"], activity: ["read"] },
+      },
+    );
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+    expect(requestsEndingIn("/v1/onboarding/state")).toHaveLength(0);
+  });
+
+  it("walks a member who may only connect mail straight to that step", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(
+      403,
+      { row: { code: "not_found" }, status: 404 },
+      { roles: ["rep"], allow: { activity: ["create"] } },
+    );
+    mount();
     await waitFor(() =>
-      expect(requestsEndingIn("/v1/ai/profile")).toHaveLength(1),
+      expect(window.location.hash).toBe("#/onboarding/connect"),
     );
   });
 
@@ -634,6 +683,127 @@ describe("onboarding gate", () => {
       expect(window.location.hash).toBe("#/onboarding/company"),
     );
   });
+
+  const USER = meFixture().user.id;
+  const finishedMark = {
+    family: STORAGE_KEYS.onboardingComplete,
+    member: USER,
+  };
+
+  it("paints the shell for a user this browser saw finish, while the journey reads are out", async () => {
+    window.location.hash = "#/contacts";
+    writeStored(finishedMark, "1");
+    stubCompany(403, undefined, { roles: ["rep"] });
+    const releaseRollout = holdAnswersTo(ROLLOUT);
+    const releaseRow = holdAnswersTo("/v1/onboarding/state");
+    mount();
+    await screen.findByRole("navigation", { name: "Primary navigation" });
+    expect(requestsEndingIn(ROLLOUT)).not.toHaveLength(0);
+    releaseRollout();
+    await waitFor(() =>
+      expect(requestsEndingIn("/v1/onboarding/state")).not.toHaveLength(0),
+    );
+    releaseRow();
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
+  });
+
+  it("still sends a remembered user whose journey reads unfinished to onboarding, and forgets the mark", async () => {
+    window.location.hash = "#/contacts";
+    writeStored(finishedMark, "1");
+    stubCompany(
+      403,
+      { row: wizardRow("voice"), status: 200 },
+      { roles: ["rep"] },
+    );
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+    expect(readStored(finishedMark)).toBeNull();
+  });
+
+  it("remembers a journey the row reads as complete, for this user only", async () => {
+    window.location.hash = "#/contacts";
+    stubCompany(403, undefined, { roles: ["rep"] });
+    mount();
+    await waitFor(() => expect(readStored(finishedMark)).toBe("1"));
+    expect(
+      readStored({ family: STORAGE_KEYS.onboardingComplete, member: "other" }),
+    ).toBeNull();
+  });
+
+  it.each([
+    ["the session lapses", false],
+    ["the last user signs out", true],
+  ])(
+    "never marks the next user finished from the last user's answer when %s",
+    async (_, signsOut) => {
+      window.location.hash = "#/contacts";
+      const first = meFixture({
+        roles: ["rep"],
+        allow: { voice_profile: ["read", "create"], activity: ["create"] },
+      });
+      const next = { ...first, user: { ...first.user, id: "next-user" } };
+      let signedIn: typeof first | null = first;
+      const rows: string[] = [];
+      let releaseNextRow = () => {};
+      const nextRow = new Promise<void>((resolve) => {
+        releaseNextRow = resolve;
+      });
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: Request | string | URL) => {
+          const url = String(input instanceof Request ? input.url : input);
+          const answer = (body: unknown, status = 200) =>
+            new Response(JSON.stringify(body), {
+              status,
+              headers: { "Content-Type": "application/json" },
+            });
+          if (url.endsWith("/v1/me"))
+            return signedIn ? answer(signedIn) : answer({}, 401);
+          if (url.endsWith(ROLLOUT))
+            return answer({ onboarding_enabled: true, read_enabled: true });
+          if (url.endsWith("/v1/onboarding/state")) {
+            rows.push(signedIn?.user.id ?? "");
+            if (signedIn === next) await nextRow;
+            return answer(wizardRow("complete"));
+          }
+          return answer({ data: [], page: {} });
+        }),
+      );
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">
+            <App />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      await waitFor(() => expect(readStored(finishedMark)).toBe("1"));
+      signedIn = null;
+      await act(async () => {
+        await (signsOut
+          ? resetToSignedOut(client)
+          : client.refetchQueries({ queryKey: ["me"], exact: true }));
+      });
+      await screen.findByLabelText("Email");
+      expect(client.getQueryData(["me"]) === undefined).toBe(signsOut);
+      signedIn = next;
+      await act(async () => {
+        await client.refetchQueries({ queryKey: ["me"], exact: true });
+      });
+      await waitFor(() => expect(rows).toEqual([USER, "next-user"]));
+      const nextMark = {
+        family: STORAGE_KEYS.onboardingComplete,
+        member: "next-user",
+      };
+      expect(readStored(nextMark)).toBeNull();
+      releaseNextRow();
+      await waitFor(() => expect(readStored(nextMark)).toBe("1"));
+    },
+  );
 
   // Serialised behind the company read, the rollout would add a round trip to
   // every admin's splash, so it goes out while the company is still unanswered.
@@ -730,3 +900,6 @@ describe("onboarding gate", () => {
     );
   });
 });
+
+// A member the gate holds reads only the journey: its row once, and none of the
+// full app's reads until finishing lets them in.

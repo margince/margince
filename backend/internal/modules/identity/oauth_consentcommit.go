@@ -108,7 +108,7 @@ func (s *Service) mintConsentedAuthorizationCode(
 		// token endpoint. The code row is the contract: if the code does not name
 		// the scopes, client, and user, the redemption has no authority to mint
 		// from (oauth_token.go deletes the code on a successful redeem).
-		codeHash := hashOAuthCode(code)
+		codeHash := hashToken(code)
 		if err := holdConsentAgainstRevocation(ctx, tx, req.ClientID, id.UserID, sessionHash); err != nil {
 			return err
 		}

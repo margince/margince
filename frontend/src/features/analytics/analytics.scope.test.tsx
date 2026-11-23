@@ -2,6 +2,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../../i18n";
+import { de } from "../../i18n/de";
 import { scopeKey, scopeQuery, writableScope } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
 
@@ -96,5 +98,28 @@ describe("the population control", () => {
 
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(screen.getByText(/Lena Fischer/)).toBeTruthy();
+  });
+
+  // The server labels the whole company in English for every reader. The
+  // picker names it in the reader's language and keeps a team's own name.
+  it("names the whole company in the reader's language", async () => {
+    render(
+      <LocaleProvider initial="de">
+        <AnalyticsScopePicker
+          scopes={[WORKSPACE, NORTH]}
+          selected={NORTH}
+          onSelect={vi.fn()}
+        />
+      </LocaleProvider>,
+    );
+
+    await userEvent.click(await screen.findByRole("combobox"));
+    expect(
+      screen.getByRole("option", {
+        name: de["analytics.scope.workspace"],
+      }),
+    ).toBeTruthy();
+    expect(screen.getByRole("option", { name: "North" })).toBeTruthy();
+    expect(screen.queryByText("Whole company")).toBeNull();
   });
 });

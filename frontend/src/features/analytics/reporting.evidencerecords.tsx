@@ -31,6 +31,7 @@ const metricDateHeading: Partial<
   stage_age: "reporting.expectedCloseOn",
   leads_qualified: "reporting.qualifiedOn",
   bookings_won: "reporting.closedOn",
+  bookings_mix: "reporting.closedOn",
   meetings_held: "reporting.meetingOn",
   accepted_opportunities: "reporting.acceptedOn",
   leads_created: "reporting.createdOn",
@@ -46,6 +47,8 @@ const metricDateHeading: Partial<
   lead_cohort_outcomes: "reporting.arrivedOn",
   account_progression: "reporting.arrivedOn",
   source_quality: "reporting.arrivedOn",
+  introductions_made: "reporting.introductionCountedOn",
+  meetings_booked_for_colleagues: "reporting.bookedOn",
 };
 
 // A cohort member's row carries its days to an outcome, or open so far, where

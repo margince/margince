@@ -12,8 +12,6 @@ src/features/analytics/analytics.forecast.review.tsx 1
 src/features/analytics/analytics.outcomes.targets.tsx 2
 src/features/analytics/reporting.views.ts 4
 src/features/automations/agent-clients.tsx 2
-src/features/automations/automationdetail.tsx 2
-src/features/automations/automations.instances.tsx 1
 src/features/booking/booking-guest-parts.tsx 1
 src/features/booking/meeting-guest-view.tsx 1
 src/features/booking/meeting-link-drawer.tsx 3
@@ -30,7 +28,6 @@ src/components/meetingrows.tsx 1
 src/features/contacts/contactmemory.rows.ts 1
 src/features/contacts/contactstanding.ts 1
 src/features/import/vcard-import.tsx 1
-src/features/lists/filtersentence.ts 1
 src/features/lists/listhistory.tsx 1
 src/features/onboarding/connect-posture.tsx 1
 src/features/onboarding/onboarding.tsx 1

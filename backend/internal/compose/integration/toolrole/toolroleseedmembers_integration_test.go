@@ -18,13 +18,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// sweepSeed is what a state seed reaches: the app, the pool it notes facts in,
-// and the seeders of the kinds it builds on.
+// sweepSeed is what a state seed reaches: the app, the pool it notes facts in
+// and the seeders of the kinds it builds on. Its owner owns what they make.
 type sweepSeed struct {
 	t      *testing.T
 	e      *apptest.AppEnv
 	pool   *recordPool
 	create map[string]func() string
+	owner  string
 }
 
 // call sends one route as the signed-in admin and stops the sweep on any
@@ -241,6 +242,13 @@ func accessSeeders(s sweepSeed) map[string]func() string {
 			company := s.post("/v1/companies", integration.AnyMap{"display_name": "Sweep " + ids.NewV7().String(), "source": "manual", "owner_id": s.create["user"]()})
 			defer s.asRoles("rep")()
 			s.call("POST", "/v1/records/company/"+company+"/ownership-request", integration.AnyMap{}, nil, nil)
+			return company
+		},
+		// The same ask for edit access, on a company of its own.
+		"edit_asked_company": func() string {
+			company := s.post("/v1/companies", integration.AnyMap{"display_name": "Sweep " + ids.NewV7().String(), "source": "manual", "owner_id": s.create["user"]()})
+			defer s.asRoles("rep")()
+			s.call("POST", "/v1/records/company/"+company+"/edit-access-request", nil, nil, nil)
 			return company
 		},
 	}

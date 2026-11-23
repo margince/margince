@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 2,
+  "passed": 0,
   "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -11,13 +11,76 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "92d778d1da3a10e0",
+    "tools": "90c67b7411dbee7c",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "7298bf32321832a612835d4cf164580ffabfeb92",
+    "ran_at": "2026-11-22T09:50:38Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:56Z"
+  },
   "usage": {
-    "input_tokens": 69099,
-    "output_tokens": 5855,
+    "input_tokens": 48457,
+    "output_tokens": 4914,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 927104,
+    "cache_read_input_tokens": 605184,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_contact_consent",
+        "list_contact_stops",
+        "list_notices",
+        "read_context",
+        "read_details",
+        "read_record",
+        "search_records"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "get_contact_consent",
+        "list_notices",
+        "read_context",
+        "read_details",
+        "read_record",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 24.5,
+      "min": 14,
+      "max": 35
+    },
+    "refused": {
+      "median": 14,
+      "min": 6,
+      "max": 22
+    },
+    "prompt_tokens": {
+      "median": 326820.5,
+      "min": 242955,
+      "max": 410686
+    },
+    "output_tokens": {
+      "median": 2457,
+      "min": 1979,
+      "max": 2935
+    }
   }
 }

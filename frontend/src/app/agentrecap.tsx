@@ -1,6 +1,7 @@
 import { AppLink } from "../design-system/applink";
 import { Badge } from "../design-system/atoms";
-import { formatNumber, INTL_LOCALE } from "../format/format";
+import { formatNumber } from "../format/format";
+import { numberFormat } from "../format/formatters";
 import { useNow } from "../format/now";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useAgentTierMap } from "../lib/autonomy";
@@ -57,7 +58,7 @@ function agoFor(
   if (Number.isNaN(seconds)) {
     return t("agent.line.justNow");
   }
-  const format = new Intl.NumberFormat(INTL_LOCALE[locale], {
+  const format = numberFormat(locale, {
     style: "unit",
     unitDisplay: "narrow",
     maximumFractionDigits: 0,

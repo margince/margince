@@ -54,7 +54,7 @@ func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID
 	INSERT INTO stage (id, pipeline_id, name, "position")
 	  VALUES ('00000000-0000-7000-8000-00000000d0c6', '00000000-0000-7000-8000-00000000d0c5', 'Open', 1);
 	INSERT INTO deal (name, status, pipeline_id, stage_id, company_id, source, captured_by)
-	  SELECT 'Deal '||n, 'open', '00000000-0000-7000-8000-00000000d0c5', '00000000-0000-7000-8000-00000000d0c6', id, 'seed', 'system'
+	  SELECT 'Deal '||n, 'open', '00000000-0000-7000-8000-00000000d0c5', '00000000-0000-7000-8000-00000000d0c6', id, 'manual', 'system'
 	    FROM seeded_company;
 	CREATE TEMP TABLE seeded_mail AS
 	  SELECT gen_random_uuid() id, s.i g, c.id contact_id, c.company_id
@@ -78,7 +78,8 @@ func seedBusyAccount(ctx context.Context, t *testing.T, tx pgx.Tx, busy ids.UUID
 }
 
 // seedBusyAccountFiles gives every mail seedBusyAccount wrote two files, so the
-// busy account holds 10,000 of the 90,000, and each account fifty uploads.
+// busy account holds 10,000 of the 90,000. Each account has fifty uploads of
+// its own and fifty on its deal.
 // Only the Documents plan reads files, so only it pays for writing them.
 func seedBusyAccountFiles(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	t.Helper()
@@ -87,18 +88,21 @@ func seedBusyAccountFiles(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key, category)
 	  SELECT 'activity', m.id, 'file-'||m.g||'-'||k||'.pdf', 'application/pdf', 200000, 'imap', 'connector:imap', 'k/'||m.g||'/'||k, 'email_attachment'
 	    FROM seeded_mail m, generate_series(1, 2) k;
-	INSERT INTO attachment (entity_type, entity_id, company_id, filename, content_type, byte_size, source, captured_by, storage_key)
-	  SELECT 'company', c.id, c.id, 'upload-'||c.n||'-'||k||'.pdf', 'application/pdf', 100000, 'upload', 'system', 'u/'||c.n||'/'||k
+	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key)
+	  SELECT 'company', c.id, 'upload-'||c.n||'-'||k||'.pdf', 'application/pdf', 100000, 'upload', 'system', 'u/'||c.n||'/'||k
 	    FROM seeded_company c, generate_series(1, 50) k;
+	INSERT INTO attachment (entity_type, entity_id, filename, content_type, byte_size, source, captured_by, storage_key)
+	  SELECT 'deal', d.id, 'offer-'||c.n||'-'||k||'.pdf', 'application/pdf', 100000, 'upload', 'system', 'd/'||c.n||'/'||k
+	    FROM seeded_company c JOIN deal d ON d.company_id = c.id, generate_series(1, 50) k;
 	ANALYZE attachment`); err != nil {
 		t.Fatalf("seeding the busy account's files: %v", err)
 	}
 }
 
 // attachmentKey is an index condition that pins attachment to a value: an
-// equality or an `= ANY` on its id, its parent's id or its account. A range or
+// equality or an `= ANY` on its id or its parent's id. A range or
 // an inequality on those columns still walks the table.
-var attachmentKey = regexp.MustCompile(`[( ](?:entity_id|company_id|id) = `)
+var attachmentKey = regexp.MustCompile(`[( ](?:entity_id|id) = `)
 
 func TestABusyAccountsDocumentsListStartsFromTheAccount(t *testing.T) {
 	e := setupPromises(t)

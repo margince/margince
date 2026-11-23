@@ -11,6 +11,7 @@ import { daysPast } from "../../format/lateness";
 import { messageDetail } from "../../lib/standingmarks";
 import { type PeekWords, partialFoot } from "../../lib/standingpeeks";
 import { omitted } from "./contact360";
+import { owedPromises } from "./contactpromises";
 import { colleaguesInTouch } from "./contactstanding";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -47,24 +48,20 @@ export function contactPeeks(
 
 function promisesPeek(
   view: Contact360,
-  { t, locale, zone }: PeekWords,
+  words: PeekWords,
   open: () => void,
 ): StandingPeek | undefined {
-  if (omitted(view, "claims")) {
-    return undefined;
-  }
+  const { t, locale } = words;
   const asOf = Date.parse(view.as_of);
-  const items = (view.claims ?? [])
-    .filter(
-      (claim) => claim.kind === "commitment_ours" && claim.status === "open",
-    )
-    .map((claim) => {
-      const due = claim.due_at ?? undefined;
-      const day = due ? formatDayMonth(due, locale, zone) : undefined;
+  const items = (owedPromises(view, t, words) ?? []).map(
+    ({ key, title, due, zone }) => {
+      const day = due
+        ? formatDayMonth(due, locale, zone ?? words.zone)
+        : undefined;
       const late = due ? daysPast(Date.parse(due), asOf).late : false;
       return {
-        key: claim.id,
-        title: claim.body,
+        key,
+        title,
         sub: !day
           ? t("standing.next.peek.undated")
           : late
@@ -72,7 +69,8 @@ function promisesPeek(
             : day,
         onOpen: open,
       };
-    });
+    },
+  );
   return items.length > 0
     ? { head: t("contact.standing.peek.promises"), items }
     : undefined;

@@ -101,7 +101,7 @@ func (s *Store) PrepareRender(ctx context.Context, id ids.OfferID) (RenderIngred
 		if err != nil {
 			return err
 		}
-		locale, layout, err := resolveRenderTemplate(ctx, tx, offer.TemplateId)
+		locale, layout, err := resolveRenderTemplate(ctx, tx, offer.TemplateId, languageOf(offer.Language))
 		if err != nil {
 			return err
 		}
@@ -179,29 +179,60 @@ func (s *Store) issuerName(ctx context.Context, tx pgx.Tx) (string, error) {
 	return s.installation.Name(ctx, tx)
 }
 
-// resolveRenderTemplate resolves an offer's render locale AND layout
-// together — one offer_template row backs both. Unset falls back to
-// de-DE (offer_template's own launch default) and an empty layout, never
-// a blank column. A template_id that no longer resolves (only possible if
-// a template were hard-deleted out from under the FK's ON DELETE SET NULL
-// mid-flight, never observed in practice) falls back the same way rather
-// than failing an otherwise-good render.
-func resolveRenderTemplate(ctx context.Context, tx pgx.Tx, templateID *openapi_types.UUID) (locale string, layout map[string]any, err error) {
-	if templateID == nil {
+// resolveRenderTemplate resolves an offer's render locale and layout
+// together, since one offer_template row backs both. An offer with no template, or
+// one whose template no longer resolves, takes the live default template of
+// its language. With no such default it gets an empty layout and its own
+// language as the locale; an offer with no language gets de-DE.
+func resolveRenderTemplate(ctx context.Context, tx pgx.Tx, templateID *openapi_types.UUID, language string) (locale string, layout map[string]any, err error) {
+	if templateID != nil {
+		err = tx.QueryRow(ctx,
+			`SELECT locale, layout FROM offer_template WHERE id = $1`, ids.UUID(*templateID)).Scan(&locale, &layout)
+		if err == nil {
+			return locale, nonNilLayout(layout), nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return "", nil, fmt.Errorf("render: read template locale/layout: %w", err)
+		}
+	}
+	if language == "" {
 		return defaultOfferTemplateLocale, map[string]any{}, nil
 	}
-	err = tx.QueryRow(ctx,
-		`SELECT locale, layout FROM offer_template WHERE id = $1`, ids.UUID(*templateID)).Scan(&locale, &layout)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return defaultOfferTemplateLocale, map[string]any{}, nil
-	}
+	return languageDefaultTemplate(ctx, tx, language)
+}
+
+// languageDefaultTemplate is the live default template whose locale is in
+// language. Locales are compared by languageOfLocale, the parser the offer's
+// own language is derived with.
+func languageDefaultTemplate(ctx context.Context, tx pgx.Tx, language string) (string, map[string]any, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT locale, layout FROM offer_template WHERE is_default AND archived_at IS NULL ORDER BY locale`)
 	if err != nil {
-		return "", nil, fmt.Errorf("render: read template locale/layout: %w", err)
+		return "", nil, fmt.Errorf("render: read the default templates: %w", err)
 	}
+	defaults, err := pgx.CollectRows(rows, pgx.RowToStructByPos[struct {
+		Locale string
+		Layout map[string]any
+	}])
+	if err != nil {
+		return "", nil, fmt.Errorf("render: read a default template: %w", err)
+	}
+	for _, d := range defaults {
+		if languageOfLocale(d.Locale) == language {
+			return d.Locale, nonNilLayout(d.Layout), nil
+		}
+	}
+	if language == languageOfLocale(defaultOfferTemplateLocale) {
+		return defaultOfferTemplateLocale, map[string]any{}, nil
+	}
+	return language, map[string]any{}, nil
+}
+
+func nonNilLayout(layout map[string]any) map[string]any {
 	if layout == nil {
-		layout = map[string]any{}
+		return map[string]any{}
 	}
-	return locale, layout, nil
+	return layout
 }
 
 // SetPdfAssetRef persists the blob key the render handler already wrote

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -67,7 +67,7 @@ func employmentEpisodes(kind string, raw []byte) ([]employmentEvidence, error) {
 		if e.CompanyDomain == "" {
 			e.CompanyDomain = e.CompanyName
 		}
-		if domain, err := values.ParseDomain(e.CompanyDomain); err == nil {
+		if domain, err := owndomain.ParseDomain(e.CompanyDomain); err == nil {
 			e.CompanyDomain = domain.String()
 		} else {
 			e.CompanyDomain = ""

@@ -30,12 +30,13 @@ type requestDeadlineFunc func(ctx context.Context, tx pgx.Tx, who ruleSubject, k
 
 // requestDeadlineTx is the one resolver both request writers use. A failed
 // country read is returned, never treated as "no jurisdiction": the GDPR month
-// can be later than the selected pack's deadline. A zero subject is a request
-// no record names yet, which the installation's country decides.
+// can be later than the selected pack's deadline. Otherwise the country of the
+// entity that answers for the record decides (recordEntityTx). A zero subject
+// is a request no record names yet, which the default entity's country decides.
 func (s *Store) requestDeadlineTx(ctx context.Context, tx pgx.Tx, who ruleSubject, kind string, received time.Time) (time.Time, string, error) {
 	code, err := subjectDataProtectionTx(ctx, tx, who)
 	if err == nil && code == "" {
-		code, err = s.defaultEntityCountry(ctx, tx)
+		code, err = s.recordCountryTx(ctx, tx, who)
 	}
 	if err != nil {
 		return time.Time{}, "", fmt.Errorf("consent: reading the jurisdiction a request deadline comes from: %w", err)
@@ -92,15 +93,21 @@ func receivedAtFor(stated *time.Time, now time.Time) (time.Time, error) {
 
 // dueAtFor settles the stored deadline against the computed one. An absent
 // date takes the computed one. A later date is refused, because it would
-// show a request as on time on a day it is already late. An earlier date is
-// the officer's choice and is marked as such.
-func dueAtFor(stated *time.Time, computed time.Time, rule string) (due time.Time, overridden bool, err error) {
+// show a request as on time on a day it is already late. A date before the
+// request arrived is refused, because the request would be overdue from its
+// first second. Any other earlier date is the officer's choice and is marked
+// as such.
+func dueAtFor(stated *time.Time, received, computed time.Time, rule string) (due time.Time, overridden bool, err error) {
 	if stated == nil {
 		return computed, false, nil
 	}
 	if stated.After(computed) {
 		return time.Time{}, false, &ValidationError{Field: fieldDueAt, Reason: fmt.Sprintf(
 			"later than the statutory deadline %s (%s); choose that date or an earlier one", computed.UTC().Format(time.RFC3339), rule)}
+	}
+	if stated.Before(received) {
+		return time.Time{}, false, &ValidationError{Field: fieldDueAt, Reason: fmt.Sprintf(
+			"before the request arrived at %s; choose the day it arrived or a later one", received.UTC().Format(time.RFC3339))}
 	}
 	return *stated, !stated.Equal(computed), nil
 }

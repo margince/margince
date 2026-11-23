@@ -118,7 +118,7 @@ func TestExistingRequestTaskRequiresItsAssigneeToBeAddressed(t *testing.T) {
 				if want {
 					expected = 1
 				}
-				assertLeadRequestWork(t, e, ids.From[ids.LeadKind](ids.UUID(lead.Id)), expected)
+				assertLeadRequestWork(t, e, ids.From[ids.LeadKind](ids.UUID(lead.Id)), at.Add(time.Hour), expected)
 				if contactPage.NextSteps == nil || len(contactPage.NextSteps.Data) != expected {
 					t.Errorf("contact current tasks=%+v want %d", contactPage.NextSteps, expected)
 				}
@@ -164,9 +164,11 @@ func TestExistingRequestTaskRequiresItsAssigneeToBeAddressed(t *testing.T) {
 	}
 }
 
-func assertLeadRequestWork(t *testing.T, e *integration.Env, leadID ids.LeadID, want int) {
+// assertLeadRequestWork reads the lead at asOf, the instant the rest of the
+// test reads at. The request's age then never depends on the day it runs.
+func assertLeadRequestWork(t *testing.T, e *integration.Env, leadID ids.LeadID, asOf time.Time, want int) {
 	t.Helper()
-	lead, err := e.Contacts.GetLead(e.Admin(), leadID, storekit.LiveOnly)
+	lead, err := e.Contacts.GetLead(contacts.WithReadInstant(e.Admin(), asOf), leadID, storekit.LiveOnly)
 	if err != nil {
 		t.Fatal(err)
 	}

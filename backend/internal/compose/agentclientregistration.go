@@ -24,6 +24,11 @@ func WithClientRegistrationLimit(limit identity.RegistrationMethods) Option {
 	return func(s *Server, _ *pgxpool.Pool) { s.clientRegistrationLimit = &limit }
 }
 
+// WithUnusedClientLimit carries mcp.client_registration.unused_limit.
+func WithUnusedClientLimit(limit int) Option {
+	return func(s *Server, _ *pgxpool.Pool) { s.authHandlers = s.WithUnusedDynamicClientCap(limit) }
+}
+
 // publishClientRegistration hands the limit and the admin's switches to the
 // authorization server. It runs after the option loop, so a server built
 // without the option reads both methods as allowed, as before the switches.

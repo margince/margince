@@ -80,7 +80,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(
     page
       .getByRole("region", { name: "Phasenverlauf" })
-      .getByText(/Lars Brandt hat das Projekt angelegt/),
+      .getByText(/Lars Brandt hat das Projekt erstellt/),
   ).toBeVisible();
   // A new project has filed no documents, and its standing says so.
   await expect(
@@ -92,7 +92,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.goto("/#/deals/d-fleet");
   await page.getByRole("button", { name: "Weitere Aktionen" }).click();
   await page.getByRole("button", { name: "Details bearbeiten" }).click();
-  await page.getByRole("button", { name: /^Unternehmen ändern/ }).click();
+  await page
+    .getByRole("button", { name: /^Feld „Unternehmen“ ändern/ })
+    .click();
   const group = page.getByRole("dialog", { name: "Unternehmen", exact: true });
   await choose(
     page,
@@ -120,7 +122,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // Through the head's own verb: the deal page carries no standing log form,
   // because a form open on every read asks for a note nobody came to write.
   await page
-    .getByRole("button", { name: "Aktivität erfassen", exact: true })
+    .getByRole("button", { name: "Notiz, Aktivität erfassen", exact: true })
     .click();
   // Inside the dialog, and exactly: the head's own verb is still on the page
   // behind it, and "Erfassen" matches "Aktivität erfassen" as a substring.
@@ -258,14 +260,24 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     page.getByText("Erweiterung wird neu verhandelt.", { exact: false }),
   ).toBeVisible();
 
-  // 7. Close with a reason. The close button stays disabled until a reason
-  // is typed, and the reason is what the history shows afterwards.
-  await phase.getByRole("button", { name: "Abgeschlossen" }).click();
+  // 7. Close with a reason. A close with no reason is refused on the reason
+  // field, and the reason is what the history shows afterwards.
+  // The Closed step is named for the move it makes, as the dialog's heading is.
+  await phase.getByRole("button", { name: "Wechsel zu Abgeschlossen" }).click();
   await expect(
     page.getByRole("heading", { name: "Wechsel zu Abgeschlossen" }),
   ).toBeVisible();
-  const close = page.getByRole("button", { name: "Projekt abschließen" });
-  await expect(close).toBeDisabled();
+  const close = page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Projekt abschließen" });
+  await close.click();
+  await expect(page.getByTestId("project-advance-reason")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await expect(
+    page.getByRole("heading", { name: "Wechsel zu Abgeschlossen" }),
+  ).toBeVisible();
   await page
     .getByTestId("project-advance-reason")
     .fill("Go-live abgenommen, Hypercare an den Support übergeben.");

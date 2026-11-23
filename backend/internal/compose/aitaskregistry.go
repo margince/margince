@@ -7,7 +7,9 @@ package compose
 
 import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/cardphoto"
 	"github.com/margince/margince/backend/internal/compose/chatsummary"
+	"github.com/margince/margince/backend/internal/compose/chattasks"
 	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/reportsetup"
 	"github.com/margince/margince/backend/internal/compose/rewrite"
@@ -50,6 +52,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskDraftReply, "intro_note", introNoteCases{})
 	oneShot(ai.TaskRewrite, "rewrite", rewrite.CertCases{})
 	oneShot(ai.TaskChatSummary, "episode", chatsummary.CertCases{})
+	oneShot(ai.TaskChatTaskReading, "chat_tasks", chattasks.CertCases{})
 	oneShot(ai.TaskProposeRoles, "committee", proposeRolesCases{})
 	oneShot(ai.TaskNlSearch, "filter_propose", filterProposeCases{})
 	oneShot(ai.TaskNlSearch, "search_data_plan", searchplan.Cases{Vocabulary: searchCaseVocabulary})
@@ -78,7 +81,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskSummarize, "deal_room_brief", roomBriefCases{})
 	oneShot(ai.TaskTranscriptPropose, "next_steps", transcriptProposeCases{})
 	oneShot(ai.TaskDocumentExtract, "fields", documentFieldsCases{})
-	oneShot(ai.TaskDocumentExtract, "cards", cardPhotoCases{})
+	oneShot(ai.TaskDocumentExtract, "cards", cardphoto.CertCases{})
 	oneShot(ai.TaskDocumentExtract, laneChat, chatCaptureCases{})
 	oneShot(ai.TaskGrowthFit, "growth_fit", growthFitCases{})
 	oneShot(ai.TaskCertJudge, "judge", certJudgeCases{})

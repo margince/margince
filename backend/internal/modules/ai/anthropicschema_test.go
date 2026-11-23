@@ -21,9 +21,8 @@ import (
 // order the fit produces.
 func TestAnthropicOutputSchemaFitsWhatTheDecoderEnforces(t *testing.T) {
 	cases := []struct {
-		name      string
-		schema    string
-		downgrade string
+		name   string
+		schema string
 		// sent is the schema expected on the wire, compacted; empty means
 		// nothing is sent.
 		sent string
@@ -34,55 +33,48 @@ func TestAnthropicOutputSchemaFitsWhatTheDecoderEnforces(t *testing.T) {
 			sent:   `{"type":"object","additionalProperties":false,"properties":{"ok":{"type":"boolean"},"at":{"type":"string","format":"date-time"},"tags":{"type":"array","minItems":1,"items":{"type":"string","enum":["a","b"]}}},"required":["ok"]}`,
 		},
 		{
-			name:      "string lengths move into the description",
-			schema:    `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","minLength":1,"maxLength":998,"description":"The subject line."}},"required":["subject"]}`,
-			downgrade: model.SchemaRelaxed,
-			sent:      `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","description":"The subject line.\n\n{minLength: 1, maxLength: 998}"}},"required":["subject"]}`,
+			name:   "string lengths move into the description",
+			schema: `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","minLength":1,"maxLength":998,"description":"The subject line."}},"required":["subject"]}`,
+			sent:   `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","description":"The subject line.\n\n{minLength: 1, maxLength: 998}"}},"required":["subject"]}`,
 		},
 		{
-			name:      "numeric bounds inside array items move too",
-			schema:    `{"type":"object","additionalProperties":false,"properties":{"scores":{"type":"array","items":{"type":"number","minimum":0,"maximum":1}}},"required":["scores"]}`,
-			downgrade: model.SchemaRelaxed,
-			sent:      `{"type":"object","additionalProperties":false,"properties":{"scores":{"type":"array","items":{"type":"number","description":"{minimum: 0, maximum: 1}"}}},"required":["scores"]}`,
+			name:   "numeric bounds inside array items move too",
+			schema: `{"type":"object","additionalProperties":false,"properties":{"scores":{"type":"array","items":{"type":"number","minimum":0,"maximum":1}}},"required":["scores"]}`,
+			sent:   `{"type":"object","additionalProperties":false,"properties":{"scores":{"type":"array","items":{"type":"number","description":"{minimum: 0, maximum: 1}"}}},"required":["scores"]}`,
 		},
 		{
-			name:      "array bounds and an unlisted format move",
-			schema:    `{"type":"array","maxItems":5,"minItems":2,"uniqueItems":true,"items":{"type":"string","format":"phone"}}`,
-			downgrade: model.SchemaRelaxed,
-			sent:      `{"type":"array","items":{"type":"string","description":"{format: \"phone\"}"},"description":"{maxItems: 5, minItems: 2, uniqueItems: true}"}`,
+			name:   "array bounds and an unlisted format move",
+			schema: `{"type":"array","maxItems":5,"minItems":2,"uniqueItems":true,"items":{"type":"string","format":"phone"}}`,
+			sent:   `{"type":"array","items":{"type":"string","description":"{format: \"phone\"}"},"description":"{maxItems: 5, minItems: 2, uniqueItems: true}"}`,
 		},
 		{
-			// Closing enforces more than was written, not less, so it is sent
-			// fitted but reported as no downgrade.
+			// Closing enforces more than was written, not less.
 			name:   "an object with properties but no closure is closed",
 			schema: `{"type":"object","properties":{"a":{"type":"string"}},"required":["a"]}`,
 			sent:   `{"type":"object","properties":{"a":{"type":"string"}},"required":["a"],"additionalProperties":false}`,
 		},
 		{
-			name:      "properties keep the order they were written in",
-			schema:    `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","maxLength":9},"body":{"type":"string"},"acknowledged":{"type":"boolean"}},"required":["subject","body","acknowledged"]}`,
-			downgrade: model.SchemaRelaxed,
-			sent:      `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","description":"{maxLength: 9}"},"body":{"type":"string"},"acknowledged":{"type":"boolean"}},"required":["subject","body","acknowledged"]}`,
+			name:   "properties keep the order they were written in",
+			schema: `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","maxLength":9},"body":{"type":"string"},"acknowledged":{"type":"boolean"}},"required":["subject","body","acknowledged"]}`,
+			sent:   `{"type":"object","additionalProperties":false,"properties":{"subject":{"type":"string","description":"{maxLength: 9}"},"body":{"type":"string"},"acknowledged":{"type":"boolean"}},"required":["subject","body","acknowledged"]}`,
 		},
 		{
-			name:      "each branch of a union is fitted",
-			schema:    `{"anyOf":[{"type":"string","maxLength":5},{"type":"null"}]}`,
-			downgrade: model.SchemaRelaxed,
-			sent:      `{"anyOf":[{"type":"string","description":"{maxLength: 5}"},{"type":"null"}]}`,
+			name:   "each branch of a union is fitted",
+			schema: `{"anyOf":[{"type":"string","maxLength":5},{"type":"null"}]}`,
+			sent:   `{"anyOf":[{"type":"string","description":"{maxLength: 5}"},{"type":"null"}]}`,
 		},
-		{name: "a free-form object is dropped", schema: `{"type":"object","properties":{"fields":{"type":"object"}}}`, downgrade: model.SchemaDropped},
-		{name: "an object open to extra keys is dropped", schema: `{"type":"object","additionalProperties":true,"properties":{"a":{"type":"string"}}}`, downgrade: model.SchemaDropped},
-		{name: "a type union is dropped", schema: `{"type":["string","null"]}`, downgrade: model.SchemaDropped},
+		{name: "a free-form object is dropped", schema: `{"type":"object","properties":{"fields":{"type":"object"}}}`},
+		{name: "an object open to extra keys is dropped", schema: `{"type":"object","additionalProperties":true,"properties":{"a":{"type":"string"}}}`},
+		{name: "a type union is dropped", schema: `{"type":["string","null"]}`},
 		{
 			name:   "a local reference to the root's definitions goes as written",
 			schema: `{"type":"object","additionalProperties":false,"properties":{"home":{"$ref":"#/$defs/address"},"work":{"$ref":"#/definitions/address"}},"required":["home","work"],"$defs":{"address":{"type":"object","additionalProperties":false,"properties":{"city":{"type":"string"}},"required":["city"]}},"definitions":{"address":{"type":"object","additionalProperties":false,"properties":{"city":{"type":"string"}},"required":["city"]}}}`,
 			sent:   `{"type":"object","additionalProperties":false,"properties":{"home":{"$ref":"#/$defs/address"},"work":{"$ref":"#/definitions/address"}},"required":["home","work"],"$defs":{"address":{"type":"object","additionalProperties":false,"properties":{"city":{"type":"string"}},"required":["city"]}},"definitions":{"address":{"type":"object","additionalProperties":false,"properties":{"city":{"type":"string"}},"required":["city"]}}}`,
 		},
 		{
-			name:      "a definition is fitted like any subschema",
-			schema:    `{"type":"object","properties":{"id":{"$ref":"#/$defs/id"}},"required":["id"],"$defs":{"id":{"type":"string","maxLength":8}}}`,
-			downgrade: model.SchemaRelaxed,
-			sent:      `{"type":"object","properties":{"id":{"$ref":"#/$defs/id"}},"required":["id"],"$defs":{"id":{"type":"string","description":"{maxLength: 8}"}},"additionalProperties":false}`,
+			name:   "a definition is fitted like any subschema",
+			schema: `{"type":"object","properties":{"id":{"$ref":"#/$defs/id"}},"required":["id"],"$defs":{"id":{"type":"string","maxLength":8}}}`,
+			sent:   `{"type":"object","properties":{"id":{"$ref":"#/$defs/id"}},"required":["id"],"$defs":{"id":{"type":"string","description":"{maxLength: 8}"}},"additionalProperties":false}`,
 		},
 		{
 			name:   "a reference spells a slash in a definition's name as ~1",
@@ -94,28 +86,25 @@ func TestAnthropicOutputSchemaFitsWhatTheDecoderEnforces(t *testing.T) {
 			schema: `{"type":"object","additionalProperties":false,"properties":{"a":{"$ref":"#/definitions/a~0b"}},"required":["a"],"definitions":{"a~b":{"type":"string"}}}`,
 			sent:   `{"type":"object","additionalProperties":false,"properties":{"a":{"$ref":"#/definitions/a~0b"}},"required":["a"],"definitions":{"a~b":{"type":"string"}}}`,
 		},
-		{name: "an unescaped slash points below a definition and is dropped", schema: `{"$ref":"#/$defs/a/b","$defs":{"a/b":{"type":"string"}}}`, downgrade: model.SchemaDropped},
-		{name: "a malformed escape names no definition and is dropped", schema: `{"$ref":"#/$defs/a~2b","$defs":{"a~2b":{"type":"string"}}}`, downgrade: model.SchemaDropped},
-		{name: "recursion through an escaped name is dropped", schema: `{"$ref":"#/$defs/a~1b","$defs":{"a/b":{"type":"array","items":{"$ref":"#/$defs/a~1b"}}}}`, downgrade: model.SchemaDropped},
-		{name: "an external reference is dropped", schema: `{"$ref":"https://example.com/schema.json"}`, downgrade: model.SchemaDropped},
-		{name: "a reference to a missing definition is dropped", schema: `{"$ref":"#/$defs/y","$defs":{"x":{"type":"string"}}}`, downgrade: model.SchemaDropped},
-		{name: "a reference to the root is dropped", schema: `{"anyOf":[{"type":"null"},{"$ref":"#"}]}`, downgrade: model.SchemaDropped},
-		{name: "a self-referencing definition is dropped", schema: `{"$ref":"#/$defs/node","$defs":{"node":{"type":"object","properties":{"next":{"anyOf":[{"type":"null"},{"$ref":"#/$defs/node"}]}},"required":["next"]}}}`, downgrade: model.SchemaDropped},
-		{name: "mutually recursive definitions are dropped", schema: `{"$ref":"#/$defs/a","$defs":{"a":{"type":"array","items":{"$ref":"#/$defs/b"}},"b":{"type":"array","items":{"$ref":"#/$defs/a"}}}}`, downgrade: model.SchemaDropped},
-		{name: "a reference inside allOf is dropped", schema: `{"allOf":[{"$ref":"#/$defs/x"}],"$defs":{"x":{"type":"string"}}}`, downgrade: model.SchemaDropped},
-		{name: "definitions below the root are dropped", schema: `{"type":"object","properties":{"a":{"type":"string","$defs":{"x":{"type":"string"}}}},"required":["a"]}`, downgrade: model.SchemaDropped},
-		{name: "an enum of objects is dropped", schema: `{"type":"string","enum":[{"a":1}]}`, downgrade: model.SchemaDropped},
-		{name: "tuple items are dropped", schema: `{"type":"array","items":[{"type":"string"}]}`, downgrade: model.SchemaDropped},
-		{name: "an unknown keyword is dropped", schema: `{"type":"string","contentEncoding":"base64"}`, downgrade: model.SchemaDropped},
-		{name: "a branch that cannot fit drops the whole union", schema: `{"anyOf":[{"type":"string"},{"type":"object"}]}`, downgrade: model.SchemaDropped},
-		{name: "unparseable is dropped", schema: `{"type":`, downgrade: model.SchemaDropped},
+		{name: "an unescaped slash points below a definition and is dropped", schema: `{"$ref":"#/$defs/a/b","$defs":{"a/b":{"type":"string"}}}`},
+		{name: "a malformed escape names no definition and is dropped", schema: `{"$ref":"#/$defs/a~2b","$defs":{"a~2b":{"type":"string"}}}`},
+		{name: "recursion through an escaped name is dropped", schema: `{"$ref":"#/$defs/a~1b","$defs":{"a/b":{"type":"array","items":{"$ref":"#/$defs/a~1b"}}}}`},
+		{name: "an external reference is dropped", schema: `{"$ref":"https://example.com/schema.json"}`},
+		{name: "a reference to a missing definition is dropped", schema: `{"$ref":"#/$defs/y","$defs":{"x":{"type":"string"}}}`},
+		{name: "a reference to the root is dropped", schema: `{"anyOf":[{"type":"null"},{"$ref":"#"}]}`},
+		{name: "a self-referencing definition is dropped", schema: `{"$ref":"#/$defs/node","$defs":{"node":{"type":"object","properties":{"next":{"anyOf":[{"type":"null"},{"$ref":"#/$defs/node"}]}},"required":["next"]}}}`},
+		{name: "mutually recursive definitions are dropped", schema: `{"$ref":"#/$defs/a","$defs":{"a":{"type":"array","items":{"$ref":"#/$defs/b"}},"b":{"type":"array","items":{"$ref":"#/$defs/a"}}}}`},
+		{name: "a reference inside allOf is dropped", schema: `{"allOf":[{"$ref":"#/$defs/x"}],"$defs":{"x":{"type":"string"}}}`},
+		{name: "definitions below the root are dropped", schema: `{"type":"object","properties":{"a":{"type":"string","$defs":{"x":{"type":"string"}}}},"required":["a"]}`},
+		{name: "an enum of objects is dropped", schema: `{"type":"string","enum":[{"a":1}]}`},
+		{name: "tuple items are dropped", schema: `{"type":"array","items":[{"type":"string"}]}`},
+		{name: "an unknown keyword is dropped", schema: `{"type":"string","contentEncoding":"base64"}`},
+		{name: "a branch that cannot fit drops the whole union", schema: `{"anyOf":[{"type":"string"},{"type":"object"}]}`},
+		{name: "unparseable is dropped", schema: `{"type":`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			sent, downgrade := anthropicOutputSchema(json.RawMessage(tc.schema))
-			if downgrade != tc.downgrade {
-				t.Fatalf("downgrade = %q, want %q", downgrade, tc.downgrade)
-			}
+			sent := anthropicOutputSchema(json.RawMessage(tc.schema))
 			if tc.sent == "" {
 				if sent != nil {
 					t.Fatalf("a dropped schema must send nothing, sent %s", sent)
@@ -130,9 +119,8 @@ func TestAnthropicOutputSchemaFitsWhatTheDecoderEnforces(t *testing.T) {
 }
 
 // What the shared builder composes is inside the decoder's subset, so it goes
-// byte for byte — every constructor, nested the way task schemas nest them. A
-// builder shape that started drawing a downgrade would quietly weaken
-// generation for every Anthropic-bound task that uses it.
+// byte for byte. A builder shape the fit had to change would weaken generation
+// for each Anthropic-bound task that uses it.
 func TestAnthropicSendsWhatTheSchemaBuilderComposesVerbatim(t *testing.T) {
 	leaf := schema.Record(
 		schema.Field("text", schema.String().Describe("what it says")),
@@ -146,30 +134,27 @@ func TestAnthropicSendsWhatTheSchemaBuilderComposesVerbatim(t *testing.T) {
 		schema.Field("list", schema.Array(schema.Optional(schema.Array(leaf)))),
 		schema.Field("object", schema.Object(map[string]schema.Node{"id": schema.String()}, "id")),
 	))
-	sent, downgrade := anthropicOutputSchema(raw)
-	if downgrade != "" || !bytes.Equal(sent, raw) {
-		t.Fatalf("a builder schema was fitted (downgrade %q):\nsent %s\nwant %s", downgrade, sent, raw)
+	if sent := anthropicOutputSchema(raw); !bytes.Equal(sent, raw) {
+		t.Fatalf("a builder schema was fitted:\nsent %s\nwant %s", sent, raw)
 	}
 }
 
 func TestAnthropicOutputSchemaWithNoSchemaSendsNothing(t *testing.T) {
-	if sent, downgrade := anthropicOutputSchema(nil); sent != nil || downgrade != "" {
-		t.Fatalf("no schema must send nothing and report no downgrade, got %s / %q", sent, downgrade)
+	if sent := anthropicOutputSchema(nil); sent != nil {
+		t.Fatalf("no schema must send nothing, got %s", sent)
 	}
 }
 
-// The adapter reports the downgrade on the Response, which is what reaches the
-// call record, and the wire carries the fitted schema or none.
-func TestAnthropicCompleteReportsTheSchemaDowngradeItSentUnder(t *testing.T) {
+// The wire carries the fitted schema, or none when no fit exists.
+func TestAnthropicCompleteSendsTheFittedSchemaOrNone(t *testing.T) {
 	cases := []struct {
 		name       string
 		schema     string
-		downgrade  string
 		wantFormat bool
 	}{
-		{"eligible", `{"type":"object","additionalProperties":false,"properties":{"ok":{"type":"boolean"}},"required":["ok"]}`, "", true},
-		{"relaxed", `{"type":"object","additionalProperties":false,"properties":{"body":{"type":"string","maxLength":10}},"required":["body"]}`, model.SchemaRelaxed, true},
-		{"dropped", `{"type":"object","properties":{"fields":{"type":"object"}}}`, model.SchemaDropped, false},
+		{"eligible", `{"type":"object","additionalProperties":false,"properties":{"ok":{"type":"boolean"}},"required":["ok"]}`, true},
+		{"relaxed", `{"type":"object","additionalProperties":false,"properties":{"body":{"type":"string","maxLength":10}},"required":["body"]}`, true},
+		{"dropped", `{"type":"object","properties":{"fields":{"type":"object"}}}`, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -180,15 +165,11 @@ func TestAnthropicCompleteReportsTheSchemaDowngradeItSentUnder(t *testing.T) {
 				}
 				writeAnthropicText(t, w, "{}")
 			})
-			resp, err := client.Complete(context.Background(), model.Request{
+			if _, err := client.Complete(context.Background(), model.Request{
 				Messages:       []model.Message{{Role: "user", Content: "hi"}},
 				ResponseSchema: json.RawMessage(tc.schema),
-			})
-			if err != nil {
+			}); err != nil {
 				t.Fatal(err)
-			}
-			if resp.SchemaDowngrade != tc.downgrade {
-				t.Fatalf("SchemaDowngrade = %q, want %q", resp.SchemaDowngrade, tc.downgrade)
 			}
 			if _, sent := wire["output_config"]; sent != tc.wantFormat {
 				t.Fatalf("output_config sent = %v, want %v: %v", sent, tc.wantFormat, wire)

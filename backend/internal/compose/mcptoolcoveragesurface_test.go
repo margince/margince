@@ -33,11 +33,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -165,7 +168,7 @@ func extensionTools(dir string) ([]unitTool, error) {
 }
 
 // lanePassportScopes are the scopes scripts/e2e-llm.sh mints its passports with.
-// The key is a scenario's `passport:` line: absent, "wide" (draft and send) or "research" (enrich).
+// The key is a scenario's `passport:` line: absent, "wide", "research", "rep" or "readonly".
 //
 // It is the LANE'S OWN CHOICE, restated here because the page's central claim is
 // about the surface a passport is served, and a claim about a caller must name
@@ -182,11 +185,9 @@ var lanePassportScopes = map[string]map[principal.Scope]bool{
 		principal.ScopeDraft: true,
 		principal.ScopeSend:  true,
 	},
-	"research": {
-		principal.ScopeRead:   true,
-		principal.ScopeWrite:  true,
-		principal.ScopeEnrich: true,
-	},
+	"research": {principal.ScopeRead: true, principal.ScopeWrite: true, principal.ScopeEnrich: true},
+	"rep":      {principal.ScopeRead: true, principal.ScopeWrite: true},
+	"readonly": {principal.ScopeRead: true},
 }
 
 // TestTheCoveragePageCountsTheSurfaceItNames is the census.
@@ -373,108 +374,81 @@ func unitManifestCount(dir string) (int, error) {
 // has ever graded this".
 const corpusDir = "aicert/corpus"
 
-// corpusGradedTools returns, per tool name, the certification tasks whose
-// scenarios name it — as the expected answer or as a near miss.
+// corpusGrades is what the certification corpus grades of each tool. Expected
+// are the tasks whose scenarios expect it as the answer. NearMiss are the tasks
+// that name it only as a wrong reach a model must avoid.
+type corpusGrades struct {
+	expected, nearMiss map[string][]string
+}
+
+// corpusGradedTools reads the two fields of a certification scenario that name
+// a tool: `expect.answer` and `expect.near_misses`. An action counts as its
+// router. A word elsewhere names something else: `task: enrich` is the AI task
+// that reads a mail signature, not the enrich tool.
 //
-// A near miss COUNTS as graded, and that is the point rather than a looseness.
-// The certification corpus grades tool SELECTION: a scenario naming a tool in
-// `near_misses:` is asserting that a model must NOT reach for it on that goal,
-// which is a live assertion about that tool's description. The use-case lane
-// cannot express it at all — check.py matches a tool NAME appearing in a
-// transcript, so it cannot tell a right first pick from a wrong one recovered.
-//
-// Read as TEXT rather than parsed as YAML. The corpus is the corpus of another
-// lane and its schema is that lane's to change; a reader that only needs "is
-// this word in this file" should not acquire an opinion about the file's shape,
-// because the day the shape moves is the day this silently returns nothing.
-// Matching a whole word is what keeps `read_record` out of `read_record_tags`.
-// A MISSING CORPUS IS AN ERROR, not an empty one. The path is a fixed location
-// in this repository, so its absence means the corpus moved and this reader did
-// not — and answering "nothing is graded elsewhere" to that would publish the
-// larger untried number with nothing failing. Under-recognition again, and the
-// direction rule 8 names.
-func corpusGradedTools(dir string, names []string) (map[string][]string, error) {
-	tasks, err := os.ReadDir(dir)
+// A missing corpus is an error, not an empty one. Its path is fixed, so a
+// moved corpus would otherwise publish a larger untried count with nothing failing.
+func corpusGradedTools(dir string, names []string, routes map[string]string) (corpusGrades, error) {
+	grades := corpusGrades{expected: map[string][]string{}, nearMiss: map[string][]string{}}
+	files, err := filepath.Glob(filepath.Join(dir, "*", "*.yaml"))
 	if err != nil {
-		return nil, fmt.Errorf("reading the certification corpus at %s: %w", dir, err)
+		return grades, err
 	}
-	graded := map[string][]string{}
-	for _, task := range tasks {
-		if !task.IsDir() {
-			continue
-		}
-		scenarios, readErr := os.ReadDir(filepath.Join(dir, task.Name()))
+	if len(files) == 0 {
+		return grades, fmt.Errorf("reading the certification corpus at %s: no scenario", dir)
+	}
+	served := map[string]bool{}
+	for _, name := range names {
+		served[name] = true
+	}
+	for _, file := range files {
+		body, readErr := os.ReadFile(file)
 		if readErr != nil {
-			return nil, readErr
+			return grades, readErr
 		}
-		var body strings.Builder
-		for _, scenario := range scenarios {
-			if !strings.HasSuffix(scenario.Name(), ".yaml") {
-				continue
-			}
-			text, fileErr := os.ReadFile(filepath.Join(dir, task.Name(), scenario.Name()))
-			if fileErr != nil {
-				return nil, fileErr
-			}
-			body.Write(text)
-			body.WriteString("\n")
+		var scenario struct {
+			Expect struct {
+				Answer     any      `yaml:"answer"`
+				NearMisses []string `yaml:"near_misses"`
+			} `yaml:"expect"`
 		}
-		corpus := body.String()
-		for _, name := range names {
-			if namedInCorpus(corpus, name) {
-				graded[name] = append(graded[name], task.Name())
+		if decodeErr := yaml.Unmarshal(body, &scenario); decodeErr != nil {
+			return grades, fmt.Errorf("%s: %w", file, decodeErr)
+		}
+		task := filepath.Base(filepath.Dir(file))
+		if answer, ok := scenario.Expect.Answer.(string); ok && served[routedName(answer, routes)] {
+			grades.expected[routedName(answer, routes)] = append(grades.expected[routedName(answer, routes)], task)
+		}
+		for _, miss := range scenario.Expect.NearMisses {
+			if tool := routedName(miss, routes); served[tool] {
+				grades.nearMiss[tool] = append(grades.nearMiss[tool], task)
 			}
 		}
 	}
-	for name := range graded {
-		sort.Strings(graded[name])
-	}
-	return graded, nil
-}
-
-// namedInCorpus reports whether a tool name appears as a whole word.
-//
-// The boundary is checked against the characters a tool name is built from
-// rather than with a regex per tool: the corpus is read once per task and the
-// name set is the whole catalog, so this runs tens of thousands of times.
-func namedInCorpus(corpus, name string) bool {
-	for from := 0; ; {
-		at := strings.Index(corpus[from:], name)
-		if at < 0 {
-			return false
+	for _, byTool := range []map[string][]string{grades.expected, grades.nearMiss} {
+		for name := range byTool {
+			byTool[name] = sortedCopy(byTool[name])
 		}
-		at += from
-		before := at == 0 || !isToolNameByte(corpus[at-1])
-		end := at + len(name)
-		after := end == len(corpus) || !isToolNameByte(corpus[end])
-		if before && after {
-			return true
-		}
-		from = at + 1
 	}
-}
-
-func isToolNameByte(b byte) bool {
-	return b == '_' || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z') || (b >= '0' && b <= '9')
+	return grades, nil
 }
 
 // writeCoverageSurfaces is the section this page did not have, and the reason
 // its headline number was unreadable.
 //
-// There are TWO surfaces and they are not comparable. Surface A is the MCP
-// catalog a user's assistant is offered: broad, because a user is there to
-// correct a wrong reach. Surface B is a scheduled agent's declared allowlist:
-// five to seven tools, because the run is unattended and every listed tool is
-// paid for on every step of every run. Reporting one coverage number over both
-// reports a menu nobody is served.
+// There are TWO menus and they are not comparable. Your AI assistant is
+// offered the whole MCP catalog, because a user is there to correct a wrong
+// reach. A night helper gets its declared allowlist of five to seven tools.
+// Its run is unattended, and every listed tool is paid for on every step.
+// One coverage number over both reports a menu nobody is served.
 //
 // It also states what this page CANNOT see, rather than leaving the reader to
 // infer that silence means zero: the units' tools, and the scope filter.
 func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
-	p.WriteString("## The two surfaces\n\n")
-	p.WriteString("A tool being \"untried\" means something different on each, so the numbers above " +
-		"are Surface A's.\n\n")
-	p.WriteString("| | Surface A: MCP | Surface B: scheduled agents |\n|---|---|---|\n")
+	p.WriteString("## Your AI assistant and the night helpers\n\n")
+	p.WriteString("A tool being \"untried\" means something different for each, so the numbers above " +
+		"are your AI assistant's.\n\n")
+	p.WriteString("| | Your AI assistant, over MCP | The night helpers: scheduled agents of Margince AI |\n|---|---|---|\n")
 	p.WriteString("| Who drives it | a user, watching | a job on a timer, unattended |\n")
 	fmt.Fprintf(p, "| Menu | %d tools, the whole catalog | %s tools, declared per agent |\n",
 		r.Totals.Tools, agentMenuRange(r.Agents))
@@ -482,7 +456,7 @@ func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("| Graded by | the use-case lane on this page | " +
 		"[ai-certification.md](ai-certification.md) |\n\n")
 
-	p.WriteString("### Surface B, as the contract declares it\n\n")
+	p.WriteString("### The night helpers, as the contract declares them\n\n")
 	p.WriteString("From `backend/api/ai-tasks.yaml`. The allowlist narrows and never grants: every " +
 		"call still passes the same admission gate\n")
 	p.WriteString("against the same passport. An empty one is a build error, because it would " +
@@ -587,4 +561,33 @@ func equalStrings(got, want []string) bool {
 		}
 	}
 	return true
+}
+
+// A tool is graded elsewhere only where a corpus field names it as one: the
+// expected answer, or a near miss kept apart. The word in a task's own name,
+// or anywhere else in the file, grades nothing.
+func TestTheCorpusGradesOnlyTheToolsItsAnswerFieldsName(t *testing.T) {
+	dir := t.TempDir()
+	plant := func(task, body string) {
+		if err := os.MkdirAll(filepath.Join(dir, task), 0o750); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, task, "s.yaml"), []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	plant("enrich", "task: enrich\nfixture:\n  text: read the enrich signature\nexpect:\n  answer: {company: x}\n")
+	plant("brief", "task: brief\nexpect:\n  answer: read_brief\n  near_misses:\n    - annotate_brief\n")
+	grades, err := corpusGradedTools(dir, []string{"enrich", "read_details", "annotate_brief"},
+		map[string]string{"read_brief": "read_details"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := map[string][]string{"read_details": {"brief"}}; !reflect.DeepEqual(grades.expected, want) {
+		t.Errorf("expected answers = %v, want %v (an action counts as its router; a task name is no tool)",
+			grades.expected, want)
+	}
+	if want := map[string][]string{"annotate_brief": {"brief"}}; !reflect.DeepEqual(grades.nearMiss, want) {
+		t.Errorf("near misses = %v, want %v", grades.nearMiss, want)
+	}
 }

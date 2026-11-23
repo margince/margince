@@ -35,7 +35,7 @@ does in this state.
 
 | Task | Name | Mode | Ladder | Every rung blocked | Decision model |
 | --- | --- | --- | --- | --- | --- |
-| `account_scan` | Reading what an account needs | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
+| `account_scan` | Reading what a company needs | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `agent_loop` | Agent reasoning loop | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `brief_ranking` | Morning brief ranking | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `capture_classify` | Message classification | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
@@ -43,6 +43,7 @@ does in this state.
 | `capture_counterparty_verdict` | First-time sender check | background | `local_small` | waits for the provider's next check; the attempt is not spent | a failed decision call hands the task to its ladder |
 | `cert_judge` | Certification judging | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `chat_summary` | Chat channel summary | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
+| `chat_task_reading` | Chat and open tasks | interactive | `local_small` → `cheap_cloud` | fails at once with a 503 naming the cause | — |
 | `cold_start` | Onboarding read | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `corpus_ask` | Document corpus question | interactive | `premium` | answers from its own facts instead of failing | — |
 | `deal_health` | Deal status card | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |

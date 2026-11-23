@@ -21,6 +21,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import {
+  scopeName,
   useAnalyticsContext,
   useAnalyticsSelection,
 } from "./analytics.context";
@@ -126,7 +127,7 @@ export function ReportingTargets() {
             options={["active", "retired", "all"]}
             labels={{
               active: t("reporting.activeTargets"),
-              retired: t("reporting.retired"),
+              retired: t("reporting.retiredTargets"),
               all: t("reporting.allTargets"),
             }}
             onChange={(value) => {
@@ -308,7 +309,7 @@ function TargetSubject({
   return (
     <>
       <strong>
-        {target.definition.scope.label ?? target.definition.scope.kind}
+        {scopeName(target.definition.scope, t) ?? target.definition.scope.kind}
       </strong>
       <div>{metricName(target.definition.metric)}</div>
       <div className="t-caption">

@@ -17,12 +17,13 @@ import {
   formatNumber,
   identifierNumber,
 } from "../../format/format";
+import { zoneNameAllYear } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCompanyZone } from "../../lib/companyzone";
 import { labelFor, valueFor } from "../../lib/labelfor";
 import { navigate, routeHash } from "../../lib/router";
 import { hashWithParams, replaceDial, useUrlParams } from "../../lib/urlstate";
-import { useViewerZone } from "../../lib/viewerzone";
 import { GoalBars, GoalMonths } from "./goals.bars";
 import { GoalEditor, WithdrawConfirm } from "./goals.editor";
 import {
@@ -332,14 +333,27 @@ function eventLine(
 function PlanHistory({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
   const t = useT();
   const { locale } = useLocale();
-  const zone = useViewerZone();
+  const zone = useCompanyZone();
+  const rows = [...plan.history].reverse();
+  const newest = rows[0];
   return (
-    <Panel title={t("goals.history")}>
+    <Panel
+      title={t("goals.history")}
+      footer={
+        newest && (
+          <span className="t-caption">
+            {t("goals.history.zone", {
+              zone: zoneNameAllYear(newest.created_at, zone, locale),
+            })}
+          </span>
+        )
+      }
+    >
       <PanelBody>
         <DataTable
           label={t("goals.history")}
           fold
-          rows={[...plan.history].reverse()}
+          rows={rows}
           rowKey={(event) => String(event.revision)}
           columns={[
             {
@@ -352,7 +366,9 @@ function PlanHistory({ plan }: Readonly<{ plan: SalesGoalPlan }>) {
               key: "reason",
               header: t("goals.history.reason"),
               grow: true,
-              render: (event) => event.reason,
+              render: (event) => (
+                <span className="goal-reason-text">{event.reason}</span>
+              ),
             },
             {
               key: "total",

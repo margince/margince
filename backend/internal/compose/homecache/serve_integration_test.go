@@ -60,9 +60,7 @@ func recordLogs(t *testing.T) *logRecorder {
 func serveWorklist(ctx context.Context, c *homecache.Cache, reader ids.UUID) error {
 	_, _, err := homecache.Serve(ctx, c, reader, homecache.Worklist, "home",
 		func(context.Context) (crmcontracts.Worklist, error) { return crmcontracts.Worklist{}, nil },
-		func(crmcontracts.Worklist) (*ids.UUID, error) {
-			return nil, nil //nolint:nilnil // an empty Worklist starts no walk, which Serve reads as nil
-		})
+		homecache.NoWalk[crmcontracts.Worklist]())
 	return err
 }
 
@@ -105,7 +103,7 @@ func TestAReaderWhoLeftIsLoggedAtDebugAndACacheFaultAtError(t *testing.T) {
 
 // A client may leave after its write commits and before the answer is sent.
 // The write stands, so the writer's Home must still be forgotten.
-func TestAWriterWhoLeftAfterTheCommitStillHasTheirHomeForgotten(t *testing.T) {
+func TestAWriterWhoLeftAfterTheCommitStillHasTheirHomeMarkedBehind(t *testing.T) {
 	e := integration.Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
@@ -122,7 +120,7 @@ func TestAWriterWhoLeftAfterTheCommitStillHasTheirHomeForgotten(t *testing.T) {
 	if err := c.Forget(left, []ids.UUID{e.Rep1}); err != nil {
 		t.Fatalf("forgetting for a writer who left: %v", err)
 	}
-	if _, _, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home"); err != nil || hit {
-		t.Errorf("the kept answer is served = %v (err %v); a departed client left it stale", hit, err)
+	if _, standing, hit, err := homecache.Lookup[crmcontracts.Worklist](ctx, c, e.Rep1, homecache.Worklist, "home"); err != nil || !hit || !standing.Written {
+		t.Errorf("the kept answer: hit %v, written %v (err %v); a departed client left it unmarked", hit, standing.Written, err)
 	}
 }

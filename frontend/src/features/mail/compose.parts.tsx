@@ -1,9 +1,7 @@
 import { Ellipsis, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { EntityRef } from "../../components/entityref";
-import { SendMark } from "../../components/sendpermission";
 import { Button } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
 import { EmailText } from "../../design-system/emailtext";
 import { ErrorLine } from "../../design-system/errorline";
@@ -12,7 +10,7 @@ import { RichText } from "../../design-system/richtext";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { CommunicationContext } from "../../lib/compose-context";
+import { useNoMailboxConnected } from "../../lib/connectors";
 import {
   authorName,
   correspondenceSide,
@@ -34,34 +32,7 @@ import { ScheduleMenu, scheduledSendLabel } from "./composeschedule";
 import type { ComposeSend } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
 import type { VoiceDraft } from "./composevoicedraft";
-import { SendRefusal } from "./sendrefusal";
-
-// The mail-only send-time notice: a shared-unsubscribe-token risk. A channel
-// reply has no addressee list to warn about, so this renders nothing there.
-// The empty-recipient line belongs to the To field, not the foot of the drawer,
-// because that is closer to the thing to fix.
-export function MailSendNotices({
-  newContacts = [],
-}: Readonly<{
-  to: string[];
-  cc: string[];
-  context: CommunicationContext | undefined;
-  /** Addresses on no record, which the send adds as the sender's contacts. */
-  newContacts?: readonly string[];
-}>) {
-  const t = useT();
-  return (
-    <>
-      {newContacts.map((address) => (
-        <Callout
-          key={address}
-          kind="standing"
-          title={t("compose.newContact", { address })}
-        />
-      ))}
-    </>
-  );
-}
+import { NoMailboxLine, SendRefusal } from "./sendrefusal";
 
 // The composer's window: docked beside the page, at its own size, grown or
 // folded. Each opening starts at its own size.
@@ -235,9 +206,6 @@ export function ComposeFoot({
             <ScheduleMenu onOpen={onPickMoment} reasonId={heldBy} />
           )}
         </span>
-        {!isChannelReply && (
-          <SendMark {...send.permission} blocked={send.blocked} />
-        )}
         <div className="compose-foot-marks" ref={marksRef} />
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
@@ -259,7 +227,6 @@ export function ComposeFoot({
           {t(holdLine)}
         </p>
       )}
-      {send.lawfulBasisDialog}
     </div>
   );
 }
@@ -297,10 +264,14 @@ export function ComposeOutcome({
   refusal: Refusal;
 }>) {
   const t = useT();
+  const noMailbox = useNoMailboxConnected();
   return (
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
+      {!isChannelReply && noMailbox && refusal !== "noMailbox" && (
+        <NoMailboxLine standing />
+      )}
       <SendRefusal refusal={refusal} />
     </>
   );

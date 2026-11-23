@@ -19,7 +19,7 @@
     "address_city":
      "City",
     "address_country":
-     "Country code (ISO 3166)",
+     "Country",
     "address_line1":
      "Street and number",
     "address_line2":
@@ -324,6 +324,8 @@
      "Note (optional)",
     "disqualify_reason":
      "Reason",
+    "disqualify_reason_id":
+     "Disqualify reason",
     "domain":
      "Domain",
     "domains":
@@ -346,12 +348,16 @@
      "Email reminder one hour before",
     "emails":
      "Email addresses",
+    "employment_status":
+     "Employment status",
     "empty":
      "empty",
     "en":
      "en",
     "ended_at":
      "Ended",
+    "ended_precision":
+     "End date precision",
     "enrichment_depth":
      "Read scope",
     "execution":
@@ -412,6 +418,10 @@
      "href",
     "html_body":
      "Formatted message",
+    "impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
+    "impersonation_warning_cleared":
+     "Impersonation warning cleared",
     "import_apply_tag":
      "Add tag",
     "import_close_deal":
@@ -460,6 +470,8 @@
      "Invitation status",
     "invoice_id":
      "Cited invoice",
+    "is_current_primary":
+     "Primary employer",
     "is_default":
      "Default for this language",
     "is_done":
@@ -1158,6 +1170,8 @@
      "Revoked override",
     "revoked_rows":
      "Overrides taken back",
+    "role":
+     "Role",
     "rows":
      "rows",
     "scheduled_at":
@@ -1214,6 +1228,8 @@
      "start project delivery",
     "started_at":
      "Started",
+    "started_precision":
+     "Start date precision",
     "state":
      "state",
     "status":
@@ -1272,6 +1288,8 @@
      "Job title",
     "to":
      "To",
+    "trigger":
+     "Qualified by",
     "true":
      "true",
     "unavailable_name":
@@ -4612,6 +4630,26 @@
      "Unknown",
     "disqualify_reason/boolean/true":
      "Yes",
+    "disqualify_reason_id/lifecycle/customer":
+     "Customer",
+    "disqualify_reason_id/lifecycle/disqualified":
+     "Disqualified",
+    "disqualify_reason_id/lifecycle/former_customer":
+     "Former customer",
+    "disqualify_reason_id/lifecycle/live":
+     "Live",
+    "disqualify_reason_id/lifecycle/onboarding":
+     "Onboarding",
+    "disqualify_reason_id/lifecycle/opportunity":
+     "Opportunity",
+    "disqualify_reason_id/lifecycle/prospect":
+     "Prospect",
+    "disqualify_reason_id/lifecycle/target":
+     "Target",
+    "disqualify_reason_id/lifecycle/unknown":
+     "Unknown",
+    "disqualify_reason_id/boolean/true":
+     "Yes",
     "domain/lifecycle/customer":
      "Customer",
     "domain/lifecycle/disqualified":
@@ -4832,6 +4870,26 @@
      "Unknown",
     "emails/boolean/true":
      "Yes",
+    "employment_status/lifecycle/customer":
+     "Customer",
+    "employment_status/lifecycle/disqualified":
+     "Disqualified",
+    "employment_status/lifecycle/former_customer":
+     "Former customer",
+    "employment_status/lifecycle/live":
+     "Live",
+    "employment_status/lifecycle/onboarding":
+     "Onboarding",
+    "employment_status/lifecycle/opportunity":
+     "Opportunity",
+    "employment_status/lifecycle/prospect":
+     "Prospect",
+    "employment_status/lifecycle/target":
+     "Target",
+    "employment_status/lifecycle/unknown":
+     "Unknown",
+    "employment_status/boolean/true":
+     "Yes",
     "empty/lifecycle/customer":
      "Customer",
     "empty/lifecycle/disqualified":
@@ -4891,6 +4949,26 @@
     "ended_at/lifecycle/unknown":
      "Unknown",
     "ended_at/boolean/true":
+     "Yes",
+    "ended_precision/lifecycle/customer":
+     "Customer",
+    "ended_precision/lifecycle/disqualified":
+     "Disqualified",
+    "ended_precision/lifecycle/former_customer":
+     "Former customer",
+    "ended_precision/lifecycle/live":
+     "Live",
+    "ended_precision/lifecycle/onboarding":
+     "Onboarding",
+    "ended_precision/lifecycle/opportunity":
+     "Opportunity",
+    "ended_precision/lifecycle/prospect":
+     "Prospect",
+    "ended_precision/lifecycle/target":
+     "Target",
+    "ended_precision/lifecycle/unknown":
+     "Unknown",
+    "ended_precision/boolean/true":
      "Yes",
     "enrichment_depth/text/page":
      "Read one page and prepare an enrichment proposal",
@@ -5486,6 +5564,46 @@
      "Unknown",
     "html_body/boolean/true":
      "Yes",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Customer",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Disqualified",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Former customer",
+    "impersonation_warning_carried/lifecycle/live":
+     "Live",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Opportunity",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Prospect",
+    "impersonation_warning_carried/lifecycle/target":
+     "Target",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Unknown",
+    "impersonation_warning_carried/boolean/true":
+     "Yes",
+    "impersonation_warning_cleared/lifecycle/customer":
+     "Customer",
+    "impersonation_warning_cleared/lifecycle/disqualified":
+     "Disqualified",
+    "impersonation_warning_cleared/lifecycle/former_customer":
+     "Former customer",
+    "impersonation_warning_cleared/lifecycle/live":
+     "Live",
+    "impersonation_warning_cleared/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_cleared/lifecycle/opportunity":
+     "Opportunity",
+    "impersonation_warning_cleared/lifecycle/prospect":
+     "Prospect",
+    "impersonation_warning_cleared/lifecycle/target":
+     "Target",
+    "impersonation_warning_cleared/lifecycle/unknown":
+     "Unknown",
+    "impersonation_warning_cleared/boolean/true":
+     "Yes",
     "import_apply_tag/lifecycle/customer":
      "Customer",
     "import_apply_tag/lifecycle/disqualified":
@@ -5965,6 +6083,26 @@
     "invoice_id/lifecycle/unknown":
      "Unknown",
     "invoice_id/boolean/true":
+     "Yes",
+    "is_current_primary/lifecycle/customer":
+     "Customer",
+    "is_current_primary/lifecycle/disqualified":
+     "Disqualified",
+    "is_current_primary/lifecycle/former_customer":
+     "Former customer",
+    "is_current_primary/lifecycle/live":
+     "Live",
+    "is_current_primary/lifecycle/onboarding":
+     "Onboarding",
+    "is_current_primary/lifecycle/opportunity":
+     "Opportunity",
+    "is_current_primary/lifecycle/prospect":
+     "Prospect",
+    "is_current_primary/lifecycle/target":
+     "Target",
+    "is_current_primary/lifecycle/unknown":
+     "Unknown",
+    "is_current_primary/boolean/true":
      "Yes",
     "is_default/lifecycle/customer":
      "Customer",
@@ -9119,7 +9257,7 @@
     "merge_profile_field/text/address_city":
      "City",
     "merge_profile_field/text/address_country":
-     "Country code (ISO 3166)",
+     "Country",
     "merge_profile_field/text/address_line1":
      "Street and number",
     "merge_profile_field/text/address_line2":
@@ -9202,6 +9340,8 @@
      "Name",
     "merge_profile_field/text/disposition":
      "Disposition",
+    "merge_profile_field/text/disqualify_reason_id":
+     "Disqualify reason",
     "merge_profile_field/text/domain":
      "Domain",
     "merge_profile_field/text/domains":
@@ -9216,8 +9356,12 @@
      "Email",
     "merge_profile_field/text/emails":
      "Email addresses",
+    "merge_profile_field/text/employment_status":
+     "Employment status",
     "merge_profile_field/text/ended_at":
      "Ended",
+    "merge_profile_field/text/ended_precision":
+     "End date precision",
     "merge_profile_field/text/expected_arr_minor":
      "Expected ARR",
     "merge_profile_field/text/expected_close_date":
@@ -9250,10 +9394,16 @@
      "History",
     "merge_profile_field/text/icp":
      "Ideal customer profile",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
+    "merge_profile_field/text/impersonation_warning_cleared":
+     "Impersonation warning cleared",
     "merge_profile_field/text/industry":
      "Industry",
     "merge_profile_field/text/invitation_status":
      "Invitation status",
+    "merge_profile_field/text/is_current_primary":
+     "Primary employer",
     "merge_profile_field/text/is_done":
      "Done",
     "merge_profile_field/text/last_name":
@@ -9388,6 +9538,8 @@
      "Revoked override",
     "merge_profile_field/text/revoked_rows":
      "Overrides taken back",
+    "merge_profile_field/text/role":
+     "Role",
     "merge_profile_field/text/sales_motion":
      "Sales motion",
     "merge_profile_field/text/scope":
@@ -9406,6 +9558,8 @@
      "Stage",
     "merge_profile_field/text/started_at":
      "Started",
+    "merge_profile_field/text/started_precision":
+     "Start date precision",
     "merge_profile_field/text/status":
      "Status",
     "merge_profile_field/text/stopped":
@@ -9426,6 +9580,8 @@
      "Task type",
     "merge_profile_field/text/title":
      "Job title",
+    "merge_profile_field/text/trigger":
+     "Qualified by",
     "merge_profile_field/text/usp":
      "Differentiation",
     "merge_profile_field/text/value_proposition":
@@ -9465,7 +9621,7 @@
     "merge_profile_field/lifecycle/address_city":
      "City",
     "merge_profile_field/lifecycle/address_country":
-     "Country code (ISO 3166)",
+     "Country",
     "merge_profile_field/lifecycle/address_line1":
      "Street and number",
     "merge_profile_field/lifecycle/address_line2":
@@ -9548,6 +9704,8 @@
      "Name",
     "merge_profile_field/lifecycle/disposition":
      "Disposition",
+    "merge_profile_field/lifecycle/disqualify_reason_id":
+     "Disqualify reason",
     "merge_profile_field/lifecycle/domain":
      "Domain",
     "merge_profile_field/lifecycle/domains":
@@ -9562,8 +9720,12 @@
      "Email",
     "merge_profile_field/lifecycle/emails":
      "Email addresses",
+    "merge_profile_field/lifecycle/employment_status":
+     "Employment status",
     "merge_profile_field/lifecycle/ended_at":
      "Ended",
+    "merge_profile_field/lifecycle/ended_precision":
+     "End date precision",
     "merge_profile_field/lifecycle/expected_arr_minor":
      "Expected ARR",
     "merge_profile_field/lifecycle/expected_close_date":
@@ -9596,10 +9758,16 @@
      "History",
     "merge_profile_field/lifecycle/icp":
      "Ideal customer profile",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
+    "merge_profile_field/lifecycle/impersonation_warning_cleared":
+     "Impersonation warning cleared",
     "merge_profile_field/lifecycle/industry":
      "Industry",
     "merge_profile_field/lifecycle/invitation_status":
      "Invitation status",
+    "merge_profile_field/lifecycle/is_current_primary":
+     "Primary employer",
     "merge_profile_field/lifecycle/is_done":
      "Done",
     "merge_profile_field/lifecycle/last_name":
@@ -9734,6 +9902,8 @@
      "Revoked override",
     "merge_profile_field/lifecycle/revoked_rows":
      "Overrides taken back",
+    "merge_profile_field/lifecycle/role":
+     "Role",
     "merge_profile_field/lifecycle/sales_motion":
      "Sales motion",
     "merge_profile_field/lifecycle/scope":
@@ -9752,6 +9922,8 @@
      "Stage",
     "merge_profile_field/lifecycle/started_at":
      "Started",
+    "merge_profile_field/lifecycle/started_precision":
+     "Start date precision",
     "merge_profile_field/lifecycle/status":
      "Status",
     "merge_profile_field/lifecycle/stopped":
@@ -9772,6 +9944,8 @@
      "Task type",
     "merge_profile_field/lifecycle/title":
      "Job title",
+    "merge_profile_field/lifecycle/trigger":
+     "Qualified by",
     "merge_profile_field/lifecycle/usp":
      "Differentiation",
     "merge_profile_field/lifecycle/value_proposition":
@@ -14114,6 +14288,26 @@
      "Unknown",
     "revoked_rows/boolean/true":
      "Yes",
+    "role/lifecycle/customer":
+     "Customer",
+    "role/lifecycle/disqualified":
+     "Disqualified",
+    "role/lifecycle/former_customer":
+     "Former customer",
+    "role/lifecycle/live":
+     "Live",
+    "role/lifecycle/onboarding":
+     "Onboarding",
+    "role/lifecycle/opportunity":
+     "Opportunity",
+    "role/lifecycle/prospect":
+     "Prospect",
+    "role/lifecycle/target":
+     "Target",
+    "role/lifecycle/unknown":
+     "Unknown",
+    "role/boolean/true":
+     "Yes",
     "rows/lifecycle/customer":
      "Customer",
     "rows/lifecycle/disqualified":
@@ -14673,6 +14867,26 @@
     "started_at/lifecycle/unknown":
      "Unknown",
     "started_at/boolean/true":
+     "Yes",
+    "started_precision/lifecycle/customer":
+     "Customer",
+    "started_precision/lifecycle/disqualified":
+     "Disqualified",
+    "started_precision/lifecycle/former_customer":
+     "Former customer",
+    "started_precision/lifecycle/live":
+     "Live",
+    "started_precision/lifecycle/onboarding":
+     "Onboarding",
+    "started_precision/lifecycle/opportunity":
+     "Opportunity",
+    "started_precision/lifecycle/prospect":
+     "Prospect",
+    "started_precision/lifecycle/target":
+     "Target",
+    "started_precision/lifecycle/unknown":
+     "Unknown",
+    "started_precision/boolean/true":
      "Yes",
     "state/lifecycle/customer":
      "Customer",
@@ -15247,6 +15461,26 @@
     "to/lifecycle/unknown":
      "Unknown",
     "to/boolean/true":
+     "Yes",
+    "trigger/lifecycle/customer":
+     "Customer",
+    "trigger/lifecycle/disqualified":
+     "Disqualified",
+    "trigger/lifecycle/former_customer":
+     "Former customer",
+    "trigger/lifecycle/live":
+     "Live",
+    "trigger/lifecycle/onboarding":
+     "Onboarding",
+    "trigger/lifecycle/opportunity":
+     "Opportunity",
+    "trigger/lifecycle/prospect":
+     "Prospect",
+    "trigger/lifecycle/target":
+     "Target",
+    "trigger/lifecycle/unknown":
+     "Unknown",
+    "trigger/boolean/true":
      "Yes",
     "true/lifecycle/customer":
      "Customer",
@@ -16976,6 +17210,12 @@
      "Not set",
     "disqualify_reason/execution":
      "Set when applied",
+    "disqualify_reason_id/boolean":
+     "No",
+    "disqualify_reason_id/empty":
+     "Not set",
+    "disqualify_reason_id/execution":
+     "Set when applied",
     "domain/boolean":
      "No",
     "domain/empty":
@@ -17042,6 +17282,12 @@
      "Not set",
     "emails/execution":
      "Set when applied",
+    "employment_status/boolean":
+     "No",
+    "employment_status/empty":
+     "Not set",
+    "employment_status/execution":
+     "Set when applied",
     "empty/boolean":
      "No",
     "empty/empty":
@@ -17059,6 +17305,12 @@
     "ended_at/empty":
      "Not set",
     "ended_at/execution":
+     "Set when applied",
+    "ended_precision/boolean":
+     "No",
+    "ended_precision/empty":
+     "Not set",
+    "ended_precision/execution":
      "Set when applied",
     "enrichment_depth/boolean":
      "No",
@@ -17240,6 +17492,18 @@
      "Not set",
     "html_body/execution":
      "Set when applied",
+    "impersonation_warning_carried/boolean":
+     "No",
+    "impersonation_warning_carried/empty":
+     "Not set",
+    "impersonation_warning_carried/execution":
+     "Set when applied",
+    "impersonation_warning_cleared/boolean":
+     "No",
+    "impersonation_warning_cleared/empty":
+     "Not set",
+    "impersonation_warning_cleared/execution":
+     "Set when applied",
     "import_apply_tag/boolean":
      "No",
     "import_apply_tag/empty":
@@ -17383,6 +17647,12 @@
     "invoice_id/empty":
      "Not set",
     "invoice_id/execution":
+     "Set when applied",
+    "is_current_primary/boolean":
+     "No",
+    "is_current_primary/empty":
+     "Not set",
+    "is_current_primary/execution":
      "Set when applied",
     "is_default/boolean":
      "No",
@@ -19542,6 +19812,12 @@
      "Not set",
     "revoked_rows/execution":
      "Set when applied",
+    "role/boolean":
+     "No",
+    "role/empty":
+     "Not set",
+    "role/execution":
+     "Set when applied",
     "rows/boolean":
      "No",
     "rows/empty":
@@ -19709,6 +19985,12 @@
     "started_at/empty":
      "Not set",
     "started_at/execution":
+     "Set when applied",
+    "started_precision/boolean":
+     "No",
+    "started_precision/empty":
+     "Not set",
+    "started_precision/execution":
      "Set when applied",
     "state/boolean":
      "No",
@@ -19883,6 +20165,12 @@
     "to/empty":
      "Not set",
     "to/execution":
+     "Set when applied",
+    "trigger/boolean":
+     "No",
+    "trigger/empty":
+     "Not set",
+    "trigger/execution":
      "Set when applied",
     "true/boolean":
      "No",
@@ -20105,7 +20393,7 @@
     "address_city":
      "Stadt",
     "address_country":
-     "Ländercode (ISO 3166)",
+     "Land",
     "address_line1":
      "Straße und Hausnummer",
     "address_line2":
@@ -20351,7 +20639,7 @@
     "creation_acquired_at":
      "Erfasst am",
     "creation_acquisition":
-     "Warum dieser Kontakt angelegt wird",
+     "Warum dieser Kontakt erstellt wird",
     "creation_duplicate":
      "Vorgeschlagene Dublette",
     "creation_email_correspondence":
@@ -20410,6 +20698,8 @@
      "Notiz (optional)",
     "disqualify_reason":
      "Grund",
+    "disqualify_reason_id":
+     "Disqualifizierungsgrund",
     "domain":
      "Domain",
     "domains":
@@ -20432,12 +20722,16 @@
      "E-Mail-Erinnerung eine Stunde vorher",
     "emails":
      "E-Mail-Adressen",
+    "employment_status":
+     "Beschäftigungsstatus",
     "empty":
      "empty",
     "en":
      "en",
     "ended_at":
      "Beendet",
+    "ended_precision":
+     "Genauigkeit des Enddatums",
     "enrichment_depth":
      "Leseumfang",
     "execution":
@@ -20498,6 +20792,10 @@
      "href",
     "html_body":
      "Formatierte Nachricht",
+    "impersonation_warning_carried":
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
+    "impersonation_warning_cleared":
+     "Warnung vor möglicher Täuschung aufgehoben",
     "import_apply_tag":
      "Tag hinzufügen",
     "import_close_deal":
@@ -20546,6 +20844,8 @@
      "Einladungsstatus",
     "invoice_id":
      "Angeführte Rechnung",
+    "is_current_primary":
+     "Hauptarbeitgeber",
     "is_default":
      "Standard für diese Sprache",
     "is_done":
@@ -21035,7 +21335,7 @@
     "promotion_company_industry":
      "Branche des Unternehmens",
     "promotion_company_proposed":
-     "Unternehmen zum Verknüpfen oder Anlegen",
+     "Unternehmen zum Verknüpfen oder Erstellen",
     "promotion_consent_before":
      "Einwilligung vor der Qualifizierung",
     "promotion_contact_email":
@@ -21244,6 +21544,8 @@
      "Widerrufene Freigabe",
     "revoked_rows":
      "Zurückgenommene Freigaben",
+    "role":
+     "Rolle",
     "rows":
      "rows",
     "scheduled_at":
@@ -21300,6 +21602,8 @@
      "start project delivery",
     "started_at":
      "Beginn",
+    "started_precision":
+     "Genauigkeit des Startdatums",
     "state":
      "state",
     "status":
@@ -21358,6 +21662,8 @@
      "Jobtitel",
     "to":
      "An",
+    "trigger":
+     "Qualifiziert durch",
     "true":
      "true",
     "unavailable_name":
@@ -24698,6 +25004,26 @@
      "Unbekannt",
     "disqualify_reason/boolean/true":
      "Ja",
+    "disqualify_reason_id/lifecycle/customer":
+     "Kunde",
+    "disqualify_reason_id/lifecycle/disqualified":
+     "Disqualifiziert",
+    "disqualify_reason_id/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "disqualify_reason_id/lifecycle/live":
+     "Live",
+    "disqualify_reason_id/lifecycle/onboarding":
+     "Onboarding",
+    "disqualify_reason_id/lifecycle/opportunity":
+     "Chance",
+    "disqualify_reason_id/lifecycle/prospect":
+     "Interessent",
+    "disqualify_reason_id/lifecycle/target":
+     "Zielunternehmen",
+    "disqualify_reason_id/lifecycle/unknown":
+     "Unbekannt",
+    "disqualify_reason_id/boolean/true":
+     "Ja",
     "domain/lifecycle/customer":
      "Kunde",
     "domain/lifecycle/disqualified":
@@ -24918,6 +25244,26 @@
      "Unbekannt",
     "emails/boolean/true":
      "Ja",
+    "employment_status/lifecycle/customer":
+     "Kunde",
+    "employment_status/lifecycle/disqualified":
+     "Disqualifiziert",
+    "employment_status/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "employment_status/lifecycle/live":
+     "Live",
+    "employment_status/lifecycle/onboarding":
+     "Onboarding",
+    "employment_status/lifecycle/opportunity":
+     "Chance",
+    "employment_status/lifecycle/prospect":
+     "Interessent",
+    "employment_status/lifecycle/target":
+     "Zielunternehmen",
+    "employment_status/lifecycle/unknown":
+     "Unbekannt",
+    "employment_status/boolean/true":
+     "Ja",
     "empty/lifecycle/customer":
      "Kunde",
     "empty/lifecycle/disqualified":
@@ -24977,6 +25323,26 @@
     "ended_at/lifecycle/unknown":
      "Unbekannt",
     "ended_at/boolean/true":
+     "Ja",
+    "ended_precision/lifecycle/customer":
+     "Kunde",
+    "ended_precision/lifecycle/disqualified":
+     "Disqualifiziert",
+    "ended_precision/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "ended_precision/lifecycle/live":
+     "Live",
+    "ended_precision/lifecycle/onboarding":
+     "Onboarding",
+    "ended_precision/lifecycle/opportunity":
+     "Chance",
+    "ended_precision/lifecycle/prospect":
+     "Interessent",
+    "ended_precision/lifecycle/target":
+     "Zielunternehmen",
+    "ended_precision/lifecycle/unknown":
+     "Unbekannt",
+    "ended_precision/boolean/true":
      "Ja",
     "enrichment_depth/text/page":
      "Eine Seite lesen und einen Anreicherungsvorschlag vorbereiten",
@@ -25572,6 +25938,46 @@
      "Unbekannt",
     "html_body/boolean/true":
      "Ja",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Kunde",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Disqualifiziert",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "impersonation_warning_carried/lifecycle/live":
+     "Live",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Chance",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Interessent",
+    "impersonation_warning_carried/lifecycle/target":
+     "Zielunternehmen",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Unbekannt",
+    "impersonation_warning_carried/boolean/true":
+     "Ja",
+    "impersonation_warning_cleared/lifecycle/customer":
+     "Kunde",
+    "impersonation_warning_cleared/lifecycle/disqualified":
+     "Disqualifiziert",
+    "impersonation_warning_cleared/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "impersonation_warning_cleared/lifecycle/live":
+     "Live",
+    "impersonation_warning_cleared/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_cleared/lifecycle/opportunity":
+     "Chance",
+    "impersonation_warning_cleared/lifecycle/prospect":
+     "Interessent",
+    "impersonation_warning_cleared/lifecycle/target":
+     "Zielunternehmen",
+    "impersonation_warning_cleared/lifecycle/unknown":
+     "Unbekannt",
+    "impersonation_warning_cleared/boolean/true":
+     "Ja",
     "import_apply_tag/lifecycle/customer":
      "Kunde",
     "import_apply_tag/lifecycle/disqualified":
@@ -26051,6 +26457,26 @@
     "invoice_id/lifecycle/unknown":
      "Unbekannt",
     "invoice_id/boolean/true":
+     "Ja",
+    "is_current_primary/lifecycle/customer":
+     "Kunde",
+    "is_current_primary/lifecycle/disqualified":
+     "Disqualifiziert",
+    "is_current_primary/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "is_current_primary/lifecycle/live":
+     "Live",
+    "is_current_primary/lifecycle/onboarding":
+     "Onboarding",
+    "is_current_primary/lifecycle/opportunity":
+     "Chance",
+    "is_current_primary/lifecycle/prospect":
+     "Interessent",
+    "is_current_primary/lifecycle/target":
+     "Zielunternehmen",
+    "is_current_primary/lifecycle/unknown":
+     "Unbekannt",
+    "is_current_primary/boolean/true":
      "Ja",
     "is_default/lifecycle/customer":
      "Kunde",
@@ -29205,7 +29631,7 @@
     "merge_profile_field/text/address_city":
      "Stadt",
     "merge_profile_field/text/address_country":
-     "Ländercode (ISO 3166)",
+     "Land",
     "merge_profile_field/text/address_line1":
      "Straße und Hausnummer",
     "merge_profile_field/text/address_line2":
@@ -29288,6 +29714,8 @@
      "Name",
     "merge_profile_field/text/disposition":
      "Einstufung",
+    "merge_profile_field/text/disqualify_reason_id":
+     "Disqualifizierungsgrund",
     "merge_profile_field/text/domain":
      "Domain",
     "merge_profile_field/text/domains":
@@ -29302,8 +29730,12 @@
      "E-Mail",
     "merge_profile_field/text/emails":
      "E-Mail-Adressen",
+    "merge_profile_field/text/employment_status":
+     "Beschäftigungsstatus",
     "merge_profile_field/text/ended_at":
      "Beendet",
+    "merge_profile_field/text/ended_precision":
+     "Genauigkeit des Enddatums",
     "merge_profile_field/text/expected_arr_minor":
      "Erwarteter ARR",
     "merge_profile_field/text/expected_close_date":
@@ -29336,10 +29768,16 @@
      "Geschichte",
     "merge_profile_field/text/icp":
      "Ideales Kundenprofil",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
+    "merge_profile_field/text/impersonation_warning_cleared":
+     "Warnung vor möglicher Täuschung aufgehoben",
     "merge_profile_field/text/industry":
      "Branche",
     "merge_profile_field/text/invitation_status":
      "Einladungsstatus",
+    "merge_profile_field/text/is_current_primary":
+     "Hauptarbeitgeber",
     "merge_profile_field/text/is_done":
      "Erledigt",
     "merge_profile_field/text/last_name":
@@ -29474,6 +29912,8 @@
      "Widerrufene Freigabe",
     "merge_profile_field/text/revoked_rows":
      "Zurückgenommene Freigaben",
+    "merge_profile_field/text/role":
+     "Rolle",
     "merge_profile_field/text/sales_motion":
      "Vertriebsprozess",
     "merge_profile_field/text/scope":
@@ -29492,6 +29932,8 @@
      "Phase",
     "merge_profile_field/text/started_at":
      "Beginn",
+    "merge_profile_field/text/started_precision":
+     "Genauigkeit des Startdatums",
     "merge_profile_field/text/status":
      "Status",
     "merge_profile_field/text/stopped":
@@ -29512,6 +29954,8 @@
      "Aufgabentyp",
     "merge_profile_field/text/title":
      "Jobtitel",
+    "merge_profile_field/text/trigger":
+     "Qualifiziert durch",
     "merge_profile_field/text/usp":
      "Differenzierung",
     "merge_profile_field/text/value_proposition":
@@ -29551,7 +29995,7 @@
     "merge_profile_field/lifecycle/address_city":
      "Stadt",
     "merge_profile_field/lifecycle/address_country":
-     "Ländercode (ISO 3166)",
+     "Land",
     "merge_profile_field/lifecycle/address_line1":
      "Straße und Hausnummer",
     "merge_profile_field/lifecycle/address_line2":
@@ -29634,6 +30078,8 @@
      "Name",
     "merge_profile_field/lifecycle/disposition":
      "Einstufung",
+    "merge_profile_field/lifecycle/disqualify_reason_id":
+     "Disqualifizierungsgrund",
     "merge_profile_field/lifecycle/domain":
      "Domain",
     "merge_profile_field/lifecycle/domains":
@@ -29648,8 +30094,12 @@
      "E-Mail",
     "merge_profile_field/lifecycle/emails":
      "E-Mail-Adressen",
+    "merge_profile_field/lifecycle/employment_status":
+     "Beschäftigungsstatus",
     "merge_profile_field/lifecycle/ended_at":
      "Beendet",
+    "merge_profile_field/lifecycle/ended_precision":
+     "Genauigkeit des Enddatums",
     "merge_profile_field/lifecycle/expected_arr_minor":
      "Erwarteter ARR",
     "merge_profile_field/lifecycle/expected_close_date":
@@ -29682,10 +30132,16 @@
      "Geschichte",
     "merge_profile_field/lifecycle/icp":
      "Ideales Kundenprofil",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
+    "merge_profile_field/lifecycle/impersonation_warning_cleared":
+     "Warnung vor möglicher Täuschung aufgehoben",
     "merge_profile_field/lifecycle/industry":
      "Branche",
     "merge_profile_field/lifecycle/invitation_status":
      "Einladungsstatus",
+    "merge_profile_field/lifecycle/is_current_primary":
+     "Hauptarbeitgeber",
     "merge_profile_field/lifecycle/is_done":
      "Erledigt",
     "merge_profile_field/lifecycle/last_name":
@@ -29820,6 +30276,8 @@
      "Widerrufene Freigabe",
     "merge_profile_field/lifecycle/revoked_rows":
      "Zurückgenommene Freigaben",
+    "merge_profile_field/lifecycle/role":
+     "Rolle",
     "merge_profile_field/lifecycle/sales_motion":
      "Vertriebsprozess",
     "merge_profile_field/lifecycle/scope":
@@ -29838,6 +30296,8 @@
      "Phase",
     "merge_profile_field/lifecycle/started_at":
      "Beginn",
+    "merge_profile_field/lifecycle/started_precision":
+     "Genauigkeit des Startdatums",
     "merge_profile_field/lifecycle/status":
      "Status",
     "merge_profile_field/lifecycle/stopped":
@@ -29858,6 +30318,8 @@
      "Aufgabentyp",
     "merge_profile_field/lifecycle/title":
      "Jobtitel",
+    "merge_profile_field/lifecycle/trigger":
+     "Qualifiziert durch",
     "merge_profile_field/lifecycle/usp":
      "Differenzierung",
     "merge_profile_field/lifecycle/value_proposition":
@@ -34200,6 +34662,26 @@
      "Unbekannt",
     "revoked_rows/boolean/true":
      "Ja",
+    "role/lifecycle/customer":
+     "Kunde",
+    "role/lifecycle/disqualified":
+     "Disqualifiziert",
+    "role/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "role/lifecycle/live":
+     "Live",
+    "role/lifecycle/onboarding":
+     "Onboarding",
+    "role/lifecycle/opportunity":
+     "Chance",
+    "role/lifecycle/prospect":
+     "Interessent",
+    "role/lifecycle/target":
+     "Zielunternehmen",
+    "role/lifecycle/unknown":
+     "Unbekannt",
+    "role/boolean/true":
+     "Ja",
     "rows/lifecycle/customer":
      "Kunde",
     "rows/lifecycle/disqualified":
@@ -34759,6 +35241,26 @@
     "started_at/lifecycle/unknown":
      "Unbekannt",
     "started_at/boolean/true":
+     "Ja",
+    "started_precision/lifecycle/customer":
+     "Kunde",
+    "started_precision/lifecycle/disqualified":
+     "Disqualifiziert",
+    "started_precision/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "started_precision/lifecycle/live":
+     "Live",
+    "started_precision/lifecycle/onboarding":
+     "Onboarding",
+    "started_precision/lifecycle/opportunity":
+     "Chance",
+    "started_precision/lifecycle/prospect":
+     "Interessent",
+    "started_precision/lifecycle/target":
+     "Zielunternehmen",
+    "started_precision/lifecycle/unknown":
+     "Unbekannt",
+    "started_precision/boolean/true":
      "Ja",
     "state/lifecycle/customer":
      "Kunde",
@@ -35333,6 +35835,26 @@
     "to/lifecycle/unknown":
      "Unbekannt",
     "to/boolean/true":
+     "Ja",
+    "trigger/lifecycle/customer":
+     "Kunde",
+    "trigger/lifecycle/disqualified":
+     "Disqualifiziert",
+    "trigger/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "trigger/lifecycle/live":
+     "Live",
+    "trigger/lifecycle/onboarding":
+     "Onboarding",
+    "trigger/lifecycle/opportunity":
+     "Chance",
+    "trigger/lifecycle/prospect":
+     "Interessent",
+    "trigger/lifecycle/target":
+     "Zielunternehmen",
+    "trigger/lifecycle/unknown":
+     "Unbekannt",
+    "trigger/boolean/true":
      "Ja",
     "true/lifecycle/customer":
      "Kunde",
@@ -37062,6 +37584,12 @@
      "Nicht gesetzt",
     "disqualify_reason/execution":
      "Wird beim Anwenden festgelegt",
+    "disqualify_reason_id/boolean":
+     "Nein",
+    "disqualify_reason_id/empty":
+     "Nicht gesetzt",
+    "disqualify_reason_id/execution":
+     "Wird beim Anwenden festgelegt",
     "domain/boolean":
      "Nein",
     "domain/empty":
@@ -37128,6 +37656,12 @@
      "Nicht gesetzt",
     "emails/execution":
      "Wird beim Anwenden festgelegt",
+    "employment_status/boolean":
+     "Nein",
+    "employment_status/empty":
+     "Nicht gesetzt",
+    "employment_status/execution":
+     "Wird beim Anwenden festgelegt",
     "empty/boolean":
      "Nein",
     "empty/empty":
@@ -37145,6 +37679,12 @@
     "ended_at/empty":
      "Nicht gesetzt",
     "ended_at/execution":
+     "Wird beim Anwenden festgelegt",
+    "ended_precision/boolean":
+     "Nein",
+    "ended_precision/empty":
+     "Nicht gesetzt",
+    "ended_precision/execution":
      "Wird beim Anwenden festgelegt",
     "enrichment_depth/boolean":
      "Nein",
@@ -37326,6 +37866,18 @@
      "Nicht gesetzt",
     "html_body/execution":
      "Wird beim Anwenden festgelegt",
+    "impersonation_warning_carried/boolean":
+     "Nein",
+    "impersonation_warning_carried/empty":
+     "Nicht gesetzt",
+    "impersonation_warning_carried/execution":
+     "Wird beim Anwenden festgelegt",
+    "impersonation_warning_cleared/boolean":
+     "Nein",
+    "impersonation_warning_cleared/empty":
+     "Nicht gesetzt",
+    "impersonation_warning_cleared/execution":
+     "Wird beim Anwenden festgelegt",
     "import_apply_tag/boolean":
      "Nein",
     "import_apply_tag/empty":
@@ -37469,6 +38021,12 @@
     "invoice_id/empty":
      "Nicht gesetzt",
     "invoice_id/execution":
+     "Wird beim Anwenden festgelegt",
+    "is_current_primary/boolean":
+     "Nein",
+    "is_current_primary/empty":
+     "Nicht gesetzt",
+    "is_current_primary/execution":
      "Wird beim Anwenden festgelegt",
     "is_default/boolean":
      "Nein",
@@ -39628,6 +40186,12 @@
      "Nicht gesetzt",
     "revoked_rows/execution":
      "Wird beim Anwenden festgelegt",
+    "role/boolean":
+     "Nein",
+    "role/empty":
+     "Nicht gesetzt",
+    "role/execution":
+     "Wird beim Anwenden festgelegt",
     "rows/boolean":
      "Nein",
     "rows/empty":
@@ -39795,6 +40359,12 @@
     "started_at/empty":
      "Nicht gesetzt",
     "started_at/execution":
+     "Wird beim Anwenden festgelegt",
+    "started_precision/boolean":
+     "Nein",
+    "started_precision/empty":
+     "Nicht gesetzt",
+    "started_precision/execution":
      "Wird beim Anwenden festgelegt",
     "state/boolean":
      "Nein",
@@ -39969,6 +40539,12 @@
     "to/empty":
      "Nicht gesetzt",
     "to/execution":
+     "Wird beim Anwenden festgelegt",
+    "trigger/boolean":
+     "Nein",
+    "trigger/empty":
+     "Nicht gesetzt",
+    "trigger/execution":
      "Wird beim Anwenden festgelegt",
     "true/boolean":
      "Nein",
@@ -40191,7 +40767,7 @@
     "address_city":
      "Thành phố",
     "address_country":
-     "Mã quốc gia (ISO 3166)",
+     "Quốc gia",
     "address_line1":
      "Số nhà và tên đường",
     "address_line2":
@@ -40496,6 +41072,8 @@
      "Ghi chú (không bắt buộc)",
     "disqualify_reason":
      "Lý do",
+    "disqualify_reason_id":
+     "Lý do loại",
     "domain":
      "Tên miền",
     "domains":
@@ -40518,12 +41096,16 @@
      "Nhắc qua email một giờ trước",
     "emails":
      "Địa chỉ email",
+    "employment_status":
+     "Tình trạng việc làm",
     "empty":
      "empty",
     "en":
      "en",
     "ended_at":
      "Kết thúc",
+    "ended_precision":
+     "Độ chính xác ngày kết thúc",
     "enrichment_depth":
      "Phạm vi đọc",
     "execution":
@@ -40584,6 +41166,10 @@
      "href",
     "html_body":
      "Nội dung có định dạng",
+    "impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
+    "impersonation_warning_cleared":
+     "Đã gỡ cảnh báo mạo danh",
     "import_apply_tag":
      "Thêm thẻ",
     "import_close_deal":
@@ -40632,6 +41218,8 @@
      "Trạng thái lời mời",
     "invoice_id":
      "Hóa đơn được viện dẫn",
+    "is_current_primary":
+     "Nơi làm việc chính",
     "is_default":
      "Mặc định cho ngôn ngữ này",
     "is_done":
@@ -41330,6 +41918,8 @@
      "Ghi đè đã thu hồi",
     "revoked_rows":
      "Số ghi đè đã thu hồi",
+    "role":
+     "Vai trò",
     "rows":
      "rows",
     "scheduled_at":
@@ -41386,6 +41976,8 @@
      "start project delivery",
     "started_at":
      "Bắt đầu",
+    "started_precision":
+     "Độ chính xác ngày bắt đầu",
     "state":
      "state",
     "status":
@@ -41444,6 +42036,8 @@
      "Chức danh",
     "to":
      "Đến",
+    "trigger":
+     "Xác nhận bởi",
     "true":
      "true",
     "unavailable_name":
@@ -44784,6 +45378,26 @@
      "Chưa rõ",
     "disqualify_reason/boolean/true":
      "Có",
+    "disqualify_reason_id/lifecycle/customer":
+     "Khách hàng",
+    "disqualify_reason_id/lifecycle/disqualified":
+     "Đã loại",
+    "disqualify_reason_id/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "disqualify_reason_id/lifecycle/live":
+     "Đang vận hành",
+    "disqualify_reason_id/lifecycle/onboarding":
+     "Đang triển khai",
+    "disqualify_reason_id/lifecycle/opportunity":
+     "Cơ hội",
+    "disqualify_reason_id/lifecycle/prospect":
+     "Tiềm năng",
+    "disqualify_reason_id/lifecycle/target":
+     "Mục tiêu",
+    "disqualify_reason_id/lifecycle/unknown":
+     "Chưa rõ",
+    "disqualify_reason_id/boolean/true":
+     "Có",
     "domain/lifecycle/customer":
      "Khách hàng",
     "domain/lifecycle/disqualified":
@@ -45004,6 +45618,26 @@
      "Chưa rõ",
     "emails/boolean/true":
      "Có",
+    "employment_status/lifecycle/customer":
+     "Khách hàng",
+    "employment_status/lifecycle/disqualified":
+     "Đã loại",
+    "employment_status/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "employment_status/lifecycle/live":
+     "Đang vận hành",
+    "employment_status/lifecycle/onboarding":
+     "Đang triển khai",
+    "employment_status/lifecycle/opportunity":
+     "Cơ hội",
+    "employment_status/lifecycle/prospect":
+     "Tiềm năng",
+    "employment_status/lifecycle/target":
+     "Mục tiêu",
+    "employment_status/lifecycle/unknown":
+     "Chưa rõ",
+    "employment_status/boolean/true":
+     "Có",
     "empty/lifecycle/customer":
      "Khách hàng",
     "empty/lifecycle/disqualified":
@@ -45063,6 +45697,26 @@
     "ended_at/lifecycle/unknown":
      "Chưa rõ",
     "ended_at/boolean/true":
+     "Có",
+    "ended_precision/lifecycle/customer":
+     "Khách hàng",
+    "ended_precision/lifecycle/disqualified":
+     "Đã loại",
+    "ended_precision/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "ended_precision/lifecycle/live":
+     "Đang vận hành",
+    "ended_precision/lifecycle/onboarding":
+     "Đang triển khai",
+    "ended_precision/lifecycle/opportunity":
+     "Cơ hội",
+    "ended_precision/lifecycle/prospect":
+     "Tiềm năng",
+    "ended_precision/lifecycle/target":
+     "Mục tiêu",
+    "ended_precision/lifecycle/unknown":
+     "Chưa rõ",
+    "ended_precision/boolean/true":
      "Có",
     "enrichment_depth/text/page":
      "Đọc một trang và chuẩn bị đề xuất bổ sung thông tin",
@@ -45658,6 +46312,46 @@
      "Chưa rõ",
     "html_body/boolean/true":
      "Có",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Khách hàng",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Đã loại",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "impersonation_warning_carried/lifecycle/live":
+     "Đang vận hành",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Đang triển khai",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Cơ hội",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Tiềm năng",
+    "impersonation_warning_carried/lifecycle/target":
+     "Mục tiêu",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Chưa rõ",
+    "impersonation_warning_carried/boolean/true":
+     "Có",
+    "impersonation_warning_cleared/lifecycle/customer":
+     "Khách hàng",
+    "impersonation_warning_cleared/lifecycle/disqualified":
+     "Đã loại",
+    "impersonation_warning_cleared/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "impersonation_warning_cleared/lifecycle/live":
+     "Đang vận hành",
+    "impersonation_warning_cleared/lifecycle/onboarding":
+     "Đang triển khai",
+    "impersonation_warning_cleared/lifecycle/opportunity":
+     "Cơ hội",
+    "impersonation_warning_cleared/lifecycle/prospect":
+     "Tiềm năng",
+    "impersonation_warning_cleared/lifecycle/target":
+     "Mục tiêu",
+    "impersonation_warning_cleared/lifecycle/unknown":
+     "Chưa rõ",
+    "impersonation_warning_cleared/boolean/true":
+     "Có",
     "import_apply_tag/lifecycle/customer":
      "Khách hàng",
     "import_apply_tag/lifecycle/disqualified":
@@ -46137,6 +46831,26 @@
     "invoice_id/lifecycle/unknown":
      "Chưa rõ",
     "invoice_id/boolean/true":
+     "Có",
+    "is_current_primary/lifecycle/customer":
+     "Khách hàng",
+    "is_current_primary/lifecycle/disqualified":
+     "Đã loại",
+    "is_current_primary/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "is_current_primary/lifecycle/live":
+     "Đang vận hành",
+    "is_current_primary/lifecycle/onboarding":
+     "Đang triển khai",
+    "is_current_primary/lifecycle/opportunity":
+     "Cơ hội",
+    "is_current_primary/lifecycle/prospect":
+     "Tiềm năng",
+    "is_current_primary/lifecycle/target":
+     "Mục tiêu",
+    "is_current_primary/lifecycle/unknown":
+     "Chưa rõ",
+    "is_current_primary/boolean/true":
      "Có",
     "is_default/lifecycle/customer":
      "Khách hàng",
@@ -49291,7 +50005,7 @@
     "merge_profile_field/text/address_city":
      "Thành phố",
     "merge_profile_field/text/address_country":
-     "Mã quốc gia (ISO 3166)",
+     "Quốc gia",
     "merge_profile_field/text/address_line1":
      "Số nhà và tên đường",
     "merge_profile_field/text/address_line2":
@@ -49374,6 +50088,8 @@
      "Tên",
     "merge_profile_field/text/disposition":
      "Kết quả xử lý",
+    "merge_profile_field/text/disqualify_reason_id":
+     "Lý do loại",
     "merge_profile_field/text/domain":
      "Tên miền",
     "merge_profile_field/text/domains":
@@ -49388,8 +50104,12 @@
      "Email",
     "merge_profile_field/text/emails":
      "Địa chỉ email",
+    "merge_profile_field/text/employment_status":
+     "Tình trạng việc làm",
     "merge_profile_field/text/ended_at":
      "Kết thúc",
+    "merge_profile_field/text/ended_precision":
+     "Độ chính xác ngày kết thúc",
     "merge_profile_field/text/expected_arr_minor":
      "ARR dự kiến",
     "merge_profile_field/text/expected_close_date":
@@ -49422,10 +50142,16 @@
      "Lịch sử",
     "merge_profile_field/text/icp":
      "Hồ sơ khách hàng lý tưởng",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
+    "merge_profile_field/text/impersonation_warning_cleared":
+     "Đã gỡ cảnh báo mạo danh",
     "merge_profile_field/text/industry":
      "Ngành",
     "merge_profile_field/text/invitation_status":
      "Trạng thái lời mời",
+    "merge_profile_field/text/is_current_primary":
+     "Nơi làm việc chính",
     "merge_profile_field/text/is_done":
      "Xong",
     "merge_profile_field/text/last_name":
@@ -49560,6 +50286,8 @@
      "Ghi đè đã thu hồi",
     "merge_profile_field/text/revoked_rows":
      "Số ghi đè đã thu hồi",
+    "merge_profile_field/text/role":
+     "Vai trò",
     "merge_profile_field/text/sales_motion":
      "Cách bán hàng",
     "merge_profile_field/text/scope":
@@ -49578,6 +50306,8 @@
      "Giai đoạn",
     "merge_profile_field/text/started_at":
      "Bắt đầu",
+    "merge_profile_field/text/started_precision":
+     "Độ chính xác ngày bắt đầu",
     "merge_profile_field/text/status":
      "Trạng thái",
     "merge_profile_field/text/stopped":
@@ -49598,6 +50328,8 @@
      "Loại việc",
     "merge_profile_field/text/title":
      "Chức danh",
+    "merge_profile_field/text/trigger":
+     "Xác nhận bởi",
     "merge_profile_field/text/usp":
      "Điểm khác biệt",
     "merge_profile_field/text/value_proposition":
@@ -49637,7 +50369,7 @@
     "merge_profile_field/lifecycle/address_city":
      "Thành phố",
     "merge_profile_field/lifecycle/address_country":
-     "Mã quốc gia (ISO 3166)",
+     "Quốc gia",
     "merge_profile_field/lifecycle/address_line1":
      "Số nhà và tên đường",
     "merge_profile_field/lifecycle/address_line2":
@@ -49720,6 +50452,8 @@
      "Tên",
     "merge_profile_field/lifecycle/disposition":
      "Kết quả xử lý",
+    "merge_profile_field/lifecycle/disqualify_reason_id":
+     "Lý do loại",
     "merge_profile_field/lifecycle/domain":
      "Tên miền",
     "merge_profile_field/lifecycle/domains":
@@ -49734,8 +50468,12 @@
      "Email",
     "merge_profile_field/lifecycle/emails":
      "Địa chỉ email",
+    "merge_profile_field/lifecycle/employment_status":
+     "Tình trạng việc làm",
     "merge_profile_field/lifecycle/ended_at":
      "Kết thúc",
+    "merge_profile_field/lifecycle/ended_precision":
+     "Độ chính xác ngày kết thúc",
     "merge_profile_field/lifecycle/expected_arr_minor":
      "ARR dự kiến",
     "merge_profile_field/lifecycle/expected_close_date":
@@ -49768,10 +50506,16 @@
      "Lịch sử",
     "merge_profile_field/lifecycle/icp":
      "Hồ sơ khách hàng lý tưởng",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
+    "merge_profile_field/lifecycle/impersonation_warning_cleared":
+     "Đã gỡ cảnh báo mạo danh",
     "merge_profile_field/lifecycle/industry":
      "Ngành",
     "merge_profile_field/lifecycle/invitation_status":
      "Trạng thái lời mời",
+    "merge_profile_field/lifecycle/is_current_primary":
+     "Nơi làm việc chính",
     "merge_profile_field/lifecycle/is_done":
      "Xong",
     "merge_profile_field/lifecycle/last_name":
@@ -49906,6 +50650,8 @@
      "Ghi đè đã thu hồi",
     "merge_profile_field/lifecycle/revoked_rows":
      "Số ghi đè đã thu hồi",
+    "merge_profile_field/lifecycle/role":
+     "Vai trò",
     "merge_profile_field/lifecycle/sales_motion":
      "Cách bán hàng",
     "merge_profile_field/lifecycle/scope":
@@ -49924,6 +50670,8 @@
      "Giai đoạn",
     "merge_profile_field/lifecycle/started_at":
      "Bắt đầu",
+    "merge_profile_field/lifecycle/started_precision":
+     "Độ chính xác ngày bắt đầu",
     "merge_profile_field/lifecycle/status":
      "Trạng thái",
     "merge_profile_field/lifecycle/stopped":
@@ -49944,6 +50692,8 @@
      "Loại việc",
     "merge_profile_field/lifecycle/title":
      "Chức danh",
+    "merge_profile_field/lifecycle/trigger":
+     "Xác nhận bởi",
     "merge_profile_field/lifecycle/usp":
      "Điểm khác biệt",
     "merge_profile_field/lifecycle/value_proposition":
@@ -54286,6 +55036,26 @@
      "Chưa rõ",
     "revoked_rows/boolean/true":
      "Có",
+    "role/lifecycle/customer":
+     "Khách hàng",
+    "role/lifecycle/disqualified":
+     "Đã loại",
+    "role/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "role/lifecycle/live":
+     "Đang vận hành",
+    "role/lifecycle/onboarding":
+     "Đang triển khai",
+    "role/lifecycle/opportunity":
+     "Cơ hội",
+    "role/lifecycle/prospect":
+     "Tiềm năng",
+    "role/lifecycle/target":
+     "Mục tiêu",
+    "role/lifecycle/unknown":
+     "Chưa rõ",
+    "role/boolean/true":
+     "Có",
     "rows/lifecycle/customer":
      "Khách hàng",
     "rows/lifecycle/disqualified":
@@ -54845,6 +55615,26 @@
     "started_at/lifecycle/unknown":
      "Chưa rõ",
     "started_at/boolean/true":
+     "Có",
+    "started_precision/lifecycle/customer":
+     "Khách hàng",
+    "started_precision/lifecycle/disqualified":
+     "Đã loại",
+    "started_precision/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "started_precision/lifecycle/live":
+     "Đang vận hành",
+    "started_precision/lifecycle/onboarding":
+     "Đang triển khai",
+    "started_precision/lifecycle/opportunity":
+     "Cơ hội",
+    "started_precision/lifecycle/prospect":
+     "Tiềm năng",
+    "started_precision/lifecycle/target":
+     "Mục tiêu",
+    "started_precision/lifecycle/unknown":
+     "Chưa rõ",
+    "started_precision/boolean/true":
      "Có",
     "state/lifecycle/customer":
      "Khách hàng",
@@ -55419,6 +56209,26 @@
     "to/lifecycle/unknown":
      "Chưa rõ",
     "to/boolean/true":
+     "Có",
+    "trigger/lifecycle/customer":
+     "Khách hàng",
+    "trigger/lifecycle/disqualified":
+     "Đã loại",
+    "trigger/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "trigger/lifecycle/live":
+     "Đang vận hành",
+    "trigger/lifecycle/onboarding":
+     "Đang triển khai",
+    "trigger/lifecycle/opportunity":
+     "Cơ hội",
+    "trigger/lifecycle/prospect":
+     "Tiềm năng",
+    "trigger/lifecycle/target":
+     "Mục tiêu",
+    "trigger/lifecycle/unknown":
+     "Chưa rõ",
+    "trigger/boolean/true":
      "Có",
     "true/lifecycle/customer":
      "Khách hàng",
@@ -57148,6 +57958,12 @@
      "Chưa đặt",
     "disqualify_reason/execution":
      "Được xác định khi áp dụng",
+    "disqualify_reason_id/boolean":
+     "Không",
+    "disqualify_reason_id/empty":
+     "Chưa đặt",
+    "disqualify_reason_id/execution":
+     "Được xác định khi áp dụng",
     "domain/boolean":
      "Không",
     "domain/empty":
@@ -57214,6 +58030,12 @@
      "Chưa đặt",
     "emails/execution":
      "Được xác định khi áp dụng",
+    "employment_status/boolean":
+     "Không",
+    "employment_status/empty":
+     "Chưa đặt",
+    "employment_status/execution":
+     "Được xác định khi áp dụng",
     "empty/boolean":
      "Không",
     "empty/empty":
@@ -57231,6 +58053,12 @@
     "ended_at/empty":
      "Chưa đặt",
     "ended_at/execution":
+     "Được xác định khi áp dụng",
+    "ended_precision/boolean":
+     "Không",
+    "ended_precision/empty":
+     "Chưa đặt",
+    "ended_precision/execution":
      "Được xác định khi áp dụng",
     "enrichment_depth/boolean":
      "Không",
@@ -57412,6 +58240,18 @@
      "Chưa đặt",
     "html_body/execution":
      "Được xác định khi áp dụng",
+    "impersonation_warning_carried/boolean":
+     "Không",
+    "impersonation_warning_carried/empty":
+     "Chưa đặt",
+    "impersonation_warning_carried/execution":
+     "Được xác định khi áp dụng",
+    "impersonation_warning_cleared/boolean":
+     "Không",
+    "impersonation_warning_cleared/empty":
+     "Chưa đặt",
+    "impersonation_warning_cleared/execution":
+     "Được xác định khi áp dụng",
     "import_apply_tag/boolean":
      "Không",
     "import_apply_tag/empty":
@@ -57555,6 +58395,12 @@
     "invoice_id/empty":
      "Chưa đặt",
     "invoice_id/execution":
+     "Được xác định khi áp dụng",
+    "is_current_primary/boolean":
+     "Không",
+    "is_current_primary/empty":
+     "Chưa đặt",
+    "is_current_primary/execution":
      "Được xác định khi áp dụng",
     "is_default/boolean":
      "Không",
@@ -59714,6 +60560,12 @@
      "Chưa đặt",
     "revoked_rows/execution":
      "Được xác định khi áp dụng",
+    "role/boolean":
+     "Không",
+    "role/empty":
+     "Chưa đặt",
+    "role/execution":
+     "Được xác định khi áp dụng",
     "rows/boolean":
      "Không",
     "rows/empty":
@@ -59881,6 +60733,12 @@
     "started_at/empty":
      "Chưa đặt",
     "started_at/execution":
+     "Được xác định khi áp dụng",
+    "started_precision/boolean":
+     "Không",
+    "started_precision/empty":
+     "Chưa đặt",
+    "started_precision/execution":
      "Được xác định khi áp dụng",
     "state/boolean":
      "Không",
@@ -60055,6 +60913,12 @@
     "to/empty":
      "Chưa đặt",
     "to/execution":
+     "Được xác định khi áp dụng",
+    "trigger/boolean":
+     "Không",
+    "trigger/empty":
+     "Chưa đặt",
+    "trigger/execution":
      "Được xác định khi áp dụng",
     "true/boolean":
      "Không",

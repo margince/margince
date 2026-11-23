@@ -73,6 +73,8 @@ export type TimelineEntry = {
     | "signal";
   title: string;
   isDone?: boolean;
+  // A task's holder and due day, drawn by the caller, which can name a member.
+  terms?: ReactNode;
   atIso: string;
   // `day` when only the date is known, so the row draws no time.
   atPrecision: OccurredPrecision;
@@ -232,13 +234,22 @@ export type TimelineEntry = {
 // The kind in a word beside the row, not an icon alone. A glyph is a thing to
 // recognise and a word is a thing to read. A timeline that mixes mail,
 // meetings and field edits is scanned by reading.
-export const TIMELINE_KIND_LABEL = {
-  email: "timeline.kind.email",
-  meeting: "timeline.kind.meeting",
+//
+// The activity kinds' words are the one table every surface reads.
+export const ACTIVITY_KIND_LABEL = {
   note: "timeline.kind.note",
-  call: "timeline.kind.call",
   task: "timeline.kind.task",
+  call: "timeline.kind.call",
+  meeting: "timeline.kind.meeting",
+  email: "timeline.kind.email",
   message: "timeline.kind.message",
+} as const satisfies Record<
+  components["schemas"]["Activity"]["kind"],
+  MessageKey
+>;
+
+export const TIMELINE_KIND_LABEL = {
+  ...ACTIVITY_KIND_LABEL,
   change: "timeline.kind.change",
   extension: "timeline.kind.extension",
   signal: "timeline.kind.signal",

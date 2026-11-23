@@ -37,6 +37,7 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { MeetingReadyVerb, needsReadiness } from "./worklist.ready";
+import { RowTaskReminder } from "./worklist.reminder";
 import { repliedMessage, replyTarget, WaitingReply } from "./worklist.reply";
 import { answerBelow } from "./worklist.suggestion";
 
@@ -155,12 +156,14 @@ const ANSWER_BY_SOURCE: Partial<
         />
       );
       const replyTo = repliedMessage(item) ? replyTarget(item) : undefined;
+      const menu = <RowTaskReminder item={item} />;
       return replyTo
         ? {
             primary: <WaitingReply item={item} to={replyTo} />,
             equals: complete,
+            menu,
           }
-        : { primary: complete };
+        : { primary: complete, menu };
     },
   },
   // The row's id is the contact's here, which is what the dismissal endpoint

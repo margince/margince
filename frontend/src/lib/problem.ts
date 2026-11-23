@@ -15,10 +15,12 @@ import {
 } from "./problembody";
 import {
   heldByColleagueCopy,
+  legalReviewRefusalCopy,
   PROBLEM_CODE_COPY,
   roleCannotCaptureCopy,
 } from "./problemcodecopy";
 
+export { blankRequired } from "./blankrequired";
 export type { FieldLabel, FieldLabels } from "./faultsentence";
 export {
   faultSentence,
@@ -44,6 +46,7 @@ function problemDetail(
   const copyKey =
     heldByColleagueCopy(problem) ??
     roleCannotCaptureCopy(problem) ??
+    legalReviewRefusalCopy(problem) ??
     PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ??
     fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);
@@ -298,13 +301,13 @@ export function refusalSentences(
       byField.set(fault.field, faultSentence(fault, locale, labels));
     }
   }
-  if (byField.size === 0) {
+  // One refusal with nothing beside a field keeps the problem's own words,
+  // which a code the copy table knows can sharpen.
+  if (byField.size === 0 && unplaced.length < 2) {
     return { byField, rest: problemMessageOf(error, t, fallback, labels) };
   }
-  return {
-    byField,
-    rest: unplaced[0] ? faultSentence(unplaced[0], locale, labels) : null,
-  };
+  const rest = unplaced.map((fault) => faultSentence(fault, locale, labels));
+  return { byField, rest: rest.length > 0 ? rest.join(" ") : null };
 }
 
 // The code of a 409 that says the value is already taken, naming no field.
@@ -323,6 +326,12 @@ export function isVersionSkew(problem: unknown): boolean {
 // telling a reader somebody changed the record when the request never landed.
 export function isVersionSkewOf(error: unknown): boolean {
   return error instanceof ProblemError && isVersionSkew(error.problem);
+}
+
+// A 403 whose code says an owner filter names someone the reader may not
+// measure. A report the reader may not run at all has another code.
+export function isOwnerNotMeasurable(problem: unknown): boolean {
+  return problemCode(problem) === "owner_not_measurable";
 }
 
 // A 409 whose code names the "already decided" race. Another caller (or the
@@ -354,6 +363,13 @@ export function refusalShown(
 ): boolean {
   const statuses = meta?.[SHOWN_REFUSALS];
   return Array.isArray(statuses) && statuses.includes(problemStatus(error));
+}
+
+// A read of a record or link that no retry can answer. The reader may see none
+// (404, a row-scope miss too), it expired (410), or the id or token is invalid (422).
+export function isGone(err: unknown): boolean {
+  const status = problemStatus(err);
+  return status === 404 || status === 410 || status === 422;
 }
 
 // The HTTP status out of a thrown RFC-7807 body, or 0 when the failure carried

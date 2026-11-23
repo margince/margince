@@ -5,7 +5,8 @@
 Margince is made to be worked in by AI agents as much as by humans. Here you find what an agent is allowed to do, and what waits for you. You also find what it is refused outright, and how a passport is created and revoked.
 
 For what the AI makes (drafts, document reads, briefs), see
-[What the AI does, and what it does not](what-the-ai-does.md).
+[What the AI does, and what it does not](what-the-ai-does.md). Which assistants we
+tested, and how well each did, is on [Which AI can I use with Margince?](which-ai-you-can-use.md).
 
 There is one rule under everything here:
 
@@ -115,7 +116,7 @@ A disconnected tool then leaves the list. The link below it that counts the disc
 Also called: kill switch, remove an agent, disconnect, delete an API key.
 
 ### How do I let Margince work overnight for me?
-To let Margince prepare your Morning brief overnight, open **Settings → Connections**. On the **Overnight preparation** card, turn on **Let Margince prepare the Morning brief overnight**.
+To let Margince prepare your Morning brief overnight, open **Settings → Account**. On the **Overnight preparation** card, turn on **Prepare my Morning brief overnight**.
 It acts as you and sees only what you can see; it reads and writes but can never send. If it says **Overnight authority expired**, turn it off and on again to renew it.
 Also called: overnight agent, scheduled agent, background agent.
 
@@ -326,8 +327,7 @@ so a change applies at once rather than at the next sign-in.
 A scheduled agent runs while you are away, so it cannot take your rights from
 a session you are not in. You have to give them in advance. In
 the app this is the **Overnight preparation** card in **Settings →
-Connections**, with the switch **Let Margince prepare the Morning brief
-overnight**. You were asked the same question once when you first joined.
+Account**, with the switch **Prepare my Morning brief overnight**. If you connected a mailbox when you first joined, you were asked the same question then.
 
 Turning it on creates your own passport in the same step. The overnight run
 then carries a passport that is yours. So everything it does is limited to

@@ -50,7 +50,7 @@ What the switch cannot promise:
 
 Also called: works council, Betriebsrat, figures per rep, team figures.
 
-## The four compliance documents, in order
+## Staff mail capture documents for Germany
 
 1. **Tell the colleagues whose mail will be read**: the
    *Beschäftigteninformation* (Art. 13 GDPR). Do it before a mailbox is
@@ -81,6 +81,14 @@ Also called: works council, Betriebsrat, figures per rep, team figures.
 With Germany chosen as the law, the templates are on **Settings → Compliance →
 Jurisdiction**, to read and download. The English set is for reading and for
 passing around inside the company; the German versions are the ones to sign.
+They are drafts written by AI, not legal advice, so have a lawyer check
+them first.
+
+## Vietnamese staff mail capture documents
+
+Choose the Vietnamese rules in **Settings → Compliance → Jurisdiction** to find the
+staff notice, its English copy and the receipt. Fill in the Vietnamese notice and give
+it to staff before connecting their mailboxes. Keep the signed receipt as a record.
 
 ## What Margince gives you to point at
 
@@ -102,12 +110,14 @@ templates have blanks to fill in. For erasure, access requests, retention and co
 
 ## Which law applies
 
-Margince follows one law for the whole installation. An admin chooses it at first setup, or later on **Settings → Compliance → Jurisdiction**. The page shows what the choice changes:
+An admin chooses the law of the default company at first setup, or later on **Settings → Compliance → Jurisdiction**. Each further legal entity follows its own law, as the end of this page says. The page shows what the choice changes:
 
 - how long business mail is kept before anyone may delete it;
 - the due date of a privacy request;
 - who your company says it is, and whom to ask about data, at the foot of its mail;
 - the sales-mail rules for recipients under that law.
+
+The rules, deadlines and documents on that page are drafts written by AI, not legal advice. The page marks them with \* and says so at its foot. Have a lawyer check them before you use them.
 
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
 
@@ -159,5 +169,9 @@ Vietnamese law does not ask for sales mail to go out from a Vietnamese mail serv
 How long business mail is kept follows the legal entity of the colleague it belongs to. That is the colleague who sent it, or whose mailbox it arrived in. Mail that names no colleague follows the owner of the contact or deal it is filed under. A legal entity that follows another law keeps its colleagues' mail under that law, but never for a shorter time than the law chosen here. Mail that belongs to nobody uses the law chosen here. When the colleagues of one mail work under two different laws, the mail is kept for the longer time.
 
 When a colleague moves to another legal entity, or a legal entity changes its law, mail already kept keeps its time.
+
+Each legal entity has a **Country**, where its address is, and a **Jurisdiction**, the law it follows. The two may differ: a company with its address in Germany may follow Italian law. The default company follows the law chosen on this page, and its own form shows that law without a field to change it. You choose the **Jurisdiction** of each further company on its form under **Settings → Company profile → Legal entities**. With more than one legal entity, the page lists each one with its law.
+
+A contact or lead follows the legal entity of the colleague who owns it. That entity sets when a privacy request about the contact is due, and which company the contact's privacy page names. Mail that Margince sends to the contact on its own, such as a confirmation request, goes out for that company too. A contact with no owner follows the default company.
 
 A change to a law that keeps mail for a shorter time does not cut that time for mail you already hold. That mail keeps the old time, and the page says until when.

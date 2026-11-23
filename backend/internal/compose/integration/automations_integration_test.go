@@ -92,8 +92,8 @@ func assertAutomationCatalogIsClosed(t *testing.T, e *apptest.AppEnv) {
 		if !ok {
 			t.Fatalf("unexpected or repeated recipe %q", entry.Key)
 		}
-		if entry.Tier != registered.Tier {
-			t.Fatalf("recipe %s tier = %q, want %q", entry.Key, entry.Tier, registered.Tier)
+		if entry.Tier != registered.Tier() {
+			t.Fatalf("recipe %s tier = %q, want %q", entry.Key, entry.Tier, registered.Tier())
 		}
 		if entry.ParamsSchema == nil {
 			t.Fatalf("starter %s ships no params_schema — the editor form has nothing to render", entry.Key)
@@ -107,10 +107,11 @@ func assertBootstrapSeededStarters(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	var listed struct {
 		Data []struct {
-			ID      string `json:"id"`
-			Key     string `json:"key"`
-			Status  string `json:"status"`
-			Version int    `json:"version"`
+			ID         string `json:"id"`
+			Key        string `json:"key"`
+			Status     string `json:"status"`
+			SetupState string `json:"setup_state"`
+			Version    int    `json:"version"`
 		} `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/automations", nil, nil, &listed); status != http.StatusOK {
@@ -126,12 +127,12 @@ func assertBootstrapSeededStarters(t *testing.T, e *apptest.AppEnv) {
 		t.Fatalf("bootstrap seeded %d automations, want %d", len(listed.Data), len(expected))
 	}
 	for _, a := range listed.Data {
-		entry, ok := expected[a.Key]
-		if !ok {
+		if _, ok := expected[a.Key]; !ok {
 			t.Fatalf("unexpected or repeated starter %q", a.Key)
 		}
+		// A starter ships on only when its setup is complete, as its card reads it.
 		want := "enabled"
-		if entry.Validate(nil) != nil || entry.Action == string(automation.ActionTypeDraftEmail) {
+		if a.SetupState == "needs_setup" {
 			want = "paused"
 		}
 		if a.Status != want {

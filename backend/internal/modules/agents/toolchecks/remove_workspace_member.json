@@ -2,6 +2,7 @@
   "verb": "remove_workspace_member",
   "checks": [
     "activity.read",
+    "activity.update",
     "admin",
     "company.read",
     "contact.read",

@@ -128,8 +128,9 @@ func frontendGen(manifests []derivedManifest, verbs []declaredVerb, merged map[s
 	b.WriteString("[\n")
 	for _, m := range manifests {
 		name := m.Unit.Name
-		fmt.Fprintf(&b, "  {\n    name: %s,\n    secretScope: %s,\n    title: %s,\n    verbs: [\n",
-			tsString(name), tsString(unitSecretScope(m.Manifest)), tsString(unitTitleKey(name, merged)))
+		fmt.Fprintf(&b, "  {\n    name: %s,\n    secretScope: %s,\n    title: %s,\n    summary: %s,\n    verbs: [\n",
+			tsString(name), tsString(unitSecretScope(m.Manifest)),
+			tsString(unitCopyKey(name, "title", merged)), tsString(unitCopyKey(name, "summary", merged)))
 		for _, d := range verbs {
 			if string(d.verb.Unit) != name {
 				continue

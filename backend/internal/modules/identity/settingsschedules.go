@@ -24,7 +24,10 @@ import (
 
 // scheduleStore stores a pass interval. The worker reads it as a system actor,
 // through the read gate, so it is not machinery-applied.
-var scheduleStore = config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb}
+var scheduleStore = config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, Cacheable: true}
+
+// uncachedScheduleStore is for the passes that carry out retention and run agents.
+var uncachedScheduleStore = config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb}
 
 const (
 	day  = 24 * time.Hour
@@ -52,7 +55,7 @@ var (
 		Key: "installation.agent_runner_interval_seconds", Env: "MARGINCE_INSTALLATION_AGENT_RUNNER_INTERVAL_SECONDS",
 		Type: config.Int, Default: seconds(30 * time.Second), Min: seconds(10 * time.Second), Max: seconds(time.Hour),
 		Doc: "Seconds between the passes of the agent scheduler.",
-	}, scheduleStore)
+	}, uncachedScheduleStore)
 	WebhookRetryIntervalSeconds = config.DefineStored(config.Spec[int]{
 		Key: "installation.webhook_retry_interval_seconds", Env: "MARGINCE_INSTALLATION_WEBHOOK_RETRY_INTERVAL_SECONDS",
 		Type: config.Int, Default: seconds(30 * time.Second), Min: seconds(10 * time.Second), Max: seconds(time.Hour),
@@ -77,7 +80,7 @@ var (
 		Key: "installation.retention_sweep_interval_seconds", Env: "MARGINCE_INSTALLATION_RETENTION_SWEEP_INTERVAL_SECONDS",
 		Type: config.Int, Default: seconds(day), Min: seconds(time.Hour), Max: seconds(week),
 		Doc: "Seconds between the retention sweeps.",
-	}, scheduleStore)
+	}, uncachedScheduleStore)
 	GeocodeBackfillIntervalSeconds = config.DefineStored(config.Spec[int]{
 		Key: "installation.geocode_backfill_interval_seconds", Env: "MARGINCE_INSTALLATION_GEOCODE_BACKFILL_INTERVAL_SECONDS",
 		Type: config.Int, Default: seconds(time.Hour), Validate: offOrWithin(5*time.Minute, week),

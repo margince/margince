@@ -20,17 +20,6 @@ type InstallationBrand func(context.Context) (*crmcontracts.InstallationBrand, e
 // the context would be refused. It asks that list's own resolution and clauses.
 type RefusedFilters func(context.Context) ([]string, error)
 
-// InlineSendReview reads whether the composer decides at Send, for the caller
-// bound on the context.
-type InlineSendReview func(context.Context) (bool, error)
-
-// WithInlineSendReview binds the pilot switch /me carries. Without it /me
-// omits it, and a client keeps the composer it has.
-func (h Handlers) WithInlineSendReview(read InlineSendReview) Handlers {
-	h.inlineSendReview = read
-	return h
-}
-
 // WithInstallationBrand binds the brand read /me carries. Without it /me omits
 // the brand, and a client draws the product's own mark.
 func (h Handlers) WithInstallationBrand(brand InstallationBrand) Handlers {
@@ -58,18 +47,14 @@ func (h Handlers) me(ctx context.Context, id Identity) (crmcontracts.MeResponse,
 	resp := h.meResponse(ctx, id)
 	asCaller := actorCtx(ctx, id)
 	var err error
+	if resp.RoleNames, err = h.svc.heldRoleNames(asCaller, id.Roles); err != nil {
+		return crmcontracts.MeResponse{}, err
+	}
 	if resp.Authorization.RefusedDealFilters, err = refusedFilters(asCaller, h.refusedDealFilters); err != nil {
 		return crmcontracts.MeResponse{}, err
 	}
 	if resp.Authorization.RefusedLeadFilters, err = refusedFilters(asCaller, h.refusedLeadFilters); err != nil {
 		return crmcontracts.MeResponse{}, err
-	}
-	if h.inlineSendReview != nil {
-		on, err := h.inlineSendReview(asCaller)
-		if err != nil {
-			return crmcontracts.MeResponse{}, err
-		}
-		resp.InlineSendReview = &on
 	}
 	if h.installationBrand == nil {
 		return resp, nil

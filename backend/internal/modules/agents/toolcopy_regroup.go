@@ -77,7 +77,9 @@ var changeActivitiesCopy = toolCopy{
 	Limits: "relink and relink_many usually run at once; filing under a project, or a move the " +
 		"installation's policy holds, answers staged with an approval id, and nothing has moved " +
 		"until the retry answers. Tell the user before you file under a project, " +
-		"which only a member can undo from the activity. attach checks the record first; read list_documents before " +
+		"which only a member can undo from the activity. Before log, read the record's recent " +
+		"activity with read_context about catch_up: a call or meeting already on it is reported as " +
+		"there, never logged a second time. attach checks the record first; read list_documents before " +
 		"attaching the same file again. A logged meeting names who takes part: leave off anyone " +
 		"whose invitation did not go out.",
 	Instead: "Use schedule_meeting to book a meeting still to come, change_state with " +

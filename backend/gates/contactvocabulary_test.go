@@ -18,9 +18,9 @@ package gates
 // directions and had no counterpart below it; this is that counterpart.
 //
 // WHAT THIS DOES NOT COVER, said rather than left to be assumed. The word
-// `contact` itself, which this tree already used for four other things before
+// `contact` itself, which this tree already used for three other things before
 // the rename — a `graph_contact_edge`, a `company_fact` whose field is
-// `contact_email`, a partner's `last_contact_at`, a lead that has been
+// `contact_email`, a lead that has been
 // `contacted`. Telling a NEW second spelling of the record apart from those is
 // judgement per occurrence, so this test does not pretend to: it refuses the
 // retired word and says nothing about the new one.
@@ -199,7 +199,7 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/internal/compose/meetingbrief/advancecopy.go":   "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/compose/meetingbrief/objectivecopy.go": "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/compose/metriccopy/metriccopy.go":      "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/reportinglabelcopy.go":         "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/metriccopy/labels.go":          "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/modules/reporting/statuscopy.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/shared/kernel/dealrole/words.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
 
@@ -231,6 +231,8 @@ var retired = gatekit.Waive(map[string]string{
 		"licence grants rights to any person, a legal term that ships verbatim with the data",
 	"backend/internal/platform/cldrzone/data/LICENSE-cldr.txt": "the same Unicode licence, " +
 		"shipped beside the zone list this package reads",
+	"backend/internal/modules/deals/fonts/LICENSE": "the SIL Open Font License of the embedded " +
+		"offer PDF faces names any person who contributed, a legal term that ships verbatim with the fonts",
 	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
 		"docscodeofconduct_test.go; its people are human beings, never this record",
 	"LICENSING.md": "counsel's explanation of the CLA, kept verbatim beside it",

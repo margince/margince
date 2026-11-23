@@ -143,7 +143,8 @@ func TestEveryAuditEntryNamesTheRecordItIsAbout(t *testing.T) {
 	want["Fleet retrofit"] = e.SeedDeal(t, "Fleet retrofit",
 		ids.From[ids.PipelineKind](want["Retrofit pipeline"]), ids.From[ids.StageKind](want["Site survey"]), nil)
 	project, err := ProjectsStore(e.Pool).CreateProject(admin, projects.CreateProjectInput{
-		Name: "Depot rollout", CompanyID: ids.From[ids.CompanyKind](company),
+		Source: "manual",
+		Name:   "Depot rollout", CompanyID: ids.From[ids.CompanyKind](company),
 	})
 	if err != nil {
 		t.Fatalf("creating a project: %v", err)

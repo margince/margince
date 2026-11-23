@@ -85,6 +85,8 @@ type StubOpts = {
   // run, which is why that case went unrendered until somebody opened the page.
   assuranceStatus?: number;
   unreadSource?: boolean;
+  // Answers every call with this refusal instead of storing it.
+  callRefusal?: { status: number; body: Record<string, unknown> };
 };
 
 function forecastStub(opts: StubOpts = {}) {
@@ -103,6 +105,9 @@ function forecastStub(opts: StubOpts = {}) {
         body,
         request ? request.headers.get("Idempotency-Key") : null,
       );
+      if (opts.callRefusal) {
+        return jsonResponse(opts.callRefusal.body, opts.callRefusal.status);
+      }
       return jsonResponse({ id: "c1", ...body }, 201);
     }
     if (url.includes("/forecast/assurance/exceptions")) {
@@ -156,12 +161,14 @@ async function openCallEditor(
 
 describe("ForecastView", () => {
   // The same two facts the Overview's caption states: the whole period, and
-  // the instant its actuals run through.
+  // the instant its actuals run through on the clock that counted them.
   it("names the whole period and the cutoff as two facts", async () => {
     vi.stubGlobal("fetch", forecastStub());
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
     const period = await screen.findByText("1 April – 30 June");
-    const through = screen.getByText("Actuals through 14/05/2026, 11:00");
+    const through = screen.getByText(
+      "Actuals through 14/05/2026, 11:00 · Central European Summer Time · UTC+2",
+    );
     expect(period.parentElement).toBe(through.parentElement);
   });
 
@@ -489,6 +496,48 @@ describe("ForecastView", () => {
     expect(posted[0].amount_minor).toBe(0);
   });
 
+  it("refuses a negative amount in the editor, before any request", async () => {
+    const posted: Record<string, unknown>[] = [];
+    vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await openCallEditor(user, "-500");
+
+    expect(screen.getByText(en["forecast.callAmountNegative"])).toBeTruthy();
+    const save = screen.getByRole("button", { name: /Save forecast/i });
+    expect((save as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(save);
+    expect(posted).toHaveLength(0);
+  });
+
+  it("says why a refused call was not saved and keeps the editor open", async () => {
+    vi.stubGlobal(
+      "fetch",
+      forecastStub({
+        callRefusal: {
+          status: 422,
+          body: {
+            type: "about:blank",
+            title: "Unprocessable Entity",
+            status: 422,
+            detail: "The server refused this amount.",
+          },
+        },
+      }),
+    );
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+
+    const user = userEvent.setup();
+    await openCallEditor(user);
+    await user.click(screen.getByRole("button", { name: /Save forecast/i }));
+
+    expect(
+      await screen.findByText("The server refused this amount."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Save forecast/i })).toBeTruthy();
+  });
+
   // An empty note is no note. Sent as "", it claims the author wrote something
   // blank, and a reader cannot tell that from a note they cannot see.
   it("sends no note at all when the author wrote none", async () => {
@@ -587,6 +636,22 @@ describe("SharedForecastView", () => {
     }
   });
 
+  it("says a closed or unknown share link is gone and offers no Retry", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({ status: 404, detail: "not found" }, 404),
+      ),
+    );
+    render(<SharedForecastView token="closed" />);
+    expect(
+      await screen.findByText(en["reporting.sharedForecastGone"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["common.retry"] }),
+    ).toBeNull();
+  });
+
   const ranged = {
     range_low_minor: 90_000,
     range_high_minor: 210_000,
@@ -598,6 +663,7 @@ describe("SharedForecastView", () => {
         jsonResponse({
           kind,
           target: "forecast",
+          as_of: "2026-05-14T09:00:00Z",
           withheld: false,
           readings: readings({ ...ranged, ...over }),
         }),
@@ -606,7 +672,7 @@ describe("SharedForecastView", () => {
     render(<SharedForecastView token="fixture" />);
   }
 
-  it("shows a live share's landing basis beside its modelled finish", async () => {
+  it("shows a live share's landing basis beside its modelled finish, and names the zone it was read in", async () => {
     share("live", {
       landing: {
         amount_minor: 160_000,
@@ -617,6 +683,11 @@ describe("SharedForecastView", () => {
     });
     expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
     expect(screen.getByText("Modelled quarter finish")).toBeTruthy();
+    expect(
+      screen.getByText(
+        /^Live report · .+ · Central European Summer Time · UTC\+2$/,
+      ),
+    ).toBeTruthy();
   });
 
   it("says a snapshot from before the landing was kept has no recorded basis", async () => {

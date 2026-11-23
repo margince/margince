@@ -16,7 +16,7 @@ import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
-import { formatDate, formatMoney } from "../../format/format";
+import { formatDateAbbrev, formatMoneyWhole } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
@@ -63,9 +63,8 @@ function contractsState(
   mayRead: boolean,
   count: number,
 ): SectionState {
-  // A reader without the grant is WITHHELD, never empty: "this account has no
-  // agreements" and "you may not see them" are different sentences, and only
-  // one of them is about the account.
+  // A reader without the grant is WITHHELD, never empty: "no agreements" and
+  // "you may not see them" are different sentences.
   if (!mayRead) {
     return "withheld";
   }
@@ -85,31 +84,21 @@ export function CompanyContractsCard({
   companyId,
 }: Readonly<{ companyId: string }>) {
   const t = useT();
-  // `useCan` for the READ — the grant alone decides what may be shown. The
-  // three below gate MUTATING controls, so they take the seat as well: the
-  // server clamps the licensing seat on the HTTP method, before RBAC runs, and a
-  // read seat holding a full contract grant would otherwise be offered verbs
-  // whose every press is refused.
-  //
-  // ADD and EDIT are different grants, because they are different writes:
-  // createContract demands `create` (contract_write.go:49) and patchContract
-  // demands `update` (contract_lifecycle.go:84). One `mayWrite` for both offered
-  // Add to a principal who may only correct existing paper, and hid it from one
-  // who may only file new.
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
+  // `useCan` for the read. The three below gate writes and take the seat too,
+  // since the server clamps a read seat before RBAC runs. Add and Edit differ:
+  // createContract demands `create` and patchContract `update`.
   const mayRead = useCan("contract", "read");
   const mayAdd = useCanWrite("contract", "create");
   const mayEdit = useCanWrite("contract", "update");
   const mayArchive = useCanWrite("contract", "delete");
-  // Renew asserts BOTH grants at once (Store.Renew, contract_lifecycle.go: it
-  // requires contract_write's create AND contract_lifecycle's update in one
-  // call, because a renewal both creates the successor and supersedes the
-  // predecessor) — so a seat holding only one of them would see the verb and
-  // have every press refused.
+  // Renew asks for both grants at once (Store.Renew): it creates the successor
+  // and supersedes the predecessor, so one grant alone is refused every time.
   const mayRenew = mayAdd && mayEdit;
   const [activeOnly, setActiveOnly] = useState(false);
-  // `editing` carries the contract being corrected; undefined means the form is
-  // adding a new one. One form serves both, because "record what we agreed" and
-  // "fix what I typed wrong" are the same fields.
+  // `editing` is the contract being corrected, undefined for a new one: one
+  // form serves both, since recording and correcting take the same fields.
   const [editing, setEditing] = useState<Contract | undefined>();
   const [formOpen, setFormOpen] = useState(false);
 
@@ -129,6 +118,7 @@ export function CompanyContractsCard({
     },
   });
   const contracts = query.data ?? [];
+  const names = menuNames(contracts, locale, readerZone);
   const state = contractsState(
     query.isPending,
     query.isError,
@@ -139,10 +129,8 @@ export function CompanyContractsCard({
 
   return (
     <>
-      {/* A SIBLING of the panel, not a child: a panel draws its rows only when
-          the section has them, so a modal nested inside would never mount on an
-          account with no agreements — the account the add button most exists
-          for. */}
+      {/* Beside the panel, not in it: a panel without rows draws none, so a
+          nested form would never open on an account with no agreements. */}
       <ContractForm
         companyId={companyId}
         contract={editing}
@@ -191,10 +179,11 @@ export function CompanyContractsCard({
               </EmptyState>
             </PanelBody>
           ) : (
-            contracts.map((contract) => (
+            contracts.map((contract, index) => (
               <ContractRow
                 key={contract.id}
                 contract={contract}
+                menuName={names[index] ?? contract.title}
                 companyId={companyId}
                 mayWrite={mayEdit}
                 mayArchive={mayArchive}
@@ -222,8 +211,30 @@ export function CompanyContractsCard({
   );
 }
 
+// A renewal starts with its predecessor's title. So a row's menu also names
+// its number or first day, then the lowest "(n)" no other name holds.
+function menuNames(contracts: Contract[], locale: Locale, zone: string) {
+  const day = (on?: string | null) => on && formatDateAbbrev(on, locale, zone);
+  const names = contracts.map((row) =>
+    [row.title, row.contract_number ?? day(row.starts_on)]
+      .filter(Boolean)
+      .join(", "),
+  );
+  const shared = (name: string) =>
+    names.indexOf(name) !== names.lastIndexOf(name);
+  const taken = new Set(names.filter((name) => !shared(name)));
+  return names.map((name) => {
+    let place = 1;
+    while (shared(name) && taken.has(`${name} (${place})`)) place += 1;
+    const unique = shared(name) ? `${name} (${place})` : name;
+    taken.add(unique);
+    return unique;
+  });
+}
+
 function ContractRow({
   contract,
+  menuName,
   companyId,
   mayWrite,
   mayArchive,
@@ -231,6 +242,7 @@ function ContractRow({
   onEdit,
 }: Readonly<{
   contract: Contract;
+  menuName: string;
   companyId: string;
   mayWrite: boolean;
   mayArchive: boolean;
@@ -330,10 +342,13 @@ function ContractRow({
           </Badge>
         )}
         {(mayWrite || mayArchive || mayRenewThis) && (
-          <OverflowMenu label={t("contracts.rowMenu")}>
-            {/* Menu items are Buttons, like every other menu in the product.
-                A bare <button> here drew as centred unstyled text inside a
-                panel that was otherwise the design system's. */}
+          <OverflowMenu
+            label={t("table.rowActions", {
+              name: menuName,
+            })}
+          >
+            {/* Menu items are Buttons, as in every other menu: a bare <button>
+                drew as unstyled text. */}
             {mayWrite && (
               <Button onClick={onEdit}>{t("contracts.edit")}</Button>
             )}
@@ -400,7 +415,7 @@ function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
   const t = useT();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
-  const on = (date: string) => formatDate(date, locale, readerZone);
+  const on = (date: string) => formatDateAbbrev(date, locale, readerZone);
   if (!contract.starts_on && !contract.ends_on) {
     return <span>{t("contracts.noTerm")}</span>;
   }
@@ -439,7 +454,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
     return (
       <Badge tone="warning">
         {t("contracts.endsOn", {
-          when: formatDate(
+          when: formatDateAbbrev(
             contract.cancellation_effective_on,
             locale,
             readerZone,
@@ -452,7 +467,7 @@ function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
     return (
       <span className="t-caption">
         {t("contracts.renewsOn", {
-          when: formatDate(contract.renewal_on, locale, readerZone),
+          when: formatDateAbbrev(contract.renewal_on, locale, readerZone),
         })}
       </span>
     );
@@ -472,7 +487,7 @@ export function contractAmount(contract: Contract, locale: Locale): string {
   if (contract.value_minor == null || !contract.currency) {
     return "";
   }
-  return formatMoney(contract.value_minor, contract.currency, locale);
+  return formatMoneyWhole(contract.value_minor, contract.currency, locale);
 }
 
 export function basisLabel(contract: Contract): MessageKey | "" {

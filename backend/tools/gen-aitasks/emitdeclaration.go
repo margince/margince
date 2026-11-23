@@ -37,7 +37,7 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 
 	writeAgentTable(b, c, taskNames)
 
-	b.WriteString("// noPayloadTasks are the tasks whose content must NEVER reach\n")
+	b.WriteString("// noPayloadTasks are the tasks, and the embed workload, whose content must NEVER reach\n")
 	b.WriteString("// ai_call_payload, whatever the deployment's capture posture says. The\n")
 	b.WriteString("// contract pins the prohibition as a hard property, not a default.\n")
 	b.WriteString("var noPayloadTasks = map[Task]bool{\n")
@@ -46,9 +46,26 @@ func writeDeclarationTables(b *strings.Builder, c contract, taskNames []string) 
 			fmt.Fprintf(b, "\t%s: true,\n", taskConst(name))
 		}
 	}
+	// The embed lane traces under TaskEmbeddings, so the workload's own
+	// prohibition joins the one table every capture site reads.
+	if c.Embed.NoPayload {
+		b.WriteString("\tTaskEmbeddings: true,\n")
+	}
 	b.WriteString("}\n\n")
 	b.WriteString("// NoPayload reports the contract's payload prohibition for a task.\n")
 	b.WriteString("func NoPayload(t Task) bool { return noPayloadTasks[t] }\n\n")
+
+	b.WriteString("// inputScaledTasks take longer the larger their input, so certified latency\n")
+	b.WriteString("// over fixed fixtures sets no time limit for them.\n")
+	b.WriteString("var inputScaledTasks = map[Task]bool{\n")
+	for _, name := range taskNames {
+		if c.Tasks[name].LatencyScalesWithInput {
+			fmt.Fprintf(b, "\t%s: true,\n", taskConst(name))
+		}
+	}
+	b.WriteString("}\n\n")
+	b.WriteString("// LatencyScalesWithInput reports the contract's latency_scales_with_input for a task.\n")
+	b.WriteString("func LatencyScalesWithInput(t Task) bool { return inputScaledTasks[t] }\n\n")
 
 	writeSubjectRestrictionTable(b, c, taskNames)
 

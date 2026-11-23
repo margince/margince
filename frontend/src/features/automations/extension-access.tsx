@@ -16,7 +16,6 @@ import {
   type QueryLike,
   QueryStates,
 } from "../../design-system/querystates";
-import { INTL_LOCALE } from "../../format/format";
 import { objectLabel } from "../../format/rbacobjects";
 import { useLocale, useT } from "../../i18n";
 import { useCan, useCanMutate } from "../../lib/capability";
@@ -34,6 +33,7 @@ import {
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import "./extension-access.css";
+import { listFormat } from "../../format/formatters";
 import {
   EXTENSIONS_KEY,
   type ExtensionUnit,
@@ -318,7 +318,7 @@ function UnitCard({
             title={t("extAccess.nobodyReadsTitle")}
           >
             {t("extAccess.nobodyReads", {
-              object: new Intl.ListFormat(INTL_LOCALE[locale], {
+              object: listFormat(locale, {
                 style: "long",
                 type: "conjunction",
               }).format(unread.map((object) => objectLabel(unit.name, object))),

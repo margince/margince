@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type RefObject, useEffect, useRef, useState } from "react";
-import { formatNumber, INTL_LOCALE } from "../format/format";
+import { formatNumber } from "../format/format";
+import { listFormat } from "../format/formatters";
 import { type Locale, translatePlural } from "../i18n";
 import type { BoardColumn, BoardRecord } from "./pipelineboard";
 
@@ -28,7 +29,7 @@ export function matchesTitle<Record extends BoardRecord>(
     (sum, column) => sum + (column.count ?? column.deals.length),
     0,
   );
-  const names = new Intl.ListFormat(INTL_LOCALE[locale], {
+  const names = listFormat(locale, {
     style: "long",
     type: "conjunction",
   }).format(columns.map((column) => column.label));
@@ -41,6 +42,31 @@ export function matchesTitle<Record extends BoardRecord>(
 /** Brings one column into view, leaving it where it is if it already shows. */
 export function scrollColumnIn(node: HTMLElement | undefined) {
   node?.scrollIntoView?.(scrollIn);
+}
+
+/**
+ * Brings a column the reader unfolds into view once it has opened. Opened, a
+ * fold takes a whole stage width and can end past the board's edge. The stage
+ * just asked for would then be the one cut off. Returns the call a fold makes
+ * as it is pressed; `openStages` lists the stages drawn open.
+ */
+export function useUnfoldIntoView(
+  sections: RefObject<Map<string, HTMLElement>>,
+  openStages: readonly string[],
+): (stage: string) => void {
+  const unfolding = useRef<string | undefined>(undefined);
+  // A string, so a new array with the same stages is no change.
+  const openKey = openStages.join("\n");
+  useEffect(() => {
+    const stage = unfolding.current;
+    unfolding.current = undefined;
+    if (stage !== undefined && openKey.split("\n").includes(stage)) {
+      scrollColumnIn(sections.current.get(stage));
+    }
+  }, [openKey, sections]);
+  return (stage) => {
+    unfolding.current = stage;
+  };
 }
 
 /**

@@ -237,7 +237,14 @@ describe("BlockedDomainsCard", () => {
 
   it("refuses the write until there is a reason somebody can review", async () => {
     const user = userEvent.setup();
-    mount(OPS, { [LIST]: () => jsonResponse({ data: [], total: 0 }) });
+    const sent: unknown[] = [];
+    mount(OPS, {
+      [LIST]: () => jsonResponse({ data: [], total: 0 }),
+      [WRITE]: (body) => {
+        sent.push(body);
+        return jsonResponse({}, 200);
+      },
+    });
 
     await screen.findByText(en["blockedDomains.none"]);
     const dialog = await openDecisionDialog(user);
@@ -250,12 +257,10 @@ describe("BlockedDomainsCard", () => {
     );
     // A domain with no reason is exactly what the server 422s, and a refusal
     // nobody can explain is one nobody can review — so the card never sends it.
-    expect(save).toBeDisabled();
-    await user.type(
-      within(dialog).getByTestId("blocked-domain-reason"),
-      "a vendor",
-    );
-    expect(save).toBeEnabled();
+    await user.click(save);
+    expect(within(dialog).getByText("Reason is required.")).toBeVisible();
+    expect(within(dialog).getByTestId("blocked-domain-reason")).toHaveFocus();
+    expect(sent).toHaveLength(0);
   });
 
   it("says why the write was refused rather than leaving the form silent", async () => {

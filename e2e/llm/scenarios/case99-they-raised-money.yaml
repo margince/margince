@@ -1,19 +1,11 @@
 # CASE 99 — A signal is an observation about a company. Recording one is a change_attention action, and it changes no field of the company.
 name: case99_they_raised_money
+title: They raised money
 criteria: [1]
 writes: true
 
 prompt: |
   Heads up, Reply Deutschland just announced a funding round. Record that as a signal on the company.
-
-must_call:
-  - change_attention
-
-must_call_with:
-  - change_attention.action=create_signal
-
-must_call_matching:
-  - 'change_attention~(?i)fund'
 
 must_not_call_with:
   - update_record~.
@@ -26,6 +18,10 @@ may_call:
   - read_record
   - read_workspace
   - whoami
+  - change_attention
+
+must_end_with:
+  - company "Reply Deutschland Betreuerwechsel" signal=*fund*
 
 runs: 3
 pass_at: 2

@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sync/semaphore"
 
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/modules/capture/orderedfetch"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -48,15 +49,13 @@ func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, a
 	if err != nil {
 		return connector.BackfillEstimate{}, err
 	}
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return connector.BackfillEstimate{}, err
-	}
-	count, err := c.api.EstimateAfter(ctx, refreshed.AccessToken, after)
-	if err != nil {
-		return connector.BackfillEstimate{}, err
-	}
-	return connector.BackfillEstimate{Messages: count}, nil
+	return authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (connector.BackfillEstimate, error) {
+		count, err := c.api.EstimateAfter(ctx, refreshed.AccessToken, after)
+		if err != nil {
+			return connector.BackfillEstimate{}, err
+		}
+		return connector.BackfillEstimate{Messages: count}, nil
+	})
 }
 
 // BackfillPage pulls one page of the window, oldest-boundary inclusive,
@@ -68,11 +67,15 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
-	refreshed, err := c.oauth.Refresh(ctx, st.RefreshToken, st.Granted)
-	if err != nil {
-		return connector.BackfillPageResult{}, err
-	}
-	access := refreshed.AccessToken
+	return authorized(ctx, c, st, func(refreshed oauthflow.TokenRefresh) (connector.BackfillPageResult, error) {
+		return c.backfillPageWith(ctx, refreshed.AccessToken, st.Owner, after, pageToken, sink)
+	})
+}
+
+// backfillPageWith is one BackfillPage under one access token.
+func (c *Connector) backfillPageWith(
+	ctx context.Context, access, owner string, after time.Time, pageToken string, sink connector.Sink,
+) (connector.BackfillPageResult, error) {
 	// The listing spans the whole mailbox, so the page resolves the synced
 	// folders' opaque ids first and steps over mail filed anywhere else. Sent
 	// Items is also the proof the owner sent a message. Without it the page
@@ -105,7 +108,7 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 		},
 		func(i int, raw []byte, err error) error {
 			msg := walked[i]
-			captured, err := c.backfillOne(ctx, raw, err, msg, sink, st.Owner, folders[msg.ParentFolderID] == folderSent)
+			captured, err := c.backfillOne(ctx, raw, err, msg, sink, owner, folders[msg.ParentFolderID] == folderSent)
 			if err != nil {
 				return err
 			}

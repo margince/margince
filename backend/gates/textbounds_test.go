@@ -117,7 +117,7 @@ func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
 	}
 	for _, column := range columns {
 		policy := policies[column.Key]
-		if policy.Limit == 0 {
+		if policy.Limit == 0 || textbounds.NamesColumns(column.Table) {
 			continue
 		}
 		for _, operation := range []string{"insert", "update"} {
@@ -136,6 +136,59 @@ func TestEveryBoundedTextColumnChecksNewAndChangedValues(t *testing.T) {
 			}
 		}
 	}
+}
+
+// A guard that names its columns says the changed-value rule once per column.
+// So it must be, column for column, the condition the registry generates today.
+func TestAGuardThatNamesItsColumnsIsTheConditionTheRegistryGenerates(t *testing.T) {
+	t.Parallel()
+	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wanted, err := textbounds.PolicyBounds(string(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	conditions := map[string]string{}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if match := catalogTextGuard.FindStringSubmatch(line); match != nil {
+			conditions[match[1]] = strippedCondition(match[2])
+		}
+	}
+	named := 0
+	for table, limits := range wanted {
+		if !textbounds.NamesColumns(table) {
+			continue
+		}
+		named++
+		bounds := textbounds.TableBounds(table, limits, columns)
+		for _, operation := range []string{textbounds.OnInsert, textbounds.OnUpdate} {
+			key := table + ".text_bound_" + operation
+			if conditions[key] != strippedCondition(textbounds.Condition(table, bounds, operation)) {
+				t.Errorf("%s does not check each bounded column of its table for a new or changed value; run gen-textbounds -tables %s", key, table)
+			}
+		}
+	}
+	if named == 0 {
+		t.Fatal("no bounded table names its columns: the list in textbounds no longer matches the catalog")
+	}
+}
+
+var catalogTextGuard = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*\.text_bound_(?:insert|update)) CREATE TRIGGER .* FOR EACH ROW WHEN \((.*)\) EXECUTE FUNCTION refuse_oversized_text\(`)
+
+// strippedCondition removes what Postgres adds when it prints a condition
+// back: its own parentheses, the schema, and the type of a bare NULL.
+func strippedCondition(condition string) string {
+	stripped := strings.ToLower(strings.Join(strings.Fields(condition), ""))
+	for _, added := range []string{"public.", "::text[]", "(", ")", "\""} {
+		stripped = strings.ReplaceAll(stripped, added, "")
+	}
+	return stripped
 }
 
 func normalizedTextGuard(definition string) string {
@@ -233,5 +286,63 @@ func TestContentColumnsOnTheDocumentLimitSayWhatTheirWritersWereCheckedFor(t *te
 	// pattern fails here instead of shrinking what the test reads.
 	if matched < 108 {
 		t.Fatalf("only %d text columns look like content: the name pattern no longer matches the catalog", matched)
+	}
+}
+
+// companyNameBodies are the request bodies whose display_name a company's own
+// record holds. Each is refused past the record's label limit.
+var companyNameBodies = []string{
+	"CompanyProfileInput", "CreateCompanyRequest", "UpdateCompanyRequest",
+	"CreateLegalEntityRequest", "UpdateLegalEntityRequest",
+}
+
+// memberNameBodies name a seat. Identity refuses each past displayNameMaxRunes.
+var memberNameBodies = []string{
+	"FormerMemberRequest", "InviteUserRequest", "SaveMyDisplayNameRequest",
+	"ServiceMemberRequest", "UpdateMemberRequest",
+}
+
+func TestEveryDisplayNameBodyPublishesItsOwnersLimit(t *testing.T) {
+	t.Parallel()
+	raw, err := gatekit.ReadFile("api/crm.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var contract map[string]any
+	if err := yaml.Unmarshal(raw, &contract); err != nil {
+		t.Fatal(err)
+	}
+	schemas, ok := contract["components"].(map[string]any)["schemas"].(map[string]any)
+	if !ok {
+		t.Fatal("api/crm.yaml has no components.schemas")
+	}
+	var found []string
+	for name, schema := range schemas {
+		body, isMap := schema.(map[string]any)
+		properties, hasProperties := body["properties"].(map[string]any)
+		if !isMap || !hasProperties || properties["display_name"] == nil ||
+			!(strings.HasSuffix(name, "Request") || strings.HasSuffix(name, "Input")) {
+			continue
+		}
+		found = append(found, name)
+	}
+	listed := slices.Concat(companyNameBodies, memberNameBodies)
+	slices.Sort(found)
+	slices.Sort(listed)
+	if !slices.Equal(found, listed) {
+		t.Errorf("request bodies taking a display_name are %v, the lists name %v: list each new one as a company or a member name", found, listed)
+	}
+	for _, name := range companyNameBodies {
+		limit := publishedMaxLength(t, contract, schemaPath("components", "schemas", name, "properties", "display_name"))
+		if limit != values.TextLabelCharacters {
+			t.Errorf("%s.display_name publishes %d, and the company record refuses past %d", name, limit, values.TextLabelCharacters)
+		}
+	}
+	seatLimit := appliedIntConst(t, "internal/modules/identity/userdisplayname.go", "displayNameMaxRunes")
+	for _, name := range memberNameBodies {
+		limit := publishedMaxLength(t, contract, schemaPath("components", "schemas", name, "properties", "display_name"))
+		if limit != seatLimit {
+			t.Errorf("%s.display_name publishes %d, and identity refuses a seat name past %d", name, limit, seatLimit)
+		}
 	}
 }

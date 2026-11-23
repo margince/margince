@@ -19,6 +19,7 @@
 // `MaxSendBytes` — the two-spellings drift that was #2047.
 
 import type { components } from "../../api/schema";
+import { characterCount } from "../../lib/charactercount";
 import type { ChosenFile } from "./composeattachments";
 
 type Carriage = components["schemas"]["ChannelProviderEntry"]["attachments"];
@@ -91,10 +92,8 @@ export function carriageViolations(
     });
   }
   // The caption bound applies to the body only once a file is attached, which
-  // the length check above already established. Runes, not UTF-16 units, to
-  // agree with the server's `utf8.RuneCountInString`: an emoji is one character
-  // to the contact counting and one rune to the gate.
-  const length = [...body].length;
+  // the length check above already established.
+  const length = characterCount(body);
   if (
     carriage.max_body_with_files > 0 &&
     length > carriage.max_body_with_files

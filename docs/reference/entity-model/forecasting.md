@@ -80,7 +80,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_contribution
 
-40 columns · primary key `(id)` · referenced by 0 foreign keys
+34 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -89,7 +89,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `approval_id` | `uuid` |  |  |
 | `audit_id` | `uuid` |  |  |
 | `base_minor` | `bigint` |  | The deal's amount in the base currency. |
-| `category` | `text` |  |  |
 | `close_provisional` | `boolean`, default `false` | yes |  |
 | `currency` | `currency_code` |  |  |
 | `deal_id` | `uuid` | yes |  |
@@ -100,7 +99,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `focus_reason` | `jsonb` |  |  |
 | `fx_date` | `date` |  |  |
 | `fx_rate` | `numeric(20,10)` |  |  |
-| `in_best_case` | `boolean`, default `false` | yes |  |
 | `in_evidence` | `boolean`, default `false` | yes | Whether the deal counts in the Likely reading. |
 | `in_lost` | `boolean`, default `false` | yes |  |
 | `in_open` | `boolean`, default `false` | yes |  |
@@ -108,8 +106,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `owner_id` | `uuid` |  |  |
 | `probability_source` | `text` |  | Where the deal's probability came from. |
 | `qualification` | `text` |  | One of `eligible`, `excluded`, `unsupported`, `unknown`. |
-| `qualification_complete` | `boolean` |  |  |
-| `qualified_policy_version` | `text` |  |  |
 | `risk_effect` | `numeric` |  |  |
 | `risk_signal_facts` | `jsonb` |  |  |
 | `risk_signals` | `text[]` |  |  |
@@ -117,8 +113,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `stage_id` | `uuid` |  |  |
 | `stage_probability` | `integer` |  |  |
 | `typed_probability` | `integer` |  | The deal's own probability where one is set, else the chance typed on its stage, in percent. |
-| `viability_assessed_at` | `timestamp with time zone` |  |  |
-| `viability_disposition` | `text` |  | One of `none`, `open_review`, `override`, `unsupported`. |
 | `weighted_minor` | `bigint` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -151,7 +145,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_risk_signals_known`: `CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed', 'no_next_step', 'quiet', 'stuck'])))`
 - `forecast_contribution_typed_probability_is_a_percent`: `CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))`
 - `forecast_contribution_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
-- `forecast_contribution_viability_disposition_known`: `CHECK (((viability_disposition IS NULL) OR (viability_disposition = ANY (ARRAY['none', 'open_review', 'override', 'unsupported']))))`
 - `forecast_contribution_weighted_minor_js_safe`: `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_weighted_needs_a_base`: `CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))`
 - `uq_forecast_contribution_deal`: `UNIQUE (snapshot_id, deal_id)`
@@ -159,19 +152,18 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `forecast_contribution_pkey`: `unique, btree (id)`
-- `idx_forecast_contribution_audit`: `btree (audit_id) WHERE (audit_id IS NOT NULL)`
 - `idx_forecast_contribution_deal`: `btree (deal_id, created_at DESC)`
 - `uq_forecast_contribution_deal`: `unique, btree (snapshot_id, deal_id)`
 
 **Triggers**
 
 - `forecast_contribution_is_frozen`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION forecast_contribution_is_frozen()`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"category": 20000, "captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000, "viability_disposition": 20000, "qualified_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"qualified_policy_version":20000,"risk_signals":20000,"viability_disposition":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"category": 20000, "captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000, "viability_disposition": 20000, "qualified_policy_version": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"category":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"qualified_policy_version":20000,"risk_signals":20000,"viability_disposition":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"risk_signals":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "risk_signals": 20000, "qualification": 20000, "exclusion_reason": 2000, "probability_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"exclusion_reason":2000,"probability_source":20000,"qualification":20000,"risk_signals":20000}')`
 
 ## forecast_snapshot
 
-41 columns · primary key `(id)` · referenced by 2 foreign keys
+40 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -182,7 +174,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `confirmed_date_count` | `integer` | yes |  |
 | `definition_version` | `text` | yes |  |
 | `eligible_count` | `integer` | yes |  |
-| `evidence_cutoff` | `timestamp with time zone` |  |  |
 | `evidence_minor` | `bigint` | yes |  |
 | `focus_on_target` | `boolean` |  |  |
 | `forward_measure` | `text` |  | One of `likely`, `qualified_likely`, `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted` and 1 more. |

@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -126,8 +127,8 @@ func openDealsStaked(ctx context.Context, tx pgx.Tx, company *ids.UUID, contacts
 	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d
 		 WHERE `+openDealSQL+companyClause+`
 		   AND EXISTS (SELECT 1 FROM relationship r
-		                WHERE r.deal_id = d.id AND r.kind = 'deal_stakeholder'
-		                  AND r.contact_id = ANY($1) AND r.archived_at IS NULL AND r.ended_at IS NULL
+		                WHERE r.deal_id = d.id AND `+dealseat.CurrentSQL("r")+`
+		                  AND r.contact_id = ANY($1)
 		                  AND (`+edgeScope+`))
 		 ORDER BY d.id LIMIT `+limitPos, args...)
 }

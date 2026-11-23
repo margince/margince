@@ -50,7 +50,7 @@ func TestOnePromiseToSeveralAttendeesIsAskedOnce(t *testing.T) {
 	if !strings.Contains(session.Question, "archive solution") {
 		session = asks[1]
 	}
-	if want := `Where does this stand: "` + strings.TrimSuffix(sessionPromise, ".") + `"?`; session.Question != want {
+	if want := "Where does this stand: “" + strings.TrimSuffix(sessionPromise, ".") + "”?"; session.Question != want {
 		t.Errorf("question = %q, want %q", session.Question, want)
 	}
 	if want := "We promised Ana Roth, Ben Ito and Cleo Marx this and it is still open."; session.Basis.Text != want {

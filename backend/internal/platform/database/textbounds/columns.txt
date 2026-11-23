@@ -125,13 +125,9 @@ public.ai_call.context_fingerprint document
 public.ai_call.context_scopes document
 public.ai_call.decision_choice document
 public.ai_call.error_sentinel document
-public.ai_call.finish_reason note
 public.ai_call.kind document
 public.ai_call.model_id document
 public.ai_call.provider document
-public.ai_call.request_fingerprint document
-public.ai_call.schema_downgrade document
-public.ai_call.secret_kinds document
 public.ai_call.served_identity_source document
 public.ai_call.served_model document
 public.ai_call.served_provider document
@@ -147,7 +143,6 @@ public.ai_feedback.claim_key document
 public.ai_feedback.claim_kind document
 public.ai_feedback.corrected_value document checked: typed by a user
 public.ai_feedback.note note
-public.ai_feedback.source document
 public.ai_feedback.subject_type document
 public.ai_feedback.value_shown document
 public.ai_feedback.verdict document
@@ -205,16 +200,12 @@ public.approval.target_label label
 public.approval_autonomy_policy.kind exempt bounded action identifiers follow the existing tool-kind grammar
 public.approval_autonomy_policy.mode document
 public.approval_preference.kind document
-public.assurance_cycle.opened_by document
 public.assurance_cycle.scope document
-public.assurance_deal_receipt.captured_by document
 public.assurance_deal_receipt.input_fingerprint document
 public.assurance_deal_receipt.outcome document
 public.assurance_deal_receipt.policy_version document
-public.assurance_deal_receipt.reasons note
 public.assurance_deal_receipt.verdict_basis_digest document
 public.assurance_deal_receipt.verdict_input_checksum document
-public.assurance_deal_receipt.verdict_prompt_version document
 public.assurance_exception.captured_by document
 public.assurance_exception.delivery_state document
 public.assurance_exception.logical_key document
@@ -230,12 +221,10 @@ public.assurance_resolution.reason note
 public.assurance_run.captured_by document
 public.assurance_run.digest document
 public.assurance_run.readiness document
-public.assurance_run.requested_by document
 public.assurance_run.status document
 public.assurance_source_coverage.captured_by document
 public.assurance_source_coverage.source document
 public.assurance_source_coverage.state document
-public.assurance_task_item.state document
 public.assurance_task_item.subject_kind document
 public.attachment.captured_by document
 public.attachment.category document
@@ -299,7 +288,6 @@ public.capture_connection.history_baseline_tz document
 public.capture_connection.mail_posture document
 public.capture_connection.provider document
 public.capture_connection.provider_scopes document
-public.capture_connection.scopes document
 public.capture_connection.status document
 public.capture_connection.watch_ref document
 public.capture_counterparty_hold.created_by document
@@ -336,7 +324,6 @@ public.capture_pending_counterparty.disposition_reason note
 public.capture_pending_counterparty.domain document
 public.capture_pending_counterparty.email document
 public.capture_pending_counterparty.kind document
-public.capture_pending_counterparty.served_model document
 public.capture_pending_counterparty.status document
 public.capture_sender_override.address document
 public.capture_sender_override.captured_by document
@@ -374,17 +361,13 @@ public.channel_provider.provider exempt bounded provider identifiers follow the 
 public.channel_provider.transport document
 public.chat_link.card_fingerprint label
 public.chat_link.card_message_id line
-public.chat_link.channel_external_key line
 public.chat_link.channel_name line
 public.chat_link.channel_slug line
 public.chat_link.provider document
 public.chat_link.status document
 public.chat_link.verbosity document
-public.chat_post_item.entity_type document
 public.chat_post_item.event_type document
-public.chat_post_item.last_error line
 public.chat_post_item.message_id line
-public.chat_post_item.tier document
 public.close_date_run.captured_by document
 public.close_date_run.status document
 public.close_date_run_member.outcome document
@@ -507,7 +490,6 @@ public.company_domain_disposition.evidence exempt carries model reasons and craw
 public.company_domain_disposition.pending_reason note
 public.company_domain_disposition.source document
 public.company_domain_disposition.status document
-public.company_domain_question_reader.domain document
 public.company_dossier.fingerprint document
 public.company_dossier.generated_by document
 public.company_fact.captured_by document
@@ -598,6 +580,8 @@ public.contact.last_name exempt captured name parts retain the existing ingestio
 public.contact.narrowing_reason note
 public.contact.photo_object_key document
 public.contact.photo_origin document
+public.contact.quarantine_cleared_by document
+public.contact.quarantine_reason document
 public.contact.relationship_mark document
 public.contact.relationship_mark_set_by document
 public.contact.source document
@@ -698,8 +682,6 @@ public.data_task_run.last_error_class document
 public.data_task_run.status document
 public.data_task_run.step document
 public.data_task_run.task_id document
-public.data_task_run_history.step document
-public.data_task_run_history.task_id document
 public.deal.acquisition_source document
 public.deal.captured_by document
 public.deal.commercial_mode document
@@ -848,7 +830,6 @@ public.finance_connection.last_error_code document
 public.finance_connection.provider document
 public.finance_connection.source document
 public.finance_connection.status document
-public.finance_connection.sync_cursor document
 public.finance_customer_link.captured_by document
 public.finance_customer_link.external_customer_id document
 public.finance_customer_link.source document
@@ -875,13 +856,10 @@ public.forecast_call.scope_kind document
 public.forecast_capture_status.context_key document
 public.forecast_capture_status.failure document
 public.forecast_contribution.captured_by document
-public.forecast_contribution.category document
 public.forecast_contribution.exclusion_reason note
 public.forecast_contribution.probability_source document
 public.forecast_contribution.qualification document
-public.forecast_contribution.qualified_policy_version document
 public.forecast_contribution.risk_signals document
-public.forecast_contribution.viability_disposition document
 public.forecast_snapshot.captured_by document
 public.forecast_snapshot.definition_version document
 public.forecast_snapshot.forward_measure document
@@ -924,6 +902,7 @@ public.import_run.source document
 public.import_run.source_name exempt generated from independently checked source columns
 public.import_run.source_ref document
 public.import_run.status document
+public.installation_state.key document
 public.intro_request.captured_by document
 public.intro_request.decision_reason note
 public.intro_request.fallback_policy document
@@ -1010,6 +989,7 @@ public.legal_entity.display_name exempt the registered entity identity can inher
 public.legal_entity.iban document
 public.legal_entity.icp document
 public.legal_entity.imprint document
+public.legal_entity.jurisdiction document
 public.legal_entity.legal_name line
 public.legal_entity.logo_object_key document
 public.legal_entity.offer_summary document checked: typed by an admin; refused past 20000
@@ -1267,7 +1247,6 @@ public.report_definition.name label
 public.report_edition.publication_audience document
 public.report_edition_contribution.context_id document
 public.report_edition_contribution.contribution_key document
-public.report_edition_contribution.group_key document
 public.report_edition_contribution.metric document
 public.report_edition_contribution.source_type document
 public.report_edition_question.card_id document
@@ -1280,7 +1259,6 @@ public.report_execution.reason note
 public.report_execution.request_hash document
 public.report_execution.status document
 public.report_run.captured_by document
-public.report_run.schema_version document
 public.report_schedule.last_status document
 public.report_schedule.timezone document
 public.restore_drill.notes note
@@ -1293,7 +1271,6 @@ public.retention_policy.object_type document
 public.role.key document
 public.role.name label
 public.runner_job.agent_spec document
-public.runner_job.last_error document checked: fixed text and catalog spec names
 public.runner_job.status document
 public.runner_job.trigger_ref document
 public.sales_goal_plan_revision.kind document
@@ -1378,11 +1355,6 @@ public.stage_exit_criterion.hint line
 public.stage_exit_criterion.key document
 public.stage_exit_criterion.kind document
 public.stage_exit_criterion.label label
-public.stage_progression_outcome.evidence_kinds document
-public.stage_progression_outcome.outcome document
-public.stage_progression_outcome.rejection_reason note
-public.stage_progression_policy.mode document
-public.stage_progression_policy.suspended_reason note
 public.stored_object_intent.kind document
 public.stored_object_intent.storage_key document
 public.suggestion_dismissal.fingerprint document
@@ -1521,15 +1493,12 @@ public.weekly_review_learning.kind document
 public.weekly_review_learning.text line
 public.weekly_review_learning_citation.label label
 public.weekly_review_learning_citation.subject_type document
-public.weekly_review_movement.bar document
-public.weekly_review_movement.period_kind document
 public.weekly_review_outlook.forward_measure document
 public.weekly_review_outlook.period_kind document
 public.withdrawal_credential.address document
 public.withdrawal_credential.revoked_reason note
 public.withdrawal_credential.scope document
 public.withdrawal_credential.token_hash document
-public.workflow_run.error document checked: no code writes it
 public.workflow_run.handler document
 public.workflow_run.idempotency_key document
 public.workflow_run.status document

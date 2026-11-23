@@ -323,6 +323,19 @@
 .brief-triage-lead .emailentry__marks {
   display: none;
 }
+/* A caption hidden above still counts as a sibling, so here a dot follows a
+   fact only where a shown one comes after it. */
+.brief-triage-lead .worklist-row-facts-line > *::after {
+  content: none;
+}
+.brief-triage-lead
+  .worklist-row-facts-line
+  > :not(.worklist-row-about, .worklist-row-when):has(
+    ~ :not(.worklist-row-about, .worklist-row-when)
+  )::after {
+  content: "·" / "";
+  margin-inline-start: var(--space-2);
+}
 
 /* Next task ends the title line, apart from the verbs that answer the task. */
 .brief-triage-title {
@@ -353,6 +366,17 @@
 }
 .brief-triage-lead p.worklist-row-title > * {
   min-width: 0;
+}
+/* A state badge keeps its word; the name beside it gives way instead. */
+.brief-triage-lead p.worklist-row-title > .badge {
+  flex: none;
+}
+/* A phone has no room for name, badge and way on in one line: the badge and
+   Next task go under the name. */
+@media (max-width: 480px) {
+  .brief-triage-lead p.worklist-row-title {
+    flex-wrap: wrap;
+  }
 }
 .brief-triage-lead p.worklist-row-title,
 .brief-triage-lead-head > .heading {

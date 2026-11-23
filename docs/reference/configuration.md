@@ -267,7 +267,6 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `activities.follow_up_after_days` | `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | — | `int`, `1` to `30`, stored | `2` | api, worker | Days a sent message may go without a reply before its sender is asked to follow up. |
-| `activities.inline_send_review` | `MARGINCE_ACTIVITIES_INLINE_SEND_REVIEW` | — | `bool`, stored | `false` | api, worker | Decide a composed email at Send and show a refusal inline, instead of checking while it is written. |
 | `activities.private_mail_requests` | `MARGINCE_ACTIVITIES_PRIVATE_MAIL_REQUESTS` | — | `bool`, stored | `true` | api, worker | Let the AI read private mail for requests: what a customer asks of its reader, and a request for a quote. Only mail private because of a setting is read; mail held for any other reason never is. Sharing a quote request with the workspace is a separate setting. |
 | `activities.share_private_quote_requests` | `MARGINCE_ACTIVITIES_SHARE_PRIVATE_QUOTE_REQUESTS` | — | `bool`, stored | `true` | api, worker | Share a request for a quote found in private mail with the whole workspace: what the customer asked for becomes visible on the deal it opens. Only mail private because of a mailbox setting counts; mail held for any other reason never does. |
 
@@ -353,6 +352,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
+| `contacts.dormancy_days` | `MARGINCE_CONTACTS_DORMANCY_DAYS` | — | `list<int>`, stored | `30,60,90` | api, worker | Three day counts, each above the one before: after how many days with no activity a company moves to each later step of the ladder. |
+| `contacts.dormancy_follow_up_enabled` | `MARGINCE_CONTACTS_DORMANCY_FOLLOW_UP_ENABLED` | — | `bool`, stored | `true` | api, worker | Offer the owner of a quiet or stale company a task to get back in touch. |
 | `contacts.first_response_enabled` | `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | — | `bool`, stored | `false` | api, worker | Track a first-response target on every lead. |
 | `contacts.first_response_target_minutes` | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | — | `int`, `15` to `10080`, stored | `240` | api, worker | Minutes a lead may wait for its first real response once its clock starts. |
 | `contacts.shared_merge_reviews` | `MARGINCE_CONTACTS_SHARED_MERGE_REVIEWS` | — | `bool`, stored | `false` | api, worker | Let any owner of a possible duplicate merge the whole case, keeping the other owners' access to the remaining contact through a record grant. |
@@ -481,6 +482,8 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 |---|---|---|---|---|---|---|
 | `mcp.client_registration.dynamic` | `MARGINCE_MCP_CLIENT_REGISTRATION_DYNAMIC` | — | `bool` | `true` | api | Let AI tools register their own OAuth client at `/oauth/register` (DCR); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
 | `mcp.client_registration.metadata_document` | `MARGINCE_MCP_CLIENT_REGISTRATION_METADATA_DOCUMENT` | — | `bool` | `true` | api | Accept a client ID that is the URL of the tool's published metadata document (CIMD); false keeps it off whatever the admin's switch in Settings > AI tool access says. |
+| `mcp.client_registration.unused_limit` | `MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_LIMIT` | — | `int` | `1000` | api | Most clients that AI tools made themselves (at `/oauth/register` or by a metadata document) and that no sign-in has used yet; a new one past it removes the oldest such client. |
+| `mcp.client_registration.unused_retention` | `MARGINCE_MCP_CLIENT_REGISTRATION_UNUSED_RETENTION` | — | `duration` | `24h0m0s` | worker | How long a client an AI tool made itself, and that no sign-in has used, is kept before the hourly sweep deletes it. |
 | `mcp.connector_enabled` | `MARGINCE_MCP_CONNECTOR_ENABLED` | — | `bool` | `false` | api | Serve `/mcp` and the OAuth authorization server to outside agent clients; needs `--public-base-url`. |
 
 ### `operations`
@@ -617,6 +620,25 @@ which day it is, and neither reports a fault.
 asks both engines for every 15 minutes of the next 14 months, in zones
 whose rules have moved. It fails naming the first moment they place
 differently.
+
+A stored zone name can also stop loading in Go, as after a move to a binary with older zone
+data. Inside a background pass, `storekit.EffectiveZone` then answers UTC to each Go reader of the
+installation zone. A reader binds that same name into the SQL it writes. So no pass stops. A read
+a user asks for still fails on the name, because one answer must not count in two zones. An operator
+sees the fault in two places:
+
+- Each background pass that fell back writes one `system_log` row with the action
+  `installation_zone.unresolved`. Its detail names the stored zone and the zone applied.
+- System health shows the finding `zone_unresolved`, whose button opens the reporting timezone.
+  The finding goes when the stored name loads again.
+
+SQL that reads the stored name by itself keeps that name while Postgres can read it. So a report
+and a background pass can place a moment near the end of a day on different days. That lasts
+until an admin chooses a zone again. Postgres refuses a name it cannot read, and the write that asked fails.
+
+The setup screen sends the zone name its browser reports. When Go or Postgres does not know that
+name, the claim stores UTC for the installation and its first admin. The admin then chooses the
+zone in Settings. The name `Local` is still refused.
 
 What a browser holds is its own third copy. It decides what a reader is shown,
 and it reaches what is stored in two ways. Setting up an account and the zone setting

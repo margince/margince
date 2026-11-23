@@ -14,6 +14,7 @@ import {
 import type { RecordTimeline } from "../../design-system/recordtimeline";
 import { emailSummaryText } from "../../format/emailtext";
 import { useT } from "../../i18n";
+import { useDeal } from "../../lib/dealread";
 import type { Lead } from "./leads";
 import { type PromotionRecord, promotionSummary } from "./leads.promotion";
 import { usePromotePreview } from "./leads.qualify";
@@ -88,7 +89,7 @@ export function LeadEnquiryCard({
  * If they are qualified: what the server's promotion preview says happens to
  * the contact, and that a deal can be opened in the same step. The preview
  * names no deal, so the card names none either. Once the lead is qualified the
- * same card says "Qualified as" and links the contact it became.
+ * same card says "Qualified as" and links the contact, company and deal it made.
  */
 export function LeadQualifyPreviewCard({
   lead,
@@ -102,17 +103,7 @@ export function LeadQualifyPreviewCard({
     lead.status !== "disqualified";
   const preview = usePromotePreview(lead.id, open);
   if (lead.promoted_contact_id && !lead.merged_into_id) {
-    return (
-      <OverviewCard title={t("lead.card.qualifiedAs")}>
-        <OverviewList>
-          <OverviewRow
-            title={t("lead.card.qualifiedContact")}
-            sub={promotionSummary(promotion, t)}
-            right={<EntityRef kind="contact" id={lead.promoted_contact_id} />}
-          />
-        </OverviewList>
-      </OverviewCard>
-    );
+    return <QualifiedAsCard lead={lead} promotion={promotion} />;
   }
   if (!open) {
     return null;
@@ -130,6 +121,49 @@ export function LeadQualifyPreviewCard({
         />
       </OverviewList>
     </OverviewCard>
+  );
+}
+
+// Every record the qualification left: the contact, the deal the call opened
+// or joined, and that deal's company. A contact's own employer can change
+// later, so it is never read here.
+function QualifiedAsCard({
+  lead,
+  promotion,
+}: Readonly<{ lead: Lead; promotion: PromotionRecord }>) {
+  const t = useT();
+  return (
+    <OverviewCard title={t("lead.card.qualifiedAs")}>
+      <OverviewList>
+        <OverviewRow
+          title={t("lead.card.qualifiedContact")}
+          sub={promotionSummary(promotion, t)}
+          right={<EntityRef kind="contact" id={lead.promoted_contact_id} />}
+        />
+        {lead.qualified_deal_id && (
+          <QualifiedDealRows dealId={lead.qualified_deal_id} />
+        )}
+      </OverviewList>
+    </OverviewCard>
+  );
+}
+
+function QualifiedDealRows({ dealId }: Readonly<{ dealId: string }>) {
+  const t = useT();
+  const deal = useDeal(dealId);
+  return (
+    <>
+      {deal.data?.company_id && (
+        <OverviewRow
+          title={t("lead.card.qualifiedCompany")}
+          right={<EntityRef kind="company" id={deal.data.company_id} />}
+        />
+      )}
+      <OverviewRow
+        title={t("lead.card.qualifiedDeal")}
+        right={<EntityRef kind="deal" id={dealId} />}
+      />
+    </>
   );
 }
 

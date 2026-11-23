@@ -1,27 +1,37 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Dispatch } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
 import { formatNumber } from "../../../format/format";
-import { useLocale } from "../../../i18n";
+import { useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { problemMessage } from "../../../lib/problem";
+import { problemMessageOf } from "../../../lib/problem";
 import { isAcceptedCorpusFile } from "../../../lib/voice-corpus-file";
-import type {
-  IntakeOutcome,
-  RefusalReason,
-} from "../../../lib/voice-intake-core";
+import type { IntakeOutcome } from "../../../lib/voice-intake-core";
 import {
   intakeFile,
   intakePaste,
   intakeTranscript,
+  pasteLabel,
   sourceRef,
 } from "../../../lib/voice-intake-core";
+import {
+  readCorpusSummary,
+  removeSource,
+} from "../../../lib/voice-sample-remove";
 import type {
   ConversationEvent,
   ConversationState,
 } from "./conversation-machine";
 import { diffCorpus, useNarrationQueue } from "./narration";
+import {
+  VOICE_PROBE_KEY,
+  type VoiceRestoreProbe,
+  voiceCorpusOwner,
+} from "./restore";
 import { excerptLines } from "./voice-excerpts";
+import { type CorpusManifestEntry, storedEntry } from "./voice-manifest";
+import { refusalEntry, skipKeys } from "./voice-refusal-line";
 
 // The voice corpus of the conversational shell as one hook: intake (files
 // and pasted text), the preview probe that decides what a source honestly
@@ -33,22 +43,7 @@ import { excerptLines } from "./voice-excerpts";
 
 type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
-type IngestStats = components["schemas"]["VoiceIngestStats"];
-
-export type CorpusManifestEntry = Readonly<{
-  ref: string;
-  label: string;
-  /** Server-counted words that survived the speaker filter. */
-  keptWords: number;
-  /** Server-counted words of the whole source before filtering. */
-  inputWords: number;
-  /** Kept-of-total is shown only where filtering actually discarded turns. */
-  transcript: boolean;
-  /** Sentences of the reader's own prose, for the distilling panel to read
-   * back. Empty for a transcript: its text carries other speakers' turns, and
-   * which words are the reader's is decided on the server, not here. */
-  lines: readonly string[];
-}>;
+type Ingested = Extract<IntakeOutcome, { kind: "ingested" }>;
 
 type SpeakerAsk = Readonly<{
   ref: string;
@@ -57,10 +52,8 @@ type SpeakerAsk = Readonly<{
   preview: CorpusPreview;
 }>;
 
-/** What the board shows beside itself when a source could not be added: a
- * server refusal, a safe ingest-failed detail, or the unexpected-client-bug
- * fallback. The thread these used to narrate into is gone with the chat
- * rail, so this is now the only surface a reader sees the refusal on. */
+/** One source that could not be added, as the board shows it: a refusal, a
+ *  safe ingest-failed detail, or the fallback for an unexpected client bug. */
 export type VoiceIngestFailure = Readonly<{
   id: string;
   i18nKey: MessageKey;
@@ -70,62 +63,53 @@ export type VoiceIngestFailure = Readonly<{
 type UseVoiceCorpusArgs = Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
-  /** The restore probe's server meter, so a resumed session's word count
-   * (and the build gate) is honest before the first new ingest. */
-  initialSummary?: CorpusSummary | null;
 }>;
 
-const refusalKeys: Record<RefusalReason, MessageKey> = {
-  unattributed: "ob.conv.voice.refusalUnattributed",
-  speaker: "ob.conv.voice.refusalSpeaker",
-  unsupported: "ob.conv.voice.refusalUnsupported",
-};
-
-// Why a file went nowhere, in the room's own words. `type` is decided by name
-// before anything is read; the other two are what reading it found.
-const skipKeys: Record<
-  Extract<IntakeOutcome, { kind: "skipped" }>["reason"],
-  MessageKey
-> = {
-  type: "ob.conv.voice.fileSkipped",
-  empty: "ob.conv.voice.fileEmpty",
-  unreadable: "ob.conv.voice.fileUnreadable",
-};
-
-// The refusal category the core read off the 422 picks the honest line; a
-// refusal it did not recognize falls back to the server's own safe detail.
-function refusalEntry(
-  ref: string,
-  reason: RefusalReason | null,
-  problem: unknown,
-): Extract<ConversationEvent, { type: "NARRATION" }>["entry"] {
-  if (reason !== null) {
-    return {
-      kind: "narration",
-      id: `refuse:${ref}`,
-      i18nKey: refusalKeys[reason],
-    };
-  }
-  return {
-    kind: "narration",
-    id: `refuse:${ref}`,
-    i18nKey: "ob.conv.voice.ingestFailed",
-    params: { detail: problemMessage(problem) },
-  };
-}
-
-export function useVoiceCorpus({
-  state,
-  dispatch,
-  initialSummary = null,
-}: UseVoiceCorpusArgs) {
+export function useVoiceCorpus({ state, dispatch }: UseVoiceCorpusArgs) {
   const { locale } = useLocale();
-  const [summary, setSummary] = useState<CorpusSummary | null>(initialSummary);
-  const [manifest, setManifest] = useState<readonly CorpusManifestEntry[]>([]);
+  const t = useT();
+  const queryClient = useQueryClient();
+  // The restore probe holds the meter and the samples, and outlives the step:
+  // a write that settles after Back reaches the step that opens again. Only
+  // the screen reads it; this observer follows it.
+  const probe = useQuery<VoiceRestoreProbe>({
+    queryKey: VOICE_PROBE_KEY,
+    enabled: false,
+  }).data;
+  const summary = probe?.summary ?? null;
+  const meterStale = probe?.meterStale === true;
+  // What this step learned of the samples it added itself: the stored row
+  // carries no pre-filter count and no text.
+  const [added, setAdded] = useState<ReadonlyMap<string, CorpusManifestEntry>>(
+    () => new Map(),
+  );
+  const sources = probe?.sources;
+  const manifest = useMemo(
+    () =>
+      (sources ?? [])
+        .filter((source) => source.included)
+        .map((source) => {
+          const own = added.get(source.source_ref);
+          return own?.id === source.id && own.version === source.version
+            ? own
+            : storedEntry(source);
+        }),
+    [sources, added],
+  );
+  const [removing, setRemoving] = useState<string | null>(null);
   const [asks, setAsks] = useState<readonly SpeakerAsk[]>([]);
   const [probesInFlight, setProbesInFlight] = useState(0);
-  const [failure, setFailure] = useState<VoiceIngestFailure | null>(null);
-  const summaryRef = useRef<CorpusSummary | null>(initialSummary);
+  const [failures, setFailures] = useState<readonly VoiceIngestFailure[]>([]);
+  // One line per source the current pick could not add, so a batch with
+  // three bad files names all three. A newer word on one source replaces it.
+  const noteFailure = useCallback((failure: VoiceIngestFailure) => {
+    setFailures((prev) => [
+      ...prev.filter((existing) => existing.id !== failure.id),
+      failure,
+    ]);
+  }, []);
+  // The meter the growth narration last spoke from.
+  const summaryRef = useRef<CorpusSummary | null>(summary);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -164,9 +148,9 @@ export function useVoiceCorpus({
     (id: string, err: unknown) => {
       console.error("voice corpus ingest failed unexpectedly", err);
       say(id, "ob.conv.voice.ingestUnexpected");
-      setFailure({ id, i18nKey: "ob.conv.voice.ingestUnexpected" });
+      noteFailure({ id, i18nKey: "ob.conv.voice.ingestUnexpected" });
     },
-    [say],
+    [say, noteFailure],
   );
 
   // A file that went nowhere is said on the board, the same notice a refusal
@@ -176,54 +160,72 @@ export function useVoiceCorpus({
     (name: string, reason: keyof typeof skipKeys) => {
       const id = `skip:${name}`;
       say(id, skipKeys[reason], { name });
-      setFailure({ id, i18nKey: skipKeys[reason], params: { name } });
+      noteFailure({ id, i18nKey: skipKeys[reason], params: { name } });
     },
-    [say],
+    [say, noteFailure],
   );
 
-  // Concurrent ingests can settle out of order; each request is stamped at
-  // issue time and only the newest-by-request-order summary may drive the
-  // meter and the word-growth narration. Every response's summary is
-  // authoritative for the corpus AT that request — a stale one arriving
-  // late must not roll the displayed totals (and the build gate) backwards.
-  const ingestSeq = useRef(0);
-  const appliedSummarySeq = useRef(0);
+  // Each write is stamped when issued; only the newest summary drives the
+  // meter and the word-growth narration, so a late one never rolls it back.
+  // The order is the corpus owner's, so a step that opens again ranks its
+  // writes against those the closed one left in flight.
+  const [{ order, patch: patchProbe }] = useState(() =>
+    voiceCorpusOwner(queryClient),
+  );
 
   const recordIngest = useCallback(
-    (
-      seq: number,
-      entry: CorpusManifestEntry,
-      stats: IngestStats,
-      next: CorpusSummary,
-      reactionKey: MessageKey,
-    ) => {
+    (seq: number, outcome: Ingested, reactionKey: MessageKey) => {
+      const { ref, source, stats, summary: next } = outcome;
+      const newest = order.take(seq);
+      // The probe outlives this step, so Back finds the sample even if the
+      // reader left before the server answered.
+      patchProbe((old) => ({
+        summary: newest ? next : old.summary,
+        meterStale: newest ? false : old.meterStale,
+        sources: [
+          ...old.sources.filter((stored) => stored.source_ref !== ref),
+          source,
+        ],
+      }));
       if (!mounted.current) {
         return;
       }
-      setManifest((prev) => [
-        ...prev.filter((existing) => existing.ref !== entry.ref),
-        entry,
-      ]);
-      say(`react:${entry.ref}`, reactionKey, {
+      setAdded((prev) =>
+        new Map(prev).set(ref, {
+          ref,
+          id: source.id,
+          version: source.version,
+          label: outcome.label,
+          keptWords: stats.kept_words,
+          inputWords: stats.input_words,
+          transcript: outcome.transcript,
+          lines: outcome.transcript ? [] : excerptLines(outcome.content),
+        }),
+      );
+      say(`react:${ref}`, reactionKey, {
         kept: formatNumber(stats.kept_words, locale),
         total: formatNumber(stats.input_words, locale),
         words: formatNumber(stats.kept_words, locale),
       });
-      if (seq <= appliedSummarySeq.current) {
+      if (!newest) {
         return;
       }
-      appliedSummarySeq.current = seq;
       queue.push(diffCorpus(summaryRef.current, next, locale));
       summaryRef.current = next;
-      setSummary(next);
     },
-    [locale, queue, say],
+    [locale, queue, say, patchProbe, order],
   );
 
   // One place the conversation learns what an intake attempt ended as: the
   // core decides, this translates the verdict into what the thread says.
   const applyOutcome = useCallback(
     (seq: number, outcome: IntakeOutcome, reactionKey: MessageKey): void => {
+      // An added sample reaches the restore probe even after the step closed;
+      // recordIngest keeps the step's own state behind its mounted check.
+      if (outcome.kind === "ingested") {
+        recordIngest(seq, outcome, reactionKey);
+        return;
+      }
       if (!mounted.current) {
         return;
       }
@@ -232,13 +234,9 @@ export function useVoiceCorpus({
         return;
       }
       if (outcome.kind === "refused") {
-        const entry = refusalEntry(
-          outcome.ref,
-          outcome.reason,
-          outcome.problem,
-        );
+        const entry = refusalEntry(outcome, locale, t);
         dispatch({ type: "NARRATION", entry });
-        setFailure({
+        noteFailure({
           id: entry.id,
           i18nKey: entry.i18nKey,
           params: entry.params,
@@ -257,24 +255,9 @@ export function useVoiceCorpus({
             preview: outcome.preview,
           },
         ]);
-        return;
       }
-      recordIngest(
-        seq,
-        {
-          ref: outcome.ref,
-          label: outcome.label,
-          keptWords: outcome.stats.kept_words,
-          inputWords: outcome.stats.input_words,
-          transcript: outcome.transcript,
-          lines: outcome.transcript ? [] : excerptLines(outcome.content),
-        },
-        outcome.stats,
-        outcome.summary,
-        reactionKey,
-      );
     },
-    [dispatch, recordIngest, skip],
+    [dispatch, locale, noteFailure, recordIngest, skip, t],
   );
 
   // Each intake is stamped when its INGEST is issued, and only the
@@ -292,11 +275,9 @@ export function useVoiceCorpus({
       failureId: string,
     ): void => {
       setProbesInFlight((count) => count + 1);
-      setFailure(null);
       let seq = 0;
       start(() => {
-        ingestSeq.current += 1;
-        seq = ingestSeq.current;
+        seq = order.issue();
         return seq;
       })
         .then((outcome) => applyOutcome(seq, outcome, reactionKey))
@@ -311,7 +292,7 @@ export function useVoiceCorpus({
           }
         });
     },
-    [applyOutcome, sayUnexpectedFailure],
+    [applyOutcome, sayUnexpectedFailure, order],
   );
 
   // One intake for all three entry paths: the attach button, a drop onto the
@@ -319,6 +300,7 @@ export function useVoiceCorpus({
   // no reader for is refused by name, before anything is read.
   const addFiles = useCallback(
     (files: readonly File[]) => {
+      setFailures([]);
       for (const file of files) {
         if (!isAcceptedCorpusFile(file.name)) {
           skip(file.name, "type");
@@ -347,9 +329,13 @@ export function useVoiceCorpus({
     [dispatch, runIntake, skip],
   );
 
+  // The key stays on the bare prefix, so re-pasting a text updates its row.
+  // Only the label the list shows names the opening words.
   const addPaste = useCallback(
-    (text: string, label: string) => {
-      const ref = sourceRef("paste", label, text);
+    (text: string, prefix: string) => {
+      const ref = sourceRef("paste", prefix, text);
+      const label = pasteLabel(prefix, text);
+      setFailures([]);
       dispatch({ type: "UPLOAD_ADDED", id: ref, name: label });
       runIntake(
         (stamp) => intakePaste(ref, label, text, stamp),
@@ -378,6 +364,10 @@ export function useVoiceCorpus({
       question: {
         id: `speaker:${nextAsk.ref}`,
         i18nKey: "ob.conv.voice.speakerQuestion",
+        params: { name: nextAsk.label },
+        // A colleague's call, or one where the reader is not listed, has no
+        // right answer among the options, so the file can be left out.
+        dismissLabelKey: "ob.conv.voice.speakerSkip",
         options: nextAsk.preview.speakers.map((speaker) => ({
           value: speaker.label,
           label: speaker.label,
@@ -391,10 +381,10 @@ export function useVoiceCorpus({
     });
   }, [nextAsk, state.phase, state.pendingQuestion, dispatch, locale]);
 
-  // The owner named themselves: ingest with the speaker filter, so only that
-  // speaker's server-counted words ever reach the meter.
+  // A named speaker filters the ingest, so only their words reach the meter.
+  // Without a value the owner skipped the file, and none of it is sent.
   const answerSpeaker = useCallback(
-    (questionId: string, value: string) => {
+    (questionId: string, value: string | null) => {
       const ask = asks.find(
         (candidate) => `speaker:${candidate.ref}` === questionId,
       );
@@ -402,6 +392,10 @@ export function useVoiceCorpus({
         return;
       }
       setAsks((prev) => prev.filter((candidate) => candidate.ref !== ask.ref));
+      setFailures([]);
+      if (value === null) {
+        return;
+      }
       runIntake(
         (stamp) =>
           intakeTranscript(ask.ref, ask.label, ask.content, value, stamp),
@@ -412,17 +406,89 @@ export function useVoiceCorpus({
     [asks, runIntake],
   );
 
+  // The removal's summary is the newest corpus there is, so it outranks any
+  // ingest issued before it, as a later ingest would.
+  const applyRemovalSummary = useCallback(
+    (seq: number, next: CorpusSummary) => {
+      if (!order.take(seq)) {
+        return;
+      }
+      patchProbe(() => ({ summary: next, meterStale: false }));
+      summaryRef.current = next;
+    },
+    [patchProbe, order],
+  );
+
+  const removeSample = useCallback(
+    (entry: CorpusManifestEntry) => {
+      setFailures([]);
+      setRemoving(entry.ref);
+      const seq = order.issue();
+      removeSource(entry.id, entry.version)
+        .then(
+          (profileId) => {
+            // Gone at the server once the DELETE lands, whatever the meter
+            // read after it answers, and whether or not the step is still open.
+            order.removed(seq);
+            patchProbe((old) => ({
+              sources: old.sources.filter((source) => source.id !== entry.id),
+            }));
+            return readCorpusSummary(profileId).then(
+              (next) => applyRemovalSummary(seq, next),
+              // The meter still counts the removed words, so Build waits for a fresh read.
+              () => {
+                patchProbe(() => ({ meterStale: true }));
+                // Its own stamp, issued now: an ingest that settled since the
+                // DELETE must not make this newer read look stale. Its answer
+                // goes through the order, never straight into the probe.
+                const reread = order.issue();
+                return readCorpusSummary(profileId).then(
+                  (next) => applyRemovalSummary(reread, next),
+                  // A second failure leaves the meter unknown until the next sample.
+                  () => undefined,
+                );
+              },
+            );
+          },
+          (err: unknown) => {
+            if (mounted.current) {
+              noteFailure({
+                id: `remove:${entry.ref}`,
+                i18nKey: "ob.conv.voice.removeFailed",
+                params: {
+                  name: entry.label,
+                  detail: problemMessageOf(err, t),
+                },
+              });
+            }
+          },
+        )
+        .finally(() => {
+          if (mounted.current) {
+            setRemoving(null);
+          }
+        });
+    },
+    [applyRemovalSummary, noteFailure, patchProbe, t, order],
+  );
+
   return {
     summary,
     manifest,
+    removeSample,
+    /** The source_ref of the sample being removed, or null. */
+    removing,
     addFiles,
     addPaste,
     answerSpeaker,
-    /** True while any probe, ingest, or speaker question is still open —
-     * a build starting now would misrepresent what the voice is made of. */
-    busy: probesInFlight > 0 || asks.length > 0,
-    /** The most recent source the corpus could not add; cleared the moment
-     * a new attempt starts. */
-    failure,
+    /** True while any probe, ingest, removal or speaker question is still
+     * open: a build starting now would misrepresent what the voice is made of. */
+    busy:
+      probesInFlight > 0 || asks.length > 0 || removing !== null || meterStale,
+    /** True while no fresh summary has answered for the last removal. */
+    meterStale,
+    /** Each source of the latest pick the corpus could not add; cleared
+     * when the reader hands over the next file, paste or speaker answer. */
+    failures,
   };
 }

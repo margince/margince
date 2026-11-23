@@ -16,6 +16,7 @@ import { messageBox, writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { contactDocuments } from "../../testing/contactdocuments";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import { meFixture } from "../../testing/mefixture";
 import {
   allowedPreview,
@@ -138,6 +139,7 @@ function stubRoutes(
       sent.push({ key, body });
       const override = overrides[key];
       if (override) return override();
+      if (key === "GET /connectors") return jsonResponse(CONNECTED_ROSTER);
       if (key === "GET /contacts/p-1/360") return jsonResponse(CONTACT);
       if (
         key === "GET /contacts" &&
@@ -192,7 +194,7 @@ async function fillAndSend(user: ReturnType<typeof userEvent.setup>) {
   await pickOption(
     user,
     screen.getByLabelText("Reason for contact"),
-    "Follow-up they requested",
+    "They asked for it",
   );
   await pressSend(user);
 }

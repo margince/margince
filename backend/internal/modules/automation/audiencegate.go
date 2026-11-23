@@ -193,15 +193,9 @@ func ownerContext(ctx context.Context, resolver authz.Resolver, workspace, owner
 		// reaching here is a wiring bug, and it must not become a false "allow".
 		return nil, errors.New("automation: no authz.Resolver to resolve the owner's authority")
 	}
-	rbac, err := resolver.EffectiveRBAC(ctx, workspace, owner)
+	member, err := authz.MemberPrincipal(ctx, resolver, workspace, owner)
 	if err != nil {
 		return nil, err
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          principal.HumanIDPrefix + owner.String(),
-		UserID:      owner,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), nil
+	return principal.WithActor(ctx, member), nil
 }

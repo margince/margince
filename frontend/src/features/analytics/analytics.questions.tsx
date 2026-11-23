@@ -8,23 +8,25 @@ import { EntityRef } from "../../components/entityref";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
+import { ErrorLine } from "../../design-system/errorline";
 import { FactList } from "../../design-system/factlist";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Stack } from "../../design-system/stack";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatAnalyticsMoneyOrAbsent } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import {
   openAnalyticsSection,
   openSavedQuestion,
 } from "../../lib/analytics.address";
-import { unwrap } from "../../lib/problem";
+import { isGone, unwrap } from "../../lib/problem";
 import { routeHash, useRoute } from "../../lib/router";
 import {
   type AnalyticsContext,
   type AnalyticsScope,
   type AnalyticsSelection,
+  scopeName,
   scopeQuery,
 } from "./analytics.context";
 import { AnswerTable, QuestionFailure } from "./analytics.questions.answer";
@@ -88,7 +90,7 @@ export function QuestionsView({
   const [draft, setDraft] = useState<QuestionDraft>(() => newDraft(""));
   // Set when an edited question was saved over a population this reader may
   // not measure, so the builder says it will be asked over another one.
-  const [scopeNotice, setScopeNotice] = useState<string | null>(null);
+  const [scopeNotice, setScopeNotice] = useState<AnalyticsScope | null>(null);
   if (runId) {
     return (
       <SavedQuestion
@@ -108,7 +110,7 @@ export function QuestionsView({
               )
             : defaultScope;
           onSelectScope(known ?? defaultScope);
-          setScopeNotice(known ? null : defaultScope.label);
+          setScopeNotice(known ? null : defaultScope);
           openAnalyticsSection("questions");
         }}
       />
@@ -141,7 +143,7 @@ function AskQuestion({
   draft: QuestionDraft;
   onDraft: (next: QuestionDraft) => void;
   baseCurrency: string | null;
-  scopeNotice: string | null;
+  scopeNotice: AnalyticsScope | null;
   onAsked: () => void;
 }>) {
   const t = useT();
@@ -201,7 +203,7 @@ function AskQuestion({
                 tone="info"
                 kind="standing"
                 title={t("analytics.q.scopeNotAvailable", {
-                  scope: scopeNotice,
+                  scope: scopeName(scopeNotice, t) ?? "",
                 })}
               />
             )}
@@ -274,15 +276,16 @@ function scopeLabel(
   query: AnalyticsQuery,
   defaultScope: AnalyticsScope,
   allowedScopes: readonly AnalyticsScope[],
+  t: Translator,
 ): string | null {
   if (!query.scope_kind) {
-    return defaultScope.label;
+    return scopeName(defaultScope, t);
   }
   const wanted = queryScopeKey(query);
   const known = allowedScopes.find(
     (scope) => queryScopeKey(scopeQuery(scope)) === wanted,
   );
-  return known ? known.label : null;
+  return known ? scopeName(known, t) : null;
 }
 
 /**
@@ -334,7 +337,11 @@ function SavedQuestion({
   if (run.isError) {
     return (
       <Stack gap="3">
-        <QuestionFailure error={run.error} />
+        {isGone(run.error) ? (
+          <ErrorLine>{t("analytics.q.gone")}</ErrorLine>
+        ) : (
+          <QuestionFailure error={run.error} />
+        )}
         <div>
           <Button onClick={() => openAnalyticsSection("questions")}>
             {t("analytics.q.newQuestion")}
@@ -344,7 +351,7 @@ function SavedQuestion({
     );
   }
   const saved = run.data;
-  const population = scopeLabel(saved.query, defaultScope, allowedScopes);
+  const population = scopeLabel(saved.query, defaultScope, allowedScopes, t);
   return (
     <Stack gap="4">
       <Panel

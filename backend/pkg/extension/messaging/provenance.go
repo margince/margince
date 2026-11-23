@@ -39,6 +39,21 @@ type Instrument struct {
 	// ExpiresFrom is the first instant the instrument no longer binds. Zero
 	// means it states no end. Once past, a citation of it is no longer shown.
 	ExpiresFrom time.Time
+
+	// TextURL is where a refresh reads the text when SourceURL serves a page a
+	// plain HTTP client cannot read. Empty reads SourceURL.
+	TextURL string
+
+	// TextDigest is the SHA-256 of the text a refresh last read, in lower-case
+	// hex. Empty records no refresh.
+	TextDigest string
+
+	// TextFetchedAt is the day TextDigest was taken.
+	TextFetchedAt time.Time
+
+	// CheckedByHandAt is the day someone read a source no plain HTTP client
+	// can read. Zero means nobody did, and a refresh fetches the source.
+	CheckedByHandAt time.Time
 }
 
 // Validate refuses an instrument that names nothing, links to an unsafe
@@ -55,14 +70,39 @@ func (i Instrument) Validate() error {
 	if !i.ExpiresFrom.IsZero() && !i.EffectiveFrom.IsZero() && !i.ExpiresFrom.After(i.EffectiveFrom) {
 		return fmt.Errorf("instrument %q expires on or before it takes effect", i.Name)
 	}
+	if err := i.validateRefresh(); err != nil {
+		return fmt.Errorf("instrument %q: %w", i.Name, err)
+	}
+	return nil
+}
+
+// validateRefresh refuses a refresh record that does not say how the source
+// was read. It is a digest with its day and an address, or a check by hand.
+func (i Instrument) validateRefresh() error {
+	if i.TextURL != "" {
+		if err := validateSourceURL(i.TextURL); err != nil {
+			return err
+		}
+	}
+	byHand := !i.CheckedByHandAt.IsZero()
+	switch {
+	case !validSHA256(i.TextDigest):
+		return fmt.Errorf("text digest %q is not a SHA-256 in lower-case hex", i.TextDigest)
+	case (i.TextDigest == "") != i.TextFetchedAt.IsZero():
+		return errors.New("a text digest and the day it was fetched are stated together or not at all")
+	case byHand && (i.TextDigest != "" || i.TextURL != ""):
+		return errors.New("a source checked by hand states no text address and no text digest")
+	case (byHand || i.TextDigest != "") && i.SourceURL == "" && i.TextURL == "":
+		return errors.New("a refresh is recorded and no source was stated to read")
+	}
 	return nil
 }
 
 // Provenance is who reviewed a rule set against its sources, and when.
 //
-// Two dates that read alike and mean different things: ReviewDue passing says
-// nobody has re-read the pack in time, and the pack still applies. An
-// instrument's ExpiresFrom passing says the law itself ended. The first
+// A pack cites its law with or without a review. ReviewDue passing on a
+// reviewed pack says nobody re-read it in time, and the pack still applies.
+// An instrument's ExpiresFrom passing says the law itself ended. The first
 // silences the pack's citations; the second silences only that instrument's.
 type Provenance struct {
 	// CreatedAt is when the rule set was first written.
@@ -71,9 +111,10 @@ type Provenance struct {
 	// published texts.
 	SourceCheckedAt time.Time
 	// ReviewedAt is when a named reviewer last approved it. Zero is a draft,
-	// and a draft cannot cite.
+	// which cites like a reviewed pack.
 	ReviewedAt time.Time
-	// ReviewDue is when the next review is owed. Zero sets no due date.
+	// ReviewDue is when the next review is owed. Zero sets no due date, and a
+	// draft has none to miss.
 	ReviewDue time.Time
 	// Reviewer names who approved it, as the pack's maintainers sign.
 	Reviewer string
@@ -136,16 +177,15 @@ type Citation struct {
 	SourceURL string
 }
 
-// validateCitations refuses a citation that names no declared law, has no
-// provision or source to link, or comes from a pack nobody reviewed.
+// validateCitations refuses a citation that names no declared law, or has no
+// provision or source to link. A reviewed pack that cites must have checked
+// its sources before the review approved them.
 func (r Rules) validateCitations() error {
 	if err := r.Provenance.validate(); err != nil {
 		return err
 	}
-	if len(r.Citations) > 0 && r.Provenance.ReviewedAt.IsZero() {
-		return errors.New("the rule set cites law and records no review — a draft rule cannot cite")
-	}
-	if checked := r.Provenance.SourceCheckedAt; len(r.Citations) > 0 && (checked.IsZero() || checked.After(r.Provenance.ReviewedAt)) {
+	reviewed, checked := r.Provenance.ReviewedAt, r.Provenance.SourceCheckedAt
+	if len(r.Citations) > 0 && !reviewed.IsZero() && (checked.IsZero() || checked.After(reviewed)) {
 		return errors.New("the rule set cites law and its sources were not checked before its review")
 	}
 	cited := map[string][]Territory{}
@@ -223,11 +263,13 @@ const digestLength = 64
 
 // validateDigest accepts no digest, or a SHA-256 in lower-case hex.
 func (r Rules) validateDigest() error {
-	if r.Digest == "" {
-		return nil
-	}
-	if len(r.Digest) != digestLength || strings.Trim(r.Digest, "0123456789abcdef") != "" {
+	if !validSHA256(r.Digest) {
 		return fmt.Errorf("digest %q is not a SHA-256 in lower-case hex", r.Digest)
 	}
 	return nil
+}
+
+// validSHA256 accepts no digest, or a SHA-256 in lower-case hex.
+func validSHA256(digest string) bool {
+	return digest == "" || (len(digest) == digestLength && strings.Trim(digest, "0123456789abcdef") == "")
 }

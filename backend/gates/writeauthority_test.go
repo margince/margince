@@ -37,15 +37,12 @@ package gates
 //     a `read` share anyway — a gate that accepted it would read green over the
 //     defect it exists for.
 //
-// One probe family is deliberately outside the census, and the absence is not
-// an oversight: auth.EnsureLinkTarget and its attach-direction twin
-// auth.EnsureAttachTarget. They ask whether the caller may put this record in a
-// row — name a parent company, file an activity onto it, add a list member —
-// and "add" is not one authority: naming a record you can see from a row of
-// your own needs read, while hanging a child row onto somebody else's record
-// needs a share that is not read-only. Neither is write authority over the
-// record, which is what this census is about, so a site holding one of them is
-// not thereby a site holding this.
+// One probe family is outside the census: auth.EnsureLinkTarget and its
+// attach-direction twin auth.EnsureAttachTarget. They ask whether the caller
+// may put this record in a row. Naming a record you can see from your own row
+// needs read. Hanging a child row onto a record needs write authority over it,
+// which EnsureAttachTarget asks. Which callers of the read
+// probe may stay on it is attachauthority_test.go's census, not this one.
 //
 // The LIST predicates (auth.ScopeClauseFor, auth.VisiblePredicate) are IN the
 // census, and that is a correction rather than a flourish. A first draft left
@@ -100,6 +97,8 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:visibleCompanyDomainsTx":       "Asks whether the caller may see an employer before the import test run reads its domains for the duplicate check. It decides what the batch is told, and no company changes.",
+	"internal/modules/contacts:ownerSeesCompanies":            "Asks whether the contact's OWNER may open the two companies an employer question names, so the card never shows them a name they could not read. It narrows what is staged; the accept writes through EnsureLinkTarget and the relationship writers, and no company changes.",
 	"internal/modules/capture:companyOfDomainTx":              "names the company a domain belongs to in a refusal, and only when the caller may read it. The write is a capture list entry; no company changes.",
 	"internal/modules/activities:ownCompanyTestScopes":        "Read scopes classify a meeting counterparty; the only possible mutation is on the activity. No company is changed.",
 	"internal/modules/activities:readableContactScope":        "Read scopes classify visible meeting participants. The outcome writer gates the activity separately and changes no contact.",
@@ -117,7 +116,7 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 	"internal/modules/initiatives:visibleRecords":          "narrows a pick or an exclusion to the records the caller may read. The row that changes is the initiative's, behind its own update gate and row scope; no lead or deal row changes",
 	"internal/modules/initiatives:carriedDeals":            "a read: the deals promoted from member leads, under the reader's own row scope; no lead or deal row changes",
 	"internal/modules/initiatives:memberRead":              "a read: the member list after a write, under the reader's own row scope. Nothing is written on a lead or deal",
-	"internal/modules/contacts:TransferRequestableTx":      "asks whether a colleague may ASK for a record they cannot change; it writes nothing on the record, and the move on accept passes auth.EnsureWritableLive as the owner",
+	"internal/modules/contacts:OwnerAskableTx":             "asks whether a colleague may ASK about a record they cannot change; it writes nothing on the record. A handover's move passes auth.EnsureWritableLive as the owner on accept, and an edit access share passes auth.EnsureCanGrant as the owner",
 	"internal/modules/deals:pendingMappingsOf":             "narrows which lost deals a mapping count or apply page reads to those the operator may see. Each write then asks auth.EnsureWritable on the deal (writeMappedLossReason) and skips one the operator may not write",
 	"internal/modules/deals:ListLegacyLossReasons":         "a read: the custom_field update gate names who may decide a mapping, and the deal scope clause narrows which lost deals' notes the list counts and shows. Nothing is written",
 	"internal/modules/contacts:attachToSettledVerdict":     "checks visibility of a concurrently settled employer before writing an inferred employment edge; no company row changes",

@@ -4,20 +4,81 @@
     1
   ],
   "passed": 2,
-  "runs": 3,
+  "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
   "effort": "reasoning medium",
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "3b32be5b5ae06b75",
+    "tools": "1a12fa8ab3926d3b",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T04:27:52Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:43Z"
+  },
   "usage": {
-    "input_tokens": 127592,
-    "output_tokens": 6252,
+    "input_tokens": 47785,
+    "output_tokens": 2840,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 1197696,
-    "runs_measured": 3,
+    "cache_read_input_tokens": 505472,
+    "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_contract_status",
+        "change_offers",
+        "create_contract",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_contract_status",
+        "change_offers",
+        "create_contract",
+        "describe_record_fields",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "refused": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 276628.5,
+      "min": 232653,
+      "max": 320604
+    },
+    "output_tokens": {
+      "median": 1420,
+      "min": 1333,
+      "max": 1507
+    }
   }
 }

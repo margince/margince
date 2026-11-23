@@ -169,6 +169,19 @@ if (typeof window !== "undefined") {
     } as unknown as typeof window.ResizeObserver;
   }
 
+  // Neither test DOM has the popover methods. A floating layer calls
+  // showPopover() to reach the top layer, which a test DOM never paints, so
+  // doing nothing is the faithful stand-in.
+  if (!window.HTMLElement.prototype.showPopover) {
+    window.HTMLElement.prototype.showPopover = () => {};
+    window.HTMLElement.prototype.hidePopover = () => {};
+  }
+  // jsdom's own sheet hides each [popover] the no-op above never opens, and
+  // outranks a plain author rule. base.css shows a mounted one, so this wins.
+  const popoverShown = document.createElement("style");
+  popoverShown.textContent = "[popover]{display:block !important}";
+  document.head.append(popoverShown);
+
   // The Margince Core draws its liquid on a WebGL canvas; jsdom has no GL
   // context. Returning null is the same signal a browser without WebGL gives,
   // and the Core has a REQUIRED CSS rendering of every state for exactly that

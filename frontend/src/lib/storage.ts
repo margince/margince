@@ -62,6 +62,16 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "device",
   },
+  tableHidden: {
+    prefix: "margince.table.hidden.",
+    area: "local",
+    lifetime: "device",
+  },
+  tableDense: {
+    prefix: "margince.table.dense.",
+    area: "local",
+    lifetime: "device",
+  },
   faultsSeen: {
     name: "margince.agent.faults-seen",
     area: "local",
@@ -167,6 +177,12 @@ export const STORAGE_KEYS = {
   },
   sessionSeen: {
     name: "margince.session.seen",
+    area: "local",
+    lifetime: "seat",
+  },
+  // A user whose journey read "complete", per user id, so the splash skips it.
+  onboardingComplete: {
+    prefix: "margince.onboarding.complete:",
     area: "local",
     lifetime: "seat",
   },
@@ -309,6 +325,18 @@ function registeredAs(area: StorageArea, name: string): Registered | undefined {
     (key) =>
       key.area === area &&
       ("name" in key ? key.name === name : name.startsWith(key.prefix)),
+  );
+}
+
+/** Whether this browser holds any member of the family. */
+export function storedInFamily(family: KeyFamily): boolean {
+  return withStorage(
+    family.area,
+    (storage) =>
+      Array.from({ length: storage.length }, (_, index) =>
+        storage.key(index),
+      ).some((name) => name?.startsWith(family.prefix) === true),
+    false,
   );
 }
 

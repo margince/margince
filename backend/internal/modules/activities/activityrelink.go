@@ -100,7 +100,7 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 //
 // A moved row is marked relinked_at. No calendar roster retires it after that,
 // so the organiser's next sync cannot destroy a link a member chose. It keeps
-// roster_seat, so the roster that settled it still records the guest's answer.
+// its roster seats, so a calendar that lists it still records the guest's answer.
 func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.ActivityID, target ids.UUID, displaced []ids.UUID) error {
 	if err := unbindDisplacedSenders(ctx, tx, id, target, displaced); err != nil {
 		return err

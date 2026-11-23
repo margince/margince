@@ -1,7 +1,7 @@
 {
   "verb": "list_record_documents",
   "checks": [
-    "activity.read,lead.read,project.read"
+    "activity.read,lead.read"
   ],
   "takes": [
     "company"

@@ -125,6 +125,7 @@ func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 				stats, read, n.NodeType, n.RelationName, n.Alias)
 		}
 	})
+	assertFollowUpsComputedOnce(t, stats, plan)
 	if sets != 1 || attendeeReads == 0 || keyedReads == 0 {
 		t.Fatalf("%s statistics: the plan read no attendees (%.0f) or no later activity (%.0f), so this test checks nothing",
 			stats, attendeeReads, keyedReads)
@@ -132,6 +133,30 @@ func assertBoundedDealFollowUpPlan(t *testing.T, stats string, plan planNode) {
 	if attendeeReads > planMeetings {
 		t.Errorf("%s statistics: attendees read %.0f times for %d meetings, once per deal instead of once",
 			stats, attendeeReads, planMeetings)
+	}
+}
+
+// perMeetingSteps bounds how often one step may run for each meeting: a
+// follow-up checks a few later activities and arms per meeting. A statement that
+// re-runs the follow-ups for every deal link loops planMeetings times as often.
+const perMeetingSteps = 8
+
+// assertFollowUpsComputedOnce holds the batch to computing its follow-up rows
+// once. Joined as a subquery, a nested loop may run them again for every link.
+func assertFollowUpsComputedOnce(t *testing.T, stats string, plan planNode) {
+	t.Helper()
+	computed := 0
+	plan.walk(func(n planNode) {
+		if n.ActualLoops > perMeetingSteps*planMeetings {
+			t.Errorf("%s: %s %s %s ran %.0f times for %d meetings, so the follow-ups ran again per deal link",
+				stats, n.NodeType, n.RelationName, n.Alias, n.ActualLoops, planMeetings)
+		}
+		if n.SubplanName == "CTE "+followUpsOwed {
+			computed++
+		}
+	})
+	if computed != 1 {
+		t.Errorf("%s: the plan computes the follow-up rows in %d materialized sets, want exactly one", stats, computed)
 	}
 }
 
@@ -225,13 +250,14 @@ func seedDealMeetingsAmongOtherMail(ctx context.Context, t *testing.T, tx pgx.Tx
 	INSERT INTO stage (id, pipeline_id, name, "position") SELECT pipeline, pipeline, 'Qualified', 1 FROM plan_seed;
 	CREATE TEMP TABLE plan_deal AS SELECT n, gen_random_uuid() id FROM plan_seed s, generate_series(1, s.deals) n;
 	INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-	  SELECT d.id, 'Deal '||d.n, 'open', s.rep, s.pipeline, s.pipeline, 'seed', 'system' FROM plan_deal d, plan_seed s;
+	  SELECT d.id, 'Deal '||d.n, 'open', s.rep, s.pipeline, s.pipeline, 'manual', 'system' FROM plan_deal d, plan_seed s;
 	CREATE TEMP TABLE plan_meeting AS
 	  SELECT gen_random_uuid() id, gen_random_uuid() contact, g, d.id deal,
 	         s.at - interval '4 days' - random() * interval '12 days' at_time
 	    FROM plan_seed s CROSS JOIN LATERAL generate_series(1, s.meetings) g
 	    JOIN plan_deal d ON d.n = greatest(1, g - (s.meetings - s.deals));
-	INSERT INTO contact (id, full_name, source, captured_by) SELECT contact, 'Attendee '||g, 'manual', 'human:seed' FROM plan_meeting;
+	INSERT INTO contact (id, full_name, source, captured_by, owner_id)
+	  SELECT m.contact, 'Attendee '||m.g, 'manual', 'human:seed', s.rep FROM plan_meeting m, plan_seed s;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, meeting_status)
 	  SELECT id, 'meeting', 'Meeting '||g, at_time, 'outbound', 'manual', 'human:seed', 'held' FROM plan_meeting;
 	INSERT INTO activity_participant (activity_id, address, user_id, role)

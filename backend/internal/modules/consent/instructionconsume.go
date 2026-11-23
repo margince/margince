@@ -44,6 +44,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -89,6 +90,16 @@ type LiveInstruction struct {
 type InstructionStaleError struct {
 	Why string
 }
+
+// ErrNothingHeld answers a decision on a review refused before its message
+// could be kept, so there is nothing to send.
+var ErrNothingHeld error = &InstructionStaleError{
+	Why: "this review holds no message to send; it was refused before the message could be kept",
+}
+
+// HeldReason stops a scheduled message with a refusal the sender can read and
+// answer in its review, where it would otherwise fail its job.
+func (e *InstructionStaleError) HeldReason() string { return heldreason.SendRefused }
 
 func (e *InstructionStaleError) Error() string {
 	return "the decision to send this message no longer describes it: " + e.Why

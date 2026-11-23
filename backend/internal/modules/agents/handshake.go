@@ -53,18 +53,14 @@ func (s *Dispatcher) initialize(rawParams json.RawMessage) (map[string]any, *rpc
 
 // instructions is the guidance as THIS composition can honour it.
 //
-// The queue sentence names a tool BY NAME, and the queue surface is optional:
-// RegisterApprovalTools registers nothing without an inbox, because "a role
-// with no approvals engine does not advertise a queue it cannot read". Told to
-// call it there, a model would get `method not found` — worse than silence,
-// since one that tried and failed learns the check is broken rather than that
-// there was nothing to check.
+// The approvals sentence names a tool BY NAME, and RegisterApprovalTools
+// registers nothing without an inbox, so the sentence is served only beside it.
 func (s *Dispatcher) instructions() string {
 	guidance := orientation + s.startingTools() + surfaceInstructions
 	if _, served := s.registry.Spec(listApprovalsToolName); !served {
 		return guidance
 	}
-	return guidance + " " + queueInstruction
+	return guidance + " " + approvalsClaimRule
 }
 
 // orientation says what this server is, ahead of the rules. A host that loads
@@ -75,7 +71,7 @@ const orientation = "Margince is a CRM: contacts, companies, deals, leads, proje
 	"beside it; quote the display. "
 
 // startingTools names the first tools to reach for, only those this composition
-// serves, for the same reason the queue sentence is conditional.
+// serves, for the same reason the approvals sentence is conditional.
 func (s *Dispatcher) startingTools() string {
 	var served []string
 	for _, name := range []string{readAttentionToolName, findRecordsToolName, readContextToolName, "read_record"} {
@@ -102,27 +98,15 @@ const surfaceInstructions = "A governed CRM tool surface. Every call re-authenti
 	"the granting human's own permissions, so a tool may refuse a record this passport cannot " +
 	"reach. Tools that a human must approve say so in their own description; calling one " +
 	"stages the effect for review rather than performing it. A tool whose description names no " +
-	"governance runs immediately and needs only the read scope. " + mcp.ConflictingSourcesRule + " " +
+	"governance runs immediately and needs only the read scope. " + mcp.UntrustedContentRule + " " +
+	mcp.ConflictingSourcesRule + " " +
 	mcp.LocalTimeRule + " " + mcp.OwnershipRule
 
-// queueInstruction is the REPORTING RULE, appended where the queue is served.
-//
-// It is here because nothing else reaches. An assistant finished a run of
-// correct writes and reported "nothing pending approval this time" while a
-// drafted reply sat in the queue: the automation that staged it ran in reaction
-// to what the agent had just logged, after every one of its calls had returned.
-// No write envelope can carry that — the row did not exist when the write
-// answered — so the only thing that prevents the false report is the model
-// knowing to look before it makes one.
-//
-// It names the task's own records, because the queue holds colleagues' work too.
-const queueInstruction = "A write can also leave a question for a human WITHOUT saying so in its " +
-	"answer — an automation reacting to what you just wrote may draft a reply or stage a change " +
-	"of its own, after your call returned. Before telling anyone the work is finished, call " +
-	"list_approvals with targets naming every record this task created or changed, the " +
-	"activities and tasks it logged included, and report what it returns as what the work left " +
-	"waiting; it needs no approval of its own. The rest of the queue is not part of the task: " +
-	"do not list it unless the user asks."
+// approvalsClaimRule bounds a claim about the queue without ordering a call.
+// An automation may stage a draft after a write returns, so an answer that has
+// not just read the queue cannot know it is empty.
+const approvalsClaimRule = "Say that nothing is waiting for approval only when the user asked and " +
+	"you have just read list_approvals."
 
 // identity is the serverInfo both framings report: the handshake era in its
 // initialize result, the modern era in every result's _meta.

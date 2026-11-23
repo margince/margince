@@ -88,8 +88,11 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "auto.renewal.authorizer",
     // A duplicate case asks whether two contacts are the same human being.
     "contactCase.intro",
+    // "In person" says the rep and the contact were in one room.
+    "compose.why.met",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -104,6 +107,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
+    "analytics.outcomesOwnLensOnly",
     "firstRun.microsoft.tenantHint",
     "firstRun.platform.sub",
     "oauthApp.google.sub",
@@ -206,6 +210,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.intro",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -240,6 +245,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
 
     // The meeting's organizer is a human, not the CRM contact record type.
     "meetingChange.line.details",
+    "worklist.ask.invitation",
     "worklist.ask.changedInvitation",
     "worklist.ask.meeting.updated",
     "worklist.ask.meeting.canceled",
@@ -257,6 +263,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
+    "common.ownerNotMeasurable",
     "common.permissionDenied",
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
@@ -401,6 +408,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.intro",
     "privacy.possibleDuplicates",
     "contactCase.pair.notSame",
+    "contactCase.evidence.hint",
     "contactCase.member.dismissedWith",
     "contactCase.evidence.different",
     "worklist.ask.contact_case",
@@ -427,10 +435,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "homeRepair.explain",
     // These name users, recipients and participants, not contact records.
     "approval.scheduled.rearm",
-    "compose.holdRefused",
     "sendPermission.appliesToSome_one",
     "sendPermission.appliesToSome_other",
-    "sendPermission.ready",
     "approval.read.retained",
     "approval.read.effect",
     "approval.preview.companyPrivateReadings",
@@ -495,7 +501,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "scheduling.unavailable",
     // Human account holders whose full seats determine the shared allowance.
     "aiAdmin.fixed",
-    "aiAdmin.formula",
+    "aiAdmin.formula_one",
+    "aiAdmin.formula_other",
     "aiAdmin.floor",
     "aiAdmin.perUser",
     "aiAdmin.overrideHint",
@@ -722,10 +729,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "co.role.user",
     "co.roleLabel.blocker",
     "co.roleLabel.champion",
+    "co.roleLabel.decision_maker",
     "co.roleLabel.economic_buyer",
     "co.roleLabel.influencer",
     "co.roleLabel.user",
     "co.spine.andOthers",
+    "common.ownerNotMeasurable",
     "coverage.risk.champion_left",
     "coverage.risk.coverage_gap",
     "deal.newProjectOwner",
@@ -896,3 +905,45 @@ describe.each(Object.keys(CATALOGS))(
     });
   },
 );
+
+// The company record is called a company, and English once called it an
+// account. The word also names a mail, user, channel or provider account, so a
+// sweep of every value cannot tell the two apart. The key can. These keys, and
+// the keys under these prefixes, use "account" for the company record. Their
+// English value must not.
+const COMPANY_SENSE_ACCOUNT_KEYS = [
+  "analytics.sectionAccounts",
+  "analytics.accounts.",
+  "deal.aside.account",
+  "dealSuggestion.accountOwner",
+  "linkedinReach.account",
+  "co.contacts.map.account",
+  "rollup.accounts",
+  "reporting.prepared.accounts",
+  "reporting.account_cohort",
+  "agent.activity.accountScan",
+  "jobs.kind.account_scan",
+  "aiTask.name.account_scan",
+  "worklist.because.account_termination",
+];
+
+describe("en names the company record a company", () => {
+  const underCompanySense = (key: string) =>
+    COMPANY_SENSE_ACCOUNT_KEYS.some((prefix) => key.startsWith(prefix));
+
+  it("no key that names the company with the old word says account", () => {
+    const stale = Object.keys(en).filter(
+      (key) =>
+        underCompanySense(key) &&
+        /\baccounts?\b/i.test(visibleWords((en as Catalog)[key])),
+    );
+    expect(stale).toEqual([]);
+  });
+
+  it("every listed key or prefix still names a key", () => {
+    const spent = COMPANY_SENSE_ACCOUNT_KEYS.filter(
+      (prefix) => !Object.keys(en).some((key) => key.startsWith(prefix)),
+    );
+    expect(spent).toEqual([]);
+  });
+});

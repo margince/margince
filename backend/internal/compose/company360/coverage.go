@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -241,7 +242,7 @@ func (s *Service) wireCommittee(
 	}
 	held := map[string]bool{}
 	for _, seat := range seats {
-		held[seat.Role] = true
+		held[dealrole.Recorded(seat.Role)] = true
 		wire := crmcontracts.CompanyCoverageSeat{
 			ContactId: openapi_types.UUID(seat.ContactID),
 			FullName:  identity[ids.From[ids.ContactKind](seat.ContactID)].fullName,
@@ -341,16 +342,14 @@ func (s *Service) visibleOpenDeals(
 // a partial one, and it would then have to either name a gap that may not
 // exist or never name one at all.
 //
-// It excludes EXACTLY what the scoped read excludes — archived seats and
-// nothing else. Filtering more here (an ended_at arm the stakeholder read does
-// not carry) makes the total smaller than the slice it is compared against, and
-// unlisted_seats goes negative on a seat that has ended but not been archived.
+// It counts the seats the scoped read admits, through the same
+// dealseat.CurrentSQL. Any other rule makes the total disagree with the slice it
+// is compared against, and unlisted_seats goes wrong on an ended seat.
 func seatCount(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (int, error) {
 	var total int
 	err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM relationship
-		 WHERE kind = 'deal_stakeholder' AND deal_id = $1
-		   AND archived_at IS NULL`, dealID).Scan(&total)
+		 WHERE `+dealseat.CurrentSQL("")+` AND deal_id = $1`, dealID).Scan(&total)
 	if err != nil {
 		return 0, fmt.Errorf("company360: counting the deal's seats: %w", err)
 	}
@@ -416,15 +415,14 @@ func suggestedSeats(
 	// colleague typed here could be marked as the product's reading because of
 	// an unrelated deal elsewhere.
 	//
-	// And the SAME liveness rule the committee read applies: it excludes only
-	// archived rows, so filtering ended ones here as well would drop the
-	// provenance of a seat still on the board and quietly unmark it.
+	// And the currency rule the committee read applies, so no seat on the
+	// board loses its provenance and no ended seat gains one.
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT r.contact_id, coalesce(r.role, ''), r.captured_by = $%d, r.id, r.version
 		  FROM relationship r
-		 WHERE r.kind = 'deal_stakeholder' AND r.contact_id = ANY($%d)
-		   AND r.deal_id = $%d AND r.archived_at IS NULL
-		   AND (%s)`, agentPos, contactsPos, dealPos, edgeBound), args...)
+		 WHERE %s AND r.contact_id = ANY($%d)
+		   AND r.deal_id = $%d
+		   AND (%s)`, agentPos, dealseat.CurrentSQL("r"), contactsPos, dealPos, edgeBound), args...)
 	if err != nil {
 		return nil, fmt.Errorf("company360: reading the committee's provenance: %w", err)
 	}

@@ -8,9 +8,12 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { useCompanyZone } from "../lib/companyzone";
+import { hideHomeRows } from "../lib/homerows";
 import { noteHomeTaskDone } from "../lib/installhint";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { useRoute } from "../lib/router";
@@ -28,7 +31,12 @@ type TaskPatch = {
   // through this one mutation, so pinning it here pins all four at once.
   // Unpinned, two contacts could each complete one task and be told it worked.
   version: number | undefined;
-  body: { is_done?: boolean; due_at?: string; remind_at?: string | null };
+  body: {
+    is_done?: boolean;
+    due_at?: string;
+    remind_at?: string | null;
+    remind_intent?: components["schemas"]["IntentTime"];
+  };
 };
 
 // Every task write carries this key, so any control can see a write in flight.
@@ -37,6 +45,7 @@ const TASK_WRITE = ["task-write"] as const;
 export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
+  const companyZone = useCompanyZone();
   return useMutation({
     mutationKey: TASK_WRITE,
     mutationFn: async (input: TaskPatch) => {
@@ -51,13 +60,18 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
         t,
       );
       if (input.body.due_at && data) {
-        await refreshMovedTask(queryClient, invalidateKeys, data);
+        await refreshMovedTask(queryClient, invalidateKeys, data, companyZone);
       }
       // The version the write PRODUCED, answered so a follow-on press has one.
       // An undo re-sending the version the row was drawn at would be refused as
       // skew by the very write it is undoing.
       return data?.version;
     },
+    // A completed task leaves Home at once; every other edit keeps its row.
+    onMutate: (input) =>
+      input.body.is_done
+        ? hideHomeRows(queryClient, [{ source: "task", id: input.id }])
+        : undefined,
     // Returned, so the mutation stays pending until the reads have landed.
     // Until then the row keeps the version it was fetched at. A second press
     // in that window would re-send it and be refused as skew.
@@ -65,6 +79,7 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
       input.body.due_at
         ? undefined
         : refetchAfterWrite(queryClient, invalidateKeys, input.id),
+    onSettled: (_data, _error, _input, settle) => settle?.(),
     // A stale press is not a failed one: the task moved on under it, so the
     // reads are refreshed to show where it is now.
     onError: (error, input) => {

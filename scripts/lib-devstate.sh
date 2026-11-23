@@ -20,6 +20,16 @@ dev_state_root() {
   printf '%s' "${MARGINCE_DEV_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/margince/dev}"
 }
 
+# devlog_awk runs awk a line at a time. mawk reads a pipe in 4 KB blocks unless
+# told it is interactive, so a quiet server's lines would arrive late.
+devlog_awk() {
+  if awk -W version 2>&1 </dev/null | grep -qi '^mawk'; then
+    awk -W interactive "$@"
+  else
+    awk "$@"
+  fi
+}
+
 # The primary worktree's stack has no slug, so its state directory needs a name
 # anyway. It is reserved: DEV_SLUG may not take it, or two stacks would share one
 # directory and each stop would remove the other's pids and claim.
@@ -138,6 +148,17 @@ dev_state_dir() { # slug
   printf '%s/%s' "$(dev_state_root)" "${1:-$DEV_BASE_SLUG_DIR}"
 }
 
+# dev_recorded_stack NAME — one value (FE_PORT, API_PORT, …) from the record
+# `make dev` writes for this worktree's stack; non-zero when there is none.
+dev_recorded_stack() { # name
+  local slug env_file
+  slug="$(dev_resolve_slug "${DEV_SLUG:-}")" || return 1
+  env_file="$(dev_state_dir "$slug")/env"
+  [[ -f "$env_file" ]] || return 1
+  # shellcheck disable=SC1090
+  (unset "$1"; . "$env_file" && [[ -n "${!1:-}" ]] && printf '%s' "${!1}")
+}
+
 # dev_app_base_url — the URL this worktree's stack actually serves the app on.
 #
 # `make seed-dev` and `make verify-boot` both defaulted to :8080, which was the
@@ -149,17 +170,11 @@ dev_state_dir() { # slug
 # Falls back to :8080 when this worktree has no recorded stack, which keeps the
 # primary worktree and CI on the URL they already use.
 dev_app_base_url() {
-  local slug env_file FE_PORT
+  local slug fe_port
   slug="$(dev_resolve_slug "${DEV_SLUG:-}")" || return 1
-  env_file="$(dev_state_dir "$slug")/env"
-  if [[ -f "$env_file" ]]; then
-    FE_PORT=''
-    # shellcheck disable=SC1090
-    . "$env_file"
-    if [[ -n "$FE_PORT" ]]; then
-      printf 'http://localhost:%s' "$FE_PORT"
-      return 0
-    fi
+  if fe_port="$(dev_recorded_stack FE_PORT)"; then
+    printf 'http://localhost:%s' "$fe_port"
+    return 0
   fi
   # No recorded stack. For the PRIMARY worktree :8080 is still the answer — that
   # stack is the shared one and its port is fixed. For a LINKED worktree there is

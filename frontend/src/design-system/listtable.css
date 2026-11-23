@@ -1270,6 +1270,17 @@
   cursor: pointer;
 }
 
+/* A list fills the viewport, so its pager sits where a toast lands. While a list
+ * is on screen the toast stands above the pager's row, leaving the pages usable. */
+:root:has(.lt-foot) .toast-region {
+  --lt-foot-height: calc(var(--controlHeight) + 2 * var(--space-3));
+  bottom: calc(
+    var(--stickyBottomInset) +
+    var(--lt-foot-height) +
+    var(--space-4)
+  );
+}
+
 /* One page and nothing more to fetch: the pager has nothing to say, but it keeps
  * its space so the page-size control does not jump when a filter is cleared. */
 .lt-foot.single .lt-pager {
@@ -1730,6 +1741,23 @@
 }
 .lt-select {
   margin-inline-end: var(--space-3);
+}
+/* On a phone a press that misses the box lands on the row and opens the
+   record, so a thumb gets a 44px target from a layer of the label that draws
+   nothing. It ends where the name's link starts, across the gap above. */
+@media (pointer: coarse) {
+  .lt-select {
+    position: relative;
+  }
+  .lt-select::before {
+    content: "";
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: calc(-1 * var(--space-3));
+    inline-size: 44px;
+    block-size: 44px;
+    translate: 0 -50%;
+  }
 }
 
 .lt-bulkbar {

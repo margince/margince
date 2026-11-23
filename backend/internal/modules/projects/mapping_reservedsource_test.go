@@ -81,3 +81,25 @@ func TestProjectImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 		t.Error("the client door admitted the importer namespace")
 	}
 }
+
+// A source off the fixed list is refused, and each channel on it passes.
+func TestProjectCreateInputRefusesASourceOffTheList(t *testing.T) {
+	company := openapi_types.UUID(ids.NewV7())
+	for _, source := range []string{"seed", "acme-helpdesk:ticket-4471", "Manual"} {
+		var refused *provenance.RecordSourceError
+		if _, err := ProjectCreationInput(crmcontracts.CreateProjectRequest{
+			Name: "Typed", CompanyId: company, Source: source,
+		}); !errors.As(err, &refused) {
+			t.Errorf("source %q: err = %v, want a RecordSourceError", source, err)
+		}
+	}
+	for _, source := range provenance.RecordSources() {
+		in, err := ProjectCreationInput(crmcontracts.CreateProjectRequest{Name: "Typed", CompanyId: company, Source: source})
+		if err != nil || in.Source != source {
+			t.Errorf("source %q: got %q, %v, want it kept", source, in.Source, err)
+		}
+	}
+	if err := projectCheckError("project_source_check", ""); !errors.As(err, new(*provenance.RecordSourceError)) {
+		t.Errorf("project_source_check answers %v, want a RecordSourceError", err)
+	}
+}

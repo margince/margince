@@ -117,8 +117,8 @@ func TestReplayRecordsNoOwnerForABareStampDespiteOneConnection(t *testing.T) {
 	e := integration.Setup(t)
 	bare := seedReplayableMailStamped(t, "connector:gmail", "msg-bare", ccMessage)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `INSERT INTO capture_connection
-		(id, provider, user_id, scopes, status, auth, account_label)
-		VALUES ($1, 'gmail', $2, '{}', 'connected', ''::bytea, 'owner@myco.example')`,
+		(id, provider, user_id, status, auth, account_label)
+		VALUES ($1, 'gmail', $2, 'connected', ''::bytea, 'owner@myco.example')`,
 		ids.NewV7(), e.Rep1); err != nil {
 		t.Fatalf("seeding the only gmail connection: %v", err)
 	}
@@ -170,8 +170,8 @@ func TestReplayRecordsUnreadableRatherThanFailingTheBatch(t *testing.T) {
 	// Written straight through the owner rather than integration.SeedRow: that
 	// helper binds a workspace, and this table no longer has one to bind.
 	if _, err := owner.Exec(context.Background(), `INSERT INTO capture_connection
-		(id, provider, user_id, scopes, status, auth, account_label)
-		VALUES ($1, 'gmail', $2, '{}', 'connected', ''::bytea, 'owner@myco.example')`,
+		(id, provider, user_id, status, auth, account_label)
+		VALUES ($1, 'gmail', $2, 'connected', ''::bytea, 'owner@myco.example')`,
 		ids.NewV7(), e.Rep1); err != nil {
 		t.Fatalf("seeding the mailbox connection: %v", err)
 	}
@@ -259,8 +259,8 @@ func TestReplayRecordsCappedRatherThanFoundNone(t *testing.T) {
 		"",
 	))
 	if _, err := owner.Exec(context.Background(), `INSERT INTO capture_connection
-		(id, provider, user_id, scopes, status, auth, account_label)
-		VALUES ($1, 'gmail', $2, '{}', 'connected', ''::bytea, 'owner@myco.example')`,
+		(id, provider, user_id, status, auth, account_label)
+		VALUES ($1, 'gmail', $2, 'connected', ''::bytea, 'owner@myco.example')`,
 		ids.NewV7(), e.Rep1); err != nil {
 		t.Fatalf("seeding the mailbox connection: %v", err)
 	}

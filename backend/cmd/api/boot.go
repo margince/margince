@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/platform/replayguard"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -70,6 +71,7 @@ func boundPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 		pool.Close()
 		return nil, err
 	}
+	settings.EnableCache(pool)
 	return pool, nil
 }
 
@@ -262,6 +264,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deploy
 	// when declared. bindInstallation already proved the base URL they advertise.
 	if cfg.mcpConnector {
 		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration),
+			compose.WithUnusedClientLimit(config.Val(cfg.settings, ps.MCPUnusedClientLimit)),
 			compose.WithDispactCalls(replayguard.New(rdb), cfg.posture.IsNonProduction()))
 	}
 

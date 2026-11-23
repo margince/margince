@@ -20,7 +20,7 @@ import {
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { AutonomyDot } from "../../design-system/trust";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatDateTimeAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { deferralDetail } from "../../lib/deferral-detail";
@@ -192,7 +192,11 @@ function SiteReadDeferral({ report }: Readonly<{ report: SiteReadReport }>) {
         <>
           {" "}
           {t("deepread.resumesAt", {
-            when: formatDateTime(report.next_attempt_at, locale, readerZone),
+            when: formatDateTimeAbbrev(
+              report.next_attempt_at,
+              locale,
+              readerZone,
+            ),
           })}
         </>
       )}

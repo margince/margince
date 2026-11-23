@@ -8,6 +8,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -82,8 +83,8 @@ type ApprovalQuery struct {
 // side's write authority has no verb to be offered — and the card is where they
 // should learn that, rather than from a refusal after the press.
 type Duplicates interface {
-	OpenCandidates(ctx context.Context, limit int) ([]DuplicatePair, error)
-	CountOpen(ctx context.Context) (int, error)
+	OpenCandidates(ctx context.Context, limit int, owners *storekit.OwnerSet) ([]DuplicatePair, error)
+	CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error)
 	DescribeMany(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]RecordFace, error)
 	DecidableSubset(ctx context.Context, entityType string, rowIDs []ids.UUID) (map[ids.UUID]bool, error)
 	// SettleablePairs asks the PAIR's own question, which authority cannot:
@@ -95,6 +96,9 @@ type Duplicates interface {
 	SettleablePairs(ctx context.Context, pairs []DuplicatePair) (map[ids.UUID]bool, error)
 }
 
+// PairOwners narrows the duplicate pairs to those the owners decide; nil is every pair.
+type PairOwners = storekit.OwnerSet
+
 // DuplicatePair is one open candidate: the pair, and what the detector saw.
 type DuplicatePair struct {
 	ID         ids.UUID
@@ -103,6 +107,8 @@ type DuplicatePair struct {
 	LeftID     ids.UUID
 	RightID    ids.UUID
 	Evidence   []FieldComparison
+	// Owners are the live owners of the two records.
+	Owners []ids.UUID
 }
 
 // FieldComparison is one row of the detection-time snapshot.
@@ -251,6 +257,7 @@ type FailedEffect struct {
 	// Sentence is the server's own line about what did not run, written for
 	// the reader when the failure was recorded.
 	Sentence string
+	Code     *string // the sentence as Approval.effect_failure_code, when it has one
 	FailedAt time.Time
 	// The record the decision was about; empty TargetType when it named none,
 	// and the card offers `open` only when it did.

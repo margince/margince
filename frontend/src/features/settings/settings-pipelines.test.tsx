@@ -646,6 +646,10 @@ describe("PipelinesCard: the ladder", () => {
     const [edit] = backend.writes("PATCH", "/stages/s1");
     expect(edit.ifMatch).toBe("5");
     expect(edit.body).toMatchObject({ name: "Qualified" });
+    // The "Forecast uses" line reads the chances again after the write.
+    await waitFor(() =>
+      expect(backend.writes("GET", "/forecast/stage-chances")).toHaveLength(2),
+    );
   });
 
   it("refuses a new type on the pipeline's only Won stage, and saves the same type", async () => {
@@ -665,11 +669,10 @@ describe("PipelinesCard: the ladder", () => {
     expect((await within(form).findAllByText(sentence)).length).toBeGreaterThan(
       0,
     );
-    expect(
-      within(form)
-        .getByRole("button", { name: "Save" })
-        .hasAttribute("disabled"),
-    ).toBe(true);
+    await user.click(within(form).getByRole("button", { name: "Save" }));
+    expect(backend.writes("PATCH", "/stages/s2")).toHaveLength(0);
+    expect(document.activeElement).toBe(type);
+    expect(type.getAttribute("aria-invalid")).toBe("true");
     await user.click(type);
     await user.click(screen.getByRole("option", { name: "Won" }));
     await user.click(within(form).getByRole("button", { name: "Save" }));

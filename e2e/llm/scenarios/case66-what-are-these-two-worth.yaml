@@ -1,4 +1,4 @@
-# CASE 66 — What are these two deals worth together.
+# CASE 66 — What are these two deals worth together, and where do I open one.
 #
 # Every amount a tool returns is a `<name>_minor` figure with a readable
 # `<name>_display` beside it. A model that divides the minor figure itself, or
@@ -9,20 +9,29 @@
 # The seeded world holds Körber Sensorik Rollout at 56,000.00 EUR and Rheinufer
 # Netzmodernisierung at 12,500.00 EUR, so the pair is 68,500.00 EUR. Neither
 # raw minor sum (6,850,000) nor a missed division (685,000) may appear.
+#
+# Every evidence entry for a deal also carries a `web_url` to its page in the
+# app. A user who asks for a link needs it, and a model that has only seen an id
+# cannot give one. A deal's page is `/#/deals/<id>` on the stack's public base
+# URL. The harness reads the answer and the calls, not the tool results, so it
+# cannot compare the link's id to the deal's; it holds the shape of a deal page.
 name: case66_what_are_these_two_worth
-criteria: [1]
+title: What two deals are worth, and where to open one
+criteria: [1, 2]
 writes: false
 
 prompt: |
   What are the Körber Sensorik Rollout and the Rheinufer Netzmodernisierung
-  deals worth together?
-
-must_call:
-  - search_records|list_records|query_workspace|read_record|read_forecast
+  deals worth together? And give me a link I can open the Körber one from.
 
 may_call:
   - find_records
   - resolve_entities
+  - search_records
+  - list_records
+  - query_workspace
+  - read_record
+  - read_forecast
 
 # The two figures are seed-specific, so an answer that carries both was read
 # from the deals and not recalled.
@@ -30,6 +39,8 @@ must_mention:
   - "68[.,' ’]?500"
   - "56[.,' ’]?000"
   - "12[.,' ’]?500"
+  # Criterion 2: a link to a deal's page, a mechanical fact a regex holds.
+  - "/#/deals/[0-9a-f]{8}-[0-9a-f]{4}-"
 
 must_not_mention:
   - "6[.,' ’]?850[.,' ’]?000"

@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
   render as rtlRender,
@@ -50,8 +51,15 @@ afterEach(() => {
 
 let restoreMotion: (() => void) | null = null;
 
-const render = (ui: ReactNode) =>
-  rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>);
+// A wrapper, not a tree, so a rerender keeps the client the band's Sign out reads.
+const render = (ui: ReactNode) => {
+  const client = new QueryClient();
+  return rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
+};
 
 function fact(
   over: Partial<CompanySiteReadFact> & { value_key: string },

@@ -1,17 +1,19 @@
-# CASE 117 — Log the meeting, add the task, and say what the work left waiting.
+# CASE 117 — Log the meeting, add the task, and claim nothing about the queue
+# that the work cannot know.
 #
-# THE FAILURE IT EXISTS FOR: the finish-time approval check used to hand back the
-# whole queue, and the answer read colleagues' work out as if this task had raised
-# it. The setup stages three contact-card reviews (Wiebke Brandstätter, Okko
-# Rademacher, Theda Uphoff) that have nothing to do with this task. An answer
-# that lists or describes them fails. A bare count of other waiting items is
-# allowed; what they are is not.
+# THE FAILURES IT EXISTS FOR: an answer that reads the queue may read colleagues'
+# work out as if this task had raised it. The setup stages three contact-card
+# reviews (Wiebke Brandstätter, Okko Rademacher, Theda Uphoff) that have nothing
+# to do with this task. An answer that lists or describes them fails. A bare
+# count of other waiting items is allowed; what they are is not.
 #
 # The setup also turns on the post-meeting recap, so the meeting stages a held
-# draft to Jannik Feddersen. That draft lands a few seconds after the write
-# returns, so an answer may not have seen it yet; it is not judged. The draft
-# waits in the queue, and asking again lists it.
+# draft to Jannik Feddersen a few seconds after the write returns. The user did
+# not ask about approvals, so an answer that says nothing is waiting fails: a
+# check made before the draft lands reads an empty queue. Reporting the draft
+# is not required.
 name: case117_log_it_and_say_what_waits
+title: Log it, and say what waits
 criteria: [2]
 
 # Both belong to this case alone: a pending review or a recap draft would show in
@@ -27,21 +29,20 @@ writes: true
 
 # The deadline is not judged here. A weekday name reads two ways when the run
 # falls on that weekday, and a run spent deciding which one never reaches the queue.
+# Yesterday, never this morning: the lane runs at any hour, and a meeting held at
+# 9:30 today is still in the future when it runs before then, so logging it is refused.
 prompt: |
-  Had coffee with Jannik Feddersen from Husumer Windservice this morning at
+  Had coffee with Jannik Feddersen from Husumer Windservice yesterday morning at
   9:30 at their office. They want a quote for the gearbox inspection on their six
   turbines in Q1. Please log the meeting in the CRM and add a follow-up task for
   me to send him the quote within a week.
 
-# The finish-time check is the behaviour under test, so the run must make it.
 # The prompt gives a start time: a held meeting with only today's date is
-# refused as not over yet, and a run that stops there never reads the queue.
-must_call:
-  - list_approvals
-
+# refused as not over yet. Reading the queue is allowed, never required.
+#
 # The meeting is what the recap answers, so it is pinned the way case 1 pins
-# it. The end-state reader finds an activity only on a project, and this one is
-# on a contact.
+# it. The run picks its subject and adds a task beside it, so no end-state
+# entry can name the meeting: the call that writes it is its only trace.
 must_call_with:
   - log_activity.kind=meeting|create_record.record_type=activity
 may_call:
@@ -63,8 +64,21 @@ must_mention:
 
 # The unrelated reviews by the names their cards carry. Describing them without
 # a name is criterion 2's to catch.
+#
+# The rest is a claim that nothing waits, which the recap draft can make untrue
+# after the answer. Each pattern is one shape of that claim, kept inside one
+# clause, so "nothing has been sent; the draft is waiting" is not one.
+# scripts/test-e2e-llm-check.sh holds these against sentences that must and
+# must not match.
 must_not_mention:
   - "(?i)brandst(?:ä|ae)tter|rademacher|uphoff"
+  - "(?i)\b(?:nothing|none)\b[^.;:,\n]{0,40}?\b(?:is|are|was|were)\s+(?:currently\s+|still\s+|now\s+)?(?:waiting|pending|awaiting|queued)\b"
+  - "(?i)\bnothing\s+(?:waiting|pending|awaiting|queued)\b"
+  - "(?i)\bno\s+(?:\w+\s+){0,2}?(?:pending|outstanding|open|waiting)\s+(?:approvals?|items?|drafts?|proposals?|reviews?|decisions?|requests?)\b"
+  - "(?i)\bno\s+(?:\w+\s+){0,2}?(?:approvals?|items?|drafts?|proposals?|reviews?|decisions?|requests?)\s+(?:is\s+|are\s+)?(?:currently\s+|still\s+)?(?:waiting|pending|awaiting|queued)\b"
+  - "(?i)\b(?:queue|inbox)\s+(?:is|was|looks)\s+(?:currently\s+|now\s+|still\s+)?(?:empty|clear)\b"
+  - "(?i)\bnothing\s+(?:for\s+you\s+|left\s+)?to\s+(?:approve|review|decide)\b"
+  - "(?i)\b(?:are|is|has|have)\s+no\s+(?:\w+\s+)?(?:approvals?|drafts?|proposals?|reviews?)\b"
 
 judge:
   - "Criterion 2. The answer keeps to what this task left waiting. This task is the coffee meeting with Jannik Feddersen of Husumer Windservice: the meeting, its quote and its follow-up task are this task's own items, and reporting them is a yes. It does not list, name or describe any waiting item that has nothing to do with this task, such as contact-card reviews for other people; a bare count of other waiting items that says nothing about what they are or whom they concern is a yes. Answer no if the answer lists, names or summarises an unrelated waiting item, for example by saying what kind of item it is or whom it is about."

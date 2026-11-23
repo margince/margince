@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -78,11 +79,22 @@ func TestAnInheritedProjectGivesItsOwnerNoSayOverTheNote(t *testing.T) {
 	}
 	pipeline, open, _ := DealFixture(t, e)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(company)),
+		Source: "manual",
+		Name:   "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(company)),
 		ProjectID: new(projectIDOf(ids.UUID(project.Id))), OwnerID: userIDPtr(&e.Rep1),
 	})
 	if err != nil {
 		t.Fatalf("creating the deal: %v", err)
+	}
+	// Inheriting the project adds to it, so Rep1 needs a write share on it.
+	e.GrantRole(t, e.Rep1, "rep")
+	if _, err := identity.NewService(e.Pool).CreateRecordGrant(e.As(e.Rep3, []ids.UUID{e.Team2}, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
+		Objects: map[string]principal.ObjectGrant{"project": {Read: true, Update: true}},
+	}), identity.CreateGrantInput{
+		RecordType: "project", RecordID: ids.UUID(project.Id), SubjectType: "user", SubjectID: e.Rep1, Access: "write",
+	}); err != nil {
+		t.Fatalf("sharing the project: %v", err)
 	}
 	member := dealNotePerms(principal.ObjectGrant{Create: true, Read: true, Update: true})
 	note := logDealNote(e.As(e.Rep1, []ids.UUID{e.Team1}, member), t, e, onDeal(ids.UUID(deal.Id)))

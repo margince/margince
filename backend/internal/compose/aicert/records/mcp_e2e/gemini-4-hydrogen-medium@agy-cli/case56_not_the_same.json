@@ -12,13 +12,80 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "00210e3689df6825",
+    "tools": "8654edccb7c19d75",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "1d06e4e790e4733576f87296a1fcadc09dafe0ae",
+    "ran_at": "2026-11-22T05:10:47Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:55:20Z"
+  },
   "usage": {
-    "input_tokens": 61036,
-    "output_tokens": 20518,
+    "input_tokens": 60779,
+    "output_tokens": 14725,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 253349,
+    "cache_read_input_tokens": 217206,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "read_workspace",
+        "resolve_duplicates",
+        "resolve_entities",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "read_workspace",
+        "resolve_duplicates",
+        "resolve_entities",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 8,
+      "min": 8,
+      "max": 8
+    },
+    "turns": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 138992.5,
+      "min": 120708,
+      "max": 157277
+    },
+    "output_tokens": {
+      "median": 7362.5,
+      "min": 6525,
+      "max": 8200
+    }
   }
 }

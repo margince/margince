@@ -6,7 +6,6 @@ package datatask
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -42,10 +41,10 @@ func SealReviewTx(ctx context.Context, tx pgx.Tx, taskID string, review ReviewRe
 		return "", err
 	}
 	token := base64.RawURLEncoding.EncodeToString(secret)
-	hash := sha256.Sum256([]byte(token))
+	hash := storekit.TokenHashBytes(token)
 	expires := now.Add(15 * time.Minute)
 	if _, err := tx.Exec(ctx, `INSERT INTO data_task_review(token_hash,task_id,operator,review,expires_at,created_at)
- VALUES(@hash,@task,@operator,@review,@expires,@now)`, pgx.NamedArgs{"hash": hash[:], paramTask: taskID, paramOperator: actor.ID, "review": review, "expires": expires, paramNow: now}); err != nil {
+ VALUES(@hash,@task,@operator,@review,@expires,@now)`, pgx.NamedArgs{"hash": hash, paramTask: taskID, paramOperator: actor.ID, "review": review, "expires": expires, paramNow: now}); err != nil {
 		return "", err
 	}
 	if _, err := storekit.LogSystem(ctx, tx, "data_task.review_issued", map[string]any{"task_id": taskID, paramOperator: actor.ID, "expires_at": expires}); err != nil {
@@ -55,12 +54,12 @@ func SealReviewTx(ctx context.Context, tx pgx.Tx, taskID string, review ReviewRe
 }
 
 func consumeReview(ctx context.Context, tx pgx.Tx, taskID, operator string, review ReviewRequest, now time.Time) (ReviewRequest, error) {
-	hash := sha256.Sum256([]byte(review.PreviewToken))
+	hash := storekit.TokenHashBytes(review.PreviewToken)
 	review.PreviewToken = ""
 	var consumed int
 	err := tx.QueryRow(ctx, `DELETE FROM data_task_review WHERE token_hash=@hash AND task_id=@task
  AND operator=@operator AND expires_at>@now AND review=@review::jsonb RETURNING 1`,
-		pgx.NamedArgs{"hash": hash[:], paramTask: taskID, paramOperator: operator, paramNow: now, "review": review}).Scan(&consumed)
+		pgx.NamedArgs{"hash": hash, paramTask: taskID, paramOperator: operator, paramNow: now, "review": review}).Scan(&consumed)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ReviewRequest{}, apperrors.ErrConflict
 	}

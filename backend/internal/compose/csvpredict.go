@@ -37,6 +37,9 @@ const (
 	// from the three outcomes above because a dry run that folds it into
 	// `created` promises work that cannot happen.
 	predictUnwritable
+	// predictHeldKey is an update refused over a key another record holds. The
+	// row is skipped, and its record still answers to the row's ref.
+	predictHeldKey
 	// predictCollides is a row naming a company the CRM ALREADY holds, found
 	// by the same PO-F-2 ladder the create path runs. The commit still lands
 	// it — and files a review pair — so this is a disclosure, not a refusal:
@@ -66,7 +69,7 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // Checks run in Ensure's order: create grant, then cells, then a contact's
 // company link under the run's policy. A dropped link rides on the outcome.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
-	w.predictedWarnings = nil
+	w.predictedWarnings, w.predictedChange = nil, nil
 	if refused := w.createRefusal(ctx, row); refused != nil {
 		return predictUnwritable, refused, nil
 	}
@@ -165,6 +168,9 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 		return predictUnwritable, why, err
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
+	if err == nil && !collides {
+		collides, err = w.collidesInFile(ctx, row)
+	}
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
@@ -205,7 +211,12 @@ func (w *csvWriters) reconcilePrediction(
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
-	return predictUpdate, kept, nil
+	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
+	if err != nil || why.Code != "" {
+		return predictHeldKey, why, err
+	}
+	w.predictedChange, err = w.changeOf(ctx, id, changed, current)
+	return predictUpdate, kept, err
 }
 
 // collidesWithExisting asks whether the CRM already holds the company this row

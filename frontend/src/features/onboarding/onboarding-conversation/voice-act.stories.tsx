@@ -9,22 +9,22 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  storyQueryClient,
 } from "../../../testing/story-utils";
 import { initialConversationState } from "./conversation-machine";
 import type {
   ConversationPhase,
   ConversationState,
 } from "./conversation-types";
+import { VOICE_PROBE_KEY, type VoiceRestoreProbe } from "./restore";
 import { VoiceAct } from "./voice-act";
 
 // The act that learns how this company writes: it collects a corpus, says how
 // much it has, and builds a voice profile from it.
 //
-// The word meter is the SERVER's count, not the browser's — `initialSummary` is
-// the restore probe's answer for a resumed session — so the stories that matter
-// are the ones where that count is below, at, and past the threshold the build
-// needs. A story that seeded the count client-side would be documenting a
-// number the wire never sent.
+// The word meter is the SERVER's count, as the restore probe answered it for a
+// resumed session. So the stories that matter put that count below, at, and
+// past the threshold the build needs.
 //
 // The eyebrow is the rail position, ungrouped in every locale.
 
@@ -69,13 +69,15 @@ function act(
       "GET /voice/corpus": () =>
         corpus ? jsonResponse(corpus) : jsonResponse(summary(0)),
     });
+    const client = storyQueryClient();
+    client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, {
+      built: false,
+      summary: corpus,
+      sources: [],
+    });
     return (
-      <StoryProviders locale={locale}>
-        <VoiceAct
-          state={conversation}
-          dispatch={() => {}}
-          initialSummary={corpus}
-        />
+      <StoryProviders locale={locale} client={client}>
+        <VoiceAct state={conversation} dispatch={() => {}} />
       </StoryProviders>
     );
   };
@@ -139,15 +141,6 @@ export const Built: Story = {
     }),
     summary(4820),
   ),
-};
-
-/**
- * Skipped. A company that will not hand over its writing still has to reach the
- * end of onboarding, so this is an ordinary outcome rather than a failure — and
- * the act says what the product will do without it.
- */
-export const Skipped: Story = {
-  render: act(state("vo.skipped"), summary(0)),
 };
 
 /** At 390px the meter, the paste area and the build verb stack. */

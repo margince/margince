@@ -49,15 +49,13 @@ func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, a
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.BackfillEstimate{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return connector.BackfillEstimate{}, err
-	}
-	count, floor, err := c.api.EstimateAfter(ctx, access, afterQuery(after))
-	if err != nil {
-		return connector.BackfillEstimate{}, err
-	}
-	return connector.BackfillEstimate{Messages: count, Floor: floor}, nil
+	return authorized(ctx, c, st, func(ctx context.Context, access string) (connector.BackfillEstimate, error) {
+		count, floor, err := c.api.EstimateAfter(ctx, access, afterQuery(after))
+		if err != nil {
+			return connector.BackfillEstimate{}, err
+		}
+		return connector.BackfillEstimate{Messages: count, Floor: floor}, nil
+	})
 }
 
 // BackfillPage pulls one page of the window, oldest-boundary inclusive,
@@ -73,17 +71,22 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.BackfillPageResult{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return connector.BackfillPageResult{}, err
-	}
+	return authorized(ctx, c, st, func(ctx context.Context, access string) (connector.BackfillPageResult, error) {
+		return c.backfillPageWith(ctx, access, st.Owner, after, pageToken, sink)
+	})
+}
+
+// backfillPageWith is one BackfillPage under one access token.
+func (c *Connector) backfillPageWith(
+	ctx context.Context, access, owner string, after time.Time, pageToken string, sink connector.Sink,
+) (connector.BackfillPageResult, error) {
 	gate := &rateGate{}
 	page, err := c.listHistoryPage(ctx, access, afterQuery(after), pageToken, gate)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
 	w := &pageWalk{
-		c: c, ctx: ctx, access: access, owner: st.Owner, sink: sink, gate: gate,
+		c: c, ctx: ctx, access: access, owner: owner, sink: sink, gate: gate,
 		ids: page.IDs, settled: make(map[string]bool), progress: connector.BackfillProgressFrom(ctx),
 		res: connector.BackfillPageResult{NextToken: *page.Next, Scanned: len(page.IDs)},
 	}

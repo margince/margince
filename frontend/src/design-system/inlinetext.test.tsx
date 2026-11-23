@@ -73,13 +73,27 @@ describe("a text value edited in a dialog", () => {
     expect(onSave).toHaveBeenCalledWith("One\nTwo ");
   });
 
-  it("edits a number at the step the caller allows", async () => {
+  // A number box hands over "" for text it cannot read, and the dialog sets
+  // noValidate, so a typo would save as no value. Text reaches the save as typed.
+  it("edits a number as text, so a typo is never saved as no value", async () => {
     const user = userEvent.setup();
-    renderText({ type: "number", step: "any", value: "14.6" });
+    const { onSave } = renderText({ type: "decimal", value: "14.6" });
     await user.click(screen.getByRole("button", { name: /Change Industry/ }));
-    const box = screen.getByRole("spinbutton", { name: "Industry" });
-    expect(box).toHaveAttribute("step", "any");
-    expect(box).toHaveValue(14.6);
+    const box = screen.getByRole("textbox", { name: "Industry" });
+    expect(box).toHaveAttribute("inputmode", "decimal");
+    await user.type(box, "e");
+    await user.click(save());
+    expect(onSave).toHaveBeenCalledWith("14.6e");
+  });
+
+  it("asks for a keyboard of digits only for a whole number", async () => {
+    const user = userEvent.setup();
+    renderText({ type: "number", value: "40" });
+    await user.click(screen.getByRole("button", { name: /Change Industry/ }));
+    expect(screen.getByRole("textbox", { name: "Industry" })).toHaveAttribute(
+      "inputmode",
+      "numeric",
+    );
   });
 
   it("saves a day picked in the calendar from Save", async () => {
@@ -212,10 +226,9 @@ describe("the value at rest", () => {
       readOnlyReason: "Archived.",
     });
     expect(screen.queryByRole("button")).toBeNull();
-    expect(screen.getByText("€48,000.00")).toHaveAttribute(
-      "title",
-      "Archived.",
-    );
+    const value = screen.getByText("€48,000.00");
+    expect(value).toHaveAccessibleDescription("Archived.");
+    expect(value).toHaveAttribute("tabindex", "0");
   });
 
   it("stands a suggested value in for an empty one, muted, for editor and reader alike", () => {

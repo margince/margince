@@ -29,6 +29,10 @@ import { CommandPalette, useBuiltinCommands } from "./palette";
 import { PageTitle, WorkspaceRail } from "./shell";
 import { TopBar } from "./topbar";
 
+// Record ids in the form the server reads; the trail names no other kind.
+const ANNA_ID = "0a7e5c1d-6b2f-4c8e-9d3a-1f2e3d4c5b6a";
+const LONG_NAME_ID = "3c9b2a1d-8e7f-4a6b-9c5d-2e1f0a9b8c7d";
+
 /**
  * The one strip that is true of the whole session rather than of the page under
  * it: where you are, how you reach anything, which system of record is
@@ -330,8 +334,8 @@ export const RecordRoute: Story = {
   name: "a record — the trail ends in its name",
   render: () => (
     <BarStory
-      route={{ screen: "contacts", id: "p-anna" }}
-      record={{ id: "p-anna", name: "Anna Weber" }}
+      route={{ screen: "contacts", id: ANNA_ID }}
+      record={{ id: ANNA_ID, name: "Anna Weber" }}
     />
   ),
 };
@@ -391,9 +395,9 @@ export const RecordLongName: Story = {
   name: "a record whose name outruns the row",
   render: () => (
     <BarStory
-      route={{ screen: "contacts", id: "p-long" }}
+      route={{ screen: "contacts", id: LONG_NAME_ID }}
       record={{
-        id: "p-long",
+        id: LONG_NAME_ID,
         name:
           "Maria Aleksandra Wittenberg-Sørensen de la Cruz Habermann-Vogelsang " +
           "(Beteiligungsgesellschaft für erneuerbare Energien)",
@@ -559,8 +563,8 @@ export const Narrow: Story = {
   globals: { viewport: { value: "narrow" } },
   render: () => (
     <BarStory
-      route={{ screen: "contacts", id: "p-anna" }}
-      record={{ id: "p-anna", name: "Anna Weber" }}
+      route={{ screen: "contacts", id: ANNA_ID }}
+      record={{ id: ANNA_ID, name: "Anna Weber" }}
     />
   ),
 };

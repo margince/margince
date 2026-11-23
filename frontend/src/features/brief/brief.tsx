@@ -14,7 +14,7 @@ import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { PageZones } from "../../design-system/pagezones";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { FlatPanelHeads, Panel, PanelBody } from "../../design-system/panel";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
@@ -73,6 +73,7 @@ import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { taskName } from "./brief.taskcard";
+import { shownAddress } from "./brief.teamselect";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
@@ -83,7 +84,7 @@ export function BriefScreen() {
   const me = useMe();
   const [params, setParams] = useUrlParams();
   const query = useHomeDay(Boolean(params.get(FOCUS_PARAM)));
-  const address = addressFrom(params);
+  const address = shownAddress(addressFrom(params), me.data?.team_week);
   const day = briefDay(query.data?.pages);
   const queueOpen = drawerOpen(params);
   const review = useWeeklyReview(address.week, address.view === "weekly");
@@ -96,9 +97,8 @@ export function BriefScreen() {
       onChange={(next) => setParams(paramsFor(next, params))}
     />
   );
-  // The way into the reader's own Today, with that list's count on it. It
-  // always opens Mine, Today, every category, whatever view the drawer was
-  // last left on, so the number is the one the opened list shows.
+  // The way into the reader's own Today: it always opens Mine, Today, every
+  // category, so the number is the one the opened list shows.
   const queueToggle = (
     <PageAsideToggle
       controlled={{
@@ -131,13 +131,13 @@ export function BriefScreen() {
             }
           : undefined
       }
-      week={review.data}
+      week={address.team ? undefined : review.data}
       firstName={firstName}
       now={new Date(nowMs)}
       pending={query.isPending}
       briefedAt={morning ? brief.data?.generated_at : undefined}
       controls={dials}
-      titleAside={morning ? undefined : <WeekStepper />}
+      titleAside={morning || address.team ? undefined : <WeekStepper />}
     />
   );
   return (
@@ -166,7 +166,7 @@ function BriefBody({
   query: ReturnType<typeof useWorklist>;
   queueToggle: ReactNode;
 }>) {
-  if (address.view === "weekly") return <WeeklyPage />;
+  if (address.view === "weekly") return <WeeklyPage team={address.team} />;
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
 }
 
@@ -306,15 +306,13 @@ function PersonalMorning({
           </>
         }
         aside={
-          <>
+          // Every rail card opens with the one flat head, so a card added here
+          // cannot draw a band its neighbours do not.
+          <FlatPanelHeads value>
             {/* The day's meetings first: the work is read against them. */}
             <ScheduleWithMeetings day={day} state={state} />
             {day && (
-              <Panel
-                title={t("brief.rail.numbers")}
-                flatHead
-                className="brief-overview"
-              >
+              <Panel title={t("brief.rail.numbers")} className="brief-overview">
                 <PanelBody>
                   <BriefReadingsStrip day={day} />
                   <BriefCoverage
@@ -331,7 +329,6 @@ function PersonalMorning({
               <div aria-hidden="true">
                 <Panel
                   title={t("brief.rail.numbers")}
-                  flatHead
                   className="brief-overview"
                 >
                   <PanelBody>
@@ -343,7 +340,7 @@ function PersonalMorning({
             <CustomerPaymentsCard
               enabled={dayAnswered(state, [handled, ...dealReads])}
             />
-          </>
+          </FlatPanelHeads>
         }
       />
       {linkedTask && (

@@ -27,6 +27,7 @@ import {
   type ImportFormat,
   type ImportObject,
   type ImportReport,
+  type ImportRun,
   isImportObject,
 } from "./importtypes";
 
@@ -387,6 +388,26 @@ export function refusalSentence(
   return refusal.inFile && values.file !== undefined
     ? words.t("import.refusal.inFile", { file: values.file, sentence })
     : sentence;
+}
+
+/**
+ * Why a run stopped, in the reader's words when it kept the refusal's code. A
+ * run stored with only the sentence, or with a code this build does not know,
+ * shows the sentence.
+ */
+export function useRunStopSentence(
+  run: ImportRun | undefined,
+  format?: ImportFormat,
+): string | undefined {
+  const t = useT();
+  const { locale } = useLocale();
+  const sentence = run?.error ?? undefined;
+  const refusal = run?.error_refusal;
+  if (sentence === undefined || refusal === undefined) return sentence;
+  return (
+    refusalSentence({ ...refusal, message: sentence }, { t, locale, format }) ??
+    sentence
+  );
 }
 
 /** Why the server refused an upload or a test run, in the reader's words. */

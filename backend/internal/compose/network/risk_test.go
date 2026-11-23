@@ -41,23 +41,22 @@ func kinds(risks []Risk) map[string]bool {
 	return out
 }
 
-func TestSingleThreadedIsTheReportingRuleVerbatim(t *testing.T) {
-	// REPORT-PARAM-1: distinct_engaged_contacts < 2. One engaged contact is
-	// single-threaded however many seats the deal has — an unengaged seat is
-	// a name on a list, not a relationship.
-	one := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
-		seat(true, roleChampion), seat(false, "user"), seat(false, "legal"),
-	}}
-	if !kinds(foldRisks(one, testEnglish))[RiskSingleThreadedTheirs] {
-		t.Error("a deal with one engaged contact and two idle seats is not flagged single-threaded")
-	}
-
-	// Two engaged clears it, exactly at the floor.
-	two := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
-		seat(true, roleChampion), seat(true, "user"),
-	}}
-	if kinds(foldRisks(two, testEnglish))[RiskSingleThreadedTheirs] {
-		t.Errorf("two engaged contacts flagged single-threaded — the floor is %d, and a flag that fires at the boundary contradicts every other surface", ReportThreadingFloor)
+// The finding follows the published threshold. At most that many engaged
+// contacts is single-threaded, and one more clears it. An unengaged seat does
+// not count.
+func TestSingleThreadedFollowsThePublishedThreshold(t *testing.T) {
+	for _, tc := range []struct {
+		maxEngaged, engaged int
+		want                bool
+	}{{1, 1, true}, {1, 2, false}, {2, 2, true}, {2, 3, false}, {0, 0, true}, {0, 1, false}} {
+		seats := []deals.DealStakeholder{seat(false, "user"), seat(false, "legal")}
+		for range tc.engaged {
+			seats = append(seats, seat(true, "user"))
+		}
+		c := DealCoverage{DealID: ids.NewV7(), EverTouched: true, MaxEngagedSeats: tc.maxEngaged, Stakeholders: seats}
+		if got := kinds(foldRisks(c, testEnglish))[RiskSingleThreadedTheirs]; got != tc.want {
+			t.Errorf("%d engaged at a threshold of %d: single-threaded %v, want %v", tc.engaged, tc.maxEngaged, got, tc.want)
+		}
 	}
 }
 
@@ -65,7 +64,7 @@ func TestOneContactInTwoRolesIsStillOneThread(t *testing.T) {
 	buyer := seat(true, "economic_buyer")
 	champion := buyer
 	champion.Role = roleChampion
-	c := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{buyer, champion}}
+	c := DealCoverage{DealID: ids.NewV7(), EverTouched: true, MaxEngagedSeats: 1, Stakeholders: []deals.DealStakeholder{buyer, champion}}
 	for _, r := range foldRisks(c, testEnglish) {
 		if r.Kind == RiskSingleThreadedTheirs {
 			if len(r.ContactIDs) != 1 || r.ContactIDs[0] != buyer.ContactID {
@@ -125,7 +124,7 @@ func TestACoverageGapIsAboutTheChampionNotTheCount(t *testing.T) {
 	// Three engaged contacts and no champion among them: well covered by the
 	// threading rule, and still nobody inside is arguing for the deal. The two
 	// findings are different questions and must not collapse into one.
-	noChampion := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
+	noChampion := DealCoverage{DealID: ids.NewV7(), EverTouched: true, MaxEngagedSeats: 1, Stakeholders: []deals.DealStakeholder{
 		seat(true, "user"), seat(true, "legal"), seat(true, "finance"),
 	}}
 	got := kinds(foldRisks(noChampion, testEnglish))
@@ -138,7 +137,7 @@ func TestACoverageGapIsAboutTheChampionNotTheCount(t *testing.T) {
 
 	// A champion who exists but has gone quiet does not count: the seat is not
 	// the relationship.
-	quietChampion := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
+	quietChampion := DealCoverage{DealID: ids.NewV7(), EverTouched: true, MaxEngagedSeats: 1, Stakeholders: []deals.DealStakeholder{
 		seat(false, roleChampion), seat(true, "user"), seat(true, "legal"),
 	}}
 	if !kinds(foldRisks(quietChampion, testEnglish))[RiskCoverageGap] {
@@ -171,7 +170,7 @@ func TestTheEngagementRulesWaitForTheFirstTouch(t *testing.T) {
 
 	// One captured touch and the same seats: both findings now mean what they
 	// say, and both are reported.
-	touched := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: seats}
+	touched := DealCoverage{DealID: ids.NewV7(), EverTouched: true, MaxEngagedSeats: 1, Stakeholders: seats}
 	got = kinds(foldRisks(touched, testEnglish))
 	if !got[RiskSingleThreadedTheirs] {
 		t.Error("a contacted deal with no engaged seat is not flagged single-threaded")
@@ -188,7 +187,7 @@ func TestTheEngagementRulesWaitForTheFirstTouch(t *testing.T) {
 // and both must still be reported.
 func TestALongSilentDealStillReportsItsEngagementFindings(t *testing.T) {
 	old := DealCoverage{
-		DealID: ids.NewV7(), EverTouched: true, LastTouchAt: daysAgo(120),
+		DealID: ids.NewV7(), EverTouched: true, MaxEngagedSeats: 1, LastTouchAt: daysAgo(120),
 		TouchedAsOf: testNow, Zone: time.UTC, Status: dealStatusOpen,
 		Stakeholders: []deals.DealStakeholder{
 			seat(false, roleChampion), seat(false, "user"),
@@ -305,6 +304,17 @@ func TestGoingColdFiresOnTheReportingWindowAndOnlyWhileTheDealIsOpen(t *testing.
 		if kinds(foldRisks(cover(status, 400), testEnglish))[RiskGoingCold] {
 			t.Errorf("a %s deal untouched for 400 days flagged going cold — it was delivered, not lost", status)
 		}
+	}
+}
+
+func TestGoingColdIsSilencedByAPauseOrAMeetingAheadAsStalledIs(t *testing.T) {
+	cover := DealCoverage{
+		DealID: ids.NewV7(), Status: dealStatusOpen, LastTouchAt: daysAgo(41),
+		TouchedAsOf: testNow, Zone: time.UTC, QuietSuppressed: true,
+		Stakeholders: []deals.DealStakeholder{seat(true, roleChampion), seat(true, "user")},
+	}
+	if kinds(foldRisks(cover, testEnglish))[RiskGoingCold] {
+		t.Error("a paused deal, or one with a meeting booked, 41 days silent was flagged going cold; stalled says it is not quiet")
 	}
 }
 
@@ -471,5 +481,21 @@ func TestGoingColdCountsADayTouchFromItsOwnDate(t *testing.T) {
 	cold, ok := goingCold(cover, testEnglish)
 	if !ok || cold.DaysSinceTouch != goingColdDays {
 		t.Fatalf("a day touch dated %d days ago reads %+v, want going cold for %d days", goingColdDays, cold, goingColdDays)
+	}
+}
+
+// A stored role is free text, so " Champion " is the champion for both the
+// coverage gap and the departure finding.
+func TestAChampionStoredInOtherCaseIsStillTheChampion(t *testing.T) {
+	champion := seat(true, " Champion ")
+	covered := DealCoverage{DealID: ids.NewV7(), EverTouched: true, MaxEngagedSeats: 1, Stakeholders: []deals.DealStakeholder{
+		champion, seat(true, "user"),
+	}}
+	if kinds(foldRisks(covered, testEnglish))[RiskCoverageGap] {
+		t.Error("an engaged champion stored as \" Champion \" was not counted")
+	}
+	covered.DepartedContactIDs = []ids.UUID{champion.ContactID}
+	if !kinds(foldRisks(covered, testEnglish))[RiskChampionLeft] {
+		t.Error("a departed champion stored as \" Champion \" was not reported as champion_left")
 	}
 }

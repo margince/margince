@@ -20,7 +20,7 @@ export default meta;
 type Story = StoryObj;
 
 const deals: PeekContent = {
-  head: "Open deals on this account",
+  head: "Open deals on this company",
   items: [
     {
       key: "a",
@@ -68,7 +68,7 @@ export const OpensOnPress: Story = {
     );
     await expect(
       within(document.body).getByRole("region", {
-        name: "Open deals on this account",
+        name: "Open deals on this company",
       }),
     ).toBeVisible();
   },

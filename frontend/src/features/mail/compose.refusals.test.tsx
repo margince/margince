@@ -1,12 +1,13 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fillSendableForm,
   footScheduleConfirm,
   installComposeClock,
+  jsonResponse,
   pickWhy,
   pressSend,
   problemResponse,
@@ -47,6 +48,15 @@ const MAILBOX_NOT_SEND_CAPABLE = {
   detail: "reconnect your mailbox to enable sending",
 };
 
+// The 422 for a sender who holds no mailbox at all.
+const MAILBOX_NOT_CONNECTED = {
+  type: "https://errors.gradion.com/mailbox_not_connected",
+  title: "Unprocessable Entity",
+  status: 422,
+  code: "mailbox_not_connected",
+  detail: "connect a mailbox to send",
+};
+
 // Each refusal is a product state with a fix, so each reads as its own copy.
 // None may fall into the generic line.
 describe("ComposeWindow send refusals", () => {
@@ -74,6 +84,42 @@ describe("ComposeWindow send refusals", () => {
     await pressSend(user);
 
     await expectReconnect(onClose);
+  });
+
+  it("tells a rep with no mailbox to connect one, not to reconnect", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    stubRoutes({
+      "POST /activities/act-1/send-email": () =>
+        problemResponse(MAILBOX_NOT_CONNECTED, 422),
+    });
+    renderComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillSendableForm(user);
+    await pressSend(user);
+
+    expect(
+      await screen.findByText(/No mailbox is connected/i),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getByRole("link", { name: "Connect a mailbox" })
+        .getAttribute("href"),
+    ).toBe("/#/settings/connections");
+    expect(screen.queryByText(/capture only/i)).toBeNull();
+    expect(screen.queryByText(MAILBOX_NOT_CONNECTED.detail)).toBeNull();
+  });
+
+  it("says before any send that no mailbox is connected", async () => {
+    stubRoutes({ "GET /connectors": () => jsonResponse({ data: [] }) });
+    renderComposer();
+
+    expect(
+      await screen.findByText(/No mailbox is connected/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Connect a mailbox" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });
 
   it("explains an older server's footer refusal without promising an unusable override", async () => {
@@ -189,12 +235,14 @@ describe("ComposeWindow send refusals", () => {
 
     expect(screen.queryByText(/more than one recipient/i)).toBeNull();
     await pickWhy(user, WHY_LABEL.marketing);
+    await pressSend(user);
 
-    await screen.findByRole("button", { name: /recipients checked/i });
+    await waitFor(() =>
+      expect(
+        sent.some((r) => r.key === "POST /activities/act-1/send-email"),
+      ).toBe(true),
+    );
     expect(screen.queryByText(/more than one recipient/i)).toBeNull();
-    expect(
-      sent.some((r) => r.key === "POST /activities/act-1/send-email"),
-    ).toBe(false);
   });
 
   it("does not warn about a lone addressee under the same purpose", async () => {

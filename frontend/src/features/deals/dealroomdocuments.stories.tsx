@@ -80,7 +80,7 @@ type Story = StoryObj<typeof AddDocument>;
 
 /**
  * The ordinary case: pick one of the deal's files, say which group it belongs
- * in, add it. The add verb stays disabled until a file is picked, because a
+ * in, add it. Adding with no file picked says the file is required, because a
  * group on its own attaches nothing.
  */
 export const PickAFile: Story = {

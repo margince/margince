@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
-import { DealStatusBadge } from "../../components/dealstatusbadge";
+import { useIdempotencyKey } from "../../api/idempotencykey";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import {
   LatestInboundLine,
   useLatestInbound,
   useLatestInboundRead,
 } from "../../components/latestinbound";
 import { useRailRename } from "../../components/railfield";
-import { Badge } from "../../design-system/atoms";
+import { RecordGone } from "../../components/recordgone";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
@@ -27,6 +28,7 @@ import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { fromHere } from "../../lib/navigatefrom";
 import { useOpenEmail } from "../../lib/openemail";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import type { RecordTabId } from "../../lib/recordtaborder";
 import { scrollPageToTop } from "../../lib/reveal";
@@ -49,6 +51,7 @@ import { DealActions } from "./deal360/dealactions";
 import { DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab, DealLatestInbound } from "./deal360/dealhistorytab";
 import { DealLegalTab } from "./deal360/deallegaltab";
+import { ArchivedDealBand } from "./deal360/dealrestore";
 import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
 import { currentReplyTarget } from "./deal360/dealwaiting";
@@ -60,10 +63,11 @@ import { DealFiles } from "./dealfiles";
 import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
-import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
+import { DealPulsePills } from "./deals.pulsepills";
 import { useDealStatusCard } from "./dealstatus";
+import { offerWriteRefusal, settleUnsureOfferWrite } from "./offers.actions";
 
 const DEAL_TABS = [
   "overview",
@@ -119,41 +123,30 @@ function DealTabs({
 }
 
 // One sentence for why this deal takes no changes, whichever reason applies,
-// said once across the header so every refused control can point at it.
+// said once across the header so every refused control can point at it. An
+// archived deal's band also offers the way back.
 // Absent while the deal is live and the reader's: `undefined`, not an element
 // that renders null, because RecordView reserves space for anything it is
 // handed. A line always reserved would read as a record with nothing said.
 function dealBand({
+  deal,
   reason,
   reasonId,
 }: Readonly<{
+  deal: Deal;
   reason: string | undefined;
   reasonId: string;
 }>): ReactNode | undefined {
   if (reason === undefined) {
     return undefined;
   }
-  return <p id={reasonId}>{reason}</p>;
-}
-
-// The pills under the deal's name. They say whose move it is and when a buyer
-// is owed a reply. Then come the deal's status and, as on the board card,
-// whether it is archived.
-function DealPulsePills({
-  status,
-  archived,
-  yourMove,
-}: Readonly<{ status: Deal["status"]; archived: boolean; yourMove: boolean }>) {
-  const t = useT();
+  if (deal.archived_at) {
+    return <ArchivedDealBand deal={deal} reason={reason} reasonId={reasonId} />;
+  }
   return (
     <>
-      {yourMove && (
-        <Badge tone="warning" dot>
-          {t("deal.standing.teamReply")}
-        </Badge>
-      )}
-      <DealStatusBadge status={status} />
-      {archived && <Badge>{t("deal.archived")}</Badge>}
+      <p id={reasonId}>{reason}</p>
+      <EditAccessRequest kind="deal" record={deal} />
     </>
   );
 }
@@ -223,11 +216,20 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
       );
     },
   });
+  const { key: offerKey, renew: renewOfferKey } = useIdempotencyKey();
   const createOffer = useMutation({
-    mutationFn: async (input: { currency: string; fromRevision?: number }) => {
+    mutationFn: async (input: {
+      dealId: string;
+      currency: string;
+      fromRevision?: number;
+      key: string;
+    }) => {
       return unwrap(
         await api.POST("/deals/{id}/offers", {
-          params: { path: { id } },
+          params: {
+            path: { id: input.dealId },
+            header: { "Idempotency-Key": input.key },
+          },
           body: {
             currency: input.currency,
             source: "manual",
@@ -238,9 +240,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     },
     onMutate: fromHere,
     onSuccess: (offer: Offer, _input, from) => {
+      renewOfferKey();
       from.navigate({ screen: "offers", id: offer.id });
     },
+    onError: (error, input) =>
+      settleUnsureOfferWrite(error, queryClient, input.dealId, renewOfferKey),
   });
+  const createRefusal = createOffer.isError
+    ? offerWriteRefusal(createOffer.error, t)
+    : undefined;
   const decide = useMutation({
     mutationFn: async (input: {
       approvalId: string;
@@ -262,9 +270,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={dealQuery} pendingLabel={t("nav.deals")}>
+      <QueryGate
+        query={dealQuery}
+        pendingLabel={t("nav.deals")}
+        gone={<RecordGone kind="deal" />}
+      >
         {(deal) => {
-          const stages = stagesInOrder(pipelineQuery.data?.stages ?? []);
+          const stages = inPositionOrder(pipelineQuery.data?.stages ?? []);
           const openStages = stages.filter(
             (stage) => stage.semantic === "open",
           );
@@ -334,6 +346,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               // The sentence naming why this deal takes no changes, while
               // it does not.
               band={dealBand({
+                deal,
                 reason: readOnlyReason,
                 reasonId: readOnlyReasonId,
               })}
@@ -382,9 +395,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       threadQuery.isSuccess && !threadQuery.hasNextPage
                     }
                     creatingOffer={createOffer.isPending}
+                    createRefusal={createRefusal}
                     locale={locale}
                     onCreateOffer={(currency, fromRevision) =>
-                      createOffer.mutate({ currency, fromRevision })
+                      createOffer.mutate({
+                        dealId: id,
+                        currency,
+                        fromRevision,
+                        key: offerKey,
+                      })
                     }
                     readOnly={readOnly}
                     refusedReasonId={refusedReasonId}

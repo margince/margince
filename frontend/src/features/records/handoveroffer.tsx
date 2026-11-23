@@ -10,13 +10,14 @@
 import { useState } from "react";
 import { Button, Field, Textarea } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { formatDate } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import { useCanMutate } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
-import { problemMessageOf } from "../../lib/problem";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -117,7 +118,9 @@ function OfferForm({
   id,
 }: Readonly<{ kind: TransferableRecordType; id: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const toast = useToast();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [opened, setOpened] = useState(false);
   const [toId, setToId] = useState("");
   const [note, setNote] = useState("");
@@ -129,12 +132,22 @@ function OfferForm({
   }));
   if (!opened) {
     return (
-      <Button variant="link" onClick={() => setOpened(true)}>
+      <Button
+        variant="link"
+        onClick={() => {
+          faults.show(new Map());
+          setOpened(true);
+        }}
+      >
         {t("handover.offer")}
       </Button>
     );
   }
   const send = () => {
+    const blank = blankRequired(locale, {
+      toId: [t("handover.offerTo"), toId],
+    });
+    if (faults.show(blank)) return;
     const name = options.find((option) => option.value === toId)?.label ?? "";
     offer.mutate(
       { recordType: kind, id, toId, note },
@@ -142,15 +155,18 @@ function OfferForm({
     );
   };
   return (
-    <div>
-      <Field label={t("handover.offerTo")}>
+    <div className="form-stack" ref={faultsRoot}>
+      <Field label={t("handover.offerTo")} required error={faults.of("toId")}>
         {(control) => (
           <Select
             {...control}
             options={options}
             value={toId}
             placeholder={t("handover.offerPick")}
-            onChange={setToId}
+            onChange={(next) => {
+              setToId(next);
+              faults.edited("toId");
+            }}
           />
         )}
       </Field>
@@ -167,17 +183,14 @@ function OfferForm({
           />
         )}
       </Field>
-      <Button
-        variant="primary"
-        disabled={toId === ""}
-        pending={offer.isPending}
-        onClick={send}
-      >
-        {t("handover.offerSend")}
-      </Button>
-      <Button variant="link" onClick={() => setOpened(false)}>
-        {t("handover.offerCancel")}
-      </Button>
+      <div className="form-actions">
+        <Button variant="link" onClick={() => setOpened(false)}>
+          {t("handover.offerCancel")}
+        </Button>
+        <Button variant="primary" pending={offer.isPending} onClick={send}>
+          {t("handover.offerSend")}
+        </Button>
+      </div>
       {offer.error && (
         <ErrorLine inline>{problemMessageOf(offer.error, t)}</ErrorLine>
       )}

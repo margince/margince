@@ -175,6 +175,10 @@ export const recordListsKey = (recordType: string, recordId: string) =>
 // stakeholder is seated from the contact's page as readily as from the deal's.
 export const DEAL_COVERAGE_KEY: QueryKey = ["deal-coverage"];
 
+// The chance the forecast uses for each open stage. A stage's typed chance is
+// one of its inputs, so every stage write makes it stale.
+export const STAGE_CHANCES_KEY: QueryKey = ["forecast", "stage-chances"];
+
 const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey[]> = {
   deal: (id) => [DEAL_STATUS_KEY(id), recordListsKey("deal", id)],
   contact: (id) => [recordListsKey("contact", id)],
@@ -183,6 +187,7 @@ const DERIVED_FROM_RECORD: Record<string, (id: string) => QueryKey[]> = {
   // Keyed on the relationship's own id nowhere: what goes stale is the deal the
   // edge names, and the edit form knows only the edge. The prefix covers it.
   relationship: () => [DEAL_COVERAGE_KEY],
+  stage: () => [STAGE_CHANCES_KEY],
 };
 
 // What a logged activity makes stale: the record's timeline, or its task reads.
@@ -317,6 +322,11 @@ function matchesShape(
 
 // ── The record's own read ───────────────────────────────────────────────────
 
+/** A project's own row, archived or not. Under the ["project", id] prefix, so
+ *  a write to the project refreshes it with the 360. */
+export const projectRowKey = (projectId: string) =>
+  ["project", projectId, "row"] as const;
+
 // The deal's record read. It is NOT in TIMELINE_SEED_KEYS because the deal's
 // seed is the status card; what carries the
 // deal's own fields is this.
@@ -346,9 +356,13 @@ export function isRecordRead(key: QueryKey): boolean {
   // every minute, and a reviews list that did not would leave the two halves of
   // one comparison on different clocks.
   shapes.push(dealOutcomeReviewsKey(SHAPE_ID) as unknown[]);
-  // The row is what says a contact or company was archived. The 360 then only
-  // answers 404, so a page re-reading the 360 alone could never learn why.
-  shapes.push(["contact", SHAPE_ID], ["company", SHAPE_ID]);
+  // The row is what says a record was archived, and what says it was restored.
+  // The 360 then only answers 404, so re-reading the 360 alone learns neither.
+  shapes.push(
+    ["contact", SHAPE_ID],
+    ["company", SHAPE_ID],
+    [...projectRowKey(SHAPE_ID)],
+  );
   return shapes.some((shape) => matchesShape(key as unknown[], shape, false));
 }
 

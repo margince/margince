@@ -13,8 +13,9 @@ import {
   AutomationInspectors,
   AutomationPreview,
   AutomationRuns,
-  OutcomeBadge,
 } from "./automationdetail";
+import { TRACED_RUNS } from "./automations.fixtures";
+import { OutcomeBadge } from "./automations.runrow";
 
 // The two human-only automation panels rendered against static fixtures — the
 // same fetch-stub convention the unit tests use, so every visual state below
@@ -111,6 +112,37 @@ const renderMixedRuns = () => {
 };
 
 export const RunsMixed: Story = { render: renderMixedRuns };
+
+const renderTracedRuns = () => {
+  installFetchStub({
+    [RUNS_PATH]: () =>
+      jsonResponse({ data: TRACED_RUNS, page: { next_cursor: null } }),
+  });
+  return (
+    <StoryProviders>
+      <AutomationRuns automationId="au-1" />
+    </StoryProviders>
+  );
+};
+
+// Runs a current server traces, written in the reader's words: what was done
+// to which record, when, and the event behind it under technical details.
+export const RunsTraced: Story = {
+  render: renderTracedRuns,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText(/Created task “Send the proposal” on/);
+    await expect(
+      canvas.getAllByRole("link", { name: "Globex Renewal" }).length,
+    ).toBeGreaterThan(0);
+  },
+};
+
+export const RunsTracedPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: renderTracedRuns,
+};
 
 // The same five outcomes in dark. `reasonColor` puts `--danger` and `--warning`
 // on bare text, the shape that fails a contrast floor first in dark.

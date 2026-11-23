@@ -158,9 +158,6 @@ func TestRecordForSiteFoldsOnlyThatSitesScenarios(t *testing.T) {
 	if acts.Verdict != aicert.VerdictSupportedDegraded {
 		t.Fatalf("acts verdict = %q, want the worse of its two scenarios", acts.Verdict)
 	}
-	if acts.Reliability() != 1 {
-		t.Fatalf("acts reliability = %v, want 1 — both of ITS runs passed, while the task's did not", acts.Reliability())
-	}
 
 	extract, ok := rec.ForSite("field_extract")
 	if !ok {

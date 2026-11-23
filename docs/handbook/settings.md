@@ -135,11 +135,11 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 ### How do I add a second company we work under?
 <!-- opens: settings/company -->
 
-**Legal entities** lists the companies you work under. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for.
+**Legal entities** lists the companies you work under, each with its **Country** and **Jurisdiction**. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for.
 
-To add another, an Admin chooses **New legal entity**, types its name and legal name, and picks where it is based. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A new offer is issued by the company its writer works for; see [Offers and the rate card](offers-and-products.md).
+An Admin adds another with **New legal entity**: its name, legal name, **Country** (where its address is) and **Jurisdiction** (the law it follows). Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A new offer is issued by the company its writer works for; see [Offers and the rate card](offers-and-products.md).
 
-To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed. A logo is stored as soon as you choose it with **Edit** and **Upload logo** under the logo. For the default the form holds only where it is based, its **Bank details**, document language and imprint.
+To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed. A logo is stored as soon as you choose it with **Edit** and **Upload logo** under the logo. For the default the form holds only its **Bank details**, document language and imprint. It shows the law of the default, which you choose on **Settings → Compliance → Jurisdiction**.
 
 **Archive** in the same menu takes one off the list, and the default cannot be archived. Margince also refuses while colleagues still work for it or companies are rated against it. It then says what to change first. Once there are two, the **Members** page shows a **Legal entity** column, where an Admin chooses which one each colleague works for.
 ## Sign-in and security
@@ -157,11 +157,11 @@ The switch keeps its setting when someone resets data.
 Also called: require MFA, password MFA.
 
 ### How do I offer sign-in with Google or Microsoft?
-To offer sign-in with Google or Microsoft in Margince, store that company's app on Settings → **Sign-in and security** and keep its switch on.
-1. Under **Google app** or **Microsoft app**, open **Authorized redirect URIs**. Add each address to the app at Google or Microsoft.
-2. Enter the **Client ID** and **Client secret**, then choose **Store app**.
-3. Under **Sign-in methods**, check that **Continue with Google** or **Continue with Microsoft** is on.
-A provider that is on but has no app yet says it is not on the sign-in screen.
+To offer sign-in with Google or Microsoft in Margince, set up that company's app on Settings → **Sign-in and security** → **Sign-in apps**.
+1. Choose **Set up Google app** or **Set up Microsoft app**. The panel lists the addresses Google or Microsoft sends people back to: add each one to the app there.
+2. Enter the **Client ID** and **Client secret**, then choose **Save Google app** or **Save Microsoft app**.
+3. On the **Sign-in methods** tab, check that **Continue with Google** or **Continue with Microsoft** is on.
+A provider that is on but has no app yet says that it is not on the sign-in screen. It links to where you set up its app.
 Also called: single sign-on, Google login, Microsoft login.
 
 ## Members, Teams, and Seats and license
@@ -170,7 +170,7 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 **Members** lists everyone with a seat, and what each one can open. Here you ask colleagues in, change a role, turn a user off and turn them on again. Only a role allowed to see users sees this page: Admin by default, or a custom role given that permission. Every seat can still look a colleague up in the lists for sharing and for picking an owner on a record. An Admin also picks a member's teams here, and a team name nobody has yet creates that team.
 
-**Teams** holds who is in each team, which decides who can open records shared with a team. Create one, archive it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it. See [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds).
+**Teams** holds who is in each team, which decides who can open records shared with a team. Create one, archive or restore it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it. See [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds).
 
 **Seats and license** shows how many seats the installation may use against how many are in use. See [the licence](seats-roles-and-access.md#the-licence).
 
@@ -212,7 +212,7 @@ The Sales group in Settings has one page per subject. There are the fields a rec
   - **Pipelines**: the stages a deal moves through, for the whole company. See [The pipeline](the-pipeline.md#pipelines-and-stages).
   - **Acquisition sources**: the business channels a deal can come from. Lead origins, which record where a lead came from, are separate.
   - **Loss reasons**: the reasons a seller picks when a deal is lost.
-  - **Outcome reviews**: questions a seller answers when a deal is won or lost. There is one set for won and one for lost.
+  - **Outcome reviews**: questions a seller answers when a deal is won or lost. Each outcome asks one template at a time; you can add templates and turn them on or off.
   - **Legal review**: whether a stage waits for legal. See [Legal review](legal-review.md).
   - **Forecast**: how the forecast counts open deals, and whether anyone sees a colleague's figures.
 - **Leads**: lead origins, reasons to drop a lead, and the first-reply target, which is off by default. Origins add or take away score points.
@@ -317,7 +317,7 @@ Admin and Ops can see Retention and the **Held** list. The audit log and privacy
 
 System health and Reset data sit in the **System** group, and Data import in **Data**.
 
-**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass. Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review.
+**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass. Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review. **The reporting timezone cannot be read** means the server cannot load the saved time zone, so background work counts its days in UTC. Its button opens **Regional and calendar**, where an admin chooses the time zone again.
 
 **Not set up yet** lists each part nobody has set up, such as AI providers, search or restore tests. Each says what happened, why it matters and what to do, with a button that goes there. **Passing** lists the checks with nothing to do. **All checks** holds service status; **Diagnostics** shows the technical details.
 
@@ -334,7 +334,7 @@ Moving to another view asks you to save a draft first. **Search settings** opens
 
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, leads, deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the AI finds.
-- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
+- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it. A step marked **Done, action needed** finished but left records for someone. It says why, what to do and how many records are left. Once that is done, choose **Retry** on the step to handle the records again.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
 - **AI provider status**: recorded provider problems. An empty list does not prove that a provider recently answered. See [AI providers](ai-providers.md).
 - **Mail capture checks**: connections that need attention, with the member, mailbox, condition and last good sync. Admin and Ops see no messages here.
@@ -344,10 +344,10 @@ Moving to another view asks you to save a draft first. **Search settings** opens
 - **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
   **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.
 - **Restore drills**: when a restore was tested, if it passed, and how long it took against the targets. Whoever runs the installation records each test. Margince does not see backups; the card says "Not observed by Margince". The same readers as Background jobs see it.
+- **Table space**: below **Restore drills**. It lists each table where at least 20% of the file, and at least 100 MB, holds no live row. It shows the command to run and the role that must run it. Margince never runs the command: it holds a lock on the table until it ends, so run it in a set window.
 - **Reset data**: takes an installation back to how it was on its first start.
-  It deletes every record and setting, but keeps the company and its users, so
-  everyone can still sign in. It appears only where whoever runs the
-  installation has turned it on.
+  It deletes every record and setting, but keeps the company and its users, so everyone can still sign in.
+  It appears only where whoever runs the installation has turned it on.
 
 ### Review automatic Home work
 

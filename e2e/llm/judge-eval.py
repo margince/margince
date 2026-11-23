@@ -9,7 +9,7 @@ judge's accuracy is a fact the page has to be able to state and a reader has to
 be able to reproduce.
 
 THE GROUND TRUTH IS NOT ANOTHER MODEL'S OPINION. e2e/llm/testdata/judge holds
-185 verdicts recorded by whichever model is pinned; scoring a judge against them
+the verdicts recorded by whichever model is pinned; scoring a judge against them
 measures resemblance to that model and hands it a free hundred per cent when it
 IS that model. The fixtures under e2e/llm/testdata/<case>/ carry a better label:
 a contact wrote each answer to be right or wrong on a named criterion, and

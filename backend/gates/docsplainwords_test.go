@@ -247,14 +247,14 @@ var plainCaps = map[string]int{
 	plainWordsFile:                     plainWordCap,
 	"docs/how-to/plain-words.txt":      1365,
 	"docs/explanation/plain-words.txt": 1637,
-	"docs/handbook/plain-words.txt":    1384,
+	"docs/handbook/plain-words.txt":    1381,
 	"docs/reference/plain-words.txt":   1712,
 	plainProjectFile:                   1776,
 }
 
 // glossaryLegacyMax is how many names may still lack a meaning: the names pages
 // used before they joined the bar. It must equal that count, so it only goes down.
-const glossaryLegacyMax = 411
+const glossaryLegacyMax = 410
 
 const glossaryLegacyHeading = "## Names without a meaning yet"
 

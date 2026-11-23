@@ -79,6 +79,8 @@ export function WithheldRateCard({
 
 export function FxRatesCard() {
   const t = useT();
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
   // Reading the sheet and authoring it are separate grants, so the card asks
   // for each one where it needs it.
   //
@@ -190,7 +192,8 @@ export function FxRatesCard() {
             {
               key: "effective",
               header: t("settings.rates.colEffective"),
-              render: (row) => row.effective_date,
+              render: (row) =>
+                formatDate(row.effective_date, locale, readerZone),
             },
           ]}
         />

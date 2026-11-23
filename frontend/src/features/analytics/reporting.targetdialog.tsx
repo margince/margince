@@ -30,6 +30,7 @@ import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem } from "../../lib/problem";
 import { REPORTING_EVALUATION_KEY } from "../../lib/reportingfigures";
 import { useInstallationSettings } from "../../lib/uploadlimit";
+import { scopeName } from "./analytics.context";
 import { AnalyticsScopePicker } from "./analytics.scope";
 import type { ReportingMetricID } from "./reporting.model";
 import { useReportingCatalog } from "./reporting.queries";
@@ -149,9 +150,9 @@ export function ReportingTargetDialog({
             });
           }}
         >
-          <QueryGate query={catalog} pendingLabel={t("reporting.metrics")}>
+          <QueryGate query={catalog} pendingLabel={t("reporting.metric")}>
             {(catalog) => (
-              <Field label={t("reporting.metrics")}>
+              <Field label={t("reporting.metric")}>
                 {(field) => (
                   <Select
                     {...field}
@@ -175,7 +176,7 @@ export function ReportingTargetDialog({
             )}
           </QueryGate>
           {target ? (
-            <p>{scope.label}</p>
+            <p>{scopeName(scope, t)}</p>
           ) : (
             <AnalyticsScopePicker
               scopes={context.allowed_scopes.filter(
@@ -228,9 +229,8 @@ export function ReportingTargetDialog({
               {(field) => (
                 <TextInput
                   {...field}
-                  type="number"
-                  min="1900"
-                  max="9999"
+                  inputMode="numeric"
+                  maxLength={4}
                   disabled={!!target}
                   value={periodStart.split("-")[0]}
                   onChange={(event) =>

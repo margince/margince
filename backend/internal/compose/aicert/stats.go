@@ -7,7 +7,10 @@ package aicert
 // confidence level thresholds.go names. Standard textbook forms on purpose: a
 // reader arguing with a grade should be able to redo it by hand.
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 // wilsonBounds is the Wilson score interval for passed of runs at confidenceZ.
 //
@@ -25,6 +28,44 @@ func wilsonBounds(passed, runs int) (lower, upper float64) {
 	radius := confidenceZ * math.Sqrt(p*(1-p)/n+z2/(4*n*n))
 	denom := 1 + z2/n
 	return (centre - radius) / denom, (centre + radius) / denom
+}
+
+// ReliabilityInterval is the Wilson interval on a pass rate, from the formula
+// and z the verdict uses. A band reads the lower end of a site's pooled rate
+// and the upper end of each case alone. A pooled row's interval grades nothing.
+type ReliabilityInterval struct {
+	Lower float64 `json:"lower"`
+	Upper float64 `json:"upper"`
+}
+
+// ReliabilityIntervalOf is the interval on passed of runs, nil with no runs.
+func ReliabilityIntervalOf(passed, runs int) *ReliabilityInterval {
+	if runs == 0 {
+		return nil
+	}
+	lower, upper := wilsonBounds(passed, runs)
+	// The last digits of the formula differ between CPUs, and the committed
+	// report must read the same on every machine. Six decimals is far finer
+	// than any report prints. An end on 0 or 1 is the edge itself.
+	if passed == 0 {
+		lower = 0
+	}
+	if passed == runs {
+		upper = 1
+	}
+	lower, upper = roundReported(lower), roundReported(upper)
+	return &ReliabilityInterval{Lower: lower, Upper: upper}
+}
+
+// ReliabilityCell is how every report prints a reliability: the point with its
+// Wilson interval, as "0.67 [0.32, 0.89]". A point alone invites comparing two
+// records inside their sampling noise. Zero runs prints Unmeasured.
+func ReliabilityCell(passed, runs int) string {
+	interval := ReliabilityIntervalOf(passed, runs)
+	if interval == nil {
+		return Unmeasured
+	}
+	return fmt.Sprintf("%.2f [%.2f, %.2f]", float64(passed)/float64(runs), interval.Lower, interval.Upper)
 }
 
 // meanBounds is the t interval on the mean of xs, with its small-n quantile and
@@ -69,4 +110,9 @@ func tQuantile(df int) float64 {
 		df = len(tQuantile90)
 	}
 	return tQuantile90[df-1]
+}
+
+// roundReported rounds a printed bound to six decimals.
+func roundReported(bound float64) float64 {
+	return math.Round(bound*1e6) / 1e6
 }

@@ -5,19 +5,12 @@
 
 package contacts
 
-// A merge moves who-was-in-it, not only how the message is filed.
+// A merge moves who was in a message, and not only how the message is filed.
 //
-// activity_link followed the survivor from the start; activity_participant did
-// not, and nothing failed when it stayed behind. The rows kept naming a record
-// no read returns, so the interaction graph — the answer to "who on our team
-// knows this contact" — went on crediting the merged-away contact forever, and
-// every reader of those rows matches contact_id exactly with none walking
-// merged_into_id.
-//
-// This needs a database for the collision: uq_activity_participant spans
-// (activity, role, user, contact, address), so the case where BOTH halves of the
-// merge sat on ONE activity in the same role is a constraint violation the unit
-// lane cannot see.
+// Readers of activity_participant match contact_id and never walk merged_into_id.
+// It needs a database for the collision. uq_activity_participant_identity spans
+// activity, role and a digest of the identity columns.
+// Both halves of a merge on one activity in one role violate it.
 
 import (
 	"context"

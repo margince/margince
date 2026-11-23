@@ -10,6 +10,7 @@ package integration
 // surface that names the installation reads the new name.
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -219,8 +220,9 @@ func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 	e := oneNameApp(t)
 	anchor := saveAnchor(t, e, "Profile Name AG")
 	tooLong := strings.Repeat("a", values.TextLabelCharacters+1)
+	pastTheSetting := strings.Repeat("a", values.MaxCompanyNameRunes+1)
 
-	for name, code := range map[string]string{tooLong: "too_long", "   ": "required"} {
+	for name, code := range map[string]string{tooLong: "too_long", pastTheSetting: "too_long", "   ": "required"} {
 		body := wellFormedCompany()
 		body["display_name"] = name
 		var problem companyProblem
@@ -255,6 +257,29 @@ func TestAnAnchorNameTheInstallationCannotCarryIsRefused(t *testing.T) {
 		t.Fatalf("a customer's typed name past the label limit = %d, want 422", status)
 	}
 	wantNameFault(t, customerProblem, "too_long")
+}
+
+// A name stored before the label limit stays saveable while it is unchanged,
+// so its company can still edit the rest of the profile. Only a hand-written
+// row can hold one now, because every writer refuses a new one.
+func TestAnExistingLongAnchorNameSavesUnchanged(t *testing.T) {
+	e := oneNameApp(t)
+	anchor := saveAnchor(t, e, "Profile Name AG")
+	stored := strings.Repeat("a", values.TextLabelCharacters+30)
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE company SET display_name = $1 WHERE id = $2`, stored, anchor); err != nil {
+		t.Fatalf("store a long legacy name: %v", err)
+	}
+
+	body := wellFormedCompany()
+	body["display_name"] = stored
+	body["icp"] = "Mid-market RevOps teams in the DACH region."
+	if status := e.Call(t, http.MethodPut, "/v1/company", body, nil, nil); status != http.StatusOK {
+		t.Fatalf("PUT /v1/company with the stored name unchanged = %d, want 200", status)
+	}
+	if got := anchorName(t, e, anchor); got != stored {
+		t.Errorf("the save left the anchor named %q, want the stored name", got)
+	}
 }
 
 // Renaming the anchor renames the installation. So a seat that may edit the

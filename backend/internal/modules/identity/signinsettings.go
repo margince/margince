@@ -207,4 +207,7 @@ var RequireMFA = config.DefineStored(config.Spec[bool]{
 	Type:    config.Bool,
 	Default: config.Some(false),
 	Doc:     "Password sign-in needs two-step sign-in; Google and Microsoft check their own sign-ins.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+}, config.Store{
+	RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true,
+	MachineryApplied: true, // admission applies it to every password session, whatever the member's grants
+})

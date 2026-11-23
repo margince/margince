@@ -113,7 +113,7 @@ func (s *Service) retirementPreviewTx(ctx context.Context, tx pgx.Tx, actor Iden
 		if err != nil {
 			return out, err
 		}
-		if survivor.Status == userStatusDeactivated {
+		if alreadyDeactivated(survivor.Status) {
 			out.Consequences = append(out.Consequences, "survivor_inactive")
 		}
 		out.SurvivorName = &survivor.Name
@@ -153,16 +153,17 @@ func applyRetirementWork(out *crmcontracts.MemberRetirementPreview, work MemberW
 		out.Blockers = append(out.Blockers, "private_tasks")
 	}
 	if work.Owned.Project > work.VisibleOwned.Project || (target != nil &&
-		(work.Owned.RecordAssignment > work.Transferable.RecordAssignment || work.Owned.SdrHandoff > work.Transferable.SdrHandoff)) {
+		(work.Owned.RecordAssignment > work.Transferable.RecordAssignment || work.Owned.SdrHandoff > work.Transferable.SdrHandoff ||
+			work.Owned.MailDraft > work.Transferable.MailDraft)) {
 		out.Blockers = append(out.Blockers, "work_not_transferable")
 	}
-	if merge || member.Status == userStatusDeactivated {
+	if merge || alreadyDeactivated(member.Status) {
 		out.SignalCount = work.Signals
 	}
 	if merge {
 		applyMergeEligibility(out, member, actor, target)
 	}
-	if !merge && member.Status != userStatusDeactivated {
+	if !merge && refuseUnlessDeactivated(member.Status) != nil {
 		out.Blockers = append(out.Blockers, "deactivate_first")
 	}
 	if merge && target == nil {
@@ -328,6 +329,9 @@ func (s *Service) applyMemberRetirement(ctx context.Context, tx pgx.Tx, actor Id
 		merged = target
 	}
 	if _, err := tx.Exec(ctx, `UPDATE app_user SET removed_at = now(), merged_into_user_id = @merged WHERE id = @member`, pgx.StrictNamedArgs{memberParameter: source, "merged": merged}); err != nil {
+		return err
+	}
+	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
 		return err
 	}
 	auditID, err := storekit.Audit(ctx, tx, "archive", "user", source.UUID,

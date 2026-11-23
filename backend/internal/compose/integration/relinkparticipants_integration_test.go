@@ -45,10 +45,10 @@ func TestRelinkRemovesTheDisplacedParticipantWhenTheTargetIsAlreadyOne(t *testin
 	act := seedRelinkActivity(t, e, "Quote follow-up")
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, act, her)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'to', $2)`, act, her)
-	// He was on it too, in ANOTHER role — a different row under
-	// uq_activity_participant, and no obstacle to the repoint, but enough to
-	// make the old guard skip it because that guard asked only about the
-	// contact. The displaced row is promoted here; the same-role case below is
+	// He was on it too, in another role. That is a different row under
+	// uq_activity_participant_identity and no obstacle to the repoint.
+	// A guard that asks only about the contact would skip it.
+	// The displaced row is promoted here; the same-role case below is
 	// the one that has to delete instead.
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, contact_id) VALUES ($1, 'cc', $2)`, act, him)
 
@@ -86,7 +86,7 @@ func TestRelinkRemovesTheDisplacedParticipantWhenTheTargetIsAlreadyOne(t *testin
 
 // SEVERAL displaced participants and no target row. Every one of them
 // qualified for the rewrite, and the second collided with the first on
-// uq_activity_participant.
+// uq_activity_participant_identity.
 func TestRelinkMergesSeveralDisplacedParticipantsWithoutColliding(t *testing.T) {
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)

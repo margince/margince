@@ -62,11 +62,17 @@ func (k FileKeeper) Stage(
 	return out, nil
 }
 
-// Record files the staged files on the activity, inside capture's transaction.
-func (k FileKeeper) Record(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-	from capture.FileSource, staged []capture.StagedFile,
-) error {
+// Discard deletes the bytes of staged files no row names.
+func (k FileKeeper) Discard(ctx context.Context, staged []capture.StagedFile) error {
+	owned, err := ownStaged(staged)
+	if err != nil {
+		return err
+	}
+	return k.Store.DiscardCapturedFiles(ctx, owned)
+}
+
+// ownStaged takes back the store's own staged files from capture's opaque ones.
+func ownStaged(staged []capture.StagedFile) ([]activities.StagedFile, error) {
 	owned := make([]activities.StagedFile, 0, len(staged))
 	for _, file := range staged {
 		typed, ok := file.(activities.StagedFile)
@@ -74,9 +80,21 @@ func (k FileKeeper) Record(
 			// Only activities.StagedFile meets the marker, so this adapter never
 			// gets here. A skipped file would break the promise that what
 			// arrived is what is stored, so it fails instead.
-			return errStagedFileNotOurs
+			return nil, errStagedFileNotOurs
 		}
 		owned = append(owned, typed)
+	}
+	return owned, nil
+}
+
+// Record files the staged files on the activity, inside capture's transaction.
+func (k FileKeeper) Record(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
+	from capture.FileSource, staged []capture.StagedFile,
+) error {
+	owned, err := ownStaged(staged)
+	if err != nil {
+		return err
 	}
 	return k.Store.RecordCapturedFiles(ctx, tx, activityID, activities.CapturedFileSource{
 		System:     from.System,

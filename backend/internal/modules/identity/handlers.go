@@ -144,9 +144,7 @@ type Handlers struct {
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (meparts.go).
 	installationBrand InstallationBrand
-	// inlineSendReview reads the composer's pilot switch. Nil omits it.
-	inlineSendReview InlineSendReview
-	analyticsStartup AnalyticsStartup
+	analyticsStartup  AnalyticsStartup
 	// refusedDealFilters and refusedLeadFilters name the deal and lead list
 	// filters the caller is refused. Nil omits them (meparts.go).
 	refusedDealFilters RefusedFilters
@@ -198,6 +196,9 @@ type Handlers struct {
 	// client registration methods are on (oauth_registrationsettings.go).
 	registrationDeployment *RegistrationMethods
 	registrationSwitches   AdminRegistrationSwitches
+	// unusedDynamicClientCap bounds the self-registered clients no consent used
+	// (oauth_dcrbounds.go); zero holds the default.
+	unusedDynamicClientCap int
 	// capabilitiesPerIP bounds the ANONYMOUS capabilities probe, which reaches
 	// the database once the provider policy is wired: a pool connection, a
 	// transaction and a row per request, for a caller with no cookie and no

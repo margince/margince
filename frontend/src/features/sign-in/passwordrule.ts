@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { characterCount } from "../../lib/charactercount";
+
 /**
  * The password rule the client states, in one place.
  *
@@ -23,7 +25,7 @@ export const MIN_PASSWORD = 12;
 
 /** How long this password is, counted the way the reader counted it. */
 export function passwordLength(password: string): number {
-  return [...password].length;
+  return characterCount(password);
 }
 
 /**

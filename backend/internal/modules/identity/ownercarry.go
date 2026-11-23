@@ -11,7 +11,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -21,7 +20,7 @@ import (
 )
 
 // CarryOwnerAccessTx keeps a former owner's access to a record a merge folded
-// theirs into, at the widest access their seat allows. A grant they already
+// theirs into, at the widest access their seat and role allow. A grant they already
 // hold keeps its term, reason and grantor; only its access may rise. A new grant
 // is persistent. A colleague who has left gets nothing. mergedFrom may be zero
 // when no single record retired.
@@ -38,11 +37,15 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 		out.Skipped = authz.OwnerCarryInactive
 		return out, nil
 	}
-	access, err := ShareAccessForTx(ctx, tx, owner)
+	in := CreateGrantInput{
+		RecordType: recordType, RecordID: record, SubjectType: "user", SubjectID: owner,
+		Access: GrantAccessWrite, FitToRecipient: true,
+	}
+	access, cut, err := grantAccessFor(ctx, tx, in)
 	if err != nil {
 		return out, err
 	}
-	in := CreateGrantInput{RecordType: recordType, RecordID: record, SubjectType: "user", SubjectID: owner, Access: access}
+	in.Access = access
 	if err := storekit.LockWriteIdentity(ctx, tx, "record_grant", grantIdentity(in)); err != nil {
 		return out, err
 	}
@@ -58,7 +61,11 @@ func (s *Service) CarryOwnerAccessTx(ctx context.Context, tx pgx.Tx, recordType 
 	if err != nil {
 		return out, err
 	}
-	evidence := map[string]any{"owner_carry": true}
+	evidence := grantCutEvidence(GrantAccessWrite, cut)
+	if evidence == nil {
+		evidence = map[string]any{}
+	}
+	evidence["owner_carry"] = true
 	if !mergedFrom.IsZero() {
 		evidence["merged_from"] = mergedFrom
 	}
@@ -97,16 +104,13 @@ func foldPriorGrant(ctx context.Context, tx pgx.Tx, in *CreateGrantInput, granto
 		return grantor, nil, false, err
 	}
 	if live {
-		if prior.Access == in.Access || in.Access != grantAccessWrite {
+		if prior.Access == in.Access || in.Access != GrantAccessWrite {
 			return grantor, nil, true, nil
 		}
 		in.ExpiresAt, in.Reason, grantor = prior.ExpiresAt, prior.Reason, prior.GrantedBy
 	}
 	return grantor, grantImage(prior), false, nil
 }
-
-// grantAccessWrite is the wider of a grant's two access levels.
-const grantAccessWrite = string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite)
 
 // grantLiveNow judges expiry against the database clock, as the visibility
 // predicates do.
@@ -127,12 +131,13 @@ func ownerCarryGrantor(ctx context.Context, owner ids.UUID) ids.UUID {
 	return owner
 }
 
-// memberLive is whether the former owner is a colleague still here; an agent
-// seat is none.
+// memberLive is whether the former owner is a colleague who is here or about to
+// be: active, or invited and not yet signed in. An agent seat is none. A case's
+// owners follow the same set.
 func memberLive(ctx context.Context, tx pgx.Tx, member ids.UUID) (bool, error) {
 	var live bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user u WHERE u.id = @member AND u.removed_at IS NULL AND `+
-		workforce.LiveHumanSQL("u")+`)`, pgx.NamedArgs{"member": member}).Scan(&live); err != nil {
+		workforce.AskableMemberSQL("u")+`)`, pgx.NamedArgs{"member": member}).Scan(&live); err != nil {
 		return false, fmt.Errorf("read whether the former owner is still a colleague: %w", err)
 	}
 	return live, nil

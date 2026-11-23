@@ -3,9 +3,9 @@
 
 package consent
 
-// The warning before a send to a recipient whose pack has no legitimate-interest
-// basis. It applies when the record holds no basis that pack accepts for the
-// use (settlePackBasisTx).
+// The warning before a send under a pack with no legitimate-interest basis: the
+// recipient's or the sending entity's. It applies when the record holds no
+// basis that pack accepts for the use (settlePackBasisTx).
 //
 // The preview marks the recipient and the screen warns. The user sending
 // confirms for each recipient's record, and staging spends one confirmation
@@ -113,8 +113,8 @@ func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subj
 	if err != nil {
 		return false, err
 	}
-	if rules, _, found := applicableRules(country.Code); !found || !rules.NoLegitimateInterests {
-		return false, nil
+	if applies, err := s.warningMayApplyTx(ctx, tx, country); err != nil || !applies {
+		return false, err
 	}
 	column := confirmationColumn(subject.Kind)
 	var open bool
@@ -140,6 +140,45 @@ func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subj
 		"country_source": string(country.Source),
 	})
 	return err == nil, err
+}
+
+// warningMayApplyTx reports whether the warning can apply to this recipient
+// for any legal entity a message may go out for. The request names no entity,
+// so a confirmation is kept wherever staging may ask for one. Staging spends it
+// only on a send its own decision flags.
+func (s *Store) warningMayApplyTx(ctx context.Context, tx pgx.Tx, country RecipientCountry) (bool, error) {
+	senders, err := s.entityCountriesTx(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	for _, sender := range senders {
+		country.Sender = sender
+		if rules, _, found := applicableRules(country.dataProtectionCodes()...); found && rules.NoLegitimateInterests {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// entityCountriesTx is the data-protection country of every live legal
+// entity: the default entity's through senderCountryOf, then each further
+// one's jurisdiction.
+func (s *Store) entityCountriesTx(ctx context.Context, tx pgx.Tx) ([]jurisdiction.Code, error) {
+	home, err := s.senderCountryOf(ctx, tx, ids.UUID{})
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT jurisdiction FROM legal_entity
+		 WHERE NOT is_default AND archived_at IS NULL AND jurisdiction IS NOT NULL`)
+	if err != nil {
+		return nil, fmt.Errorf("consent: reading the legal entities' jurisdictions: %w", err)
+	}
+	further, err := pgx.CollectRows(rows, pgx.RowTo[jurisdiction.Code])
+	if err != nil {
+		return nil, fmt.Errorf("consent: reading the legal entities' jurisdictions: %w", err)
+	}
+	return append([]jurisdiction.Code{home}, further...), nil
 }
 
 // confirmedCountryTx is the country the warning was shown under: the one the

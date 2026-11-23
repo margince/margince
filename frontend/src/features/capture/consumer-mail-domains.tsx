@@ -21,6 +21,7 @@ import {
   PanelIntro,
 } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
@@ -30,7 +31,12 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanUpsert, useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { isOption } from "../../lib/options";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import {
+  blankRequired,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../../lib/problem";
 import { captureValueMessage } from "./capturevalue";
 import { DomainQuestionCallout, domainQuestionOf } from "./domainquestion";
 import "./consumer-mail-domains.css";
@@ -330,6 +336,8 @@ function AddConsumerMailDialog({
   onClose,
 }: Readonly<{ canManage: boolean; onClose: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
   const add = useAddConsumerMailDomain();
   const headingId = useId();
   // The kind stays on the update grant: `never` overrides the shipped baseline
@@ -342,6 +350,7 @@ function AddConsumerMailDialog({
   const [domain, setDomain] = useState("");
   const [kind, setKind] = useState<Kind>("extra");
   const typed = domain.trim();
+  const domainLabel = t("consumerMail.domainLabel");
   return (
     <Modal open onClose={onClose} labelledBy={headingId} intent="form">
       <Heading size="large" id={headingId} className="t-h2 modal-title">
@@ -349,23 +358,29 @@ function AddConsumerMailDialog({
       </Heading>
       <form
         id={formId}
+        ref={faultsRoot}
         className="form-stack"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          if (typed === "") {
+          if (
+            faults.show(blankRequired(locale, { domain: [domainLabel, typed] }))
+          )
             return;
-          }
           add.mutate({ domain: typed, kind }, { onSuccess: onClose });
         }}
       >
-        <Field label={t("consumerMail.domainLabel")}>
+        <Field label={domainLabel} required error={faults.of("domain")}>
           {(control) => (
             <TextInput
               {...control}
               data-testid="consumer-mail-domain-input"
               placeholder={t("consumerMail.domainPlaceholder")}
               value={domain}
-              onChange={(e) => setDomain(e.target.value)}
+              onChange={(e) => {
+                setDomain(e.target.value);
+                faults.edited("domain");
+              }}
             />
           )}
         </Field>
@@ -422,7 +437,7 @@ function AddConsumerMailDialog({
           type="submit"
           form={formId}
           variant="primary"
-          disabled={add.isPending || typed === ""}
+          pending={add.isPending}
         >
           {t("consumerMail.add")}
         </Button>

@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -49,9 +48,9 @@ func (s *Service) SaveMyDisplayName(ctx context.Context, name string) (Seat, err
 		return Seat{}, err
 	}
 
-	// Trimmed before it is judged, so a name that is only spaces is refused
+	// Flattened before it is judged, so a name that is only spaces is refused
 	// rather than stored as a blank a colleague cannot address.
-	name = strings.TrimSpace(name)
+	name = displayNameLine(name)
 	seat := Seat{UserID: ids.From[ids.UserKind](human), DisplayName: name}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var before string

@@ -5,19 +5,16 @@ import {
   Badge,
   Button,
   Checkbox,
-  Field,
   Modal,
   PendingBody,
 } from "../design-system/atoms";
-import { DateInput } from "../design-system/dateinput";
 import { focusableWithin } from "../design-system/dialogfocus";
 import { DrawerBody, DrawerHead } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
 import { provenanceOf } from "../design-system/provenanceof";
 import { SourceEvidence } from "../design-system/sourceevidence";
 import { formatActivityWhen } from "../format/activitywhen";
-import { calendarDay, dueDayBounds } from "../format/calendarday";
-import { isoOrBlank } from "../format/datepattern";
+import { calendarDay } from "../format/calendarday";
 import { formatDue } from "../format/format";
 import { startOfDayInZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -25,7 +22,6 @@ import { taskDueChoice, taskDueFields } from "../lib/activitybody";
 import { useCanWriteRecord } from "../lib/capability";
 import { isVersionSkewOf } from "../lib/problem";
 import { isWebsiteInquiryTask } from "../lib/websiteinquiries";
-import { TaskTimeField } from "./followuptaskfields";
 import { mostSpecificFirst, RecordLinkChips } from "./recordlinks";
 import { TaskAssignee } from "./taskassignee";
 import { TaskDetailReading, TaskDetailTitle } from "./taskdetailtext";
@@ -38,9 +34,11 @@ import { useTaskContact } from "../lib/taskcontact";
 import { useViewerZone } from "../lib/viewerzone";
 import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
+import { TaskDueDatePick } from "./taskduedatepick";
 import { TaskNextSteps } from "./tasknextsteps";
 import { taskOriginKey } from "./taskorigin";
 import { TaskOutcomeForm } from "./taskoutcome";
+import { TaskRemindMenu } from "./taskreminder";
 import type { useTaskUpdate } from "./taskwrite";
 
 // Acting on a task from the record it belongs to. The tasks screen owns the
@@ -58,6 +56,7 @@ export {
   useMeetingOutcome,
   useNoticeRead,
 } from "./taskactions.rowwrites";
+export { TaskDueDatePick } from "./taskduedatepick";
 export { useTaskDone, useTaskUpdate } from "./taskwrite";
 
 type Activity = components["schemas"]["Activity"];
@@ -84,16 +83,20 @@ export function snoozedDueAt(
 
 /**
  * TaskCompleteCheck is the tick itself: a checkbox for a row that names its
- * own verb, since ticking is completing. Every caller lists open tasks only,
- * so the box starts unchecked. The row leaves on the invalidated re-read,
- * with the confirmation and its Undo raised meanwhile.
+ * own verb, since ticking is completing. Its name is for screen readers only,
+ * and names the task, so a box read out of its row still says what it does.
+ * Every caller lists open tasks only, so the box starts unchecked. The row
+ * leaves on the invalidated re-read, with the confirmation and its Undo raised
+ * meanwhile.
  */
 export function TaskCompleteCheck({
   activityId,
+  subject,
   version,
   update,
 }: Readonly<{
   activityId: string;
+  subject: string;
   version: number | undefined;
   update: ReturnType<typeof useTaskUpdate>;
 }>) {
@@ -104,13 +107,11 @@ export function TaskCompleteCheck({
   // A rejected PATCH re-enables the box, unchecked, like a click that did
   // nothing; this line is what tells the two apart.
   const failed = update.isError && isThisTask;
+  const name = t("tasks.completeNamed", { subject });
   return (
     <>
-      {/* The row already names the task beside it, so the tick's own name is
-          screen-reader-only — the words are not repeated on screen, and the
-          box still announces what ticking it does. */}
       <Checkbox
-        label={<span className="sr-only">{t("tasks.complete")}</span>}
+        label={<span className="sr-only">{name}</span>}
         checked={false}
         disabled={pending}
         onChange={() => complete(activityId, version)}
@@ -176,74 +177,6 @@ export function TaskQuickActions({
           {t("tasks.snooze")}
         </Button>
       )}
-    </>
-  );
-}
-
-/**
- * The day and time to move a task to. The detail modal draws it, where a
- * reader came to work on one task; a date box in every row is too heavy.
- * It also dates a task that has no deadline to snooze.
- */
-export function TaskDueDatePick({
-  activityId,
-  version,
-  dueAt,
-  dueHasTime,
-  dueIntent,
-  update,
-}: Readonly<{
-  activityId: string;
-  version: number | undefined;
-  dueAt?: string | null;
-  dueHasTime?: boolean;
-  dueIntent?: components["schemas"]["IntentTime"];
-  update: ReturnType<typeof useTaskUpdate>;
-}>) {
-  const t = useT();
-  const pending = update.isPending;
-  const readerZone = useViewerZone();
-  // Seeded from the task's own day and time in the INSTALLATION's zone,
-  // matching what the meta line above reads it in: a picker opening on a
-  // different day than the one displayed beside it would be two answers to
-  // "when is this due".
-  const choice = taskDueChoice(dueAt, dueHasTime, readerZone, dueIntent);
-  const current = isoOrBlank(choice.day);
-  const time = choice.time;
-  const move = (day: string, nextTime: string) =>
-    update.mutate({
-      id: activityId,
-      version,
-      body: taskDueFields(day, nextTime, choice.zone),
-    });
-  return (
-    <>
-      <Field label={t("tasks.moveTo")}>
-        {(field) => (
-          <DateInput
-            {...field}
-            value={current}
-            {...dueDayBounds(readerZone)}
-            disabled={pending}
-            onChange={(event) => {
-              const day = event.target.value;
-              // A cleared box is not a request to undate the task.
-              if (day === "") {
-                return;
-              }
-              move(day, time);
-            }}
-          />
-        )}
-      </Field>
-      {/* Clearing the time puts the task back to the end of its day. */}
-      <TaskTimeField
-        day={pending ? "" : current}
-        value={time}
-        onChange={(nextTime) => {
-          if (current !== "") move(current, nextTime);
-        }}
-      />
     </>
   );
 }
@@ -438,6 +371,7 @@ function TaskDetailActions({
             <Button onClick={() => setLogging(true)}>
               {t("tasks.log.action")}
             </Button>
+            <TaskRemindMenu task={task} update={update} />
           </div>
           {/* After the buttons in reading order, as on screen. */}
           <div className="task-detail-due">
@@ -454,7 +388,11 @@ function TaskDetailActions({
       )}
       {!logging && <TaskWriteFailure taskId={task.id} update={update} />}
       {logging && (
-        <TaskOutcomeForm task={task} onLogged={() => setLogging(false)} />
+        <TaskOutcomeForm
+          task={task}
+          onLogged={() => setLogging(false)}
+          onBack={() => setLogging(false)}
+        />
       )}
     </>
   );

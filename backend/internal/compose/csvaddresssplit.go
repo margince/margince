@@ -11,6 +11,8 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -44,11 +46,31 @@ func splitsAddressLine(object string, mapping map[string]string) bool {
 	return line1
 }
 
-// shapeAddressCells sets the line 1 split on a part's source when its mapping
-// asks for one.
+// shapeAddressCells sets the cell rewrites a part's mapping asks for: the line 1
+// split, and a country name read as its code.
 func shapeAddressCells(source *migration.CSVSource, object string, mapping map[string]string) {
-	if splitsAddressLine(object, mapping) {
-		source.ShapeRows(splitAddressCell)
+	split := splitsAddressLine(object, mapping)
+	country := object != migration.ObjectLead && slices.Contains(slices.Collect(maps.Values(mapping)), fieldAddressCountry)
+	if !split && !country {
+		return
+	}
+	source.ShapeRows(func(fields map[string]any) {
+		if split {
+			splitAddressCell(fields)
+		}
+		if country {
+			resolveCountryCell(fields)
+		}
+	})
+}
+
+// resolveCountryCell turns a country written as a name into its code. A value
+// it cannot place stays as written, so the cell check refuses it with the row named.
+func resolveCountryCell(fields map[string]any) {
+	if raw, ok := fields[fieldAddressCountry].(string); ok {
+		if code, found := contacts.ResolveCountry(raw); found {
+			fields[fieldAddressCountry] = code
+		}
 	}
 }
 

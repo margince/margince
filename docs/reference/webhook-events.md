@@ -130,6 +130,9 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`lead.updated`](#leadupdated) | lead | 1 |
 | [`lead_disqualify_reason.changed`](#lead_disqualify_reasonchanged) | lead_disqualify_reason | 1 |
 | [`lead_source.changed`](#lead_sourcechanged) | lead_source | 1 |
+| [`legal_review.decided`](#legal_reviewdecided) | legal_review | 1 |
+| [`legal_review.requested`](#legal_reviewrequested) | legal_review | 1 |
+| [`legal_review.withdrawn`](#legal_reviewwithdrawn) | legal_review | 1 |
 | [`linkedin_account.changed`](#linkedin_accountchanged) | user | 1 |
 | [`linkedin_match.decided`](#linkedin_matchdecided) | user | 1 |
 | [`linkedin_network.imported`](#linkedin_networkimported) | user | 1 |
@@ -1246,6 +1249,40 @@ Deprecated: the lead source list no longer feeds the score, and a separate break
 | `data.key` | string | yes | The stable key leads carry, which never changes for a given source. |
 | `data.source_id` | string (uuid) | yes |  |
 
+### `legal_review.decided`
+
+Record: `legal_review` · version 1
+
+Payload for legal_review.decided: legal answered a request. It carries the outcome and none of the reviewer's comments.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.deal_id` | string (uuid) | yes | The deal under review. |
+| `data.outcome` | string | yes | approved or changes_needed. |
+| `data.review_id` | string (uuid) | yes | The review that was answered. |
+
+### `legal_review.requested`
+
+Record: `legal_review` · version 1
+
+Payload for legal_review.requested: a deal's side asked legal to review the deal. It names the deal and the review and nothing the requester wrote: a receiver reads the note under its own scope.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.deal_id` | string (uuid) | yes | The deal under review. |
+| `data.review_id` | string (uuid) | yes | The review the request opened. |
+
+### `legal_review.withdrawn`
+
+Record: `legal_review` · version 1
+
+Payload for legal_review.withdrawn: the deal's side took back an open request.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.deal_id` | string (uuid) | yes | The deal under review. |
+| `data.review_id` | string (uuid) | yes | The review that was taken back. |
+
 ### `linkedin_account.changed`
 
 Record: `user` · version 1
@@ -1609,7 +1646,7 @@ Payload for relationship_nudge.decided. A rep set a lapsed contact aside so thei
 
 Record: `dynamic` · version 1
 
-Payload for retention.applied. A retention or erasure action ran against one record. Four emit sites have four different runtime subjects. The embed-call sweep acts on ai_call. The voice-learning-signal content sweep acts on voice_learning_signal. A workspace's configured retention policy acts on its object type (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure acts on a contact. None is fixed enough for this schema to name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. The policy and reason fields are a union across the sites. Both telemetry sweeps set neither, the policy-driven sweep sets only policy, and Art. 17 erasure sets only reason.
+Payload for retention.applied. A retention or erasure action ran against one record. Three emit sites have three different runtime subjects. The voice-learning-signal content sweep acts on voice_learning_signal. A workspace's configured retention policy acts on its object type (activity | deal | lead | contact | ai_call_payload). Art. 17 erasure acts on a contact. None is fixed enough for this schema to name, so this is a dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and each emit site supplies its own runtime entity type through storekit.EmitEventForEntity. The policy and reason fields are a union across the sites. The voice sweep sets neither, the policy-driven sweep sets only policy, and Art. 17 erasure sets only reason.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

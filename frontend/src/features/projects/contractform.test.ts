@@ -113,6 +113,18 @@ describe("draftProblem", () => {
     ).toBe("contracts.form.errTermOrder");
   });
 
+  it.each([
+    ["value", { valueMinor: -10000 }],
+    ["annual recurring revenue", { arrMinor: -1 }],
+  ])(
+    "refuses a negative %s instead of sending it as no amount",
+    (_, amount) => {
+      expect(draftProblem({ ...DRAFT, ...amount })).toBe(
+        "contracts.form.errNegativeAmount",
+      );
+    },
+  );
+
   it("accepts an open-ended term, which is a real shape and not a gap", () => {
     expect(draftProblem({ ...DRAFT, startsOn: "2026-01-01" })).toBeNull();
   });

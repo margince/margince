@@ -36,6 +36,7 @@ func Seed(ctx context.Context, tx pgx.Tx, def Definition, raw json.RawMessage, s
 		return false, fmt.Errorf("settings: seeding %s: %w", def.Key(), err)
 	}
 	database.Forget(tx, ValueMemoKey(def.Key()))
+	forgetCachedWith(tx, def.Key())
 	return tag.RowsAffected() == 1, nil
 }
 
@@ -72,5 +73,6 @@ func ResetConfig(ctx context.Context, tx pgx.Tx, reg *Registry) error {
 	for _, key := range keys {
 		database.Forget(tx, ValueMemoKey(key))
 	}
+	forgetCachedWith(tx, keys...)
 	return nil
 }

@@ -99,8 +99,8 @@ export function originFilterOptions(
   }));
 }
 
-// The shipped values a row's `source` takes when nothing imported it. A
-// connector's value names the connector.
+// The shipped values a row's `source` takes: the channels a deal, offer or
+// project holds, and the older words a lead still may.
 const WRITTEN_BY: Readonly<
   Record<string, Parameters<ReturnType<typeof useT>>[0]>
 > = {
@@ -111,6 +111,9 @@ const WRITTEN_BY: Readonly<
   import: "lead.source.import",
   crawl: "lead.source.crawl",
   siteread: "lead.source.siteread",
+  api: "lead.source.api",
+  automation: "lead.source.automation",
+  capture: "lead.source.capture",
 };
 
 /**

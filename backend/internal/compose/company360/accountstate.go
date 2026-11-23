@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -82,6 +83,7 @@ func (a *assembly) readStateStrip() error {
 		strip.Account.Lifecycle = crmcontracts.Company360StateStripAccountLifecycle(*lc)
 	}
 	strip.Account.RelationshipTypes = accountRelationshipTypes(a.out.Company.RelationshipTypes)
+	strip.Dormancy = in.dormancy.wire()
 
 	if in.timeline {
 		strip.Engagement = new(struct {
@@ -224,10 +226,15 @@ func (a *assembly) readHealth() error {
 		balance := float32(inbound90) / float32(total)
 		health.ReplyBalance = &balance
 	}
-	// One contact carrying the whole relationship is the one shape a rep can
-	// fix before it costs them the account, so it is named rather than scored.
+	// Too few contacts carrying the relationship is a shape a rep can fix, so it
+	// is named rather than scored. It is the deal's rule over the account's
+	// contacts, at the published threshold.
 	if len(strengths) > 0 {
-		single := active == 1
+		thresholds, _, err := reporting.AccountCoverageThresholds(a.ctx, a.tx)
+		if err != nil {
+			return err
+		}
+		single := reporting.SingleThreaded(active > 0, active, *thresholds.MaxEngagedSeats)
 		health.SingleThreaded = &single
 	}
 

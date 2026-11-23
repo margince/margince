@@ -168,13 +168,12 @@ func TestEachRecipientIsCitedFromTheirOwnMarket(t *testing.T) {
 }
 
 // A citation that may not be shown leaves the same refusal with no provision,
-// so the sender reads the facts and no law.
+// so the sender reads the facts and no law. A missing review is not such a
+// reason.
 func TestACitationThatMayNotBeShownLeavesTheRefusalUncited(t *testing.T) {
 	overdue := reviewedOnce
 	overdue.SourceCheckedAt, overdue.ReviewedAt, overdue.ReviewDue =
 		citedAt.AddDate(-2, 0, 0), citedAt.AddDate(-2, 0, 0), citedAt.AddDate(0, 0, -1)
-	unreviewed := reviewedOnce
-	unreviewed.ReviewedAt, unreviewed.ReviewDue = citedAt.AddDate(0, 0, 1), citedAt.AddDate(1, 0, 1)
 	expired := germanLaw.instrument()
 	expired.EffectiveFrom, expired.ExpiresFrom = citedAt.AddDate(-5, 0, 0), citedAt.AddDate(0, 0, -1)
 	ahead := germanLaw.instrument()
@@ -190,9 +189,9 @@ func TestACitationThatMayNotBeShownLeavesTheRefusalUncited(t *testing.T) {
 		{"a review that fell due", func(t *testing.T) jurisdiction.Code {
 			return citingPack(t, germanLaw, overdue, germanLaw.instrument())
 		}, commsauthz.Provision{}},
-		{"a review dated after the send", func(t *testing.T) jurisdiction.Code {
-			return citingPack(t, germanLaw, unreviewed, germanLaw.instrument())
-		}, commsauthz.Provision{}},
+		{"a draft pack with no review shows its law", func(t *testing.T) jurisdiction.Code {
+			return citingPack(t, germanLaw, messagingrules.Provenance{}, germanLaw.instrument())
+		}, germanLaw.refusalProvision()},
 		{"a law that expired", func(t *testing.T) jurisdiction.Code {
 			return citingPack(t, germanLaw, reviewedOnce, expired)
 		}, commsauthz.Provision{}},

@@ -142,6 +142,7 @@
     "correctDealCloseDay": "business",
     "correctProjectHealthAssessment": "business",
     "createAcquisitionSource": "admin_settings",
+    "createActivityReviewTemplate": "admin_settings",
     "createAutomation": "admin_settings",
     "createCaptureCounterpartyHold": "capture",
     "createCaptureExclusion": "workspace_settings",
@@ -356,6 +357,7 @@
     "getDealSuggestion": "business",
     "getDealWinEvidence": "business",
     "getDedupeCandidate": "business",
+    "getEditAccessRequest": "business",
     "getEmailPresentation": "business",
     "getEmailSignatureTemplate": "workspace_settings",
     "getExtensionIngestHealth": "operator",
@@ -520,6 +522,7 @@
     "listConfirmSubmissions": "compliance",
     "listConnectorContainers": "capture",
     "listConnectors": "capture",
+    "listConsentPurposeSendCounts": "compliance",
     "listConsentPurposes": "compliance",
     "listConsumerMailBaseline": "workspace_settings",
     "listConsumerMailDomains": "workspace_settings",
@@ -617,6 +620,8 @@
     "listSalesProgressDeals": "business",
     "listSavedViews": "business",
     "listScheduledSends": "business",
+    "listSchedulingTeamCandidates": "business",
+    "listSchedulingTeamRequests": "business",
     "listSdrUpcomingMeetings": "business",
     "listSdrWaitingHandoffs": "business",
     "listSignals": "business",
@@ -759,6 +764,7 @@
     "requestAttachmentAccess": "business",
     "requestCompanyVatCheck": "business",
     "requestDetailsConfirmation": "compliance",
+    "requestEditAccess": "business",
     "requestLegalReview": "business",
     "requestOwnershipTransfer": "business",
     "rescheduleScheduledSend": "business",
@@ -918,6 +924,7 @@
     "useDealEstimate": "business",
     "validateImportRun": "business",
     "visitList": "business",
+    "withdrawEditAccessRequest": "business",
     "withdrawLegalReview": "business",
     "withdrawOwnershipOffer": "business",
     "withdrawOwnershipRequest": "business"
@@ -952,6 +959,7 @@
     "annotateMorningBrief": "worklist",
     "answerCalendarInvitation": "activities",
     "answerReportingQuestionCard": "reports",
+    "answerSchedulingTeamRequest": "scheduling",
     "answerWeeklyPlanCommitment": "worklist",
     "applyContactEmploymentImport": "contacts",
     "applyLegacyLossReasons": "sales_lists",
@@ -1015,6 +1023,7 @@
     "claimRecord": "sharing",
     "claimTaskReminderDelivery": "activities",
     "clearActivityDisposition": "activities",
+    "clearContactImpersonationWarning": "contacts",
     "clearLeadManualSignal": "leads",
     "clearVoiceCorpus": "voice",
     "closeDealRoom": "deal_rooms",
@@ -1044,6 +1053,7 @@
     "correctProjectHealthAssessment": "projects",
     "countPendingApprovals": "agent_limits",
     "createAcquisitionSource": "sales_lists",
+    "createActivityReviewTemplate": "sales_rules",
     "createAutomation": "automations",
     "createCaptureCounterpartyHold": "capture_triage",
     "createCaptureExclusion": "capture_rules",
@@ -1311,6 +1321,7 @@
     "getDealWinEvidence": "deals",
     "getDedupeCandidate": "duplicates",
     "getDispactAppManifest": "connectors",
+    "getEditAccessRequest": "sharing",
     "getEmailPresentation": "activities",
     "getEmailSignatureTemplate": "sales_rules",
     "getExtensionIngestHealth": "system_health",
@@ -1445,6 +1456,7 @@
     "getUserAccess": "members",
     "getUserAvatar": "members",
     "getUserHandover": "members",
+    "getVacuumRecommendations": "system_health",
     "getVoiceBuild": "voice",
     "getVoiceLearningSummary": "voice",
     "getVoiceProfile": "voice",
@@ -1519,6 +1531,7 @@
     "listConfirmSubmissions": "consent",
     "listConnectorContainers": "connectors",
     "listConnectors": "connectors",
+    "listConsentPurposeSendCounts": "consent",
     "listConsentPurposes": "consent",
     "listConsumerMailBaseline": "capture_rules",
     "listConsumerMailDomains": "capture_rules",
@@ -1629,6 +1642,8 @@
     "listSalesProgressDeals": "reports",
     "listSavedViews": "lists",
     "listScheduledSends": "activities",
+    "listSchedulingTeamCandidates": "scheduling",
+    "listSchedulingTeamRequests": "scheduling",
     "listSdrUpcomingMeetings": "reports",
     "listSdrWaitingHandoffs": "reports",
     "listSharedMailboxes": "connectors",
@@ -1815,6 +1830,7 @@
     "requestCompanyVatCheck": "companies",
     "requestDealRoomLink": "buyer_rooms",
     "requestDetailsConfirmation": "consent",
+    "requestEditAccess": "sharing",
     "requestLegalReview": "legal_reviews",
     "requestOwnershipTransfer": "sharing",
     "requestPasswordReset": "sign_in",
@@ -2037,6 +2053,7 @@
     "validateImportRun": "imports",
     "visitList": "lists",
     "waitInputCheck": "forecast",
+    "withdrawEditAccessRequest": "sharing",
     "withdrawExistingCustomerNotice": "consent",
     "withdrawLegalReview": "legal_reviews",
     "withdrawOwnershipOffer": "sharing",
@@ -2318,6 +2335,9 @@
     ],
     "create_acquisition_source": [
       "sales_lists"
+    ],
+    "create_activity_review_template": [
+      "sales_rules"
     ],
     "create_automation": [
       "automations"
@@ -2781,6 +2801,9 @@
     ],
     "get_deal_win_evidence": [
       "deals"
+    ],
+    "get_edit_access_request": [
+      "sharing"
     ],
     "get_extension_settings": [
       "extensions"
@@ -3720,6 +3743,9 @@
     "request_details_confirmation": [
       "consent"
     ],
+    "request_edit_access": [
+      "sharing"
+    ],
     "request_legal_review": [
       "legal_reviews"
     ],
@@ -4165,6 +4191,9 @@
     "withdraw_capture_sender_decision": [
       "capture_triage"
     ],
+    "withdraw_edit_access_request": [
+      "sharing"
+    ],
     "withdraw_legal_review": [
       "legal_reviews"
     ],
@@ -4445,6 +4474,9 @@
       "business"
     ],
     "create_acquisition_source": [
+      "admin_settings"
+    ],
+    "create_activity_review_template": [
       "admin_settings"
     ],
     "create_automation": [
@@ -4902,6 +4934,9 @@
       "business"
     ],
     "get_deal_win_evidence": [
+      "business"
+    ],
+    "get_edit_access_request": [
       "business"
     ],
     "get_extension_settings": [
@@ -5802,6 +5837,9 @@
     "request_details_confirmation": [
       "compliance"
     ],
+    "request_edit_access": [
+      "business"
+    ],
     "request_legal_review": [
       "business"
     ],
@@ -6240,6 +6278,9 @@
     ],
     "withdraw_capture_sender_decision": [
       "capture"
+    ],
+    "withdraw_edit_access_request": [
+      "business"
     ],
     "withdraw_legal_review": [
       "business"

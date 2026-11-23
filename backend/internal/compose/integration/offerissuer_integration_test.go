@@ -15,6 +15,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -218,7 +219,7 @@ func TestAnIssuerChangeRetiresTheRenderingAndTheSentPDFNamesTheNewIssuer(t *test
 
 	created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{})
 	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
-	if pdf := renderThrough(rep, t, e, h, blob, created.Id); !bytes.Contains(pdf, []byte("Acme Wien GmbH")) {
+	if text := offerPDFText(t, renderThrough(rep, t, e, h, blob, created.Id)); !strings.Contains(text, "Acme Wien GmbH") {
 		t.Fatal("the first rendering does not name Vienna")
 	}
 	fallback := ids.From[ids.LegalEntityKind](defaultEntityID(t, e))
@@ -243,8 +244,8 @@ func TestAnIssuerChangeRetiresTheRenderingAndTheSentPDFNamesTheNewIssuer(t *test
 	if sent.PdfAssetRef != nil {
 		t.Errorf("the sent offer still carries the draft's rendering %s", *sent.PdfAssetRef)
 	}
-	pdf := renderThrough(rep, t, e, h, blob, created.Id)
-	if bytes.Contains(pdf, []byte("Acme Wien GmbH")) || !bytes.Contains(pdf, []byte("Authz")) {
+	text := offerPDFText(t, renderThrough(rep, t, e, h, blob, created.Id))
+	if strings.Contains(text, "Acme Wien GmbH") || !strings.Contains(text, "Authz") {
 		t.Error("the sent offer's PDF does not name the entity it was sent under")
 	}
 }

@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -154,6 +153,7 @@ func (agendaWebhookAuthority) SeatType(context.Context, ids.UUID, ids.UUID) (pri
 	return principal.SeatFull, nil
 }
 
+// AdmittedAuthority is the read the delivery boundary makes for each owner.
 func (agendaWebhookAuthority) AdmittedAuthority(context.Context, ids.UUID, ids.UUID, ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	return authz.RBAC{}, "", apperrors.ErrPermissionDenied
+	return authz.RBAC{Permissions: integration.AdminPerms}, principal.SeatFull, nil
 }

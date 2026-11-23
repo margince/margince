@@ -221,6 +221,34 @@ export const BoardCardMailFlyout: StoryObj = {
   },
 };
 
+// A name past its two lines: focus on the link shows the whole of it in a tip.
+const LONG_NAME =
+  "Group-wide ERP connector rollout for the northern distribution centres, phase two of three, incl. data migration";
+
+export const BoardCardLongNameTip: StoryObj = {
+  render: () => (
+    <div style={{ width: 300, maxWidth: "100%", paddingTop: "var(--space-8)" }}>
+      <DealCard
+        deal={boardDeal({
+          name: LONG_NAME,
+          closeDate: "2026-09-30",
+          owner: { id: "u-2", name: "Jonas Ritter" },
+        })}
+        href="#/deals/d2"
+        zone="Europe/Berlin"
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    within(canvasElement).getByRole("link", { name: LONG_NAME }).focus();
+    await waitFor(() =>
+      expect(
+        within(canvasElement.ownerDocument.body).getByRole("tooltip"),
+      ).toHaveTextContent(LONG_NAME),
+    );
+  },
+};
+
 // The card's menu open: the card keeps its focus ring and lifts on a firmer
 // edge while the panel, portalled beside it, holds focus.
 function MenuCard() {

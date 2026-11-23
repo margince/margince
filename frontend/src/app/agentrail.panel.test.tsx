@@ -6,7 +6,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
@@ -177,6 +177,15 @@ async function openPanel(answers: Answers = {}, locale: "en" | "de" = "en") {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.doUnmock("./agentpanel");
+});
+
+// The rail's lazy panel keeps the module it first loads. Loaded after a case
+// resets the modules, it reads another i18n instance and speaks its default.
+beforeAll(async () => {
+  await openPanel();
+  cleanup();
+  vi.unstubAllGlobals();
 });
 
 describe("the agent panel's hierarchy", () => {
@@ -232,16 +241,16 @@ describe("the agent panel's hierarchy", () => {
     );
   });
 
-  // The log opens the AI usage page, which a seat without the diagnostics read
+  // The log opens the AI call log, which a seat without the diagnostics read
   // grant cannot open. Offering it would send a rep to a refusal.
   it("offers the full log only to a seat that can open it", async () => {
     const rep = await openPanel({ allow: { license: ["read"] } });
     expect(rep.querySelector("a.link-button")).toBeNull();
     cleanup();
     const admin = await openPanel();
-    expect(admin.querySelector("a.link-button")?.textContent).toBe(
-      en["agent.panel.fullLog"],
-    );
+    const log = admin.querySelector("a.link-button");
+    expect(log?.textContent).toBe(en["agent.panel.fullLog"]);
+    expect(log?.getAttribute("href")).toBe("/#/settings/model-calls");
   });
 
   // The Core's vocabulary is five machine words and this is the one place they
@@ -253,8 +262,11 @@ describe("the agent panel's hierarchy", () => {
     );
     cleanup();
     const german = await openPanel({}, "de");
-    expect(german.querySelector(".arpstate")?.textContent).toBe(
-      de["agent.state.idle"],
+    // The German catalog loads after the first paint, which is in English.
+    await waitFor(() =>
+      expect(german.querySelector(".arpstate")?.textContent).toBe(
+        de["agent.state.idle"],
+      ),
     );
     expect(de["agent.state.idle"]).not.toBe(en["agent.state.idle"]);
   });
@@ -278,6 +290,98 @@ describe("the agent panel's hierarchy", () => {
     expect(opened.lastElementChild?.className).toContain("arclaim");
   });
 });
+
+describe("the agent panel's focus", () => {
+  it("takes focus in on the press that opened it and gives it back on Escape", async () => {
+    const opened = await openPanel();
+    await waitFor(() =>
+      expect(opened.contains(document.activeElement)).toBe(true),
+    );
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(document.activeElement?.className).toBe("artoggle");
+  });
+
+  // The panel's code arrives after the press. These hold that code back, so
+  // the reader can act while it is on its way.
+  it("takes focus in once its code arrives, when the reader stayed on the button", async () => {
+    const panel = await railWithHeldPanel();
+    await panel.press();
+
+    panel.release();
+
+    const opened = await panel.opened();
+    await waitFor(() =>
+      expect(opened.contains(document.activeElement)).toBe(true),
+    );
+  });
+
+  it("leaves focus where the reader moved it while its code was on its way", async () => {
+    const panel = await railWithHeldPanel();
+    await panel.press();
+    const elsewhere = document.getElementById("elsewhere");
+    act(() => elsewhere?.focus());
+
+    panel.release();
+
+    await panel.opened();
+    expect(document.activeElement).toBe(elsewhere);
+  });
+});
+
+// The rail as a fresh module whose panel import waits for `release`: the lazy
+// panel keeps its first import, so each case needs its own.
+async function railWithHeldPanel() {
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  vi.resetModules();
+  vi.doMock("./agentpanel", async (importOriginal) => {
+    await held;
+    return importOriginal();
+  });
+  const { AgentRail: HeldRail } = await import("./agentrail");
+  const { LocaleProvider: HeldLocale } = await import("../i18n");
+  // The fresh modules hold their own catalogs, which the setup file never filled.
+  await (await import("../i18n/catalogs")).loadLocale("en");
+  stubApi({});
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const { container } = render(
+    <QueryClientProvider client={client}>
+      <HeldLocale initial="en">
+        <HeldRail />
+        <button type="button" id="elsewhere">
+          Elsewhere
+        </button>
+      </HeldLocale>
+    </QueryClientProvider>,
+  );
+  return {
+    press: async () => {
+      const trigger = await waitFor(() => {
+        const button = container.querySelector<HTMLElement>(".artoggle");
+        if (!button)
+          throw new Error("no .artoggle button in the rendered tree");
+        return button;
+      });
+      await user.click(trigger);
+      expect(document.activeElement).toBe(trigger);
+      expect(document.querySelector(".arpanel")).toBeNull();
+    },
+    release: () => act(release),
+    opened: () =>
+      waitFor(() => {
+        const opened = document.querySelector(".arpanel");
+        if (!opened) throw new Error("The agent panel has not loaded");
+        return opened;
+      }),
+  };
+}
 
 describe("the agent panel's report", () => {
   // The mark used to carry the orb's CURRENT tone at a fading opacity, so a

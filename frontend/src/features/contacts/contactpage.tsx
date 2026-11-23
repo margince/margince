@@ -5,6 +5,7 @@ import {
   type ActivityGate,
   useActivityGate,
 } from "../../components/activitygate";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { MergedIntoSentence } from "../../components/historymergedref";
 import {
   LatestInboundLine,
@@ -39,13 +40,16 @@ import { useConsentGuard } from "./contactconsentpanel";
 import { ContactResearchDrawer } from "./contactdrawers";
 import { useContactEdit } from "./contactedit";
 import { ContactFollowState } from "./contactfollowstate";
+import { ContactImpersonationWarning } from "./contactimpersonation";
 import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
 import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
+import { RecordGone } from "../../components/recordgone";
 import { useHiddenCoreFeatures } from "../../lib/corefeatures";
+import { isGone } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   openContactTab,
@@ -81,6 +85,7 @@ function refusalsOf(
   readOnlyReason: string | undefined,
   readOnlyReasonId: string,
   activity: ActivityGate,
+  row: Contact | undefined,
   t: ReturnType<typeof useT>,
 ): ReactNode {
   const activityRefused = activity.refusedId !== undefined;
@@ -95,6 +100,9 @@ function refusalsOf(
         <span id={activity.sentenceId}>
           {t(activity.refusalKey ?? "record.logActivityRefused")}
         </span>
+      )}
+      {readOnlyReason && row && (
+        <EditAccessRequest kind="contact" record={row} />
       )}
     </>
   );
@@ -206,7 +214,7 @@ export function ContactPageV2({
     return <ContactOpening id={id} {...openingIdentity(record, view)} />;
   }
   if (reads === "notOpened" || !view.data) {
-    return <div className="wrap">{t("contact.page.notOpened")}</div>;
+    return <ContactNotOpened gone={readsGone(record, view)} />;
   }
 
   const contact = view.data.contact;
@@ -232,7 +240,13 @@ export function ContactPageV2({
   // What the record refuses this reader, stated once at the foot of the left
   // card: every refused verb points at its sentence by id. The rail adds the
   // Email verb's own refusal, which it reads from the same transports.
-  const refusals = refusalsOf(readOnlyReason, readOnlyReasonId, activity, t);
+  const refusals = refusalsOf(
+    readOnlyReason,
+    readOnlyReasonId,
+    activity,
+    shownRow,
+    t,
+  );
   const contactDetails = (
     <ContactRail
       view={view.data}
@@ -317,6 +331,10 @@ export function ContactPageV2({
               />
             }
           >
+            <ContactImpersonationWarning
+              contact={contact}
+              refusedReasonId={refusedReasonId}
+            />
             {tab === "overview" && (
               <>
                 <ContactFollowState contactId={id} />
@@ -443,4 +461,24 @@ function ContactRecordView({
     t("create.fullName"),
   );
   return <RecordView {...view} rename={rename} />;
+}
+
+// A failed row read decides. After a live row, the 360 can still find the
+// contact gone, since it can go between the two reads.
+function readsGone(
+  record: Readonly<{ isError: boolean; error: unknown }>,
+  view: Readonly<{ error: unknown }>,
+): boolean {
+  return isGone(record.isError ? record.error : view.error);
+}
+
+// A read no retry can answer says the contact is not there; any other failure
+// keeps the page's own sentence.
+function ContactNotOpened({ gone }: Readonly<{ gone: boolean }>) {
+  const t = useT();
+  return (
+    <div className="wrap">
+      {gone ? <RecordGone kind="contact" /> : t("contact.page.notOpened")}
+    </div>
+  );
 }

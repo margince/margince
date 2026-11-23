@@ -77,7 +77,7 @@ var addressVariantQuery = `
 		WITH addresses AS MATERIALIZED (
           SELECT contact_id,email FROM contact_email e
           WHERE ` + addressBaseSQL("e.email") + ` = ANY($1)
-          AND lower(e.email) <> ALL($2) AND e.archived_at IS NULL)
+          AND e.email <> ALL($2) AND e.archived_at IS NULL)
         SELECT e.contact_id, array_agg(e.email)
           FROM addresses e CROSS JOIN LATERAL (
           SELECT id,archived_at FROM contact p WHERE p.id=e.contact_id OFFSET 0) p

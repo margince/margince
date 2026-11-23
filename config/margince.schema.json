@@ -183,14 +183,6 @@
           "maximum": 30,
           "default": 2
         },
-        "inline_send_review": {
-          "description": "Decide a composed email at Send and show a refusal inline, instead of checking while it is written.",
-          "type": [
-            "boolean",
-            "null"
-          ],
-          "default": false
-        },
         "private_mail_requests": {
           "description": "Let the AI read private mail for requests: what a customer asks of its reader, and a request for a quote. Only mail private because of a setting is read; mail held for any other reason never is. Sharing a quote request with the workspace is a separate setting.",
           "type": [
@@ -912,6 +904,29 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "dormancy_days": {
+          "description": "Three day counts, each above the one before: after how many days with no activity a company moves to each later step of the ladder.",
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "integer"
+          },
+          "default": [
+            30,
+            60,
+            90
+          ]
+        },
+        "dormancy_follow_up_enabled": {
+          "description": "Offer the owner of a quiet or stale company a task to get back in touch.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
         "first_response_enabled": {
           "description": "Track a first-response target on every lead.",
           "type": [
@@ -1855,6 +1870,22 @@
                 "null"
               ],
               "default": true
+            },
+            "unused_limit": {
+              "description": "Most clients that AI tools made themselves (at /oauth/register or by a metadata document) and that no sign-in has used yet; a new one past it removes the oldest such client.",
+              "type": [
+                "integer",
+                "null"
+              ],
+              "default": 1000
+            },
+            "unused_retention": {
+              "description": "How long a client an AI tool made itself, and that no sign-in has used, is kept before the hourly sweep deletes it.",
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": "24h0m0s"
             }
           }
         },
@@ -2385,7 +2416,7 @@
           "$ref": "#/$defs/embeddingsBinding"
         },
         "decisions": {
-          "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, on a certified site, and falls back to its ladder whenever the answer does not stand.",
+          "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, with or without a certification record, and falls back to its ladder whenever the answer does not stand.",
           "$ref": "#/$defs/decisionsBinding"
         },
         "providers": {

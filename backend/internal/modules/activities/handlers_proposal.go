@@ -143,8 +143,13 @@ func (h Handlers) GetPublicProposalAvailability(w http.ResponseWriter, r *http.R
 		return
 	}
 	slots, truncated, err := h.store.ReliableAvailability(r.Context(), row.Host, params.From, params.To, time.Duration(row.Request.DurationMinutes)*time.Minute)
+	if isCalendarNotConnected(err) {
+		// The recipient cannot connect the host's calendar, and the host's setup is not theirs to learn.
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
 	if err != nil {
-		writeStoreErr(w, r, err)
+		writeGuestAvailabilityErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, struct {

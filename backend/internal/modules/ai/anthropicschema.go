@@ -5,25 +5,10 @@ package ai
 
 // Fitting a response schema to what Anthropic's structured output enforces.
 //
-// output_config.format constrains generation to a JSON Schema, but only to a
-// subset of the vocabulary: every object closed with additionalProperties
-// false, no numeric bounds, no string length, no array bound beyond a minItems
-// of 0 or 1, no pattern, and string formats from a short list. A schema outside
-// the subset is answered with a 400 that fails the call, so the fit is decided
-// before sending, the way Anthropic's own SDKs decide it.
-//
-// An unenforceable bound moves into the description, where the model reads it
-// even though the decoder cannot hold it, and an object that declares its
-// properties is closed. The caller's validator still holds the whole original
-// schema, so a moved bound is checked after generation rather than lost. A
-// shape no fit can express — a free-form object, a type union, an external or
-// recursive reference — is not sent at all. Either downgrade is reported on
-// the Response, so the call record says which answers generation did not fully
-// hold.
-//
-// The shared schema builder emits nothing outside the subset, so its schemas go
-// verbatim; what reaches the fit is a hand-written schema, or one an extension
-// supplies.
+// output_config.format holds generation to a subset of JSON Schema, and a
+// schema outside it fails the call with a 400. So the fit is decided before
+// sending. A bound the decoder cannot hold moves into the description, and a
+// shape no fit can express is not sent. The caller's validator holds the rest.
 
 import (
 	"bytes"
@@ -31,8 +16,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // errSchemaIneligible is a response schema Anthropic's structured output cannot
@@ -74,15 +57,11 @@ var anthropicUnenforcedKeywords = map[string]bool{
 	"maxItems": true, "uniqueItems": true, "minProperties": true, "maxProperties": true,
 }
 
-// anthropicOutputSchema is what to send as output_config.format for a
-// request's response schema, and the downgrade that cost: the schema verbatim
-// and "" when it already fits; a fitted copy and "" when fitting only closed an
-// object, which enforces more rather than less; a fitted copy and
-// model.SchemaRelaxed when a bound had to move into a description; nil and
-// model.SchemaDropped when no fit exists.
-func anthropicOutputSchema(raw json.RawMessage) (json.RawMessage, string) {
+// anthropicOutputSchema is what to send as output_config.format. It is the
+// schema verbatim when it fits, a fitted copy when one exists, and nil otherwise.
+func anthropicOutputSchema(raw json.RawMessage) json.RawMessage {
 	if len(raw) == 0 {
-		return nil, ""
+		return nil
 	}
 	fitter, err := newAnthropicSchemaFitter(raw)
 	var fitted json.RawMessage
@@ -91,28 +70,25 @@ func anthropicOutputSchema(raw json.RawMessage) (json.RawMessage, string) {
 	}
 	switch {
 	case err != nil:
-		return nil, model.SchemaDropped
-	case fitter.relaxed:
-		return fitted, model.SchemaRelaxed
+		return nil
 	case fitter.changed:
-		return fitted, ""
+		return fitted
 	default:
-		return raw, ""
+		return raw
 	}
 }
 
 // anthropicSchemaFitter walks one schema. changed says the fitted copy differs
-// from what was written, relaxed that some bound in it is no longer enforced —
-// two facts, because closing an object is the first without the second.
+// from what was written.
 //
 // definitions are the local reference targets the root declares, the only
 // `$ref` values the decoder resolves; depth is how far below the root the walk
 // is, since a definitions block anywhere else is not where a "#/$defs/…"
 // pointer lands.
 type anthropicSchemaFitter struct {
-	changed, relaxed bool
-	definitions      map[string]json.RawMessage
-	depth            int
+	changed     bool
+	definitions map[string]json.RawMessage
+	depth       int
 }
 
 // newAnthropicSchemaFitter reads the root's definitions before the walk, so a
@@ -165,7 +141,7 @@ func (f *anthropicSchemaFitter) fit(node schemaObject) (schemaObject, error) {
 	if err != nil || len(moved) == 0 {
 		return out, err
 	}
-	f.changed, f.relaxed = true, true
+	f.changed = true
 	description, err := describeMoved(out.get(kwDescription), moved)
 	if err != nil {
 		return nil, err

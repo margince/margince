@@ -34,6 +34,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 		"industry": "payments", "size_band": "51-200", "include_anchor": "true",
 		"source_system": "acme-erp", "source_id": "C-1",
 		"partner_kind": "referral", "partner_stage": "contract_signed", "partner_stage_meaning": "active",
+		"dormancy": "dormant",
 	}))
 	assertEveryFilterNarrows(t, "partner", partnerListFilters, map[string]string{
 		"partner_kind": "referral", "partner_role": "hosting", "relationship_stage": "ready",
@@ -67,7 +68,7 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 			"owner_team_id", "related_to", "relationship_mark", "shared_with_me", "sort", "tag_id", "tag_mode", "unassigned",
 		}},
 		{datasource.EntityCompany, []string{
-			"ai_written", "captured_by_kind", "domain", "extension_relationship_type", "include_anchor", "include_archived", "industry", "lifecycle", "list_id",
+			"ai_written", "captured_by_kind", "domain", "dormancy", "extension_relationship_type", "include_anchor", "include_archived", "industry", "lifecycle", "list_id",
 			"owner_id", "owner_team_id", "partner_kind", "partner_stage", "partner_stage_meaning", "relationship_type",
 			"size_band", "sort", "source_id", "source_system", "tag_id", "tag_mode", "unassigned",
 		}},

@@ -317,9 +317,9 @@ func (p *Patch) ApplyGuardedIn(
 }
 
 // RowLock witnesses that the current transaction holds FOR UPDATE on one
-// live row. Its fields are unexported and only LockRow/LockPair mint it,
-// so an ApplyLocked call structurally proves the row cannot race a
-// concurrent writer for the rest of the transaction.
+// live row. Its fields are unexported and only the LockRow family mints it.
+// So an ApplyLocked call proves the row cannot race a concurrent writer for
+// the rest of the transaction.
 type RowLock struct {
 	table string
 	id    ids.UUID
@@ -333,6 +333,27 @@ type RowLock struct {
 // ID exposes the locked row's id so multi-step flows can thread the
 // witness instead of a bare UUID.
 func (l RowLock) ID() ids.UUID { return l.id }
+
+// Holds reports whether this lock is on row id of table. A writer handed a
+// lock it did not take checks it before trusting it.
+func (l RowLock) Holds(table string, id ids.UUID) bool { return l.table == table && l.id == id }
+
+// LockRowReading is LockRow that also scans columns of the locked row into
+// dest in the same statement. columns is a compile-time literal of the caller.
+func LockRowReading(
+	ctx context.Context, tx pgx.Tx, table string, id ids.UUID, archived ArchivedFilter, columns string, dest ...any,
+) (RowLock, error) {
+	err := tx.QueryRow(ctx,
+		fmt.Sprintf(`SELECT %s FROM %s WHERE id = $1%s FOR UPDATE`, columns, table, liveClause(archived)),
+		id).Scan(dest...)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return RowLock{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return RowLock{}, err
+	}
+	return RowLock{table: table, id: id, archived: archived}, nil
+}
 
 // LockRow takes (or idempotently re-takes) FOR UPDATE on one row; a row
 // the filter cannot resolve is apperrors.ErrNotFound. LiveOnly is the
@@ -425,6 +446,25 @@ func (p *Patch) ApplyLocked(ctx context.Context, tx pgx.Tx, lock RowLock) error 
 		fmt.Sprintf(`UPDATE %s SET %s WHERE id = $%d%s`,
 			lock.table, strings.Join(p.sets, ", "), len(args), liveClause(lock.archived)),
 		args...)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() != 1 {
+		return apperrors.ErrNotFound
+	}
+	return nil
+}
+
+// TouchLocked moves a held row's version and updated_at after a write changed
+// only what hangs off it. A merge that moves addresses onto it is one. The
+// table's trigger does the bump. A client holding the old version then meets a
+// conflict on its next write.
+func TouchLocked(ctx context.Context, tx pgx.Tx, lock RowLock) error {
+	if lock.table == "" {
+		return errors.New("storekit: TouchLocked requires a lock minted by LockRow or LockPair")
+	}
+	tag, err := tx.Exec(ctx,
+		fmt.Sprintf(`UPDATE %s SET updated_at = updated_at WHERE id = $1%s`, lock.table, liveClause(lock.archived)), lock.id)
 	if err != nil {
 		return err
 	}

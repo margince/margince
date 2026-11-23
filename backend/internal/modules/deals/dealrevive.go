@@ -81,12 +81,12 @@ func (s *Store) ReviveLostDeal(ctx context.Context, in ReviveLostDealInput) (boo
 	if err := RequireSuggestionDecision(ctx, true); err != nil {
 		return false, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return false, err
-	}
 	var revived bool
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		ctx, may, err := actAsOwnerNow(ctx, tx, in.AsOwner, func(ctx context.Context) error {
 			return RequireSuggestionDecision(ctx, true)
 		})

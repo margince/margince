@@ -167,42 +167,21 @@ func derivationRows(
 	return scanDerivationRows(pgRows, plan.columns)
 }
 
-// maskedDerivationSelects is plan.selects with each REFERENCE column wrapped so
-// that a row pointing at a record this caller cannot open returns NULL there
-// instead of the id.
-//
-// Masking rather than excluding, and the difference is the whole of it. The
-// drill-through returns every dimension the spec declares — that is deliberate,
-// so a reader can see why each record is in this group — which means it hands
-// back the partner id even when the number above it was a stage total. Dropping
-// those rows to avoid naming the partner would make the explanation smaller
-// than the number it explains. Blanking the column keeps both true: the row is
-// one this caller may read, and the reference is one they may not.
-//
-// It mirrors what an ordinary read of the same record already does
-// (deals/fieldmask.go blanks partner_company_id and keeps the deal), so a reader
-// who follows the link sees the same rows with the same holes.
-//
-// The aggregate recompute does NOT take this treatment and must not: it counts
-// rows, names no reference, and wrapping a column it never returns would only
-// make the two halves read different SQL for one row set.
+// maskedDerivationSelects blanks a reference the caller cannot open and keeps
+// its row. Not excluding: dropped rows would add up to less than the headline.
+// The aggregate recompute is not masked: it returns no reference, and wrapping
+// one would give the two halves different SQL for one row set.
 func maskedDerivationSelects(
 	ctx context.Context, spec reportSpec, plan derivationPlan, arg func(any) int,
 ) ([]string, error) {
 	if len(spec.referenceScopes) == 0 {
 		return plan.selects, nil
 	}
-	// Only the references this plan actually RETURNS. A spec may scope a column
-	// it exposes as a filter alone (deals-by-stage scopes company_id for
-	// that reason), and no select mentions it — while ScopeClauseFor registers a
-	// bind parameter for every column it is asked about. A parameter the
-	// finished statement never names is a Postgres error, not a no-op.
+	// Only the references a select names: each ScopeClauseFor binds a parameter,
+	// and Postgres rejects one the statement never uses.
 	returned := make(map[string]bool, len(plan.columns))
 	for _, name := range plan.columns {
-		if expr, ok := spec.dimensions[name]; ok {
-			returned[expr] = true
-		}
-		if expr, ok := spec.measures[name]; ok {
+		if expr, ok := derivationColumnExpr(spec, name); ok {
 			returned[expr] = true
 		}
 	}
@@ -231,21 +210,11 @@ func maskedDerivationSelects(
 	if len(masks) == 0 {
 		return plan.selects, nil
 	}
-	// plan.columns and plan.selects are built in one pass and stay aligned, so
-	// the column name at index i names the expression selected at index i.
-	//
-	// A column is a dimension or a measure (derivation.go appends both), and
-	// both are looked up: a spec that exposed a reference as a measure would
-	// otherwise return the id unmasked, which is a disclosure and not an error.
-	// TestNoMeasureCarriesAReference refuses that spec at the gate, and this
-	// stays honest either way rather than assuming the gate.
+	// Measures are looked up too, so a reference spelled as one is still blanked.
 	out := make([]string, len(plan.selects))
 	copy(out, plan.selects)
 	for i, name := range plan.columns {
-		expr, named := spec.dimensions[name]
-		if !named {
-			expr, named = spec.measures[name]
-		}
+		expr, named := derivationColumnExpr(spec, name)
 		if !named {
 			continue
 		}
@@ -374,7 +343,8 @@ func predicateFields(preds []boundExpr) []string {
 // column to its wire value positionally.
 func scanDerivationRows(pgRows pgx.Rows, columns []string) ([]map[string]any, error) {
 	var out []map[string]any
-	reader := rowvalue.NewReader()
+	// Instants, as drill-through rows have always been: their screens read them so.
+	reader := rowvalue.NewInstantReader()
 	for pgRows.Next() {
 		values, err := reader.Values(pgRows)
 		if err != nil {

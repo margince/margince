@@ -92,6 +92,9 @@ func insertServiceMember(ctx context.Context, tx pgx.Tx, in ServiceMemberInput) 
 		member, address, in.DisplayName, in.Extension, owndomain.StoredOfAddress(address)); err != nil {
 		return ids.UserID{}, err
 	}
+	if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+		return ids.UserID{}, err
+	}
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO role_assignment (role_id, user_id) VALUES ($1, $2)`,
 		roleID, member); err != nil {
@@ -166,6 +169,9 @@ func (s *Service) ArchiveServiceMember(ctx context.Context, actor Identity, memb
 		if _, err := tx.Exec(ctx,
 			`UPDATE app_user SET status = 'deactivated', archived_at = now() WHERE id = $1`,
 			member); err != nil {
+			return err
+		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "user", member.UUID,

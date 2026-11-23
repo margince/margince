@@ -84,7 +84,7 @@ func TestManagementSeesEveryRowAndAdministersNothing(t *testing.T) {
 
 	// Another user's passport reads as absent to management, as it does to
 	// any non-admin — existence-hiding, not a 403.
-	adminPassport, err := e.svc.IssuePassport(e.wsCtx(e.admin), e.admin, IssuePassportInput{Scopes: []string{"read"}})
+	adminPassport, err := e.svc.IssuePassport(e.wsCtx(e.admin), e.admin, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("issuing the admin's passport: %v", err)
 	}

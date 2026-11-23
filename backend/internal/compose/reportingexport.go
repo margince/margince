@@ -8,6 +8,7 @@ import (
 	"encoding/csv"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -96,7 +97,29 @@ func reportingCSVRows(evaluation crmcontracts.ReportingEvaluation) [][]string {
 			appendRow(string(chart.Metric), string(chart.Kind), say.Say(reportingcsv.Labels["closing"]), chart.Closing, nil, nil, nil, chart.Unit, chart.ContextId, covered)
 		}
 	}
+	// The page writes the assessment from the figures above, so the file names
+	// the card instead of keeping a second copy of its sentence rules.
+	// Written whole, since it holds no figure for appendRow to give a unit.
+	if placesAssessment(evaluation.Selection) {
+		rows = append(rows, []string{assessmentRow, assessmentRow, say.Say(reportingcsv.Labels[assessmentRow]), "", "", "", "", "", "", "", "not_exported", strconv.FormatBool(false), "", evaluation.Context.EvaluatedAt.Format(time.RFC3339Nano)})
+	}
 	return rows
+}
+
+const assessmentRow = string(crmcontracts.ReportingCardKindAssessment)
+
+func placesAssessment(selection crmcontracts.ReportingSelection) bool {
+	if selection.Layout == nil {
+		return false
+	}
+	for _, section := range *selection.Layout {
+		if slices.ContainsFunc(section.Cards, func(card crmcontracts.ReportingCard) bool {
+			return card.Kind == crmcontracts.ReportingCardKindAssessment
+		}) {
+			return true
+		}
+	}
+	return false
 }
 
 // csvCoverage is what one row says of its figure's coverage. The withheld flag

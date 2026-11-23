@@ -408,6 +408,7 @@ type transcriptReadStore interface {
 	// The Tx form, for the close that has to commit with the proposals it is
 	// closing over — see stageAndFinish.
 	FinishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, outcome activities.TranscriptReadOutcome) error
+	ReleaseTranscriptRead(ctx context.Context, readID ids.UUID, claimedAt time.Time) error
 }
 
 // meetingDayLabel shows the weekday beside the date: "by Friday" resolves

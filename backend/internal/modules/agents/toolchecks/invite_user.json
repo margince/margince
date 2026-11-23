@@ -2,7 +2,6 @@
   "verb": "invite_user",
   "checks": [
     "user_admin.create",
-    "user_admin.create|update",
-    "user_admin.read|create|update|delete"
+    "user_admin.create|update"
   ]
 }

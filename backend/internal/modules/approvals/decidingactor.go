@@ -54,10 +54,14 @@ var sendingKinds = map[string]bool{
 	KindScheduledSendHeld: true,
 }
 
-// humanAcceptedKinds are agreements between two colleagues. Taking on a
-// colleague's record, or giving one's own away, is that colleague's own consent
-// and is not delegated to a credential.
-var humanAcceptedKinds = map[string]bool{approvalsubject.KindOwnershipTransfer: true}
+// humanAcceptedKinds are answers a member gives in person. Taking on a
+// colleague's record, giving one's own away, or letting a colleague change it
+// is that member's own consent. An employer change rests on outside mail, which
+// an agent reading it could be steered by. None is delegated to a credential.
+var humanAcceptedKinds = map[string]bool{
+	approvalsubject.KindOwnershipTransfer: true, approvalsubject.KindEmployerChange: true,
+	approvalsubject.KindEditAccess: true,
+}
 
 // ReleaseSends reports whether APPROVING this kind puts a message on the wire at
 // the moment of decision, which is the classification agentMayDecide charges the

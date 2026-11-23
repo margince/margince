@@ -377,6 +377,9 @@ export function TimelineRow({
           )}
           {entry.via}
           <TaskStateFlag entry={entry} />
+          {entry.terms && !entry.withheld && (
+            <span className="tl-head-part">{entry.terms}</span>
+          )}
           {/* Who may read it, when that is worth a mark: sealed rows and
               withheld ones. Withheld first, because a held row's `audience`
               is not the reader's to see and the mark must not claim one. */}

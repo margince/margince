@@ -105,7 +105,6 @@ A value that uses both forms at once is refused.
 
 - `served_provider`: the upstream that served the call, from the `provider` field
   of the response. Empty on a direct vendor, which reports none.
-- `finish_reason`, so an answer that ended early and a complete one are different rows.
 - `cached_tokens` and `cache_write_tokens`, read from `usage.prompt_tokens_details`,
   both already within `prompt_tokens`.
 

@@ -9,8 +9,8 @@ import { formatNumber } from "../../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../../i18n";
 import { labelFor } from "../../../lib/labelfor";
 import { bandLabelKeys } from "./narration";
-import type { CorpusManifestEntry } from "./use-voice-corpus";
 import { emphasisIndices } from "./voice-excerpts";
+import type { CorpusManifestEntry } from "./voice-manifest";
 
 // The distilling panel: while the reader adds writing, the room reads it back
 // — a running line of their own sentences, and between them what the server

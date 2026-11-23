@@ -1,11 +1,14 @@
 import { useEntityName } from "../components/entityref";
+import type { NameReading } from "../components/entityref.queries";
 import { translate, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import type { EntityKind } from "../lib/entity";
 import { useOpenableApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN, findExtension, unitTitle } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import type { Route, Screen } from "../lib/router";
+import { isUuid } from "../lib/uuid";
 import {
   NAV,
   type NavLevelEntry,
@@ -188,11 +191,12 @@ export function sectionHead(
  * request without an id to resolve.
  *
  * The three ways a read can leave this without a name are not one case. A read
- * that FAILED says so: the id is the thing the reader cannot act on, and
- * printing it for a 403 made a refusal indistinguishable from a record whose
- * display field is blank. A read still in flight, and one that answered with no
- * name, both fall back to the id — which is not a name, but is true, and is what
- * the reader can quote.
+ * that FAILED says so, since the reader cannot act on the id. Printing the id
+ * for a 403 would make a refusal look like a record with a blank name. A read
+ * still in flight falls back to the id, which is true and quotable. A settled
+ * answer leaves an id out only when no record the reader may see has it. An id
+ * that is no record id names nothing either. Both say "Not found", as the page
+ * under them does.
  */
 export function useRouteSubject(route: Route): string {
   const t = useT();
@@ -213,21 +217,13 @@ export function useRouteSubject(route: Route): string {
   // screen's own state — the settings tab, for one — and the subject is still
   // the page.
   const recordKind = recordKindOf(route);
-  const { name, reading } = useEntityName(
+  const recordId = recordKind && route.id;
+  const { name, reading, absent } = useEntityName(
     recordKind ?? "contact",
-    recordKind && route.id,
+    recordId,
   );
-  if (recordKind && route.id) {
-    if (name) {
-      return name;
-    }
-    if (reading === "failed") {
-      return t("ref.nameLoadFailed");
-    }
-    // A lead may legitimately have no name; its id is no label for it.
-    return reading === "unnamed" && recordKind === "lead"
-      ? t("ref.leadUnnamed")
-      : route.id;
+  if (recordKind && recordId) {
+    return name ?? subjectWithoutName(recordKind, recordId, reading, absent, t);
   }
   if (unit) {
     return unitTitle(unit, locale);
@@ -239,4 +235,25 @@ export function useRouteSubject(route: Route): string {
   return reserved
     ? t(reserved)
     : resolveTitle(route.screen, navLabelKey(navItem, readsTeam), t);
+}
+
+function subjectWithoutName(
+  kind: EntityKind,
+  id: string,
+  reading: NameReading,
+  absent: boolean,
+  t: ReturnType<typeof useT>,
+): string {
+  if (reading === "pending") {
+    return id;
+  }
+  // The server refuses a read for an id that is no record id, as it is.
+  if (reading === "failed") {
+    return isUuid(id) ? t("ref.nameLoadFailed") : t("shell.unknownPage");
+  }
+  // A lead the answer held may legitimately have no name; every other record
+  // kind has one.
+  return kind === "lead" && !absent
+    ? t("ref.leadUnnamed")
+    : t("shell.unknownPage");
 }

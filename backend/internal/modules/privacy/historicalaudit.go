@@ -35,8 +35,8 @@ type HistoricalAuditPage struct {
 	Review []ErasureReviewSource
 }
 
-// RedactHistoricalAuditPageTx advances over the audit primary key, including
-// ordinary writes. The run ID bounds the walk before newly written certificates.
+// RedactHistoricalAuditPageTx advances over the erasure certificates in audit
+// primary key order. The run ID bounds the walk before newly written certificates.
 func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until ids.UUID, limit int, country CountryReader) (HistoricalAuditPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return HistoricalAuditPage{}, err
@@ -45,9 +45,12 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 	if err != nil {
 		return HistoricalAuditPage{}, err
 	}
-	rows, err := tx.Query(ctx, `SELECT id, entity_type, entity_id,
-	 `+storekit.PhysicalErasureCertificateSQL("audit_log", "@erasure_actions")+`
-	 FROM audit_log WHERE id > @after AND id < @until ORDER BY id LIMIT @limit`,
+	// Only erasure certificates are read, so a page of ordinary writes costs
+	// nothing; a held certificate is still returned and revisited next run.
+	rows, err := tx.Query(ctx, `SELECT id, entity_type, entity_id
+	 FROM audit_log WHERE id > @after AND id < @until
+	 AND `+storekit.PhysicalErasureCertificateSQL("audit_log", "@erasure_actions")+`
+	 ORDER BY id LIMIT @limit`,
 		pgx.StrictNamedArgs{"after": after, "until": until, auditPageLimitParameter: limit, "erasure_actions": storekit.AuditRedactionActions()})
 	if err != nil {
 		return HistoricalAuditPage{}, err
@@ -55,11 +58,10 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 	type entry struct {
 		id, entity ids.UUID
 		kind       string
-		privacy    *bool
 	}
 	entries, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (entry, error) {
 		var e entry
-		err := row.Scan(&e.id, &e.kind, &e.entity, &e.privacy)
+		err := row.Scan(&e.id, &e.kind, &e.entity)
 		return e, err
 	})
 	if err != nil {
@@ -68,9 +70,6 @@ func RedactHistoricalAuditPageTx(ctx context.Context, tx pgx.Tx, after, until id
 	page := HistoricalAuditPage{}
 	for _, e := range entries {
 		page.Scanned = append(page.Scanned, e.id)
-		if e.privacy == nil || !*e.privacy {
-			continue
-		}
 		changed, err := redactHistoricalRecord(ctx, tx, e.id, e.kind, e.entity, floor)
 		if err != nil {
 			return HistoricalAuditPage{}, err

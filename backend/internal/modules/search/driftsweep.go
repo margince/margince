@@ -23,8 +23,8 @@ import (
 // (embedreindextransport.go); this sweep never touches the binding marker.
 // Idempotent by UpsertEmbedding's content-hash + identity skip-compare, so a
 // concurrent ordinary embed of the same entity costs nothing. Returns how many
-// entities it actually embedded.
-func (s *Store) SweepWorkspaceEmbeddingDrift(ctx context.Context, wsID ids.WorkspaceID, embedder Embedder) (int, error) {
+// entities it actually embedded. scope picks the recent rows or every row.
+func (s *Store) SweepWorkspaceEmbeddingDrift(ctx context.Context, wsID ids.WorkspaceID, embedder Embedder, scope DriftScope) (int, error) {
 	configured, _ := embedder.EmbedIdentity()
 	if configured == "" {
 		return 0, nil
@@ -49,7 +49,7 @@ func (s *Store) SweepWorkspaceEmbeddingDrift(ctx context.Context, wsID ids.Works
 	wsCtx := systemWorkspaceContext(ctx, wsID.UUID)
 	healed := 0
 	for entityType, src := range pendingSources {
-		pendingIDs, err := s.pendingEntityIDs(wsCtx, entityType, src, configured)
+		pendingIDs, err := s.pendingEntityIDs(wsCtx, entityType, src, configured, scope)
 		if err != nil {
 			return healed, err
 		}
@@ -98,10 +98,10 @@ func (s *Store) healEntity(ctx context.Context, entityType string, id ids.UUID, 
 // endpoint reports. Ids only: healEntity re-reads the text at heal time. It
 // runs in its own short transaction, because model calls must not run under
 // a held workspace transaction.
-func (s *Store) pendingEntityIDs(ctx context.Context, entityType string, src pendingSource, currentIdentity string) ([]ids.UUID, error) {
+func (s *Store) pendingEntityIDs(ctx context.Context, entityType string, src pendingSource, currentIdentity string, scope DriftScope) ([]ids.UUID, error) {
 	var pendingIDs []ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, src.pendingIDsSQL(entityType), currentIdentity)
+		rows, err := tx.Query(ctx, src.pendingIDsSQL(entityType, scope), currentIdentity)
 		if err != nil {
 			return fmt.Errorf("search: selecting pending %s rows: %w", entityType, err)
 		}

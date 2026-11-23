@@ -18,6 +18,8 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // A Vietnamese keyboard prints the Ctrl cap in English.
+  "shell.shortcuts.ctrl",
   // A link's kind is the product's own name, or "Web".
   "docs.kind.docs",
   "docs.kind.sheets",
@@ -41,6 +43,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Markup with placeholders, which is the same in every language.
   // Only placeholders and punctuation, with no word to translate.
   "compose.aboutWhen",
+  "product.candidatePrice",
   "sendPermission.recipientLine",
   "privacynotice.purposeLine",
   "changes.check.outcome",
@@ -55,6 +58,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "contact.chapter.wayInAnswer",
   "contact.chapter.withDetail",
   "merge.recordDetail",
+  "explain.col.inCurrency",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",
@@ -66,9 +70,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
-  // Audit filter examples in the stored spelling the filter matches.
-  "settings.auditActorExample",
-  "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
   // The product's own name, as the agent that made a change.
@@ -270,6 +271,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
+  "offer.deal",
+  "legalReview.packDeal",
 
   // A bare percentage, written the same way in Vietnamese.
   "deal.winProbability.band.zero",

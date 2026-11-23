@@ -34,7 +34,7 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 		{name: "read share", private: true, share: "read"},
 		{name: "write share", private: true, share: "write", want: true},
 		{name: "owner", private: true, owner: true, want: true},
-		{name: "workspace contact on another team", want: true},
+		{name: "workspace contact on another team"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := Setup(t)
@@ -49,6 +49,7 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 				Objects: map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
 			})
 			if tc.share != "" {
+				e.GrantRole(t, e.Rep1, "rep")
 				if _, err := identity.NewService(e.Pool).CreateRecordGrant(owner, identity.CreateGrantInput{
 					RecordType: "contact", RecordID: contact, SubjectType: "user", SubjectID: e.Rep1, Access: tc.share,
 				}); err != nil {

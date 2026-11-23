@@ -78,6 +78,8 @@ type SearchArm = Readonly<{
   // What to tell the reader when it failed: the server's advice for a search
   // that was too broad, otherwise the shared line.
   failure: string;
+  // The search answered the words now in the box and found no record.
+  empty: boolean;
 }>;
 
 // Live record hits for the palette (RS-1): one request per pause in the typing
@@ -93,11 +95,12 @@ export function useSearchCommands(
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const typed = query.trim();
+  // Leading blanks only: a trailing one tells the server the word is finished.
+  const typed = query.trimStart();
   const settled = useSettledValue(typed);
   // The typed floor hides a cleared box's hits at once (its fetch aborts a
   // pause later, when `settled` moves); the settled one never asks one letter.
-  const enabled = typed.length >= 2 && settled.length >= 2;
+  const enabled = typed.trim().length >= 2 && settled.trim().length >= 2;
   // Hits are records the reader's row scope narrows.
   const readerScope = useHealthScope();
   const result = useQuery({
@@ -116,6 +119,7 @@ export function useSearchCommands(
             q: settled,
             per_type: kind ? PALETTE_PER_KIND : PALETTE_PER_TYPE,
             with_employees: true,
+            typeahead: true,
             ...(kind ? { types: [kind] } : {}),
           },
         },
@@ -240,6 +244,14 @@ export function useSearchCommands(
     // would read as "no matches".
     pending: enabled && result.isFetching,
     failed,
+    // Asked of the hits rather than the rows: the results page lists a hit the
+    // palette has no row for. A failed refresh keeps the answer before it.
+    empty:
+      !failed &&
+      !result.isFetching &&
+      answer !== undefined &&
+      foldForSearch(answer.q) === foldForSearch(typed) &&
+      answer.hits.length === 0,
     failure: problemMessageOf(result.error, t, t("palette.searchFailed")),
   };
 }

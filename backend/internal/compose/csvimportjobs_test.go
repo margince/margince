@@ -145,9 +145,13 @@ func TestATestRunKeepsARefusalTheImporterCanActOn(t *testing.T) {
 	if got := migration.StopCause(migration.StatusValidating, testRunRefusal(header)); got != header.Error() {
 		t.Errorf("a broken header: cause = %q, want the refusal's own sentence %q", got, header.Error())
 	}
+	damaged := migration.InEntry("leads.csv", &migration.FileFault{Kind: migration.ErrSourceUnreadable, Message: "Line 7 is damaged.", Params: migration.Params{"reason": "field_count", "line": "7"}})
+	if got := migration.RefusalOf(testRunRefusal(damaged)); got == nil || got.Field != "file" || got.Code != "unreadable" || got.Params["line"] != "7" || got.Params["file"] != "leads.csv" {
+		t.Errorf("a damaged line keeps refusal %+v, want file/unreadable on line 7 of leads.csv", got)
+	}
 	driver := errors.New("pq: relation import_record_map does not exist")
-	if got := migration.StopCause(migration.StatusValidating, testRunRefusal(driver)); got != migration.CauseTestRunStopped {
-		t.Errorf("a driver error: cause = %q, want %q", got, migration.CauseTestRunStopped)
+	if got := migration.StopCause(migration.StatusValidating, testRunRefusal(driver)); got != migration.CauseTestRunStopped || migration.RefusalOf(testRunRefusal(driver)) != nil {
+		t.Errorf("a driver error: cause = %q, want %q and no refusal", got, migration.CauseTestRunStopped)
 	}
 	for _, own := range []error{context.DeadlineExceeded, context.Canceled, migration.ErrSuperseded, apperrors.ErrPermissionDenied} {
 		if wrapped := fmt.Errorf("reading: %w", own); !errors.Is(testRunRefusal(wrapped), own) || errors.As(testRunRefusal(wrapped), new(migration.RunStop)) {

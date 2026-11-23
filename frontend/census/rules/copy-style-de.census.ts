@@ -119,6 +119,8 @@ const RETIRED_WORDS = [
   "Administratoren",
   "Verwalter",
   "Systemadministrator",
+  "Systembetreiber",
+  "Betreiber",
   "Kollege",
   "Kollegin",
   "Kollegen",
@@ -163,6 +165,8 @@ const RETIRED_WORDS = [
   "Spine",
   "Backread",
   "Gastgeber",
+  "Organisator",
+  "Organisatoren",
   "Deep Read",
   "Zulassungsprüfung",
   "Audit-Trail",
@@ -191,6 +195,11 @@ const RETIRED_WORDS = [
   "Privatsphäre",
   "GDPR",
   "Gegenbuchung",
+  "Ctrl",
+  "anlegen",
+  "Anlegen",
+  "angelegt",
+  "anzulegen",
   "erfolgt",
   "seitens",
   "Seitens",
@@ -272,6 +281,56 @@ export function vocabularyNeverColumn(): string {
     .join("\n");
 }
 
+// The du imperative keeps its -e (lege, prüfe, sage). These are the short
+// forms a translation reaches for. A verb whose stem changes its vowel (gib,
+// nimm, lies) has no -e form, nor has "lass", so none of them is listed.
+// "Versuch" alone is a noun, so the verb is listed with the "es" it takes.
+const SHORT_IMPERATIVE = word(
+  [
+    "leg",
+    "schreib",
+    "prüf",
+    "markier",
+    "zieh",
+    "füg",
+    "trag",
+    "schick",
+    "geh",
+    "mach",
+    "frag",
+    "sag",
+    "verschieb",
+    "setz",
+    "bleib",
+    "versuch es",
+  ]
+    .flatMap((verb) => [verb, verb[0].toUpperCase() + verb.slice(1)])
+    .join("|"),
+);
+
+// "freigeben" and "Freigabe" mean approve. Where the English says share and
+// not approve, the German says teilen.
+const SHARE_IN_ENGLISH = /\bshar(?:e|es|ed|ing)\b/i;
+const APPROVE_IN_ENGLISH = /\bapprov/i;
+// Any case, so a sentence-initial "Freigeben" and a compound "Kontofreigabe"
+// count. The split verb ("gibt … frei") is read as one, and the adjective frei
+// alone is not the verb.
+const APPROVE_IN_GERMAN = [
+  /frei(?:ge|zu)?g[ei]b|freigabe/i,
+  new RegExp(
+    `(?<![${LETTER}])(?:gib|gibt|gebe|geben|gab|gaben)(?![${LETTER}])[^.?!]*(?<![${LETTER}])frei(?![${LETTER}])`,
+    "i",
+  ),
+];
+
+function sharesWithTheApprovalWord(english: string, german: string): boolean {
+  return (
+    SHARE_IN_ENGLISH.test(english) &&
+    !APPROVE_IN_ENGLISH.test(english) &&
+    APPROVE_IN_GERMAN.some((approval) => approval.test(german))
+  );
+}
+
 const ABBREVIATION = new RegExp(
   `(?<![${LETTER}])(?:[zZ]\\.\\s?B\\.|[dD]\\.\\s?h\\.|[uU]sw\\.|[uU]\\.\\s?a\\.|[gG]gf\\.|[bB]zgl\\.|[bB]zw\\.|[iI]nkl\\.|[cC]a\\.|Tg\\.)`,
 );
@@ -328,6 +387,17 @@ export function styleFindings(
     // joins around markup, and the joined text needs their edge space.
     ...offenders("has no double space", / {2}/),
     ...offenders("uses no exclamation mark", /!/),
+    ...offenders("keeps the -e of a du imperative", SHORT_IMPERATIVE, {
+      text: prose,
+    }),
+    ...entries
+      .filter(([, , value, english]) =>
+        sharesWithTheApprovalWord(english, prose(value)),
+      )
+      .map(
+        ([source, key, value]) =>
+          `says teilen where the English says share: ${source} ${key}: ${JSON.stringify(value)}`,
+      ),
     ...offenders(
       "says bitte once, to open a recovery step in a sentence",
       misplacedBitte(RECOVERY_BITTE_DU),

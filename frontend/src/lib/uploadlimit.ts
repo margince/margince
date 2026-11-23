@@ -1,8 +1,9 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { INTL_LOCALE } from "../format/format";
+import { numberFormat } from "../format/formatters";
 import { type Locale, useLocale, useT } from "../i18n";
 import { throwProblem } from "./problem";
+import { signInShowsRefusal } from "./session.read";
 
 // The installation's own settings, and the one field on them a form has to act
 // on: how large a file this deployment accepts.
@@ -34,6 +35,7 @@ export const INSTALLATION_SETTINGS_KEY = ["installation-settings"] as const;
  */
 export const installationSettingsOptions = queryOptions({
   queryKey: INSTALLATION_SETTINGS_KEY,
+  meta: signInShowsRefusal,
   queryFn: async () => {
     const { data, error, response } = await api.GET("/installation/settings");
     if (error || !response.ok) throwProblem(error);
@@ -73,7 +75,7 @@ export function formatUploadLimit(bytes: number, locale: Locale): string {
   // Through Intl, so the decimal separator is the reader's own: a German reader
   // shown "12.5 MB" reads twelve and a half as twelve-thousand-five-hundred,
   // and the unit word rides Intl's vocabulary rather than a table here.
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+  return numberFormat(locale, {
     style: "unit",
     unit: "megabyte",
     unitDisplay: "short",

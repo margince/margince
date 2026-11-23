@@ -125,9 +125,40 @@ describe("DealRoomTab", () => {
       await screen.findByRole("button", { name: "Open a Deal Room" }),
     );
     expect(await screen.findByLabelText(/Room title/)).toHaveAttribute(
-      "maxlength",
+      "data-character-limit",
       "120",
     );
+  });
+
+  it("says the room title is required on Open, and sends nothing", async () => {
+    const create = vi.fn(() => jsonResponse(room(), 201));
+    stubWithSession(
+      {
+        "GET /deal-rooms": () => jsonResponse({ data: [], page: {} }),
+        "POST /deal-rooms": create,
+      },
+      { deal_room: ["read", "create"] },
+    );
+    const user = userEvent.setup();
+    withProviders(
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Open a Deal Room" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const title = within(dialog).getByLabelText(/Room title/);
+    await user.clear(title);
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: translate("en", "room.create.confirm"),
+      }),
+    );
+
+    expect(within(dialog).getByText("Room title is required.")).toBeVisible();
+    expect(title).toHaveFocus();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("a reader who may not create is offered no way to open a room", async () => {
@@ -581,7 +612,7 @@ describe("the settings dialog's access changes", () => {
     );
     await user.type(
       await screen.findByRole("textbox", { name: /Access ends on/ }),
-      "31/12/2026{Enter}",
+      "31/12/2026{Tab}",
     );
     await user.click(screen.getByRole("radio", { name: /Closed/ }));
     await user.click(screen.getByRole("button", { name: "Save changes" }));
@@ -622,7 +653,7 @@ describe("an expired room takes a later end date", () => {
     expect(screen.getByLabelText(/Room title/)).toBeDisabled();
     await user.type(
       screen.getByRole("textbox", { name: /Access ends on/ }),
-      "31/12/2026{Enter}",
+      "31/12/2026{Tab}",
     );
     await user.click(screen.getByRole("button", { name: "Save changes" }));
 

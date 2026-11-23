@@ -11,6 +11,7 @@ import {
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openFilterValues } from "../../testing/listquery.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
@@ -198,6 +199,11 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     await user.click(screen.getByLabelText("New owner"));
     await user.click(await screen.findByRole("option", { name: "Lena F." }));
     await user.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Assign",
+      }),
+    );
 
     await waitFor(() => expect(sent).not.toBeNull());
     expect(sent).toEqual({
@@ -262,6 +268,11 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     await user.click(screen.getByLabelText("New owner"));
     await user.click(await screen.findByRole("option", { name: "Lena F." }));
     await user.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Assign",
+      }),
+    );
 
     expect(
       await screen.findByText(/active colleague you may assign work to/),
@@ -521,7 +532,12 @@ describe("LeadsScreen — rich create (P-15)", () => {
       }
       return emptyPage();
     });
+    const user = userEvent.setup();
     render(<LeadsScreen />);
+    const step = within(await openViewStep(user, "Columns"));
+    await user.click(
+      await step.findByRole("checkbox", { name: "Referred by partner" }),
+    );
 
     expect(await screen.findByText("Former Partner AG")).toBeTruthy();
     expect(screen.queryByText("c-old")).toBeNull();

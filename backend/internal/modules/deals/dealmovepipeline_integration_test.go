@@ -62,7 +62,8 @@ func setupMovePipelineEnv(t *testing.T) movePipelineEnv {
 	e.firstOpen = e.stageNamed(t, e.target, "First")
 	owner := ids.From[ids.UserKind](e.admin)
 	deal, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Moving deal", PipelineID: e.source, StageID: e.sourceStage, OwnerID: &owner, OwnerExact: true,
+		Source: "manual",
+		Name:   "Moving deal", PipelineID: e.source, StageID: e.sourceStage, OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)

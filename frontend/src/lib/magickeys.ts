@@ -75,6 +75,27 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.archive_deal",
   "magic.action.archive_lead",
   "magic.action.archive_project",
+  "magic.action.create_offer",
+  "magic.action.update_offer",
+  "magic.action.archive_offer",
+  "magic.action.create_contract",
+  "magic.action.update_contract",
+  "magic.action.archive_contract",
+  "magic.action.create_deal_room",
+  "magic.action.update_deal_room",
+  "magic.action.archive_deal_room",
+  "magic.action.create_stage_evidence",
+  "magic.action.update_stage_evidence",
+  "magic.action.archive_stage_evidence",
+  "magic.action.create_introduction",
+  "magic.action.update_introduction",
+  "magic.action.archive_introduction",
+  "magic.action.create_assignment",
+  "magic.action.update_assignment",
+  "magic.action.archive_assignment",
+  "magic.action.create_attachment",
+  "magic.action.update_attachment",
+  "magic.action.archive_attachment",
   "magic.action.archive_activity",
   "magic.action.archive_activity_email",
   "magic.action.archive_activity_meeting",
@@ -178,6 +199,7 @@ const MAGIC_UNDO_REASONS: Readonly<Record<string, MessageKey | undefined>> = {
 // the reader's work; that they may not write it is no news on every row.
 const READER_REFUSALS: ReadonlySet<string> = new Set([
   "not_writable_by_caller",
+  "restore_archiver_required",
 ]);
 
 /** Why this line cannot be taken back, in words, or null for a reason this build has none for or does not say. */

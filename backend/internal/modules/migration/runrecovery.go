@@ -37,7 +37,7 @@ func (s *RunStore) failStale(ctx context.Context, from string, idle time.Duratio
 	failed := 0
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			UPDATE import_run SET status = $1, error = $2, updated_at = now()
+			UPDATE import_run SET status = $1, error = $2, error_refusal = NULL, updated_at = now()
 			 WHERE status = $3 AND connector = $4 AND updated_at < now() - make_interval(secs => $5)
 			   AND `+legacyRow+`
 			RETURNING id`, StatusFailed, cause, from, ConnectorCSV, idle.Seconds())

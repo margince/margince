@@ -17,9 +17,9 @@ package compose
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/sendlater"
 	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -67,19 +67,12 @@ func (h directedSendHandlers) DirectCommunicationSend(
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	var shown []string
-	if body.ShownReasons != nil {
-		shown = *body.ShownReasons
+	in := sendlater.DecisionOf(body)
+	if h.directed.later.Serve(w, r, ids.UUID(id), in, body) {
+		return
 	}
-	sent, err := h.directed.DirectAndSend(r.Context(), ids.UUID(id), consent.DirectInput{
-		AssessmentRevision: derefString(body.AssessmentRevision),
-		ReasonCode:         string(body.ReasonCode),
-		Explanation:        body.Explanation,
-		WarningVersion:     body.WarningVersion,
-		Acknowledged:       body.Acknowledged,
-		ShownReasons:       shown,
-	})
-	sendmetrics.ObserveSendAnyway(body.WarningVersion, err)
+	sent, err := h.directed.DirectAndSend(r.Context(), ids.UUID(id), in)
+	sendmetrics.ObserveSendAnyway(err)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

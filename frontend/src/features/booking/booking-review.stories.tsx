@@ -64,3 +64,6 @@ export const PersonalLinkOnOutlook: Story = {
 export const CalendarNotReady: Story = {
   render: panel({ configured: false, picks: [] }),
 };
+export const LongSubject: Story = {
+  render: panel({ draft: { ...draft, subject: "M".repeat(200) } }),
+};

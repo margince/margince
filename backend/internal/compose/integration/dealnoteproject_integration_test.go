@@ -36,7 +36,8 @@ func seedDealNoteFixture(t *testing.T, e *Env) dealNoteFixture {
 	pipeline, open, _ := DealFixture(t, e)
 	newDeal := func(name string, project ids.UUID) ids.UUID {
 		companyID := companyIDOf(company)
-		in := deals.CreateDealInput{Name: name, PipelineID: pipeline, StageID: open, CompanyID: &companyID}
+		// Rep1 owns every deal, so Rep1 may file notes onto them.
+		in := deals.CreateDealInput{Source: "manual", Name: name, PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: userIDPtr(&e.Rep1)}
 		if !project.IsZero() {
 			in.ProjectID = new(projectIDOf(project))
 		}

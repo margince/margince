@@ -40,6 +40,13 @@ import (
 func closedDeal(t *testing.T, e *Env, name string) (ids.DealID, ids.UUID) {
 	t.Helper()
 	pipeline, open, won := DealFixture(t, e)
+	return closedDealIn(t, e, name, pipeline, open, won)
+}
+
+// closedDealIn closes a deal on a pipeline the test already seeded, for a
+// test that needs more than one closing.
+func closedDealIn(t *testing.T, e *Env, name string, pipeline ids.PipelineID, open, won ids.StageID) (ids.DealID, ids.UUID) {
+	t.Helper()
 	admin := e.Admin()
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, name, pipeline, open, &e.Rep1))
 	closed, err := e.Deals.AdvanceDeal(admin, deal, deals.AdvanceDealInput{

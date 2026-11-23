@@ -1,26 +1,17 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approvaldetail.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewsight.go -->
+<!-- describes: frontend/src/features/automations/approvalrow.tsx frontend/src/features/automations/approvaldrawer.tsx frontend/src/features/automations/approvaleditor.tsx frontend/src/features/automations/approvaldetail.tsx frontend/src/features/automations/approval-preferences.tsx frontend/src/features/settings/autonomy-settings.tsx backend/internal/modules/approvals/decide.go backend/internal/modules/approvals/expiry.go backend/internal/modules/approvals/authority.go frontend/src/features/records/handoverrequest.tsx frontend/src/components/editaccessrequest.tsx frontend/src/features/records/handoveroffer.tsx backend/internal/compose/editaccess/editaccess.go backend/internal/compose/ownershiptransfer.go backend/internal/compose/ownershipoffer.go backend/internal/compose/approvalpreviewsight.go -->
 # Approvals
 
-An approval in Margince is a change an agent proposed but was not allowed to
-make on its own. The agent does not do it. It writes down what it means to do
-and puts it before a human, who accepts, edits or rejects it. The product
-calls the waiting items **Approvals**.
+An approval in Margince is a change an agent proposed but was not allowed to make on its own. The agent does not do it. It writes down what it means to do and puts it before a human, who accepts, edits or rejects it. The product calls the waiting items **Approvals**.
 
 ## Reading a commercial change
 
-A deal-stage, owner or company-lifecycle proposal shows the record and the values before and after
-the change. Owners and stages have names. **Review authority** explains why you can answer it.
-A deal win also names its effects on linked correspondence and eligible delivery projects.
-**Set when applied** means Margince records that value when the change takes effect.
+A deal-stage, owner or company-lifecycle proposal shows the record and the values before and after the change. Owners and stages have names. **Review authority** explains why you can answer it.
+A deal win also names its effects on linked correspondence and eligible delivery projects. **Set when applied** means Margince records that value when the change takes effect.
 
-Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
-Request a new proposal with current context, or reject the old one.
+Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it. Request a new proposal with current context, or reject the old one.
 
-Every agent proposal shows what the agent's own run will do, read with the agent's access. If that run
-touches or names a record you cannot open, the card shows none of the plan. It says that "A colleague who can
-see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal
-that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
+Every agent proposal shows what the agent's own run will do, read with the agent's access. If that run touches or names a record you cannot open, the card shows none of the plan. It says that "A colleague who can see them must decide it," and you cannot approve it. Fields your role hides stay hidden on the card. A proposal that Margince itself or a colleague made shows what it will do when you approve it, read with your access.
 
 The approval email and an agent's approval read use the card's detail labels and value words.
 They also carry its conflicts, files and import rows.
@@ -48,11 +39,11 @@ or a list of fields does not tell you what you are confirming.
 ## Answering approvals
 
 ### How do I approve an action in Margince?
-To approve a proposed change in Margince, open **Home** and show the **Worklist**. Find the approval row and choose **Decide**, then **Accept**. The open card on **Home** shows the proposal too, and its **View details** answers it.
+To approve a proposed change in Margince, open **Home** and show the **Worklist**. Find the approval row and choose **Decide**, then **Approve**. The open card on **Home** shows the proposal too, and its **View details** answers it.
 1. Open **Home** and choose **Show Worklist** if it is hidden.
 2. Open the **Decisions** tab to see only approvals.
 3. On the row, choose **Decide**. The **Your decision** panel opens.
-4. Read the proposal and its evidence, then choose **Accept**.
+4. Read the proposal and its evidence, then choose **Approve** (**Approve email** for an email).
 
 If it edited a record, the **Applied** message offers **Undo on record** to reverse it from the record's history; a sent email has no undo.
 When an agent asked to run the change itself, approving only lets that agent run it. The message then reads "Approved. Waiting for the agent to run it." and offers no undo, because nothing has changed yet.
@@ -118,6 +109,15 @@ To keep such a promise yourself, press **I’ll take this** beside it on the con
 
 The email for such a request names the deal or company and the mail or meeting it came from. It also names who made the promise, quotes their words, and says why you are asked.
 Also called: commitment, promise task, promised by, who owns this promise, take over a promise.
+
+### How do I ask a colleague for edit access to their record?
+To change a contact, company, lead, deal or project a colleague owns, press **Ask … for edit access**, which names the owner. On a contact or company it is in the access chip under the name. On a lead, deal or project it is under the line that says the record is not yours to change.
+The request waits on the owner's **Worklist** for 7 days. Only the owner can answer it, and their agent can decline it but not accept it.
+
+If the owner approves, the record is shared with you for writing, and the owner stays its owner. A notice tells you when the owner approves or declines and when the request runs out. After a decline the same owner is not asked again; if the record changes owner, you can ask the new one. **Withdraw edit access request** in the same place takes it back.
+
+You can ask only on a seat that can edit records, for a record you can see but not change. A record nobody owns and a closed lead offer no request. If the owner has left, ask an administrator.
+Also called: request write access, ask to edit, edit rights on a colleague's lead.
 
 ### How do I ask a colleague to hand over a contact or company?
 To ask a colleague for a contact or company they own, open the record and press the access chip under its name. Then press **Ask … to hand it over**, which names the owner.
@@ -248,11 +248,11 @@ changes says nothing about mail you send out.
 Turning a switch off sends that kind back to your approvals, where the rest of
 this page applies.
 
-## Deciding: accept, edit or reject
+## Deciding: approve, edit or reject
 
 An approval has three answers.
 
-**Accept.** Margince applies the change and records it in the audit log. When
+**Approve.** Margince applies the change and records it in the audit log. When
 it changed a record, the message that appears offers **Undo on
 record**, which opens that record's history to reverse it. A kind that sends
 mail or names no record has nothing to put back, so it offers no undo. A new
@@ -381,7 +381,7 @@ yourself.
    proposal was read from, word for word.
    Read them before you answer. A proposal is a reading of what somebody said,
    and the lines are how you check it.
-9. **Accept** to create the task, or **Reject**. An accepted proposal becomes an
+9. **Create task** to create the task, or **Reject**. An accepted proposal becomes an
    ordinary task on the contact and on their company.
 
 It does not send anything or create tasks without your approval. Reading the

@@ -526,20 +526,6 @@ kinds:
       starts a pass when no active recovery pass remains. It freezes its horizon and
       resumes through bounded pages instead of rescanning the first page on each tick.
 
-  capture_digest:
-    role: worker
-    fleet: true
-    go_type: CaptureDigestArgs
-    queue: default
-    timeout: 5m
-    opts_owner: caller
-    cadence: 24h
-    registration: {when: [GmailRegistry], absent: registers_nothing}
-    reason: >-
-      Daily, after the overnight passes it summarizes. The boot pass backfills
-      a missed night, so a morning is never silently empty.
-
-
   brief_generate:
     role: worker
     fleet: true
@@ -826,9 +812,13 @@ kinds:
     cadence: 15m
     registration: {when: [Embedder], absent: registers_nothing}
     reason: >-
-      An empty pass is six indexed NOT-EXISTS probes per workspace, so a short
-      cadence is cheap; fifteen minutes is how long a lost embed event may keep
-      a record out of semantic search. The when: above is the weaker of the two
+      Most passes read only the activity, contact and company rows written in
+      the last hour, through the indexes on created_at or updated_at, plus the
+      small deal, lead and project tables in full; fifteen minutes is how long
+      a lost embed event for a new row may keep it out of semantic search. The
+      first pass of each UTC day in a worker process reads every live row of all
+      six tables, which finds an edit whose event was lost and a row that became
+      embeddable without a write of its own. The when: above is the weaker of the two
       conditions addEmbedDriftSweepJob actually applies, and deliberately so:
       the lane must also be BOUND (a non-empty EmbedIdentity), which is a
       runtime method rather than a JobRunnerConfig field and so cannot be
@@ -1417,6 +1407,22 @@ kinds:
       anchor was deleted or fell out of its author's scope — reading one
       answers not found, so nobody can find it to discard it — and a draft
       holds a subject's address and the words written to them.
+
+  oauth_client_unused_sweep:
+    role: worker
+    go_type: OAuthClientUnusedSweepArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 1h
+    reason: >-
+      Hourly, because each pass is capped (unusedClientSweepBatch) and the
+      cadence drains a backlog deeper than one batch. It deletes the clients
+      that registered themselves at /oauth/register and that no consent used
+      within mcp.client_registration.unused_retention. Registration needs no
+      sign-in, so without it nothing removes such a row, and the cap on them
+      would stay full.
 
   privacy_request_proof_expiry:
     role: worker
@@ -2092,6 +2098,7 @@ kinds:
       Workspace: id
       DealID: id
       ActivityID: id
+      RereadFor: id
     reason: >-
       Four minutes is one model call with the structured lane's
       retry-and-escalate headroom, plus the ledger writes — the same wall the
@@ -2102,6 +2109,29 @@ kinds:
       deal, so there is no human watching a queued row wondering why it has not
       moved. An installation with no model configured simply reads no criteria,
       and its stages keep the deterministic evidence the ledger already writes.
+
+  stage_evidence_reread:
+    role: worker
+    go_type: StageEvidenceRereadArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    registration: {when: [StageEvidenceBrain], absent: registers_anyway}
+    args:
+      Workspace: id
+      Domain: {scalar: true, reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}
+      Removal: id
+      After: id
+    reason: >-
+      Two minutes is one page of 200 activities: a short authorship read for
+      each and one insert per reading, with no model call. The API queues the
+      first page in the transaction that removes an own domain, and each full
+      page queues the next with its cursor.
+
+      REGISTERED without a model lane, unlike the reading it queues. The API
+      cannot see whether the worker holds a lane, so the row arrives either
+      way, and a kind no worker claims would retry to its last attempt. Without
+      a lane the worker completes and queues nothing.
 
   document_extract:
     role: worker

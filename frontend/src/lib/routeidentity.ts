@@ -44,7 +44,9 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   tags: WHOLE_ADDRESS,
   lists: WHOLE_ADDRESS,
   share: WHOLE_ADDRESS,
-  onboarding: WHOLE_ADDRESS,
+  // #/onboarding/<step>: one conversation holds every step in its own state,
+  // and the address follows it, so a step change must not remount it.
+  onboarding: 1,
   client: WHOLE_ADDRESS,
   book: WHOLE_ADDRESS,
   preferences: WHOLE_ADDRESS,

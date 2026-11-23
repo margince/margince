@@ -68,7 +68,7 @@ func TestAMaskedReaderIsListedNoFindingMoneyOnADealTheyCannotChange(t *testing.T
 	myDeal, theirDeal := ids.NewV7(), ids.NewV7()
 	for deal, dealOwner := range map[ids.UUID]ids.UUID{myDeal: mine, theirDeal: theirs} {
 		exec(`INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, amount_minor, currency, source, captured_by)
-			 VALUES ($1, 'Deal', 'open', $2, $3, $4, 500000, 'EUR', 'seed', 'test')`,
+			 VALUES ($1, 'Deal', 'open', $2, $3, $4, 500000, 'EUR', 'manual', 'test')`,
 			deal, dealOwner, pipeline, stage)
 		exec(`INSERT INTO assurance_exception
 			     (logical_key, type, subject_kind, subject_id, severity, owner_id,

@@ -40,6 +40,18 @@ func withPinnedSLANow(ctx context.Context, now time.Time) context.Context {
 	return context.WithValue(ctx, slaNowKey{}, now)
 }
 
+// WithReadInstant pins the instant for a caller with its own clock. The lead
+// reads built from ctx judge SLA state, evidence age and current work by it.
+func WithReadInstant(ctx context.Context, now time.Time) context.Context {
+	return withPinnedSLANow(ctx, now.UTC())
+}
+
+// pinSLANow fixes one instant for everything built from ctx. It keeps a pin the
+// caller set, and reads the live clock once only when none is set.
+func pinSLANow(ctx context.Context) context.Context {
+	return withPinnedSLANow(ctx, slaNow(ctx))
+}
+
 // slaNow is the pinned instant, or the live clock for a caller that pinned
 // none — a single-statement read has nothing to agree with.
 func slaNow(ctx context.Context) time.Time {
@@ -53,7 +65,7 @@ func slaNow(ctx context.Context) time.Time {
 // stored clock start, first response and closure (formulas §18.1) under the
 // installation's policy. A closed or answered lead owes nothing and reads
 // null; with the target switched off every lead does.
-func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Time, firstResponseAt, archivedAt *time.Time) (*time.Time, *crmcontracts.LeadSlaState) {
+func leadSLAFields(now time.Time, policy leadSLAPolicy, routedAt *time.Time, createdAt time.Time, firstResponseAt, archivedAt *time.Time) (*time.Time, *crmcontracts.LeadSlaState) {
 	if !policy.enabled || archivedAt != nil {
 		return nil, nil
 	}
@@ -65,7 +77,6 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 	if firstResponseAt != nil {
 		return &deadline, nil
 	}
-	now := leadSLAClock().UTC()
 	state := crmcontracts.LeadSlaStateLeadSlaStateWithinTarget
 	switch {
 	case now.After(deadline):

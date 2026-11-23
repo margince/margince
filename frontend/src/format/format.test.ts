@@ -3,10 +3,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  formatAnalyticsPercent,
+  formatAnalyticsPercentPoints,
   formatBytes,
   formatDate,
+  formatDateAbbrev,
   formatDateAbbrevRange,
   formatDateTime,
+  formatDateTimeAbbrev,
   formatDayMonth,
   formatDayMonthNearYear,
   formatDayRange,
@@ -17,6 +21,7 @@ import {
   formatMoneyOrAbsent,
   formatMoneyWhole,
   formatNumber,
+  formatPercent,
   formatSignedMoney,
   formatTimeOfDay,
   formatUsdPerMTok,
@@ -575,6 +580,21 @@ describe("formatDateAbbrevRange", () => {
   });
 });
 
+describe("formatDateTimeAbbrev", () => {
+  it("writes the short month with the time after it, in the reader's zone", () => {
+    const at = "2026-11-16T12:49:00Z";
+    expect(formatDateTimeAbbrev(at, "en", "Europe/Berlin")).toBe(
+      "16 Nov 2026, 13:49",
+    );
+    expect(formatDateTimeAbbrev(at, "de", "Europe/Berlin")).toBe(
+      "16. Nov. 2026, 13:49",
+    );
+    expect(formatDateTimeAbbrev(at, "en", "Europe/Berlin")).toContain(
+      formatDateAbbrev(at, "en", "Europe/Berlin"),
+    );
+  });
+});
+
 describe("formatMoneyWhole", () => {
   it("drops the cents of a whole amount and keeps them otherwise", () => {
     expect(formatMoneyWhole(4_800_000, "EUR", "en")).toBe("€48,000");
@@ -592,5 +612,30 @@ describe("formatHours", () => {
   it("rounds a long fraction to one decimal and drops a whole one", () => {
     expect(formatHours(2.04, "en")).toMatch(/^2\s*hr/);
     expect(formatHours(12.26, "en")).toMatch(/^12\.3\s*hr/);
+  });
+});
+
+// German sets a no-break space before the sign, English none. A sign glued by
+// hand is wrong in one of them.
+describe("a percent in the reader's locale", () => {
+  it.each([
+    ["de", "40\u00a0%"],
+    ["en", "40%"],
+    ["vi", "40%"],
+  ] as const)("writes the sign as %s does", (locale, written) => {
+    expect(formatPercent(0.4, locale)).toBe(written);
+    expect(formatAnalyticsPercent(0.4, locale)).toBe(written);
+    expect(formatAnalyticsPercentPoints(40, locale)).toBe(written);
+  });
+
+  it("keeps a rate's decimals when asked for them", () => {
+    expect(formatPercent(7.7 / 100, "de", 2)).toBe("7,7\u00a0%");
+    expect(formatPercent(7.7 / 100, "en", 2)).toBe("7.7%");
+    expect(formatPercent(0.077, "en")).toBe("8%");
+  });
+
+  it("keeps the analytics marks for a rounded or tiny figure", () => {
+    expect(formatAnalyticsPercentPoints(12.4, "de")).toBe("≈12\u00a0%");
+    expect(formatAnalyticsPercentPoints(0.2, "en")).toBe("<1%");
   });
 });

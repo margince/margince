@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { UserPlus } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
@@ -14,7 +14,7 @@ import { Select } from "../../design-system/select";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useHoldsAdminRole } from "../../lib/capability";
-import { looksLikeEmail } from "../../lib/emailshape";
+import { emailFault } from "../../lib/emailshape";
 import { nameFromEmail } from "../../lib/namefromemail";
 import {
   type FieldLabels,
@@ -27,6 +27,7 @@ import {
   writeMayHaveLanded,
 } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { AccessPreviewPanel } from "./users-access";
 import {
   entityOptions,
@@ -77,13 +78,11 @@ export function memberChecks(
 ): ReadonlyMap<string, string> {
   const found = new Map<string, string>();
   const email = member.email.trim();
+  const malformed = emailFault(email, locale, labels.email);
   if (email === "") {
     found.set("email", fieldCheckSentence("required", locale, labels.email));
-  } else if (!looksLikeEmail(email)) {
-    found.set(
-      "email",
-      fieldCheckSentence("email_malformed", locale, labels.email),
-    );
+  } else if (malformed) {
+    found.set("email", malformed);
   }
   if (member.display_name.trim() === "" && "display_name" in labels) {
     found.set(
@@ -159,7 +158,10 @@ export function InviteUserForm({
   // Asked only beside the name: the setup journey derives the name from the
   // address, and the member's first sign-in can fill this instead.
   const greetingName = askName ? greeting.trim() : "";
+  const queryClient = useQueryClient();
+  const inviteKey = ["member-invite", formId];
   const invite = useMutation({
+    mutationKey: inviteKey,
     mutationFn: async (
       choice: Readonly<{
         email: string;
@@ -230,7 +232,9 @@ export function InviteUserForm({
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          if (invite.isPending) return;
+          // The cache, not `invite.isPending`: a second click can land before
+          // the render that would carry the first one's pending state.
+          if (queryClient.isMutating({ mutationKey: inviteKey }) > 0) return;
           const member = { email: email.trim(), display_name: displayName };
           const checks = new Map(memberChecks(member, labels, locale));
           if (!offersRole) {
@@ -283,7 +287,7 @@ export function InviteUserForm({
               <TextInput
                 {...control}
                 placeholder={t("users.namePlaceholder")}
-                maxLength={255}
+                maxLength={TEXT_LIMITS.label}
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);

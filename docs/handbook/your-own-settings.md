@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/signeddevices.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/signeddevices.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts frontend/src/lib/setup-checklist.ts frontend/src/features/onboarding/onboarding-conversation/voice-scenes.tsx frontend/src/features/onboarding/onboarding-conversation/connect-scene.tsx frontend/src/features/onboarding/onboarding-account.tsx frontend/src/app/onboarding-gate.ts frontend/src/features/onboarding/onboarding-journey.ts -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Notifications**, **Meetings**, **Writing voice**, **AI assistants** and **Connections**. Everything here changes your own seat and nobody else's.
@@ -13,19 +13,36 @@ The pages are **Account**, **Notifications**, **Meetings**, **Writing voice**, *
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
+### What happens the first time I sign in?
+The first time you sign in with a full seat, two steps come before the rest of Margince. They are **Train your writing voice** and **Connect your mail and calendar**. If your role may not build a writing voice, you start on the second step. If it may do neither, as with **Read-only**, Home opens with no setup.
+1. On **Train your writing voice**, drop files you wrote, choose **Browse files**, or choose **Paste text instead**. For a file with several speakers, the step names the file and asks which speaker is you. Choose **Skip this file** when none of them is.
+2. Every sample you added is listed under **Sources**, and **Remove** takes one out again. Then choose **Build my voice profile**, or **Skip for now** to go straight to the second step.
+3. If no AI is connected yet, the step says **Connect an AI first**. **Build my voice profile** then waits until an administrator connects one, and your samples are kept.
+4. On **Connect your mail and calendar**, pick Google, Microsoft or **Other mail provider**. **Also worth doing now** offers your LinkedIn profile and your AI tool. Once a mailbox is connected, it also offers **Prepare my Morning brief overnight**.
+5. A profile you saved stays on its row, with **Change** to correct it. Choose **Continue**, or **Skip for now**. **Back**, or your browser's Back button, returns you to the first step.
+6. If the step cannot check your mailboxes, it says so and offers **Retry**, and **Skip for now** still works. If mail capture is not set up on your Margince, the step says so instead of offering accounts.
+
+**Account** and **Sign out** sit at the top of both steps. **Account** opens Settings → **Account**, where you can change your language, name or password, and **Back to setup** returns you. Sign out, and the next sign-in opens setup again. Until setup is done, the other pages of Margince stay closed. Home opens after the second step.
+
+Samples you added are kept even if you skip or the build does not finish. Whatever you skipped waits under **Finish setup**. You can change all of it later in Settings under **Writing voice**, **Connections** and **Account**.
+Also called: onboarding, first sign-in, welcome steps.
+
 ### How do I finish setting up Margince?
-To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists the steps. Connect your mail and your calendar, choose where you work and your language, and see what Margince may do. Then add writing samples and turn on your booking link.
+To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**. It lists up to nine steps. First come **Set up AI**, **Connect your mail** and **Connect your calendar**. Then come **Choose where you work**, **Choose your language** and **See what Margince may do**. Last come **Connect your AI tool**, **Train your writing voice** and **Turn on your booking link**. Which of them you see depends on your role: a step whose page you cannot change is left out.
 
 Every member sees the three personal steps, so a colleague invited to an existing workspace has them too. **Choose where you work** sets your time zone, and **Choose your language** sets the language, both on **Account**; the step's button takes you there. **See what Margince may do** opens a short note on what Margince reads and writes. It is done once you choose **Got it**, and this browser keeps it.
 
 While steps are open, **Finish setup** at the top of the screen shows how many are done, and **Hide until next sign-in** puts it away. Once every step is done, **Your setup** and **Finish setup** are gone, and each step's page stays on **Overview**. If a step comes undone, **Your setup** comes back, and so does **Finish setup** unless you chose **Hide until next sign-in**. On a phone, **Finish setup** is a row in the account menu, right after **Help and feedback**. It opens the page of your next step. Also called: setup list, getting started, onboarding steps.
 
+Google and Microsoft connect through the company's app for each. While no such app is set up, the calendar step says "Waits on an administrator." and offers nothing to press. So does the mail step, unless another mail provider can be connected instead. If you may set the app up yourself, a step that would wait offers **Set up app** instead, which opens Settings → **Sign-in and security**.
+
 The writing voice step names what is next for your voice: **Add samples**, **Build voice** or **View progress**. After a failed build it shows the reason and **Try again**. When a build needs your review it shows **Review voice**, which opens the review on **Writing voice**. Your first version is never used on its own. The step is done once you choose **Use this version**. After **Discard this version**, add more samples and build again.
 
 ### How do I save a change on a settings page?
-To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page.
+To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page. Margince then says **Saved**.
+
 **Discard** in that bar puts every field back as it was. If a field has a mistake, the bar says "Fix the marked fields to save."
-Switches work at once and need no save. If you leave with changes not saved, Margince asks "Save your changes?" and offers **Save**, **Discard changes** or **Stay**.
+Switches work at once and need no save. If you leave or sign out with changes not saved, Margince asks "Save your changes?" and offers **Save**, **Discard** or **Stay**.
 Also called: save settings, changes not saved, undo changes.
 
 ### How do I change my notifications?
@@ -33,10 +50,19 @@ Also called: save settings, changes not saved, undo changes.
 To change your notifications in Margince, open Settings → **Notifications**.
 1. Under **Delivery by kind**, pick how each kind reaches you: **Off**, **In the app**, **Email** or **Daily digest**. Not every kind offers every choice.
 2. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
-3. Under **Browser notifications**, press **Allow**, then allow it in the browser's own question.
-   The browser then shows a due reminder on one of your tasks while Margince is open in a tab.
-   To turn it off, block notifications for this site in your browser settings. If the browser
-   blocks them, the row says so and offers no **Allow**.
+3. Choose **Save** in the bar at the foot of the page.
+
+To get a due reminder from the browser as well, press **Allow** in the **Browser notifications** row at the top of **Delivery by kind**. Then allow it in the browser's own question. This needs no **Save**.
+The browser then shows a due reminder on one of your tasks while Margince is open in a tab.
+To turn it off, block notifications for this site in your browser settings. If the browser
+blocks them, the row says so and offers no **Allow**.
+
+The other rows under **Email summaries** decide how those emails come:
+- **Routine email time**: the hour they are sent, or **Start of my working hours**. They arrive within three hours of it, on your working days and in your time zone.
+- **Weekly review day**: the day the Weekly review is sent. On a day you do not work, it comes on your next working day.
+- **Quiet mornings**: a morning with nothing to act on sends no email, unless you choose a status summary.
+- **Combine routine emails**: one routine email per reporting day instead of several. Approvals still come on their own.
+- **Routine email scope** and **Choose a team**: whose work the emails cover, yours, a team you review, or both. These rows show only if you review a team.
 
 Every notice also stays in the notification center under the bell, whatever you pick. **Nudges from colleagues** cannot be turned off. The brief and the review always appear on **Home**, and what you still need to do waits on your Worklist there.
 
@@ -82,7 +108,7 @@ To turn on two-step sign-in in Margince, open Settings → **Account** and choos
 
 Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left". When two or fewer are left, the row warns you. Turning it on signs you out on all your other computers and phones. Also called: MFA, second sign-in step, sign-in code, code app.
 
-A setup you started and did not finish shows **Not finished**. **Discard setup** removes it, with no code needed.
+A setup you started and did not finish shows **Not finished**. Choose **Remove** in that row, then **Discard setup**, with no code needed.
 
 ### What if Margince asks me to set up two-step sign-in before I can continue?
 Your installation requires two-step sign-in for password sessions, and you have not set it up yet. After your password, Margince shows **Set up two-step sign-in**. Google and Microsoft manage their own MFA; provider sessions do not require Margince setup.
@@ -114,12 +140,13 @@ Keep your backup codes where you can find them without your phone. If you lose b
 <!-- opens: settings/account -->
 To change your display name in Margince, open Settings → **Account**, edit the **Display name** field, and choose **Save** or press Enter. **Save** shows once you change the name.
 Your display name is what colleagues see on records you edit, in pickers and in the audit log.
-It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
+
+It cannot be empty, and it can be up to 120 characters long. Margince keeps it on one line: a new line or a tab turns into a blank, and characters that show nothing are removed. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
 
 ### How do I change my profile picture?
 <!-- opens: settings/account -->
-To change your profile picture in Margince, open Settings → **Account** and choose **Upload picture** in the **Profile picture** row. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name.
+To change your profile picture in Margince, open Settings → **Account**, choose **Edit** in the **Profile picture** row, then **Upload picture**. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name. Your browser tries to make a larger phone photo of up to 25 MB smaller before it sends it. If the picture is still over 5 MB, pick a smaller file.
 Also called: photo, avatar, profile photo.
 
 Colleagues see a picture you uploaded first. Without one, they see the picture of the Google account you sign in with. It updates at each sign-in, and each time you connect that same account for mail or calendar. Without either, they see the first letters of your name. **Remove picture** takes the picture off for good, even after a later sign-in with Google. Only a new upload brings a picture back.
@@ -135,15 +162,16 @@ Also called: email footer, sign-off, signature block.
 
 ### How do I change the language?
 <!-- opens: settings/account -->
-To change the language Margince uses with you, open Settings → **Account**. Pick one in the **Language** row: **English**, **Deutsch** or **Tiếng Việt**.
-The screen changes at once. The choice is saved to your account, so your next sign-in uses it too, and it changes nothing for anyone else.
-The sign-in page has its own language switch at the foot of the page.
+To change the language Margince uses with you, open Settings → **Account**. Pick one in the **Language** row: **English**, **Deutsch** or **Tiếng Việt**, then choose **Save**.
+The screen changes once the choice is saved. It is saved to your account, so your next sign-in uses it too, and it changes nothing for anyone else.
+
+The sign-in page has its own language switch at the foot of the page. It starts in the language last set on this browser. That is the language of the last account that signed in here, unless someone picked another one on the sign-in page since. If neither happened, it follows the browser's language.
 Also called: change to German, switch to Vietnamese, locale, translation.
 
 ### How do I change the theme?
 <!-- opens: settings/account -->
 To change the theme in Margince, open Settings → **Account** and pick a choice in the **Appearance** row: **Light**, **Dark** or **System**.
-You can do the same from the account menu at the top right, under **Theme**. Both change the same setting.
+You can do the same from the account menu at the top right, under **Theme**. Both change the same setting, and the screen changes at once.
 **System** follows the light or dark setting of your computer or phone, and keeps following it.
 Also called: dark mode, light mode, appearance, colour scheme.
 
@@ -160,6 +188,7 @@ Also called: turn off keys, keyboard shortcuts, single key.
 
 The Meetings page in Settings is where customers book time with you. It has three tabs: **Booking links**, with your links and the calendar, **Availability**, with **When people can book**, and **Guest page**, with **What guests see**.
 While no Google or Microsoft 365 calendar is connected, a card **Connect a calendar to take bookings** comes first on **Booking links**.
+**Booking links** also holds **Colleagues on this link**, where you name the colleagues who join each meeting booked through your link. A colleague confirms under **Colleagues’ links that name you**; see [Meetings and booking](meetings-and-booking.md#how-do-i-offer-times-when-several-colleagues-are-free).
 
 ### How do I set up bookings?
 <!-- opens: settings/meetings -->
@@ -187,6 +216,7 @@ Opening meeting settings from a booking draft opens another tab; coming back loa
 ### How do I change my time zone?
 <!-- opens: settings/account -->
 To change your own time zone in Margince, open Settings → **Account**, pick a place in the **Time zone** list and choose **Save**.
+To find a place, type its name, an old name such as "Saigon", or a zone name such as "Europe/Berlin".
 On your first sign-in, Margince uses your browser's time zone, and a zone you pick stays on every browser.
 Every time Margince shows you is in your zone, and so is your booking and mail timing. The company's time zone is separate; see the next question.
 Also called: change time zone, my time zone, local time.
@@ -265,7 +295,7 @@ The best samples are emails you sent, then proposals and posts, then the written
 
 **Learn from sent mail** reads only mail sent from your own mailbox, never a colleague's mail or a copy of it. It leaves out mail kept private to its participants, and mail whose subject marks it confidential. From each mail it keeps only what you wrote: quoted replies, forwards and signatures are cut. Each mail becomes one sample, named by its subject and date. A sample you remove stays out when you choose the button again.
 
-Margince reads a PDF or Word document to its text in the browser before it sends anything. It skips a file with no text in it. It names a file it cannot open (one with a password, or one that is broken), so you can paste its text in instead.
+Margince reads a PDF or Word document to its text in the browser before it sends anything. It skips a file with no text in it. It names a file it cannot open (one with a password, or one that is broken), so you can paste its text in instead. A file must stay just under 1 MB as sent. Text with many quotation marks or new lines reaches that sooner. A larger file is named and left out, so you can split it into smaller files.
 
 When at least half of a file comes from named speakers, Margince reads it as a conversation. The page asks which speaker is you, and keeps only your parts. Under that share, the file counts as plain text and is taken whole. So an email with a line that opens with a heading and a colon, such as "Frage: …", is not asked about.
 

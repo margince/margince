@@ -23,6 +23,8 @@ const (
 	TranscriptFailureMissing       = "missing"
 	TranscriptFailureRefused       = "refused"
 	TranscriptFailureNoModel       = "no_model"
+	TranscriptFailureUnanswered    = "unanswered"
+	TranscriptFailureUnfinished    = "unfinished"
 )
 
 // TranscriptReadFacts is what one reading did with what it found.

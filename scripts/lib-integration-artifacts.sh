@@ -138,3 +138,26 @@ reconcile_parts() {
   fi
   rm -f "$union"
 }
+
+# newest_attempt_artifacts DIR — keep, under its plain name, the newest attempt
+# of each artifact DIR holds as <name>-attempt-<n>, and remove the older ones. A
+# re-run of one job uploads a second copy of its artifact, and both download.
+newest_attempt_artifacts() {
+  local dir="$1" path base name attempt kept=""
+  while read -r name attempt; do
+    [[ "$attempt" =~ ^[0-9]+$ ]] || { echo "FAIL: $dir/$name-attempt-$attempt names no attempt number"; return 1; }
+    if [[ "$name" == "$kept" ]]; then
+      rm -rf "${dir:?}/$name-attempt-$attempt" || return 1
+      continue
+    fi
+    kept="$name"
+    [[ ! -e "$dir/$name" ]] || { echo "FAIL: $dir/$name has no attempt number beside its attempts"; return 1; }
+    mv "$dir/$name-attempt-$attempt" "$dir/$name" || return 1
+  done < <(
+    for path in "$dir"/*-attempt-*; do
+      [[ -d "$path" ]] || continue
+      base="${path##*/}"
+      printf '%s %s\n' "${base%-attempt-*}" "${base##*-attempt-}"
+    done | LC_ALL=C sort -k1,1 -k2,2nr
+  )
+}

@@ -59,6 +59,7 @@ type BoundaryProps = Readonly<{
   retryLabel: string;
   children: ReactNode;
   fallback?: ReactNode;
+  reloadsOn?: (error: unknown) => boolean;
 }>;
 type BoundaryState = Readonly<{ failed: boolean; error?: unknown }>;
 
@@ -74,6 +75,12 @@ class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
 
   private readonly retry = () => {
     if (retryStaleChunk(this.state.error)) return;
+    // Not reloadForNewBuild: its guard stops automatic reload loops, and a
+    // pressed Retry must always reload.
+    if (this.props.reloadsOn?.(this.state.error)) {
+      window.location.reload();
+      return;
+    }
     // The cache is reset BEFORE the re-render: a query that threw keeps its
     // failed result, so a boundary that only cleared its own state would hand
     // the same error straight back and the button would do nothing visible.
@@ -110,7 +117,14 @@ class CardRenderBoundary extends Component<BoundaryProps, BoundaryState> {
 export function CardBoundary({
   children,
   fallback,
-}: Readonly<{ children: ReactNode; fallback?: ReactNode }>) {
+  reloadsOn,
+}: Readonly<{
+  children: ReactNode;
+  fallback?: ReactNode;
+  /** The failures Retry answers with a page reload, such as an import the
+   *  browser refused: it keeps a refused module, so drawing again fails again. */
+  reloadsOn?: (error: unknown) => boolean;
+}>) {
   const t = useT();
   return (
     <QueryErrorResetBoundary>
@@ -120,6 +134,7 @@ export function CardBoundary({
             resetLocaleFailures();
             reset();
           }}
+          reloadsOn={reloadsOn}
           fallback={fallback}
           title={t("card.errorTitle")}
           retryLabel={t("card.errorRetry")}

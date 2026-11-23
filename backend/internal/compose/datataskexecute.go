@@ -148,11 +148,12 @@ type DataTaskVerdict struct {
 	Failed           []string         `json:"failed,omitempty"`
 	LeftInScope      map[string]int64 `json:"left_in_scope,omitempty"`
 	NothingInspected []string         `json:"nothing_inspected,omitempty"`
+	NeedsAction      map[string]int64 `json:"needs_action,omitempty"`
 }
 
 // DataTaskVerdictOf reads the verdict off one run.
 func DataTaskVerdictOf(run DataTaskRun) DataTaskVerdict {
-	v := DataTaskVerdict{Release: buildinfo.ReleaseVersion, Required: run.Required, LeftInScope: run.LeftInScope}
+	v := DataTaskVerdict{Release: buildinfo.ReleaseVersion, Required: run.Required, LeftInScope: run.LeftInScope, NeedsAction: map[string]int64{}}
 	for _, p := range run.Progress {
 		step := p.TaskID + "/" + p.Step
 		if !current(p, run.Required) {
@@ -173,6 +174,9 @@ func DataTaskVerdictOf(run DataTaskRun) DataTaskVerdict {
 			v.Done++
 			if p.Scanned == 0 {
 				v.NothingInspected = append(v.NothingInspected, step)
+			}
+			if p.Action != nil {
+				v.NeedsAction[step] = p.Action.Count
 			}
 		}
 	}

@@ -13,9 +13,9 @@ package activities
 // viewer something about them, which is the disclosure the parent gate exists to
 // prevent (DOC-AC-2).
 //
-// `company_id` on the row is a read path for uploads, not a second parent; it
-// never decides who may see one. A mail's file carries no stamp: it is read
-// through the links of its mail as they are now (documentMembership).
+// A file's company is read from the record it is filed on, never from a copy
+// on the file's row. A mail's file is read through the links of its mail as
+// they are now (documentMembership).
 
 import (
 	"context"
@@ -245,7 +245,7 @@ const scopeNothing = "FALSE"
 // clause over their own columns. `activity` is not one of them — its scope is
 // the link walk — so it gets its own arm in activityParentClause rather than
 // being forced into this shape, which would widen it.
-var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityContact}
+var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityContact, linkEntityProject}
 
 // activityParentClause is the arm for a file hanging off an activity. It uses
 // the link-walk scope every other activity read uses (ADR-0054 §8: scope policy

@@ -18,17 +18,19 @@ import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, WriteRefused } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { countryOptions } from "../../format/assignedcountries";
 import { todayIn } from "../../format/calendarday";
 import { typedDecimalText, typedNumberFault } from "../../format/decimalinput";
-import { formatNumber } from "../../format/format";
+import { formatDate, formatNumber, formatPercent } from "../../format/format";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { WithheldRateCard } from "./rates";
 
 type TaxRate = components["schemas"]["TaxRate"];
@@ -36,11 +38,15 @@ type Category = TaxRate["category"];
 
 const TAX_RATES_KEY = ["tax-rates"] as const;
 
+// The server sends a rate in percent with two decimals.
+const TAX_RATE_DIGITS = 2;
+
 // The tax rates offers are charged, by country and category. A rate is added
 // and never changed: a new rate from a later day replaces it from that day.
 export function TaxRatesCard() {
   const t = useT();
   const { locale } = useLocale();
+  const readerZone = useViewerZone();
   const canRead = useCan("tax_rate", "read");
   const canRecord = useCanWrite("tax_rate", "create");
   const [open, setOpen] = useState(false);
@@ -99,12 +105,14 @@ export function TaxRatesCard() {
             {
               key: "rate",
               header: t("taxRates.colRate"),
-              render: (row) => `${row.rate} %`,
+              // A statutory rate keeps its decimals: 7.7 % is not 8 %.
+              render: (row) =>
+                formatPercent(Number(row.rate) / 100, locale, TAX_RATE_DIGITS),
             },
             {
               key: "from",
               header: t("taxRates.colFrom"),
-              render: (row) => row.valid_from,
+              render: (row) => formatDate(row.valid_from, locale, readerZone),
             },
           ]}
         />
@@ -128,6 +136,11 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
   const plural = usePlural();
   const labelId = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
+  const labels = {
+    country: t("taxRates.colCountry"),
+    rate: t("taxRates.colRate"),
+  };
   // The sheet counts its days in the installation's zone, so the form opens
   // on the day the server reads as today.
   const zone = useCompanyZone();
@@ -161,23 +174,36 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
     },
   });
   const rateFault = typedNumberFault(draft.rate, locale, t);
-  const ready =
-    draft.country !== "" && draft.rate.trim() !== "" && rateFault === undefined;
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!ready || save.isPending || refuseUnreadableField(event.currentTarget))
-      return;
+    const found = blankRequired(locale, {
+      country: [labels.country, draft.country],
+      rate: [labels.rate, draft.rate],
+    });
+    if (rateFault !== undefined && !found.has("rate")) {
+      found.set("rate", rateFault);
+    }
+    if (faults.show(found) || save.isPending) return;
+    if (refuseUnreadableField(event.currentTarget)) return;
     save.mutate(draft);
   };
-  const set = (patch: Partial<Draft>) =>
+  const set = (patch: Partial<Draft>) => {
     setDraft((current) => ({ ...current, ...patch }));
+    for (const key of Object.keys(patch)) faults.edited(key);
+  };
   return (
     <Modal open onClose={onClose} labelledBy={labelId} intent="form">
       <Heading size="large" id={labelId} className="t-h2 modal-title">
         {t("taxRates.modalTitle")}
       </Heading>
-      <form id={formId} className="form-stack" onSubmit={submit}>
-        <Field label={t("taxRates.colCountry")}>
+      <form
+        id={formId}
+        ref={faultsRoot}
+        className="form-stack"
+        noValidate
+        onSubmit={submit}
+      >
+        <Field label={labels.country} required error={faults.of("country")}>
           {(control) => (
             <Select
               {...control}
@@ -209,9 +235,10 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
           )}
         </Field>
         <Field
-          label={t("taxRates.colRate")}
+          label={labels.rate}
           hint={t("taxRates.rateHint")}
-          error={rateFault}
+          required
+          error={faults.of("rate") ?? rateFault}
         >
           {(control) => (
             <TextInput
@@ -245,7 +272,7 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
           type="submit"
           form={formId}
           variant="primary"
-          disabled={!ready || save.isPending}
+          pending={save.isPending}
         >
           {t("taxRates.save")}
         </Button>

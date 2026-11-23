@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	"github.com/margince/margince/backend/internal/compose/draftcontent"
+	"github.com/margince/margince/backend/internal/compose/employerchange"
 	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/homecache"
@@ -49,18 +50,14 @@ import (
 // newContactsHandlers builds the contact/company/lead transport with the
 // seams compose owns for it.
 //
-// The fieldcatalog seam: customfields' catalog read makes the
-// workspace's active cf_* columns ride contact/company
-// payloads (values only — the schema-change engine stays behind
-// WithSchemaPool; ActiveColumns needs none of it).
-// The match stager is injected here because approvals is a sibling of
-// contacts and a module never imports one: compose is where that edge is
-// made, as it is for every other cross-module dependency.
+// The fieldcatalog seam: customfields' catalog read makes the workspace's
+// active cf_* columns ride contact/company payloads (values only; the
+// schema-change engine stays behind WithSchemaPool).
+// The match stager and the employer-change proposer are injected here because
+// approvals is a sibling of contacts and a module never imports one.
 //
 // The lead settings write through the installation settings store, and the
-// qualify dialog's "also open a deal" rides the deals store through the
-// contacts→deals edge (leadDealOpener) — both injected here for the same
-// ADR-0054 reason as the stager.
+// qualify dialog's "also open a deal" rides the deals store (leadDealOpener).
 func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 	return withContactMergeCarriers(InstallationDB(pool), contacts.NewHandlers(InstallationDB(pool))).
 		WithPrivacyReviewer(identity.NewServiceFor(InstallationDB(pool))).
@@ -81,7 +78,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithLeadArrivals(newLeadWorkTasks(InstallationDB(pool), slog.Default())).
 		WithPartnerNextSteps(partnersteps.New(activities.NewStore(InstallationDB(pool)))).
 		WithInstallationRenamer(installationRenamer(pool)).
-		WithConsumerMail(capture.MatcherTx)
+		WithConsumerMail(capture.MatcherTx).WithEmployerChangeProposer(employerchange.Proposer{DB: InstallationDB(pool), Inbox: approvalsInbox{}})
 }
 
 // newBookerContacts is the contact path a public booking resolves its booker
@@ -314,7 +311,7 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	s.voiceHandlers = s.WithPriceSync(newAIPriceSync(pool, s.vault, log, s.priceCatalogues))
 	s.aiAdminHandlers = aiAdminHandlers{store: ai.NewAdminStore(InstallationDB(pool), NewSettingsStore(pool), StoredConfig(pool), budgetFullUsers, aiDeferredWork(pool))}
 	s.ownDomainHandlers = ownDomainHandlers{
-		store:    capture.NewOwnDomainStore(InstallationDB(pool)),
+		store:    capture.NewOwnDomainStore(InstallationDB(pool)).WithRemoved(queueStageEvidenceReread),
 		evidence: deals.NewStore(InstallationDB(pool), DealsInstallation()), log: log,
 	}
 	// The installation's own identity and reporting basis (ADR-0090/A135):

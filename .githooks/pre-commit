@@ -4,6 +4,12 @@
 # `make -C backend check` remains the merge gate.
 set -eu
 
+# Build with -trimpath so worktrees share one Go build cache; CI keeps the paths.
+case " ${GOFLAGS:-} " in
+	*" -trimpath "*) ;;
+	*) [ -n "${CI:-}" ] || export GOFLAGS="${GOFLAGS:+$GOFLAGS }-trimpath" ;;
+esac
+
 root="$(git rev-parse --show-toplevel)"
 
 staged_go="$(git diff --cached --name-only --diff-filter=ACMR -- '*.go' || true)"

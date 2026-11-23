@@ -32,14 +32,23 @@ func TestAReviewedPackMayCiteADeclaredInstrument(t *testing.T) {
 	}
 }
 
+// A pack is refreshed against its sources at release, with no human sign-off,
+// so a draft cites its declared law as a reviewed pack does.
+func TestADraftPackMayCiteADeclaredInstrument(t *testing.T) {
+	r := citingRules()
+	r.Provenance = Provenance{}
+	if err := r.Validate(); err != nil {
+		t.Fatalf("a draft pack citing its own instrument was refused: %v", err)
+	}
+}
+
 // Each case breaks one rule of the citation contract, so a validator that
 // refused everything would not pass the case above and these together.
-func TestACitationMustNameReviewedLawWithALinkableSource(t *testing.T) {
+func TestACitationMustNameDeclaredLawWithALinkableSource(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		breakIt func(*Rules)
 	}{
-		{"a draft rule cannot cite", func(r *Rules) { r.Provenance = Provenance{} }},
 		{"an undeclared instrument", func(r *Rules) { r.Citations[0].Instrument = "Telemediengesetz" }},
 		{"an http source", func(r *Rules) { r.Citations[0].SourceURL = "http://example.org/uwg" }},
 		{"a script source", func(r *Rules) { r.Citations[0].SourceURL = "javascript:alert(1)" }},
@@ -47,7 +56,7 @@ func TestACitationMustNameReviewedLawWithALinkableSource(t *testing.T) {
 		{"no provision anywhere", func(r *Rules) { r.Instruments[0].Provision, r.Citations[0].Provision = "", "" }},
 		{"an empty code", func(r *Rules) { r.Citations[0].Code = "" }},
 		{"an unknown territory", func(r *Rules) { r.Citations[0].Territory = "sender_on_the_moon" }},
-		{"sources never checked", func(r *Rules) { r.Provenance.SourceCheckedAt = time.Time{} }},
+		{"a review of sources never checked", func(r *Rules) { r.Provenance.SourceCheckedAt = time.Time{} }},
 		{"sources checked after the review", func(r *Rules) { r.Provenance.SourceCheckedAt = reviewedOn.AddDate(0, 0, 1) }},
 		{"a review naming nobody", func(r *Rules) { r.Provenance.Reviewer = "" }},
 		{"a review due before it happened", func(r *Rules) { r.Provenance.ReviewDue = reviewedOn.AddDate(0, 0, -1) }},
@@ -118,5 +127,43 @@ func TestResolvingACitationFillsWhatItLeftToItsInstrument(t *testing.T) {
 	}
 	if got.Provision != "§7" || got.SourceURL != r.Instruments[0].SourceURL {
 		t.Errorf("resolved to %+v, want the instrument's provision and source", got)
+	}
+}
+
+func TestAnInstrumentRecordsItsRefreshOneWay(t *testing.T) {
+	fetched := time.Date(2026, 3, 9, 0, 0, 0, 0, time.UTC)
+	digest := strings.Repeat("0f", 32)
+	source := Instrument{Name: "Act A", SourceURL: "https://example.org/a"}
+	with := func(change func(*Instrument)) Instrument {
+		in := source
+		change(&in)
+		return in
+	}
+	for name, in := range map[string]Instrument{
+		"no refresh yet":      source,
+		"a digest of its day": with(func(in *Instrument) { in.TextDigest, in.TextFetchedAt = digest, fetched }),
+		"a readable address":  with(func(in *Instrument) { in.TextURL = "https://example.org/a.pdf" }),
+		"a check by hand":     with(func(in *Instrument) { in.CheckedByHandAt = fetched }),
+		"a digest of a text address alone": {
+			Name: "Act A", TextURL: "https://example.org/a.pdf", TextDigest: digest, TextFetchedAt: fetched,
+		},
+	} {
+		if err := in.Validate(); err != nil {
+			t.Errorf("%s was refused: %v", name, err)
+		}
+	}
+	for name, in := range map[string]Instrument{
+		"a text address over http":         with(func(in *Instrument) { in.TextURL = "http://example.org/a.pdf" }),
+		"a digest that is no SHA-256":      with(func(in *Instrument) { in.TextDigest, in.TextFetchedAt = "abc", fetched }),
+		"a digest with no day":             with(func(in *Instrument) { in.TextDigest = digest }),
+		"a day with no digest":             with(func(in *Instrument) { in.TextFetchedAt = fetched }),
+		"a digest and a check by hand":     with(func(in *Instrument) { in.TextDigest, in.TextFetchedAt, in.CheckedByHandAt = digest, fetched, fetched }),
+		"a text address checked by hand":   with(func(in *Instrument) { in.TextURL, in.CheckedByHandAt = "https://example.org/a.pdf", fetched }),
+		"a check by hand of no source":     {Name: "Act A", CheckedByHandAt: fetched},
+		"a digest of no source or address": {Name: "Act A", TextDigest: digest, TextFetchedAt: fetched},
+	} {
+		if err := in.Validate(); err == nil {
+			t.Errorf("%s was accepted", name)
+		}
 	}
 }

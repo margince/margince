@@ -13,6 +13,7 @@
 # repeated a human's faulty memory back to the contact about to walk into the
 # meeting.
 name: case6_ask_the_company
+title: Ask the company
 criteria: [1, 3, 5]
 
 # WRITES: nothing — this case only reads. Said out loud because a scenario that
@@ -27,13 +28,12 @@ prompt: |
   much. Did we have it in the past, what happened, how did we react, what should
   I be prepared for? Is there something we can learn? Check in our CRM.
 
-must_call:
-  - search_context
 may_call:
   - query_workspace
   - catch_me_up_on
   - read_record
   - search_records
+  - search_context
 
 # WHAT IS A REGEX HERE AND WHAT IS A JUDGE, and why.
 #

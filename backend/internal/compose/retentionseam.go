@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -42,6 +43,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// init binds the event types the deal check reads to the outbox writer, from
+// the list the retention read keeps.
+func init() {
+	storekit.UseAssuranceInputTypes(assurance.MarkingEventTypes())
+}
+
 // NewRetentionServiceFor assembles the retention service for one database
 // binding, with every seam its actions depend on.
 //
@@ -54,6 +61,9 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 		WithOutboxReaders(storekit.OutboxReaders{
 			UnreadTypes: assurance.MarkingEventTypes(), NeededBy: []func(string) string{automation.RetryableTriggerSQL},
 		}).
+		WithCallPrunes(ai.PruneEmbedCallsTx, ai.PruneAnswerCallsTx).WithOperationalPrunes(privacy.OperationalPrune{
+		Name: "automation runs that changed nothing", Days: automation.NoEffectRunDays, Remove: automation.PruneNoEffectRunsTx,
+	}).
 		WithExtensions(ExtensionData()).
 		WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 }
@@ -81,6 +91,15 @@ func RawCapturePurgerFor(db *database.DB) privacy.RawCapturePurger {
 type capturedTextPurger struct {
 	*capture.PendingStore
 	db *database.DB
+}
+
+// PurgeRawCaptureTx marks unchecked legacy mail as unreadable for the
+// calendar-method re-read, then destroys the originals.
+func (p capturedTextPurger) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	if err := activities.MarkCalendarMethodsUnreadableTx(ctx, tx, activityIDs); err != nil {
+		return err
+	}
+	return p.PendingStore.PurgeRawCaptureTx(ctx, tx, activityIDs)
 }
 
 // PurgeTextCopiesTx empties the voice samples read from the activities.

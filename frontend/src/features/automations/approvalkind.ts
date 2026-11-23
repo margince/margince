@@ -117,6 +117,11 @@ export const EDITABLE_FIELDS: Readonly<
   ownership_transfer: [],
   // A share request is answered yes or no; its fields name the records.
   contact_share: [],
+  // An edit access request is answered yes or no; its fields name the parties.
+  edit_access: [],
+  legal_review_request: [],
+  // An employer change is answered yes or no; the server refuses an edit.
+  employer_change: [],
   // The owner keeps, changes or clears the captured day.
   task_due_date: [
     { field: "due_date", as: "date", label: "approval.field.due_date" },

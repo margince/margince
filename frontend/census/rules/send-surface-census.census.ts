@@ -29,7 +29,10 @@ const SAYS_SOMETHING = [
 
 // Files that post a send and draw no mark, each with the reason somebody
 // wrote for it.
-export const SILENT_SENDERS: Readonly<Record<string, string>> = {};
+export const SILENT_SENDERS: Readonly<Record<string, string>> = {
+  "src/features/mail/composesend.ts":
+    "The composer decides at Send: nothing is asked while the rep writes, and a refusal comes back with its review, drawn by composesendanyway.tsx.",
+};
 
 export const postsASend = (source: string): boolean =>
   SEND_PATHS.some((path) => source.includes(path));

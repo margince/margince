@@ -235,7 +235,7 @@ it.each([false, true])(
   },
 );
 
-it("leads the row in hand's one line with the agent's move, and ends it with its menu", () => {
+it("starts the row in hand's line with its details, then the agent's move, and ends it with its menu", () => {
   stubApi({});
   const { container } = render(
     <BriefFeed
@@ -250,17 +250,17 @@ it("leads the row in hand's one line with the agent's move, and ends it with its
       .querySelector(".worklist-row-acts")
       ?.querySelectorAll("button, a") ?? []),
   ];
-  // The card is finished on its answer, so the answer opens the line. Then the
-  // way into what the row is about and Done; the row's menu, holding the other
-  // set-asides, closes it.
+  // The way into what the row is about is drawn first, so it comes first in
+  // the page too. Then the card's answer and Done; the row's menu, holding the
+  // other set-asides, closes it.
   const draft = lead.getByRole("link", {
     name: en["worklist.verb.draft_reply_now"],
   });
   expect(draft.className).toContain("btn-ai");
-  expect(line.at(0)).toBe(draft);
-  expect(line.at(1)).toBe(
+  expect(line.at(0)).toBe(
     lead.getByRole("button", { name: en["brief.focus.context"] }),
   );
+  expect(line.at(1)).toBe(draft);
   expect(line.at(-2)).toBe(
     lead.getByRole("button", { name: en["worklist.disposition.verb.handled"] }),
   );

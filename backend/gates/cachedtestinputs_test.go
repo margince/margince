@@ -18,18 +18,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// A cached test file that runs a process to read the tree for it declares what
-// that process read through gatekit. Go's test cache sees what the test opens
-// and nothing a child process opens, so a cached pass over the process's answer
-// replays after the tree has changed underneath it. The census judges test
-// files, file by file: a production helper that shells out is out of its sight.
-var treeReaders = map[string]bool{"git": true, "go": true}
+// A cached test file that runs a process declares what that process read
+// through gatekit. Go's test cache sees only what the test opens itself, so a
+// pass over the process's answer replays after the tree changed. The census
+// judges test files; a production helper that shells out is out of its sight.
+// Any program counts as a tree reader except those listed here.
+var readsNoTree = map[string]bool{"sleep": true}
 
-// launchers run whatever their arguments name, so they read the tree when an
-// argument names a tree reader or cannot be read at all.
+// launchers run whatever their arguments name. They read the tree when an
+// argument names a tree reader, a path or a file, or cannot be read at all.
 var launchers = map[string]bool{"sh": true, "bash": true, "env": true}
 
-var namesATreeReader = regexp.MustCompile(`\b(git|go)\b`)
+var namesATreeReader = regexp.MustCompile(`\b(git|go)\b|[/.]`)
 
 // uncachedPackages reads UNCACHED_TEST_PKGS out of the Makefile that runs them,
 // so this gate exempts exactly the packages that never replay.
@@ -88,8 +88,8 @@ func treeReaderIn(command []ast.Expr) string {
 		return "a program named at run time"
 	}
 	switch name := path.Base(program); {
-	case treeReaders[name]:
-		return program
+	case readsNoTree[name]:
+		return ""
 	case launchers[name]:
 		for _, arg := range command[1:] {
 			text, isLiteral := gatekit.StringExpr(arg, nil, gatekit.FoldStrict)
@@ -97,8 +97,10 @@ func treeReaderIn(command []ast.Expr) string {
 				return program + " running a tree reader"
 			}
 		}
+		return ""
+	default:
+		return program
 	}
-	return ""
 }
 
 // declaresItsInputs reports whether the file tells the test cache what the
@@ -198,6 +200,9 @@ func TestTheShellOutCensusJudgesTheSpellingsItMustSee(t *testing.T) {
 		{"git behind a shell", `exec.Command("sh", "-c", "git ls-files | wc -l")`, true},
 		{"go behind env", `exec.Command("/usr/bin/env", "go", "list")`, true},
 		{"a shell running a script named at run time", `exec.Command("bash", "-c", script)`, true},
+		{"node by name", `exec.Command("node", "script.mjs")`, true},
+		{"a script run by a shell", `exec.Command("bash", "scripts/check.sh")`, true},
+		{"a shell reading a file", `exec.Command("sh", "-c", "cat notes.txt")`, true},
 		{"a shell that reads no tree", `exec.Command("/bin/sh", "-c", "exit 3")`, false},
 		{"a process that reads no tree", `exec.Command("/bin/sleep", "60")`, false},
 	} {

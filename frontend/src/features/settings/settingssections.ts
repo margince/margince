@@ -34,6 +34,8 @@ export const SETTINGS_SECTIONS = {
       "scheduling.linksTitle",
       "scheduling.setup.title",
       "scheduling.acceptBookings",
+      "scheduling.team.title",
+      "scheduling.team.add",
     ],
     availability: [
       "settings.part.meetings.availability",
@@ -174,7 +176,7 @@ export const SETTINGS_SECTIONS = {
       "lossReasons.title",
       "lossReasons.legacyTitle",
     ],
-    reviews: ["settings.part.deals.reviews"],
+    reviews: ["settings.part.deals.reviews", "reviewTemplates.title"],
     legal: [
       "settings.part.deals.legal",
       "legalReview.settingsTitle",
@@ -353,6 +355,7 @@ export const SETTINGS_SECTIONS = {
       "settings.captureHealth",
       "settings.automaticWork",
       "settings.recoveryHealth",
+      "settings.vacuumHealth",
     ],
     configuration: [
       "health.configuration",

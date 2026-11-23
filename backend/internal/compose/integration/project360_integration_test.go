@@ -85,7 +85,8 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	currency := "EUR"
 	companyID := companyIDOf(company)
 	deal, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-		Name: "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+		Source: "manual",
+		Name:   "ERP licences", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 		ProjectID: &project, AmountMinor: &amount, Currency: &currency, OwnerID: userIDPtr(&e.Rep1),
 	})
 	if err != nil {

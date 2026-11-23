@@ -58,8 +58,11 @@ type EntityIdentity struct {
 	// AnchorCompanyID is the company whose logo the default entity wears, and
 	// the zero id on every other entity.
 	AnchorCompanyID ids.CompanyID
-	// Country is nil on the default entity when it takes the installation's.
-	Country           *string
+	// Country is the registered address's country, nil on the default entity.
+	Country *string
+	// Jurisdiction is the pack whose law the entity follows. It is nil on the
+	// default entity, whose law is the installation's.
+	Jurisdiction      *string
 	DefaultLanguage   *string
 	BankAccountHolder *string
 	IBAN              *string
@@ -94,7 +97,7 @@ func (a *legalEntityArgs) add(value any) string {
 
 const legalEntityColumns = `id, is_default, coalesce(display_name, ''), legal_name,
 	address_line1, address_line2, address_postal_code, address_city, address_region,
-	vat_id, register_court, register_number, logo_object_key, country, default_language,
+	vat_id, register_court, register_number, logo_object_key, country, jurisdiction, default_language,
 	bank_account_holder, iban, bic, imprint, signature_template, offer_summary, icp, value_proposition, usp, version, created_at, updated_at, archived_at,
 	(SELECT count(*) FROM legal_entity_member m WHERE m.legal_entity_id = legal_entity.id)`
 
@@ -103,10 +106,15 @@ func scanLegalEntity(row pgx.Row) (LegalEntity, error) {
 	e := &out.EntityIdentity
 	err := row.Scan(&e.ID, &e.IsDefault, &e.DisplayName, &e.LegalName,
 		&e.Address.Line1, &e.Address.Line2, &e.Address.PostalCode, &e.Address.City, &e.Address.Region,
-		&e.VatID, &e.RegisterCourt, &e.RegisterNumber, &e.LogoObjectKey, &e.Country, &e.DefaultLanguage,
+		&e.VatID, &e.RegisterCourt, &e.RegisterNumber, &e.LogoObjectKey, &e.Country, &e.Jurisdiction, &e.DefaultLanguage,
 		&e.BankAccountHolder, &e.IBAN, &e.BIC, &e.Imprint, &e.SignatureTemplate,
 		&e.Offering.OfferSummary, &e.Offering.ICP, &e.Offering.ValueProposition, &e.Offering.USP, &out.Version, &out.CreatedAt, &out.UpdatedAt,
 		&out.ArchivedAt, &out.MemberCount)
+	if e.IsDefault {
+		// The default entity's country and law are the installation's. A value
+		// stored before that rule is never read, so no reader sees a second one.
+		e.Country, e.Jurisdiction = nil, nil
+	}
 	return out, err
 }
 

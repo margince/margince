@@ -55,7 +55,7 @@ func BundleEntries(t *testing.T, raw []byte) map[string][]byte {
 // doubling as the content probe.
 func CSVColumn(t *testing.T, raw []byte, column string) []string {
 	t.Helper()
-	records, err := csv.NewReader(bytes.NewReader(raw)).ReadAll()
+	records, err := csv.NewReader(bytes.NewReader(bytes.TrimPrefix(raw, []byte("\xEF\xBB\xBF")))).ReadAll()
 	if err != nil {
 		t.Fatalf("parsing csv: %v", err)
 	}

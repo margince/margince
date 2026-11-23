@@ -249,17 +249,19 @@ describe("LeadManualSignals", () => {
     expect(save().hasAttribute("disabled")).toBe(true);
   });
 
-  it("cannot be saved without evidence, empty or whitespace, and sends nothing", async () => {
+  it("says evidence is required on Save, empty or whitespace, and sends nothing", async () => {
     const user = userEvent.setup();
     const writes: Write[] = [];
     await show(writes);
 
     await pickOption(user, question("Website traffic?"), "High");
-    expect(save().hasAttribute("disabled")).toBe(true);
     await evidence(user, "   ");
-    expect(save().hasAttribute("disabled")).toBe(true);
     await user.click(save());
 
+    expect(screen.getByText("Evidence is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(
+      screen.getByRole("textbox", { name: "Evidence" }),
+    );
     expect(sentSignals(writes)).toEqual([]);
     expect(
       (screen.getByRole("textbox", { name: "Evidence" }) as HTMLTextAreaElement)

@@ -109,7 +109,7 @@ describe("conversationReducer happy path", () => {
           questionId: "speaker",
           value: "Speaker 1",
         },
-        { type: "BUILD_STARTED", buildId: "b1" },
+        { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
         { type: "BUILD_STAGE", buildId: "b1", stage: "snapshot" },
         { type: "BUILD_STAGE", buildId: "b1", stage: "extract" },
         { type: "BUILD_STAGE", buildId: "b1", stage: "evaluate" },
@@ -220,7 +220,7 @@ describe("conversationReducer happy path", () => {
       { type: "COMPANY_CONFIRMED" },
       { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
-      { type: "BUILD_STARTED", buildId: "b1" },
+      { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
       {
         type: "BUILD_TERMINAL",
         buildId: "b1",
@@ -237,7 +237,7 @@ describe("conversationReducer happy path", () => {
     // A failed build retries and a deferred one resumes; neither is revised.
     const failed = run(
       [
-        { type: "BUILD_STARTED", buildId: "b2" },
+        { type: "BUILD_STARTED", buildId: "b2", profileId: "profile-1" },
         {
           type: "BUILD_TERMINAL",
           buildId: "b2",
@@ -250,7 +250,7 @@ describe("conversationReducer happy path", () => {
     expect(conversationReducer(failed, { type: "VOICE_REVISE" })).toBe(failed);
   });
 
-  it("lets the voice act be skipped and still reach connect", () => {
+  it("skips the voice act in one press, straight to connect", () => {
     const state = run([
       { type: "START", memberPath: false },
       { type: "READ_STARTED", readId: "r1" },
@@ -260,7 +260,6 @@ describe("conversationReducer happy path", () => {
       { type: "BASIS_DONE" },
       { type: "INVITE_ACCEPTED" },
       { type: "VOICE_SKIPPED" },
-      { type: "VOICE_DONE" },
     ]);
     expect(state).toMatchObject({ act: "connect", phase: "cn.consent" });
     expect(
@@ -314,7 +313,6 @@ describe("restore normalization out of co.confirmed", () => {
     const targets = [
       { target: "bs.ask", act: "basis" },
       { target: "vo.collecting", act: "voice" },
-      { target: "vo.skipped", act: "voice" },
       { target: "in.ask", act: "invite" },
       { target: "tm.ask", act: "team" },
       { target: "cn.consent", act: "connect" },
@@ -329,7 +327,6 @@ describe("restore normalization out of co.confirmed", () => {
   it("fast-forwards a member to their own stable points, and never into a creator act", () => {
     const own = [
       { target: "vo.collecting", act: "voice" },
-      { target: "vo.skipped", act: "voice" },
       { target: "cn.consent", act: "connect" },
     ] as const;
     for (const { target, act } of own) {
@@ -395,6 +392,113 @@ describe("restore seeding through START", () => {
   });
 });
 
+describe("a member who may not train a voice", () => {
+  it("starts at connect, wherever the restore pointed", () => {
+    for (const target of [undefined, "vo.collecting", "cn.consent"] as const) {
+      const state = run([
+        {
+          type: "START",
+          memberPath: true,
+          companyConfirmed: true,
+          voiceStep: false,
+        },
+        { type: "RESUME", target },
+      ]);
+      expect(state, String(target)).toMatchObject({
+        act: "connect",
+        phase: "cn.consent",
+        voiceStep: false,
+      });
+    }
+  });
+});
+
+describe("a creator who may not train a voice", () => {
+  it("goes on from the invite to connect", () => {
+    const state = run([
+      {
+        type: "START",
+        memberPath: false,
+        companyConfirmed: true,
+        voiceStep: false,
+      },
+      { type: "RESUME", target: "in.ask" },
+      { type: "INVITE_ACCEPTED" },
+    ]);
+    expect(state).toMatchObject({ act: "connect", phase: "cn.consent" });
+  });
+});
+
+describe("back from connect", () => {
+  const member = (target: "vo.collecting") =>
+    run([
+      { type: "START", memberPath: true, companyConfirmed: true },
+      { type: "RESUME", target },
+    ]);
+
+  it("returns a skipped voice to collecting, so it can be trained after all", () => {
+    const state = run(
+      [{ type: "VOICE_SKIPPED" }, { type: "CONNECT_BACK" }],
+      member("vo.collecting"),
+    );
+    expect(state).toMatchObject({ act: "voice", phase: "vo.collecting" });
+  });
+
+  it("returns a built voice to its result, where Continue still leads on", () => {
+    const state = run(
+      [
+        { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: "b1",
+          status: "succeeded",
+          detail: null,
+        },
+        { type: "VOICE_DONE" },
+        { type: "CONNECT_BACK" },
+      ],
+      member("vo.collecting"),
+    );
+    expect(state).toMatchObject({ act: "voice", phase: "vo.result" });
+    expect(run([{ type: "VOICE_DONE" }], state)).toMatchObject({
+      act: "connect",
+      phase: "cn.consent",
+    });
+  });
+
+  it("returns a voice sent back for more writing to collecting, not its old result", () => {
+    const state = run(
+      [
+        { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
+        {
+          type: "BUILD_TERMINAL",
+          buildId: "b1",
+          status: "succeeded",
+          detail: null,
+        },
+        { type: "VOICE_REVISE" },
+        { type: "VOICE_SKIPPED" },
+        { type: "CONNECT_BACK" },
+      ],
+      member("vo.collecting"),
+    );
+    expect(state).toMatchObject({ act: "voice", phase: "vo.collecting" });
+  });
+
+  it("is refused where the journey offers no voice step", () => {
+    const state = run([
+      {
+        type: "START",
+        memberPath: true,
+        companyConfirmed: true,
+        voiceStep: false,
+      },
+      { type: "RESUME" },
+    ]);
+    expect(conversationReducer(state, { type: "CONNECT_BACK" })).toBe(state);
+  });
+});
+
 describe("member path", () => {
   // A member's company was confirmed before they arrived: START opens in
   // co.confirmed and RESUME lands them on the first act that is theirs.
@@ -409,7 +513,7 @@ describe("member path", () => {
     expect(state).toMatchObject({ act: "voice", phase: "vo.collecting" });
     state = run(
       [
-        { type: "BUILD_STARTED", buildId: "b1" },
+        { type: "BUILD_STARTED", buildId: "b1", profileId: "profile-1" },
         {
           type: "BUILD_TERMINAL",
           buildId: "b1",
@@ -442,10 +546,7 @@ describe("member path", () => {
       expect(conversationReducer(state, event)).toBe(state);
     }
     // The voice act is theirs, with every event in it.
-    const skipped = run(
-      [{ type: "VOICE_SKIPPED" }, { type: "VOICE_DONE" }],
-      state,
-    );
+    const skipped = run([{ type: "VOICE_SKIPPED" }], state);
     expect(skipped).toMatchObject({ act: "connect", phase: "cn.consent" });
   });
 });

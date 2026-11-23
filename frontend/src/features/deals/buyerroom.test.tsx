@@ -335,10 +335,14 @@ describe("BuyerRoomScreen", () => {
     render(<BuyerRoomScreen />);
 
     await screen.findByText("This link no longer works");
-    await user.type(
-      screen.getByLabelText("Your email address"),
-      "laura@buyer.example",
-    );
+    const email = screen.getByLabelText(/^Your email address/);
+    await user.click(screen.getByRole("button", { name: /request new link/i }));
+    expect(screen.getByText("Your email address is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(email);
+    expect(
+      sent.filter((s) => s.key === "POST /public/rooms/link-request"),
+    ).toHaveLength(0);
+    await user.type(email, "laura@buyer.example");
     await user.click(screen.getByRole("button", { name: /request new link/i }));
     await screen.findByText(/a new link is on its way/i);
     const request = sent.find(

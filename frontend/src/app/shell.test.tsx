@@ -1,10 +1,12 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { House } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../i18n/en";
-import { parseHash, type Route } from "../lib/router";
+import { findExtension, unitTitle } from "../lib/extensions";
+import { parseHash, type Route, samePage, useHash } from "../lib/router";
+import { useReportShownAddress } from "../lib/screenaddress";
 import {
   fixtureSection,
   ignoreSearch,
@@ -63,8 +65,18 @@ vi.mock("@composition/extensions", () => ({
 // shell MOUNTS them in the places it promises, and feeds them the counts it
 // already has.
 
+// A screen still on `address` while the bar has moved on.
+function StillOn({ address }: Readonly<{ address: string }>) {
+  useReportShownAddress(address, !samePage(address, useHash()));
+  return null;
+}
+
+// A contact id in the form the server reads.
+const ANNA_ID = "0a7e5c1d-6b2f-4c8e-9d3a-1f2e3d4c5b6a";
+
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   window.location.hash = "";
   vi.unstubAllGlobals();
   // The sidebar remembers its width in localStorage, which jsdom keeps for the
@@ -494,9 +506,9 @@ describe("Shell", () => {
   // is not the page. So the row yields to `aria-current="true"` there (current in
   // this set) and the trail's last stop keeps `page`.
   it("claims the page exactly once on a record, with the sidebar's row yielding", () => {
-    window.location.hash = "#/contacts/p-anna";
+    window.location.hash = `#/contacts/${ANNA_ID}`;
     const client = newClient();
-    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", ANNA_ID], "Anna Weber");
     const { container } = renderWith(
       client,
       <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
@@ -677,6 +689,33 @@ describe("Shell", () => {
         .getAllByRole("link")
         .some((link) => link.getAttribute("aria-current") === "page"),
     ).toBe(false);
+  });
+
+  it("names a composed unit's page on its way by the unit's title", async () => {
+    vi.useFakeTimers();
+    window.location.hash = "#/analytics";
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <StillOn address="#/analytics" />
+      </Shell>,
+    );
+    await act(async () => {
+      window.history.pushState(null, "", "#/ext/notes");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    await act(() => vi.advanceTimersByTimeAsync(200));
+    const label = document.querySelector(".pagewait")?.textContent;
+    cleanup();
+    vi.useRealTimers();
+
+    // The unit's page once it has landed: its trail ends in the same name.
+    render(<Shell onOpenSearch={ignoreSearch}>{null}</Shell>);
+    const leaf = document.querySelector(".topbar .crumbs-current")?.textContent;
+    const unit = findExtension("notes");
+    if (!unit) throw new Error("the composed registry lost its unit");
+    expect(leaf).toBe(unitTitle(unit, "en"));
+    expect(label).toBe(en["shell.pageLoading"].replace("{page}", leaf ?? ""));
   });
 
   it("mints the page-level heading on a route that names no record", () => {

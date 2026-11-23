@@ -9,6 +9,7 @@ package compose
 import (
 	"maps"
 
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -19,9 +20,7 @@ func pipelineCurrentSpec() reportSpec {
 		entity: datasource.EntityDeal,
 		table:  tableDeal,
 		joins:  []string{joinStageForWinProbability},
-		// OPEN only. A won deal is money that arrived and a lost one is money
-		// that did not; neither is still in the pipeline, and counting them
-		// here reports a composition the team cannot act on.
+		// Open only: a won or lost deal is no longer in the pipeline.
 		baseWhere: whereOpenDeal,
 		basePlain: "live (unarchived) deals still open, valued in the installation's base " +
 			"currency — each deal converted on its own at the answer's as-of date, a closed " +
@@ -30,25 +29,18 @@ func pipelineCurrentSpec() reportSpec {
 			fieldStageID:    colStageID,
 			fieldPipelineID: colPipelineID,
 			fieldOwnerID:    colOwnerID,
-			// The currency a deal was WRITTEN in stays groupable: "how much of
-			// this pipeline is denominated abroad" is a real question, and the
-			// money answering it is still converted, so the total under each
-			// currency is comparable with the others.
+			// The currency a deal was written in stays groupable, and its money
+			// is still converted, so the totals compare across currencies.
 			fieldCurrency:         colCurrency,
 			fieldPartnerCompanyID: colPartnerCompanyID,
 			fieldCloseMonth:       colCloseMonth,
 		},
-		// BASE-CURRENCY measures only, and the native ones are deliberately
-		// absent.
-		//
-		// This spec's whole reason to exist is that its default grouping does
-		// NOT include currency — one stage is one row. Offering amount_minor
-		// beside that would let a caller ask for a sum of minor units across
-		// currencies and get a number with no unit: 10,000 EUR + 10,000 USD =
-		// 20,000 of nothing, where the answer is 15,000 EUR. deals-by-stage
-		// still serves the native figures, and it groups by currency.
+		// Base-currency measures only: one stage is one row, so a native sum
+		// across currencies would be a number with no unit. deals-by-stage
+		// serves the native figures, grouped by currency.
 		measures:    baseMoneyMeasures(nil),
 		sumCoverage: baseMoneyCoverage(),
+		partialSums: true,
 		filters: map[string]string{
 			fieldPipelineID:       colPipelineID,
 			fieldOwnerID:          colOwnerID,
@@ -66,6 +58,7 @@ func pipelineCurrentSpec() reportSpec {
 			colPartnerCompanyID: tableCompany,
 			colCompanyID:        tableCompany,
 		},
+		drillColumns: dealCompanyDrillColumn,
 		// By STAGE alone. deals-by-stage groups by stage and currency, so a
 		// stage trading in three currencies draws three rows and no total —
 		// which is honest while the money is unconverted and pointless once it
@@ -75,13 +68,15 @@ func pipelineCurrentSpec() reportSpec {
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountBaseMinor, As: "amount_base_minor_sum"},
 			{Fn: aggFnSum, Field: fieldWeightedBaseMinor, As: "weighted_base_minor_sum"},
-			// How many of those deals the money actually covers. Without it a
-			// stage holding a deal in an unpriced currency shows a complete
-			// count beside a short total and reads as whole.
+			// How many deals the money covers; the row's coverage says why the rest are not.
 			{Fn: aggFnCount, Field: fieldAmountBaseMinor, As: aliasPricedDeals},
 		},
 	}
 }
+
+// dealCompanyDrillColumn puts the deal's own company on a drill-through row
+// beside its partner company, so the partner is not read as the deal's company.
+var dealCompanyDrillColumn = map[string]string{fieldCompanyID: colCompanyID}
 
 // fieldCloseMonth groups open deals by the month they are expected to close.
 // A DATE has no zone, and a month is the same under every fiscal start, so it
@@ -129,7 +124,7 @@ func baseMoneyCoverage(fields ...string) map[string]string {
 	if len(fields) == 0 {
 		fields = []string{fieldAmountBaseMinor, fieldWeightedBaseMinor}
 	}
-	missing := "CASE WHEN t.amount_minor IS NOT NULL AND (" + pipelineBaseValueExpr + ") IS NULL THEN 1 ELSE 0 END"
+	missing := "CASE WHEN " + dealcoverage.NoRateSQL("t", pipelineBaseValueExpr) + " THEN 1 ELSE 0 END"
 	out := make(map[string]string, len(fields))
 	for _, field := range fields {
 		out[field] = missing

@@ -15,7 +15,7 @@
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
 // `accessgrants`, not `capability`: the latter's hooks pull the component graph
-// and its CSS into `e2e/ac.spec.ts`, whose Playwright transform cannot load it.
+// and its CSS into `e2e/screens.ts`, whose Playwright transform cannot load it.
 import { type AccessSnapshot, grants, type RbacObject } from "./accessgrants";
 import { BUSINESS_PAGES } from "./settingscatalog.business";
 import { PLATFORM_PAGES } from "./settingscatalog.platform";
@@ -128,13 +128,14 @@ export function holds(
 export const SETTINGS_GROUPS = [
   "me",
   "company",
+  // Compliance answers to the law and System to whoever runs the install: one
+  // "Governance" group mixed the two jobs and their readers. Compliance sits
+  // under Company because the country chosen there is what it puts in force.
+  "compliance",
   "people",
   "sales",
   "data",
   "ai",
-  // Compliance answers to the law and System to whoever runs the install: one
-  // "Governance" group mixed the two jobs and their readers.
-  "compliance",
   "system",
 ] as const;
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number];

@@ -68,12 +68,18 @@ export function narrowingSignature(
  * Sends the reader back to page one when the narrowing changes. Page 2 of a
  * new filter, sort or scope holds rows they never asked for.
  *
+ * Not when `keepsPage` says so: a link that changes the narrowing names its page.
+ *
  * Not on arrival: a page read from the address must survive the first render.
  * So the reset compares the signature with the one seeded during the first
  * render. Counting effect runs fails, because StrictMode and late deps run
  * the effect on arrival more than once.
  */
-function useResetOnNarrowing(narrowing: string, toFirstPage: () => void) {
+function useResetOnNarrowing(
+  narrowing: string,
+  toFirstPage: () => void,
+  keepsPage: (() => boolean) | undefined,
+) {
   const narrowedBy = useRef(narrowing);
   // `toFirstPage` is re-made every render and must not re-run the effect;
   // what it does depends only on the signature.
@@ -83,6 +89,9 @@ function useResetOnNarrowing(narrowing: string, toFirstPage: () => void) {
       return;
     }
     narrowedBy.current = narrowing;
+    if (keepsPage?.()) {
+      return;
+    }
     toFirstPage();
     // The page and nothing else. This also fires on the way out, against an
     // address that is no longer the list's, and a scroll offset written then
@@ -133,6 +142,8 @@ export type PagingControl<Row> = Readonly<{
   onLoadMore?: () => void;
   /** False where a body outside the table owns the paging; default true. */
   reachAsked?: boolean;
+  /** True when the page in hand was named with the narrowing, so no reset. */
+  keepsPage?: () => boolean;
 }>;
 
 /** The rows the table slices out, and the pager's state. */
@@ -197,8 +208,10 @@ export function usePaging<Row>(
     loadMore: () => control.onLoadMore?.(),
     setPage,
   });
-  useResetOnNarrowing(narrowingSignature({ ...narrowing, perPage }), () =>
-    setPage(1),
+  useResetOnNarrowing(
+    narrowingSignature({ ...narrowing, perPage }),
+    () => setPage(1),
+    control.keepsPage,
   );
   const goto = (to: number) => {
     // Stepping past what is loaded is answered by `useReachAskedPage`.

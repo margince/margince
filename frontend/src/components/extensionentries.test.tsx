@@ -19,7 +19,15 @@ function unit(
   name: string,
   entries: ExtensionDescriptor["entries"],
 ): ExtensionDescriptor {
-  return { name, title: "", verbs: [], entries, panels: [], secretScope: "" };
+  return {
+    name,
+    title: "",
+    summary: "",
+    verbs: [],
+    entries,
+    panels: [],
+    secretScope: "",
+  };
 }
 
 const VISITS = unit("visits", [

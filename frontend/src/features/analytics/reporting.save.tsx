@@ -14,6 +14,7 @@ import { useT } from "../../i18n";
 import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+import { scopeName } from "./analytics.context";
 import { ReportComposition, useComposition } from "./reporting.composition";
 import { useCreateReport } from "./reporting.create";
 import { blocksOf } from "./reporting.layout";
@@ -119,8 +120,18 @@ export function SaveReportingDialog({
     description,
     audience,
   });
-  const incomplete =
-    write.isPending || !name.trim() || unsaveable(selection, metrics);
+  // Save stays pressable; a press with something missing names it instead.
+  const [attempted, setAttempted] = useState(false);
+  const nameMissing = name.trim() === "";
+  const refusal = saveRefusal(selection, metrics);
+  const submit = (asDraft: boolean) => {
+    if (write.isPending) return;
+    if (nameMissing || refusal !== undefined) {
+      setAttempted(true);
+      return;
+    }
+    save(asDraft);
+  };
   return (
     <Modal open onClose={onClose} labelledBy={title} intent="form">
       <Heading size="large" id={title} className="t-h2 modal-title">
@@ -131,12 +142,20 @@ export function SaveReportingDialog({
       <form
         id={formId}
         className="form-stack"
+        // The press names a missing name itself; a native bubble would pre-empt it.
+        noValidate
         onSubmit={singlePress((event) => {
           event.preventDefault();
-          save(draftOpen);
+          submit(draftOpen);
         })}
       >
-        <Field label={t("reporting.name")} required>
+        <Field
+          label={t("reporting.name")}
+          required
+          error={
+            attempted && nameMissing ? t("record.fieldRequired") : undefined
+          }
+        >
           {(field) => (
             <TextInput
               {...field}
@@ -159,7 +178,7 @@ export function SaveReportingDialog({
           )}
         </Field>
         <p className="t-caption">
-          {selection.scope.label} · {t(`reporting.${selection.period}`)}
+          {scopeName(selection.scope, t)} · {t(`reporting.${selection.period}`)}
         </p>
         <Field label={t("reporting.audience")}>
           {(field) => (
@@ -203,6 +222,9 @@ export function SaveReportingDialog({
         {metadataChanged && !draftOpen && (
           <p className="t-caption">{t("reporting.draftKeepsName")}</p>
         )}
+        {attempted && refusal !== undefined && (
+          <ErrorLine inline>{t(refusal)}</ErrorLine>
+        )}
         <ErrorLine error={write.error} />
       </form>
       <div className="actions">
@@ -212,13 +234,13 @@ export function SaveReportingDialog({
         {report && !draftOpen && (
           <Button
             variant="ghost"
-            disabled={incomplete || metadataChanged}
-            onClick={() => save(true)}
+            disabled={write.isPending || metadataChanged}
+            onClick={() => submit(true)}
           >
             {t("reporting.saveDraft")}
           </Button>
         )}
-        <Button type="submit" form={formId} disabled={incomplete}>
+        <Button type="submit" form={formId} disabled={write.isPending}>
           {t(draftOpen ? "reporting.saveDraft" : "reporting.save")}
         </Button>
       </div>
@@ -244,10 +266,18 @@ export function unsaveable(
   selection: ReportingSelection,
   metrics: readonly unknown[],
 ): boolean {
-  if (metrics.length === 0) return true;
-  if (selection.period !== "custom") return false;
-  return (
-    !selection.interval ||
+  return saveRefusal(selection, metrics) !== undefined;
+}
+
+// Why a report cannot be saved as it stands, or nothing when it can.
+function saveRefusal(
+  selection: ReportingSelection,
+  metrics: readonly unknown[],
+): "reporting.needsChart" | "reporting.needsInterval" | undefined {
+  if (metrics.length === 0) return "reporting.needsChart";
+  if (selection.period !== "custom") return undefined;
+  return !selection.interval ||
     selection.interval.start_at >= selection.interval.end_at
-  );
+    ? "reporting.needsInterval"
+    : undefined;
 }

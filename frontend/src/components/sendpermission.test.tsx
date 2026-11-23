@@ -6,7 +6,6 @@ import type { components } from "../api/schema";
 import { LocaleProvider, translate } from "../i18n";
 import {
   decidingRecipient,
-  SendMark,
   SendPermission,
   sendStatus,
 } from "./sendpermission";
@@ -586,20 +585,6 @@ describe("one status for the message", () => {
     ).toBe("restricted");
   });
 
-  it("shows no ready mark beside a refused send", () => {
-    render(
-      <LocaleProvider initial="en">
-        <SendMark
-          preview={preview(answer({ decided_by: "machine", verdict: "allow" }))}
-          refusal={{ refusals: [] }}
-        />
-      </LocaleProvider>,
-    );
-    expect(
-      screen.queryByRole("button", { name: /recipients checked/i }),
-    ).toBeNull();
-  });
-
   // Distinct conditions get distinct titles, so a missing deal never reads as
   // a consent problem and a missing consent never reads as an objection.
   it.each([
@@ -609,7 +594,7 @@ describe("one status for the message", () => {
         resolved_category: "active_deal_followup",
       },
       "This message needs one more detail",
-      "Choose the deal for this follow-up.",
+      "No open deal with this recipient supports this follow-up.",
     ],
     [
       { reason_code: "no_marketing_consent" },
@@ -659,7 +644,9 @@ describe("one status for the message", () => {
       screen.getByText("This message needs one more detail"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Choose the deal for this follow-up."),
+      screen.getByText(
+        "No open deal with this recipient supports this follow-up.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("No recorded reason to contact this recipient"),
@@ -685,7 +672,9 @@ describe("one status for the message", () => {
       </LocaleProvider>,
     );
     expect(
-      screen.getByText("Choose the deal for this follow-up."),
+      screen.getByText(
+        "No open deal with this recipient supports this follow-up.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -765,47 +754,6 @@ describe("the server's order picks the deciding refusal before and after Send", 
     expect(before.deciding?.address).toBe(expected);
     expect(after.deciding?.address).toBe(expected);
     expect(after.kind).toBe(before.kind);
-  });
-});
-
-describe("the mark makes no passed claim on a blocked form", () => {
-  it("draws nothing for an allowed message the form will still stop", () => {
-    render(
-      <LocaleProvider initial="en">
-        <SendMark
-          preview={preview(
-            answer({
-              decided_by: "machine",
-              verdict: "allow",
-              would_refuse: false,
-            }),
-          )}
-          blocked
-        />
-      </LocaleProvider>,
-    );
-    expect(
-      screen.queryByRole("button", { name: /recipients checked/i }),
-    ).toBeNull();
-  });
-
-  it("draws the passed check once nothing on the form is in the way", () => {
-    render(
-      <LocaleProvider initial="en">
-        <SendMark
-          preview={preview(
-            answer({
-              decided_by: "machine",
-              verdict: "allow",
-              would_refuse: false,
-            }),
-          )}
-        />
-      </LocaleProvider>,
-    );
-    expect(
-      screen.getByRole("button", { name: /recipients checked/i }),
-    ).toBeInTheDocument();
   });
 });
 

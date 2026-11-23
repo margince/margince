@@ -98,6 +98,13 @@ describe("ProjectScreen", () => {
       stepper.querySelector('[aria-current="step"]')?.textContent,
     ).toContain("Initiative");
     expect(screen.getByTestId("project-step-closed").tagName).toBe("BUTTON");
+    // Each move says what pressing it does, not only the phase it names.
+    expect(
+      screen.getAllByRole("button", { name: "Move to Pursuing" }),
+    ).toContain(screen.getByTestId("project-step-pursuing"));
+    expect(screen.getByRole("button", { name: "Move to Closed" })).toBe(
+      screen.getByTestId("project-step-closed"),
+    );
 
     // The figures: the phase's days, the open tasks, no file attached.
     const figures = screen.getByTestId("project-figures");
@@ -211,6 +218,32 @@ describe("ProjectScreen", () => {
     expect(
       within(drawer).getByText(/No file is attached to this project/),
     ).toBeTruthy();
+    await user.click(
+      within(drawer).getByRole("button", { name: en["docs.add.action"] }),
+    );
+    expect(
+      await screen.findByRole("dialog", { name: en["docs.add.title"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no upload on a project this caller may not change", async () => {
+    const user = userEvent.setup();
+    projectsBackend({
+      view: project360({
+        project: project({ owner_id: "u-someone-else", writable: false }),
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(
+      screen.getByRole("button", { name: en["project.documents.title"] }),
+    );
+    const drawer = await screen.findByRole("dialog", {
+      name: en["project.documents.title"],
+    });
+    expect(
+      within(drawer).queryByRole("button", { name: en["docs.add.action"] }),
+    ).toBeNull();
   });
 
   // The update itself is read in the full history, which the More menu opens.
@@ -386,13 +419,17 @@ describe("ProjectScreen", () => {
     const confirm = within(dialog).getByRole("button", {
       name: "Close project",
     });
-    expect(confirm.hasAttribute("disabled")).toBe(true);
+    await user.click(confirm);
+    expect(posted).toBeFalsy();
+    expect(within(dialog).getByText("Reason is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(
+      within(dialog).getByLabelText("Reason *"),
+    );
 
     await user.type(
       within(dialog).getByLabelText("Reason *"),
       "Delivered and signed off",
     );
-    expect(confirm.hasAttribute("disabled")).toBe(false);
     await user.click(confirm);
 
     await waitFor(() => expect(posted).toBeTruthy());
@@ -492,14 +529,14 @@ describe("ProjectScreen", () => {
     for (const label of ["New deal"]) {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     }
-    // Logging files an activity under the project rather than changing it, so
-    // a colleague's project takes a note as every other record page does.
+    // Logging attaches an activity to the project, and attaching needs the
+    // right to change it, so a colleague's project offers no log.
     await waitFor(() =>
       expect(
         screen
           .getByRole("button", { name: en["log.title"] })
           .hasAttribute("disabled"),
-      ).toBe(false),
+      ).toBe(true),
     );
     // Inside the overflow menu the verbs are refused rather than dropped, so a
     // reader learns the verb exists and why it is shut. What must NOT happen is
@@ -516,7 +553,7 @@ describe("ProjectScreen", () => {
       screen
         .getByRole("button", { name: /^Add task/ })
         .hasAttribute("disabled"),
-    ).toBe(false);
+    ).toBe(true);
     for (const label of [
       /^Edit project/,
       /^Archive/,
@@ -872,7 +909,9 @@ describe("a commitment's tick", () => {
 
     await userEvent.click(
       lastOf(
-        await screen.findAllByRole("checkbox", { name: en["tasks.complete"] }),
+        await screen.findAllByRole("checkbox", {
+          name: "Mark Confirm the depot slot done",
+        }),
       ),
     );
 

@@ -222,13 +222,12 @@ it("will not send until a reason is written", async () => {
   render(<CompanyRejectAction company={COMPANY} />);
 
   await user.click(await screen.findByTestId("reject-company"));
-  expect(confirmButton()).toBeDisabled();
-  await user.type(
-    screen.getByLabelText(/reason this is not a company/i),
-    "   ",
-  );
-  expect(confirmButton()).toBeDisabled();
+  const reason = screen.getByLabelText(/reason this is not a company/i);
+  await user.type(reason, "   ");
+  await user.click(confirmButton());
   expect(sent).toHaveLength(0);
+  expect(reason).toHaveAttribute("aria-invalid", "true");
+  expect(reason).toHaveFocus();
 });
 
 // A second decision about the same company is a second decision.

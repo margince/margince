@@ -222,6 +222,13 @@ describe("the rate sheets", () => {
     // trimDecimal turns the numeric(20,10) value into a readable 0.92.
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     expect(screen.getByText("0.92")).toBeTruthy();
+    // The day a rate takes effect reads like every other date in Settings,
+    // never as the stored ISO string.
+    const fx = rateCard("Currency rates");
+    expect(
+      within(fx).getByText(formatDate("2026-07-23", "en", browserZone())),
+    ).toBeTruthy();
+    expect(within(fx).queryByText("2026-07-23")).toBeNull();
     expect(screen.getByText("claude-opus-4-8")).toBeTruthy();
     expect(screen.getByText(/\$6\.25$/)).toBeTruthy();
 
@@ -329,21 +336,25 @@ describe("the rate sheets", () => {
     );
     await user.click(screen.getByRole("option", { name: "gemini" }));
     for (const label of [
-      "Provider",
-      "Model",
-      "Input $/M",
-      "Output $/M",
+      "Provider *",
+      "Model *",
+      "Input $/M *",
+      "Output $/M *",
       "Cache read $/M",
       "Cache write $/M",
-      "Effective",
+      "Effective *",
     ]) {
       expect(within(dialog).getByLabelText(label)).toBeTruthy();
     }
-    // Provider, model and the two prices are required; the cache columns
-    // default to 0 and do not hold the button.
-    expect(within(dialog).getByRole("button", { name: "Save" })).toHaveProperty(
-      "disabled",
-      true,
+    // Model and the two prices are required; the cache columns default to 0
+    // and are left alone by Save.
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(within(dialog).getByText("Model is required.")).toBeTruthy();
+    expect(within(dialog).getByText("Input $/M is required.")).toBeTruthy();
+    expect(within(dialog).getByText("Output $/M is required.")).toBeTruthy();
+    expect(within(dialog).queryByText(/^Cache .* is required\.$/)).toBeNull();
+    expect(document.activeElement).toBe(
+      within(dialog).getByRole("combobox", { name: "Model" }),
     );
   });
 

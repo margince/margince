@@ -31,16 +31,16 @@ const latestInboundLimit = 10
 // nobody has answered, newest first, and the record's last exchange. Mail and
 // messages come from the waiting_reply read, so this never judges a thread on its own.
 func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID ids.UUID) (crmcontracts.LatestInboundList, error) {
-	columns, err := s.ActiveActivityColumns(ctx)
-	if err != nil {
-		return crmcontracts.LatestInboundList{}, err
-	}
 	now := s.now()
 	since := now.Add(-JustInDays * 24 * time.Hour)
 	var out crmcontracts.LatestInboundList
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
 		// An unknown record is a 404, which the timeline's own gate serves as an empty list.
 		if err := auth.EnsureVisibleExisting(ctx, tx, entityType, entityID); err != nil {
+			return err
+		}
+		columns, err := s.activityColumnsIn(ctx, tx)
+		if err != nil {
 			return err
 		}
 		read := func(in ListActivitiesInput) ([]crmcontracts.Activity, error) {

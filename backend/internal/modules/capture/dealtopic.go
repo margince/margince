@@ -53,8 +53,8 @@ type DealTopic struct {
 }
 
 // ErrTopicAbstained is a check that gave no answer: no model is configured,
-// the budget is spent, or every model declined. The mail is then filed on no
-// suggested deal, and a later pass asks again.
+// the budget is spent, or the subject is restricted. The mail is then filed on
+// no suggested deal, and a later pass asks again.
 var ErrTopicAbstained = errors.New("capture: the deal topic check gave no answer")
 
 // DealTopicCheck asks a model which of deals the mail is about. Compose

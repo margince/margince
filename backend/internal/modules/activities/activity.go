@@ -80,6 +80,10 @@ type LogActivityInput struct {
 	audienceOf *ids.ActivityID
 	// recordsMeeting is the meeting a transcript records (records_meeting_id).
 	recordsMeeting *ids.ActivityID
+	// continues is the activity this one carries on: a reply's anchor, a
+	// transcript's meeting, a reminder's message. Only internal writers set it,
+	// because the links that activity holds skip the write check (mayCarry).
+	continues *ids.UUID
 	// inheritedProject is the deal's project the activity is filed under too.
 	inheritedProject ids.UUID
 	// Automatic notes can also record a meeting that already has its outcome.
@@ -239,9 +243,6 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	if err := s.withCustomColumns(ctx, &in); err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
 	var out crmcontracts.Activity
 	created := true
 	isolation := pgx.ReadCommitted
@@ -249,6 +250,9 @@ func (s *Store) LogActivity(ctx context.Context, in LogActivityInput) (crmcontra
 		isolation = pgx.Serializable
 	}
 	err := s.txRetryingLockCycles(ctx, isolation, func(tx pgx.Tx) error {
+		if err := s.withCustomColumns(ctx, tx, &in); err != nil {
+			return err
+		}
 		var err error
 		out, created, err = s.logActivityAndReadTranscript(ctx, tx, in)
 		return err
@@ -267,11 +271,9 @@ func (s *Store) LogActivityTx(ctx context.Context, tx pgx.Tx, in LogActivityInpu
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	if err := s.withCustomColumns(ctx, &in); err != nil {
+	if err := s.withCustomColumns(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	// The columns this call already read, never a second read: the caller holds
-	// its transaction, and the catalog would open another connection under it.
 	out, created, err := s.logActivityAndReadTranscript(ctx, tx, in)
 	if err == nil {
 		err = withCustomValuesOf(ctx, tx, in.customColumns, &out)

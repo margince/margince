@@ -3,7 +3,10 @@
 
 package automation
 
-import "github.com/margince/margince/backend/internal/shared/ports/workflow"
+import (
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
+)
 
 // ActionType is the closed, user-facing action vocabulary (RC-11,
 // features/10 §1): the seven effects a catalog or agent-authored
@@ -183,6 +186,26 @@ func AllActionTypes() []ActionType {
 		ActionTypeCreateTask, ActionTypeNotify, ActionTypeAssignOwner,
 		ActionTypeSetField, ActionTypeDraftEmail, ActionTypeRequestApproval, ActionTypeAddToShortlist,
 	}
+}
+
+// RuleTier is the mode a rule with this action shows, in its list row and on
+// its runs. It is confirmation_required when every firing waits for approval.
+func RuleTier(action string) string {
+	def, ok := ActionDefFor(ActionType(action))
+	if !ok {
+		return tierAutoExecute
+	}
+	// Drafting is auto_execute, but every draft then waits as a held draft.
+	if def.Executor == workflow.ActionDraftEmail {
+		return tierConfirmationRequired
+	}
+	if def.Tier != tierDynamic {
+		return def.Tier
+	}
+	if resolveAssignOwnerTier(ruleFiringScope) == mcp.TierConfirmationRequired {
+		return tierConfirmationRequired
+	}
+	return tierAutoExecute
 }
 
 // ActionDefFor resolves one action's registry entry; ok=false for

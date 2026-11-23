@@ -5,20 +5,77 @@
     6
   ],
   "passed": 2,
-  "runs": 3,
+  "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
   "effort": "reasoning medium",
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "5c4fe6ab0ba18e76",
+    "tools": "b1ff58b347f273dc",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:18:48Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:18Z"
+  },
   "usage": {
-    "input_tokens": 71470,
-    "output_tokens": 3196,
+    "input_tokens": 86934,
+    "output_tokens": 2062,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 380032,
-    "runs_measured": 3,
+    "cache_read_input_tokens": 474240,
+    "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_import_format",
+        "describe_record_fields",
+        "preview_import",
+        "read_import",
+        "read_import_report",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_import_format",
+        "describe_record_fields",
+        "preview_import",
+        "read_import",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3.5,
+      "min": 3,
+      "max": 4
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 280587,
+      "min": 264444,
+      "max": 296730
+    },
+    "output_tokens": {
+      "median": 1031,
+      "min": 976,
+      "max": 1086
+    }
   }
 }

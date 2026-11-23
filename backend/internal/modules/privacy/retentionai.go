@@ -12,6 +12,7 @@ package privacy
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -83,77 +84,58 @@ func (s *RetentionService) eraseVoiceSignalContent(ctx context.Context, id ids.U
 	})
 }
 
-// embedCallWithoutPayload narrows the embed sweep to the rows whose deletion
-// destroys nothing but telemetry.
+// evaluateCallRetention deletes the call traces past their fixed caps, a set
+// per transaction, and records each pass once. They are engine telemetry with
+// no subject, so no row gets its own audit.
 //
-// It is what makes the sweep safe under the retain-only posture. ai_call's own
-// columns are routing, spend and served identity — no subject content, which is
-// why ageing them out is hygiene rather than storage limitation. But
-// ai_call_payload FK-CASCADES from ai_call (0089), and an embed call's captured
-// payload holds the INPUT TEXTS that were embedded (ai.buildEmbedPayload) —
-// record content, and the same special-category-adjacent content the
-// ai_call_payload/content policy governs. So deleting a payload-bearing embed
-// call destroys subject content through the cascade, in the same pass that
-// suppresses the policy which governs exactly those rows.
-//
-// Under the posture the sweep therefore skips any embed call that has a payload
-// row. With Layer-3 capture off — the default — no embed call has one, so the
-// volume hygiene this sweep exists for is unaffected.
-const embedCallWithoutPayload = `
-	AND NOT EXISTS (SELECT 1 FROM ai_call_payload p WHERE p.ai_call_id = ai_call.id)`
-
-// evaluateEmbedCallRetention erases over-age embedding-kind ai_call trace
-// rows, batched and audited one record per transaction like every other
-// retention action — but driven by the fixed embedCallRetention cap
-// instead of a workspace's retention_policy rows, since these rows are
-// engine telemetry, not a policy-configurable domain record.
-//
-// retainOnly narrows it to the payload-free rows; see embedCallWithoutPayload.
-func (s *RetentionService) evaluateEmbedCallRetention(ctx context.Context, retainOnly bool) error {
-	selector := `
-		SELECT id FROM ai_call
-		WHERE kind = 'embedding' AND occurred_at < now() - make_interval(days => $1)`
-	if retainOnly {
-		selector += embedCallWithoutPayload
+// An answer trace with a stored payload always stays. The payload has its own
+// retention rule, and deleting the trace would take the payload with it.
+func (s *RetentionService) evaluateCallRetention(ctx context.Context) error {
+	if s.pruneEmbedCalls == nil || s.pruneAnswerCalls == nil {
+		s.log.Warn("retention: call traces are kept, because their prunes were not supplied")
+		return nil
 	}
-	selector += ` LIMIT $2`
-	var due []ids.UUID
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, selector, embedCallRetention, retentionBatch)
-		if err != nil {
-			return err
-		}
-		due, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err := s.pruneCalls(ctx, s.pruneEmbedCalls, embedCallPrune, embedCallRetention, false); err != nil {
 		return err
-	})
-	if err != nil {
-		return fmt.Errorf("retention ai_call/embedding: select: %w", err)
 	}
-	for _, id := range due {
-		if err := s.eraseEmbedCall(ctx, id); err != nil {
-			return fmt.Errorf("retention ai_call/embedding on %s: %w", id, err)
-		}
-	}
-	return nil
+	return s.pruneCalls(ctx, s.pruneAnswerCalls, answerCallPrune, answerCallRetention, true)
 }
 
-// eraseEmbedCall deletes one over-age embedding-kind ai_call row outright
-// — unlike activity/erase there is no metadata half left to keep: the
-// embedding trace row IS the content being aged out.
-func (s *RetentionService) eraseEmbedCall(ctx context.Context, id ids.UUID) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `DELETE FROM ai_call WHERE id = $1`, id); err != nil {
+// pruneCalls reads the retain-only posture in each batch's transaction. A
+// switch to retain-only during a long pass then holds from the next batch.
+func (s *RetentionService) pruneCalls(ctx context.Context, prune CallPrune, rows string, days int, keepWithPayload bool) error {
+	cutoff := time.Now().AddDate(0, 0, -days)
+	var total int64
+	for {
+		var removed int64
+		err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+			retainOnly, err := retainOnlyTx(ctx, tx)
+			if err != nil {
+				return err
+			}
+			removed, err = prune(ctx, tx, cutoff, operationalPruneBatch, keepWithPayload || retainOnly)
 			return err
-		}
-		auditID, err := storekit.AuditWithEvidence(ctx, tx, actionErase, "ai_call", id, nil, nil, map[string]any{
-			evidenceKeyRetentionAction: actionErase, "retain_days": embedCallRetention,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("retention %s: %w", rows, err)
 		}
-		if err := storekit.RedactAuditHistory(ctx, tx, auditID); err != nil {
-			return err
+		total += removed
+		if removed < operationalPruneBatch {
+			break
 		}
-		return storekit.EmitEventForEntity(ctx, tx, auditID, "ai_call", id, retentionAppliedPayload(crmcontracts.RetentionAppliedErase, nil, nil))
-	})
+	}
+	return s.recordPrune(ctx, rows, total, days)
+}
+
+// CallPrune removes up to limit call traces of its kinds from before cutoff.
+// keepWithPayload leaves a trace that still has a stored payload.
+type CallPrune func(ctx context.Context, tx pgx.Tx, cutoff time.Time, limit int, keepWithPayload bool) (int64, error)
+
+// WithCallPrunes returns a service that ages out call traces: the embedding
+// ones, then the completion and decision ones. The ai module owns the table
+// and supplies both deletes.
+func (s *RetentionService) WithCallPrunes(embedding, answers CallPrune) *RetentionService {
+	out := *s
+	out.pruneEmbedCalls, out.pruneAnswerCalls = embedding, answers
+	return &out
 }

@@ -189,8 +189,8 @@ type ConsentCapturer interface {
 	// booking on somebody's behalf is not that somebody initiating contact.
 	RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error
 	// CaptureLeadBookingConsent records the operational grant for a booker who
-	// is a live lead. A newsletter tick is not asked about: its confirmation
-	// link is minted against a contact's own address, and a lead has none.
+	// is a live lead. A newsletter tick is asked about through the lead's own
+	// address, by the same confirmation link a contact gets.
 	CaptureLeadBookingConsent(ctx context.Context, leadID ids.LeadID, consent BookingConsent) (MarketingOutcome, error)
 }
 
@@ -231,7 +231,7 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, err)
 		return
 	}
-	profile, ok := h.openBookingPage(w, r, page)
+	profile, team, ok := h.openBookingPage(w, r, page)
 	if !ok {
 		return
 	}
@@ -241,12 +241,22 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 	}
 	profile = bookingLength(profile, params.L)
 	duration := time.Duration(profile.DurationMinutes) * time.Minute
-	slots, truncated, err := h.store.ReliableAvailability(r.Context(), page.HostUserID, params.From, params.To, duration)
+	slots, truncated, err := h.store.PageAvailability(r.Context(), page.HostUserID, team, params.From, params.To, duration)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		writeGuestAvailabilityErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"slots": slots, "truncated": truncated})
+}
+
+// writeGuestAvailabilityErr answers a guest's availability read. A host with no
+// calendar reads as a paused page, so the guest learns nothing of the host's setup.
+func writeGuestAvailabilityErr(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, errNoCalendarToRead) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	writeStoreErr(w, r, err)
 }
 
 // bookingRequestIsWritable refuses a request before anything is written.
@@ -327,7 +337,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writePublicInvitation(w, *recovered, intent.Marketing)
 		return
 	}
-	if _, err := h.store.validateInvitationTime(r.Context(), page.HostUserID, req.Start, req.End); err != nil {
+	if err := h.store.validatePageTime(r.Context(), page.HostUserID, open.team, req.Start, req.End); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}

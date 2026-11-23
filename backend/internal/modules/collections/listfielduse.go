@@ -47,29 +47,6 @@ func (s *Store) retiredColumns(ctx context.Context, entityType string) (map[stri
 	return retired, nil
 }
 
-// retiredFieldsOf is the retired custom fields a Live List's filter names.
-// A Shortlist names none.
-func (s *Store) retiredFieldsOf(ctx context.Context, l listRow) ([]string, error) {
-	if l.ListType != listTypeDynamic {
-		return nil, nil
-	}
-	pred, err := predicateFromDefinition(l.Definition)
-	if err != nil {
-		return nil, err
-	}
-	retired, err := s.retiredColumns(ctx, l.EntityType)
-	if err != nil {
-		return nil, err
-	}
-	var out []string
-	for _, field := range storekit.FieldsNamed(pred) {
-		if retired[field] {
-			out = append(out, field)
-		}
-	}
-	return out, nil
-}
-
 // LiveListsUsingField answers the live, unarchived Live Lists of one record
 // type whose filter names field. A list this caller may find is named; the
 // others are only counted, so a private list's name stays with its owner and

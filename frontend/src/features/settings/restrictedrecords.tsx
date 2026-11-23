@@ -15,12 +15,13 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { activityDay } from "../../format/activitywhen";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { isUuid } from "../../lib/uuid";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -87,9 +88,15 @@ function OverrideModal({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [reason, setReason] = useState("");
   const [typedId, setTypedId] = useState("");
+  const labels = {
+    id: t("restricted.pin.idLabel"),
+    reason: t("restricted.reasonLabel"),
+  };
   const activityId = kind === "pin" ? typedId.trim() : target?.activityId;
   // A malformed id keeps the irreversible confirm shut. Shape only: whether
   // the record exists is the server's answer.
@@ -119,7 +126,16 @@ function OverrideModal({
   });
 
   // The reason is what makes this a decision rather than a toggle, so the
-  // confirm waits for one: the server refuses a blank one.
+  // confirm asks for one: the server refuses a blank one.
+  const confirm = () => {
+    const blank = blankRequired(locale, {
+      ...(kind === "pin" ? { id: [labels.id, typedId] as const } : {}),
+      reason: [labels.reason, reason],
+    });
+    if (idIsMalformed) blank.set("id", t("restricted.pin.idMalformed"));
+    if (faults.show(blank)) return;
+    if (activityId) decide.mutate({ activityId, kind, reason });
+  };
   return (
     <ConfirmModal
       open={open}
@@ -127,48 +143,55 @@ function OverrideModal({
         setReason("");
         setTypedId("");
         decide.reset();
+        faults.show(new Map());
         onClose();
       }}
       title={t(`restricted.${kind}.title`)}
       confirmLabel={t(`restricted.${kind}.confirm`)}
       confirmVariant="danger"
-      confirmDisabled={
-        reason.trim() === "" || (kind === "pin" && !idIsWellFormed)
-      }
-      onConfirm={() =>
-        activityId && decide.mutate({ activityId, kind, reason })
-      }
+      bodyRef={faultsRoot}
+      onConfirm={confirm}
       pending={decide.isPending}
       error={decide.error ? problemMessageOf(decide.error, t) : null}
     >
       <p>{t(`restricted.${kind}.body`)}</p>
       {kind === "pin" && (
         <Field
-          label={t("restricted.pin.idLabel")}
+          label={labels.id}
           hint={t("restricted.pin.idHint")}
-          error={idIsMalformed ? t("restricted.pin.idMalformed") : undefined}
+          error={
+            faults.of("id") ??
+            (idIsMalformed ? t("restricted.pin.idMalformed") : undefined)
+          }
           required
         >
           {(control) => (
             <TextInput
               {...control}
               value={typedId}
-              onChange={(event) => setTypedId(event.target.value)}
+              onChange={(event) => {
+                setTypedId(event.target.value);
+                faults.edited("id");
+              }}
             />
           )}
         </Field>
       )}
       <Field
-        label={t("restricted.reasonLabel")}
+        label={labels.reason}
         hint={t("restricted.reasonHint")}
         required
+        error={faults.of("reason")}
       >
         {(control) => (
           <Textarea
             {...control}
             rows={3}
             value={reason}
-            onChange={(event) => setReason(event.target.value)}
+            onChange={(event) => {
+              setReason(event.target.value);
+              faults.edited("reason");
+            }}
           />
         )}
       </Field>

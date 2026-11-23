@@ -4,20 +4,21 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { AddDocumentDialog } from "../../components/adddocument";
 import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { type Translator, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { attachmentTitle } from "../../lib/attachmentlink";
 import {
+  blankRequired,
   type FieldLabels,
   problemCodeOf,
   refusalSentences,
   unwrap,
 } from "../../lib/problem";
-import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { roomBriefKey } from "./dealroombrief.key";
 import "./dealroomdocuments.css";
 import { dealFilesKey, roomDocumentsKey } from "../../lib/attachmentkeys";
@@ -70,6 +71,7 @@ export function AddDocument({
   refusal,
 }: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [attachmentId, setAttachmentId] = useState("");
   const [group, setGroup] = useState(DOCUMENT_GROUPS[0]?.key ?? "");
   const [uploading, setUploading] = useState(false);
@@ -106,6 +108,7 @@ export function AddDocument({
         <Field
           label={labels.attachment_id}
           hint={t("room.docs.fileHint")}
+          required
           error={faults.of("attachment_id")}
         >
           {(control) => (
@@ -145,9 +148,12 @@ export function AddDocument({
       </div>
       <div className="card-actions">
         <Button
-          disabled={attachmentId === ""}
           pending={add.isPending}
-          onClick={() =>
+          onClick={() => {
+            const blank = blankRequired(locale, {
+              attachment_id: [labels.attachment_id, attachmentId],
+            });
+            if (faults.show(blank)) return;
             add.mutate(
               { attachmentId, group },
               {
@@ -155,8 +161,8 @@ export function AddDocument({
                 onError: (error) =>
                   faults.show(addRefusal(error, labels, t).byField),
               },
-            )
-          }
+            );
+          }}
         >
           {t("room.docs.add")}
         </Button>

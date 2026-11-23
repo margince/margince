@@ -323,7 +323,7 @@ func (s *Store) offerLanguage(ctx context.Context, tx pgx.Tx, entity ids.LegalEn
 		id := openapi_types.UUID(template.UUID)
 		templateID = &id
 	}
-	locale, _, err := resolveRenderTemplate(ctx, tx, templateID)
+	locale, _, err := resolveRenderTemplate(ctx, tx, templateID, "")
 	if err != nil {
 		return "", err
 	}

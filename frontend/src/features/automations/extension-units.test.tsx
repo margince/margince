@@ -32,13 +32,19 @@ vi.mock("../../lib/extensions", async (importOriginal) => ({
 
 // A unit's copy as gen-composition merges it, so a title resolves as it would composed.
 vi.mock("@composition/copy", () => ({
-  extensionCopy: { en: { "extDispactConnector.title": "Dispact" } },
+  extensionCopy: {
+    en: {
+      "extDispactConnector.title": "Dispact",
+      "extDispactConnector.summary": "Files team chat messages on the CRM.",
+    },
+  },
   extensionOverrides: {},
 }));
 
 const DISPACT: ExtensionDescriptor = {
   name: "dispact-connector",
   title: "extDispactConnector.title",
+  summary: "",
   secretScope: "user",
   panels: [],
   verbs: [],
@@ -75,6 +81,16 @@ describe("the units offered on a settings page", () => {
     );
   });
 
+  it("says under the name what the unit does, when its copy says it", () => {
+    unitsForSecretScope.mockReturnValue([
+      { ...DISPACT, summary: "extDispactConnector.summary" },
+    ]);
+    renderCard("user");
+    expect(
+      screen.getByText("Files team chat messages on the CRM."),
+    ).toBeTruthy();
+  });
+
   it("opens the unit from a press anywhere on its row", () => {
     unitsForSecretScope.mockReturnValue([DISPACT]);
     renderCard("user");
@@ -88,6 +104,7 @@ describe("the units offered on a settings page", () => {
       {
         name: "open_notes",
         title: "",
+        summary: "",
         secretScope: "user",
         panels: [],
         verbs: [],
@@ -156,6 +173,7 @@ describe("the units offered on a settings page", () => {
       {
         name: "notes",
         title: "",
+        summary: "",
         secretScope: "user",
         verbs: [],
         entries: [],

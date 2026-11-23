@@ -13,35 +13,29 @@
 // its labels sat outside the drawing. The shared RelationshipMap draws the same
 // routes in the language the account page already uses.
 
-import { useId, useMemo, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 
 import type { components } from "../../../api/schema";
 import { Chapter, ChapterJump, Chapters } from "../../../design-system/chapter";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Panel, PanelBody } from "../../../design-system/panel";
-import { RelationshipMap } from "../../../design-system/relationshipmap";
 import { SurfaceState } from "../../../design-system/surfacestate";
-import { formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
-import { useViewerId } from "../../../lib/session";
 import { mapLabels } from "../../companies/companycontacts/summary";
 import { useContactGraph } from "../contactgraph";
-import { availabilityLabel, RoutesPanel, useOwnRoute } from "../contactroutes";
+import { availabilityLabel, RoutesPanel } from "../contactroutes";
 import { IntroAsksPanel, isOpenAsk } from "../introasks";
 import { IntroDrawer } from "../introdrawer";
 import { type IntroRequest, useIntroRequests } from "../introrequests";
+import { lastReadFailed } from "../readfailed";
 import { RecordIntroductionButton } from "../recordintroduction";
-import { CaptureGapsNotice } from "./capturegaps";
+import { CaptureGapsNotice, useCaptureGapsShown } from "./capturegaps";
 import { useNetworkReadings } from "./decision";
-import { EdgeDetail } from "./edgedetail";
 import { LeadPanel } from "./leadpanel";
-import {
-  completenessText,
-  mapModelFromContactGraph,
-  WRITE_EMAIL_ACTION,
-} from "./mapmodel";
 import { latestChange, MomentsTimeline } from "./moments";
+import { type Graph, type GraphReading, readGraph } from "./readgraph";
 import { RelaySteps } from "./relay";
+import { WhoKnowsChapter } from "./whoknows";
 import "../contactnetwork.css";
 
 type RelationshipMoments = Pick<
@@ -110,8 +104,6 @@ export function ContactNetworkTab({
   );
 }
 
-type Graph = NonNullable<ReturnType<typeof useContactGraph>["data"]>;
-
 // The tab's three chapters over one read graph: the way in, who knows the
 // contact, and where the introduction and the relationship stand.
 function NetworkChapters({
@@ -129,9 +121,8 @@ function NetworkChapters({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const own = useOwnRoute();
-  const viewerId = useViewerId();
   const asks = useIntroRequests(contactId);
+  const asksFailed = lastReadFailed(asks);
   const [focus, setFocus] = useState<string | null>(null);
   const [asking, setAsking] = useState<RouteCandidate | undefined>();
   const baseId = useId();
@@ -140,26 +131,10 @@ function NetworkChapters({
     who: `${baseId}-who`,
     progress: `${baseId}-progress`,
   };
-  const copy = useMemo(
-    () => ({
-      ourTeam: t("contact.intro.laneOurs"),
-      theirCompany: t("contact.intro.laneTheirs"),
-      peers: t("contact.intro.lanePeers"),
-      target: t("contact.intro.laneTarget"),
-      useThisRoute: t("contact.intro.useThisRoute"),
-      you: t("contact.intro.heroYou"),
-      writeEmail: t("compose.writeEmail"),
-      withheldDirect: t("contact.graph.withheldDirect"),
-      withheldAccount: t("contact.graph.withheldAccount"),
-      edgeDirect: (name: string) => t("contact.intro.edgeDirect", { name }),
-      edgeDirectYou: t("contact.intro.edgeDirectYou"),
-      edgeAccount: (name: string) => t("contact.intro.edgeAccount", { name }),
-    }),
-    [t],
-  );
 
   const read = readGraph(data, asks.data ?? [], focus);
   const settledAsks = (asks.data ?? []).filter((ask) => !isOpenAsk(ask));
+  const gapsShown = useCaptureGapsShown(contactId);
   // The newest change and whether the section was refused: a refused section
   // reading as "nothing new" is a claim made out of a permission.
   const moved = latestChange(view);
@@ -170,50 +145,23 @@ function NetworkChapters({
     change: moved.change,
     changeWithheld: moved.withheld,
     open: read.open,
-    openPending: asks.isPending,
-    openUnread: asks.isError,
+    openPending: asks.isPending && !asksFailed,
+    openUnread: asksFailed,
   });
 
-  const model = mapModelFromContactGraph(data, copy, {
-    userId: viewerId,
-    mayWrite: onWrite !== undefined,
+  const wayIn = wayInParts({
+    read,
+    data,
+    contactId,
+    t,
+    onAsk: setAsking,
+    onOpenEmail,
   });
-  const complete = completenessText(data, copy, (n) =>
-    t("contact.graph.droppedNote", { count: formatNumber(n, locale) }),
-  );
-
-  const wayIn =
-    read.lead || read.hasMain ? (
-      <>
-        {/* The lead, or nothing. With no way in the chapter's answer says so,
-            and a panel repeating it would make the page say it twice. */}
-        {read.lead ? (
-          <LeadPanel
-            route={read.lead}
-            alternatives={read.routes.slice(1)}
-            roles={read.roles}
-            targetName={read.targetName}
-            targetId={contactId}
-            blocked={availabilityLabel(read.lead.availability, t)}
-            onAsk={setAsking}
-            onOpenEmail={onOpenEmail}
-          />
-        ) : null}
-        {/* Only a server that predates the ranked list sends a lone route,
-            which the lead card cannot draw. */}
-        {read.legacy ? <RoutesPanel graph={data} onAsk={setAsking} /> : null}
-        {/* A group withheld for lack of a grant says so in the product's one
-            spelling of that fact, rather than reading as nobody knowing them. */}
-        {read.withheld ? (
-          <SurfaceState
-            loadingLabel={t("tab.network")}
-            state="withheld"
-            emptyLabel={t("contact.graph.noDirect")}
-          >
-            {null}
-          </SurfaceState>
-        ) : null}
-      </>
+  // With no map below, the mailbox notice sits under the way in. One that
+  // draws nothing must not leave the chapter an empty card.
+  const lonelyNotice =
+    read.lonely && gapsShown ? (
+      <CaptureGapsNotice contactId={contactId} />
     ) : null;
   const whoTitle = t("contact.intro.mapTitle", { name: read.targetName });
 
@@ -230,7 +178,7 @@ function NetworkChapters({
               title: t("contact.chapter.wayIn"),
               reading: readings.wayIn.chip,
             },
-            { id: ids.who, title: whoTitle },
+            ...(read.lonely ? [] : [{ id: ids.who, title: whoTitle }]),
             {
               id: ids.progress,
               title: t("contact.chapter.progress"),
@@ -244,82 +192,40 @@ function NetworkChapters({
           title={t("contact.chapter.wayIn")}
           answer={readings.wayIn.answer}
         >
-          {wayIn}
+          {wayIn || lonelyNotice ? (
+            <>
+              {wayIn}
+              {lonelyNotice}
+            </>
+          ) : null}
         </Chapter>
 
-        {/* The picture behind the answer, full width: the drawing scrolls rather
-          than shrinking. How complete it is closes the card. */}
-        <Chapter
+        <WhoKnowsChapter
           id={ids.who}
           title={whoTitle}
-          answer={t("contact.chapter.whoAnswer", { name: read.targetName })}
-        >
-          <Panel className="pn-who">
-            <RelationshipMap
-              model={model}
-              focusId={read.focused}
-              onFocus={setFocus}
-              onAction={(nodeId, actionId) => {
-                if (actionId === WRITE_EMAIL_ACTION) {
-                  onWrite?.();
-                  return;
-                }
-                const picked = read.routeAt(nodeId);
-                // The reader's own route, or one spoken for, opens no drawer.
-                // The server refuses an ask whose introducer is the contact
-                // making it.
-                if (
-                  picked &&
-                  !own(picked) &&
-                  picked.availability === "available"
-                ) {
-                  setAsking(picked);
-                }
-              }}
-              completenessText={complete}
-              // The account page's word set, with the one label that names the
-              // subject swapped: this drawing is about a contact.
-              labels={mapLabels(t, locale, t("contact.intro.mapRegion"))}
-              // The selected contact's own detail, including the one write this
-              // picture offers: recording an observed acquaintance.
-              panelSlot={
-                read.focused && read.anchor ? (
-                  <EdgeDetail
-                    graph={data}
-                    nodeId={read.focused}
-                    anchorId={read.anchor.id}
-                    viewerId={viewerId}
-                    onOpenEmail={onOpenEmail}
-                  />
-                ) : null
-              }
-            />
-          </Panel>
-          <CaptureGapsNotice contactId={contactId} />
-        </Chapter>
+          contactId={contactId}
+          data={data}
+          read={read}
+          onFocus={setFocus}
+          onAsk={setAsking}
+          onWrite={onWrite}
+          onOpenEmail={onOpenEmail}
+          // The account page's word set, with the one label that names the
+          // subject swapped: this drawing is about a contact.
+          labels={mapLabels(t, locale, t("contact.intro.mapRegion"))}
+        />
 
-        <Chapter
+        <ProgressChapter
           id={ids.progress}
-          title={t("contact.chapter.progress")}
           answer={readings.progress.answer}
-          action={
-            <RecordIntroductionButton
-              contactId={contactId}
-              contactName={read.targetName}
-            />
-          }
-        >
-          {/* One card: where the handoff stands, then what moved lately with
-              earlier asks among it. */}
-          <Panel>
-            <PanelBody>
-              <RelaySteps ask={read.open} />
-            </PanelBody>
-            <MomentsTimeline view={view} asks={settledAsks} />
-          </Panel>
-          {/* An open ask keeps its verbs in a card of its own. */}
-          <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
-        </Chapter>
+          contactId={contactId}
+          read={read}
+          view={view}
+          settledAsks={settledAsks}
+          // The panel's own mount reads again, and the card holding the
+          // Retry must outlast that read.
+          asksFailed={asksFailed}
+        />
 
         {asking ? (
           <IntroDrawer
@@ -335,75 +241,113 @@ function NetworkChapters({
   );
 }
 
-/**
- * readGraph is the page's whole reading of one payload, in one place.
- *
- * Pulled out of the component because assembling six sections and deriving
- * seven values from two reads is two jobs, and only the second is worth
- * testing on its own.
- */
-function readGraph(
-  data: Graph,
-  asks: readonly IntroRequest[],
-  focus: string | null,
-) {
-  const nodes = data.nodes ?? [];
-  const routes = data.routes ?? [];
-  const alternatives =
-    routes.length > 1 || (routes.length === 0 && !!data.route);
-  const withheld = (data.groups_omitted ?? []).length > 0;
-  return {
-    anchor: nodes.find((n) => n.group === "anchor"),
-    targetName: nodes.find((n) => n.group === "anchor")?.label ?? "",
-    routes,
-    lead: routes[0],
-    // The ask in flight. Only one route per colleague can be open at a time,
-    // and the newest is the one this page is about.
-    open: asks.find(isOpenAsk),
-    // The card shows what the lead panel does NOT: the other routes when there
-    // are some, and the legacy singular `route` when a server that predates the
-    // candidate list is answering — which the panel cannot draw at all.
-    //
-    // An empty `routes` is NOT the legacy case on its own. A current server
-    // answering "nobody reaches this contact" sends an empty list and no
-    // `route`, and drawing the card then put a heading reading "Best first,
-    // pick the one you can actually use" above nothing — beside the paragraph
-    // that had already said nobody reaches them, so the page said it twice and
-    // offered a choice of none. The legacy payload is the one that has a
-    // singular `route` to draw.
-    alternatives,
-    // Job titles for the lead's chain, read off the same payload's nodes.
-    roles: {
-      via: nodes.find((n) => n.user_id === routes[0]?.via_user_id)?.sublabel,
-      through: nodes.find(
-        (n) =>
-          n.contact_id !== undefined &&
-          n.contact_id === routes[0]?.through_contact_id,
-      )?.sublabel,
-      target: nodes.find((n) => n.group === "anchor")?.sublabel,
-    },
-    legacy: routes.length === 0 ? data.route : undefined,
-    withheld,
-    // Whether the working grid has a left column at all.
-    hasMain: alternatives || withheld,
-    // The drawing's verb, joined back to the route it means.
-    //
-    // A node is keyed by the graph's own id and a route names a bare user id,
-    // so the join is the node's `user_id` — read out of the same payload rather
-    // than re-derived from the id's shape. Comparing the two raw (which is what
-    // this did) matched nothing, and every "use this route" on the picture
-    // silently did nothing at all.
-    routeAt: (nodeId: string) => {
-      const node = nodes.find((n) => n.id === nodeId);
-      return node?.user_id === undefined
-        ? undefined
-        : routes.find((r) => r.via_user_id === node.user_id);
-    },
-    // A selection only means something against the graph ON SCREEN. This tab
-    // stays mounted as a reader moves between contacts, so a raw id would open
-    // the detail on a node this graph does not have — describing a record the
-    // reader has already left. Validating beats resetting on contactId: it also
-    // covers a graph that reloads without the node for any other reason.
-    focused: nodes.some((n) => n.id === focus) ? focus : null,
-  };
+// The way in: the lead route, a lone route from an older server, and a group
+// withheld from the reader. Null when there is none, so no card is framed.
+function wayInParts({
+  read,
+  data,
+  contactId,
+  t,
+  onAsk,
+  onOpenEmail,
+}: Readonly<{
+  read: GraphReading;
+  data: Graph;
+  contactId: string;
+  t: ReturnType<typeof useT>;
+  onAsk: (route: RouteCandidate) => void;
+  onOpenEmail?: (activityId: string) => void;
+}>): ReactNode {
+  return read.lead || read.hasMain ? (
+    <>
+      {/* The lead, or nothing. With no way in the chapter's answer says so,
+          and a panel repeating it would make the page say it twice. */}
+      {read.lead ? (
+        <LeadPanel
+          route={read.lead}
+          alternatives={read.routes.slice(1)}
+          roles={read.roles}
+          targetName={read.targetName}
+          targetId={contactId}
+          blocked={availabilityLabel(read.lead.availability, t)}
+          onAsk={onAsk}
+          onOpenEmail={onOpenEmail}
+        />
+      ) : null}
+      {/* Only a server that predates the ranked list sends a lone route,
+          which the lead card cannot draw. */}
+      {read.legacy ? <RoutesPanel graph={data} onAsk={onAsk} /> : null}
+      {/* A group withheld for lack of a grant says so in the product's one
+          spelling of that fact, rather than reading as nobody knowing them. */}
+      {read.withheld ? (
+        <SurfaceState
+          loadingLabel={t("tab.network")}
+          state="withheld"
+          emptyLabel={t("contact.graph.noDirect")}
+        >
+          {null}
+        </SurfaceState>
+      ) : null}
+    </>
+  ) : null;
+}
+
+// Where the introduction stands and what moved lately. A chapter with nothing
+// in it would still draw its card, as a bare rule.
+function ProgressChapter({
+  id,
+  answer,
+  contactId,
+  read,
+  view,
+  settledAsks,
+  asksFailed,
+}: Readonly<{
+  id: string;
+  answer: ReactNode;
+  contactId: string;
+  read: GraphReading;
+  view?: RelationshipMoments;
+  settledAsks: readonly IntroRequest[];
+  asksFailed: boolean;
+}>) {
+  const t = useT();
+  const progressShown =
+    read.showRelay || view !== undefined || settledAsks.length > 0;
+  const asksPanel = (
+    <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
+  );
+  return (
+    <Chapter
+      id={id}
+      title={t("contact.chapter.progress")}
+      answer={answer}
+      action={
+        <RecordIntroductionButton
+          contactId={contactId}
+          contactName={read.targetName}
+        />
+      }
+    >
+      {progressShown ? (
+        <>
+          {/* One card: where the handoff stands, then what moved lately
+              with earlier asks among it. */}
+          <Panel>
+            {read.showRelay ? (
+              <PanelBody>
+                <RelaySteps ask={read.open} />
+              </PanelBody>
+            ) : null}
+            <MomentsTimeline view={view} asks={settledAsks} />
+          </Panel>
+          {/* An open ask keeps its verbs in a card of its own. */}
+          {asksPanel}
+        </>
+      ) : asksFailed ? (
+        // A failed read holds the only Retry for it, so its card stays.
+        asksPanel
+      ) : null}
+    </Chapter>
+  );
 }

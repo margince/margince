@@ -47,6 +47,7 @@ function ConnectedScene({
       returnPanel={returnPanel}
       onFinish={() => {}}
       finishing={false}
+      finishFailed={false}
       wantsOvernight
       onWantsOvernightChange={() => {}}
       overnightFailed={false}

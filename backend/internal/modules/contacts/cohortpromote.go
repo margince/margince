@@ -311,7 +311,7 @@ func (s *Store) ContactsOwedACohortRepair(ctx context.Context, limit int) ([]ids
 			WITH owed AS (
 				SELECT pe.contact_id
 				  FROM activity_participant ap
-				  JOIN contact_email pe ON lower(pe.email) = ap.address AND pe.archived_at IS NULL
+				  JOIN contact_email pe ON pe.email = ap.address AND pe.archived_at IS NULL
 				 WHERE ap.contact_id IS NULL AND ap.user_id IS NULL AND ap.address IS NOT NULL AND NOT ap.past_party_cap
 				   AND `+relstrength.AddressProvesSQL("pe.contact_id", "ap.address")+`
 				   AND NOT EXISTS (
@@ -428,6 +428,8 @@ func (s *Store) DomainsOwedTheirContacts(ctx context.Context, limit int) ([]Doma
 			 WHERE od.archived_at IS NULL
 			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL
 			   AND p.archived_at IS NULL AND p.merged_into_id IS NULL
+			   -- A folded domain held by two live companies has no single owner.
+			   AND NOT EXISTS (SELECT 1 FROM company_domain twin JOIN company tc ON tc.id = twin.company_id WHERE twin.domain_folded = od.domain_folded AND twin.company_id <> od.company_id AND twin.archived_at IS NULL AND tc.archived_at IS NULL AND tc.merged_into_id IS NULL)
 			   AND NOT EXISTS (
 			       SELECT 1 FROM relationship r
 			        WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
@@ -487,7 +489,7 @@ func (s *Store) AttachDomainBacklog(ctx context.Context, owed DomainBacklog) (in
 		if !live {
 			return nil
 		}
-		planted, err = plantDomainEmployment(ctx, tx, owed.Domain, owed.CompanyID)
+		planted, err = s.plantDomainEmploymentAndAsk(ctx, tx, owed.Domain, owed.CompanyID)
 		return err
 	})
 	if err != nil {

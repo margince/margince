@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/analytics/handoffassignee.tsx backend/internal/compose/memberhandoff/handlers.go frontend/src/features/settings/users-handover.tsx backend/internal/compose/handover.go frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go frontend/src/app/licensebanner.tsx -->
+<!-- describes: frontend/src/features/analytics/handoffassignee.tsx backend/internal/compose/memberhandoff/handlers.go frontend/src/features/settings/users-handover.tsx backend/internal/compose/handover.go frontend/src/features/settings/users-rolecell.tsx backend/internal/modules/capture/captureauthority.go frontend/src/features/settings/users-admin.tsx frontend/src/features/settings/users-memberverbs.tsx backend/internal/modules/identity/invitemail.go frontend/src/features/settings/roles-settings.tsx frontend/src/features/records/share.body.tsx backend/internal/modules/identity/internal/policy/defaults.go backend/internal/modules/identity/memberedit.go backend/internal/modules/identity/memberretirement.go backend/internal/modules/identity/seatceiling.go backend/internal/modules/identity/invite.go backend/internal/platform/auth/rowscope.go backend/internal/platform/auth/attachscope.go backend/internal/platform/auth/fieldmask.go backend/internal/modules/identity/roster.go frontend/src/components/recordteamassign.tsx backend/internal/modules/assignments/assignments_read.go backend/internal/modules/identity/ownercarry.go backend/internal/modules/contacts/contactcasesettings.go backend/internal/modules/contacts/contactcasedecide.go frontend/src/features/settings/sharedmergereviews.tsx backend/internal/modules/contacts/duplicatepairmerge.go frontend/src/app/licensebanner.tsx -->
 # Seats, roles and who can see what
 
 What you can do in Margince is decided by three things, and one cannot stand in for another:
@@ -43,7 +43,6 @@ A role that cannot record activities cannot connect a mailbox or calendar. Read-
 When you pick such a role for a member, the dialog says how many of their mailboxes will stop. A stopped mailbox shows as a role problem in System health. It starts again by itself once their role can record activities. Also called: cannot connect Gmail, cannot connect Outlook, mailbox stopped, capture paused.
 
 ### How do I find and edit a colleague?
-
 Open **Settings → Members**. The list loads every member, including invited and deactivated colleagues. Use **Search members** to find a name or email address.
 
 Open the colleague's actions menu and choose **Edit member**. Change their name, email, role or teams, then choose **Save member**. You can correct an email before the account has been used to sign in. Used sign-in addresses are protected. Team membership changes require an Admin.
@@ -51,7 +50,6 @@ Open the colleague's actions menu and choose **Edit member**. Change their name,
 If another administrator changed the account while you were editing, choose **Reload member**, review the current values and apply your changes again.
 
 ### How do I remove a user from Margince?
-
 To stop a colleague signing in while keeping their account in the list, choose **Deactivate** in their actions menu. You can bring it back, and it frees their seat.
 
 To remove the account from the member list, deactivate it first, then choose **Remove member**. Choose a colleague to receive any remaining CRM work and review the preview. Resolve the listed items before confirming. Private lists move to that colleague too. That member’s personal saved views are archived when the account is removed.
@@ -86,7 +84,7 @@ On a waiting handoff in your prospecting panel, choose **Reassign handoff** to c
 
 Automations and Deal Rooms stay where they are. Privacy cases need an officer to reassign them in their own queue. Introduction requests need their requester to choose another route; handing over records does not hand over a personal relationship. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
 
-Some contacts and companies only the colleague who left could see. They move too once the colleague is deactivated, and stay visible to the new owner alone. Before that, they stay with the colleague.
+Some contacts and companies only the colleague who left could see. They move too once the colleague is deactivated, and stay visible to the new owner alone. Their saved email drafts also move only once they are deactivated; before that, nobody else can open them, not even an admin. After the handover, only the new colleague can open them. Where the new colleague already has a draft in the same place, theirs stays and the old one is deleted. A draft for a scheduled or held message stays with the colleague who left.
 
 Until you hand it over, their open work still counts in their team's Worklist and numbers. Their name shows as "(left)", and their Worklist rows say the work needs a new owner.
 
@@ -195,15 +193,15 @@ Two exceptions count for every role, Admin included:
 - **A captured contact still private to its owner.** A connection creates a
   contact from a message that nothing has judged yet. The contact belongs to the colleague whose mailbox made it, until Margince judges the sender or the owner makes it public. An admin cannot open it either. So when you connect a mailbox with a year of history, the whole company does not see everyone in its mail history. That may include a lawyer or a doctor.
 
-A shared pipeline is the default. A share on one record can widen access further.
-
-Saved views, automations and your writing voice keep the owner rule; a shared list shows each reader only the records they may see.
+A shared pipeline is the default. A share on one record can widen access further. Saved views, automations and your writing voice keep the owner rule; a shared list shows each reader only the records they may see.
 
 **Only Team lead has team scope.** A Team lead reads and works on the records of everyone who shares a live team with them, with no share set up first. A Team lead who belongs to no team reaches only their own records.
 
 **User has the scope own.** For every role but Team lead, being on a team with someone does not by itself let you edit their records. That takes a share made for it, or a seat with no row limit.
 
 Everyone can read a record with **no owner**, and nobody can write to it until someone claims it.
+
+**Adding to a record counts as changing it.** Logging an activity, note or task on a record, adding a file, or moving an activity onto it needs the right to edit the record. You have it when you own the record, when your team owns it and you are its Team lead, or through a write share. On a record you can only read, these buttons are off, and an agent working for you is refused the same way. You can still name the record on your own new deal, lead or project. Mail and meetings Margince reads from your mailbox are still filed on it, and so is a reply you send to a message filed there.
 
 ## The owner and responsibility roles
 
@@ -232,7 +230,9 @@ In German, the owner is **Verantwortlich** and the responsibility roles are **Zu
 ## Seeing and sharing records
 
 ### Why can't I see a record?
-When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. The full record answers all three with **not found**. A contact, company or deal link can still show its name and short context in a [public preview](sharing-record-links.md). The preview gives no access to the full record. **Share** on such a record says "This record does not exist, or it is not shared with you."
+When you cannot see a record in Margince, one of three things is true. The record is private to its owner, it is mail or a meeting without you, or the link names a missing record. A private or missing contact, company, lead, deal, project or offer shows one page. Its sentence names the kind: "This deal is not there, or it is not shared with you." A link leads back to the list, and the top bar says **Not found** when it has no name for the record.
+
+Mail without you says "This message is not shared with you". A meeting without you shows "Content for participants only" in place of its subject. A contact, company or deal link can still show a short [public preview](sharing-record-links.md), which gives no access to the full record. **Share** on such a record says "This record does not exist, or it is not shared with you."
 
 Ask the record's owner to share it with you (**Share** on the record). Or ask them to choose **All users in the company** behind the access chip under the record's name. An admin's role does not open a private record either: only a share does. A record you can read but not edit gives a different refusal: "You do not have permission for this action. Ask an administrator, or the user who shared this record, to extend your access."
 Also called: record missing, access denied, 404, cannot open a contact.
@@ -240,42 +240,42 @@ Also called: record missing, access denied, 404, cannot open a contact.
 ### Why can't I create a contact a colleague already has?
 A contact that capture made from a colleague's mail can be private to that colleague. When you create a contact with the same email address, Margince refuses it, so the CRM does not hold the contact twice. It says "A colleague already has this contact. Margince asked them to share it with you."
 
-Your colleague then finds a request in **Review**: "Mira Voss asks you to share this contact." **Accept** shares it with you for writing, or for reading if your seat may only read. **Decline** closes the request. Another try does not ask again while a request is open or after your colleague declined. After a decline Margince says only "A colleague already has this contact."
+Your colleague then finds the request on **Home**, under **Waiting on you**: "Mira Voss asks you to share this contact. Approving gives write access, or read access when their seat or role cannot edit contacts." They choose **Decide**, then **Approve** to share the contact with you, or **Reject** to close the request. Another try does not ask again while a request is open or after your colleague rejected it. After they reject it, Margince says only "A colleague already has this contact."
 
 The refusal does not name the contact or its owner.
 Also called: contact already exists, email already taken, hidden contact.
 
 ### How do I share a record with a colleague?
 1. Open the record and choose **Share** in its header.
-2. Under **Grant access**, pick the colleague or team. A new team share starts at **Write** with **No expiry (until revoked)**. A share with a colleague starts at **Read** for 7 days.
+2. Under **Grant access**, pick the colleague or team. A contact's or company's owner is not on the list, because the record is already theirs. They can edit it when their role allows changes. An owner with the **Read-only** role can only read it. A new team share starts at **Write** with **No expiry (until revoked)**. A share with a colleague starts at **Read** for 7 days.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
-5. If you like, add a **Reason**, then choose **Grant access**.
-You cannot share more than you hold, and **Grant access** needs the right to change the record.
+5. If you like, add a **Reason**, then choose **Grant access**. Margince confirms who now has which access, for example "Mira Voss now has Read access to Acme renewal."
+You cannot share more than you hold, and **Grant access** needs the right to change the record. A **Write** share is saved as **Read** if the colleague's role can neither change such records nor log activities. A team share keeps **Write**. To change a colleague's record, press **Ask … for edit access** below the line saying it is not yours.
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
 
 Margince reports how many contacts it shared and skipped. A contact you can read but cannot share is skipped. Hidden contacts are not counted. Contacts who left the company are left out. Being on the same team alone gives no new access.
 
 ### How do I stop sharing a record?
-To take back a share in Margince, open the record and choose **Share**. Under **Shared with**, choose **Revoke** on your own share, or on any share of a record you may change, archived or not. The question says: "Revoke this access? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.
+To take back a share in Margince, open the record and choose **Share**. Under **Shared with**, choose **Revoke** on your own share, or on any share of a record you may change, archived or not. The button and the question name the person or team and the record, for example: "Revoke Read access to Acme renewal for Mira Voss? It ends at the next request and cannot be undone." To lower write to read instead, share again with **Read**; Margince asks **Reduce access?** first.
 Also called: unshare, remove access.
 
 ### How do I make a contact or company visible to everyone?
-To make a private contact or company open to the whole company, open it and press the access chip under its name (it reads **Private**). Choose **All users in the company** and press **Save**. Nothing changes until you press **Save**, so you can move through the choices with the keys and nothing happens.
+To make a private contact or company open to the whole company, open it. Press the access chip under its name, which reads **Only the owner**. Choose **All users in the company** and press **Save**. Nothing changes until you press **Save**, so you can move through the choices with the keys and nothing happens.
 
-To hide it again, press the chip (it now reads **Shared**), choose **Only the owner** and press **Save**. Users and teams it was shared with keep access. **Manage access** in the same panel opens the full list of who can open the record and why. Only someone who may change the record sees the choice; anyone else, and anyone on an archived record, sees the reason instead.
+To hide it again, press the chip (it now reads **All users in the company**), choose **Only the owner** and press **Save**. Users and teams it was shared with keep access. **Manage access** in the same panel opens the full list of who can open the record and why. Only someone who may change the record sees the choice; anyone else, and anyone on an archived record, sees the reason instead.
 
 A record with **no owner** cannot be set to its owner only, because no seat could then read it. On such a record **Only the owner** is greyed out, with the note "Assign an owner first". If you are not the owner, **Only the owner** warns "You lose access unless it is shared with you or your team". If no share reaches you, Margince then takes you back to the list.
 Also called: publish a contact, make public, make private.
 
 ## Who can see this record
 
-A contact and a company each show the answer under their own name, as one chip that reads **Shared** or **Private**. Pressing it opens one sentence that says who can see the record, the choice that changes it, and **Manage access**:
+A contact and a company each show the answer under their own name, as one chip. It reads **All users in the company** or **Only the owner**, as the choice behind it does. Pressing it opens one sentence that says who can see the record, and **Manage access**. If you may change the record, the choice that changes it is there too. The sentence reads:
 
-- **Private**, read by its owner: "Only you and the users or teams it was shared with can see this contact."
-- **Private**, read by anyone else who can open it, naming the owner: "Private to Mira Voss. You can see this contact because it was shared with you or your team." A private record reaches nobody else, an admin included; a share is the only way in.
-- **Shared**: "All users in the company can see this contact."
+- **Only the owner**, read by its owner: "Only you and the users or teams it was shared with can see this contact."
+- **Only the owner**, read by anyone else who can open it, naming the owner: "Private to Mira Voss. You can see this contact because it was shared with you or your team." A private record reaches nobody else, an admin included; a share is the only way in.
+- **All users in the company**: "All users in the company can see this contact."
 
 Both ways are ordinary edits on both record types. This helps most with a record that capture created. A company created from a message that nothing has judged yet is set to its owner only. This choice lets its owner make it public, so they do not wait for Margince to decide.
 
@@ -313,7 +313,7 @@ A team in Margince is a named group of colleagues. To create or rename one you n
 
 The Teams page says it: "Membership grants no access, except to a team lead, who can read and edit the team’s records without a share."
 
-When a team is archived, being in it gives nothing any more. You can restore an archived team.
+When a team is archived, being in it gives nothing any more. If the team has members, Margince asks first and says how many lose it. To restore a team, turn on **Show archived teams** on the Teams page and choose **Restore** on its row.
 
 ## Sharing one record
 
@@ -351,7 +351,7 @@ There are no levels of shares, no sharing by rules, and no way to give someone e
 
 When two contacts merge, the owner of the merged-away contact keeps access to the contact that remains. Margince gives them a share on it:
 
-- **Write** for a full seat, **Read** for a read seat.
+- **Write** for a full seat whose role can change contacts or log activities, and **Read** for anyone else.
 - A share they already held keeps its end date. It only goes from read to write.
 - A colleague who has left gets nothing, and the owner of the remaining contact needs no share.
 

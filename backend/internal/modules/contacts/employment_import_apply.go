@@ -15,11 +15,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ApplyEmploymentImport reconciles retained provider evidence in one contact transaction.
@@ -113,7 +113,7 @@ func (s *Store) resolveEmploymentCompany(ctx context.Context, tx pgx.Tx, e emplo
 		return &company, nil
 	}
 	if action == employmentResolve && req.Domain != nil {
-		domain, err := values.ParseDomain(strings.TrimSpace(*req.Domain))
+		domain, err := owndomain.ParseDomain(strings.TrimSpace(*req.Domain))
 		if err != nil {
 			return nil, err
 		}

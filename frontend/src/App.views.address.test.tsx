@@ -9,11 +9,13 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ScreenView } from "./App.views";
+import { Shell } from "./app/shell";
+import { withListPage } from "./components/listqueryparams";
 import { LocaleProvider } from "./i18n";
 import { navigateReplacing, useHash, useRoute } from "./lib/router";
 import { settingsRouteTarget } from "./lib/settingsrouting";
 import { useUnsavedGuard } from "./lib/unsavedclaims";
-import { type UrlParams, useUrlParams } from "./lib/urlstate";
+import { currentParams, type UrlParams, useUrlParams } from "./lib/urlstate";
 import { meFixture, READS_RECORDS } from "./testing/mefixture";
 
 // Each routed screen shows the address it reads, carries a draft, and exposes
@@ -59,7 +61,7 @@ function Routed() {
   return <ScreenView screen={route.screen} id={route.id} id2={route.id2} />;
 }
 
-function renderRouted(at: string) {
+function renderRouted(at: string, framed = false) {
   window.history.replaceState(null, "", at);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -68,7 +70,13 @@ function renderRouted(at: string) {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <Routed />
+        {framed ? (
+          <Shell onOpenSearch={() => undefined}>
+            <Routed />
+          </Shell>
+        ) : (
+          <Routed />
+        )}
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -81,9 +89,16 @@ async function moveTo(hash: string) {
   });
 }
 
-async function holdDraftOn(at: string, name: string, leaveFor: string) {
-  const user = userEvent.setup();
-  renderRouted(at);
+async function holdDraftOn(
+  at: string,
+  name: string,
+  leaveFor: string,
+  framed = false,
+) {
+  const user = userEvent.setup(
+    framed ? { advanceTimers: vi.advanceTimersByTime } : undefined,
+  );
+  renderRouted(at, framed);
   const page = await screen.findByRole("region", { name });
   await user.type(page.querySelector("input") ?? document.body, "Unsaved");
   await moveTo(leaveFor);
@@ -97,6 +112,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
   window.history.replaceState(null, "", "#/");
 });
@@ -141,6 +157,44 @@ describe("a screen held on screen past a move", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(
       await screen.findByText("reads #/contacts?page=4 as contacts"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the frame over a held draft", () => {
+  it("names the held page and shows no wait", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await holdDraftOn("#/contacts", "contacts", "#/companies", true);
+
+    act(() => vi.advanceTimersByTime(1000));
+
+    const trail = screen.getByRole("navigation", { name: "Breadcrumb" });
+    expect(trail).toHaveTextContent("Contacts");
+    expect(trail).not.toHaveTextContent("Companies");
+    expect(document.title.startsWith("Contacts ·")).toBe(true);
+    expect(
+      document.querySelector("nav.rail a.navitem.active")?.textContent,
+    ).toBe("Contacts");
+    const column = document.querySelector("main > .scroll");
+    expect(column).not.toBeNull();
+    expect(column).not.toHaveAttribute("aria-busy");
+    expect(document.querySelector(".pagewait-line")).toBeNull();
+  });
+});
+
+describe("a list the reader has left", () => {
+  it("cannot send the list they opened back to page one", async () => {
+    renderRouted("#/companies");
+    await screen.findByRole("region", { name: "companies" });
+    await moveTo("#/contacts?page=3");
+    await screen.findByText("reads #/contacts?page=3 as contacts");
+
+    // The write a list's reset makes when its narrowing changes on the way out.
+    act(() => writers.get("companies")?.(withListPage(currentParams(), 1)));
+
+    expect(window.location.hash).toBe("#/contacts?page=3");
+    expect(
+      screen.getByText("reads #/contacts?page=3 as contacts"),
     ).toBeInTheDocument();
   });
 });

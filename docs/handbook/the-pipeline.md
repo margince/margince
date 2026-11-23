@@ -67,7 +67,7 @@ To add, rename, reorder or remove stages, open the account menu → **Settings**
 5. The order is saved when you let go, and **Undo** in the confirmation puts it back. Won and Lost always stay last.
 6. A pipeline keeps one Won and one Lost stage. Add another of a type before you change the last one.
 7. To delete a stage, open the **…** menu on its row and choose **Remove** → **Remove stage**. Move its deals off it first. While it holds deals you can see, **Remove** cannot be chosen and says how many.
-8. To see what a deal must show to leave a stage, press the arrow at the end of its row. It opens the stage's **Exit criteria** under the row. **Add criterion** adds one, here or in the **…** menu. A condition of the kind **Legal approved** holds a deal at the stage until legal approves it; see [Legal review](legal-review.md).
+8. To see what a deal must show to leave a stage, press the arrow at the end of its row. It opens the stage's **Exit criteria** under the row. **Add criterion** adds one, here or in the **…** menu. You name it with a label; Margince makes its internal key. A condition of the kind **Legal approved** holds a deal at the stage until legal approves it; see [Legal review](legal-review.md).
 
 A stage whose win probability is lower than the stage above it is marked, but the order is still saved. A role that cannot edit pipelines sees "Read-only settings" at the top of the page.
 
@@ -215,21 +215,15 @@ Margince also offers you the review the moment you close, in a dialog that opens
 with the close dialog's own reason already filled in. If you say no there, the
 panel keeps waiting on the deal.
 
-An administrator writes the questions at **Settings → Deals → Outcome reviews**: one
-set for won, one for lost. Each question has its answer type, whether an answer
-must be given, and its choices if it offers any. Writing a review is logging an
-activity, so it needs the same permission as logging one.
+An administrator writes the questions at **Settings → Deals → Outcome reviews**. Each set of questions is a template, for won deals or for lost deals. Each question has its answer type, whether an answer must be given, and its choices if it offers any. Writing a review is logging an activity, so it needs the same permission as logging one.
+
+A closed deal is asked the active template for its outcome. **Add template** writes a new one, asked from the next close on. Adding a template, or turning one on with its switch, turns off the one asked before. With no active template, that outcome asks no review.
 
 Rules worth knowing:
 
-- Editing the questions changes later reviews only. A review already written
-  keeps the questions it was asked and the answers given.
-- A review is for one closing of the deal. Close, reopen and close again,
-  and there is a new outcome to review. The older review still reads well,
-  marked "From an earlier close", so nobody takes a deal lost in March for a
-  deal won in June.
-- A deal closed before Margince recorded closings takes no new review. The
-  reviews it already has still read well.
+- Editing the questions changes later reviews only. A review already written keeps the questions it was asked and the answers given. A template turned off stays listed as **Retired**, so its reviews still read well. There is no delete.
+- A review is for one closing of the deal. Close, reopen and close again, and there is a new outcome to review. The older review still reads well, marked "From an earlier close", so nobody takes a deal lost in March for a deal won in June.
+- A deal closed before Margince recorded closings takes no new review. The reviews it already has still read well.
 
 The outcome review is separate from the "How was it won?" answer. That one is
 asked in the close dialog, and only when there is no signed contract.
@@ -265,6 +259,11 @@ The board and list count activity ages by calendar days in the installation time
 A **wait until** date that is still to come hides the stalled mark, and the mark
 comes back on its own after that date. It does not hide a close date that has
 passed, which is a different thing and stays in view.
+
+The **Going cold** mark on the deal page shows after 30 days with no activity.
+A wait until date still to come, or a meeting booked for later, hides it as it
+hides the stalled mark. The overnight list of deals at risk leaves such a deal
+out too, unless something else is wrong with it.
 
 There is a second, shorter time: **19 days** with no activity makes a deal
 *quiet*. The morning screens notice that well before the deal reaches the 60

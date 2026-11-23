@@ -11,34 +11,33 @@ import {
 } from "../../../vitest.budget";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
-import { meFixture } from "../../testing/mefixture";
 import { isPreviewDoor } from "../../testing/sendpermission.testkit";
 import {
   activity202,
-  fillSendableForm,
   installComposeClock,
   jsonResponse,
+  pickWhy,
   pressSend,
   problemResponse,
   render,
   type Sent,
   stubRoutes,
   WHY_ASK,
+  WHY_LABEL,
 } from "./compose.testkit";
 import { draftKey } from "./composesaveddraftcalls";
 import { ComposeWindow } from "./composewindow";
 
-// The email composer with the inline pilot switch on. Nothing is asked while
-// the rep writes, and Send is the check. A refusal comes back as a review,
-// drawn in place with one reason and Send anyway.
+// The email composer decides at Send. Nothing is asked while the rep writes,
+// and Send is the check. A refusal comes back as a review, drawn in place with
+// one reason and Send anyway.
 
 // The in-flight and refreshed-review tests each chain eight waits, past the
 // default ceiling.
 const EIGHT_WAITS_TEST_MS =
   ASYNC_UTIL_TIMEOUT_MS * 8 + SLOWEST_MEASURED_TEST_MS;
 
-const INLINE_TEXT =
-  "The send check still blocks this message. Send anyway sends only this message and grants no permission for later ones. Your name, your reason and the message are kept in a record that cannot be edited.";
+const INLINE_TEXT = "Why send this one message anyway?";
 
 const REVIEW = {
   id: "r-1",
@@ -54,7 +53,7 @@ const REVIEW = {
   warning: { version: "override-v2", text: "The modal's longer words." },
   warnings: [
     { version: "override-v2", text: "The modal's longer words." },
-    { version: "inline-v1", text: INLINE_TEXT },
+    { version: "inline-v2", text: INLINE_TEXT },
   ],
 };
 
@@ -78,12 +77,6 @@ function refused(
     409,
   );
 }
-
-const inlineMe = () =>
-  jsonResponse({
-    ...meFixture({ allow: { activity: ["read", "create", "update"] } }),
-    inline_send_review: true,
-  });
 
 const count = (sent: Sent[], key: string) =>
   sent.filter((entry) => entry.key === key).length;
@@ -109,28 +102,25 @@ function Composer({ onClose = () => {} }: Readonly<{ onClose?: () => void }>) {
   );
 }
 
-// Waits for the switch to be read: the reason-for-contact dial goes away.
-async function openInline(sent: Sent[]) {
+// A new message to the contact: nothing it answers, so it asks why.
+async function openComposer() {
   render(<Composer />);
-  await waitFor(() => expect(count(sent, "GET /me")).toBeGreaterThan(0));
-  await waitFor(() =>
-    expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
-  );
+  await screen.findByRole("combobox", { name: WHY_ASK });
 }
 
-async function fillInline(user: UserEvent) {
+async function fillMessage(user: UserEvent) {
   await user.type(screen.getByLabelText("To"), "a@x.com");
   await user.tab();
   await user.type(screen.getByLabelText("Subject"), "Your quote");
   writeMessage("Body", "The prices you asked for.");
+  await pickWhy(user, WHY_LABEL.requestedFollowup);
 }
 
-// The callout's title; the detail behind the count lists it again.
-const leadFinding = async () =>
-  (
-    await screen.findAllByText("a@x.com objected to marketing.")
-  )[0] as HTMLElement;
-const reasonField = () => screen.findByLabelText(/Reason for sending/);
+// The callout's title. The details behind the count list only the findings
+// after it.
+const leadFinding = () => screen.findByText("a@x.com objected to marketing.");
+const reasonField = () =>
+  screen.findByLabelText(/Why send this one message anyway\?/);
 const sendAnyway = () => screen.findByRole("button", { name: "Send anyway" });
 
 beforeEach(installComposeClock);
@@ -141,24 +131,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("the email composer with the switch off", () => {
-  it("keeps the check while writing and the reason for contact", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const sent = stubRoutes();
-    render(<Composer />);
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm(user);
-    expect(previews(sent)).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Send anyway" })).toBeNull();
-  });
-});
-
-describe("the email composer with the switch on", () => {
+describe("the email composer that decides at Send", () => {
   it("asks nothing while the rep opens, types and the draft saves", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const sent = stubRoutes({ "GET /me": inlineMe });
-    await openInline(sent);
-    await fillInline(user);
+    const sent = stubRoutes();
+    await openComposer();
+    await fillMessage(user);
     await waitFor(() =>
       expect(count(sent, "PUT /mail-drafts")).toBeGreaterThan(0),
     );
@@ -170,33 +148,44 @@ describe("the email composer with the switch on", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": () => jsonResponse(activity202, 202),
     });
     render(<Composer onClose={onClose} />);
-    await waitFor(() =>
-      expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
-    );
-    await fillInline(user);
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillMessage(user);
     await pressSend(user);
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(count(sent, "POST /emails")).toBe(1);
     const body = sent.find((entry) => entry.key === "POST /emails")?.body;
-    expect(body).not.toHaveProperty("communication_context");
+    expect(body).toHaveProperty("communication_context", "requested_followup");
     expect(previews(sent)).toBe(0);
+  });
+
+  // Consent is owed to everyone who receives the message, so the server
+  // decides on the blind copy as well.
+  it("puts a blind copy in the request the server decides on", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const sent = stubRoutes({ "POST /emails": refused });
+    await openComposer();
+    await fillMessage(user);
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await user.type(screen.getByLabelText("Bcc"), "quiet@x.com");
+    await user.tab();
+    await pressSend(user);
+    await leadFinding();
+    expect(
+      sent.find((entry) => entry.key === "POST /emails")?.body,
+    ).toMatchObject({ to: ["a@x.com"], bcc: ["quiet@x.com"] });
   });
 
   it("closes a scheduled send with the scheduled note", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": () => jsonResponse(activity202, 201),
     });
     render(<Composer />);
-    await waitFor(() =>
-      expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
-    );
-    await fillInline(user);
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillMessage(user);
     await pressSend(user);
     expect(
       await screen.findByText("Email scheduled. It has not been sent yet."),
@@ -205,14 +194,26 @@ describe("the email composer with the switch on", () => {
 
   it("draws a refusal from the embedded review without asking again", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const sent = stubRoutes({ "GET /me": inlineMe, "POST /emails": refused });
-    await openInline(sent);
-    await fillInline(user);
+    const sent = stubRoutes({ "POST /emails": refused });
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
 
     expect(await leadFinding()).toBeTruthy();
-    expect(screen.getByText(INLINE_TEXT)).toBeTruthy();
+    expect(await reasonField()).toBeTruthy();
+    // The finding is the whole warning: no explanation paragraph beneath it.
+    expect(screen.queryByText(/grants no permission/)).toBeNull();
     expect(screen.getByText("1 more finding")).toBeTruthy();
+    expect(
+      screen.getByText(/^No reason to contact b@x\.com is on record\./),
+    ).toBeTruthy();
+    expect(screen.getAllByText(/a@x\.com objected to marketing/)).toHaveLength(
+      1,
+    );
+    expect(screen.getByLabelText("Subject")).toHaveProperty(
+      "value",
+      "Your quote",
+    );
     expect(screen.getByText(", named in the warning")).toBeTruthy();
     const reason = await reasonField();
     await waitFor(() => expect(document.activeElement).toBe(reason));
@@ -231,12 +232,11 @@ describe("the email composer with the switch on", () => {
   it("reads the review once from an older server that only names it", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": () => refused({}, null),
       "GET /communication-reviews/r-1": () => jsonResponse(REVIEW),
     });
-    await openInline(sent);
-    await fillInline(user);
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
     expect(await leadFinding()).toBeTruthy();
     expect(count(sent, "GET /communication-reviews/r-1")).toBe(1);
@@ -245,13 +245,12 @@ describe("the email composer with the switch on", () => {
   it("keeps the draft and offers a retry when that read fails", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": () => refused({}, null),
       "GET /communication-reviews/r-1": () =>
         problemResponse({ code: "internal", title: "Down" }, 500),
     });
-    await openInline(sent);
-    await fillInline(user);
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
     expect(
       await screen.findByText(/The check result was not loaded/),
@@ -270,16 +269,13 @@ describe("the email composer with the switch on", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": refused,
       "POST /communication-reviews/r-1/direct-send": () =>
         jsonResponse({ ...activity202, id: "act-9" }, 201),
     });
     render(<Composer onClose={onClose} />);
-    await waitFor(() =>
-      expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
-    );
-    await fillInline(user);
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillMessage(user);
     await pressSend(user);
     await user.type(await reasonField(), "  They asked on the phone.  ");
     await user.click(await sendAnyway());
@@ -292,12 +288,34 @@ describe("the email composer with the switch on", () => {
     expect(decisions[0]?.body).toEqual({
       reason_code: "other",
       explanation: "They asked on the phone.",
-      warning_version: "inline-v1",
+      warning_version: "inline-v2",
       assessment_revision: "rev-1",
       shown_reasons: ["marketing_objection", "no_compatible_evidence"],
       acknowledged: true,
     });
     expect(screen.getByText("Queued as a recorded exception.")).toBeTruthy();
+  });
+
+  it("closes and says so when another tab already sent the message", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const onClose = vi.fn();
+    stubRoutes({
+      "POST /emails": refused,
+      "POST /communication-reviews/r-1/direct-send": () =>
+        problemResponse(
+          { code: "already_sent", title: "Conflict", status: 409 },
+          409,
+        ),
+    });
+    render(<Composer onClose={onClose} />);
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillMessage(user);
+    await pressSend(user);
+    await user.type(await reasonField(), "They asked on the phone.");
+    await user.click(await sendAnyway());
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(screen.getByText("This message was already sent.")).toBeTruthy();
   });
 
   // Each stray event alone, since the button's own press latch would hold
@@ -324,13 +342,12 @@ describe("the email composer with the switch on", () => {
   ])("ignores %s on Send anyway", async (_stray, stray) => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": refused,
       "POST /communication-reviews/r-1/direct-send": () =>
         jsonResponse({ ...activity202, id: "act-9" }, 201),
     });
-    await openInline(sent);
-    await fillInline(user);
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
     await user.type(await reasonField(), "Line one{Enter}line two");
     stray(await sendAnyway());
@@ -352,12 +369,11 @@ describe("the email composer with the switch on", () => {
   it("sends the same key on a retried send and a new one after an edit", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": () =>
         problemResponse({ code: "internal", title: "Down" }, 500),
     });
-    await openInline(sent);
-    await fillInline(user);
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
     await waitFor(() => expect(count(sent, "POST /emails")).toBe(1));
     await pressSend(user);
@@ -376,13 +392,12 @@ describe("the email composer with the switch on", () => {
   async function sendAnywayTwice(changeReason: boolean) {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": refused,
       "POST /communication-reviews/r-1/direct-send": () =>
         problemResponse({ code: "internal", title: "Down" }, 500),
     });
-    await openInline(sent);
-    await fillInline(user);
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
     const reason = await reasonField();
     await user.type(reason, "Asked by phone.");
@@ -416,15 +431,14 @@ describe("the email composer with the switch on", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let answer: (response: Response) => void = () => {};
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": refused,
       "POST /communication-reviews/r-1/direct-send": () =>
         new Promise<Response>((resolve) => {
           answer = resolve;
         }),
     });
-    await openInline(sent);
-    await fillInline(user);
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
     await user.type(await reasonField(), "Asked by phone.");
     const button = await sendAnyway();
@@ -446,7 +460,6 @@ describe("the email composer with the switch on", () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       let answer: (response: Response) => void = () => {};
       const sent = stubRoutes({
-        "GET /me": inlineMe,
         "POST /emails": refused,
         "POST /communication-reviews/r-1/direct-send": () =>
           new Promise<Response>((resolve) => {
@@ -454,10 +467,8 @@ describe("the email composer with the switch on", () => {
           }),
       });
       const { queryClient } = render(<Composer />);
-      await waitFor(() =>
-        expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
-      );
-      await fillInline(user);
+      await screen.findByRole("combobox", { name: WHY_ASK });
+      await fillMessage(user);
       await pressSend(user);
       await user.type(await reasonField(), "Asked by phone.");
       await waitFor(() => {
@@ -499,9 +510,9 @@ describe("the email composer with the switch on", () => {
 
   it("detaches the review on an edit and sends the edited message anew", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const sent = stubRoutes({ "GET /me": inlineMe, "POST /emails": refused });
-    await openInline(sent);
-    await fillInline(user);
+    const sent = stubRoutes({ "POST /emails": refused });
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
     await user.type(await reasonField(), "Asked by phone.");
     await user.type(screen.getByLabelText("Subject"), " v2");
@@ -522,7 +533,6 @@ describe("the email composer with the switch on", () => {
       const second = { ...REVIEW, id: "r-2", assessment_revision: "rev-2" };
       let sends = 0;
       const sent = stubRoutes({
-        "GET /me": inlineMe,
         "POST /emails": () => {
           sends += 1;
           return sends === 2
@@ -533,10 +543,8 @@ describe("the email composer with the switch on", () => {
           jsonResponse({ ...activity202, id: "act-9" }, 201),
       });
       render(<Composer onClose={onClose} />);
-      await waitFor(() =>
-        expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
-      );
-      await fillInline(user);
+      await screen.findByRole("combobox", { name: WHY_ASK });
+      await fillMessage(user);
       await pressSend(user);
       await user.type(await reasonField(), "They asked for prices by phone.");
       writeMessage("Body", "The prices you asked for, as promised.");
@@ -567,8 +575,8 @@ describe("the email composer with the switch on", () => {
       ]);
 
       cleanup();
-      await openInline(sent);
-      await fillInline(user);
+      await openComposer();
+      await fillMessage(user);
       await pressSend(user);
       expect(await reasonField()).toHaveProperty("value", "");
     },
@@ -580,17 +588,14 @@ describe("the email composer with the switch on", () => {
     const onClose = vi.fn();
     let sends = 0;
     stubRoutes({
-      "GET /me": inlineMe,
       "POST /emails": () => {
         sends += 1;
         return sends === 1 ? refused() : jsonResponse(activity202, 202);
       },
     });
     render(<Composer onClose={onClose} />);
-    await waitFor(() =>
-      expect(screen.queryByRole("combobox", { name: WHY_ASK })).toBeNull(),
-    );
-    await fillInline(user);
+    await screen.findByRole("combobox", { name: WHY_ASK });
+    await fillMessage(user);
     await pressSend(user);
     await sendAnyway();
     writeMessage("Body", "A plain reply.");
@@ -604,7 +609,6 @@ describe("the email composer with the switch on", () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       let decisions = 0;
       const sent = stubRoutes({
-        "GET /me": inlineMe,
         "POST /emails": refused,
         "POST /communication-reviews/r-1/direct-send": () => {
           decisions += 1;
@@ -613,8 +617,8 @@ describe("the email composer with the switch on", () => {
             : jsonResponse({ ...activity202, id: "act-9" }, 201);
         },
       });
-      await openInline(sent);
-      await fillInline(user);
+      await openComposer();
+      await fillMessage(user);
       await pressSend(user);
       await user.type(await reasonField(), "Asked by phone.");
       await user.click(await sendAnyway());
@@ -632,7 +636,7 @@ describe("the email composer with the switch on", () => {
   );
 
   it(
-    "shows the country a refusal was judged under, and the refreshed one",
+    "names the country under the finding, and asks again on a refreshed review",
     async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const judged = (
@@ -653,7 +657,6 @@ describe("the email composer with the switch on", () => {
       });
       let decisions = 0;
       const sent = stubRoutes({
-        "GET /me": inlineMe,
         "POST /emails": () =>
           refused({}, judged("de", "contact_address", "rev-1")),
         "POST /communication-reviews/r-1/direct-send": () => {
@@ -663,22 +666,16 @@ describe("the email composer with the switch on", () => {
             : jsonResponse({ ...activity202, id: "act-9" }, 201);
         },
       });
-      await openInline(sent);
-      await fillInline(user);
+      await openComposer();
+      await fillMessage(user);
       await pressSend(user);
-      expect(
-        await screen.findByText("Country: Germany, from the contact’s address"),
-      ).toBeTruthy();
+      expect(await leadFinding()).toBeTruthy();
+      // Beneath the finding, the country it was judged under and where it was
+      // read, so the rep can see why this law applies.
+      expect(screen.getByText(/^Country:/).textContent).toContain("Germany");
       await user.type(await reasonField(), "Asked by phone.");
       await user.click(await sendAnyway());
-      expect(
-        await screen.findByText(
-          "Country: none, cleared by the sender for this message",
-        ),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText("Country: Germany, from the contact’s address"),
-      ).toBeNull();
+      expect(await screen.findByText(/The email checks changed/)).toBeTruthy();
       await user.click(await sendAnyway());
       await waitFor(() => expect(decisions).toBe(2));
       const second = sent.filter(
@@ -701,6 +698,7 @@ describe("the email composer with the switch on", () => {
       subject: "Your quote",
       body: "The prices you asked for.",
       html_body: "<p>The prices you asked for.</p>",
+      communication_context: "requested_followup",
       override_explanation: "They asked on the phone.",
       version: 1,
       agent_drafted: false,
@@ -708,12 +706,11 @@ describe("the email composer with the switch on", () => {
       updated_at: "2026-01-01T00:00:00Z",
     };
     const sent = stubRoutes({
-      "GET /me": inlineMe,
       "GET /mail-drafts": () => jsonResponse(saved),
       "PUT /mail-drafts": () => jsonResponse({ ...saved, version: 2 }),
       "POST /emails": refused,
     });
-    await openInline(sent);
+    await openComposer();
     await screen.findByText("Saved draft restored");
     await pressSend(user);
     const reason = await reasonField();
@@ -732,12 +729,11 @@ describe("the email composer with the switch on", () => {
 
   it("offers no Send anyway where the server offers no decision", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const sent = stubRoutes({
-      "GET /me": inlineMe,
+    stubRoutes({
       "POST /emails": () => refused({ available_actions: [] }),
     });
-    await openInline(sent);
-    await fillInline(user);
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
     expect(
       await screen.findByText(
@@ -745,13 +741,14 @@ describe("the email composer with the switch on", () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Send anyway" })).toBeNull();
-    expect(screen.queryByLabelText(/Reason for sending/)).toBeNull();
+    expect(
+      screen.queryByLabelText(/Why send this one message anyway\?/),
+    ).toBeNull();
   });
 
   it("offers no Send anyway for a warning version this build does not know", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const sent = stubRoutes({
-      "GET /me": inlineMe,
+    stubRoutes({
       "POST /emails": () =>
         refused(
           {},
@@ -759,16 +756,16 @@ describe("the email composer with the switch on", () => {
             ...REVIEW,
             warnings: [
               REVIEW.warnings[0],
-              { version: "inline-v2", text: "Newer words." },
+              { version: "inline-v3", text: "Newer words." },
             ],
           },
         ),
     });
-    await openInline(sent);
-    await fillInline(user);
+    await openComposer();
+    await fillMessage(user);
     await pressSend(user);
     await leadFinding();
     expect(screen.queryByRole("button", { name: "Send anyway" })).toBeNull();
-    expect(screen.queryByText(INLINE_TEXT)).toBeNull();
+    expect(screen.queryByLabelText(INLINE_TEXT)).toBeNull();
   });
 });

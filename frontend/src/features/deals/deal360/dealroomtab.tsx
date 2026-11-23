@@ -30,9 +30,10 @@ import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { QueryStates } from "../../../design-system/querystates";
-import { useT } from "../../../i18n";
+import { useFieldFaults } from "../../../design-system/savepage";
+import { useLocale, useT } from "../../../i18n";
 import { useCanWrite, useCanWriteRecord } from "../../../lib/capability";
-import { problemMessageOf, unwrap } from "../../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../../lib/problem";
 import { TEXT_LIMITS } from "../../../lib/textlimits_gen";
 import { buyerLink, DealRoomAccess } from "../dealroomaccess";
 import { InviteDialog } from "../dealroomaccess.dialogs";
@@ -164,6 +165,9 @@ export function RoomText({
   refusal,
 }: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const titleLabel = t("roompage.text.titleLabel");
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(room.title);
   const [welcome, setWelcome] = useState(room.welcome_message ?? "");
@@ -192,15 +196,18 @@ export function RoomText({
   return (
     <Panel title={t("roompage.text.title")}>
       <PanelBody>
-        <div className="form-stack">
-          <Field label={t("roompage.text.titleLabel")}>
+        <div className="form-stack" ref={faultsRoot}>
+          <Field label={titleLabel} required error={faults.of("title")}>
             {(control) => (
               <TextInput
                 {...control}
                 value={title}
                 maxLength={TEXT_LIMITS.label}
                 disabled={refusal !== undefined}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  faults.edited("title");
+                }}
               />
             )}
           </Field>
@@ -220,15 +227,19 @@ export function RoomText({
           ) : (
             <div className="card-actions">
               <Button
-                disabled={!dirty || title.trim() === ""}
+                disabled={!dirty}
                 pending={save.isPending}
-                onClick={() =>
+                onClick={() => {
+                  const blank = blankRequired(locale, {
+                    title: [titleLabel, title],
+                  });
+                  if (faults.show(blank)) return;
                   save.mutate({
                     title: title.trim(),
                     welcome: welcome.trim(),
                     version: requireVersion(room.version),
-                  })
-                }
+                  });
+                }}
               >
                 {t("access.save")}
               </Button>
@@ -248,6 +259,9 @@ function OpenRoomCard({
   dealName,
 }: Readonly<{ dealId: string; dealName: string }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const titleLabel = t("room.create.titleLabel");
   const mayCreate = useCanWrite("deal_room", "create");
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
@@ -296,25 +310,36 @@ function OpenRoomCard({
       </PanelBody>
       <ConfirmModal
         open={creating}
-        onClose={() => setCreating(false)}
+        onClose={() => {
+          setCreating(false);
+          faults.show(new Map());
+        }}
         title={t("room.create.open")}
         intent="form"
         confirmLabel={t("room.create.confirm")}
-        confirmDisabled={title.trim() === ""}
+        bodyRef={faultsRoot}
         pending={create.isPending}
         error={create.isError ? problemMessageOf(create.error, t) : null}
-        onConfirm={() => create.mutate(title.trim())}
+        onConfirm={() => {
+          const blank = blankRequired(locale, { title: [titleLabel, title] });
+          if (!faults.show(blank)) create.mutate(title.trim());
+        }}
       >
         <Field
-          label={t("room.create.titleLabel")}
+          label={titleLabel}
           hint={t("room.create.titleHint")}
+          required
+          error={faults.of("title")}
         >
           {(control) => (
             <TextInput
               {...control}
               value={title}
               maxLength={TEXT_LIMITS.label}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                faults.edited("title");
+              }}
             />
           )}
         </Field>

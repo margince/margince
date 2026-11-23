@@ -9,12 +9,12 @@ import {
   type SortControl,
   type ViewRow,
 } from "./listsurface";
+import { useColumnWidths, useFrozenEdge } from "./listtable.layout";
 import {
+  orderedColumns,
   useColumnDisplay,
-  useColumnWidths,
-  useFrozenEdge,
-} from "./listtable.layout";
-import { orderedColumns, useColumnOrder } from "./listtable.order";
+  useColumnOrder,
+} from "./listtable.order";
 import { fitsOnePage, usePaging } from "./listtable.paging";
 import {
   applyView,
@@ -74,6 +74,7 @@ export function ListTable<Row>({
   unit,
   unitOne,
   emptyNote,
+  emptyLine,
   search,
   sort,
   chips = [],
@@ -96,6 +97,7 @@ export function ListTable<Row>({
   onPerPage,
   page: controlledPage,
   onPage,
+  keepsPage,
   bodyRef,
   pending = false,
   problem,
@@ -165,16 +167,13 @@ export function ListTable<Row>({
   /** Singular noun for a count of one ("contact", "lead"). Defaults to `unit`. */
   unitOne?: string;
   /**
-   * A likelier cause than "there is nothing here", for a caller that knows one.
-   *
-   * Drawn under the empty state whichever line it carries, narrowed or not:
-   * which emptiness a note explains is the CALLER's to know. A "Mine" view for
-   * a reader who owns nothing is the case this was written for and is a
-   * narrowed list, so a note shown only over the unnarrowed one never appeared.
-   * A caller whose note would blame the data source for what the reader's own
-   * dial did passes none.
+   * A likelier cause than "there is nothing here", under the empty line
+   * whether it is narrowed or not. A caller whose note would blame the data
+   * source for what the reader's own dial did passes none.
    */
   emptyNote?: ReactNode;
+  /** Replaces the empty line and its Clear filters; see `EmptyRow`. */
+  emptyLine?: ReactNode;
   /**
    * Omit for a list whose GET has no `q` param; the box is then not rendered.
    * `answered` is the search the rows answer, which `value` runs ahead of while
@@ -262,18 +261,15 @@ export function ListTable<Row>({
    */
   onPerPage?: (next: number) => void;
   /**
-   * Which RENDERED page is on screen, for a caller that keeps it somewhere the
-   * table cannot — the address, so a reader who paged through a list and
-   * opened a record comes back to the page they left.
-   *
-   * Omit it and the table holds the number itself, which is what every caller
-   * did before this existed. Pass it and the table still tells you when it
-   * moves, through `onPage`: the pager, the reset on a new narrowing, and
-   * stepping past what is loaded all go through one place.
+   * Which RENDERED page is on screen, for a caller that keeps it in the address.
+   * A reader who opened a record then comes back to the page they left. Omit it
+   * and the table holds the number itself. Every move still goes to `onPage`.
    */
   page?: number;
   /** The rendered page changed, whether by the pager or by a reset. */
   onPage?: (next: number) => void;
+  /** True when `page` arrived with the narrowing, as a link names both. */
+  keepsPage?: () => boolean;
   /**
    * The element the ROWS scroll in, handed back to a caller that has something
    * to do with it — remembering where the reader was, which only the caller
@@ -311,7 +307,7 @@ export function ListTable<Row>({
   notice?: ReactNode;
 }>) {
   const columns = declared.filter((column) => !column.phoneOnly);
-  const display = useColumnDisplay(columns);
+  const display = useColumnDisplay(columns, widthsKey);
   const order = useColumnOrder(widthsKey);
   const placed = orderedColumns(columns, order.order);
   const scroller = useRef<HTMLDivElement>(null);
@@ -348,6 +344,7 @@ export function ListTable<Row>({
       hasMore,
       onLoadMore,
       reachAsked: !bodyOwnsPaging,
+      keepsPage,
     },
     {
       search: search?.value,
@@ -381,18 +378,19 @@ export function ListTable<Row>({
     !narrowedBy(dials) &&
     archived?.checked !== true &&
     fitsOnePage(rows, serverTotal, hasMore);
-  const emptyLine = (
+  const emptyRow = (
     <EmptyRow
       unit={unit}
       narrowed={narrowedBy(dials)}
       filtered={filteredBy(dials)}
       onClear={() => clearAll(dials)}
+      line={emptyLine}
       emptyNote={emptyNote}
     />
   );
   const emptyBlock = (
     <div className="lt-emptyline">
-      <EmptyState>{emptyLine}</EmptyState>
+      <EmptyState>{emptyRow}</EmptyState>
     </div>
   );
 
@@ -490,7 +488,7 @@ export function ListTable<Row>({
             phone={phone}
             pending={pending}
             problem={problem}
-            empty={emptyLine}
+            empty={emptyRow}
           />
         </ListGrid>
       )}

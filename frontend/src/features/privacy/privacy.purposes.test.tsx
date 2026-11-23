@@ -126,6 +126,16 @@ describe("Add purpose", () => {
     expect(keyBox).not.toHaveAttribute("aria-invalid", "true");
   });
 
+  it("closes through its Cancel, sending nothing", async () => {
+    const posted = stub(refused({}, 500));
+    const { user, dialog } = await addPurpose("", "");
+    await user.click(
+      within(dialog).getByRole("button", { name: en["create.cancel"] }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(posted).toHaveLength(0);
+  });
+
   it("says which fields are still empty instead of a grey button", async () => {
     const posted = stub(refused({}, 500));
     await addPurpose("", "");
@@ -185,5 +195,79 @@ describe("Add purpose", () => {
       expect(frequency).toHaveAttribute("aria-invalid", "true"),
     );
     expect(screen.queryByText(/pick weekly/)).toBeNull();
+  });
+});
+
+function stubCounts(
+  allow: NonNullable<Parameters<typeof meFixture>[0]>["allow"],
+): string[] {
+  const asked: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const url = new URL(request.url);
+      if (url.pathname.endsWith("/me")) {
+        return json(meFixture({ roles: ["admin"], allow }));
+      }
+      if (url.pathname.endsWith("/consent-purposes/send-counts")) {
+        asked.push(url.search);
+        return json({
+          days: 30,
+          data: [
+            {
+              purpose_key: "transactional",
+              class: "transactional",
+              sends: 1200,
+              disputed: 3,
+            },
+            { purpose_key: "unknown", sends: 2, disputed: 0 },
+          ],
+        });
+      }
+      return json({ data: [TRANSACTIONAL] });
+    }),
+  );
+  return asked;
+}
+
+function renderCard() {
+  rtlRender(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <LocaleProvider initial="en">
+        <ConsentPurposesCard />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+describe("Mail sent per purpose", () => {
+  it("shows a compliance reader each purpose with its class and count", async () => {
+    const asked = stubCounts({ consent_config: ["read"], contact: ["read"] });
+    renderCard();
+
+    const table = await screen.findByRole("table", {
+      name: en["privacy.purposeSendsTable"],
+    });
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows.map((row) => row.textContent)).toEqual([
+      `${TRANSACTIONAL.label}${en["privacy.purposeClass.transactional"]}1,2003`,
+      `${en["privacy.purposeUnknown"]}${en["privacy.purposeClass.undefined"]}20`,
+    ]);
+    expect(asked).toEqual(["?days=30"]);
+  });
+
+  it("asks nothing for a seat without the compliance read grant", async () => {
+    const asked = stubCounts({ contact: ["read"] });
+    renderCard();
+
+    await screen.findByText(TRANSACTIONAL.label);
+    expect(
+      screen.queryByRole("table", { name: en["privacy.purposeSendsTable"] }),
+    ).toBeNull();
+    expect(asked).toEqual([]);
   });
 });

@@ -1,8 +1,11 @@
-// Pure helpers for the custom-fields admin screen — no React, unit-tested in
-// isolation so the screen's derivations (immutable API key, the pending DDL
-// preview, and the structural-word refusal) are proven independently.
+// Pure helpers for custom fields, with no React. The admin screen's derivations
+// (immutable API key, pending DDL preview, structural-word refusal) are tested
+// here in isolation.
 
 import type { components } from "../api/schema";
+import { translate } from "../i18n";
+import { DEFAULT_LOCALE, isLocale } from "../i18n/locale";
+import { translatedLabel } from "./labeltranslation";
 
 export type CfObject = components["schemas"]["CustomField"]["object"];
 
@@ -22,6 +25,40 @@ export const CF_OBJECTS: readonly CfObject[] = [
   "contract",
   "activity",
 ];
+
+/** A record key's custom-field catalog, where that record type has one. */
+export function catalogOfRecord(recordKey: string): CfObject | undefined {
+  return CF_OBJECTS.find((object) => object === recordKey);
+}
+
+/** A field's name in the reader's language, without any retired mark. */
+export function customFieldName(
+  field: components["schemas"]["CustomField"],
+  locale: string,
+): string {
+  return translatedLabel(field.label, field.label_translations, locale);
+}
+
+/**
+ * A field's label as the reader sees it. A retired field reads "Label (retired)",
+ * because a live field may carry the same name. This is the one place that adds it.
+ */
+export function customFieldLabel(
+  field: components["schemas"]["CustomField"],
+  locale: string,
+): string {
+  const label = customFieldName(field, locale);
+  if (field.status !== "retired") {
+    return label;
+  }
+  return translate(
+    isLocale(locale) ? locale : DEFAULT_LOCALE,
+    "cf.retiredLabel",
+    {
+      label,
+    },
+  );
+}
 
 // The type set mirrors fieldcatalog.Types() in the backend, in its order.
 // backend/gates/frontendcustomfieldtypes_test.go fails when the two differ in
@@ -54,43 +91,6 @@ export function columnName(label: string): string {
 
 export function apiKey(object: CfObject, label: string): string {
   return `${object}.${columnName(label)}`;
-}
-
-// The physical storage note per type (CUSTOM-FIELDS-PARAM-4) — mirrors what the
-// governed engine emits, shown before Confirm so the admin sees the exact
-// pending schema change.
-function storageNote(type: CfType, currency: string): string {
-  switch (type) {
-    case "text":
-      return "text";
-    case "number":
-      return "numeric";
-    case "date":
-      return "date";
-    case "currency":
-      return `numeric · cents · ${currency || "EUR"}`;
-    case "multiselect":
-      return "text[]";
-    case "picklist":
-      return "enum";
-    case "boolean":
-      return "boolean";
-    case "record":
-    case "url":
-      return "text";
-  }
-}
-
-export function ddlPreview(
-  object: CfObject,
-  label: string,
-  type: CfType,
-  currency: string,
-): string {
-  return `ALTER ${object} ADD COLUMN ${columnName(label)} (${storageNote(
-    type,
-    currency,
-  )}) · backfilled NULL · reversible`;
 }
 
 // A field is data; an object or a relationship is structure. A label that reads

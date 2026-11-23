@@ -21,7 +21,8 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
-import { CitedAttention, CitedLaws } from "../../components/citedlaw";
+import { CitedLaws, FindingWithLaw } from "../../components/citedlaw";
+import { lawsOf } from "../../components/citedprovisions";
 import { Button, Checkbox, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
@@ -29,8 +30,12 @@ import { footerFindingsText } from "../../format/footerfindings";
 import { sendingCompanyScope } from "../../format/sendingcompany";
 import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { communicationContextLabel } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
+import type { ScheduleFields } from "./composeschedule";
+import { DirectSendWhen, useSendAnywayWhen } from "./directsendwhen";
 import { refusalCountryText } from "./refusalcountry";
 import { sendReviewOf } from "./sendreview";
 import { WordingCorrectionModal } from "./wordingcorrectionmodal";
@@ -39,6 +44,7 @@ import { WordingCorrectionModal } from "./wordingcorrectionmodal";
 // serves for it. Taken from the generated contract rather than restated, so a
 // field the server renames cannot go on being read here.
 type CommunicationReview = components["schemas"]["CommunicationReview"];
+type RefusedRecipient = CommunicationReview["refusals"][number];
 
 // DirectSendCommand is what the server is told. The whole of it travels as a
 // variable rather than closed over render state: a mutation reading the reason
@@ -52,14 +58,33 @@ export type DirectSendCommand = Readonly<{
   assessmentRevision?: string;
   // The refusals the director read. A review rewritten since then is stale.
   shownReasons: readonly string[];
+  // A later moment to send at. Absent sends now.
+  later?: ScheduleFields;
 }>;
+
+/** What a Send anyway came to: sent now, waiting for its moment, or gone
+ *  already from another tab. */
+export type DirectSendOutcome = "sent" | "scheduled" | "alreadySent";
+
+const OUTCOME_KEY: Readonly<Record<DirectSendOutcome, MessageKey>> = {
+  sent: "directSend.queued",
+  scheduled: "directSend.scheduled",
+  alreadySent: "directSend.alreadySent",
+};
+
+/** The line a surface shows once a Send anyway has answered. */
+export function directSendOutcomeKey(outcome: DirectSendOutcome): MessageKey {
+  return OUTCOME_KEY[outcome];
+}
 
 // A decision retried after a lost answer reuses its key, whichever reviews
 // were decided in between. The server then replays the send it recorded
 // instead of answering that the review is gone.
 const decisionKeys = intentKeys();
 
-export async function directSend(command: DirectSendCommand): Promise<string> {
+export async function directSend(
+  command: DirectSendCommand,
+): Promise<DirectSendOutcome> {
   const body = {
     reason_code: command.reasonCode as "other",
     explanation: command.explanation,
@@ -70,6 +95,7 @@ export async function directSend(command: DirectSendCommand): Promise<string> {
     // caller reaches this only from the press that is one. That is the
     // modal's confirm once ticked, or Send anyway beside its warning.
     acknowledged: true as const,
+    ...command.later,
   };
   const { data, error, response } = await decisionKeys(
     [command.reviewId, body],
@@ -86,9 +112,12 @@ export async function directSend(command: DirectSendCommand): Promise<string> {
   // undefined data for a bodiless non-2xx, which would otherwise read as a
   // message that went when nothing did.
   if (!response.ok || !data) {
+    if (response.status === 409 && error?.code === "already_sent") {
+      return "alreadySent";
+    }
     throwProblem(error || { title: "The message was not sent." });
   }
-  return data.id;
+  return response.status === 202 ? "scheduled" : "sent";
 }
 
 // REASON_CODES is the closed list the record keeps, in the server's own
@@ -109,15 +138,20 @@ export function DirectSendModal({
   review: initialReview,
   onSent,
   onReviewRefreshed,
+  laterZone,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   review: CommunicationReview;
-  onSent?: (activityId: string) => void;
+  onSent?: (outcome: DirectSendOutcome) => void;
   onReviewRefreshed?: (review: CommunicationReview) => void;
+  /** Offer a later moment, picked in this zone: the held message's own. */
+  laterZone?: string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const viewerZone = useViewerZone();
+  const when = useSendAnywayWhen(laterZone ?? viewerZone);
   const [review, setReview] = useState(initialReview);
   const correction = review.wording_correction;
   const prior = correction ?? {
@@ -180,8 +214,8 @@ export function DirectSendModal({
         setRefreshFailed(true);
       }
     },
-    onSuccess: (activityId) => {
-      onSent?.(activityId);
+    onSuccess: (outcome) => {
+      onSent?.(outcome);
       onClose();
     },
   });
@@ -194,12 +228,9 @@ export function DirectSendModal({
   // and submitting an empty version would be refused by the server with an
   // error about a field the director never saw. Saying so here is the honest
   // answer: there is nothing to read, so there is nothing to acknowledge.
-  const missing = confirmationMissing(
-    Boolean(review.warning),
-    acknowledged,
-    said,
-    t,
-  );
+  const missing =
+    confirmationMissing(Boolean(review.warning), acknowledged, said, t) ??
+    when.missing;
 
   if (editingWording) {
     return (
@@ -218,7 +249,7 @@ export function DirectSendModal({
       onClose={onClose}
       intent="form"
       title={t("directSend.title")}
-      confirmLabel={t("directSend.confirm")}
+      confirmLabel={when.confirmLabel}
       confirmVariant="danger"
       confirmDisabled={Boolean(missing)}
       confirmReason={missing}
@@ -239,6 +270,7 @@ export function DirectSendModal({
           shownReasons: (review.refusals ?? []).map(
             (refusal) => refusal.reason_code,
           ),
+          later: when.later,
         })
       }
     >
@@ -258,16 +290,7 @@ export function DirectSendModal({
         <div
           key={`${refusal.address}-${refusal.subject_id ?? ""}-${refusal.category ?? ""}`}
         >
-          <p>
-            {refusal.provision ? (
-              <CitedAttention
-                address={refusal.address}
-                provision={refusal.provision}
-              />
-            ) : (
-              refusal.address
-            )}
-          </p>
+          <p>{refusal.address}</p>
           {refusalCountryText(refusal, t, locale) && (
             <p className="t-caption">
               {refusalCountryText(refusal, t, locale)}
@@ -275,13 +298,7 @@ export function DirectSendModal({
           )}
           <ConfirmationFooter refusal={refusal} />
           <p className="t-caption">
-            {t(
-              sendPermissionReasonKey(
-                refusal.reason_code,
-                {},
-                refusal.category,
-              ),
-            )}
+            <ReasonWithLaw refusal={refusal} />
           </p>
           <p className="t-caption">
             {communicationContextLabel(
@@ -337,6 +354,7 @@ export function DirectSendModal({
         label={t("directSend.acknowledge")}
         onChange={(e) => setAcknowledged(e.target.checked)}
       />
+      {laterZone !== undefined && <DirectSendWhen state={when} />}
     </ConfirmModal>
   );
 }
@@ -361,11 +379,7 @@ function ConfirmationFooter({
       {refusal.footer_findings?.length ? (
         <p>
           {footerFindingsText(refusal.footer_findings, t, locale)}{" "}
-          <CitedLaws
-            provisions={refusal.footer_findings.map(
-              (finding) => finding.provision,
-            )}
-          />
+          <CitedLaws provisions={refusal.footer_findings.flatMap(lawsOf)} />
         </p>
       ) : null}
     </>
@@ -397,4 +411,14 @@ function confirmationMissing(
   if (!acknowledged) return t("directSend.needsAcknowledgement");
   if (!explanation) return t("directSend.needsReason");
   return undefined;
+}
+
+// Why the engine refused this recipient, with the laws it rests on where a pack
+// binding the message cites one.
+function ReasonWithLaw({ refusal }: Readonly<{ refusal: RefusedRecipient }>) {
+  const t = useT();
+  const sentence = t(
+    sendPermissionReasonKey(refusal.reason_code, {}, refusal.category),
+  );
+  return <FindingWithLaw sentence={sentence} provisions={lawsOf(refusal)} />;
 }

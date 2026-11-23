@@ -1,14 +1,13 @@
 # CASE 64 — Catch me up, and show me the brief.
 #
-# A routing case. read_context fronts three reads about one record, one
-# meeting and this morning's brief, and the prompt asks for two of them in one
-# breath. "What has been happening with Vietnam Partner" is catch_up on a
-# record, and "what is in my morning brief" is the brief. A model that answers
-# both from search_records has read the records and never asked either tool
-# built for the question.
+# read_context fronts three reads about one record, one meeting and this
+# morning's brief, and the prompt asks for two of them in one breath. "What has been happening with Vietnam Partner" is catch_up on a
+# record, and "what is in my morning brief" is the brief. The answer is scored:
+# what the account's timeline holds, and that no brief has been made.
 #
 # The prompt names no tool and no view.
 name: case64_catch_me_up_and_the_brief
+title: Catch me up, and show me the brief
 criteria: [1]
 writes: false
 
@@ -16,14 +15,21 @@ prompt: |
   Coffee first, then calls. What did I miss with Vietnam Partner lately? And
   what is on my morning brief today?
 
-must_call:
-  - catch_me_up_on
-  - read_brief
-
 must_not_call_with:
   - run_research~.
 
+# The seeded rep has no brief run yet, and the brief read answers that with a 404
+# by design. The account's timeline is Mai Nguyen's: the appendix she owes and
+# the Aufstellung the user promised.
+must_mention:
+  - "Mai Nguyen|Aufstellung|appendix|Anhang"
+  # "The generated brief is missing" and "the brief hasn't been generated" say
+  # it too, with the brief first and the negation contracted.
+  - "(?i)\bno\b[^.]{0,40}\bbrief\b|\bbrief\b[^.]{0,60}(?:\bnever|\bnot|n['’]t) (?:yet )?(?:been )?(?:generated|made|run|built|created)|\bbrief\b[^.]{0,30}\b(?:is|was)(?: still)?(?: missing| unavailable|(?: not|n['’]t) (?:there|available|ready))\b"
+
 may_call:
+  - catch_me_up_on
+  - read_brief
   - search_records
   - list_records
   - read_record

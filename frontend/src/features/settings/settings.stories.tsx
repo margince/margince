@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { use } from "react";
 import { userEvent, within } from "storybook/test";
 import { pickOption } from "../../design-system/select-testing";
 import type { Route } from "../../lib/router";
@@ -22,12 +23,14 @@ import { healthSessionRoutes } from "../../testing/systemhealth.session-fixtures
 import { HealthSessionPage } from "../../testing/systemhealth-session";
 import { SettingsScreen, settingsAddress } from "./settings";
 import { PipelinesCard } from "./settings.pipelines";
+import { SettingsPage } from "./settingspage";
 import {
   COMPANY_CONTEXT_OFF,
   EVERY_GRANT,
   NOTIFICATION_ROUTES,
   UNUSED_INSTALLATION_ROUTES,
 } from "./settingspages.fixtures";
+import { PageLoading } from "./settingspageviews";
 import { healthReport } from "./systemhealth.fixtures";
 
 // The settings entries and the cards each one carries. Every story installs the
@@ -334,6 +337,10 @@ const mintPassport = async ({
   // The Modal portals into the document body, outside the canvas.
   const body = within(canvasElement.ownerDocument.body);
   const dialog = within(await body.findByRole("dialog"));
+  await userEvent.type(
+    dialog.getByRole("textbox", { name: /Agent name/ }),
+    "Claude Code on my laptop",
+  );
   await userEvent.click(dialog.getByRole("button", { name: "Mint passport" }));
   await dialog.findByText("Next, use it");
 };
@@ -685,4 +692,36 @@ export const CompanyPageContextOff: Story = {
     "GET /company/context/capabilities": () =>
       jsonResponse(COMPANY_CONTEXT_OFF),
   }),
+};
+
+// A page's first visit while its code is still on the way: the tab strip stays
+// and the body holds its place.
+const codeNeverArrives = new Promise<never>(() => {});
+
+function ArrivingPage() {
+  return use(codeNeverArrives);
+}
+
+export const PageCodeArriving: Story = {
+  name: "Page — code arriving",
+  render: () => {
+    installFetchStub({
+      ...SHELL,
+      "GET /me": everyGrantMe,
+      ...UNUSED_INSTALLATION_ROUTES,
+    });
+    return (
+      <StoryProviders>
+        <SettingsPage
+          route={settingsAddress("company")}
+          content={(id) => (
+            <PageLoading id={id}>
+              <ArrivingPage />
+            </PageLoading>
+          )}
+          Frame={({ children }) => children}
+        />
+      </StoryProviders>
+    );
+  },
 };

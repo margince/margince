@@ -23,14 +23,16 @@ import { useLastSubject } from "../../design-system/presence";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { STAGE_CHANCES_KEY } from "../../lib/activitykeys";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import {
-  fieldCheckSentence,
   isVersionSkew,
   isVersionSkewOf,
   percentLimit,
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
+import { winProbabilityFault } from "../../lib/wholenumber";
 
 type Pipeline = components["schemas"]["Pipeline"];
 type Stage = components["schemas"]["Stage"];
@@ -69,24 +71,6 @@ function mapStageBody(v: Record<string, unknown>) {
 // The form keys the stage's name in further languages travel under.
 const STAGE_NAME = "name";
 
-// The server's bounds on a stage's chance, checked in its own words.
-const WIN_PROBABILITY = { min: "0", max: "100" } as const;
-
-function winProbabilityFault(
-  value: string,
-  label: Readonly<{ label: string; limit: (wire: string) => string }>,
-  locale: Locale,
-): string | undefined {
-  if (value.trim() === "") return undefined;
-  const percent = Number(value);
-  if (!Number.isInteger(percent)) {
-    return fieldCheckSentence("not_integer", locale, label);
-  }
-  return percent < 0 || percent > 100
-    ? fieldCheckSentence("out_of_range", locale, label, WIN_PROBABILITY)
-    : undefined;
-}
-
 // `fixedType` is the type a stage must keep because it is its pipeline's only
 // Won or Lost stage; the server refuses the change too.
 function stageFields(
@@ -119,7 +103,7 @@ function stageFields(
       label: "stage.winProb",
       type: "number",
       limit: chance.limit,
-      validate: (value) => winProbabilityFault(value, chance, locale),
+      validate: (value) => winProbabilityFault(value, locale, chance),
     },
   ];
 }
@@ -136,7 +120,7 @@ export function onlyClosingStages(ladder: readonly Stage[]): Set<string> {
 }
 
 export function ladderOf(pipeline: Pipeline): Stage[] {
-  return [...(pipeline.stages ?? [])].sort((a, b) => a.position - b.position);
+  return inPositionOrder(pipeline.stages ?? []);
 }
 
 // A new stage is created at the end of the ladder. The server moves an open
@@ -171,6 +155,7 @@ export function StageCreate({
     onSuccess: () => {
       setOpen(false);
       queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+      queryClient.invalidateQueries({ queryKey: STAGE_CHANCES_KEY });
       toast.show(t("stage.added"));
     },
   });
@@ -329,6 +314,7 @@ export function useStageRemoval(
       // The refetched ladder first, then the dialog: closing it hands focus to
       // a row that must already be drawn.
       await queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+      void queryClient.invalidateQueries({ queryKey: STAGE_CHANCES_KEY });
       setRemoving(null);
     },
     // Held pending until the re-read lands, so a second press cannot resend

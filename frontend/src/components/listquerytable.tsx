@@ -17,7 +17,7 @@ import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { entryDepth } from "../lib/historydepth";
-import { problemMessageOf } from "../lib/problem";
+import { problemMessageOf, problemStatus } from "../lib/problem";
 import {
   navigate,
   type Route,
@@ -27,7 +27,11 @@ import {
   watchAddress,
 } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
-import { currentParams, useUrlParams } from "../lib/urlstate";
+import {
+  currentParams,
+  useNarrowedFromOutside,
+  useUrlParams,
+} from "../lib/urlstate";
 import type {
   FilterSpec,
   ListState,
@@ -83,6 +87,7 @@ export function ListTable<Row>({
   saveView,
   notice,
   emptyNote,
+  emptyLine,
   scopeKey,
   body,
   bodyOwnsPaging = false,
@@ -167,10 +172,14 @@ export function ListTable<Row>({
   notice?: ReactNode;
   /**
    * What the empty table says under its generic line, when this screen knows
-   * why it is empty. Example: a "Mine" view for a reader who owns nothing,
-   * with the way back to everything.
+   * why it is empty. Example: a filter the reader's role cannot apply.
    */
   emptyNote?: ReactNode;
+  /**
+   * What the empty table says in place of its generic line and Clear filters.
+   * Example: a "Mine" view for a reader who owns nothing, with the way back.
+   */
+  emptyLine?: ReactNode;
   /**
    * What this list is reading, when the screen narrows it by something that
    * is neither a chip nor a filter. Passed to the surface, which resets the
@@ -184,9 +193,9 @@ export function ListTable<Row>({
   const { rows, query, setQuery, isPending, isError, error, refetch } = state;
   // The rendered page is a dial like the rest, so it comes from the address.
   // Read here rather than threaded through ListState: it is the only dial the
-  // table owns by default. A screen that never puts it in the URL keeps the
-  // table's own number.
+  // table owns by default.
   const [params, setParams] = useUrlParams();
+  const narrowedFromOutside = useNarrowedFromOutside(JSON.stringify(query));
   // Where the reader was in the rows, which the shell cannot remember for them.
   // A full-height list takes the overflow itself, so the page column the shell
   // watches is at zero on every one of these screens. Back then returned
@@ -341,14 +350,34 @@ export function ListTable<Row>({
   // Neither state replaces the surface. The header, the dials and the primary
   // action belong to the screen rather than to the response. So they stay put,
   // and only the body reports what happened.
+  // A 422 refuses the list's own dials, a sort or filter from an old link or
+  // saved view. A retry asks the same thing again; clearing them does not.
+  const refusedDials = isError && problemStatus(error) === 422;
+  const clearDials = () => {
+    committed.current = "";
+    typed.current = "";
+    setLocalSearch("");
+    setQuery((prev) => ({
+      ...prev,
+      q: "",
+      sort: state.initialSort ?? "",
+      filters: { ...state.initialFilters },
+    }));
+  };
   const problem = isError ? (
     <>
-      <p>{t("common.error")}</p>
+      <p>{t(refusedDials ? "table.dialsRefused" : "common.error")}</p>
       {/* ds:ignore the cause under a headline with its own Retry, a composite */}
       <p className="listquery-cause">{problemMessageOf(error, t)}</p>
-      <Button className="listquery-retry" onClick={() => refetch()}>
-        {t("common.retry")}
-      </Button>
+      {refusedDials ? (
+        <Button className="listquery-retry" onClick={clearDials}>
+          {t("table.clearFilters")}
+        </Button>
+      ) : (
+        <Button className="listquery-retry" onClick={() => refetch()}>
+          {t("common.retry")}
+        </Button>
+      )}
     </>
   ) : undefined;
 
@@ -393,6 +422,7 @@ export function ListTable<Row>({
       unit={t(unit)}
       unitOne={unitOne && t(unitOne)}
       emptyNote={emptyNote}
+      emptyLine={emptyLine}
       action={action}
       caption={caption ? t(caption) : undefined}
       footer={footer}
@@ -453,6 +483,7 @@ export function ListTable<Row>({
       onPage={(next) =>
         setParams(withListPage(currentParams(), next, state.paramScope))
       }
+      keepsPage={narrowedFromOutside}
       bodyRef={rowsScroller}
       widthsKey={layoutKey}
       body={body}

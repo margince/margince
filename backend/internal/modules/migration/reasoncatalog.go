@@ -118,7 +118,7 @@ const (
 	textValueDetail = "{value:q}: {detail}"
 )
 
-var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
+var reasonCatalog = withRecordIDReasons(withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
 	ReasonEmployerRefused: {text: map[textlang.Lang]string{
 		textlang.English:    "The employer could not be resolved. Choose an unambiguous company that you may link.",
 		textlang.German:     "Der Arbeitgeber konnte nicht zugeordnet werden. Wählen Sie ein eindeutiges Unternehmen, das Sie verknüpfen dürfen.",
@@ -157,12 +157,12 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 	}},
 	ReasonContactEmailHeld: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This email address is already held in the CRM, so the row cannot create a second contact under it.",
-		textlang.German:     "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit anlegen.",
+		textlang.German:     "Diese E-Mail-Adresse ist im CRM bereits vergeben, daher kann die Zeile keinen zweiten Kontakt damit erstellen.",
 		textlang.Vietnamese: "Địa chỉ email này đã có trong CRM nên hàng không thể tạo liên hệ thứ hai với nó.",
 	}},
 	ReasonContactHoldsLead: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "Somebody with this address is already a contact, so the row does not create a lead. The contact’s owner is told; new business with a contact is a deal.",
-		textlang.German:     "Mit dieser Adresse gibt es bereits einen Kontakt, daher legt die Zeile keinen Lead an. Wer für den Kontakt verantwortlich ist, wird informiert; ein neues Geschäft mit einem Kontakt ist ein Deal.",
+		textlang.German:     "Mit dieser Adresse gibt es bereits einen Kontakt, daher erstellt die Zeile keinen Lead. Wer für den Kontakt verantwortlich ist, wird informiert; ein neues Geschäft mit einem Kontakt ist ein Deal.",
 		textlang.Vietnamese: "Địa chỉ này đã thuộc về một liên hệ nên hàng không tạo lead. Chủ sở hữu liên hệ được báo; việc kinh doanh mới với một liên hệ là một deal.",
 	}},
 	ReasonAddressErased: {params: nil, text: map[textlang.Lang]string{
@@ -177,17 +177,17 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 	}},
 	ReasonDomainHeld: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This domain is already held by another company in the CRM, so the row cannot create a second company under it.",
-		textlang.German:     "Diese Domain gehört im CRM bereits einem anderen Unternehmen, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
+		textlang.German:     "Diese Domain gehört im CRM bereits einem anderen Unternehmen, daher kann die Zeile kein zweites Unternehmen damit erstellen.",
 		textlang.Vietnamese: "Tên miền này đã thuộc về một công ty khác trong CRM nên hàng không thể tạo công ty thứ hai với nó.",
 	}},
 	ReasonCompanyDomainMatched: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "The company that already holds the domain {value} takes this row, so no second company is created.",
-		textlang.German:     "Das Unternehmen, dem die Domain {value} bereits gehört, übernimmt diese Zeile. Es wird kein zweites Unternehmen angelegt.",
+		textlang.German:     "Das Unternehmen, dem die Domain {value} bereits gehört, übernimmt diese Zeile. Es wird kein zweites Unternehmen erstellt.",
 		textlang.Vietnamese: "Công ty đã sở hữu tên miền {value} nhận hàng này, nên không tạo công ty thứ hai.",
 	}},
 	ReasonStoredValuesKept: {params: []string{paramColumn}, text: map[textlang.Lang]string{
 		textlang.English:    "The row neither created this record nor names it by id, so it keeps its own {column}. The row fills only empty fields.",
-		textlang.German:     "Die Zeile hat diesen Datensatz weder angelegt noch per ID benannt, daher bleibt sein Wert für {column}. Die Zeile füllt nur leere Felder.",
+		textlang.German:     "Die Zeile hat diesen Datensatz weder erstellt noch per ID benannt, daher bleibt sein Wert für {column}. Die Zeile füllt nur leere Felder.",
 		textlang.Vietnamese: "Hàng này không tạo bản ghi này và không nêu nó theo ID, nên giữ nguyên {column} của nó. Hàng chỉ điền các trường còn trống.",
 	}},
 	ReasonLinkedinHeld: {params: nil, text: map[textlang.Lang]string{
@@ -202,7 +202,7 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 	}},
 	ReasonCannotCreate: {params: []string{paramPlural}, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot create {plural}, so the {plural} file is skipped.",
-		textlang.German:     "Sie dürfen keine Datensätze vom Typ {plural} anlegen, daher wird die Datei {plural} übersprungen.",
+		textlang.German:     "Sie dürfen keine Datensätze vom Typ {plural} erstellen, daher wird die Datei {plural} übersprungen.",
 		textlang.Vietnamese: "Bạn không có quyền tạo {plural} nên tệp {plural} bị bỏ qua.",
 	}},
 	ReasonCannotEdit: {params: []string{paramPlural}, text: map[textlang.Lang]string{
@@ -222,22 +222,22 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 	}},
 	ReasonTagNew: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "No tag has this name yet, so the import creates it.",
-		textlang.German:     "Noch kein Tag hat diesen Namen, daher legt der Import ihn an.",
+		textlang.German:     "Noch kein Tag hat diesen Namen, daher erstellt der Import ihn.",
 		textlang.Vietnamese: "Chưa có thẻ nào mang tên này nên quá trình nhập sẽ tạo thẻ.",
 	}},
 	ReasonTagCreated: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "No tag had this name, so the import created it.",
-		textlang.German:     "Kein Tag hatte diesen Namen, daher hat der Import ihn angelegt.",
+		textlang.German:     "Kein Tag hatte diesen Namen, daher hat der Import ihn erstellt.",
 		textlang.Vietnamese: "Không có thẻ nào mang tên này nên quá trình nhập đã tạo thẻ.",
 	}},
 	ReasonCompanyDuplicateFound: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "A company of this name is already in the CRM. Importing this row creates a second one and files the pair for review.",
-		textlang.German:     "Ein Unternehmen mit diesem Namen ist bereits im CRM. Der Import dieser Zeile legt ein zweites an und stellt das Paar zur Prüfung bereit.",
+		textlang.German:     "Ein Unternehmen mit diesem Namen ist bereits im CRM. Der Import dieser Zeile erstellt ein zweites und stellt das Paar zur Prüfung bereit.",
 		textlang.Vietnamese: "Đã có công ty cùng tên trong CRM. Nhập hàng này sẽ tạo công ty thứ hai và đưa cặp này vào hàng đợi xem xét.",
 	}},
 	ReasonContactDuplicateFound: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "Someone matching this row is already in the CRM. A row naming an address already held is refused, and a near match creates and files the pair for review.",
-		textlang.German:     "Jemand, der zu dieser Zeile passt, ist bereits im CRM. Eine Zeile mit einer bereits vergebenen Adresse wird abgelehnt, ein ähnlicher Treffer legt an und stellt das Paar zur Prüfung bereit.",
+		textlang.German:     "Jemand, der zu dieser Zeile passt, ist bereits im CRM. Eine Zeile mit einer bereits vergebenen Adresse wird abgelehnt, bei einem ähnlichen Treffer wird der Datensatz erstellt und das Paar zur Prüfung bereitgestellt.",
 		textlang.Vietnamese: "Đã có người khớp với hàng này trong CRM. Hàng có địa chỉ đã tồn tại bị từ chối, còn hàng gần giống sẽ được tạo và đưa cặp này vào hàng đợi xem xét.",
 	}},
 	ReasonCompanyDuplicateSkipped: {params: nil, text: map[textlang.Lang]string{
@@ -271,9 +271,9 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.Vietnamese: "Có nhiều hơn một công ty tên {name:q} nên chỉ con người mới quyết định được công ty nào thuê liên hệ này. Hàng đã được nhập mà không có liên kết.",
 	}},
 	ReasonIDOnNonCompany: {params: []string{paramColumn, "object"}, text: map[textlang.Lang]string{
-		textlang.English:    "Only a company row can name an “{column}”. A {object} row is identified by its own key.",
-		textlang.German:     "Nur eine Unternehmenszeile kann {column:q} angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
-		textlang.Vietnamese: "Chỉ hàng công ty mới có thể nêu {column:q}; hàng {object} được nhận diện bằng khóa riêng.",
+		textlang.English:    "Only a company, contact, lead or deal row can name an “{column}”. A {object} row is identified by its own key.",
+		textlang.German:     "Nur eine Zeile für Unternehmen, Kontakte, Leads oder Deals kann {column:q} angeben; eine Zeile vom Typ {object} wird über ihren eigenen Schlüssel erkannt.",
+		textlang.Vietnamese: "Chỉ hàng công ty, liên hệ, lead hoặc deal mới có thể nêu {column:q}; hàng {object} được nhận diện bằng khóa riêng.",
 	}},
 	ReasonIDNotACompanyID: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a company id. Export the companies to get theirs, or leave the column empty to import this row as a new company.",
@@ -402,7 +402,7 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 	}},
 	ReasonTagNameInvalid: {params: []string{paramName, "detail"}, text: map[textlang.Lang]string{
 		textlang.English:    "The tag “{name}” cannot be created: its name {detail}.",
-		textlang.German:     "Der Tag {name:q} kann nicht angelegt werden: Sein Name {detail}",
+		textlang.German:     "Der Tag {name:q} kann nicht erstellt werden: Sein Name {detail}",
 		textlang.Vietnamese: "Không thể tạo thẻ {name:q}: tên của nó {detail}",
 	}},
 	ReasonEmployerColumnEmpty: {params: nil, text: map[textlang.Lang]string{
@@ -427,7 +427,7 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 	}},
 	ReasonCannotCreateTags: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot create tags, so a tag new to the CRM is not added.",
-		textlang.German:     "Sie dürfen keine Tags anlegen, daher wird ein im CRM neuer Tag nicht hinzugefügt.",
+		textlang.German:     "Sie dürfen keine Tags erstellen, daher wird ein im CRM neuer Tag nicht hinzugefügt.",
 		textlang.Vietnamese: "Bạn không có quyền tạo thẻ nên thẻ mới đối với CRM không được thêm.",
 	}},
 	ReasonEmployerColumnEmptyDropped: {params: nil, text: map[textlang.Lang]string{
@@ -490,4 +490,4 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
 		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
-})))
+}))))

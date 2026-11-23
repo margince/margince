@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
 )
 
 var momentNow = time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC)
@@ -139,7 +140,7 @@ func TestAnAccountOwingNothingGetsTheQuietState(t *testing.T) {
 // — and this card never looked at what those rows fired on.
 func TestTheQuietAccountCardClaimsOnlyThePromisesItRead(t *testing.T) {
 	got := accountMomentOf(nil, nil)
-	if got.Headline != "Nothing is owed to this account" {
+	if got.Headline != "Nothing is owed to this company" {
 		t.Errorf("headline = %q, want a claim bounded by what the card checked", got.Headline)
 	}
 	if !strings.Contains(got.WhyNow, "promise") {
@@ -227,7 +228,7 @@ func TestATaskCarriesTheMomentItWasFiled(t *testing.T) {
 	if len(filed) != len(rows) {
 		t.Fatalf("%d tasks came back with %d filing moments; the two slices have to line up", len(rows), len(filed))
 	}
-	items := accountPromises(rows, filed, nil)
+	items := accountPromises(rows, filed, nil, time.UTC)
 	if len(items) != 1 {
 		t.Fatalf("built %d promises from one task", len(items))
 	}
@@ -245,5 +246,29 @@ func TestAWithheldPromiseIsAdmittedRatherThanSilent(t *testing.T) {
 	markAttentionWithheld(page)
 	if page.AttentionWithheld == nil || !*page.AttentionWithheld {
 		t.Error("a withheld promise left no mark; a silent card reads as 'this account owes nothing'")
+	}
+}
+
+// A task with only a date is owed on the company's day, whichever zone it was
+// picked in. Picked for 16 Nov in Los Angeles, it resolves to 07:59 UTC on the
+// 17th. At 08:00 in Berlin it is on time by instant and late by date.
+func TestADateOnlyTaskIsRankedByItsPickedDate(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	due := time.Date(2026, 11, 17, 7, 59, 59, 0, time.UTC)
+	step := crmcontracts.Company360NextStep{
+		Subject: "Send the contract", DueAt: &due, DueHasTime: new(false),
+		DueIntent: &crmcontracts.IntentTime{WallClock: "2026-11-16T23:59:59", Timezone: "America/Los_Angeles"},
+	}
+	now := time.Date(2026, 11, 17, 7, 0, 0, 0, time.UTC)
+	items := accountPromises([]crmcontracts.Company360NextStep{step}, nil, nil, berlin)
+	if _, late := owedwork.MostRecentlySlipped(items, now); !late {
+		t.Error("a task picked for the 16th is not late at 08:00 Berlin on the 17th")
+	}
+	items = accountPromises([]crmcontracts.Company360NextStep{step}, nil, nil, time.FixedZone("Los Angeles", -8*3600))
+	if _, late := owedwork.MostRecentlySlipped(items, now); late {
+		t.Error("a task picked for the 16th is late at 23:00 Los Angeles on the 16th")
 	}
 }

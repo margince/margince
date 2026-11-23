@@ -176,7 +176,7 @@ func (a *ExtractionAccept) Accept(ctx context.Context, attachmentID ids.UUID, re
 		return zero, err
 	}
 	err = database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
-		if _, err := a.deals.UpdateDealTx(ctx, tx, dealID, patch, active); err != nil {
+		if err := a.deals.ApplyDealUpdateTx(ctx, tx, dealID, patch, active); err != nil {
 			return err
 		}
 		return a.auditAcceptedFieldsTx(ctx, tx, ids.UUID(att.EntityId), accepted)

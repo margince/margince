@@ -74,6 +74,7 @@ func (f lineTaxFixture) offer(t *testing.T, entity *ids.LegalEntityID) crmcontra
 	t.Helper()
 	typed, desc, price := "16", "Old contract", int64(10000)
 	return renderOneLineOffer(f.desk, t, f.e, f.dealID, deals.CreateOfferInput{
+		Source:        "manual",
 		LegalEntityID: entity,
 		LineItems: []deals.OfferLineInputRow{
 			{ProductID: &f.product, Quantity: "1"},

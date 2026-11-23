@@ -315,7 +315,7 @@ var replayableOperations = map[string]replayTarget{
 
 	// Send anyway answers the outbound activity its decision released, gated
 	// on that activity like every other send.
-	"POST /v1/communication-reviews/{id}/direct-send": {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/communication-reviews/{id}/direct-send": {object: tableActivity, table: tableActivity, idPath: "id", altTable: tableScheduledSend, altMarker: "scheduled_at"},
 
 	"POST /v1/voice-profiles/{id}/corpus/clear": {object: tableVoiceProfile, table: tableVoiceProfile, idPath: "id"},
 
@@ -393,9 +393,13 @@ var replayableOperations = map[string]replayTarget{
 		objectNote: "authority is the parent record's own — auth.Require plus auth.EnsureWritableLive on company/deal/project",
 		tableField: "record_type", idPath: "record_id",
 	},
-	// A handover request answers the request and names the record it asks for,
-	// so a replay re-probes that record as the assignment routes do.
+	// A handover or edit access request answers with the record it asks for.
+	// So a replay re-probes that record as the assignment routes do.
 	"POST /v1/records/{record_type}/{id}/ownership-request": {
+		objectNote: "authority is the record's own — auth.Require update plus auth.EnsureVisibleLive when the request is filed",
+		tableField: "record_type", idPath: "record_id",
+	},
+	"POST /v1/records/{record_type}/{id}/edit-access-request": { //nolint:goconst // the route key; its other spellings are generated
 		objectNote: "authority is the record's own — auth.Require update plus auth.EnsureVisibleLive when the request is filed",
 		tableField: "record_type", idPath: "record_id",
 	},
@@ -420,6 +424,8 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/acquisition-sources":       {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/acquisition-sources/{id}": {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/loss-reasons":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	//nolint:goconst // a route key, as every key of this map is; the generated tables repeat it as their own data
+	"POST /v1/activity-review-templates": {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/partner-stages":            {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/partner-stages/{id}":      {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/loss-reasons/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
@@ -472,4 +478,10 @@ var replayableOperations = map[string]replayTarget{
 	// through the handler's own EnsureVisible; what a replay hands back is the
 	// receipt, which names no subject.
 	"POST /v1/contacts/{id}/enrichment-runs": {object: tableContact, rowNote: "a run receipt: state, cost and requested categories, carrying no contact values to scope"},
+
+	"POST /v1/users":                                 {object: replayMemberAdminObject, rowNote: "a member record carries no row scope; the user_admin grant that governed the invitation governs its replay"}, //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/users/{id}/resend-invite":              {object: replayMemberAdminObject, rowNote: "a member record carries no row scope; the user_admin grant that governed the invitation governs its replay"}, //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/contacts/{id}/consent/privacy-notice":  {object: tableContact, table: tableContact, pathParam: "id"},                                                                                             //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/contacts/{id}/consent/confirm-request": {object: tableContact, table: tableContact, pathParam: "id"},                                                                                             //nolint:goconst // the replay gates read this map's keys as string literals
+	"POST /v1/contacts/{id}/consent/double-opt-in":   {object: tableContact, table: tableContact, pathParam: "id"},                                                                                             //nolint:goconst // the replay gates read this map's keys as string literals
 }

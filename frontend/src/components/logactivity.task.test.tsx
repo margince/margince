@@ -81,11 +81,17 @@ describe("assigning a task at create time", () => {
     expect(post?.body).toMatchObject({ kind: "task", task_type: "meet" });
   });
 
-  it("posts no assignee when the task is left unassigned", async () => {
+  // The server gives a task that names nobody to its writer, so the default
+  // choice says "Me" rather than promising a task nobody holds.
+  it("starts on Me and posts no assignee, leaving the task to its writer", async () => {
     const captured: Captured[] = [];
     renderTaskComposer(captured);
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Subject *"), "Send proposal");
+    expect(screen.getByLabelText("Assignee").textContent).toContain("Me");
+    await user.click(screen.getByLabelText("Assignee"));
+    expect(screen.queryByRole("option", { name: "Unassigned" })).toBeNull();
+    await user.click(await screen.findByRole("option", { name: "Me" }));
     await user.click(screen.getByRole("button", { name: "Log" }));
 
     await waitFor(() =>
@@ -166,5 +172,39 @@ describe("assigning a task at create time", () => {
     expect(
       within(listbox).queryByRole("option", { name: "Runner Bot" }),
     ).toBeNull();
+  });
+});
+
+describe("clearing the due date of a task", () => {
+  it("drops a refused time with it, so the task can still be saved", async () => {
+    const captured: Captured[] = [];
+    stubApi(
+      {
+        "GET /contacts/p1": () => jsonResponse(contact),
+        "GET /users": () => jsonResponse({ data: [], page: {} }),
+        "POST /activities": createdActivity,
+      },
+      captured,
+    );
+    render(<LogActivity entityType="contact" entityId="p1" askedKind="task" />);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Subject *"), "Call back");
+    await user.type(
+      screen.getByRole("textbox", { name: "Time (optional)" }),
+      "abc",
+    );
+    await user.tab();
+    expect(screen.getByText(/Enter a time as/)).toBeTruthy();
+
+    await user.clear(screen.getByRole("textbox", { name: "Due date" }));
+    await user.tab();
+
+    expect(screen.queryByText(/Enter a time as/)).toBeNull();
+    const time = screen.getByRole("textbox", { name: "Time (optional)" });
+    expect((time as HTMLInputElement).value).toBe("");
+    await user.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() =>
+      expect(captured.some((e) => e.key === "POST /activities")).toBe(true),
+    );
   });
 });

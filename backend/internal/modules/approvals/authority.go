@@ -233,8 +233,7 @@ var decisionGrants = map[string][]DecisionGrant{
 		{targetFxRate, principal.ActionCreate},
 		{targetFxRate, principal.ActionUpdate},
 	},
-	// Accepting a deep site read writes profile fields and category facts
-	// onto the target company — the same update authority enrich needs.
+	// A deep site read writes profile fields and facts onto the target company.
 	"deepread": {{tableCompany, principal.ActionUpdate}},
 	// Accepting a site_lead proposal (a published contact from a deep read's
 	// team page) captures them as a LEAD through the capture sink — the
@@ -249,11 +248,14 @@ var decisionGrants = map[string][]DecisionGrant{
 	// the domain is free-mail, the company behind them — so deciding it
 	// needs both create grants, exactly as if the approver had typed them in.
 	approvalsubject.KindCounterparty: {{tableContact, principal.ActionCreate}, {tableCompany, principal.ActionCreate}},
-	// Accepting a contact_share request shares the contact with the colleague
-	// who asked, which is the grant the Share button itself requires.
+	// A contact_share request takes the grant the Share button itself requires.
 	approvalsubject.KindContactShare: {{tableContact, principal.ActionUpdate}},
 	// Answering a due-date question writes the date onto the captured task.
 	approvalsubject.KindTaskDueDate: {{objectActivity, principal.ActionUpdate}},
+	// Accepting an employer change starts the new employment and ends the old one.
+	approvalsubject.KindEmployerChange: {{tableContact, principal.ActionUpdate}, {targetRelationship, principal.ActionCreate}, {targetRelationship, principal.ActionUpdate}},
+	// The card decides nothing; a seat needs the grants the review's own answer takes.
+	approvalsubject.KindLegalReviewRequest: legalReviewGrants(),
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
 	// refused to create beside its near-match) creates the contact; when the
 	// card names an employer, also the employment edge (relationship create
@@ -364,9 +366,9 @@ var targetResolvedGrants = map[string]principal.Action{
 	// A part is written on the record it hangs off (an offer, a company, a
 	// project). Its store gates the write on that record's update grant.
 	"change_record_parts": principal.ActionUpdate,
-	// Accepting a transfer moves a contact or a company to a colleague, which
-	// is an owner change on that record.
-	approvalsubject.KindOwnershipTransfer: principal.ActionUpdate,
+	// Accepting a transfer changes the record's owner. Approving edit access
+	// shares the record, which takes its update grant as Share does.
+	approvalsubject.KindOwnershipTransfer: principal.ActionUpdate, approvalsubject.KindEditAccess: principal.ActionUpdate,
 }
 
 // PendingDecidableBy rechecks current state and authority because a notification event may be stale.
@@ -421,7 +423,8 @@ func requireDecisionGrants(p principal.Principal, a row) error {
 	return nil
 }
 
-// An owner's archive may use update; the row check still proves ownership.
+// decisionChecksFor lists the grant checks approving a row needs. Each is
+// admitted by the actions decisionActions names.
 func decisionChecksFor(a row) ([]auth.Check, error) {
 	grants, err := decisionGrantsFor(a.Kind, a.TargetType)
 	if err != nil {
@@ -429,11 +432,7 @@ func decisionChecksFor(a row) ([]auth.Check, error) {
 	}
 	checks := make([]auth.Check, 0, len(grants))
 	for _, grant := range grants {
-		check := auth.Check{Object: grant.Object, Actions: []principal.Action{grant.Action}}
-		if _, ruled := auth.ArchiveRuleFor(grant.Object); ruled && a.Kind == kindArchiveRecord && grant.Action == principal.ActionDelete {
-			check.Actions = append(check.Actions, principal.ActionUpdate)
-		}
-		checks = append(checks, check)
+		checks = append(checks, auth.Check{Object: grant.Object, Actions: decisionActions(a.Kind, grant)})
 	}
 	return checks, nil
 }

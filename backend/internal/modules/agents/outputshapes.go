@@ -138,6 +138,21 @@ type jsonSchema struct {
 	// see the file comment for why that is the honest default here.
 	//nolint:tagliatelle // additionalProperties is JSON Schema's own member name, camelCase by that spec
 	AdditionalProperties *additionalProperties `json:"additionalProperties,omitempty"`
+	// The members below only a read of a contract schema meets; the deriver never
+	// writes them. CarriesFreeText reads them.
+	Const json.RawMessage `json:"const,omitempty"`
+	//nolint:tagliatelle // x-extensible-enum is the contract's own schema extension
+	ExtensibleEnum openEnum `json:"x-extensible-enum,omitempty"`
+	//nolint:tagliatelle // anyOf is JSON Schema's own member name
+	AnyOf []*jsonSchema `json:"anyOf,omitempty"`
+	//nolint:tagliatelle // oneOf is JSON Schema's own member name
+	OneOf []*jsonSchema `json:"oneOf,omitempty"`
+	//nolint:tagliatelle // allOf is JSON Schema's own member name
+	AllOf []*jsonSchema `json:"allOf,omitempty"`
+	//nolint:tagliatelle // patternProperties is JSON Schema's own member name
+	PatternProperties map[string]*jsonSchema `json:"patternProperties,omitempty"`
+	//nolint:tagliatelle // prefixItems is JSON Schema's own member name
+	PrefixItems []*jsonSchema `json:"prefixItems,omitempty"`
 }
 
 // additionalProperties is JSON Schema's own union: a BOOLEAN closing or opening
@@ -148,6 +163,25 @@ type jsonSchema struct {
 // reader that could not parse that would report a perfectly good schema as
 // unreadable and withhold structured content from every call to that tool. The
 // deriver only ever emits the schema arm, for a map's values.
+// openEnum reads x-extensible-enum in both of the contract's forms: `true`
+// beside an enum, or the list of known values on a string that takes others.
+// Either form says the value is open.
+type openEnum bool
+
+func (o *openEnum) UnmarshalJSON(raw []byte) error {
+	var open bool
+	if err := json.Unmarshal(raw, &open); err == nil {
+		*o = openEnum(open)
+		return nil
+	}
+	var known []string
+	if err := json.Unmarshal(raw, &known); err != nil {
+		return fmt.Errorf("x-extensible-enum is neither a boolean nor a list of values: %w", err)
+	}
+	*o = true
+	return nil
+}
+
 type additionalProperties struct {
 	// Closed is set when the member was a boolean. false means no member beyond
 	// the declared ones is allowed; true is the default and says nothing.

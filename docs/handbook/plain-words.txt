@@ -248,7 +248,6 @@ condition
 confidence
 confidential
 configuration
-configure
 confirm
 confirmation
 conflict
@@ -324,7 +323,6 @@ describe
 description
 destroy
 detail
-determines
 device
 dial
 dialog
@@ -1291,7 +1289,6 @@ use
 user
 user's
 users
-user’s
 usual
 valid
 validation

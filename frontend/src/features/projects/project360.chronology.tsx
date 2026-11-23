@@ -132,7 +132,11 @@ function useProjectChronology(
       <>
         <ChronologyFilter filter={filter} onFilter={setFilter} />
         {filter !== "changes" && (
-          <TimelineFilterBar value={filters} onChange={setFilters} />
+          <TimelineFilterBar
+            key={view.project.id}
+            value={filters}
+            onChange={setFilters}
+          />
         )}
       </>
     ),

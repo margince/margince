@@ -390,8 +390,7 @@ function ExplainRecords({
         {data && (
           <DataTable
             label={t("explain.sources")}
-            // The report drawer's column rule: the record's name leads, and
-            // its id goes once every row has a name.
+            // The report drawer's column rule: the record leads, then its company.
             columns={derivationColumns(data).map((column) => ({
               key: column,
               header: recordHeader(t, column, fieldLabels),

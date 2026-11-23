@@ -288,7 +288,7 @@ time reports it.
 | `cg:notice-case-open` | open, and later end, the case for what the installation owes a contact it learned of without asking them | **live** |
 | `cg:approval-notify` | on `approval.requested`, put the card in the queue of the one member it names | **live** (worker) |
 | `cg:approval-notice-retract` | on a decided or timed-out card, take back the lines it put in other seats' queues | **live** |
-| `cg:overnight-agent` | on `approval.decided`, start again the waiting Surface-B run with the human's answer | **live** (worker; only when a model is set up) |
+| `cg:overnight-agent` | on `approval.decided`, start again the waiting run of a night helper with the human's answer | **live** (worker; only when a model is set up) |
 | `cg:workflows` | start the workflow engine on matching events | **live** (worker) |
 | `cg:webhooks` | send subscribed events to outbound endpoints | **live** (the relay inside the API) |
 | `cg:capture` | (reserved) | declared, no subscriber |
@@ -325,6 +325,12 @@ that layer, and never stands in for it. The `96h` TTL is set above how long the 
 to keep events. The stream is capped by a count (`MAXLEN ~`), not by a time, so at a low write
 rate an event can stay longer. A consumer that takes it back after its dedupe entry timed out runs the
 handler again, and the key layer makes that run do nothing.
+
+A group may declare the event types its handler acts on (`Group.Types`). The subscriber acks every
+other entry before `Dedupe` runs, in one `XACK` for each read, so such an entry leaves no mark. The
+handler tests its input against the same set. `TestEveryHandlerIgnoresTheTypesItsGroupLeavesOut` in
+`backend/gates/consumergrouptypes_test.go` feeds each handler every type its group leaves out. A
+group with no list gets every type on its streams.
 
 ---
 

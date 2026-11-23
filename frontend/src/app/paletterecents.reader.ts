@@ -211,8 +211,10 @@ export function createRecentReader(
           proof.abort();
         }
       });
-      const added: RecentEntry[] = record ? [record] : [];
-      if (query.trim()) added.push({ kind: "query", text: query.trim() });
+      // A record opened from a search stands for that search: one entry per act.
+      const added: RecentEntry[] = [];
+      if (record) added.push(record);
+      else if (query.trim()) added.push({ kind: "query", text: query.trim() });
       const hadHistory = readStored(key) !== null;
       const writable = () =>
         !cancelled && current() && (!hadHistory || readStored(key) !== null);

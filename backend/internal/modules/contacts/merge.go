@@ -151,13 +151,12 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 		return crmcontracts.Contact{}, &MergeSelfError{}
 	}
 
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
 	var out crmcontracts.Contact
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		out, err = s.mergeContactTx(ctx, tx, sourceID, targetID, ifVersion, active)
 		return err
 	})
@@ -228,6 +227,9 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 		sourceID, targetID, counts, prefer.wonBy(sourceID)); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
+	if err := carryImpersonationWarningTx(ctx, tx, sourceID, targetID); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
 	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, fmt.Errorf("read surviving contact: %w", err)
@@ -237,6 +239,8 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 
 // settleContactMerge applies the survivorship patch, retires the merged-away
 // contact and audits the merge.
+//
+//gate:parent-version-door
 func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock, p *storekit.Patch,
 	sourceID, targetID ids.ContactID, counts relinkCounts, won []string,
 ) error {
@@ -244,6 +248,8 @@ func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock
 		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
 			return fmt.Errorf("apply survivorship fill: %w", err)
 		}
+	} else if err := storekit.TouchLocked(ctx, tx, tgtLock); err != nil {
+		return fmt.Errorf("move the survivor's version: %w", err)
 	}
 	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return fmt.Errorf("retire merged-away contact: %w", err)

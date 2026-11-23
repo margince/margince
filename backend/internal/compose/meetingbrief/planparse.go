@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 )
 
 // scenarioCap bounds the branches. Three is a thing a rep can hold walking in;
@@ -287,7 +288,7 @@ func keptQuestions(raw []replyQuestion, known map[Evidence]string) []Question {
 // writer, and not repeat the play. Otherwise the branch has no coach line.
 func keptCoach(scenario replyScenario, cited []Evidence, known map[Evidence]string) string {
 	coach := strings.TrimSpace(scenario.Coach)
-	if coach == "" || spellsAnID(coach) || normalisedSubject(coach) == normalisedSubject(scenario.Play) ||
+	if coach == "" || spellsAnID(coach) || mailsubject.Topic(coach) == mailsubject.Topic(scenario.Play) ||
 		claims.OpensWithWriterSubject(coach) || !groundedLine(Sentence{Text: coach, Evidence: cited}, known) {
 		return ""
 	}

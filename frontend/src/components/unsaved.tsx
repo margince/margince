@@ -1,4 +1,16 @@
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import {
+  createContext,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
@@ -7,6 +19,7 @@ import { navigate, type Route, useLiveHash } from "../lib/router";
 import {
   type Saver,
   UnsavedContext,
+  type UnsavedRegistry,
   useHasUnsavedChanges,
   useUnsavedGuard,
   useUnsavedRegistry,
@@ -117,9 +130,97 @@ export function useBeforeUnload(dirty: boolean): void {
   }, [dirty]);
 }
 
+type AskThen = (exit: () => void) => void;
+
+// The guard's way to ask, for controls outside it: the account menu sits beside
+// the routed screen, not inside it. Refs, so a claim re-renders no shell.
+type Exits = Readonly<{
+  ask: RefObject<AskThen | null>;
+  /** Makes `asking` the page guard's way to ask, and returns its release. */
+  holdAsk: (asking: AskThen) => () => void;
+  /** Whether a draft beside the page, such as the docked composer, is unkept. */
+  beside: RefObject<boolean>;
+  askBeside: AskThen;
+}>;
+const ExitContext = createContext<Exits | null>(null);
+const BesideContext = createContext<UnsavedRegistry | null>(null);
+
+/** Wraps the `UnsavedGuard` and the controls beside it that `useExitAsking` serves. */
+export function UnsavedExits({ children }: Readonly<{ children: ReactNode }>) {
+  const ask = useRef<AskThen | null>(null);
+  const beside = useRef(false);
+  const claims = useUnsavedRegistry(null);
+  useLayoutEffect(() => {
+    beside.current = claims.dirty;
+  }, [claims.dirty]);
+  // Asked here only while no page guard is mounted, such as between screens.
+  const [pending, setPending] = useState<(() => void) | null>(null);
+  const exits = useMemo<Exits>(
+    () => ({
+      ask,
+      beside,
+      holdAsk: (asking) => {
+        ask.current = asking;
+        return () => {
+          if (ask.current === asking) ask.current = null;
+        };
+      },
+      askBeside: (then) => setPending(() => then),
+    }),
+    [],
+  );
+  return (
+    <ExitContext.Provider value={exits}>
+      <BesideContext.Provider value={claims}>{children}</BesideContext.Provider>
+      <LeaveQuestion
+        open={pending !== null}
+        savers={[]}
+        onStay={() => setPending(null)}
+        onLeave={() => {
+          setPending(null);
+          pending?.();
+        }}
+      />
+    </ExitContext.Provider>
+  );
+}
+
+/**
+ * Claims made below it hold Sign out but no move between pages. The docked
+ * composer sits here, because its message outlives the page that opened it.
+ */
+export function BesidePage({ children }: Readonly<{ children: ReactNode }>) {
+  const claims = useContext(BesideContext);
+  return claims ? (
+    <UnsavedContext.Provider value={claims}>{children}</UnsavedContext.Provider>
+  ) : (
+    children
+  );
+}
+
+/**
+ * Runs an exit that does not move the address, such as Sign out, once the
+ * drafts are settled: the page's and those beside it. It runs at once when
+ * nothing is unsaved, and otherwise after the question a move off the page asks.
+ */
+export function useExitAsking(): AskThen {
+  const exits = useContext(ExitContext);
+  return useCallback(
+    (exit: () => void) => {
+      const guard = exits?.ask.current;
+      if (guard) guard(exit);
+      else if (exits?.beside.current) exits.askBeside(exit);
+      else exit();
+    },
+    [exits],
+  );
+}
+
 /**
  * Holds `children` on their address while a draft is unsaved, and asks before
  * leaving. Stay hands `onKeep` the depth stamp of the entry that address was on.
+ * `children` learns whether the question is open, so the frame can tell a held
+ * page from one still loading.
  */
 export function UnsavedGuard<Address extends string>({
   address,
@@ -130,7 +231,7 @@ export function UnsavedGuard<Address extends string>({
   address: Address;
   onKeep: (address: Address, depth: number | undefined) => void;
   samePlace?: (one: Address, other: Address) => boolean;
-  children: (address: Address) => ReactNode;
+  children: (address: Address, asking: boolean) => ReactNode;
 }>) {
   const registry = useUnsavedRegistry(null);
   // The address whose content is on screen. It follows `address` freely until a
@@ -140,10 +241,8 @@ export function UnsavedGuard<Address extends string>({
   const dirty = registry.dirty;
   useBeforeUnload(dirty);
 
-  // Catching up is not a state change, so it happens during render rather than
-  // in an effect: an effect would paint the OLD content for one frame against
-  // the NEW page heading the shell has already swapped, which reads as the page
-  // half-navigating.
+  // Not in an effect: there catching up is an urgent update. A page whose code
+  // is still loading would then drop to the loading body instead of waiting.
   if (
     address !== shown.address &&
     (!dirty || samePlace(address, shown.address))
@@ -153,14 +252,35 @@ export function UnsavedGuard<Address extends string>({
 
   const asking = address !== shown.address && dirty;
 
+  const exits = useContext(ExitContext);
+  const [exit, setExit] = useState<{ run: () => void } | null>(null);
+  useLayoutEffect(() => {
+    if (!exits) return;
+    const ask: AskThen = (then) => {
+      if (dirty || exits.beside.current) setExit({ run: then });
+      else then();
+    };
+    return exits.holdAsk(ask);
+  }, [exits, dirty]);
+
   return (
     <UnsavedContext.Provider value={registry}>
-      {children(shown.address)}
+      {children(shown.address, asking)}
       <LeaveQuestion
-        open={asking}
+        open={asking || exit !== null}
         savers={registry.savers}
-        onStay={() => onKeep(shown.address, shown.depth)}
-        onLeave={() => setShown({ address, depth: entryDepth() })}
+        exitsBeside={exit !== null}
+        onStay={
+          exit ? () => setExit(null) : () => onKeep(shown.address, shown.depth)
+        }
+        onLeave={
+          exit
+            ? () => {
+                setExit(null);
+                exit.run();
+              }
+            : () => setShown({ address, depth: entryDepth() })
+        }
       />
     </UnsavedContext.Provider>
   );
@@ -175,18 +295,32 @@ export function UnsavedGuard<Address extends string>({
 function LeaveQuestion({
   open,
   savers,
+  exitsBeside = false,
   onStay,
   onLeave,
 }: Readonly<{
   open: boolean;
   savers: readonly Saver[];
+  /** Sign out and other exits that also end the drafts beside the page. Save
+   *  writes only the page, so it is offered only while those are kept, and one
+   *  that arrives as Save writes holds the exit. */
+  exitsBeside?: boolean;
   onStay: () => void;
   onLeave: () => void;
 }>) {
   const t = useT();
   const [saving, setSaving] = useState(false);
   const [refused, setRefused] = useState(false);
-  if (savers.length === 0) {
+  const saveButton = useRef<HTMLButtonElement>(null);
+  const exits = useContext(ExitContext);
+  const besideHeld = useContext(BesideContext)?.dirty ?? false;
+  // Each close of the question ends a round. A Save still writing after the
+  // reader stayed then cannot carry out the exit it was pressed for.
+  const round = useRef(0);
+  useEffect(() => {
+    if (!open) round.current += 1;
+  }, [open]);
+  if (savers.length === 0 || (exitsBeside && besideHeld)) {
     return (
       <ConfirmModal
         open={open}
@@ -206,12 +340,14 @@ function LeaveQuestion({
     then();
   };
   const save = async () => {
+    const pressed = round.current;
     setSaving(true);
     setRefused(false);
     const saved = await Promise.all(savers.map((saver) => saver()));
     setSaving(false);
-    if (saved.every(Boolean)) onLeave();
-    else setRefused(true);
+    if (round.current !== pressed) return;
+    if (!saved.every(Boolean)) setRefused(true);
+    else if (!(exitsBeside && exits?.beside.current)) onLeave();
   };
   return (
     <ConfirmModal
@@ -221,6 +357,10 @@ function LeaveQuestion({
       cancelLabel={t("unsaved.stay")}
       pending={saving}
       error={refused ? t("unsaved.saveRefused") : null}
+      // Discard comes first in the row, and Enter on it would lose the work
+      // this question exists to keep.
+      confirmRef={saveButton}
+      initialFocusTo={() => saveButton.current}
       actionsLead={
         <Button variant="ghost" disabled={saving} onClick={answer(onLeave)}>
           {t("saveBar.discard")}

@@ -225,7 +225,7 @@ export const ReadingsThatNameWhatTheyCount: Story = {
         detail="4 open"
         onOpen={() => undefined}
         peek={{
-          head: "Open deals on this account",
+          head: "Open deals on this company",
           items: [
             {
               key: "a",

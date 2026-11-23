@@ -70,7 +70,7 @@ func (s *Scanner) ScanDeal(ctx context.Context, now time.Time, deal ids.UUID) (R
 func (s *Scanner) scanOneDeal(
 	ctx context.Context, tx pgx.Tx, now time.Time, deal ids.UUID, generation int64, out *Result,
 ) error {
-	runID, err := s.store.openRun(ctx, tx, now, nil, &deal)
+	runID, err := s.store.openRun(ctx, tx, now, &deal)
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (s *Scanner) scanOneDeal(
 			return err
 		}
 	}
-	if err := s.store.RecordReceipts(ctx, tx, runID, now, s.cfg.ReceiptLifetime, subjects); err != nil {
+	if err := s.store.RecordReceipts(ctx, tx, runID, subjects); err != nil {
 		return err
 	}
 	if err := s.store.RecordRunFindings(ctx, tx, runID, pass.seen); err != nil {

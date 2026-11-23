@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { GoneNotice } from "../../components/gonenotice";
 import {
   Button,
   PendingBody,
@@ -16,6 +17,7 @@ import {
   formatDateTime,
   formatDayRange,
 } from "../../format/format";
+import { zoneLabelAt } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
@@ -33,7 +35,7 @@ import { ForecastCallEditor } from "./analytics.forecast.calleditor";
 import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
 import { forecastFit, periodDial } from "./analytics.forecast.fit";
 import { ForecastReview } from "./analytics.forecast.review";
-import { PeriodCaption } from "./analytics.period";
+import { actualsThrough, PeriodCaption } from "./analytics.period";
 import {
   FORECAST_PERIODS,
   type ForecastPeriod,
@@ -298,9 +300,7 @@ function forecastPeriod(
             )
           : undefined
       }
-      through={t("reporting.actualsThrough", {
-        at: formatDateTime(readings.as_of, locale, zone),
-      })}
+      through={actualsThrough(readings.as_of, zone, locale, t)}
     />
   );
 }
@@ -321,7 +321,11 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
   });
   return (
     <div className="wrap">
-      <QueryGate query={query} pendingLabel={t("analytics.sectionForecast")}>
+      <QueryGate
+        query={query}
+        pendingLabel={t("analytics.sectionForecast")}
+        gone={<GoneNotice messageKey="reporting.sharedForecastGone" />}
+      >
         {(view) => (
           <>
             <p className="t-caption">
@@ -329,7 +333,7 @@ export function SharedForecastView({ token }: Readonly<{ token: string }>) {
                 ? t("reporting.frozen")
                 : t("reporting.live")}
               {view.as_of
-                ? ` · ${formatDateTime(view.as_of, locale, zone)}`
+                ? ` · ${formatDateTime(view.as_of, locale, zone)} · ${zoneLabelAt(view.as_of, zone, locale)}`
                 : ""}
             </p>
             {view.withheld && (

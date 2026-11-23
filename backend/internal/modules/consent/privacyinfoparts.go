@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // NoticeSubject is the contact or website lead a notice link names.
@@ -83,24 +84,41 @@ func disclosureRecipients() []string {
 	return []string{"colleagues", "service_providers"}
 }
 
-// readControllerTx is who answers for the data: the installation's own
-// particulars. The installation sends the notice, so its default legal entity
-// is the sending entity whose rules the data follows.
-func readControllerTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) error {
+// readControllerTx is who answers for the record's data: the installation's
+// particulars. A further entity that answers for the record (recordEntityTx)
+// puts its own legal name and address in place of the installation's.
+func readControllerTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation, who ruleSubject) error {
 	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
 	if err != nil {
 		return fmt.Errorf("consent: reading who answers for this data: %w", err)
 	}
-	out.Controller = identity
+	entity, err := recordEntityTx(ctx, tx, who)
+	if err != nil {
+		return err
+	}
+	facts, err := sendingEntityFactsTx(ctx, tx, entity)
+	if err != nil {
+		return err
+	}
+	out.Controller = controllerOf(identity, facts)
 	return nil
 }
 
-// controllerParticulars reads the installation's particulars for a confirm page,
-// in a transaction of its own.
-func (s *Store) controllerParticulars(ctx context.Context) (ControllerParticulars, error) {
+// controllerParticulars reads the particulars a confirm page names for the
+// record its link is about, in a transaction of its own.
+func (s *Store) controllerParticulars(ctx context.Context, ref ConfirmRef) (ControllerParticulars, error) {
 	var out PrivacyInformation
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error { return readControllerTx(ctx, tx, &out) })
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error { return readControllerTx(ctx, tx, &out, confirmRuleSubject(ref)) })
 	return out.Controller, err
+}
+
+// confirmRuleSubject is the record a confirm link is about: the lead, else the
+// contact.
+func confirmRuleSubject(ref ConfirmRef) ruleSubject {
+	if !ref.LeadID.IsZero() {
+		return ruleSubject{Kind: entityLead, ID: ref.LeadID.String()}
+	}
+	return ruleSubject{Kind: entityContact, ID: ref.ContactID.String()}
 }
 
 // readHeld fills the parts read about this subject. Unwired, the page names no
@@ -118,7 +136,11 @@ func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *Privac
 	out.DataCategories = append(out.DataCategories, held.Categories...)
 	out.Retention = append(out.Retention, held.Retention...)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		uses, err := settleUsesTx(ctx, tx, subject, held.Uses)
+		sender, err := s.recordCountryTx(ctx, tx, noticeRuleSubject(subject))
+		if err != nil {
+			return err
+		}
+		uses, err := settleUsesTx(ctx, tx, subject, held.Uses, sender)
 		if err != nil {
 			return err
 		}
@@ -127,20 +149,20 @@ func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *Privac
 }
 
 // settleUsesTx is the uses the page lists, judged as the send engine judges
-// them. Under a pack without legitimate interests, a use is shown only on a
-// basis that pack accepts (keptUnderPack). A reader with no use left is shown
+// them, under the recipient's pack and the sender's. Under a pack without
+// legitimate interests, a use is shown only on a basis that pack accepts
+// (keptUnderPack). A reader with no use left is shown
 // business correspondence, so the page always names a purpose
 // (GDPR Art. 14(1)(c)). Its basis is defaultUseBasis.
-func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []NoticeUse) ([]NoticeUse, error) {
-	who := subjectRef{Kind: entityContact, ID: subject.ContactID.String()}
-	if subject.ContactID.IsZero() {
-		who = subjectRef{Kind: entityLead, ID: subject.LeadID.String()}
-	}
+func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []NoticeUse, sender jurisdiction.Code) ([]NoticeUse, error) {
+	rule := noticeRuleSubject(subject)
+	who := subjectRef{Kind: rule.Kind, ID: rule.ID}
 	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: who.Kind, ID: who.ID})
 	if err != nil {
 		return nil, err
 	}
-	rules, _, found := applicableRules(country.Code)
+	country.Sender = sender
+	rules, _, found := applicableRules(country.dataProtectionCodes()...)
 	noInterests := found && rules.NoLegitimateInterests
 	kept := make([]NoticeUse, 0, len(uses))
 	for _, use := range uses {
@@ -198,4 +220,13 @@ func namePurposesTx(ctx context.Context, tx pgx.Tx, uses []NoticeUse, out *Priva
 		out.PurposeSince = append(out.PurposeSince, use.Since)
 	}
 	return nil
+}
+
+// noticeRuleSubject is the record a notice page is about: the contact, else
+// the lead.
+func noticeRuleSubject(subject NoticeSubject) ruleSubject {
+	if subject.ContactID.IsZero() {
+		return ruleSubject{Kind: entityLead, ID: subject.LeadID.String()}
+	}
+	return ruleSubject{Kind: entityContact, ID: subject.ContactID.String()}
 }

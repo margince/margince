@@ -3,12 +3,9 @@ jurisdiction: at
 version: 1
 created: 2026-11-19
 instruments:
-  - name: Directive 2002/58/EC
-    effective: 2002-07-31
-    provision: "Art. 13"
-    source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
   - name: "Telekommunikationsgesetz 2021 (TKG 2021)"
     provision: "§ 174"
+    source-url: https://www.ris.bka.gv.at/eli/bgbl/i/2021/190/P174/NOR40238632
   - name: "E-Commerce-Gesetz (ECG)"
     provision: "§ 7"
 marketing-exceptions: []
@@ -16,6 +13,27 @@ fixtures:
   - finding: objection_route
     triggers: at/fixtures/advertising-without-objection-route.md
     clears: at/fixtures/advertising-with-objection-route.md
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Telekommunikationsgesetz 2021 (TKG 2021)"
+    provision: "§ 174 Abs. 3"
+  - code: marketing_permission_required
+    territorial-test: any_sender
+    instrument: "Telekommunikationsgesetz 2021 (TKG 2021)"
+    provision: "§ 174 Abs. 3"
+  - code: marketing_consent_required
+    territorial-test: any_sender
+    instrument: "Telekommunikationsgesetz 2021 (TKG 2021)"
+    provision: "§ 174 Abs. 3"
+  - code: unconfirmed_double_opt_in
+    territorial-test: any_sender
+    instrument: "Telekommunikationsgesetz 2021 (TKG 2021)"
+    provision: "§ 174 Abs. 3"
+  - code: public_opt_out_link
+    territorial-test: any_sender
+    instrument: "Directive 2002/58/EC"
+    provision: "Art. 13(4)"
 ---
 
 # What Austrian law requires of an outbound message

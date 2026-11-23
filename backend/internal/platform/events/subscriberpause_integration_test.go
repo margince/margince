@@ -21,7 +21,7 @@ import (
 // the stream and is delivered once the hold lifts.
 func TestAPausedSubscriberDeliversNothingUntilItResumes(t *testing.T) {
 	ctx, rdb := purgeTestRedis(t)
-	group := kevents.Groups()[0]
+	group := probeGroup(t)
 
 	var held atomic.Bool
 	held.Store(true)

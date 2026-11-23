@@ -193,7 +193,7 @@ var floor = briefPhrases{
 		Vi: "Điều được ghi nhận gần đây nhất là %s.",
 	},
 
-	AboutSaying:  phrase{En: "saying %q", De: "mit dem Wortlaut %q", Vi: "với nội dung %q"},
-	AboutSubject: phrase{En: "about %q", De: "zum Thema %q", Vi: "về chủ đề %q"},
+	AboutSaying:  phrase{En: "saying “%s”", De: "mit dem Wortlaut „%s“", Vi: "với nội dung “%s”"},
+	AboutSubject: phrase{En: "about “%s”", De: "zum Thema „%s“", Vi: "về chủ đề “%s”"},
 	AboutKind:    phrase{En: "a %s", De: "%s", Vi: "%s"},
 }

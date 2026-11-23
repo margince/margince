@@ -30,10 +30,10 @@
   ],
   "catalog": {
     "tools": 48,
-    "system_frame_tokens": 672,
-    "tokens": 51476,
+    "system_frame_tokens": 730,
+    "tokens": 51741,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1072
+    "mean_tool_tokens": 1077
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4367,
-      "listing_tokens": 2048,
-      "step_schema_tokens": 1646,
+      "tokens": 4439,
+      "listing_tokens": 2055,
+      "step_schema_tokens": 1653,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 18843,
+      "headroom_tokens": 18771,
       "dangling_cross_references": [],
       "temptation_weight": 5
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6632,
-      "listing_tokens": 3347,
-      "step_schema_tokens": 2613,
+      "tokens": 6705,
+      "listing_tokens": 3354,
+      "step_schema_tokens": 2620,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 16578,
+      "headroom_tokens": 16505,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,19 +85,19 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4462
+      "tokens": 4494
     },
     {
       "name": "change_settings",
-      "tokens": 3168
+      "tokens": 3209
     },
     {
       "name": "change_activities",
-      "tokens": 2877
+      "tokens": 2918
     },
     {
       "name": "read_reports",
-      "tokens": 2825
+      "tokens": 2831
     },
     {
       "name": "read_workspace",
@@ -109,11 +109,11 @@
     },
     {
       "name": "find_records",
-      "tokens": 2033
+      "tokens": 2041
     },
     {
       "name": "read_view",
-      "tokens": 1896
+      "tokens": 1921
     },
     {
       "name": "change_capture",
@@ -140,12 +140,12 @@
       "tokens": 1274
     },
     {
-      "name": "change_offers",
-      "tokens": 1096
+      "name": "change_access",
+      "tokens": 1152
     },
     {
-      "name": "change_access",
-      "tokens": 1074
+      "name": "change_offers",
+      "tokens": 1096
     },
     {
       "name": "read_analytics",
@@ -228,6 +228,10 @@
       "tokens": 395
     },
     {
+      "name": "check_availability",
+      "tokens": 375
+    },
+    {
       "name": "read_attention",
       "tokens": 365
     },
@@ -238,10 +242,6 @@
     {
       "name": "read_tags",
       "tokens": 358
-    },
-    {
-      "name": "check_availability",
-      "tokens": 342
     },
     {
       "name": "list_documents",

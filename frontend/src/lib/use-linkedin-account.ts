@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "./problem";
@@ -25,6 +25,17 @@ type LinkedInAccount = components["schemas"]["LinkedInAccount"];
  */
 export const LINKEDIN_ACCOUNT_KEY = ["linkedin-account"] as const;
 
+/** The caller's own LinkedIn account, as the onboarding row and the settings
+ * card both show it back. */
+export function useLinkedInAccount() {
+  return useQuery({
+    queryKey: LINKEDIN_ACCOUNT_KEY,
+    queryFn: async (): Promise<LinkedInAccount> => {
+      return unwrap(await api.GET("/me/linkedin-account", {}));
+    },
+  });
+}
+
 /**
  * useSaveLinkedInAccount writes the caller's own LinkedIn profile.
  *
@@ -50,6 +61,11 @@ export function useSaveLinkedInAccount() {
     // The server's answer IS the account now, whichever surface asked. Written
     // rather than invalidated: the response carries the stored row, so a
     // refetch would ask again for something already in hand.
-    onSuccess: (data) => client.setQueryData(LINKEDIN_ACCOUNT_KEY, data),
+    // A read already on its way answers for before the save, so it is
+    // cancelled first rather than left to overwrite the stored row.
+    onSuccess: async (data) => {
+      await client.cancelQueries({ queryKey: LINKEDIN_ACCOUNT_KEY });
+      client.setQueryData(LINKEDIN_ACCOUNT_KEY, data);
+    },
   });
 }

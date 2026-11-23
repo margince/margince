@@ -76,7 +76,7 @@ func listRelationshipsInTx(ctx context.Context, tx pgx.Tx, in ListRelationshipsI
 		out = out[:limit]
 		page = storekit.Page{HasMore: true, NextCursor: out[limit-1].ID.String()}
 	}
-	return out, page, nil
+	return out, page, stampArchivable(ctx, tx, out)
 }
 
 // relationshipListWhere renders the list filters (kind/contact/company/deal,

@@ -1,0 +1,8 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__list_approvals", "mcp__margince__read_approval", "mcp__margince__decide_approvals"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__list_approvals", "input": {"status": "pending"}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "{\"data\":{\"approvals\":[{\"staged_action_id\":\"ap1\",\"kind\":\"relink_activity\"}]}}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_approval", "input": {"staged_action_id": "ap1"}, "id": "fixture2"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture2", "content": "{\"data\":{\"status\":\"pending\"}}", "is_error": false}]}}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__decide_approvals", "input": {"staged_action_id": "ap1", "decision": "approve"}, "id": "fixture3"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture3", "content": "{\"data\":{\"status\":\"approved\"}}", "is_error": false}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "The Abnahmeprotokoll move was waiting, so I approved it for you."}

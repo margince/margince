@@ -127,14 +127,45 @@ func (b searchBranch) rowSource(ctx context.Context, where string, arg func(any)
 }
 
 // ownMatch is the predicate that finds a record by its own text: the name index,
-// or an identifier (whole or a fragment) the record carries. identifierPos
-// binds the query the first time an identifier arm asks for it.
-func (b searchBranch) ownMatch(alias, tsquery string, identifierPos identifierBinder) string {
+// or an identifier the record carries, as arm admits it. identifierPos binds
+// the query the first time an identifier arm asks for it.
+func (b searchBranch) ownMatch(alias, tsquery string, identifierPos identifierBinder, arm identifierArm) string {
 	if b.identifier.Table == "" {
 		return fmt.Sprintf("%s.search_tsv @@ %s", alias, tsquery)
 	}
-	return fmt.Sprintf("(%s.search_tsv @@ %s OR %s)",
-		alias, tsquery, b.identifier.MatchSQL(identifierPos.position(b.identifier == storekit.CompanyDomains), alias+".id"))
+	return fmt.Sprintf("(%s.search_tsv @@ %s OR %s)", alias, tsquery, b.identifierMatch(alias, identifierPos, arm))
+}
+
+// identifierArm says which identifier rows a branch admits: every whole or
+// contained identifier, or only those that earn an identifier tier.
+type identifierArm bool
+
+const (
+	everyIdentifier  identifierArm = false
+	rankedIdentifier identifierArm = true
+)
+
+// identifierMatch is the identifier half of ownMatch. A ranked identifier is a
+// whole one or one identifierEvidence scores; a contained-only one scores
+// nothing for it.
+func (b searchBranch) identifierMatch(alias string, identifierPos identifierBinder, arm identifierArm) string {
+	pos := identifierPos.position(b.identifier == storekit.CompanyDomains)
+	if arm == everyIdentifier {
+		return b.identifier.MatchSQL(pos, alias+".id")
+	}
+	exact, prefix := b.identifierTiers(alias, identifierPos)
+	return fmt.Sprintf("(%s OR %s OR %s)", b.identifier.ExactSQL(pos, alias+".id"), exact, prefix)
+}
+
+// unrankedScoreCeiling bounds the score of a row found only by a contained
+// identifier: 0, or 0.1 for a company. For one plain word such a row matches
+// no tsquery, so its text rank, whole-word bonus and tier are all 0. A company
+// adds only its domain similarity, at most 1, over companyDomainSimilarityDivisor.
+func (b searchBranch) unrankedScoreCeiling() float64 {
+	if b.identifier == storekit.CompanyDomains {
+		return 1.0 / companyDomainSimilarityDivisor
+	}
+	return 0
 }
 
 // Identifier tiers exceed the bounded text rank; the cursor carries the complete score.
@@ -144,21 +175,29 @@ const (
 	companyAssociationScore = 4
 	identifierPrefixScore   = 8
 	identifierExactScore    = 16
+	// companyDomainSimilarityDivisor scales a domain's similarity, at most 1,
+	// so it orders companies within a tier and never crosses one.
+	companyDomainSimilarityDivisor = 10
 )
 
 func (b searchBranch) identifierEvidence(alias string, identifierPos identifierBinder) string {
 	if b.identifier.Table == "" {
 		return "NULL::text"
 	}
-	whole := identifierPos.position(false)
-	exact := b.identifier.ExactSQL(whole, alias+".id")
-	prefix := b.identifier.PrefixSQL(whole, alias+".id")
-	if b.identifier != storekit.CompanyDomains {
-		if !identifierPos.addressPrefix {
-			prefix = sqlFalse
-		}
-	}
+	exact, prefix := b.identifierTiers(alias, identifierPos)
 	return fmt.Sprintf("CASE WHEN %s THEN 'exact' WHEN %s THEN 'prefix' ELSE NULL END", exact, prefix)
+}
+
+// identifierTiers are the predicates behind each identifier tier. Spelled as
+// plain disjuncts, the primary key can serve them in a bitmap union.
+func (b searchBranch) identifierTiers(alias string, identifierPos identifierBinder) (exact, prefix string) {
+	whole := identifierPos.position(false)
+	exact = b.identifier.ExactSQL(whole, alias+".id")
+	prefix = b.identifier.PrefixSQL(whole, alias+".id")
+	if b.identifier != storekit.CompanyDomains && !identifierPos.addressPrefix {
+		prefix = sqlFalse
+	}
+	return exact, prefix
 }
 
 func (b searchBranch) ownScore(alias, score string, identifierPos identifierBinder) string {
@@ -171,7 +210,7 @@ func (b searchBranch) ownScore(alias, score string, identifierPos identifierBind
 		return ranked
 	}
 	// A company may be discovered by an address's domain; identifier evidence describes the whole query.
-	return fmt.Sprintf("(%s + coalesce((SELECT max(similarity(f_fold_apostrophes(lower(domain)),f_fold_apostrophes(lower(btrim($%d))))) FROM company_domain WHERE company_id=%s.id AND archived_at IS NULL),0) / 10.0)", ranked, identifierPos.position(true), alias)
+	return fmt.Sprintf("(%s + coalesce((SELECT max(similarity(f_fold_apostrophes(lower(domain)),f_fold_apostrophes(lower(btrim($%d))))) FROM company_domain WHERE company_id=%s.id AND archived_at IS NULL),0) / %d.0)", ranked, identifierPos.position(true), alias, companyDomainSimilarityDivisor)
 }
 
 // identifierBinder yields the bind position of the query the identifier arms
@@ -389,7 +428,7 @@ var searchBranches = []searchBranch{
 	// Archived words are excluded: a retired tag is not in the picker, so a hit
 	// on one leads to a page that cannot be acted on.
 	{entity: "tag", table: entityTag, title: columnName, snippet: noSnippet, workspaceWide: true, textOnly: true, extraWhere: "%s.archived_at IS NULL"},
-	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: "left(coalesce(body, ''), 200)", activityWalk: true, rankSample: activityRankSample},
+	{entity: "activity", table: entityActivity, title: "coalesce(subject, channel_provider, kind)", snippet: fmt.Sprintf("left(coalesce(body, ''), %d)", activitySnippetRunes), activityWalk: true, rankSample: activityRankSample},
 }
 
 // SearchedTables names every physical table the search union full-text matches,

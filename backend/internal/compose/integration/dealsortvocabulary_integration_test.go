@@ -308,7 +308,8 @@ func seedDealForCompany(
 	t.Helper()
 	companyID := ids.From[ids.CompanyKind](company)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: pipeline, StageID: stage,
+		Source: "manual",
+		Name:   name, PipelineID: pipeline, StageID: stage,
 		CompanyID: &companyID, OwnerID: userIDPtr(&e.Rep1),
 	})
 	if err != nil {

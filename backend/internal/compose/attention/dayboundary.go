@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
@@ -225,6 +226,32 @@ func dueGroup(deadlineAt, asOf, until time.Time, loc *time.Location) string {
 	case deadlineAt.Before(tomorrowEnds):
 		return dueGroupTomorrow
 	case deadlineAt.Before(weekEnds):
+		return dueGroupThisWeek
+	default:
+		return dueGroupLater
+	}
+}
+
+// pickedDay is how many calendar days the chosen date of a task lies from today
+// in loc. Only a task with a date and no time has one.
+func pickedDay(due *time.Time, hasTime bool, intent *crmcontracts.IntentTime, asOf time.Time, loc *time.Location) (int, bool) {
+	if due == nil || hasTime || intent == nil {
+		return 0, false
+	}
+	return deadline.WallDayOffset(intent.WallClock, asOf, loc)
+}
+
+// pickedDayGroup is dueGroup for a chosen date, counted in calendar days.
+// A reader in any zone files the task under the same day.
+func pickedDayGroup(days int) string {
+	switch {
+	case days < 0:
+		return dueGroupOverdue
+	case days == 0:
+		return dueGroupToday
+	case days == 1:
+		return dueGroupTomorrow
+	case days <= upcomingWeekDays:
 		return dueGroupThisWeek
 	default:
 		return dueGroupLater

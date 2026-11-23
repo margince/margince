@@ -167,7 +167,9 @@ function useColumns(
       render: (client) =>
         client.disabled ? (
           <Badge tone="warning">{t("agentClients.disabled")}</Badge>
-        ) : null,
+        ) : (
+          <Badge tone="success">{t("agentClients.active")}</Badge>
+        ),
     },
     {
       key: "verbs",

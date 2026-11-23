@@ -68,14 +68,64 @@ it("submits each choice intact and retains the opening template and closing", as
   await user.click(screen.getByLabelText("Fit, scope"));
   await user.click(screen.getByLabelText("Trust"));
   rendered.rerender(
-    view({ ...template, version: 3, questions: [] }, "later-close"),
+    view(
+      { ...template, key: "win_review_2", version: 3, questions: [] },
+      "later-close",
+    ),
   );
   await user.click(screen.getByRole("button", { name: "Save review" }));
   await vi.waitFor(() => expect(submitted).toHaveLength(1));
   expect(submitted[0]).toMatchObject({
     closing_occurrence_id: "first-close",
     template_version: 2,
+    template_key: "win_review",
     answers: {},
     choice_answers: { reasons: ["Fit, scope", "Trust"] },
   });
+});
+
+it("says each empty required answer is required on Save, and sends nothing", async () => {
+  const fetched = vi.fn();
+  vi.stubGlobal("fetch", fetched);
+  const template: ReviewTemplate = {
+    id: "template",
+    key: "loss_review",
+    label: "Loss review",
+    outcome: "lost",
+    version: 1,
+    active: true,
+    system: true,
+    created_at: "2026-09-01T00:00:00Z",
+    updated_at: "2026-09-01T00:00:00Z",
+    questions: [
+      { key: "why", label: "Why did it close", type: "text", required: true },
+      {
+        key: "reasons",
+        label: "Reasons",
+        type: "multiselect",
+        required: true,
+        options: ["Price"],
+      },
+    ],
+  };
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <OutcomeReviewModal
+          open
+          onClose={() => {}}
+          dealId="deal"
+          closingOccurrenceId="close"
+          template={template}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Save review" }));
+  expect(screen.getByText("Why did it close is required.")).toBeTruthy();
+  expect(screen.getByText("Reasons is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(
+    screen.getByRole("textbox", { name: /^Why did it close/ }),
+  );
+  expect(fetched).not.toHaveBeenCalled();
 });

@@ -10,8 +10,9 @@ import { useState } from "react";
 import { Field, Textarea, TextInput } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import {
   listEntityTypeOf,
   type ObjectTab,
@@ -19,14 +20,14 @@ import {
   viewOf,
 } from "../../lib/filtersaddress";
 import { useCreateList, useListsAvailable } from "../../lib/lists.queries";
-import { problemMessageOf } from "../../lib/problem";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
 import type { Route } from "../../lib/router";
 import { filterStateFrom, useSaveView } from "../../lib/savedviews.queries";
 import { encode, type Node } from "../../lib/segmentpredicate";
 import {
-  DEFAULT_AUDIENCE,
   type ListAudience,
   ListAudienceFields,
+  useDefaultAudience,
 } from "./listsharing";
 
 export type SavedKind = "view" | "list";
@@ -79,8 +80,12 @@ export function SaveFilterModal({
   const createList = useCreateList();
   const [name, setName] = useState(initialName);
   const [keep, setKeep] = useState<SavedKind>(initialKeep);
-  const [audience, setAudience] = useState<ListAudience>(DEFAULT_AUDIENCE);
+  const defaultAudience = useDefaultAudience();
+  const [audience, setAudience] = useState<ListAudience>(defaultAudience);
   const [purpose, setPurpose] = useState("");
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const nameLabel = t("views.name");
   // Every opening starts from what the caller offers and nothing typed
   // before: a create that offers the last name again is how a duplicate gets
   // made. Reset as it opens rather than as it closes, so the closing dialog
@@ -91,8 +96,9 @@ export function SaveFilterModal({
     if (open) {
       setName(initialName);
       setKeep(initialKeep);
-      setAudience(DEFAULT_AUDIENCE);
+      setAudience(defaultAudience);
       setPurpose("");
+      faults.show(new Map());
     }
   }
 
@@ -114,6 +120,9 @@ export function SaveFilterModal({
   };
   // The tree is read at the press, so what is saved is the filter on screen.
   const save = () => {
+    if (faults.show(blankRequired(locale, { name: [nameLabel, name] }))) {
+      return;
+    }
     if (asList && listEntityType) {
       createList.mutate(
         {
@@ -142,12 +151,12 @@ export function SaveFilterModal({
       intent="form"
       title={t("filters.saveTitle")}
       confirmLabel={t(asList ? "filters.saveListConfirm" : "views.save")}
-      confirmDisabled={trimmed === ""}
+      bodyRef={faultsRoot}
       pending={busy}
       error={run.isError ? problemMessageOf(run.error, t) : null}
       onConfirm={save}
     >
-      <Field label={t("views.name")}>
+      <Field label={nameLabel} required error={faults.of("name")}>
         {(control) => (
           <TextInput
             {...control}
@@ -155,7 +164,10 @@ export function SaveFilterModal({
             placeholder={t("filters.namePlaceholder", {
               records: units,
             })}
-            onChange={(event) => setName(event.target.value)}
+            onChange={(event) => {
+              setName(event.target.value);
+              faults.edited("name");
+            }}
           />
         )}
       </Field>

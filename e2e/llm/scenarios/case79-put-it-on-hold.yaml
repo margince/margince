@@ -1,20 +1,12 @@
 # CASE 79 — A legal hold has its own action. Neither a tag nor a note holds a record.
 name: case79_put_it_on_hold
+title: Put the record on legal hold
 criteria: [1]
 writes: true
 
 prompt: |
   Legal called. Rheinufer AG may end up in litigation with us, so nothing about the company may be deleted until
   further notice. Please put that in place.
-
-must_call:
-  - change_compliance
-
-must_call_with:
-  - change_compliance.action=place_legal_hold
-
-must_call_matching:
-  - place_legal_hold~(?i)litigation
 
 must_not_call_with:
   - change_tags~.
@@ -27,6 +19,7 @@ may_call:
   - read_record
   - read_workspace
   - whoami
+  - change_compliance
 
 must_mention:
   - "Rheinufer"

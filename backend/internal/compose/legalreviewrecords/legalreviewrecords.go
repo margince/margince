@@ -72,18 +72,47 @@ func (r Reader) ReviewContracts(ctx context.Context, dealID ids.UUID) ([]deals.P
 	}
 	out := make([]deals.PacketContract, 0, len(page.Data))
 	for _, c := range page.Data {
-		packed := deals.PacketContract{
-			ContractID: ids.UUID(c.Id), ContractNumber: c.ContractNumber, Title: c.Title,
-			StartsOn: dateOf(c.StartsOn), EndsOn: dateOf(c.EndsOn), RenewalOn: dateOf(c.RenewalOn),
-			CancellationNoticeOn: dateOf(c.CancellationNoticeOn),
-			NoticePeriodDays:     c.NoticePeriodDays, AutoRenew: c.AutoRenew,
-		}
-		if c.Status != nil {
-			packed.Status = string(*c.Status)
-		}
-		out = append(out, packed)
+		out = append(out, packetContract(c))
 	}
 	return out, nil
+}
+
+// OpenableContracts answers which of these agreements the caller can open
+// now, with their titles. It reads them by id, so newer agreements on the deal
+// never push a frozen one out.
+func (r Reader) OpenableContracts(ctx context.Context, dealID ids.UUID, contractIDs []ids.UUID) (map[ids.UUID]string, error) {
+	out := make(map[ids.UUID]string, len(contractIDs))
+	if len(contractIDs) == 0 {
+		return out, nil
+	}
+	wanted := make([]ids.ContractID, 0, len(contractIDs))
+	for _, id := range contractIDs {
+		wanted = append(wanted, ids.From[ids.ContractKind](id))
+	}
+	rows, err := r.contracts.DealContractsByID(ctx, ids.From[ids.DealKind](dealID), wanted)
+	if unreadable(err) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	for _, c := range rows {
+		out[ids.UUID(c.Id)] = c.Title
+	}
+	return out, nil
+}
+
+func packetContract(c crmcontracts.Contract) deals.PacketContract {
+	packed := deals.PacketContract{
+		ContractID: ids.UUID(c.Id), ContractNumber: c.ContractNumber, Title: c.Title,
+		StartsOn: dateOf(c.StartsOn), EndsOn: dateOf(c.EndsOn), RenewalOn: dateOf(c.RenewalOn),
+		CancellationNoticeOn: dateOf(c.CancellationNoticeOn),
+		NoticePeriodDays:     c.NoticePeriodDays, AutoRenew: c.AutoRenew,
+	}
+	if c.Status != nil {
+		packed.Status = string(*c.Status)
+	}
+	return packed
 }
 
 // ReviewActivity lists the deal's latest touches and its open tasks, keeping
@@ -127,7 +156,7 @@ func (r Reader) ReviewActivity(ctx context.Context, dealID ids.UUID) ([]deals.Pa
 	tasks := make([]deals.PacketTask, 0, len(open))
 	for _, t := range open {
 		if _, ok := readable[t.ID]; ok {
-			tasks = append(tasks, deals.PacketTask{ActivityID: t.ID, DueAt: t.DueAt})
+			tasks = append(tasks, deals.PacketTask{ActivityID: t.ID, DueAt: t.DueAt, DueHasTime: t.DueHasTime, DueIntent: t.DueIntent})
 		}
 	}
 	return touches, tasks, nil

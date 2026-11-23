@@ -232,8 +232,8 @@ func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
 	for range 2 {
 		if _, err := e.Pool.Exec(context.Background(), `
 			WITH night AS (
-			    INSERT INTO assurance_cycle (id, scope, opened_by, closed_at)
-			    VALUES (gen_random_uuid(), 'seeded:' || gen_random_uuid()::text, 'system:test', now())
+			    INSERT INTO assurance_cycle (id, scope, closed_at)
+			    VALUES (gen_random_uuid(), 'seeded:' || gen_random_uuid()::text, now())
 			    RETURNING id
 			), copy AS (
 			    INSERT INTO activity (kind, subject, source, captured_by, origin)
@@ -245,9 +245,9 @@ func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
 			    SELECT (SELECT id FROM copy), 'deal', $2
 			)
 			INSERT INTO assurance_task_item
-			       (cycle_id, exception_id, task_activity_id, subject_kind, subject_id, state)
+			       (cycle_id, exception_id, task_activity_id, subject_kind, subject_id)
 			SELECT (SELECT id FROM night), i.exception_id, (SELECT id FROM copy),
-			       i.subject_kind, i.subject_id, 'open'
+			       i.subject_kind, i.subject_id
 			  FROM assurance_task_item i WHERE i.task_activity_id = $1 LIMIT 1`,
 			original.id, original.dealID); err != nil {
 			t.Fatalf("seeding an earlier night's task: %v", err)

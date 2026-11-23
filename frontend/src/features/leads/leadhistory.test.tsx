@@ -187,6 +187,30 @@ describe("LeadHistoryTab", () => {
     expect(screen.getByRole("button", { name: "By field" })).toBeTruthy();
   });
 
+  it("offers Capture a chat on a lead the reader may change, and opens the panel", async () => {
+    stubWithSession(
+      {},
+      { lead: ["read", "update"], activity: ["read", "create"] },
+    );
+    withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Capture a chat" }),
+    );
+    expect(await screen.findByLabelText("Screenshot")).toBeTruthy();
+  });
+
+  it("withholds Capture a chat from a reader who may not change the lead", async () => {
+    stubWithSession({}, { lead: ["read"] });
+    withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
+
+    expect(
+      await screen.findByText("No activity logged on this lead yet."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Capture a chat" })).toBeNull();
+  });
+
   it("says there is nothing yet rather than drawing an empty list silently", async () => {
     stubWithSession({}, {});
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);

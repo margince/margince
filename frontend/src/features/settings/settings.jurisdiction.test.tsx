@@ -137,6 +137,17 @@ describe("the jurisdiction page", () => {
     ).toBeInTheDocument();
   });
 
+  it("marks its rules as AI-generated drafts, not legal advice", async () => {
+    stub(UNSET);
+    render();
+    expect(
+      await screen.findByText(en["jurisdiction.legalNote"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: en["jurisdiction.effects.title"] }),
+    ).toHaveTextContent(`${en["jurisdiction.effects.title"]} *`);
+  });
+
   it("names what a change weakens before it sends it", async () => {
     const sent = stub(UNSET);
     const user = userEvent.setup();
@@ -149,18 +160,20 @@ describe("the jurisdiction page", () => {
     const dialog = await screen.findByRole("dialog", {
       name: en["jurisdiction.change.label"],
     });
-    expect(
+    await user.click(
       within(dialog).getByRole("button", {
         name: en["jurisdiction.confirm.confirm"],
       }),
-    ).toBeDisabled();
-    await pickOption(
-      user,
-      within(dialog).getByRole("combobox", {
-        name: en["jurisdiction.card.title"],
-      }),
-      "Vietnam",
     );
+    const country = within(dialog).getByRole("combobox", {
+      name: en["jurisdiction.card.title"],
+    });
+    expect(
+      within(dialog).getByText(`${en["jurisdiction.card.title"]} is required.`),
+    ).toBeInTheDocument();
+    expect(document.activeElement).toBe(country);
+    expect(sent.find((s) => s.method === "PATCH")).toBeUndefined();
+    await pickOption(user, country, "Vietnam");
     expect(within(dialog).getByText(/becomes no floor/)).toBeInTheDocument();
     expect(
       within(dialog).getByText(/keeps Commercial correspondence/),

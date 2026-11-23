@@ -24,6 +24,7 @@
 # measuring the seat boundary, which is a different and deterministic question
 # the Go suite already owns.
 name: case22_can_i_trust_the_numbers
+title: Can I trust the numbers
 criteria: [1, 2]
 
 # WRITES: nothing — this case only reads. Said out loud because a scenario that
@@ -37,16 +38,11 @@ prompt: |
   do — how much of what is going on is this system actually seeing? I do not
   want to find out afterwards that half of it never reached us.
 
-# Nothing else answers source health. The forecast tools report what the checks
-# FOUND; this reports what the check could READ, and the two are different
-# questions — a clean set of findings over a source nobody opened is the exact
-# pairing that reads as good news and is not.
-must_call:
-  - data_coverage
-
+# data_coverage reads what the check could READ; the forecast tools report what
+# it FOUND. No input check has run on the seeded workspace, and the coverage read
+# answers that with no_input_check_yet by design. The judge holds the finding.
 may_call:
-  # The nightly run's own record and its open findings, both legitimate
-  # neighbours of this question and neither a substitute for it.
+  - data_coverage
   - read_forecast
   - run_report
   - query_workspace

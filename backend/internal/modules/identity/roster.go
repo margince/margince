@@ -321,11 +321,13 @@ type RosterPage struct {
 }
 
 // ListTeamsInput narrows and pages the team list; Q is a case-insensitive
-// match over the team name (nil or empty = every team).
+// match over the team name (nil or empty = every team). IncludeArchived adds
+// the archived teams, which only a team administrator may list.
 type ListTeamsInput struct {
-	Q      *string
-	Cursor *string
-	Limit  *int
+	Q               *string
+	Cursor          *string
+	Limit           *int
+	IncludeArchived bool
 }
 
 type teamRow struct {
@@ -333,42 +335,43 @@ type teamRow struct {
 	Name        string
 	MemberCount int
 	CreatedAt   time.Time
+	ArchivedAt  *time.Time
 }
 
-// teamColumns is the roster team SELECT list: the active-member count
-// joins app_user so a suspended/deactivated seat's membership row never
-// inflates the count (mirrors the active-only gate on ListUsers).
-const teamColumns = `t.id, t.name, COUNT(u.id) AS member_count, t.created_at`
+// teamMemberCountSQL counts a team's active and invited human seats, so the count
+// agrees with the Members page. Suspended and deactivated seats never count.
+// It reads the team as `t`.
+var teamMemberCountSQL = `(SELECT count(*) FROM team_membership tm
+	   JOIN app_user u ON u.id = tm.user_id AND ` + TeamSeatSQL("u") + `
+	  WHERE tm.team_id = t.id)`
 
-var teamFromJoin = `
-	FROM team t
-	LEFT JOIN team_membership tm ON tm.team_id = t.id
-	LEFT JOIN app_user u ON u.id = tm.user_id AND ` + LiveMemberSQL("u") + ``
+var teamColumns = `t.id, t.name, ` + teamMemberCountSQL + ` AS member_count, t.created_at, t.archived_at`
 
 var listTeamsQuery = `
-	SELECT ` + teamColumns + teamFromJoin + `
-	WHERE t.archived_at IS NULL
-	  AND ($1::timestamptz IS NULL OR (t.created_at, t.id) > ($1, $2))
-	GROUP BY t.id
-	ORDER BY t.created_at, t.id
-	LIMIT $3`
-
-var listTeamsFilteredQuery = `
-	SELECT ` + teamColumns + teamFromJoin + `
-	WHERE t.archived_at IS NULL AND f_unaccent(t.name) ILIKE f_unaccent($1)
+	SELECT ` + teamColumns + `
+	FROM team t
+	WHERE ($1::boolean OR t.archived_at IS NULL)
 	  AND ($2::timestamptz IS NULL OR (t.created_at, t.id) > ($2, $3))
-	GROUP BY t.id
 	ORDER BY t.created_at, t.id
 	LIMIT $4`
 
+var listTeamsFilteredQuery = `
+	SELECT ` + teamColumns + `
+	FROM team t
+	WHERE ($1::boolean OR t.archived_at IS NULL) AND f_unaccent(t.name) ILIKE f_unaccent($2)
+	  AND ($3::timestamptz IS NULL OR (t.created_at, t.id) > ($3, $4))
+	ORDER BY t.created_at, t.id
+	LIMIT $5`
+
 func scanTeam(r pgx.Row) (teamRow, error) {
 	var tm teamRow
-	err := r.Scan(&tm.ID, &tm.Name, &tm.MemberCount, &tm.CreatedAt)
+	err := r.Scan(&tm.ID, &tm.Name, &tm.MemberCount, &tm.CreatedAt, &tm.ArchivedAt)
 	return tm, err
 }
 
-// ListTeams returns one keyset page of the installation's active teams, with
-// each team's active-membership count, optionally filtered by in.Q.
+// ListTeams returns one keyset page of the installation's teams, with each
+// team's active-and-invited membership count, optionally filtered by in.Q.
+// Archived teams are listed only when asked for, so an admin can restore one.
 //
 // No workspace predicate anywhere in it: ADR-0091 §8 phase D has taken the
 // tenant column off team and, with this slice, off app_user too. The member
@@ -377,10 +380,16 @@ func (s *Service) ListTeams(ctx context.Context, in ListTeamsInput) ([]teamRow, 
 	if err := auth.RequireMember(ctx); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if in.IncludeArchived {
+		if err := auth.Require(ctx, objectTeamAdmin, principal.ActionRead); err != nil {
+			return nil, storekit.Page{}, err
+		}
+	}
 	return listRosterPage(ctx, s.db, in.Q, in.Cursor, in.Limit, rosterQuery[teamRow]{
 		scope:     "teams",
 		plain:     listTeamsQuery,
 		filtered:  listTeamsFilteredQuery,
+		leadArgs:  []any{in.IncludeArchived},
 		scan:      scanTeam,
 		cursorKey: func(tm teamRow) (time.Time, ids.UUID) { return tm.CreatedAt, tm.ID },
 	})

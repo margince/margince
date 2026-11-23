@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useRef } from "react";
-import { useBeforeUnload } from "../../components/unsaved";
+import { useBeforeUnload, useUnsavedGuard } from "../../components/unsaved";
 import type { MessageKey } from "../../i18n/en";
 import { connectivityNow, subscribeConnectivity } from "../../lib/connectivity";
 import { ProblemError, problemCodeOf } from "../../lib/problem";
@@ -150,4 +150,6 @@ export function useKeptDraft(keeper: DraftKeeper, sending: boolean) {
     () => writeKept(keeper, true),
   );
   useBeforeUnload(keeper.unkept);
+  // Docked, this claim holds Sign out and not a move to another page.
+  useUnsavedGuard(keeper.unkept);
 }

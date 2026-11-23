@@ -22,6 +22,7 @@
 #
 # The two halves are the SAME direction — put words on records — which is why
 # they belong in one case. A removal is the opposite errand and lives in case 31.
+# No tool is pinned: the end state reads the words on the records.
 #
 # The failure this is shaped around is the one create_tag's own description
 # names: a workspace with "Key Account" does not want "key accounts" beside it.
@@ -29,6 +30,7 @@
 # leaves the vocabulary split and every record filed under a word nobody else
 # uses.
 name: case30_a_word_for_it
+title: A word for the ones from the fair
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not
@@ -47,26 +49,6 @@ prompt: |
   And Dom Digital and Rheinufer are both worth going back to early next year.
   Start a new word for that, call it Revisit Q1, and put it on those two.
 
-must_call:
-  - read_tags
-  - change_tags
-
-# The tool name alone would pass on a create_tag that coined a SECOND K5 word
-# and never touched the one the user asked for. Pinning the name is what says
-# the coinage was the intended one: "Revisit Q1" is the word the prompt names,
-# in the spelling it names it, and any other coinage is the split vocabulary
-# this case exists to catch.
-#
-# Nothing pins apply_tag's arguments. tag_id and record_id are uuids the fixture
-# does not know, and tag_name is optional — a run that resolves ids from
-# list_tags and applies by id is the BETTER path, and a must_call_with on
-# tag_name would score it as a failure.
-must_call_with:
-  - read_tags.mode=list
-  - change_tags.action=create
-  - change_tags.action=apply
-  - change_tags.name=Revisit Q1
-
 may_call:
   - search_records
   - list_records
@@ -77,6 +59,7 @@ may_call:
   # Called unprompted on most runs, and no part of this errand needs either.
   - whoami
   - read_workspace
+  - change_tags
 
 must_mention:
   # Criterion 1: it read the vocabulary and used the word that was there. The
@@ -118,6 +101,11 @@ judge:
 
 # The words on the accounts. A second K5 spelling is the judge's: the reader
 # cannot name a word the model made up.
+# A second word for K5 splits the vocabulary even when it lands on no record,
+# so no call may name a K5 word other than the one the workspace holds.
+must_not_call_with:
+  - 'change_tags~"name": "(?!K5 Conference 2026")[^"]*K5'
+
 must_end_with:
   - company "Dom Digital GmbH" tagged=K5 Conference 2026
   - company "Rheinufer AG" tagged=K5 Conference 2026

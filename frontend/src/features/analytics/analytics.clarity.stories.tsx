@@ -90,6 +90,19 @@ const readings: components["schemas"]["ForecastReadings"] = {
       chance_in_use: 60,
       signals: [],
     },
+    {
+      deal_id: "33333333-3333-4333-8333-333333333333",
+      deal_name: "Pilot without a price",
+      exclusion_reason: "unpriced",
+      weighted_minor: 0,
+      in_open: true,
+      in_won: false,
+      in_evidence: true,
+      probability_source: "stage",
+      applied_probability: 40,
+      chance_in_use: 40,
+      signals: [],
+    },
   ],
 };
 const check: components["schemas"]["InputCheck"] = {
@@ -196,6 +209,13 @@ export const CloseMonths: Story = {
           raw_minor: 743218965,
           deal_count: 1,
           priced_count: 1,
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: false,
+            no_value_deals: 0,
+            no_rate_deals: 0,
+            missing_currencies: [],
+          },
         },
       ]}
       locale="en"
@@ -250,6 +270,7 @@ export const MovementStarting: Story = {
 export const StageValues: Story = {
   render: () => (
     <StageTable
+      dealDials={{}}
       rows={[
         {
           stage_id: "proposal",
@@ -257,6 +278,13 @@ export const StageValues: Story = {
           weighted_minor: 445931379,
           deal_count: 1,
           priced_count: 1,
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: false,
+            no_value_deals: 0,
+            no_rate_deals: 0,
+            missing_currencies: [],
+          },
         },
       ]}
       stages={[

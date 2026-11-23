@@ -68,6 +68,19 @@ async function submitChange(user: ReturnType<typeof userEvent.setup>) {
   await user.click(submitButton());
 }
 
+const refusal = (status: number, body: unknown) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/problem+json" },
+  });
+
+// The 422 shape httperr.Validation writes for a refused new password.
+const validation = (code: string) => ({
+  code: "validation_error",
+  detail: "english",
+  details: { errors: [{ field: "new_password", code, message: "english" }] },
+});
+
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
@@ -125,6 +138,18 @@ describe("ChangePasswordCard", () => {
     expect(within(dialog).getByText(/agents acting for you/)).toBeTruthy();
   });
 
+  it("says each empty field is required on Change, focuses the first, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    await openForm(user);
+
+    await user.click(submitButton());
+
+    expect(screen.getByText("Current password is required.")).toBeVisible();
+    expect(screen.getByLabelText(/current password/i)).toHaveFocus();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it("will not submit until the confirmation matches", async () => {
     const user = userEvent.setup();
     const fetchSpy = vi.spyOn(globalThis, "fetch");
@@ -143,8 +168,9 @@ describe("ChangePasswordCard", () => {
       "a fine new passwrod",
     );
 
-    expect(submitButton()).toBeDisabled();
+    await user.click(submitButton());
     expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/confirm new password/i)).toHaveFocus();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -160,7 +186,8 @@ describe("ChangePasswordCard", () => {
     await user.type(screen.getByLabelText(/^new password/i), "short");
     await user.type(screen.getByLabelText(/confirm new password/i), "short");
 
-    expect(submitButton()).toBeDisabled();
+    await user.click(submitButton());
+    expect(screen.getByLabelText(/^new password/i)).toHaveFocus();
     // The refusal is announced and reads in the danger tone — not in the same
     // meta-grey as the neutral hint it replaces, and not in the same grey as
     // the success line this card shows in the very same slot.
@@ -193,7 +220,7 @@ describe("ChangePasswordCard", () => {
       screen.getByLabelText(/confirm new password/i),
       "🔑".repeat(11),
     );
-    expect(submitButton()).toBeDisabled();
+    await user.click(submitButton());
     expect(fetchSpy).not.toHaveBeenCalled();
 
     // And exactly twelve characters clears it.
@@ -202,7 +229,10 @@ describe("ChangePasswordCard", () => {
     const twelve = "🔑🗝".repeat(6);
     await user.type(screen.getByLabelText(/^new password/i), twelve);
     await user.type(screen.getByLabelText(/confirm new password/i), twelve);
-    expect(submitButton()).toBeEnabled();
+    expect(screen.getByLabelText(/^new password/i)).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
 
     // One character repeated is refused with the reason, however long.
     await user.clear(screen.getByLabelText(/^new password/i));
@@ -275,38 +305,86 @@ describe("ChangePasswordCard", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("reports the server's own refusal rather than a generic one", async () => {
+  it("says which field the server refused rather than a generic failure", async () => {
     const user = userEvent.setup();
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({ detail: "the current password does not match" }),
-        {
-          status: 401,
-          headers: { "Content-Type": "application/problem+json" },
-        },
-      ),
+      refusal(401, {
+        code: "current_password_invalid",
+        detail: "the current password does not match",
+      }),
     );
     await openForm(user);
 
-    await user.type(
-      screen.getByLabelText(/current password/i),
-      "wrong password!",
-    );
-    await user.type(
-      screen.getByLabelText(/^new password/i),
-      "a fine new password",
-    );
-    await user.type(
-      screen.getByLabelText(/confirm new password/i),
-      "a fine new password",
-    );
-    await user.click(submitButton());
+    await submitChange(user);
 
     // Which of the two fields was wrong is the whole value of the message;
     // a generic "couldn't be changed" would send someone re-typing both.
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /current password does not match/i,
+      "The current password did not match. Check it, then enter it again.",
     );
+  });
+
+  describe("in the reader's own language", () => {
+    async function submitInGerman(body: unknown, status: number) {
+      const user = userEvent.setup();
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(refusal(status, body));
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <LocaleProvider initial="de">
+            <ChangePasswordCard />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      await user.click(screen.getByRole("button", { name: "Passwort ändern" }));
+      await user.type(screen.getByLabelText(/aktuelles passwort/i), "x");
+      await user.type(
+        screen.getAllByLabelText(/^neues passwort/i)[0],
+        "a fine new password",
+      );
+      await user.type(
+        screen.getByLabelText(/neues passwort bestätigen/i),
+        "a fine new password",
+      );
+      await user.click(
+        screen.getByRole("button", { name: "Neues Passwort speichern" }),
+      );
+      return screen.findByRole("alert");
+    }
+
+    it.each([
+      [
+        "a wrong current password",
+        401,
+        { code: "current_password_invalid", detail: "english" },
+        "Das aktuelle Passwort stimmt nicht. Prüfe es und gib es erneut ein.",
+      ],
+      [
+        "a locked account",
+        401,
+        { code: "account_locked", detail: "english" },
+        "Das Konto ist nach zu vielen falschen Passwörtern gesperrt. Warte 15 Minuten und versuche es dann erneut.",
+      ],
+      [
+        "a new password equal to the current one",
+        422,
+        validation("unchanged"),
+        "Das neue Passwort ist dasselbe wie das aktuelle. Wähle ein anderes Passwort.",
+      ],
+      [
+        "a new password outside the length rule",
+        422,
+        validation("length"),
+        "Verwende ein neues Passwort mit 12 bis 256 Zeichen.",
+      ],
+      [
+        "a new password equal to the account's address",
+        422,
+        validation("email"),
+        "Das neue Passwort ist deine E-Mail-Adresse. Wähle ein anderes Passwort.",
+      ],
+    ])("names %s", async (_case, status, body, sentence) => {
+      expect(await submitInGerman(body, status)).toHaveTextContent(sentence);
+    });
   });
 
   // The fields stay editable while the change is in flight, so `ready` — the

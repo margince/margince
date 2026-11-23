@@ -111,20 +111,17 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	// The store-opened path reads the catalog through the unexported helper,
-	// not ActiveContactColumns: that one takes contact:read on the caller's
-	// behalf, and a seat may hold create without it.
-	active, err := s.activeColumns(ctx, "contact")
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
-
 	var out crmcontracts.Contact
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		// Not ActiveContactColumns, which takes contact:read on the caller's
+		// behalf. A seat may hold create without it.
+		active, err := s.activeColumnsIn(ctx, tx, "contact")
+		if err != nil {
+			return err
+		}
 		if err := refuseUnreadableSource(ctx, tx, in.CreatedFromActivityID); err != nil {
 			return err
 		}
-		var err error
 		out, err = s.createContactInTx(ctx, tx, in, by, active)
 		return err
 	})
@@ -262,12 +259,12 @@ func (s *Store) GetContact(ctx context.Context, id ids.ContactID, archived store
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	active, err := s.activeColumns(ctx, "contact")
-	if err != nil {
-		return crmcontracts.Contact{}, err
-	}
 	var out crmcontracts.Contact
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		active, err := s.activeColumnsIn(ctx, tx, "contact")
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureReadable(ctx, tx, "contact", id.UUID); err != nil {
 			return err
 		}

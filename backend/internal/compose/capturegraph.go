@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -76,12 +77,13 @@ func (c GraphConfig) TransportMountable() bool { return c.canSignState() }
 func (c GraphConfig) Enabled() bool { return c.canConnect() }
 
 //nolint:ireturn // returns the graph.OAuth seam by design (a fakeable interface)
-func newGraphOAuth(c GraphConfig) graph.OAuth {
+func newGraphOAuth(c GraphConfig, tokens *oauthflow.TokenCache) graph.OAuth {
 	return graph.NewOAuth(graph.OAuthConfig{
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
 		Tenant:       c.Tenant,
 		Scopes:       graphScopes,
+		Tokens:       tokens,
 	})
 }
 
@@ -206,7 +208,7 @@ func WithGraphCapture(c GraphConfig) Option {
 		// consent screen with `client_id=`, which fails there rather than here and
 		// gives them nothing to act on.
 		if c.canSync() {
-			s.graphOAuth = newGraphOAuth(c)
+			s.graphOAuth = newGraphOAuth(c, nil)
 			s.graphCalOAuth = newGraphCalOAuth(c)
 		}
 	}

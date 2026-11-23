@@ -200,7 +200,6 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"deal_room_document":         "a document is withdrawn in place, keeping the engagement rows that reference it readable",
 	"maskable_field":             "the field vocabulary a mask policy cites",
 	"meeting_invitation":         "append-only: an invitation is the record that it was sent",
-	"oauth_client":               "a client is disabled in place so its grants stay attributable",
 	"project_health_assessment":  "append-only: an assessment is what somebody judged at a point in time",
 	"company":                    "a company is archived, never deleted: archived_at retires it and every read filters on it",
 	"consent_purpose":            "a purpose is archived rather than deleted, so a policy that cited it keeps resolving",
@@ -231,7 +230,6 @@ var foreignKeyNoIndexNeeded = map[string]string{
 	"relationship":               "a relationship is archived or ended in place",
 	"record_role":                "append-only: a role assignment is who could do what, when",
 	"report_schedule":            "append-only in practice: a schedule is retired by its own flags rather than removed",
-	"agent_run":                  "append-only: the run is how an outcome was reached",
 	"comms_outbound":             "append-only: the ledger of what was sent",
 	"weekly_review":              "append-only: a review is what a reader saw that week",
 	"app_user": "nothing deletes an app_user row. A member is retired by setting " +

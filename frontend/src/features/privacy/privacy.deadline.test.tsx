@@ -14,7 +14,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RequestsPanel } from "../settings/settings.privacy";
-import { dueAtOf, earlierDueTooLate } from "./privacy.deadline";
+import { dueAtOf, earlierDueFault } from "./privacy.deadline";
 
 // The deadline of a manual subject request. The server computes it and the form
 // shows it. The form sends a date only when the officer chose an earlier one.
@@ -125,18 +125,39 @@ describe("the deadline field", () => {
   });
 
   it("refuses an earlier deadline that is not earlier", async () => {
-    stub();
+    const sent = stub();
+    const user = userEvent.setup();
+    await openCorrectionForm(user);
+    const deadline = screen.getByRole("textbox", { name: /earlier deadline/i });
+    await user.type(deadline, "20/08/2026");
+    await user.tab();
+    expect(screen.getByText(/choose a date before/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /open request/i }));
+    expect(deadline).toHaveFocus();
+    expect(sent.filter((call) => call.key.startsWith("POST"))).toHaveLength(0);
+  });
+
+  it("refuses an earlier deadline before the day the request arrived", async () => {
+    const sent = stub();
     const user = userEvent.setup();
     await openCorrectionForm(user);
     await user.type(
+      screen.getByRole("textbox", { name: /received on/i }),
+      "01/07/2026",
+    );
+    await user.type(
       screen.getByRole("textbox", { name: /earlier deadline/i }),
-      "20/08/2026",
+      "01/01/2020",
     );
     await user.tab();
-    expect(screen.getByText(/choose a date before/i)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /open request/i }),
-    ).toBeDisabled();
+      await screen.findByText("Choose a date on or after 01/07/2026."),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /open request/i }));
+    expect(
+      screen.getByRole("textbox", { name: /earlier deadline/i }),
+    ).toHaveFocus();
+    expect(sent.filter((call) => call.key.startsWith("POST"))).toHaveLength(0);
   });
 
   it("sends the day a late request arrived, and asks the deadline from that day", async () => {
@@ -236,12 +257,12 @@ describe("dueAtOf", () => {
       dueAtOf({ receivedOn: "", earlierDue: "2026-08-04" }, exact, ZONE),
     ).toBe(undefined);
     expect(
-      earlierDueTooLate(
-        { receivedOn: "", earlierDue: "2026-08-04" },
+      earlierDueFault(
+        { receivedOn: "2026-08-01", earlierDue: "2026-08-04" },
         exact,
         ZONE,
       ),
-    ).toBe(false);
+    ).toBe(undefined);
   });
 
   it("sends the end of an earlier day", () => {

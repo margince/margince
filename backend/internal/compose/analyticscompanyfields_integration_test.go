@@ -62,7 +62,8 @@ func seedTierBook(t *testing.T, e *integration.Env) tierBook {
 	store := deals.NewStore(e.DB(), installseam.Deals())
 	for i, at := range []*ids.CompanyID{gold, gold, silver, hidden, untiered, nil} {
 		if _, err := store.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: fmt.Sprintf("Tier deal %d", i), PipelineID: pipeline, StageID: open, CompanyID: at,
+			Source: "manual",
+			Name:   fmt.Sprintf("Tier deal %d", i), PipelineID: pipeline, StageID: open, CompanyID: at,
 		}); err != nil {
 			t.Fatalf("seed deal %d: %v", i, err)
 		}

@@ -88,9 +88,8 @@ one certification run can cover:
    tasks:
      meeting_notes:                       # illustrative — not a shipped task
        ladder: [cheap_cloud, premium]     # ordered capability tiers, not models
-       execution_mode: interactive        # interactive | background
-       on_budget_exhausted: degrade       # pairs with execution_mode, always:
-       status: shipped                    #   interactive↔degrade, background↔queue
+       execution_mode: interactive        # interactive | background; also decides
+       status: shipped                    #   what a spent budget does
        # a bare name is a site of kind one_shot; write
        # {name: chat, kind: multi_turn} for any other kind
        sites: [summarise]
@@ -286,7 +285,8 @@ task's ladder. When the decision model is not sure, the site goes back to the LL
    `TestEveryDecisionTaskHasAnAdapterAndEveryAdapterIsDeclared` fails a declaration without one.
    It also fails one without a declaration.
 4. **Certify it** ([certify-a-decision-site.md](certify-a-decision-site.md)).
-   Until its row is in `decisioncert_gen.go`, the lane skips the site.
+   A bound lane answers the site with or without its row in `decisioncert_gen.go`.
+   Until the row is there, the API and worker warn about it at start and at each routing save.
 5. **Build the prompts page again**, which now shows the site's decision question:
    `cd backend && go test ./internal/compose/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts`.
 

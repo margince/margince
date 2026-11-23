@@ -5,8 +5,8 @@
 // (interfaces.md §2, ADR-0055): scope ∧ seat ∧ tier ∧ volume, resolved against
 // the calling Principal, BEFORE any handler runs — whether the action arrives
 // as an MCP tool call or a mutating REST operation. It is its own package
-// so nothing else can mint an admitted capability — Surface A (inbound
-// agents) and Surface B (our own runner) both enter here, and there is no
+// so nothing else can mint an admitted capability. A user's AI assistant over
+// MCP and the night helpers (our own runner) both enter here, and there is no
 // other door.
 package auth
 
@@ -141,7 +141,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	if err != nil {
 		return ctx, deniedIfGone("the credential or the human behind it", spec.Name, err)
 	}
-	p.SeatType, p.Permissions, p.TeamIDs = seat, rbac.Permissions, rbac.TeamIDs
+	p = authz.WithAuthority(p, rbac, seat)
 	// A passport's areas come from this same read, so a run that authenticated
 	// once is held to a change from its next call.
 	if !p.PassportID.IsZero() {
@@ -187,16 +187,19 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// An agent acting as its user (principal.ActsAsItsUser) runs whatever the
 	// tier says: what the colleague may do unaided, their agent may do too. The
 	// tier then decides nothing, so a version it could not name raises nothing,
-	// and one it did name is still bound below. Automatic work with nobody
-	// behind it keeps both rules.
+	// and one it did name is still bound below. A dynamic tool that waits even
+	// for its user is decided per call by its resolver. A call it raises waits.
+	// One it admits runs as it would without the flag, unnamed version or not.
+	// Automatic work with nobody behind it keeps both rules.
 	resolvedAuto := tier == mcp.TierAutoExecute
+	ownMoveDecidedPerCall := p.ActsAsItsUser() && spec.WaitsEvenForItsUser
 	effectiveTier := TierFor(ctx, p, spec)
 	switch {
 	case effectiveTier == mcp.TierAutoExecute:
 		tier = mcp.TierAutoExecute
 	case effectiveTier == mcp.TierConfirmationRequired:
 		tier = mcp.TierConfirmationRequired
-	case tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil:
+	case tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil && !ownMoveDecidedPerCall:
 		return ctx, fmt.Errorf(
 			"%s resolved to auto-execute without naming the record version it was resolved from: %w",
 			spec.Name, apperrors.ErrRequiresApproval)

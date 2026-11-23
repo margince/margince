@@ -70,7 +70,7 @@ func TestAnOfferTakesItsEntitysLanguageAndProductTextInIt(t *testing.T) {
 	dealID := e.SeedDeal(t, "Language deal", pipeline, open, &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, offerLanguagePerms)
 
-	created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{LineItems: productLine(product)})
+	created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{Source: "manual", LineItems: productLine(product)})
 	if created.Language == nil || *created.Language != "de" {
 		t.Fatalf("the offer's language is %v, want Vienna's de", created.Language)
 	}
@@ -99,7 +99,7 @@ func TestALanguageWithoutATranslationTakesTheProductsName(t *testing.T) {
 	dealID := e.SeedDeal(t, "Fallback deal", pipeline, open, &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, offerLanguagePerms)
 
-	created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{Language: new("fr"), LineItems: productLine(product)})
+	created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{Source: "manual", Language: new("fr"), LineItems: productLine(product)})
 	if got := lineTexts(created); len(got) != 1 || got[0] != "Retainer" {
 		t.Errorf("a French offer's line reads %q, want the product's own name", got)
 	}
@@ -122,7 +122,7 @@ func TestAnOfferWithoutAnEntityLanguageTakesItsTemplates(t *testing.T) {
 		t.Fatalf("create the template: %v", err)
 	}
 	templateID := ids.From[ids.OfferTemplateKind](ids.UUID(tmpl.Id))
-	english := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{TemplateID: &templateID})
+	english := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{Source: "manual", TemplateID: &templateID})
 	if english.Language == nil || *english.Language != "en" {
 		t.Errorf("an offer on an English template has language %v, want en", english.Language)
 	}
@@ -183,7 +183,7 @@ func TestAChangedLanguageReachesOnlyTheLinesAddedAfterIt(t *testing.T) {
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Language switch deal", pipeline, open, &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, offerLanguagePerms)
-	created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{Language: new("en"), LineItems: productLine(product)})
+	created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{Source: "manual", Language: new("en"), LineItems: productLine(product)})
 	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
 	if _, _, err := e.Deals.UpdateOffer(rep, offerID, deals.UpdateOfferInput{Language: new("de")}); err != nil {
 		t.Fatalf("switch the draft to German: %v", err)
@@ -211,7 +211,7 @@ func TestATemplateLocaleOfAnyShapeGivesAValidLanguage(t *testing.T) {
 	templateID := ids.From[ids.OfferTemplateKind](ids.UUID(tmpl.Id))
 	for locale, want := range map[string]string{"de_AT": "de", "1x_unknown_99": "de", "en_GB": "en"} {
 		e.WsExec(t, `UPDATE offer_template SET locale = $2 WHERE id = $1`, templateID, locale)
-		created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{TemplateID: &templateID})
+		created := renderOneLineOffer(rep, t, e, dealID, deals.CreateOfferInput{Source: "manual", TemplateID: &templateID})
 		if created.Language == nil || *created.Language != want {
 			t.Errorf("template locale %q gave language %v, want %s", locale, created.Language, want)
 		}

@@ -6,10 +6,10 @@ import { Badge, Button, TableScroll } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { RecordTabs } from "../../design-system/recordtabs";
 import { Select } from "../../design-system/select";
-import { formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { formatNumber, formatPercent } from "../../format/format";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import { ColumnGuideButton } from "./import.guide";
-import { ImportRefusal } from "./import.notices";
+import { ImportRefusal, useRunStopSentence } from "./import.notices";
 import { fieldLabelOf } from "./importfieldlabel";
 import type { WizardFile } from "./importflow";
 import type {
@@ -99,7 +99,7 @@ export function ImportMappingTable({
                   <th scope="row" className="import__colName">
                     {column.header}
                   </th>
-                  <td className="import__fill">{fillLabel(column)}</td>
+                  <td className="import__fill">{fillLabel(column, locale)}</td>
                   <td
                     className="import__samples"
                     title={column.samples.join(", ") || undefined}
@@ -167,11 +167,11 @@ function isLink(target: ImportFormatColumn): boolean {
   return target.name !== "ref" && target.name.endsWith("_ref");
 }
 
-// fillLabel renders the rate as a percentage of the rows actually profiled.
-// Rounded to whole numbers: the decision it informs is "is this column worth
-// mapping", and nobody decides that differently at 4.2% than at 4%.
-function fillLabel(column: ImportColumn): string {
-  return `${Math.round(column.fill_rate * 100)}%`;
+// The rate as a percentage of the rows actually profiled. Whole numbers: the
+// decision it informs is "is this column worth mapping", and nobody decides
+// that differently at 4.2% than at 4%.
+function fillLabel(column: ImportColumn, locale: Locale): string {
+  return formatPercent(column.fill_rate, locale);
 }
 
 type TypedFile = Readonly<{ file: WizardFile; object: ImportObject }>;
@@ -212,6 +212,7 @@ export function MapStep({
     return left > 0 ? [[entry.file.file, left]] : [];
   });
   const [open, setOpen] = useState(typed[0]?.file.file ?? "");
+  const stopSentence = useRunStopSentence(wizard.run.data, format);
   const current = typed.find((entry) => entry.file.file === open) ?? typed[0];
   if (!current) return null;
   const name = current.file.file;
@@ -230,7 +231,7 @@ export function MapStep({
   const refused = test.error ?? wizard.saveFailure;
   // A test run that stopped left the run a draft, with the reason on it.
   const stopped =
-    wizard.run.data?.status === "pending" ? wizard.run.data.error : undefined;
+    wizard.run.data?.status === "pending" ? stopSentence : undefined;
   return (
     <div className="import">
       <RecordTabs

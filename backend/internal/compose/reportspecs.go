@@ -217,6 +217,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
 		sumCoverage:    baseMoneyCoverage(),
+		partialSums:    true,
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		// No stage_id filter: nothing serves it (the screen groups BY stage_id
 		// instead), and a filter key this report has no caller for is public
@@ -244,16 +245,14 @@ var prebuiltReports = map[string]reportSpec{
 		}),
 		listPredicates: deals.CommercialFilterPredicates("t"),
 		filterScopes:   projectFilterScope,
-		// Both company references, which a normal deal read masks per row
-		// when the caller cannot open them. company_id is a FILTER here
-		// and not a dimension, and it needs the scope for that alone: a count
-		// filtered to one company answers whether that company exists and has
-		// a deal, which is the disclosure whether or not the id is printed.
+		// A normal deal read masks both companies per row. The company_id scope
+		// narrows a count filtered to one company and blanks the drill column.
 		referenceScopes: map[string]string{
 			colPartnerCompanyID: tableCompany,
 			colCompanyID:        tableCompany,
 		},
-		defaultBy: moneyDefaultBy(fieldStageID),
+		drillColumns: dealCompanyDrillColumn,
+		defaultBy:    moneyDefaultBy(fieldStageID),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "amount_minor_sum"},
@@ -318,11 +317,12 @@ var prebuiltReports = map[string]reportSpec{
 		// below, through ActivityContentClause) already narrows this
 		// correctly, since an activity's discoverability is real per-row
 		// scope and not the identity-table TRUE a deal's is.
-		population:   measureEveryReadableRow,
-		baseWhere:    whereArchivedNull,
-		basePlain:    "live (unarchived) meetings and tasks; email, messages, calls and notes are not counted",
+		population: measureEveryReadableRow,
+		baseWhere:  whereArchivedNull,
+		basePlain: "live (unarchived) meetings and tasks; email, messages, calls and notes are not counted. " +
+			"Period buckets read when each happened in the installation's reporting timezone, a date-only entry on its own date",
 		activityWalk: true,
-		dimensions: map[string]string{
+		dimensions: withPeriodDimensions(map[string]string{
 			fieldKind:      colKind,
 			fieldDirection: colDirection,
 			// A meeting's CURRENT standing — booked, held, no_show, canceled —
@@ -337,9 +337,9 @@ var prebuiltReports = map[string]reportSpec{
 			// as "no project".
 			fieldProjectID: activityProjectIDExpr,
 			fieldProject:   activityProjectLabelExpr,
-		},
+		}, colActivityAt),
 		measures: map[string]string{},
-		filters: map[string]string{
+		filters: withPeriodDimensions(map[string]string{
 			fieldKind:          colKind,
 			fieldDirection:     colDirection,
 			fieldMeetingStatus: colMeetingStatus,
@@ -350,7 +350,7 @@ var prebuiltReports = map[string]reportSpec{
 			// activities list serves host and standing on each of those rows.
 			fieldHostUserID: colMeetingCreditedSeat,
 			fieldProjectID:  activityProjectIDExpr,
-		},
+		}, colActivityAt),
 		filterScopes: projectFilterScope,
 		// The project a filed activity names is row-scoped; grouping by it
 		// carries the same obligation the deal reports' company columns do,
@@ -435,6 +435,7 @@ var prebuiltReports = map[string]reportSpec{
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
 		}),
 		sumCoverage:    baseMoneyCoverage(),
+		partialSums:    true,
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		filters: map[string]string{
 			fieldOwnerID:            colOwnerID,
@@ -451,10 +452,10 @@ var prebuiltReports = map[string]reportSpec{
 			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
 		filterScopes: projectFilterScope,
-		// partner_company_id points at a company a normal deal read masks
-		// per row when the caller cannot open it, so grouping by it must not
-		// name one they could not have seen.
-		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany},
+		// A normal deal read masks both companies per row. company_id is never
+		// grouped here; its scope blanks the drill column.
+		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany, colCompanyID: tableCompany},
+		drillColumns:    dealCompanyDrillColumn,
 		defaultBy:       moneyDefaultBy(fieldWinProbabilityBand),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},

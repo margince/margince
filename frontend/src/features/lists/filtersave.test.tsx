@@ -78,15 +78,18 @@ const posted = (written: readonly Sent[], path: string) =>
 
 describe("saving with lists switched off", () => {
   it("asks for a name only, and refuses a blank one", async () => {
-    mount();
+    const { written } = mount();
     const user = userEvent.setup();
     const dialog = await openSave(user);
 
     expect(dialog).toHaveTextContent(en["filters.saveTitle"]);
     expect(screen.queryByRole("radio")).toBeNull();
-    expect(screen.getByRole("button", { name: SAVE_VIEW })).toBeDisabled();
-    await user.type(screen.getByRole("textbox", { name: NAME }), "   ");
-    expect(screen.getByRole("button", { name: SAVE_VIEW })).toBeDisabled();
+    const name = screen.getByRole("textbox", { name: NAME });
+    await user.type(name, "   ");
+    await user.click(screen.getByRole("button", { name: SAVE_VIEW }));
+    expect(screen.getByText(`${NAME} is required.`)).toBeInTheDocument();
+    expect(name).toHaveFocus();
+    expect(posted(written, "/views")).toEqual([]);
   });
 
   it("saves the tree as a view and opens it", async () => {
@@ -271,5 +274,31 @@ describe("saving with lists switched on", () => {
     await waitFor(() => expect(posted(written, "/lists")).toHaveLength(1));
     expect(posted(written, "/lists")[0]).toMatchObject({ sharing: "private" });
     expect(posted(written, "/lists")[0]).not.toHaveProperty("team_id");
+  });
+
+  it("starts a reader in no team on only them, with a team on offer but barred", async () => {
+    const { written } = mount({ listsOn: true });
+    const user = userEvent.setup();
+    await openSave(user);
+    await user.click(screen.getByRole("radio", { name: /^Live List/ }));
+    await user.type(screen.getByRole("textbox", { name: NAME }), "Mine");
+    const sharing = screen.getByRole("combobox", {
+      name: en["lists.sharingLabel"],
+    });
+    expect(sharing).toHaveTextContent(en["lists.sharing.private"]);
+    expect(sharing).toHaveAccessibleDescription(
+      `${en["lists.sharing.noTeamHint"]} ${en["lists.sharingHint"]}`,
+    );
+    await user.click(sharing);
+    expect(
+      await screen.findByRole("option", { name: en["lists.sharing.team"] }),
+    ).toHaveAttribute("aria-disabled", "true");
+    await user.keyboard("{Escape}");
+    await user.click(
+      screen.getByRole("button", { name: en["filters.saveListConfirm"] }),
+    );
+
+    await waitFor(() => expect(posted(written, "/lists")).toHaveLength(1));
+    expect(posted(written, "/lists")[0]).toMatchObject({ sharing: "private" });
   });
 });

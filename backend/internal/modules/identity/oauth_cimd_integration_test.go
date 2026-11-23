@@ -120,7 +120,7 @@ func TestAValidatedDocumentBecomesAnOrdinaryClientRow(t *testing.T) {
 	e := setupCIMD(t, "cimd-row")
 	clientID := e.docs.URL + "/client.json"
 
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatalf("resolving a valid document: %v", err)
 	}
 
@@ -145,7 +145,7 @@ func TestAValidatedDocumentBecomesAnOrdinaryClientRow(t *testing.T) {
 func TestAFreshDocumentIsNotFetchedAgain(t *testing.T) {
 	e := setupCIMD(t, "cimd-cache")
 	clientID := e.docs.URL + "/client.json"
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatal(err)
 	}
 
@@ -153,7 +153,7 @@ func TestAFreshDocumentIsNotFetchedAgain(t *testing.T) {
 	e.body = func(url string) string {
 		return `{"client_id":"` + url + `","client_name":"Renamed","redirect_uris":["https://a.example/cb"]}`
 	}
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatal(err)
 	}
 
@@ -168,7 +168,7 @@ func TestAFreshDocumentIsNotFetchedAgain(t *testing.T) {
 func TestAStaleDocumentIsRefetchedAndItsNewContentWins(t *testing.T) {
 	e := setupCIMD(t, "cimd-stale")
 	clientID := e.docs.URL + "/client.json"
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatal(err)
 	}
 	e.expire(t, clientID)
@@ -176,7 +176,7 @@ func TestAStaleDocumentIsRefetchedAndItsNewContentWins(t *testing.T) {
 	e.body = func(url string) string {
 		return `{"client_id":"` + url + `","client_name":"Renamed","redirect_uris":["https://a.example/cb"]}`
 	}
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatal(err)
 	}
 
@@ -208,7 +208,7 @@ func (e *cimdEnv) expire(t *testing.T, clientID string) {
 func TestADisabledClientIsNotFetchedAgain(t *testing.T) {
 	e := setupCIMD(t, "cimd-disabled")
 	clientID := e.docs.URL + "/client.json"
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatal(err)
 	}
 	e.expire(t, clientID)
@@ -223,7 +223,7 @@ func TestADisabledClientIsNotFetchedAgain(t *testing.T) {
 		return `{"client_id":"` + url + `","client_name":"Renamed","redirect_uris":["https://a.example/cb"]}`
 	}
 
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatalf("resolving a disabled client: %v", err)
 	}
 
@@ -249,7 +249,7 @@ func TestADocumentCannotTakeOverARegisteredClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatalf("resolving over a registered client: %v", err)
 	}
 
@@ -268,7 +268,7 @@ func TestADocumentCannotTakeOverARegisteredClient(t *testing.T) {
 func TestAnOpaqueClientIDIsNotResolvedAsADocument(t *testing.T) {
 	e := setupCIMD(t, "cimd-opaque")
 
-	err := e.svc.resolveCIMDClient(e.ctx, "s6BhdRkqt3")
+	err := e.svc.resolveCIMDClient(e.ctx, "s6BhdRkqt3", DefaultUnusedDynamicClientCap)
 
 	if err == nil || !strings.Contains(err.Error(), "not a metadata document URL") {
 		t.Fatalf("an opaque client_id → %v, want errNotCIMD", err)
@@ -286,7 +286,7 @@ func TestARefusedDocumentLeavesNoRow(t *testing.T) {
 			`"redirect_uris":["https://a.example/cb"]}`
 	}
 
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err == nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err == nil {
 		t.Fatal("a document claiming another URL was accepted")
 	}
 

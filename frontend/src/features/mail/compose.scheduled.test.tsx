@@ -17,6 +17,7 @@ import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -45,7 +46,7 @@ type Activity = components["schemas"]["Activity"];
 
 // A reason that carries no unsubscribe surface, so the form is sendable with
 // nothing else filled in.
-const WHY_LABEL = "Active deal";
+const WHY_LABEL = "Open deal";
 
 const ACTIVITY: Activity = {
   occurred_precision: "instant",
@@ -90,6 +91,9 @@ function stubSend(status: number) {
           : JSON.parse(String(init?.body));
         return jsonResponse(allowedPreview(previewedAddresses(body)));
       }
+      if (url.pathname.endsWith("/connectors")) {
+        return jsonResponse(CONNECTED_ROSTER);
+      }
       return jsonResponse({ data: [], page: { next_cursor: null } });
     }),
   );
@@ -132,7 +136,6 @@ async function composeAndSend(user: UserEvent) {
     screen.getByRole("combobox", { name: WHY_ASK }),
     WHY_LABEL,
   );
-  await screen.findByRole("button", { name: /recipients checked/i });
   await pressSend(user);
   return onClose;
 }

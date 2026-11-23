@@ -892,7 +892,7 @@ backend|./internal/compose/integration|TestACreateOffersAWordOnlyAsItExistsAndNe
 backend|./internal/compose/integration|TestACreateThatFilesADuplicateSaysSoInItsAnswer|4.46
 backend|./internal/compose/integration|TestACreateWithoutASourceIsRefusedNamingSourceOverHTTP|2.84
 backend|./internal/compose/integration|TestACredentialDoesNotReleaseTheOutboundCallItProposed|2.69
-backend|./internal/compose/integration|TestACredentialFilesAnActivityUnderErasureAsItsColleagueCould|1.68
+backend|./internal/compose/integration|TestACredentialFilesAnActivityUnderErasureOnceAHumanApproves|1.68
 backend|./internal/compose/integration|TestACredentialOverwritesATypedValueAtOnceAndStagesNothing|5.02
 backend|./internal/compose/integration|TestACredentialRelinksExactlyTheNamedActivitiesToACompanyAtOnce|1.59
 backend|./internal/compose/integration|TestACurrentQuotedPromiseSurvivesALongSignature|1.59
@@ -1617,7 +1617,7 @@ backend|./internal/compose/integration|TestAnAgentMarkingACompanySeenMovesItsUse
 backend|./internal/compose/integration|TestAnAgentNeverDecidesWhatReachesItsUserNorTheirSignIn|2.81
 backend|./internal/compose/integration|TestAnAgentNeverReplacesOrWithdrawsAUsersSenderDecision|2.62
 backend|./internal/compose/integration|TestAnAgentOnAColleaguesPassportOverwritesAHumanTypedField|2.47
-backend|./internal/compose/integration|TestAnAgentOnAPassportRelinksWithoutAskingWhileAutomaticWorkIsRefusedAProject|7.61
+backend|./internal/compose/integration|TestAnAgentOnAPassportRelinksWithoutAskingExceptToAProject|7.61
 backend|./internal/compose/integration|TestAnAgentOpensARoomAndHoldsItsConversationOnTheSeam|3.48
 backend|./internal/compose/integration|TestAnAgentPlacesAHoldAndPinsARecordButNeverLiftsOrReleases|5.02
 backend|./internal/compose/integration|TestAnAgentPreviewOfAListDefinitionIsLoggedAsARead|3.13

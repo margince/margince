@@ -22,6 +22,7 @@ export type Draft = Readonly<{
   city: string;
   region: string;
   country: string;
+  jurisdiction: string;
   vat_id: string;
   register_court: string;
   register_number: string;
@@ -55,6 +56,7 @@ export const FLAT_KEYS = [
   "display_name",
   "legal_name",
   "country",
+  "jurisdiction",
   "vat_id",
   "register_court",
   "register_number",
@@ -75,6 +77,7 @@ export const LABEL_KEYS: Readonly<Record<DraftKey, MessageKey>> = {
   city: "legalEntities.city",
   region: "legalEntities.region",
   country: "legalEntities.country",
+  jurisdiction: "legalEntities.jurisdiction",
   vat_id: "legalEntities.vatId",
   register_court: "legalEntities.registerCourt",
   register_number: "legalEntities.registerNumber",
@@ -92,7 +95,6 @@ export const LABEL_KEYS: Readonly<Record<DraftKey, MessageKey>> = {
 
 // What the default entity keeps itself; the rest it reads from the company.
 export const DEFAULT_ENTITY_KEYS = [
-  "country",
   "bank_account_holder",
   "iban",
   "bic",
@@ -105,6 +107,7 @@ const REQUIRED_ENTITY_FIELDS = [
   "display_name",
   "legal_name",
   "country",
+  "jurisdiction",
 ] as const satisfies readonly DraftKey[];
 
 const NAME_TAKEN = "legal_entity_name_taken";

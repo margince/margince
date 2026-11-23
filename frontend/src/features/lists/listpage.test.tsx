@@ -33,6 +33,7 @@ import {
   members,
   SHORTLIST_ID,
   shortlist,
+  TEAM_ID,
   visitAnswer,
 } from "../../testing/lists.fixtures";
 import { openViewStep } from "../../testing/listview.testkit";
@@ -308,6 +309,40 @@ describe("an opened list", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(en["lists.health.retiredField"])).toBeNull();
+  });
+
+  it("names a retired field by the label the catalog still holds for it", async () => {
+    stubLivePage(
+      {
+        ...liveList,
+        health: "retired_field",
+        retired_fields: ["cf_last_touch"],
+      },
+      {
+        "GET /filters/vocabulary": () => jsonResponse(vocabulary),
+        "GET /custom-fields": () =>
+          jsonResponse({
+            data: [
+              {
+                column_name: "cf_last_touch",
+                label: "Last Touch",
+                label_translations: {},
+                object: "company",
+                type: "date",
+                status: "retired",
+              },
+            ],
+            page: { has_more: false },
+          }),
+      },
+    );
+    page(LIVE_ID);
+
+    expect(
+      await screen.findByText(
+        en["lists.retiredField.body_one"].replace("{fields}", "Last Touch"),
+      ),
+    ).toBeInTheDocument();
   });
 
   it("records the visit once the list is read, reads it again, and marks the members the server says joined", async () => {
@@ -650,7 +685,7 @@ describe("an opened list", () => {
   });
 
   it("lays out how many records a reader can see, who can find the list and who looks after it", async () => {
-    stubLivePage(liveList);
+    stubLivePage(liveList, { "GET /me": listsMe(true, [TEAM_ID]) });
     page(LIVE_ID);
     expect(
       await screen.findByText(en["lists.col.recordType"]),
@@ -662,6 +697,21 @@ describe("an opened list", () => {
     ).toBeInTheDocument();
     expect(within(strip).getByText("Lena Vogt")).toBeInTheDocument();
     expect(within(strip).queryByText(/—/)).toBeNull();
+  });
+
+  it("says only the reader finds their own team list while they are in no team", async () => {
+    stubLivePage(liveList);
+    page(LIVE_ID);
+    expect(
+      await screen.findByText(en["lists.col.recordType"]),
+    ).toBeInTheDocument();
+    const strip = facts();
+    expect(
+      await within(strip).findByText(en["lists.sharing.private"]),
+    ).toBeInTheDocument();
+    expect(
+      within(strip).queryByText(en["lists.audience.yourTeams"]),
+    ).toBeNull();
   });
 
   it("states a broken filter in its notice alone, and names the record type when the server could not count", async () => {

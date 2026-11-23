@@ -5,14 +5,12 @@ package ai
 
 import "testing"
 
-// FakeRoutingConfig must bind every ladder or --ai-fake would silently
-// refuse whichever task happened to land on the gap (TaskSiteExtract's
-// ladder is premium-only, so a config that skipped the premium tier
-// would look fine for every other task and only fail deep-read
-// extraction). UnboundLadderWarnings is the same completeness check the
-// boot path runs over a declared ai-routing.yaml, so reusing it here
-// keeps the fake config honest against the SAME contract, not a
-// hand-maintained parallel list of tasks.
+// FakeRoutingConfig must bind every ladder, or --ai-fake would silently
+// refuse whichever task landed on the gap. TaskSiteExtract's ladder is
+// premium-only: a config without premium looks fine for every other task
+// and fails only deep-read extraction. UnboundLadderWarnings is the completeness check the boot
+// path runs over the stored routing setting. Reusing it here holds the fake
+// config to the same contract, not to a hand-kept list of tasks.
 func TestFakeRoutingConfigBindsEveryLadder(t *testing.T) {
 	cfg := FakeRoutingConfig()
 	if err := cfg.validate(); err != nil {

@@ -4,6 +4,8 @@
 package deadline
 
 import (
+	"encoding/json"
+	"os"
 	"testing"
 	"time"
 )
@@ -36,44 +38,89 @@ func TestPassedIsStrict(t *testing.T) {
 	}
 }
 
-// Zero is a real answer and is not the same as "not late", so callers read the
-// bool. A test that only checked the count would pass while the two were
-// conflated.
-func TestDaysPastSeparatesTheCountFromTheVerdict(t *testing.T) {
-	for _, tc := range []struct {
-		name     string
-		due      *time.Time
-		wantDays int
-		wantLate bool
+func TestDayPassedIsOverOnlyAfterTheWholeDayInTheZone(t *testing.T) {
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatal(err)
+	}
+	endOfNov20 := time.Date(2026, 11, 20, 23, 59, 59, 0, time.UTC)
+	endOfNov20InAuckland := time.Date(2026, 11, 20, 23, 59, 59, 0, auckland)
+	for name, c := range map[string]struct {
+		due, now time.Time
+		loc      *time.Location
+		want     bool
 	}{
-		{"undated", nil, 0, false},
-		{"upcoming", at(time.Hour), 0, false},
-		{"due exactly now", at(0), 0, false},
-		{"late by hours is late by no whole days", at(-5 * time.Hour), 0, true},
-		{"late by a day", at(-24 * time.Hour), 1, true},
-		{"late by a day and most of another", at(-47 * time.Hour), 1, true},
-		{"late by two days", at(-48 * time.Hour), 2, true},
+		"last fraction of the day": {endOfNov20, time.Date(2026, 11, 20, 23, 59, 59, 500_000_000, time.UTC), time.UTC, false},
+		"first moment after":       {endOfNov20, time.Date(2026, 11, 21, 0, 0, 0, 0, time.UTC), time.UTC, true},
+		"the day is over there":    {endOfNov20InAuckland, time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC), auckland, true},
 	} {
-		days, late := DaysPast(tc.due, noon)
-		if days != tc.wantDays || late != tc.wantLate {
-			t.Errorf("%s: DaysPast = (%d, %v), want (%d, %v)",
-				tc.name, days, late, tc.wantDays, tc.wantLate)
+		if got := DayPassed(c.due, c.now, c.loc); got != c.want {
+			t.Errorf("%s: DayPassed = %v, want %v", name, got, c.want)
 		}
 	}
 }
 
-// DaysPast must agree with Passed about lateness, or a caller reading one and a
-// caller reading the other disagree about the same record.
-func TestDaysPastAgreesWithPassed(t *testing.T) {
-	for _, offset := range []time.Duration{
-		-49 * time.Hour, -24 * time.Hour, -time.Nanosecond, 0, time.Nanosecond, time.Hour,
-	} {
-		_, late := DaysPast(at(offset), noon)
-		if want := Passed(at(offset), noon); late != want {
-			t.Errorf("at %v: DaysPast says late=%v, Passed says %v", offset, late, want)
+// The frontend's taskDueOnDay reads the same table
+// (frontend/src/format/dueintent.test.ts), so the two sides count a picked day
+// alike.
+func TestWallDayOffsetFollowsThePickedDate(t *testing.T) {
+	raw, err := os.ReadFile("testdata/pickedday.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cases []struct {
+		WallClock string    `json:"wall_clock"`
+		Now       time.Time `json:"now"`
+		Zone      string    `json:"zone"`
+		Offset    int       `json:"offset"`
+		EndUTC    string    `json:"end_utc"`
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	if len(cases) == 0 {
+		t.Fatal("the shared table is empty, so this proves nothing")
+	}
+	for _, tc := range cases {
+		loc, err := time.LoadLocation(tc.Zone)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, ok := WallDayOffset(tc.WallClock, tc.Now, loc)
+		if !ok || got != tc.Offset {
+			t.Errorf("%s at %s in %s: offset %d (%v), want %d", tc.WallClock, tc.Now, tc.Zone, got, ok, tc.Offset)
+		}
+		if tc.EndUTC == "" {
+			continue
+		}
+		want, err := time.Parse(time.RFC3339Nano, tc.EndUTC)
+		if err != nil {
+			t.Fatal(err)
+		}
+		due := tc.Now
+		if end := TaskDueOn(&due, false, tc.WallClock, loc); !end.Equal(want) {
+			t.Errorf("%s in %s is due until %s, want %s", tc.WallClock, tc.Zone, end.UTC().Format(time.RFC3339Nano), tc.EndUTC)
 		}
 	}
-	if _, late := DaysPast(nil, noon); late != Passed(nil, noon) {
-		t.Error("the two disagree about an undated promise")
+	if _, ok := WallDayOffset("tomorrow", noon, time.UTC); ok {
+		t.Error("text that is not a date must report false")
+	}
+}
+
+func TestTaskDueOnJudgesADateOnlyTaskAtTheEndOfItsChosenDate(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	due := time.Date(2026, 11, 17, 7, 59, 59, 0, time.UTC)
+	got := TaskDueOn(&due, false, "2026-11-16T23:59:59", berlin)
+	if want := time.Date(2026, 11, 17, 0, 0, 0, 0, berlin).Add(-time.Nanosecond); !got.Equal(want) {
+		t.Errorf("a date-only task is judged at %v, want %v", got, want)
+	}
+	if TaskDueOn(&due, true, "2026-11-16T22:30", berlin) != &due {
+		t.Error("a timed task keeps its instant")
+	}
+	if TaskDueOn(&due, false, "", berlin) != &due || TaskDueOn(&due, false, "2026-11-16T23:59:59", nil) != &due {
+		t.Error("a task with no chosen clock, or no zone, keeps its instant")
 	}
 }

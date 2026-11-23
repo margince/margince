@@ -27,6 +27,7 @@ import {
 } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { recordRoute } from "../../lib/entity";
+import { hideHomeRows } from "../../lib/homerows";
 import {
   isAlreadyDecided,
   isVersionSkew,
@@ -66,6 +67,7 @@ import {
   refusalToast,
   useHeldRejection,
 } from "./heldrejection";
+import { LegalReviewRequestRow } from "./legalreviewrequestrow";
 import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
@@ -134,7 +136,7 @@ function statusLabels(
   };
 }
 
-export function ApprovalRow({
+function DecidableApprovalRow({
   approval,
   decided,
   onAlreadyDecided,
@@ -236,6 +238,9 @@ export function ApprovalRow({
         }),
       );
     },
+    onMutate: () =>
+      hideHomeRows(queryClient, [{ source: "approval", id: approval.id }]),
+    onSettled: (_data, _error, _input, settle) => settle?.(),
     onSuccess: (data, input) => {
       void invalidateApprovalViews(queryClient);
       for (const queryKey of extraInvalidateKeys ?? []) {
@@ -465,4 +470,18 @@ export function ApprovalRow({
       {lawfulBasis.dialog}
     </DecisionCard>
   );
+}
+
+/** One staged proposal as a row. A legal review request has its own presentation. */
+export function ApprovalRow(props: Parameters<typeof DecidableApprovalRow>[0]) {
+  if (props.approval.kind === "legal_review_request") {
+    return (
+      <LegalReviewRequestRow
+        approval={props.approval}
+        decided={props.decided}
+        extraInvalidateKeys={props.extraInvalidateKeys}
+      />
+    );
+  }
+  return <DecidableApprovalRow {...props} />;
 }

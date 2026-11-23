@@ -40,6 +40,7 @@ const VIENNA = entity("le-vienna", {
   display_name: "Acme Wien",
   legal_name: "Acme Wien GmbH",
   country: "at",
+  jurisdiction: "at",
   version: 4,
   address: { city: "Wien" },
 });
@@ -78,6 +79,14 @@ function backend(
     });
     if (request.url.endsWith("/me")) {
       return jsonResponse(meFixture({ allow }));
+    }
+    if (request.url.endsWith("/installation/jurisdiction")) {
+      return jsonResponse({
+        selected: "de",
+        available: [{ code: "at" }, { code: "de" }],
+        deadlines: [],
+        documents: [],
+      });
     }
     const refusal = Object.entries(refuse).find(([path]) =>
       request.url.endsWith(path),
@@ -146,7 +155,7 @@ it("lists the default entity alone, named after the company and marked default",
   ).toBeNull();
 });
 
-it("shows an admin a further entity that names no country, and not the default one", async () => {
+it("shows an admin a further entity that names no jurisdiction, and not the default one", async () => {
   vi.stubGlobal(
     "fetch",
     backend(READER, [
@@ -156,7 +165,7 @@ it("shows an admin a further entity that names no country, and not the default o
     ]),
   );
   render(<LegalEntitiesCard />);
-  const gap = en["legalEntities.countryMissing"];
+  const gap = en["legalEntities.jurisdictionMissing"];
   const branch = await screen.findByTestId("legal-entity-le-branch");
   expect(within(branch).getByText(gap)).toBeInTheDocument();
   expect(
@@ -165,6 +174,45 @@ it("shows an admin a further entity that names no country, and not the default o
   const vienna = screen.getByTestId("legal-entity-le-vienna");
   expect(within(vienna).queryByText(gap)).toBeNull();
   expect(within(vienna).getByText("AT")).toBeInTheDocument();
+});
+
+it("flags a jurisdiction the build offers no pack for, as a copied address country can be", async () => {
+  vi.stubGlobal(
+    "fetch",
+    backend(READER, [
+      ...DEFAULT_ONLY,
+      entity("le-paris", { display_name: "Acme Paris", jurisdiction: "fr" }),
+    ]),
+  );
+  render(<LegalEntitiesCard />);
+  const paris = await screen.findByTestId("legal-entity-le-paris");
+  expect(
+    await within(paris).findByText(en["legalEntities.jurisdictionMissing"]),
+  ).toBeInTheDocument();
+});
+
+it("lists each entity's jurisdiction beside its country, the default's being the installation's", async () => {
+  vi.stubGlobal(
+    "fetch",
+    backend(READER, [
+      ...DEFAULT_ONLY,
+      { ...VIENNA, country: "fr", jurisdiction: "at" },
+    ]),
+  );
+  render(<LegalEntitiesCard />);
+  expect(
+    await screen.findByRole("columnheader", {
+      name: en["legalEntities.colJurisdiction"],
+    }),
+  ).toBeInTheDocument();
+  const vienna = await screen.findByTestId("legal-entity-le-vienna");
+  expect(within(vienna).getByText("FR")).toBeInTheDocument();
+  expect(within(vienna).getByText("Austria")).toBeInTheDocument();
+  expect(
+    await within(screen.getByTestId("legal-entity-le-default")).findByText(
+      "Germany",
+    ),
+  ).toBeInTheDocument();
 });
 
 it("names the default entity of an undescribed company in words", async () => {
@@ -179,7 +227,7 @@ it("names the default entity of an undescribed company in words", async () => {
   ).toBeInTheDocument();
 });
 
-it("describes a further entity with its name, legal name and country", async () => {
+it("describes a further entity with its name, legal name, country and jurisdiction", async () => {
   const user = userEvent.setup();
   const calls: Call[] = [];
   vi.stubGlobal("fetch", backend(ADMIN, DEFAULT_ONLY, calls));
@@ -195,6 +243,11 @@ it("describes a further entity with its name, legal name and country", async () 
     user,
     within(dialog).getByRole("combobox", { name: /Country/ }),
     "Austria",
+  );
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Jurisdiction/ }),
+    "Germany",
   );
   await user.click(
     within(dialog).getByRole("button", {
@@ -212,6 +265,7 @@ it("describes a further entity with its name, legal name and country", async () 
             display_name: "Wien",
             legal_name: "Wien GmbH",
             country: "at",
+            jurisdiction: "de",
           }),
     ),
   ).toBe(true);
@@ -275,6 +329,27 @@ it("saves only the fields an edit changed, on the version it read", async () => 
   });
 });
 
+it("sends a changed jurisdiction and nothing else", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal("fetch", backend(ADMIN, [...DEFAULT_ONLY, VIENNA], calls));
+  render(<LegalEntitiesCard />);
+  await rowVerb(user, "Acme Wien", en["legalEntities.edit"]);
+  const dialog = await screen.findByRole("dialog");
+  await pickOption(
+    user,
+    await within(dialog).findByRole("combobox", { name: /Jurisdiction/ }),
+    "Germany",
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(calls.find((call) => call.method === "PATCH")?.body).toEqual({
+    jurisdiction: "de",
+  });
+});
+
 it("offers the default only the fields it keeps itself", async () => {
   const user = userEvent.setup();
   vi.stubGlobal("fetch", backend(ADMIN, DEFAULT_ONLY));
@@ -298,9 +373,16 @@ it("offers the default only the fields it keeps itself", async () => {
       name: en["legalEntities.signatureTemplate"],
     }),
   ).toBeNull();
+  // Its law is the installation's jurisdiction, shown and never edited here.
   expect(
-    within(dialog).getByRole("combobox", { name: /Country/ }),
-  ).toHaveTextContent(en["legalEntities.countryInstallation"]);
+    within(dialog).queryByRole("combobox", { name: /Country/ }),
+  ).toBeNull();
+  expect(
+    within(dialog).queryByRole("combobox", { name: /Jurisdiction/ }),
+  ).toBeNull();
+  expect(
+    await within(dialog).findByText(/The default company follows/),
+  ).toBeInTheDocument();
 });
 
 it("never offers to archive the default entity", async () => {
@@ -470,6 +552,7 @@ it("says on each blank required field what it needs, focuses the first and sends
   );
   expect(await within(dialog).findByText("Name is required.")).toBeVisible();
   expect(within(dialog).getByText("Country is required.")).toBeVisible();
+  expect(within(dialog).getByText("Jurisdiction is required.")).toBeVisible();
   await waitFor(() => expect(name).toHaveFocus());
   expect(name).toHaveAttribute("aria-invalid", "true");
   expect(legal).not.toHaveAttribute("aria-invalid");
@@ -497,6 +580,11 @@ it("puts a refusal the server names on its field, by the field's label", async (
     user,
     within(dialog).getByRole("combobox", { name: /Country/ }),
     "Austria",
+  );
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Jurisdiction/ }),
+    "Germany",
   );
   await user.click(
     within(dialog).getByRole("button", {
@@ -532,6 +620,11 @@ it("says on the name field that another entity has the name", async () => {
     user,
     within(dialog).getByRole("combobox", { name: /Country/ }),
     "Austria",
+  );
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Jurisdiction/ }),
+    "Germany",
   );
   await user.click(
     within(dialog).getByRole("button", {

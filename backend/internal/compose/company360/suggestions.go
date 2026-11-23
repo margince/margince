@@ -120,7 +120,7 @@ func (a *assembly) readSuggestions() error {
 // decision rather than a consequence of how the blocks are arranged:
 //
 //  1. no_reply — a contact is waiting on us. Nothing else on the card is someone
-//     else's time.
+//     else's time. gone_dormant follows it: an account gone quiet as a whole.
 //  2. stalled_deal, longest idle first — money that has stopped moving.
 //  3. no_next_step — a gap in the plan, which the two above usually imply
 //     anyway, so it is the one worth losing when the card is full.
@@ -161,6 +161,7 @@ func candidateSuggestions(
 	if in.timeline && in.hasNewest {
 		found = appendIf(found, said.staleThread(companyID, now, in.loc, in.newest))
 	}
+	found = appendIf(found, goneDormantSuggestion(companyID, in))
 	if in.pipeline {
 		found = append(found, said.stalledDealSuggestions(in.open.Stalled)...)
 		if in.timeline {

@@ -49,7 +49,7 @@ func TestMailboxHistoryKeepsAQualifiedOpportunityAsHistoricalRecovery(t *testing
 		t.Fatalf("old evidence raised %d current proposals", pass.Raised)
 	}
 	scanner := assurance.NewScanner(assurance.NewStore(InstallationDB(e.Pool)), AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
-	if _, err := scanner.Scan(e.system(), e.now, nil); err != nil {
+	if _, err := scanner.Scan(e.system(), e.now); err != nil {
 		t.Fatal(err)
 	}
 	found := readSignalFindings(e.signalReader(), t, e)

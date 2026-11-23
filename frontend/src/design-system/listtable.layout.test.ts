@@ -20,6 +20,16 @@ const figures = (price: number) => ({
 });
 
 describe("columnLayout", () => {
+  it("clamps a stored width narrower than the drag minimum", () => {
+    const layout = columnLayout(catalogue, { billing: 40 }, 900);
+    expect(px(layout.widthOf(catalogue[2]))).toBe(96);
+  });
+
+  it("keeps the declared width of a row menu after a resize stored it", () => {
+    const layout = columnLayout(catalogue, { actions: 56 }, 900);
+    expect(layout.widthOf(catalogue[4])).toBe("56px");
+  });
+
   it("gives a row menu its narrow fixed width", () => {
     const layout = columnLayout(catalogue, {}, 707);
     expect(layout.widthOf(catalogue[4])).toBe("56px");
@@ -32,12 +42,65 @@ describe("columnLayout", () => {
     expect(px(layout.widthOf(catalogue[0]))).toBeGreaterThan(200);
   });
 
+  it("draws the identity column at 200px by default when the box has no room", () => {
+    const layout = columnLayout(catalogue, {}, 0);
+    expect(layout.widthOf(catalogue[0])).toBe("200px");
+  });
+
   it("holds every column at its minimum when the box has no room for them", () => {
     const layout = columnLayout(catalogue, {}, 400);
     expect(catalogue.map((column) => px(layout.widthOf(column)))).toEqual([
       200, 110, 130, 130, 56,
     ]);
     expect(layout.floor).toBe(626);
+  });
+
+  it("gives the room past every minimum to the identity column first", () => {
+    const layout = columnLayout(catalogue, {}, 806);
+    expect(catalogue.map((column) => px(layout.widthOf(column)))).toEqual([
+      380, 110, 130, 130, 56,
+    ]);
+    expect(layout.floor).toBeCloseTo(806);
+  });
+
+  it("lets the other columns grow by their shares once the identity column holds 400px", () => {
+    const layout = columnLayout(catalogue, {}, 1000);
+    expect(px(layout.widthOf(catalogue[0]))).toBe(400);
+    expect(px(layout.widthOf(catalogue[2]))).toBeGreaterThan(130);
+    expect(layout.floor).toBeCloseTo(1000);
+
+    const wide = columnLayout(catalogue, {}, 1400);
+    expect(px(wide.widthOf(catalogue[0]))).toBeGreaterThan(400);
+  });
+
+  it("splits the room past every minimum between two identity columns", () => {
+    const pair: SizedColumn[] = [
+      { key: "name", fixed: true },
+      { key: "alias", fixed: true },
+      { key: "status" },
+    ];
+    const layout = columnLayout(pair, {}, 630);
+    expect(pair.map((column) => px(layout.widthOf(column)))).toEqual([
+      250, 250, 130,
+    ]);
+  });
+
+  it("splits only the room a measured figure leaves between two identity columns", () => {
+    const pair: SizedColumn[] = [
+      { key: "name", fixed: true, numeric: true },
+      { key: "alias", fixed: true },
+      { key: "status" },
+    ];
+    const floors = { held: { name: 350 }, onScreen: { name: 350 } };
+    const layout = columnLayout(pair, {}, 730, floors);
+    expect(px(layout.widthOf(pair[0]))).toBeGreaterThanOrEqual(350);
+    expect(layout.floor).toBeCloseTo(730);
+  });
+
+  it("gives a dragged identity column no room ahead of the others", () => {
+    const layout = columnLayout(catalogue, { name: 300 }, 806);
+    expect(layout.widthOf(catalogue[0])).toBe("300px");
+    expect(px(layout.widthOf(catalogue[2]))).toBeGreaterThan(130);
   });
 
   const contacts: SizedColumn[] = [
@@ -83,6 +146,26 @@ describe("columnLayout", () => {
     expect(layout.floor).toBeCloseTo(1000);
   });
 
+  it("keeps a score column at 80px on any page, and the rest take the width", () => {
+    const leads: SizedColumn[] = [
+      { key: "name", fixed: true },
+      { key: "score", numeric: true, holds: "score" },
+      { key: "status" },
+    ];
+    for (const available of [300, 900, 1800]) {
+      const layout = columnLayout(leads, {}, available);
+      expect(layout.widthOf(leads[1])).toBe("80px");
+    }
+    const wide = columnLayout(leads, {}, 900);
+    expect(wide.floor).toBeCloseTo(900);
+  });
+
+  it("widens a score column to a figure wider than its score", () => {
+    const score: SizedColumn = { key: "price", numeric: true, holds: "score" };
+    const layout = columnLayout([score], {}, 900, figures(96));
+    expect(layout.widthOf(score)).toBe("96px");
+  });
+
   // "₫450,000,000,000" is wider than a numeric column's share; cut short, it
   // reads as a different number.
   it("never sets a numeric column narrower than the widest figure it holds", () => {
@@ -106,8 +189,8 @@ describe("columnLayout", () => {
   // screen does not hold the reader's drag at that figure.
   it("holds a dragged numeric column only at the figures on screen now", () => {
     const floors = { held: { price: 160 }, onScreen: { price: 80 } };
-    const layout = columnLayout(catalogue, { price: 90 }, 1000, floors);
-    expect(layout.widthOf(catalogue[1])).toBe("90px");
+    const layout = columnLayout(catalogue, { price: 100 }, 1000, floors);
+    expect(layout.widthOf(catalogue[1])).toBe("100px");
     expect(
       px(columnLayout(catalogue, {}, 400, floors).widthOf(catalogue[1])),
     ).toBe(160);
@@ -116,8 +199,8 @@ describe("columnLayout", () => {
   // A reader may drag any column under its default minimum; the cell then ends
   // its text in an ellipsis.
   it("keeps a width the reader set under the column's default minimum", () => {
-    const layout = columnLayout(catalogue, { name: 100, price: 60 }, 1000);
+    const layout = columnLayout(catalogue, { name: 100, price: 96 }, 1000);
     expect(layout.widthOf(catalogue[0])).toBe("100px");
-    expect(layout.widthOf(catalogue[1])).toBe("60px");
+    expect(layout.widthOf(catalogue[1])).toBe("96px");
   });
 });

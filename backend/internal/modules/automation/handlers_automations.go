@@ -10,7 +10,6 @@ package automation
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -23,7 +22,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
-	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // pathID asserts a contract path id as entity K's id — the widening
@@ -40,6 +38,7 @@ type Handlers struct {
 	// compose (WithRetryEngine). Nil in a composition that registers no
 	// workflows, where no run exists to retry in the first place.
 	retries *WorkflowEngine
+	names   RecordNames
 }
 
 // NewHandlers wires the transport over the installation-bound pool.
@@ -78,7 +77,7 @@ func (h Handlers) ListAutomationCatalog(w http.ResponseWriter, r *http.Request) 
 			ParamsSchema: e.ParamsSchema,
 		}
 		entry.Description = &e.Description
-		tier := crmcontracts.AutomationCatalogEntryTier(e.Tier)
+		tier := crmcontracts.AutomationCatalogEntryTier(e.Tier())
 		entry.Tier = &tier
 		data = append(data, entry)
 	}
@@ -272,6 +271,10 @@ func (h Handlers) ListAutomationRuns(w http.ResponseWriter, r *http.Request, id 
 	for _, rec := range page.Items {
 		data = append(data, wireAutomationRun(id, rec))
 	}
+	if err := h.nameRunRecords(r.Context(), page.Items, data); err != nil {
+		writeAutomationErr(w, r, err)
+		return
+	}
 	resp := struct {
 		Data []crmcontracts.AutomationRun `json:"data"`
 		Page crmcontracts.PageInfo        `json:"page"`
@@ -313,66 +316,8 @@ func wireAutomationRun(automationID crmcontracts.Id, rec AutomationRunRecord) cr
 	if target := runTargetRef(rec); target != "" {
 		run.TargetRef = &target
 	}
+	describeRun(rec, &run)
 	return run
-}
-
-// runActionResult summarizes what the run did in the contract's
-// one-liner: the applied action kinds for a fired run, the inbox queue
-// for a staged one; the reasoned outcomes speak through Reason instead.
-func runActionResult(rec AutomationRunRecord) string {
-	switch rec.Status {
-	case runStatusApplied:
-		kinds := runActionKinds(rec.Applied)
-		if len(kinds) == 0 {
-			return "applied"
-		}
-		return "applied " + strings.Join(kinds, ", ")
-	case runStatusRequiresApproval:
-		return "queued to approval inbox"
-	default:
-		return ""
-	}
-}
-
-// runTargetRef names the record the run acted on — the first planned
-// action's target, as "type:id".
-func runTargetRef(rec AutomationRunRecord) string {
-	var actions []workflow.Action
-	if err := json.Unmarshal(rec.Planned, &actions); err != nil || len(actions) == 0 {
-		// A pre-Plan run (skipped, failed at Match) has an empty plan —
-		// there is honestly no target to name.
-		return ""
-	}
-	target := actions[0].Target
-	if target.ID == ids.Nil {
-		return ""
-	}
-	return string(target.Type) + ":" + target.ID.String()
-}
-
-// runActionKinds lists the distinct action kinds of a run trace, in
-// trace order. A deduplicated create renders as its own entry: the trace
-// records it, but a sibling instance's firing performed the write, and
-// listing it as a plain applied kind would report a write this run never
-// made.
-func runActionKinds(trace json.RawMessage) []string {
-	var actions []workflow.Action
-	if err := json.Unmarshal(trace, &actions); err != nil {
-		return nil
-	}
-	var kinds []string
-	seen := map[string]bool{}
-	for _, a := range actions {
-		kind := string(a.Kind)
-		if a.Deduplicated {
-			kind += " (deduplicated)"
-		}
-		if !seen[kind] {
-			seen[kind] = true
-			kinds = append(kinds, kind)
-		}
-	}
-	return kinds
 }
 
 func writeAutomationErr(w http.ResponseWriter, r *http.Request, err error) {
@@ -417,7 +362,7 @@ func WireAutomation(a Automation) (crmcontracts.Automation, error) {
 		OwnerId:                   wireOwner(a.OwnerID),
 		Version:                   &version,
 		CreatedAt:                 a.CreatedAt,
-		UpdatedAt:                 a.UpdatedAt,
+		UpdatedAt:                 &a.UpdatedAt,
 	}
 	if a.Configuration != nil {
 		wire.SetupState = new(a.Configuration.State)

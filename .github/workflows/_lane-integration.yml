@@ -227,6 +227,8 @@ jobs:
       # database admin goes through cmd/migrate's db verbs on the test DSN
       # (scripts/lib-testdb.sh db_admin), so no host psql is assumed.
       - name: Start the dev infra stack (compose + app role)
+        env:
+          PG_FSYNC: "off"
         run: make db-up
       # Needs the checkout and not the binaries, so it runs while they build.
       # The shard step checks it again (INTEGRATION_TEMPLATE_READY).
@@ -349,7 +351,7 @@ jobs:
         if: ${{ !cancelled() && steps.shard.outcome != 'skipped' }}
         uses: ./.github/actions/upload-artifact-retried
         with:
-          name: integration-shard-${{ matrix.shard }}
+          name: integration-shard-${{ matrix.shard }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/shard-out
           if-no-files-found: error
           retention-days: 1
@@ -404,7 +406,7 @@ jobs:
       - name: Upload the unit coverage pods
         uses: ./.github/actions/upload-artifact-retried
         with:
-          name: integration-covdata-unit
+          name: integration-covdata-unit-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/covdata-unit
           if-no-files-found: error
           retention-days: 1

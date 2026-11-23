@@ -6,6 +6,7 @@ package inquiries
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -53,6 +54,17 @@ func (s Settings) Save(ctx context.Context, id ids.UUID, version int64, in crmco
 		return storekit.RetryLockCycles(leased, run)
 	})
 	return out, err
+}
+
+// SwitchOff turns off the handling plan of a form being archived. A plan
+// archived on its own has nothing left to switch off.
+func (s Settings) SwitchOff(ctx context.Context, automationID ids.UUID) error {
+	off := false
+	_, err := s.policies.Update(ctx, ids.From[ids.AutomationKind](automationID), automation.UpdateAutomationInput{Enabled: &off})
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return nil
+	}
+	return err
 }
 
 func (s Settings) saveHandling(ctx context.Context, id ids.UUID, version int64, in crmcontracts.WebsiteInquiryHandlingRequest) (crmcontracts.WebsiteInquiryHandling, error) {

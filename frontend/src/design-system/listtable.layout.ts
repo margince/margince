@@ -15,6 +15,7 @@ import {
   useState,
 } from "react";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { MIN_COLUMN_WIDTH } from "./listheader";
 import { useNumericFloors } from "./listtable.floors";
 
 /**
@@ -31,6 +32,9 @@ type ColumnSize = Readonly<{
   // For a value whose length hardly changes. The width past it goes to the text
   // columns, or to the trailing gap once only capped columns are left.
   max?: number;
+  // Taken from the room past every minimum before any other column grows, so a
+  // narrow page spends its spare pixels on the name. Columns carrying it split it.
+  first?: number;
 }>;
 
 const COLUMN_SIZES: Readonly<
@@ -39,18 +43,21 @@ const COLUMN_SIZES: Readonly<
     | "numeric"
     | "date"
     | "colleague"
+    | "score"
     | "standard"
     | "verbs"
     | "menu",
     ColumnSize
   >
 > = {
-  identity: { share: 2.4, min: 200 },
+  identity: { share: 2.4, min: 200, first: 400 },
   numeric: { share: 0.9, min: 110, max: 200 },
   // "28. Sept. 2027" in German, the longest abbreviated date this tree ships.
   date: { share: 0.8, min: 120, max: 150 },
   // A 20px avatar beside a full name.
   colleague: { share: 1, min: 150, max: 240 },
+  // A score of up to three digits under a one-word header and its sort arrow.
+  score: { share: null, min: 80 },
   standard: { share: 1.3, min: 130 },
   // Two labelled ghost buttons side by side in the longest locale this tree
   // ships: German turns "Edit product" into "Produkt bearbeiten".
@@ -65,7 +72,7 @@ export type SizedColumn = Readonly<{
   fixed?: boolean;
   numeric?: boolean;
   verbs?: boolean | "menu";
-  holds?: "date" | "colleague";
+  holds?: "date" | "colleague" | "score";
 }>;
 
 /**
@@ -92,7 +99,7 @@ function boundsOf(column: SizedColumn, floors: Widths): ColumnSize {
   const size = sizeOf(column);
   const floor = floors[column.key] ?? 0;
   return {
-    share: size.share,
+    ...size,
     min: Math.max(size.min, floor),
     max: size.max === undefined ? undefined : Math.max(size.max, floor),
   };
@@ -201,23 +208,42 @@ export function columnLayout(
   available: number,
   floors: NumericFloors = NO_FLOORS,
 ): ColumnLayout {
-  const sizeOf = (column: SizedColumn) => boundsOf(column, floors.held);
+  const boundsAt = (column: SizedColumn) => boundsOf(column, floors.held);
   const fixedWidth = (column: SizedColumn) => {
     const resized = widths[column.key];
     // A width the reader set is theirs. A figure on screen raises it, since a
     // figure cut short reads as a different number.
     if (resized) {
-      return Math.max(resized, floors.onScreen[column.key] ?? 0);
+      // A width stored before the minimum rose is clamped on every read. A verbs
+      // column states its own width, so it keeps what it measured.
+      const least = column.verbs ? 0 : MIN_COLUMN_WIDTH;
+      return Math.max(resized, least, floors.onScreen[column.key] ?? 0);
     }
-    const { share, min } = sizeOf(column);
+    const { share, min } = boundsAt(column);
     return share === null ? min : undefined;
   };
   const shared = shown.filter((column) => fixedWidth(column) === undefined);
+  const growsFirst = (column: SizedColumn) =>
+    fixedWidth(column) === undefined && boundsAt(column).first !== undefined;
+  const takenFromRoom = (column: SizedColumn) =>
+    growsFirst(column)
+      ? boundsAt(column).min - sizeOf(column).min
+      : (fixedWidth(column) ?? boundsAt(column).min);
+  const roomFirst =
+    (available -
+      shown.reduce((total, column) => total + takenFromRoom(column), 0)) /
+    Math.max(1, shown.filter(growsFirst).length);
+  const limitsOf = (column: SizedColumn): ColumnSize => {
+    const size = boundsAt(column);
+    return size.first === undefined
+      ? size
+      : { ...size, min: Math.max(size.min, Math.min(size.first, roomFirst)) };
+  };
   const held = new Map<string, number>();
   const pinnedWidth = (column: SizedColumn) =>
     fixedWidth(column) ?? held.get(column.key);
   const shareOf = (column: SizedColumn) =>
-    pinnedWidth(column) === undefined ? (sizeOf(column).share ?? 0) : 0;
+    pinnedWidth(column) === undefined ? (limitsOf(column).share ?? 0) : 0;
   const sum = (of: (column: SizedColumn) => number) =>
     shown.reduce((total, column) => total + of(column), 0);
   // The shares divide what the pinned columns leave, not the whole width, or
@@ -231,13 +257,13 @@ export function columnLayout(
     const shareWidth = (column: SizedColumn) =>
       (spareOf() * shareOf(column)) / sum(shareOf);
     const short = free.filter(
-      (column) => shareWidth(column) < sizeOf(column).min,
+      (column) => shareWidth(column) < limitsOf(column).min,
     );
     if (short.length > 0) {
-      return short.map((column) => [column.key, sizeOf(column).min]);
+      return short.map((column) => [column.key, limitsOf(column).min]);
     }
     return free.flatMap((column): [string, number][] => {
-      const { max } = sizeOf(column);
+      const { max } = limitsOf(column);
       return max !== undefined && shareWidth(column) > max
         ? [[column.key, max]]
         : [];
@@ -433,33 +459,5 @@ export function useFrozenEdge(
         setShifted(next);
       }
     },
-  };
-}
-
-/**
- * The presentation dials of the Display menu: which optional columns stand,
- * and how tight the rows are. Local state, unlike the query dials.
- */
-export function useColumnDisplay(
-  columns: readonly Readonly<{ key: string; initiallyHidden?: boolean }>[],
-) {
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(
-    () => new Set(columns.flatMap((c) => (c.initiallyHidden ? [c.key] : []))),
-  );
-  const [dense, setDense] = useState(false);
-  return {
-    hidden,
-    onToggleColumn: (key: string) =>
-      setHidden((prev) => {
-        const next = new Set(prev);
-        if (next.has(key)) {
-          next.delete(key);
-        } else {
-          next.add(key);
-        }
-        return next;
-      }),
-    dense,
-    onDense: () => setDense(!dense),
   };
 }

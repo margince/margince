@@ -22,10 +22,12 @@ import { useLocale, useT } from "../../i18n";
 export function ContractArrField({
   arrMinor,
   currency,
+  currencyUnread,
   onChangeMinor,
 }: Readonly<{
   arrMinor: number;
   currency: string;
+  currencyUnread?: Readonly<{ retry: () => void }>;
   onChangeMinor: (minor: number) => void;
 }>) {
   const t = useT();
@@ -43,6 +45,7 @@ export function ContractArrField({
             {...props}
             min={0}
             currency={currency}
+            currencyUnread={currencyUnread}
             valueMinor={arrMinor}
             // An agreement may carry no recurring value at all, so an unpriced
             // one shows an empty field rather than a nought nobody typed.

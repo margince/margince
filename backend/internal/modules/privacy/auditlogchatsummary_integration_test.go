@@ -30,7 +30,7 @@ func (e *auditBoundaryEnv) seedChatSummaryAudit(t *testing.T) ids.UUID {
 		{`INSERT INTO pipeline (id, name) VALUES ($1, 'Chat')`, []any{pipeline}},
 		{`INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, []any{stage, pipeline}},
 		{`INSERT INTO deal (id, name, status, pipeline_id, stage_id, source, captured_by)
-		  VALUES ($1, 'Acme renewal', 'open', $2, $3, 'seed', 'system')`, []any{deal, pipeline, stage}},
+		  VALUES ($1, 'Acme renewal', 'open', $2, $3, 'manual', 'system')`, []any{deal, pipeline, stage}},
 	} {
 		if _, err := e.owner.Exec(context.Background(), seed.statement, seed.args...); err != nil {
 			t.Fatal(err)

@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
+import { awaitArrival } from "../design-system/arrivalfocus";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { RequiredGrant } from "../lib/capability";
@@ -123,7 +124,11 @@ export function useCreateRecord<Created extends { id: string }>({
       onCreated?.(created);
       onDone(session);
       if (opens) {
-        navigate({ screen, id: created.id });
+        // Focus is not on the new record's page, so its name takes it once
+        // that page mounts (design-system/arrivalfocus.ts).
+        const page = { screen, id: created.id };
+        awaitArrival(page);
+        navigate(page);
       }
     },
   });
@@ -174,9 +179,8 @@ export function CreateAction<Created extends { id: string }>({
   // a dependent picker whose options only the server can narrow. See
   // usePublishedValues.
   onValuesChange?: (values: Record<string, string>) => void;
-  // The key is one per open dialog and per record. A repeat of the same save
-  // carries it, so a double press answers the first record. A POST that takes
-  // no Idempotency-Key ignores it.
+  // One key per attempt, renewed once the record exists or the dialog reopens.
+  // A double press answers the first record; a resend with `extra` takes a new key.
   create: CreateTransport<Created>;
   // A refusal this screen answers with its own verbs, or null for the
   // ordinary error line. `resend` sends the last submit again with `extra`.
@@ -278,7 +282,10 @@ export function CreateAction<Created extends { id: string }>({
         mutation.error,
         (extra) => {
           const last = mutation.variables;
-          if (last) mutation.mutate({ ...last, extra });
+          // Another body under the spent key is refused by the server.
+          if (last) {
+            mutation.mutate({ ...last, extra, idempotencyKey: renew() });
+          }
         },
         mutation.isPending,
       )
@@ -369,11 +376,7 @@ export function NewRecordButton({
       title={
         keyShortcut === undefined
           ? undefined
-          : shortcutTip(
-              label,
-              binding("create").keys,
-              t("shell.shortcuts.then"),
-            )
+          : shortcutTip(label, binding("create").keys, t)
       }
     >
       {link ? (
@@ -476,6 +479,7 @@ export function CreateRecordModal({
       }}
       onClose={onClose}
       intent="create"
+      resetToken={resetToken}
     />
   );
 }

@@ -18,6 +18,7 @@ import {
 } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatNumber } from "../../format/format";
@@ -28,7 +29,7 @@ import {
   RECORDS_COUNT_LABEL,
 } from "../../lib/filtersaddress";
 import { fromHere } from "../../lib/navigatefrom";
-import { problemMessageOf } from "../../lib/problem";
+import { blankRequired, problemMessageOf } from "../../lib/problem";
 import { recordKindLabel, useRecordKindDirectory } from "../../lib/recordkinds";
 import { routeHash } from "../../lib/router";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
@@ -49,6 +50,7 @@ import {
 import {
   type ListAudience,
   ListAudienceFields,
+  useDefaultAudience,
   useListAudienceLabel,
 } from "./listsharing";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
@@ -370,32 +372,50 @@ export function ListPulseBadge({
 /**
  * "New Shortlist": an empty list of chosen records, named and typed here and
  * filled from a selection or a record page. A Live List is made from the
- * builder instead, where its filter is previewed before it is saved. It
- * starts with the audience its caller names.
+ * builder instead, where its filter is previewed before it is saved.
  */
-export function NewShortlistAction({
-  defaultAudience,
-}: Readonly<{ defaultAudience: ListAudience }>) {
+export function NewShortlistAction() {
   const t = useT();
+  const { locale } = useLocale();
+  const defaultAudience = useDefaultAudience();
   const create = useCreateList();
   const [open, setOpen] = useState(false);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const nameLabel = t("lists.name");
   const [name, setName] = useState("");
   const [purpose, setPurpose] = useState("");
   const [entityType, setEntityType] = useState<ListRecordType>("contact");
   const [audience, setAudience] = useState<ListAudience>(defaultAudience);
   return (
     <>
-      <Button onClick={() => setOpen(true)}>{t("lists.newShortlist")}</Button>
+      <Button
+        onClick={() => {
+          // Every opening starts from nothing typed before: a kept draft under
+          // a reset audience would be shared wider than the reader chose.
+          setName("");
+          setPurpose("");
+          setEntityType("contact");
+          setAudience(defaultAudience);
+          create.reset();
+          faults.show(new Map());
+          setOpen(true);
+        }}
+      >
+        {t("lists.newShortlist")}
+      </Button>
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
         intent="form"
         title={t("lists.newShortlistTitle")}
         confirmLabel={t("lists.create")}
-        confirmDisabled={name.trim() === ""}
+        bodyRef={faultsRoot}
         pending={create.isPending}
         error={create.isError ? problemMessageOf(create.error, t) : null}
         onConfirm={() => {
+          if (faults.show(blankRequired(locale, { name: [nameLabel, name] }))) {
+            return;
+          }
           const from = fromHere();
           create.mutate(
             {
@@ -415,12 +435,15 @@ export function NewShortlistAction({
           );
         }}
       >
-        <Field label={t("lists.name")}>
+        <Field label={nameLabel} required error={faults.of("name")}>
           {(control) => (
             <TextInput
               {...control}
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                faults.edited("name");
+              }}
             />
           )}
         </Field>

@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // OfferNotSentError maps to 422: accept/reject/regenerate act on a SENT
@@ -411,7 +412,7 @@ func copyOfferIntoRevision(ctx context.Context, tx pgx.Tx, fromID, newID ids.Off
 		                    source_commercial_revision)
 		 SELECT $1, deal_id, offer_number, $3, 'draft', currency,
 		        buyer_company_id, valid_until, intro_text, terms_text,
-		        net_minor, tax_minor, gross_minor, source, $4, legal_entity_id, language,
+		        net_minor, tax_minor, gross_minor, `+provenance.LegacyRecordSourceChannelSQL("source")+`, $4, legal_entity_id, language,
 		        source_commercial_revision
 		 FROM offer WHERE id = $2`,
 		newID, fromID, nextRevision, by); err != nil {

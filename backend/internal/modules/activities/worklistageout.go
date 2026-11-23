@@ -27,12 +27,12 @@ const worklistAgeOutDays = 30
 // pinner is a SQL expression, not a value: the reader's own placeholder for the
 // day's page, the assignee column for the team board that counts their day.
 func worklistAgeOutClause(asOf time.Time, pinner, identities string, arg func(any) int) string {
-	floor := arg(asOf.AddDate(0, 0, -worklistAgeOutDays))
-	return storekit.CurrentTaskClause("a", asOf, identities, arg) + " AND " + sprintf(`(a.kind <> 'task' OR `+storekit.TaskDueSQL("a")+` IS NULL OR `+storekit.TaskDueSQL("a")+` >= $%d
+	floor := sprintf("$%d", arg(asOf.AddDate(0, 0, -worklistAgeOutDays)))
+	return storekit.CurrentTaskClause("a", asOf, identities, arg) + " AND " + sprintf(`(a.kind <> 'task' OR `+storekit.TaskDueSQL("a")+` IS NULL OR `+storekit.TaskDueFromSQL("a", floor)+`
 		OR `+humanReopenedTaskSQL("a")+`
 		OR (%s, a.id::text) IN (SELECT reader_id, row_id FROM %s wp WHERE wp.source = $%d)
 		OR %s)`,
-		floor, pinner, auth.EffectiveWorklistPinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)),
+		pinner, auth.EffectiveWorklistPinsSQL(arg), arg(string(crmcontracts.WorklistItemSourceTask)),
 		dueReminderClause("a", pinner, asOf, arg))
 }
 

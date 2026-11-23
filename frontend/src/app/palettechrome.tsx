@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ArrowDown, ArrowUp, ChevronRight, Sparkles } from "lucide-react";
-import { Badge, Kbd, SegmentedControl } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  Kbd,
+  SegmentedControl,
+} from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { Translator } from "../i18n";
 import { useT } from "../i18n";
@@ -67,6 +73,36 @@ export function PaletteFilter({
 }
 
 /**
+ * The heading over the recent rows, with the button that forgets them; none
+ * without an `id`. It stands above the listbox, which holds options only, and
+ * names their group by that `id`.
+ */
+export function PaletteRecentHeading({
+  id,
+  onClear,
+}: Readonly<{ id: string | undefined; onClear: () => void }>) {
+  const t = useT();
+  if (id === undefined) {
+    return null;
+  }
+  return (
+    <Eyebrow
+      as="h2"
+      id={id}
+      size="xxsmall"
+      className="palette-group"
+      action={
+        <Button variant="link" onClick={onClear}>
+          {t("palette.clearRecent")}
+        </Button>
+      }
+    >
+      {t("palette.recent")}
+    </Eyebrow>
+  );
+}
+
+/**
  * The drawer that asks one set of the reader's choosing, outside the rows so
  * Enter on a screen name never opens it. It carries what is typed into the
  * box rather than asking it. It closes the Ask Margince group, and heads it
@@ -126,4 +162,25 @@ export function PaletteKeys() {
       </span>
     </div>
   );
+}
+
+// Words the search answered with no record are named. A list with nothing in
+// it says so only once no search is still out or has failed.
+export function PaletteEmpty({
+  query,
+  nothingFound,
+  listed,
+  search,
+}: Readonly<{
+  query: string;
+  nothingFound: boolean;
+  listed: number;
+  search: Readonly<{ pending: boolean; failed: boolean }>;
+}>) {
+  const t = useT();
+  if (nothingFound) {
+    return <EmptyState>{t("search.empty", { q: query })}</EmptyState>;
+  }
+  if (listed > 0 || search.pending || search.failed) return null;
+  return <EmptyState>{t("palette.empty")}</EmptyState>;
 }

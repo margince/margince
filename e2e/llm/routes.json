@@ -19,6 +19,7 @@
         "reactivate_member": "reactivate_user",
         "remove_member": "remove_workspace_member",
         "remove_team_member": "remove_team_member",
+        "request_edit_access": "request_edit_access",
         "request_ownership": "request_ownership_transfer",
         "share": "share_record",
         "share_contacts": "share_company_contacts",
@@ -27,6 +28,7 @@
         "update_member": "update_member",
         "update_record_role": "update_record_role",
         "update_team": "update_team",
+        "withdraw_edit_access_request": "withdraw_edit_access_request",
         "withdraw_ownership_offer": "withdraw_ownership_offer",
         "withdraw_ownership_request": "withdraw_ownership_request"
       }
@@ -303,6 +305,7 @@
         "create_loss_reason": "create_loss_reason",
         "create_partner_stage": "create_partner_stage",
         "create_pipeline": "create_pipeline",
+        "create_review_template": "create_activity_review_template",
         "create_saved_view": "create_saved_view",
         "create_stage": "create_stage",
         "decide_legacy_loss_reason": "decide_legacy_loss_reason",
@@ -493,6 +496,7 @@
         "deal_suggestions": "list_deal_suggestions",
         "document_extraction": "get_attachment_extraction",
         "dossier": "get_company_dossier",
+        "edit_access_request": "get_edit_access_request",
         "enrichment_run": "get_contact_enrichment_run",
         "evidence": "get_claim_evidence",
         "field_history": "get_field_history",

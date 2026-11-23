@@ -199,6 +199,34 @@ describe("the subject-request table", () => {
     expect(within(filter).queryByText("in progress")).toBeNull();
   });
 
+  it("says on Open request that the subject is required, and sends nothing", async () => {
+    const create = vi.fn(() => json(NAMED, 201));
+    stub(create);
+    render();
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["privacy.newRequest"] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await pickOption(
+      user,
+      within(dialog).getByLabelText(en["privacy.kind"]),
+      en["privacy.kindRectify"],
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: en["privacy.openRequest"] }),
+    );
+
+    expect(
+      within(dialog).getByText(`${en["privacy.subjectRef"]} is required.`),
+    ).toBeInTheDocument();
+    expect(document.activeElement).toBe(
+      within(dialog).getByLabelText(`${en["privacy.subjectRef"]} *`),
+    );
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("puts a refused due date beside its field", async () => {
     stub(() =>
       json(
@@ -228,12 +256,16 @@ describe("the subject-request table", () => {
       en["privacy.kindRectify"],
     );
     await user.type(
-      within(dialog).getByLabelText(en["privacy.subjectRef"]),
+      within(dialog).getByLabelText(`${en["privacy.subjectRef"]} *`),
       "anna@acme.test",
     );
     await within(dialog).findByText(en["jurisdiction.rule.gdpr"], {
       exact: false,
     });
+    await user.type(
+      within(dialog).getByLabelText(en["privacy.receivedAt"]),
+      "2026-09-01",
+    );
     const due = within(dialog).getByLabelText(en["privacy.earlierDue"]);
     await user.type(due, "2026-09-30");
     await user.click(
@@ -327,6 +359,30 @@ it("shows the retained proof on a closed request", async () => {
   expect(await screen.findByText("DSR-2026-0042")).toBeVisible();
   expect(screen.getByText("subject@demo.test")).toBeVisible();
   expect(screen.getByText(en["privacy.proofErasureChanges"])).toBeVisible();
+});
+
+it("counts no erasure changes on a fulfilled access request", async () => {
+  stub();
+  renderDrawer({
+    ...NAMED,
+    kind: "access",
+    status: "fulfilled",
+    proof: {
+      request_number: "DSR-2026-0043",
+      request_kind: "access",
+      result: "fulfilled",
+      identity_check: "id_document",
+      requester_email: "subject@demo.test",
+      received_at: "2026-07-01T00:00:00Z",
+      answered_at: "2026-07-12T10:00:00Z",
+      keep_until: "2030-01-01T00:00:00Z",
+      erased_counts: {},
+      erased_counts_known: true,
+      erased_uncounted: [],
+    },
+  });
+  expect(await screen.findByText("DSR-2026-0043")).toBeVisible();
+  expect(screen.queryByText(en["privacy.proofErasureChanges"])).toBeNull();
 });
 
 it("prefills the identity check for a request opened through its confirm link", async () => {

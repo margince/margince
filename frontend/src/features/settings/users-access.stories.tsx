@@ -48,7 +48,7 @@ const ADMIN: GrantSpec = {
   user_admin: ["read", "update"],
 };
 
-type TeamsRead = () => Response | Promise<Response>;
+type TeamsRead = (body: unknown, url: URL) => Response | Promise<Response>;
 
 const listed = (teams: Record<string, unknown>[]) => () =>
   jsonResponse({ data: teams, page: { next_cursor: null, has_more: false } });
@@ -147,5 +147,49 @@ export const RowMenu: Story = {
         name: "Actions for DACH Sales",
       }),
     );
+  },
+};
+
+// The server lists an archived team only to an admin who asks for it.
+const withArchived = (_body: unknown, url: URL) =>
+  jsonResponse({
+    data:
+      url.searchParams.get("include_archived") === "true"
+        ? [
+            ...TEAMS,
+            {
+              id: "t-5",
+              name: "Sales North",
+              member_count: 3,
+              archived_at: "2026-11-20T09:00:00Z",
+            },
+          ]
+        : TEAMS,
+    page: { next_cursor: null, has_more: false },
+  });
+
+export const ArchivedTeamsShown: Story = {
+  render: story(withArchived),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("switch", { name: "Show archived teams" }),
+    );
+    await canvas.findByRole("button", { name: "Restore" });
+  },
+};
+
+export const ArchiveConfirm: Story = {
+  render: story(listed(TEAMS)),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Actions for DACH Sales",
+      }),
+    );
+    await userEvent.click(
+      await within(document.body).findByRole("button", { name: "Archive" }),
+    );
+    await within(document.body).findByRole("dialog");
   },
 };

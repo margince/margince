@@ -153,6 +153,17 @@ describe("a layer over the page", () => {
     expect(characterKeyRefused(press(document.body))).toBe(false);
   });
 
+  it("is not a popup whose trigger leaves behind an inert surface", () => {
+    const leaving = place(document.createElement("div"));
+    leaving.inert = true;
+    const combobox = place(document.createElement("input"), leaving);
+    combobox.setAttribute("aria-haspopup", "listbox");
+    combobox.setAttribute("aria-expanded", "true");
+    combobox.setAttribute("aria-controls", "options");
+    place(document.createElement("div")).id = "options";
+    expect(characterKeyRefused(press(document.body))).toBe(false);
+  });
+
   it("is a panel portalled out of its trigger", () => {
     const trigger = place(document.createElement("button"));
     trigger.setAttribute("aria-expanded", "true");

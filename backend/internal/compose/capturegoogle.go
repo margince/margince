@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gcal"
 	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
@@ -96,11 +97,12 @@ func (c GmailConfig) Enabled() bool { return c.canConnect() }
 func (c GmailConfig) TransportMountable() bool { return c.canSignState() }
 
 //nolint:ireturn // returns the gmail.OAuth seam by design (a fakeable interface)
-func newGmailOAuth(c GmailConfig) gmail.OAuth {
+func newGmailOAuth(c GmailConfig, tokens *oauthflow.TokenCache) gmail.OAuth {
 	return gmail.NewOAuth(gmail.OAuthConfig{
 		ClientID:     c.ClientID,
 		ClientSecret: c.ClientSecret,
 		Scopes:       gmailScopes,
+		Tokens:       tokens,
 	})
 }
 
@@ -275,7 +277,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			gdocsOAuth gdocs.OAuth
 		)
 		if c.canSync() {
-			gmailOAuth, gcalOAuth, gdocsOAuth = newGmailOAuth(c), newGcalOAuth(c), newGdocsOAuth(c)
+			gmailOAuth, gcalOAuth, gdocsOAuth = newGmailOAuth(c, nil), newGcalOAuth(c), newGdocsOAuth(c)
 		}
 		registry := newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg)
 		s.ImportHandlers = gmailsignature.ImportHandlers{Source: registry}

@@ -104,6 +104,12 @@ out and marked "omitted (stated, but not clearly enough to accept)".
 Note that a document filed on **a deal** can be read for deal fields; one filed
 on **the company** cannot.
 
+**Reading a filed chat against your tasks.** When you file a chat screenshot,
+the AI reads it against your open tasks on that record. It marks a task done, or
+moves it to the day the chat names, only when the chat clearly settles it. The
+change shows in **Done for you** with **Undo**. See
+[Documents and files](documents-and-files.md).
+
 **Filling in a record from the web.** Reading a company's site, matching a
 LinkedIn connection, filling in a new company. Every one of these shows a card
 for you to check, instead of writing right into the record.
@@ -118,8 +124,8 @@ An agent can ask a document set for you if its passport has **Use AI and buy dat
 
 **The brief during the night.** The Morning brief looks at your companies during
 the night and ranks what most needs your first hour. If it found nothing, it
-says so. It runs only if you turned on **Let Margince prepare the Morning brief
-overnight** in **Settings → Connections**. It can read and write but never send.
+says so. It runs only if you turned on **Prepare my Morning brief overnight** in
+**Settings → Account**. It can read and write but never send.
 
 When the night pass has something to say about a ranked deal, it writes it on
 the item itself, beside the rank. Every finding names a deal that is already in

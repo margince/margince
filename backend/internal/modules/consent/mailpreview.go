@@ -87,7 +87,7 @@ func (s *Store) previewControllerMailTx(ctx context.Context, tx pgx.Tx, contactI
 	if !s.canSendConfirm() {
 		return ControllerMailPreview{}, ErrNoMailLane
 	}
-	rules, err := s.confirmRulesTx(ctx, tx, contactID, kind, askedPurpose{}, to, false)
+	rules, err := s.confirmRulesTx(ctx, tx, linkSubjectOf(contactID, ids.LeadID{}), kind, askedPurpose{}, to, false)
 	if err != nil {
 		return ControllerMailPreview{}, err
 	}
@@ -109,7 +109,7 @@ func (s *Store) previewControllerMailTx(ctx context.Context, tx pgx.Tx, contactI
 	if err != nil {
 		return ControllerMailPreview{}, err
 	}
-	presented, err := s.confirmSender.PresentConfirmationTx(ctx, tx, ConfirmationSend{
+	presented, err := s.presentControllerMailTx(ctx, tx, ConfirmationSend{
 		ContactID: contactID, Recipient: to, Category: category, ExpiresAt: in.expiresAt, Rendered: rendered,
 	})
 	if err != nil {

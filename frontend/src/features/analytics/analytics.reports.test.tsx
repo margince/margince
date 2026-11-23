@@ -62,7 +62,6 @@ describe("reports never sum money across currencies", () => {
       { fn: "sum", field: "amount_base_minor", as: "raw_minor" },
       { fn: "sum", field: "weighted_base_minor", as: "weighted_minor" },
       { fn: "count", as: "deal_count" },
-      { fn: "count", field: "amount_base_minor", as: "priced_deals" },
     ]);
   });
 
@@ -220,29 +219,38 @@ describe("reports never sum money across currencies", () => {
     expect(row.count).toBe(3);
   });
 
-  // priced_deals answers how many of `deal_count` the sums above cover. A deal
-  // in a currency the rate sheet cannot price is counted but priced nowhere in
-  // either total (margince#4201).
-  it("carries how many of a stage's deals the money actually covers", () => {
+  // The two counts say why a stage's deals are not in its money: no amount, or
+  // no exchange rate. The report sums the deals that convert.
+  it("carries why a stage's deals are left out of the money", () => {
     const [row] = buildStageAggregates(
       [
         {
           stage_id: "pl-s1",
           raw_minor: 100,
           weighted_minor: 90,
-          deal_count: 2,
-          priced_deals: 1,
+          deal_count: 4,
+          coverage: {
+            aggregates: ["raw_minor"],
+            partial: true,
+            no_value_deals: 1,
+            no_rate_deals: 2,
+            missing_currencies: ["JPY", "SEK"],
+          },
         },
       ],
       STAGES,
     );
-    expect(row.pricedDeals).toBe(1);
+    expect(row.coverage).toEqual({
+      partial: true,
+      noValue: 1,
+      noRate: 2,
+      rateCurrencies: ["JPY", "SEK"],
+    });
   });
 
-  // A row that omits priced_deals answers "the server did not say", not "zero
-  // deals were priced". Folding the two together would print a claim nobody
-  // made.
-  it("answers null rather than zero when a stage row omits priced_deals", () => {
+  // A row that omits the counts answers "the server did not say", not "nothing
+  // is missing".
+  it("answers null rather than none when a stage row omits the counts", () => {
     const [row] = buildStageAggregates(
       [
         {
@@ -254,7 +262,7 @@ describe("reports never sum money across currencies", () => {
       ],
       STAGES,
     );
-    expect(row.pricedDeals).toBeNull();
+    expect(row.coverage).toBeNull();
   });
 
   it("shows a stage row's money is short a deal the rate sheet cannot price", async () => {
@@ -267,7 +275,13 @@ describe("reports never sum money across currencies", () => {
             raw_minor: 100,
             weighted_minor: 90,
             deal_count: 2,
-            priced_deals: 1,
+            coverage: {
+              aggregates: ["raw_minor"],
+              partial: true,
+              no_value_deals: 0,
+              no_rate_deals: 1,
+              missing_currencies: ["JPY"],
+            },
           },
         ],
       }),
@@ -275,11 +289,11 @@ describe("reports never sum money across currencies", () => {
     render(<AnalyticsScreen />);
     await openPipeline();
     expect(
-      (await stageTable()).getByText((text) => text.includes("1 of 2 priced")),
+      (await stageTable()).getByText("1 deal has no exchange rate (JPY)"),
     ).toBeTruthy();
   });
 
-  it("shows no priced footnote when the row omits priced_deals entirely", async () => {
+  it("shows no footnote when the row omits the counts entirely", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
@@ -296,10 +310,10 @@ describe("reports never sum money across currencies", () => {
     render(<AnalyticsScreen />);
     await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
-    expect(screen.queryByText((text) => text.includes("priced"))).toBeNull();
+    expect(screen.queryByText((text) => text.includes("has no"))).toBeNull();
   });
 
-  it("shows no priced footnote once every counted deal was priced", async () => {
+  it("shows no footnote once every counted deal is in the money", async () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
@@ -309,7 +323,13 @@ describe("reports never sum money across currencies", () => {
             raw_minor: 100,
             weighted_minor: 90,
             deal_count: 2,
-            priced_deals: 2,
+            coverage: {
+              aggregates: ["raw_minor"],
+              partial: false,
+              no_value_deals: 0,
+              no_rate_deals: 0,
+              missing_currencies: [],
+            },
           },
         ],
       }),
@@ -317,7 +337,7 @@ describe("reports never sum money across currencies", () => {
     render(<AnalyticsScreen />);
     await openPipeline();
     await waitFor(() => expect(screen.getByText("Qualify")).toBeTruthy());
-    expect(screen.queryByText((text) => text.includes("priced"))).toBeNull();
+    expect(screen.queryByText((text) => text.includes("has no"))).toBeNull();
   });
 
   // A band this build has no range for still holds deals. A tile set built
@@ -426,7 +446,13 @@ describe("reports never sum money across currencies", () => {
             raw_minor: 2_500_000,
             weighted_minor: 250_000,
             deal_count: 2,
-            priced_deals: 1,
+            coverage: {
+              aggregates: ["raw_minor"],
+              partial: true,
+              no_value_deals: 0,
+              no_rate_deals: 1,
+              missing_currencies: ["JPY"],
+            },
           },
         ],
       }),
@@ -437,7 +463,9 @@ describe("reports never sum money across currencies", () => {
       .click(await screen.findByRole("button", { name: "Pipeline" }));
 
     expect(
-      await screen.findByText(formatAnalyticsMoney(2_500_000, "EUR", "en")),
+      await screen.findByText(
+        `${formatAnalyticsMoney(2_500_000, "EUR", "en")} Partial`,
+      ),
     ).toBeTruthy();
     // Fragments on the tile's second line, never "Label: value" pairs: a
     // caption is read as one sentence about the figure above it. Where the
@@ -445,10 +473,10 @@ describe("reports never sum money across currencies", () => {
     // states the gap. Without it the total reads as covering both deals when
     // it covers one.
     const [detail] = screen.getAllByText((text) =>
-      text.includes("weighted · "),
+      text.includes("weighted Partial · "),
     );
     expect(detail.textContent).toBe(
-      `${formatAnalyticsMoney(250_000, "EUR", "en")} weighted · 1 of 2 priced`,
+      `${formatAnalyticsMoney(250_000, "EUR", "en")} weighted Partial · 2 deals · 1 deal has no exchange rate (JPY)`,
     );
   });
 });

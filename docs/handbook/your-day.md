@@ -4,20 +4,20 @@
 
 **Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week, its review and its plan are in [Your week](your-week.md). For overdue invoices on Home, see [Customer payments](customer-payments.md).
 
-The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
+The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; Esc or its **Close** button closes it. It has no sidebar row of its own.
 
 Under **Needs you**, every task is its own card, and the first one is open. Press another card to open it in its place. **Next task**, at the top right of the open card, opens the one after it. After the last card it goes back to the first. Opening a card changes only which task you see.
 
 When you email a task's contact after the task was created, Margince marks the task done and shows a receipt in **Done for you**. Bulk mail and a contact named only in Bcc do not count. **Undo** reopens the task; the same email will not close it again. This includes tasks from website requests. You can also choose **Mark handled** to finish one of those tasks. After an upgrade, Margince applies this rule once to the email it already holds, and those tasks show in **Done for you** with **Undo** too.
 
-Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome.
+Open a task's details and choose **Log what happened** to record the outcome and attach files. **Mark task done** starts selected. Clear it to keep the task open after logging the outcome. A task filed on no record asks which record the outcome is for: pick one, or press **Log without a record**. **Back** returns to the task's actions.
 
 ## Daily tasks
 
 ### How do I open my worklist?
 To open your Worklist in Margince, go to **Home** in the sidebar and press **Show Worklist**. The Worklist opens as a panel headed **Worklist**, with the day's count on the button.
 1. Click **Home** in the sidebar.
-2. Press **Show Worklist**. Press **Hide Worklist** to close it.
+2. Press **Show Worklist**. The panel opens over Home; press Esc or its **Close** button to close it.
 3. Switch **Whose work** to **Unassigned** for open work nobody holds. **Team** and **All** show when your role sees them.
 
 There is no separate Worklist page, Today page or Inbox page. Also called: to-do list, my tasks, work queue, inbox, today list.
@@ -31,15 +31,15 @@ To make your Worklist fill the window in Margince, press **Expand** at the top o
 On a big screen the panel stops before its rows get too long to read. Also called: full screen, big worklist, wide view.
 
 ### How do I snooze something on my worklist?
-To snooze a Worklist item in Margince, press **More actions** at the end of its row and choose
-**Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
+To snooze a customer who is waiting for a reply in Margince, press **More actions** at the end of their Worklist row and choose **Snooze**. It comes back tomorrow ("Back on your list tomorrow.").
 1. Open **Home** → **Show Worklist**.
-2. At the end of the row, press **More actions**, the button with three dots.
+2. On a row where a customer waits for a reply, press **More actions**, the button with three dots.
 3. Choose **Snooze** for one day, or **Snooze for 3 days**, **Snooze for 7 days** or **Until they reply**.
 4. The note that follows offers **Undo**.
 
-Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work.
-A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
+A task's **More actions** has no snooze. In its details, **Snooze 1 day** moves the due date for everyone. A task with no date uses **Move to** ([How do I complete a task?](#how-do-i-complete-a-task)).
+
+Snoozing a deal also hides its at-risk row until the snooze ends. Its tasks remain separate work. A snooze changes your list only. A reply that came in before you snoozed does not end it. Also called: remind me later, postpone, hide for now.
 
 ### How do I pin an item to the top of my worklist?
 To pin a Worklist item in Margince, press **More actions** on its row and choose **Pin**. It moves to the top of your Worklist.
@@ -51,7 +51,7 @@ A pin changes the order of your own list only, and changes nothing for colleague
 ### Why is a task at the top of my worklist?
 A task leads your Worklist and **Needs you** on **Home** when you hold it and its reminder time has come. The row says "your reminder is due". With notifications allowed, Margince shows the task once across all your browsers, in the first one open. Press the notification to open the task on **Home**. Press **Done** when the work is finished, or move the task with **Snooze 1 day** or **Move to**. Moving the date ends a reminder whose time has passed.
 
-Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. Also called: reminder, remind me, notify me.
+Only the colleague who holds the task is reminded. A colleague who opens your queue sees the task in its usual place, and a task nobody holds reminds nobody. A reminder stays at the top for 30 days after its time. To set one on your own task, press **Remind me** in its details or in its row's **More actions**. Choose **In 1 hour**, **Tomorrow morning**, **1 hour before it is due** or **Pick a time**, and **Remove reminder** to clear it. Also called: reminder, remind me, notify me.
 
 ### Why is this on my list?
 The open card under **Needs you** on **Home** says what happened, what to do next and its one current reason. A task Margince made opens with why it exists. It names the contact, company or deal and what changed, such as **Anna Weber asked: “Please send the report.”**. **View details** adds the messages, contact, deal and every fact behind the row. An approval card shows what the agent proposes, such as the task it would add with its due day and note. Its **View details** holds the decision, so you can approve, edit or reject it there.
@@ -136,12 +136,13 @@ A task filed on no record has no one to write to and offers none. **Draft email*
 **Call** and **Book a meeting** go to the first contact the task is filed on, and an archived contact gets neither. **Call** dials. If you may log activity, it also opens **Log activity** on **Call** under the task, which does not complete the task. A done or read-only task offers the same steps. On the open card under **Needs you** on **Home**, the step is the colour button and **Done** is a plain one. A **Do** task, or one whose step has nothing to act on, keeps **Done** as the colour button.
 
 ### How do I plan my week?
-To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under **This week’s commitments**.
+To plan your week in Margince, open **Home**, switch the view to **Weekly** and add commitments to the week's plan card.
 1. Click **Home**, then **Weekly**.
-2. Under **This week’s commitments**, press **Add commitment** and fill in **Commitment**.
-3. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press **Add**.
-4. Tick commitments to mark them, then press **Save {count} changes**.
-5. Fill in **Constraints this week**: **Risks** and **Available capacity**.
+2. If the card reads **Plan for this week**, press **Plan week**. It then shows the week's dates, such as **Plan · 16 – 22 November**.
+3. Press **Add commitment** and fill in **Commitment**.
+4. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press **Add**.
+5. Tick a commitment only when it is done, since a tick saves it as done. Then press **Save {count} changes**.
+6. Fill in **Constraints this week**: **Risks** and **Not on your calendar**.
 
 Also called: weekly plan, weekly goals, set commitments. More in [Your week](your-week.md).
 
@@ -185,7 +186,7 @@ Today names each source it could not read, with **Refresh brief**, and never sho
 - That value is the full deal amount, not the amount you expect to lose. It may not be complete, and it is not a forecast.
 - Meetings count calendar entries still to come. With no calendar connected, they count the meetings Margince knows. Margince does not say you are prepared unless the source says so.
 
-The work counts come from the current Worklist read. Each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old, and again right after you act on it. For a few seconds, Home may show a copy up to 15 minutes old. It then reads your day again and shows the new copy on its own. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
+The work counts come from the current Worklist read, and each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old. After you add something, Home shows the old copy with an "Updating…" mark, then the new copy on its own. An item you finish, hide or decide leaves Home at once, with the same mark. After other changes, Home reads your day again first, so that item is never listed as open. A change to who may see what never shows an old copy; other Worklist pages read their own state.
 
 **Since your last brief** leaves out a proposal that already has a card under **Needs you**. When nothing is left, Home does not show it. When the recent changes did not load, only **Done for you** says so, with **Retry**. Its small changes show no **Undo** until they load; the deal cards keep theirs. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
 
@@ -272,7 +273,7 @@ Worklist items are in bands, shown in this order:
 | **Keep momentum** | "No agreed work is drifting." |
 | **Prospecting** | "No prospecting work waiting." |
 
-The views are **Today** (your work), **Decisions** (choices someone must make) and **System** (problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at the end of **Today**, holds tasks due in the next 14 days; see [Where are tasks due later?](#where-are-tasks-due-later). Possible duplicate contacts share one card in **Decisions**, and each of their owners finds it in their own Worklist. Contacts with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
+The views are **Today** (your work), **Decisions** (choices someone must make) and **System** (problems Margince reports). Each shows its own count and categories. **Upcoming and backlog**, at the end of **Today**, holds tasks due in the next 14 days; see [Where are tasks due later?](#where-are-tasks-due-later). A possible duplicate is one card in **Decisions**, in the Worklist of every owner of a record in it. Records with no owner show under **Unassigned**. **Review** on the card opens the merge; see [merging duplicate contacts](records.md#how-do-i-merge-duplicate-contacts).
 
 A possible deal also waits in **Decisions**, in the Worklist of the company's owner. It sits below customer replies, promises and your planned tasks, and above routine work on records. A company with no owner shows its possible deal under **Unassigned**. If the company gets a new owner, the possible deal moves to them. See [How do I review a possible deal?](leads-deals-and-projects.md#how-do-i-review-a-possible-deal)
 
@@ -280,11 +281,10 @@ A band you have cleared still shows its heading and says so, but only when the w
 
 Inside a band, work due tomorrow, this week or later has its own heading. Late work and today's work sit under the band heading, because that is what the band already means.
 
-A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to Keep momentum. They never go before work that was already urgent.
+A row that does not fit moves down, never up. When one band fills, the rows that do not fit drop to Keep momentum. They never go before work that was already urgent. Past the ranked work, the rest of your list loads last under **More in your list**, earliest due date first. Those rows are not ranked, and a heading above them never comes back.
 
 ### Which mail is mine?
-Mine shows reply work addressed to you. Owning a contact does not make every message to that contact your work.
-Being copied alone does not assign a reply. Team shows shared work under the access you already have.
+Mine shows reply work addressed to you. Owning a contact does not make every message to that contact your work. Being copied alone does not assign a reply. Team shows shared work under the access you already have.
 
 Old automatic findings without a current check stay with their source for review. On a contact, **Review conversation findings** shows their words, source and date without calling them overdue. Tasks you typed, changed or reopened keep their own state. An import does not count as such a change. An email on another subject does not mean a promise was kept.
 
@@ -364,7 +364,7 @@ The answer stays when you refresh the page, as under **Done for you**.
 
 ## For a team lead
 
-On **Home → Team** you get the team board and the coaching suggestions. The rest lives in the Worklist panel, which has its own **Whose work** switch (**Mine**, **Unassigned**, **Team**, **All**). **Hidden from the Worklist** appears only at **All**, with no teammate selected.
+The team board and the coaching suggestions are in the Worklist at **Team**. The Worklist has its own **Whose work** switch (**Mine**, **Unassigned**, **Team**, **All**). Your team's closed week is on **Home → Weekly**, under **Whose week**; see [Your week](your-week.md#a-teams-week). **Hidden from the Worklist** appears only at **All**, with no teammate selected.
 
 **Team exceptions** shows money at risk, work nobody has taken, or the same thing failing again. Each row names **what it was judged against**, so you can see the bar instead of guessing it. You can take a row on from here.
 

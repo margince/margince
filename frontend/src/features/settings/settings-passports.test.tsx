@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
+  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -161,23 +162,74 @@ function mintBackend(
 // it creates ("New passport") while the dialog's submit names the act ("Mint
 // passport"), so the two are never one name for two acts. That is what lets
 // every assertion below name the button it means.
-async function openMintDialog(user: ReturnType<typeof userEvent.setup>) {
+async function openUnnamedMintDialog(user: ReturnType<typeof userEvent.setup>) {
   render("agents");
   await user.click(await screen.findByRole("button", { name: "New passport" }));
   return screen.findByRole("dialog");
 }
 
+// Mint passport waits for a name, so most dialogs here start with one typed.
+async function openMintDialog(user: ReturnType<typeof userEvent.setup>) {
+  const dialog = await openUnnamedMintDialog(user);
+  await user.type(within(dialog).getByLabelText(/^Agent name/), "Scout");
+  return dialog;
+}
+
 describe("PassportCard — minting", () => {
+  it("keeps Mint passport closed until the agent has a name, and caps the name", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", mintBackend());
+    const dialog = await openUnnamedMintDialog(user);
+    const submit = within(dialog).getByRole("button", {
+      name: "Mint passport",
+    });
+    expect(submit).toBeDisabled();
+    expect(
+      document.getElementById(submit.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe("Give the agent a name");
+
+    const name = within(dialog).getByLabelText(/^Agent name/);
+    await user.type(name, "   ");
+    expect(submit).toBeDisabled();
+    await user.type(name, "Scout");
+    expect(submit).toBeEnabled();
+  });
+
+  // The server trims and counts code points: 120 emoji with spaces around
+  // them fit, 121 do not.
+  it("counts the trimmed name in code points against the 120 limit", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", mintBackend());
+    const dialog = await openUnnamedMintDialog(user);
+    const submit = within(dialog).getByRole("button", {
+      name: "Mint passport",
+    });
+    const name = within(dialog).getByLabelText(/^Agent name/);
+    fireEvent.change(name, { target: { value: `  ${"😀".repeat(120)}  ` } });
+    expect(submit).toBeEnabled();
+
+    fireEvent.change(name, { target: { value: `  ${"😀".repeat(121)}  ` } });
+    expect(submit).toBeDisabled();
+    expect(
+      within(dialog).getAllByText("Use at most 120 characters."),
+    ).toBeTruthy();
+    expect(
+      document.getElementById(submit.getAttribute("aria-describedby") ?? "")
+        ?.textContent,
+    ).toBe("Use at most 120 characters.");
+  });
+
   it("puts the form in a form-width dialog, with the scopes as a named group", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend());
-    const dialog = await openMintDialog(user);
+    const dialog = await openUnnamedMintDialog(user);
     // The passport and the code example each need a line of their own.
     expect(dialog).toHaveClass("modal-form");
 
     // The name field is a real label, not a span pointed at by
     // aria-labelledby: clicking the words has to focus the control.
-    const name = within(dialog).getByLabelText("Agent name");
+    const name = within(dialog).getByLabelText(/^Agent name/);
     await user.click(within(dialog).getByText("Agent name"));
     expect(name).toHaveFocus();
 
@@ -219,7 +271,6 @@ describe("PassportCard — minting", () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", mintBackend());
     const dialog = await openMintDialog(user);
-    await user.type(within(dialog).getByLabelText("Agent name"), "Scout");
     await user.click(
       within(dialog).getByRole("button", { name: "Mint passport" }),
     );
@@ -289,6 +340,7 @@ describe("PassportCard — minting", () => {
       await screen.findByRole("button", { name: "New passport" }),
     );
     const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText(/^Agent name/), "Scout");
 
     // A cache entry from this session, which the next one must not inherit.
     client.setQueryData(["some-other-screen"], { secret: "previous session" });
@@ -383,7 +435,7 @@ describe("PassportCard — minting", () => {
     const reopened = await screen.findByRole("dialog");
     expect(reopened).toBeTruthy();
     expect(within(reopened).queryByText("mgp_live_0f3a91c4")).toBeNull();
-    expect(within(reopened).getByLabelText("Agent name")).toHaveValue("");
+    expect(within(reopened).getByLabelText(/^Agent name/)).toHaveValue("");
   });
 });
 
@@ -586,6 +638,25 @@ function cellOf(row: HTMLElement, column: string): HTMLElement {
 }
 
 describe("PassportCard: the list", () => {
+  it("names a passport minted without a name, in its row, its buttons and the Revoke dialog", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", listBackend([{ ...UNUSED, label: "  " }]));
+    render("agents");
+    const row = (await screen.findByText("Unnamed passport")).closest("tr");
+    if (!row) throw new Error("the passport row is not rendered");
+
+    await user.click(
+      within(row).getByRole("button", {
+        name: "Actions for Unnamed passport",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Revoke Unnamed passport" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Unnamed passport")).toBeTruthy();
+  });
+
   it("shows when each passport was last used, and says Never for one no agent has used", async () => {
     vi.stubGlobal("fetch", listBackend([USED, UNUSED]));
     render("agents");

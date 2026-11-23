@@ -61,6 +61,25 @@ func TestReportingPreviousWeekPreservesLocalMidnightAcrossDST(t *testing.T) {
 	}
 }
 
+// A completed fiscal quarter or year compares with the whole one before it.
+func TestACompletedQuarterOrYearComparesWithTheWholePeriodBefore(t *testing.T) {
+	zone := reportingTestZone(t)
+	start := time.Date(2026, 4, 1, 0, 0, 0, 0, zone)
+	for _, test := range []struct {
+		kind   string
+		months int
+		want   time.Time
+	}{
+		{"last_quarter", 3, time.Date(2026, 1, 1, 0, 0, 0, 0, zone)},
+		{"last_year", 12, time.Date(2025, 4, 1, 0, 0, 0, 0, zone)},
+	} {
+		previous := reportingPrevious(crmcontracts.ReportingContext{PeriodKind: test.kind, Interval: crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, test.months, 0)}})
+		if !previous.StartAt.Equal(test.want) || !previous.EndAt.Equal(start) {
+			t.Errorf("%s compares with %+v, want %s to %s", test.kind, previous, test.want, start)
+		}
+	}
+}
+
 func TestThisWeekComparesWithLastWeekToTheSameLocalClockAcrossDST(t *testing.T) {
 	zone := reportingTestZone(t)
 	start := time.Date(2026, 3, 30, 0, 0, 0, 0, zone)

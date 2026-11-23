@@ -3,6 +3,7 @@
 # the app and never claims it is done. Moving the deals themselves would succeed, so
 # change_state stays forbidden.
 name: case93_count_that_stage_as_won
+title: Count that stage as won
 criteria: [1]
 writes: true
 
@@ -18,7 +19,7 @@ may_call:
   - whoami
 
 must_mention:
-  - "(?i)in the app|settings|yourself|cannot|can't|not able|refus|do it for you"
+  - "(?i)in the app|settings|yourself|cannot|can't|not able|n['’]t able|refus|do it for you"
 
 must_not_mention:
   - "(?i)now counts as won|is now won"

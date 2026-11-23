@@ -21,11 +21,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // linkRequest is what the guards need to judge one mint.
 type linkRequest struct {
-	contactID       ids.ContactID
+	contactID ids.ContactID
+	// leadID is set instead of contactID for a lead's link.
+	leadID          ids.LeadID
 	purposeID       ids.PurposeID
 	expectedAddress string
 	// askedByTheSubject marks a mint the SUBJECT asked for from their own
@@ -64,14 +67,15 @@ func admitLinkTx(ctx context.Context, tx pgx.Tx, req linkRequest) (admittedLink,
 	if req.preview {
 		hold = auth.EnsureWritableLive
 	}
-	if err := hold(ctx, tx, "contact", req.contactID.UUID); err != nil {
+	who := linkSubjectOf(req.contactID, req.leadID)
+	if err := hold(ctx, tx, who.entityType, who.id); err != nil {
 		return admittedLink{}, err
 	}
 	purpose, err := requireConfirmablePurposeTx(ctx, tx, req.purposeID)
 	if err != nil {
 		return admittedLink{}, err
 	}
-	deliveredTo, err := deliveryAddressTx(ctx, tx, req.contactID)
+	deliveredTo, err := linkAddressTx(ctx, tx, who)
 	if err != nil {
 		return admittedLink{}, err
 	}
@@ -89,7 +93,7 @@ func admitLinkTx(ctx context.Context, tx pgx.Tx, req linkRequest) (admittedLink,
 	}
 	// THE SUBJECT'S OWN ASK IS NOT A RE-SOLICITATION. See the field.
 	if !req.askedByTheSubject {
-		if err := refuseWithdrawnPurposeTx(ctx, tx, req.contactID, req.purposeID); err != nil {
+		if err := refuseWithdrawnPurposeTx(ctx, tx, who, req.purposeID); err != nil {
 			return admittedLink{}, err
 		}
 	}
@@ -158,14 +162,14 @@ func (e *MisdirectedLinkError) FieldFault() (field, code, message string) {
 // A withdrawal is not permanent for the SUBJECT — they may re-subscribe through
 // the preference centre, which is their own mailbox and their own choice. What
 // is refused is somebody ELSE restarting the conversation on their behalf.
-func refuseWithdrawnPurposeTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, purposeID ids.PurposeID) error {
+func refuseWithdrawnPurposeTx(ctx context.Context, tx pgx.Tx, who subject, purposeID ids.PurposeID) error {
 	if purposeID.UUID == (ids.UUID{}) {
 		return nil
 	}
 	var state string
 	err := tx.QueryRow(ctx,
-		`SELECT state FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`,
-		contactID, purposeID).Scan(&state)
+		`SELECT state FROM contact_consent WHERE `+who.column+` = $1 AND purpose_id = $2`,
+		who.id, purposeID).Scan(&state)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
@@ -195,4 +199,49 @@ func (e *ReSolicitationError) Error() string {
 // because that is what the caller would change.
 func (e *ReSolicitationError) FieldFault() (field, code, message string) {
 	return purposeIDField, "purpose_withdrawn", e.Error()
+}
+
+// linkSubjectOf names who a confirm link is for. A lead's id wins when set, so
+// the contact and lead mints share every guard and differ only in the column.
+func linkSubjectOf(contactID ids.ContactID, leadID ids.LeadID) subject {
+	if !leadID.IsZero() {
+		return subject{entityType: entityLead, column: subjectColumnLead, id: leadID.UUID}
+	}
+	return subject{entityType: entityContact, column: subjectColumnContact, id: contactID.UUID}
+}
+
+// requireUpdate asks for update on the subject's own object.
+// Each object is a named constant, so the grant scan sees who reaches this door.
+func (s subject) requireUpdate(ctx context.Context) error {
+	if s.entityType == entityLead {
+		return auth.Require(ctx, entityLead, principal.ActionUpdate)
+	}
+	return auth.Require(ctx, entityContact, principal.ActionUpdate)
+}
+
+// linkAddressTx is the one address a link for this subject goes to: a contact's
+// own live primary, or the address on the lead's row.
+func linkAddressTx(ctx context.Context, tx pgx.Tx, who subject) (string, error) {
+	if who.entityType != entityLead {
+		return deliveryAddressTx(ctx, tx, ids.From[ids.ContactKind](who.id))
+	}
+	var address *string
+	if err := tx.QueryRow(ctx, `SELECT email FROM lead WHERE id = $1 AND archived_at IS NULL`, who.id).Scan(&address); err != nil {
+		return "", err
+	}
+	if address == nil || *address == "" {
+		return "", &ValidationError{
+			Field:  subjectColumnLead,
+			Reason: "this lead carries no email address, so there is no mailbox a confirm link could reach",
+		}
+	}
+	return *address, nil
+}
+
+// asIDs splits a subject back into the contact and lead id fields of a request.
+func (s subject) asIDs() (ids.ContactID, ids.LeadID) {
+	if s.entityType == entityLead {
+		return ids.ContactID{}, ids.From[ids.LeadKind](s.id)
+	}
+	return ids.From[ids.ContactKind](s.id), ids.LeadID{}
 }

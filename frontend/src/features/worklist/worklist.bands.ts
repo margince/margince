@@ -3,21 +3,11 @@
 
 import type { Worklist, WorklistItem } from "./worklist.queries";
 
-// The headings the page draws, and which rows sit under each.
-//
-// The server has always sent `bands` — every band in draw order, including one
-// holding no rows — and no client file read it. Headings were inferred from the
-// rows instead, which can say everything except the one thing the field exists
-// for: a band with nothing under it draws nothing, so a reader whose Now band
-// is empty is told the same as a reader whose page simply started at
-// Prospecting.
-//
-// "Nothing needs you today" is an answer. Inferring headings from rows cannot
-// give it, because the absence leaves no row to hang it on.
-//
-// Preserve the server's order. Prospecting and existing work may interleave
-// as deadlines and value change, so a heading labels each consecutive run.
-// Declared bands supply empty headings; they never regroup the rows.
+// The headings the page draws, and which rows sit under each. They come from
+// the server's `bands`, so a band with no rows can still say it is clear.
+// A heading labels each consecutive run, so a loaded page only adds rows after
+// the last. The server never reopens a band; rows past its ranking come last,
+// under `more`.
 
 type Band = NonNullable<WorklistItem["band"]>;
 

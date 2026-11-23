@@ -16,6 +16,7 @@ import {
   useMarkAllNoticesRead,
   useNotifications,
 } from "../features/settings/notifications.queries";
+import { formatBadgeCount } from "../format/badgecount";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
@@ -133,7 +134,7 @@ export function NotificationBell() {
         {unread > 0 && (
           <span className="notifbell-count">
             <Badge variant="primary" tone="accent">
-              {formatNumber(unread, locale)}
+              {formatBadgeCount(unread, locale)}
             </Badge>
           </span>
         )}

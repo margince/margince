@@ -14,6 +14,7 @@
 # is one those readings support — the stage's probability against the deal's
 # amount — never causes it has no data for.
 name: case45_move_the_deal_on
+title: Move the deal on
 criteria: [1, 2, 3, 4]
 
 # WRITES: the author's own statement that this case changes the world. It is not
@@ -28,9 +29,8 @@ prompt: |
   terms now. Put the Netzmodernisierung deal in Negotiation and note that
   purchasing is at the table. What does that do to my quarter?
 
-must_call:
-  - progress_deal
 must_not_call_with:
+  - move_deal_pipeline~.
   - change_offers~.
   - change_settings~.
 
@@ -42,6 +42,7 @@ may_call:
   - resolve_entities
   - query_workspace
   - read_forecast
+  - progress_deal
 
 must_mention:
   - "Negotiation"
@@ -58,6 +59,7 @@ figures_from_results: true
 # Open to open runs without sign-off, so the deal ends on the stage it was
 # told, read by name: a stage id is minted per seed.
 must_end_with:
+  - deal "Rheinufer Netzmodernisierung" pipeline=Sales
   - deal "Rheinufer Netzmodernisierung" stage=Negotiation
 
 runs: 3

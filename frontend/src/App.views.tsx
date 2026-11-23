@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   AnalyticsScreen,
+  ArchivedRecordHistory,
   BookingScreen,
   BriefScreen,
   BuyerRoomScreen,
@@ -32,7 +33,7 @@ import {
   ProgressScreen,
   ProjectScreen,
   ProjectsScreen,
-  ResetRoute,
+  ResetAddressSignedIn,
   SalesGoalsScreen,
   ScheduledSendsScreen,
   ScreenNotice,
@@ -42,6 +43,7 @@ import {
   ShareRoute,
   safeDecode,
   TagResultScreen,
+  UnknownAddress,
   UnsubscribeScreen,
   WorklistRedirect,
 } from "./App.screens";
@@ -56,7 +58,7 @@ import {
   useDisabledCoreFeatures,
   useHiddenCoreFeatures,
 } from "./lib/corefeatures";
-import { bootsOnEssentialCopy } from "./lib/essentialscreens";
+import { paintsFromEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_APP_SCREEN } from "./lib/extensionapps";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { traversalInFlight, traverseTo } from "./lib/historydepth";
@@ -112,7 +114,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
       !id || opensReservedPage({ screen: "projects", id }) ? (
         <ProjectsScreen startCreating={id !== undefined} />
       ) : (
-        <ProjectScreen id={id} />
+        <ProjectScreen id={id} archivedHistory={ArchivedRecordHistory} />
       ),
     // One segment, and it names whose day it is. A team board row needs that
     // door. The other three dials stay state: one of four in the address would
@@ -173,7 +175,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // reached only via the server's redirect off GET /oauth/authorize
     // (#/oauth-consent?…&consent=<nonce>), never a rail destination.
     "oauth-consent": () => <OAuthConsent />,
-    [RESET_ROUTE]: () => <ResetRoute />,
+    [RESET_ROUTE]: () => <ResetAddressSignedIn />,
     [EXTENSION_SCREEN]: ({ id }) => <ExtensionRoute name={id} />,
     [EXTENSION_APP_SCREEN]: ({ id }) => <ExtensionAppRoute name={id} />,
     // The fork seam (app/custom.ts). Upstream's registry is empty, so in
@@ -183,7 +185,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // A hash naming no address this app answers. The shell's heading says the
     // same word (shell.unknownPage). The reader is told once by the page and
     // once by the column, and neither claims a page by that name exists.
-    "not-found": () => <ScreenNotice messageKey="shell.unknownPage" />,
+    "not-found": () => <UnknownAddress />,
   };
 
 // Through history, so the entries around the held one are kept. Never a replace
@@ -203,9 +205,11 @@ export const screenOfAddress = (address: string) => {
   return SCREEN_VIEWS[route.screen](route);
 };
 
-function screenWithLocale(address: string) {
+// The shell paints from the essential catalog, and the screen's column waits
+// here for the complete one.
+export function screenWithLocale(address: string) {
   const view = screenOfAddress(address);
-  return bootsOnEssentialCopy(address) ? (
+  return paintsFromEssentialCopy(address) ? (
     view
   ) : (
     <CompleteLocale>{view}</CompleteLocale>
@@ -247,9 +251,10 @@ function useShownAddress(asked: string): string | null {
 
 function DrawnFor({
   address,
+  pending,
   children,
-}: Readonly<{ address: string; children: ReactNode }>) {
-  useReportShownAddress(address);
+}: Readonly<{ address: string; pending: boolean; children: ReactNode }>) {
+  useReportShownAddress(address, pending);
   return (
     <ScreenAddress.Provider value={address}>{children}</ScreenAddress.Provider>
   );
@@ -262,9 +267,9 @@ export function ScreenView({
 }: Readonly<{ screen: Screen; id?: string; id2?: string }>) {
   const disabled = useDisabledCoreFeatures();
   const hidden = useHiddenCoreFeatures();
-  const shown = useShownAddress(
-    askedAddress({ screen, id, id2 }, useLiveHash()),
-  );
+  const asked = askedAddress({ screen, id, id2 }, useLiveHash());
+  const shown = useShownAddress(asked);
+  const loading = shown !== null && !samePage(shown, asked);
   return (
     <Suspense fallback={<ScreenPending />}>
       {/* The draft guard holds content while browser history can still move. */}
@@ -272,19 +277,15 @@ export function ScreenView({
         <ScreenPending />
       ) : (
         <UnsavedGuard address={shown} samePlace={samePage} onKeep={returnTo}>
-          {(held) => (
-            <DrawnFor address={held}>
+          {(held, asking) => (
+            <DrawnFor address={held} pending={loading && !asking}>
               <Fragment key={identityOfAddress(held)}>
                 {screenEnabled(parseHash(held).screen, hidden) ? (
                   screenWithLocale(held)
+                ) : screenEnabled(parseHash(held).screen, disabled) ? (
+                  <ScreenNotice messageKey="shell.unavailableForRole" />
                 ) : (
-                  <ScreenNotice
-                    messageKey={
-                      screenEnabled(parseHash(held).screen, disabled)
-                        ? "shell.unavailableForRole"
-                        : "shell.unknownPage"
-                    }
-                  />
+                  <UnknownAddress />
                 )}
               </Fragment>
             </DrawnFor>

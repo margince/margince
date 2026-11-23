@@ -318,7 +318,11 @@ describe("InstallationSettingsCard", () => {
     // it is read before the dialog is opened over a field nobody can type in.
     expect(await screen.findByText(reason)).not.toBeNull();
 
-    const dialog = await openFrom(user, /edit base currency/i);
+    // A frozen currency has nothing to edit, so its row offers no Edit.
+    expect(
+      screen.queryByRole("button", { name: /edit base currency/i }),
+    ).toBeNull();
+    const dialog = await openFrom(user, /edit company time zone/i);
     const currency = within(dialog).getByLabelText(
       /base currency/i,
     ) as HTMLInputElement;
@@ -330,6 +334,30 @@ describe("InstallationSettingsCard", () => {
       /company time zone/i,
     ) as HTMLInputElement;
     expect(zone.disabled).toBe(false);
+  });
+
+  it("opens a dialog with only the tab's own facts, titled for the tab", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard part="forecast" />);
+    const forecast = await openFrom(user, /edit likely threshold/i);
+    expect(
+      within(forecast).getByRole("heading", { name: "Forecast rules" }),
+    ).toBeTruthy();
+    expect(within(forecast).getByLabelText(/likely threshold/i)).toBeTruthy();
+    expect(within(forecast).queryByLabelText(/company time zone/i)).toBeNull();
+    expect(within(forecast).queryByLabelText(/base currency/i)).toBeNull();
+    cleanup();
+
+    render(<InstallationSettingsCard part="regional" />);
+    const regional = await openFrom(user, /edit fiscal year starts/i);
+    expect(
+      within(regional).getByRole("heading", { name: "Regional and calendar" }),
+    ).toBeTruthy();
+    expect(within(regional).getByLabelText(/company time zone/i)).toBeTruthy();
+    expect(within(regional).queryByLabelText(/likely threshold/i)).toBeNull();
+    expect(within(regional).queryByText("Projection basis")).toBeNull();
   });
 
   it("refuses a fact a boot source sets, says where to change it, and saves the rest", async () => {
@@ -491,6 +519,55 @@ describe("InstallationSettingsCard", () => {
     // A refused save leaves the form open with what was typed still in it —
     // dismissing it on a refusal would discard the edit AND the reason for it.
     expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("marks the field a server refusal names by its setting key", async () => {
+    const user = userEvent.setup();
+    const sentence =
+      '"Mars/Olympus" is not an IANA zone name this server knows — use one like Europe/Berlin';
+    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+      refuse: [
+        {
+          field: "installation.timezone",
+          code: "setting_invalid",
+          message: sentence,
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.clear(zone);
+    await user.type(zone, "Mars/Olympus");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await within(dialog).findByText(/use one like Europe\/Berlin/);
+    expect(zone.getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("shows a refusal naming a field the dialog does not draw", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+      refuse: [
+        {
+          field: "installation.forecast_likely_threshold",
+          code: "setting_invalid",
+          message: "Threshold out of range.",
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.type(zone, "x");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await within(dialog).findByText("Settings not saved");
+    expect(dialog.querySelector('[aria-invalid="true"]')).toBeNull();
   });
 
   it("says a refusal once — on the field, or in the summary, never both", async () => {
@@ -784,7 +861,7 @@ it("states how many saved questions and reports a new fiscal start concerns, bef
   ).toBeTruthy();
   expect(
     within(dialog).getByText(
-      "3 reports read this quarter, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
+      "3 reports read this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
     ),
   ).toBeTruthy();
 });

@@ -2,21 +2,24 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useId } from "react";
 import { SendPermission } from "../../components/sendpermission";
 import { Badge, Button, Card } from "../../design-system/atoms";
+import { useToast } from "../../design-system/toast";
 import {
   formatDateTime,
   formatNumber,
   formatTimeOfDay,
   isRenderableZone,
 } from "../../format/format";
-import { INTL_LOCALE } from "../../format/intllocale";
 import { zoneNameAndOffset } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor, valueFor } from "../../lib/labelfor";
 import { logUnexpectedError } from "../../lib/problem";
 import { useSendPermission } from "../../lib/usesendpermission";
+import { useViewerZone } from "../../lib/viewerzone";
 import { DirectSendAction } from "./directsendaction";
+import { directSendOutcomeKey } from "./directsendmodal";
 import { dropsOperatorReason, isEditable } from "./schedulededit";
+import { messageZone } from "./scheduledmoment";
 import type { ScheduledSend, Status } from "./scheduledqueue";
 import { type Move, RescheduleMenu } from "./scheduledsends.reschedule";
 import { heldSendReview } from "./sendreview";
@@ -128,11 +131,7 @@ function Moment({
       {zone !== readerZone && (
         <span className="t-caption">
           {t("sched.inZone", {
-            zone: zoneNameAndOffset(
-              INTL_LOCALE[locale],
-              new Date(send.scheduled_at),
-              zone,
-            ),
+            zone: zoneNameAndOffset(locale, new Date(send.scheduled_at), zone),
           })}
         </span>
       )}
@@ -207,11 +206,13 @@ function EditVerb({
 
 /**
  * The review a held message's refusal opened, for a reader the server lets
- * confirm it. The message is already due, so the row says that confirming
- * sends it now rather than at the time it was scheduled for.
+ * confirm it. The message is already due, so the row says the sender picks
+ * now or a new moment, and tells them what came of it.
  */
 function HeldReview({ send }: Readonly<{ send: ScheduledSend }>) {
   const t = useT();
+  const toast = useToast();
+  const readerZone = useViewerZone();
   const queryClient = useQueryClient();
   const review =
     send.status === "held"
@@ -222,12 +223,14 @@ function HeldReview({ send }: Readonly<{ send: ScheduledSend }>) {
   }
   return (
     <>
-      <p className="t-caption">{t("sched.held.confirmSendsNow")}</p>
+      <p className="t-caption">{t("sched.held.confirmChoosesWhen")}</p>
       <DirectSendAction
         review={review}
-        onSent={() =>
-          void queryClient.invalidateQueries({ queryKey: ["scheduled-sends"] })
-        }
+        laterZone={messageZone(send, readerZone)}
+        onSent={(outcome) => {
+          toast.show(t(directSendOutcomeKey(outcome)));
+          void queryClient.invalidateQueries({ queryKey: ["scheduled-sends"] });
+        }}
       />
     </>
   );

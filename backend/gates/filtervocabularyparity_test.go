@@ -74,6 +74,9 @@ var correspondingTypes = map[string]string{
 	// than a different question — so the two surfaces are comparable, and the
 	// operator difference below is the real one.
 	"FieldDomain": "KindText",
+	// A routing key is text that may be a domain; the operand is folded the
+	// way FieldDomain's is, and the operator differences are FieldText's.
+	"FieldCompanyKey": "KindText",
 	// Both declare only within_radius, and both compile it through geocode.Within.
 	"FieldDistance": "KindGeo",
 }
@@ -83,18 +86,20 @@ var correspondingTypes = map[string]string{
 // matching is one for a difference that has been resolved, and leaving it
 // re-exempts whatever takes its place.
 var declaredDifferences = gatekit.Waive(map[string]string{
-	"FieldMultiselect/exists": exists,
-	"FieldText/exists":        exists,
-	"FieldID/exists":          exists,
-	"FieldNumber/exists":      exists,
-	"FieldDate/exists":        exists,
-	"FieldBoolean/exists":     exists,
-	"FieldPicklist/exists":    exists,
-	"FieldDomain/exists":      exists,
-	"FieldCurrency/exists":    exists,
-	"FieldText/contains":      "search declares no `contains` operator. Its structured `where` answers exact and ordering comparisons; approximate text is the free-text half of the same request, not a structured operator. storekit has no free-text half, so `contains` is the only way to ask there. The split is real, but nothing states it as a decision — it is how the two surfaces were built.",
-	"FieldBoolean/neq":        "search offers `eq` alone on a boolean, its vocabulary saying `neq true` is `eq false`. THAT REASONING NO LONGER HOLDS: with neq NULL-safe, `neq true` selects false AND unset, which `eq false` does not. storekit's boolean neq now answers a question search cannot express. Waived because closing it is a product decision about search's vocabulary, not a repair.",
-	"FieldDate/in":            "search admits `in` on a date and storekit does not. A gap rather than a decision — but not a one-bit fix: flipping the matrix routes dates through the string `in` branch, which binds a text array against a date column and fails at query time. It needs a date branch.",
+	"FieldMultiselect/exists":  exists,
+	"FieldText/exists":         exists,
+	"FieldID/exists":           exists,
+	"FieldNumber/exists":       exists,
+	"FieldDate/exists":         exists,
+	"FieldBoolean/exists":      exists,
+	"FieldPicklist/exists":     exists,
+	"FieldDomain/exists":       exists,
+	"FieldCompanyKey/exists":   exists,
+	"FieldCompanyKey/contains": "search declares no `contains` operator, as for FieldText; the company key keeps the substring match a text field had.",
+	"FieldCurrency/exists":     exists,
+	"FieldText/contains":       "search declares no `contains` operator. Its structured `where` answers exact and ordering comparisons; approximate text is the free-text half of the same request, not a structured operator. storekit has no free-text half, so `contains` is the only way to ask there. The split is real, but nothing states it as a decision — it is how the two surfaces were built.",
+	"FieldBoolean/neq":         "search offers `eq` alone on a boolean, its vocabulary saying `neq true` is `eq false`. THAT REASONING NO LONGER HOLDS: with neq NULL-safe, `neq true` selects false AND unset, which `eq false` does not. storekit's boolean neq now answers a question search cannot express. Waived because closing it is a product decision about search's vocabulary, not a repair.",
+	"FieldDate/in":             "search admits `in` on a date and storekit does not. A gap rather than a decision — but not a one-bit fix: flipping the matrix routes dates through the string `in` branch, which binds a text array against a date column and fails at query time. It needs a date branch.",
 })
 
 // operatorSets reads a matrix declaration and returns, per type, its operators.

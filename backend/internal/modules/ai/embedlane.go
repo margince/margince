@@ -21,8 +21,8 @@ import (
 // own fault.
 var ErrEmbedLaneFailed = errors.New("ai: the embed lane did not answer")
 
-// Embed routes the embedding lane. Inputs are stripped before egress —
-// the EmbedRequest carries no per-request hook, so the router is the
+// Embed routes the embedding lane. Inputs are masked before egress, because
+// the EmbedRequest carries no per-request hook and the router is the
 // enforcement point here. One provider call is exactly one logical call —
 // the embed lane has no retry ladder to bundle.
 func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
@@ -35,9 +35,11 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		return model.Embeddings{}, errors.New("ai: embeddings outside workspace context")
 	}
+	// An input is record text, not a request body, so the stripper reads it on
+	// the text lane.
 	stripped := make([]string, len(req.Inputs))
 	for i, input := range req.Inputs {
-		clean, _, err := r.stripper.Strip(ctx, []byte(input))
+		clean, _, err := r.stripper.StripText(ctx, []byte(input))
 		if err != nil {
 			return model.Embeddings{}, fmt.Errorf("ai: stripping embed input: %w", err)
 		}
@@ -71,7 +73,7 @@ func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embed
 		// nothing to trace, and a caller tells a deferral from a failed lane.
 		return model.Embeddings{}, err
 	}
-	trace := Call{Task: TaskEmbeddings, Tier: TierEmbedLane, Kind: callKindEmbedding, CacheOff: r.cacheOff, LatencyMS: r.now().Sub(start).Milliseconds()}
+	trace := Call{Task: TaskEmbeddings, Tier: TierEmbedLane, Kind: callKindEmbedding, LatencyMS: r.now().Sub(start).Milliseconds()}
 	if err == nil {
 		// Stamp the SAME token estimate the meter records below onto the
 		// trace row too — embeddings are input-only (no output, no cache

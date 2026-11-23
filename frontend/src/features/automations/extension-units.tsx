@@ -10,7 +10,7 @@ import {
   PanelRow,
 } from "../../design-system/panel";
 import { RowOpen } from "../../design-system/rowopen";
-import { useLocale, useT } from "../../i18n";
+import { translate, useLocale, useT } from "../../i18n";
 import { appRoute, findApp, mayOpenApp } from "../../lib/extensionapps";
 import {
   EXTENSION_SCREEN,
@@ -88,8 +88,13 @@ function UnitRow({ unit }: Readonly<{ unit: ExtensionDescriptor }>) {
   // unit can be copied or opened in a tab, which a handler alone never allowed.
   return (
     <PanelRow record onOpen={() => navigate(address)} className="extunits-row">
-      <span className="extunits-name" data-testid={`ext-unit-${name}`}>
-        {title}
+      <span className="extunits-text">
+        <span className="extunits-name" data-testid={`ext-unit-${name}`}>
+          {title}
+        </span>
+        {unit.summary && (
+          <span className="t-caption">{translate(locale, unit.summary)}</span>
+        )}
       </span>
       <span className="extunits-actions">
         {unit.app && <OpenAppAction unit={unit} title={title} />}

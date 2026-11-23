@@ -12,9 +12,10 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Row } from "../../design-system/stack";
-import { useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired, unwrap } from "../../lib/problem";
 import "./client.css";
 
 // Client surfaces (B-EP09.13a): the rail-less extension chrome — the fixed
@@ -25,7 +26,10 @@ import "./client.css";
 
 export function ClientSurfaceScreen() {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [email, setEmail] = useState("");
+  const senderLabel = t("client.sender");
 
   const lookup = useMutation({
     mutationFn: async (query: string) => {
@@ -48,20 +52,28 @@ export function ClientSurfaceScreen() {
       </header>
       <div className="wrap narrow">
         <SectionHeader title={t("client.title")} />
-        <div className="client-lookup">
-          <Field label={t("client.sender")}>
+        <div className="client-lookup" ref={faultsRoot}>
+          <Field label={senderLabel} required error={faults.of("email")}>
             {(control) => (
               <TextInput
                 {...control}
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  faults.edited("email");
+                }}
               />
             )}
           </Field>
           <Button
             variant="primary"
-            disabled={email.trim() === "" || lookup.isPending}
-            onClick={() => lookup.mutate(email.trim())}
+            pending={lookup.isPending}
+            onClick={() => {
+              const blank = blankRequired(locale, {
+                email: [senderLabel, email],
+              });
+              if (!faults.show(blank)) lookup.mutate(email.trim());
+            }}
           >
             {t("client.lookup")}
           </Button>

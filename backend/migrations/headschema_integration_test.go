@@ -96,6 +96,8 @@ func headSchema(t *testing.T, conn *pgx.Conn) {
 //     move a rewind makes
 //   - view definitions and reloptions — schema_fitness asserts a rollup view is
 //     security_invoker, which lives in reloptions and in nothing else here
+//   - table storage options, of the table and of its TOAST table — a tuned
+//     autovacuum threshold is schema that no other line here shows
 //   - triggers AND the function bodies they execute — the version bump and
 //     audit_log's append-only guard are trigger behaviour, asserted by two
 //     tests. Both halves, because pg_get_triggerdef prints which function a
@@ -209,6 +211,17 @@ const catalogParts = `
 			 WHERE n.nspname IN ('public', 'ext')
 			   AND c.relkind IN ('r', 'p', 'v', 'm', 'S')
 			   AND c.oid NOT IN (SELECT oid FROM tracked)
+			UNION ALL
+			SELECT n.nspname || '.' || c.relname || ' storage=' ||
+			       COALESCE(array_to_string(c.reloptions, ','), '-') || ' toast=' ||
+			       COALESCE(array_to_string(toast.reloptions, ','), '-')
+			  FROM pg_class c
+			  JOIN pg_namespace n ON n.oid = c.relnamespace
+			  LEFT JOIN pg_class toast ON toast.oid = c.reltoastrelid
+			 WHERE n.nspname IN ('public', 'ext')
+			   AND c.relkind IN ('r', 'p')
+			   AND c.oid NOT IN (SELECT oid FROM tracked)
+			   AND (c.reloptions IS NOT NULL OR toast.reloptions IS NOT NULL)
 			UNION ALL
 			SELECT 'policy ' || n.nspname || '.' || c.relname || '.' || pol.polname ||
 			       ' cmd=' || pol.polcmd::text || ' permissive=' || pol.polpermissive::text ||

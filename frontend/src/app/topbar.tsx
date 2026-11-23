@@ -7,6 +7,7 @@ import {
   useLayoutEffect,
   useRef,
 } from "react";
+import { usePageTitle } from "../components/auth-identity";
 import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
@@ -17,6 +18,7 @@ import { useLocale, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { useOpenableApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { stepBackOutOf } from "../lib/historydepth";
 import { useFirstScreenSettled } from "../lib/journeymarks";
 import {
   ariaKeyShortcuts,
@@ -25,12 +27,20 @@ import {
   shortcutTip,
 } from "../lib/keymap";
 import {
+  isOnRecord,
   leaveRecord,
+  leftRecord,
   listAddress,
   rememberListAddress,
 } from "../lib/listreturn";
 import { useReadsTeamProgress } from "../lib/progressreader";
-import { type Route, routeHash, useHash } from "../lib/router";
+import {
+  navigateReplacing,
+  type Route,
+  routeHash,
+  samePage,
+  useHash,
+} from "../lib/router";
 import { usePhoneViewport } from "../lib/viewport";
 import { AccountMenu } from "./account";
 import { useFiltersCrumbs } from "./filterstrail";
@@ -43,6 +53,7 @@ import {
   reservedPageTitle,
 } from "./nav";
 import { NotificationBell } from "./notificationbell";
+import { ONBOARDING_ENTRY } from "./onboarding-gate";
 import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
 import { useHomeLinkLabel, WorkspaceChip } from "./shellrail";
@@ -72,6 +83,20 @@ const SetupReminder = lazy(
 // screen. The trail and the back control both lead to that list.
 function belowList(route: Route): boolean {
   return Boolean(recordKindOf(route) && route.id) || !!reservedPageTitle(route);
+}
+
+// A bar still on the record leaves it. A bar that already left it as Back
+// would is let finish; a pending move anywhere else, Back undoes.
+function goBack(onScreen: Route, bar: string): void {
+  if (isOnRecord(onScreen, bar)) {
+    leaveRecord(onScreen);
+    return;
+  }
+  if (leftRecord(onScreen, bar)) return;
+  stepBackOutOf(
+    (hash) => samePage(hash, bar),
+    () => navigateReplacing(onScreen),
+  );
 }
 
 /**
@@ -176,13 +201,32 @@ export function TopBarSearch({
             not the four-character string "⌘K" in one box. The caps come from the
             keymap the dispatcher reads, so the cap cannot name another key. */}
         <span className="topbar-keys" aria-hidden>
-          {shortcutCaps("search").map((cap) => (
+          {shortcutCaps("search", t).map((cap) => (
             <Kbd key={cap}>{cap}</Kbd>
           ))}
         </span>
       </button>
     </div>
   );
+}
+
+/** What the page at `route` is called: the last stop of its trail. */
+export function usePageCalled(route: Route, section?: NavSection): string {
+  const crumbs = useCrumbs(route, section);
+  return crumbs[crumbs.length - 1]?.label ?? "";
+}
+
+/** The route a record stands under, for a place that reads no record's name. */
+export function withoutRecord(route: Route): Route {
+  return recordKindOf(route) ? { screen: route.screen } : route;
+}
+
+// The browser tab reads the trail from the page back to the product, as the
+// sign-in page does. Tabs and history entries then name different pages.
+function useTrailTitle(crumbs: readonly Crumb[]) {
+  const t = useT();
+  const stops = crumbs.map((crumb) => crumb.label).reverse();
+  usePageTitle([...stops, t("shell.logoAria")].join(" · "));
 }
 
 /** The trail, mounted only where it is drawn, so a phone reads no names for it. */
@@ -192,11 +236,18 @@ function TopBarTrail({
 }: Readonly<{ route: Route; section?: NavSection }>) {
   const t = useT();
   const crumbs = useCrumbs(route, section);
+  useTrailTitle(crumbs);
   return <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />;
 }
 
 /** The company's mark leading home, where a phone has no room for the trail. */
-function TopBarHome() {
+function TopBarHome({
+  route,
+  section,
+}: Readonly<{ route: Route; section?: NavSection }>) {
+  // A phone draws no trail, so its tab names a record's list rather than
+  // asking for the record's name.
+  useTrailTitle(useCrumbs(withoutRecord(route), section));
   const label = useHomeLinkLabel();
   const chipId = useId();
   const labelId = useId();
@@ -247,12 +298,16 @@ export function TopBar({
   collapsed,
   onToggle,
   onOpenSearch,
+  held = false,
 }: Readonly<{
   route: Route;
   section?: NavSection;
   collapsed: boolean;
   onToggle?: () => void;
   onOpenSearch: () => void;
+  /** The onboarding gate holds the reader: a way back to setup stands where
+   *  the outbox and the bell would. */
+  held?: boolean;
 }>) {
   const t = useT();
   const hash = useHash();
@@ -279,11 +334,7 @@ export function TopBar({
             // The shortcut belongs in the tooltip, not in the accessible name:
             // a speech-input user says the words they can read, and "Collapse
             // sidebar ⌘B" is not one of them.
-            title={shortcutTip(
-              toggleLabel,
-              binding("sidebar").keys,
-              t("shell.shortcuts.then"),
-            )}
+            title={shortcutTip(toggleLabel, binding("sidebar").keys, t)}
             aria-expanded={!collapsed}
             onClick={onToggle}
           >
@@ -300,11 +351,11 @@ export function TopBar({
           <IconAction
             label={t("shell.back")}
             icon={<ArrowLeft />}
-            onClick={() => leaveRecord(route)}
+            onClick={() => goBack(route, hash)}
           />
         )}
         {phone ? (
-          <TopBarHome />
+          <TopBarHome route={route} section={section} />
         ) : (
           <TopBarTrail route={route} section={section} />
         )}
@@ -325,8 +376,16 @@ export function TopBar({
             />
           </Suspense>
         )}
-        <OutboxButton />
-        <NotificationBell />
+        {held ? (
+          <AppLink className="btn btn-ghost" href={routeHash(ONBOARDING_ENTRY)}>
+            {t("shell.backToSetup")}
+          </AppLink>
+        ) : (
+          <>
+            <OutboxButton />
+            <NotificationBell />
+          </>
+        )}
         <AccountMenu />
       </div>
     </header>

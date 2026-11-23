@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AutomationsAdmin } from "./automations";
 import { paramFields } from "./automations.params";
@@ -77,6 +78,7 @@ type CustomField = components["schemas"]["CustomField"];
 
 const renewalReminderSchema = {
   type: "object",
+  required: ["object", "date_field", "days_before", "recipient"],
   properties: {
     date_field: {
       type: "string",
@@ -200,21 +202,35 @@ function renewalBackend(calls: Recorded[]) {
 describe("renewal_reminder's schema-driven params (GH-706)", () => {
   it("paramFields reads days_before/object/recurs_yearly, gives date_field its own picker kind, and object its enum options", () => {
     expect(paramFields(renewalReminderSchema)).toEqual([
-      { key: "date_field", kind: "date_field", initial: "" },
-      { key: "days_before", kind: "integer", min: 1, max: 365, initial: "30" },
+      { key: "date_field", kind: "date_field", required: true, initial: "" },
+      {
+        key: "days_before",
+        kind: "integer",
+        min: 1,
+        max: 365,
+        required: true,
+        initial: "30",
+      },
       {
         key: "object",
         kind: "enum",
+        required: true,
         initial: "",
         options: ["contact", "company", "deal", "lead", "project"],
       },
       {
         key: "recipient",
         kind: "enum",
+        required: true,
         initial: "",
         options: ["record_owner", "authorizer"],
       },
-      { key: "recurs_yearly", kind: "boolean", initial: "false" },
+      {
+        key: "recurs_yearly",
+        kind: "boolean",
+        required: false,
+        initial: "false",
+      },
     ]);
   });
 
@@ -222,7 +238,9 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     vi.stubGlobal("fetch", renewalBackend([]));
     render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
-      expect(screen.getByText("Renewal reminder")).toBeTruthy(),
+      expect(
+        screen.getByText(en["auto.template.renewal_reminder.name"]),
+      ).toBeTruthy(),
     );
     await openCreateDialog();
 
@@ -249,7 +267,9 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     vi.stubGlobal("fetch", renewalBackend([]));
     render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
-      expect(screen.getByText("Renewal reminder")).toBeTruthy(),
+      expect(
+        screen.getByText(en["auto.template.renewal_reminder.name"]),
+      ).toBeTruthy(),
     );
     await openCreateDialog();
 
@@ -258,14 +278,12 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     expect(
       screen.getByRole("combobox", { name: "Renewal date field" }),
     ).toBeDisabled();
-    expect(
-      screen.getByText("Choose an object first to list its date fields."),
-    ).toBeTruthy();
+    expect(screen.getByText(en["auto.dateField.needsObject"])).toBeTruthy();
 
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: "Record type" }),
-      "contact",
+      "Contact",
     );
 
     const picker = screen.getByRole("combobox", { name: "Renewal date field" });
@@ -309,14 +327,16 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     );
     render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
-      expect(screen.getByText("Renewal reminder")).toBeTruthy(),
+      expect(
+        screen.getByText(en["auto.template.renewal_reminder.name"]),
+      ).toBeTruthy(),
     );
     await openCreateDialog();
 
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: "Record type" }),
-      "contact",
+      "Contact",
     );
 
     const picker = screen.getByRole("combobox", { name: "Renewal date field" });
@@ -329,14 +349,16 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     vi.stubGlobal("fetch", renewalBackend(calls));
     render(<AutomationsAdmin view="library" />);
     await waitFor(() =>
-      expect(screen.getByText("Renewal reminder")).toBeTruthy(),
+      expect(
+        screen.getByText(en["auto.template.renewal_reminder.name"]),
+      ).toBeTruthy(),
     );
     await openCreateDialog();
 
     await pickOption(
       userEvent.setup(),
       screen.getByRole("combobox", { name: "Record type" }),
-      "contact",
+      "Contact",
     );
     await waitFor(() =>
       expect(
@@ -353,7 +375,7 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
     );
     await pickOption(
       userEvent.setup(),
-      screen.getByRole("combobox", { name: "Send the reminder task to" }),
+      screen.getByRole("combobox", { name: en["auto.renewal.recipient"] }),
       "The person authorizing this automation",
     );
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
@@ -370,4 +392,88 @@ describe("renewal_reminder's schema-driven params (GH-706)", () => {
       },
     });
   });
+
+  it("keeps Create refused, and says why, until a renewal date field is chosen", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", renewalBackend([]));
+    render(<AutomationsAdmin view="library" />);
+    const dialog = within(await openRenewalDialog());
+    const create = dialog.getByRole("button", { name: "Create" });
+    expect(create).toBeDisabled();
+    expect(dialog.getByText(en["auto.needs.dateField"])).toBeVisible();
+
+    await pickOption(
+      user,
+      dialog.getByRole("combobox", { name: "Record type" }),
+      "Deal",
+    );
+    const way = await dialog.findByRole("link", {
+      name: en["auto.dateField.place"],
+    });
+    expect(way.getAttribute("href")).toMatch(/#\/settings\/records$/);
+    expect(way.parentElement).toHaveTextContent(
+      "This record type has no date field yet. Add one in Settings → Records and fields.",
+    );
+    expect(create).toBeDisabled();
+  });
+
+  it("puts a server refusal of one parameter under that parameter's field", async () => {
+    const user = userEvent.setup();
+    const backend = renewalBackend([]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = input instanceof Request ? input : null;
+        if ((request?.method ?? init?.method) === "POST") {
+          return jsonResponse(
+            {
+              title: "Unprocessable",
+              status: 422,
+              code: "validation_error",
+              details: {
+                errors: [
+                  {
+                    field: "params.date_field",
+                    code: "invalid",
+                    message: "must not be empty",
+                  },
+                ],
+              },
+            },
+            422,
+          );
+        }
+        return backend(input, init);
+      }),
+    );
+    render(<AutomationsAdmin view="library" />);
+    const dialog = within(await openRenewalDialog());
+    await pickOption(
+      user,
+      dialog.getByRole("combobox", { name: "Record type" }),
+      "Contact",
+    );
+    const dateField = dialog.getByRole("combobox", {
+      name: "Renewal date field",
+    });
+    await waitFor(() => expect(dateField).not.toBeDisabled());
+    await pickOption(user, dateField, "Birthday");
+    await pickOption(
+      user,
+      dialog.getByRole("combobox", { name: en["auto.renewal.recipient"] }),
+      en["auto.renewal.recordOwner"],
+    );
+    await user.click(dialog.getByRole("button", { name: "Create" }));
+
+    const refusal = await dialog.findByText("Must not be empty.");
+    expect(refusal.id).toBe(
+      dateField.getAttribute("aria-describedby")?.split(" ")[0],
+    );
+    expect(dialog.getAllByRole("alert")).toHaveLength(1);
+  });
 });
+
+async function openRenewalDialog(): Promise<HTMLElement> {
+  await screen.findByText(en["auto.template.renewal_reminder.name"]);
+  return openCreateDialog();
+}

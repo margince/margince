@@ -29,6 +29,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // stagedEvidence is the wire shape of communication_decision.evidence.
@@ -54,11 +55,14 @@ type stagedEvidence struct {
 	// "" for one they cleared and absent for none. The row's own address names
 	// the recipient; the column never holds one, so erasure has nothing here.
 	StatedCountry *string `json:"stated_country,omitempty"`
+	// SenderCountry is the sending entity's data-protection country the row
+	// was judged under, so transmit judges under the same one.
+	SenderCountry string `json:"sender_country,omitempty"`
 }
 
 // evidenceJSON renders the evidence a caller named for storage on the decision
 // row. An empty Evidence renders as {}, which is the column's own default.
-func evidenceJSON(e commsauthz.Evidence) ([]byte, error) {
+func evidenceJSON(e commsauthz.Evidence, sender jurisdiction.Code) ([]byte, error) {
 	out, err := json.Marshal(stagedEvidence{
 		PolicyRevision: e.PolicyRevision,
 		FooterFindings: e.FooterFindings,
@@ -73,6 +77,7 @@ func evidenceJSON(e commsauthz.Evidence) ([]byte, error) {
 		AuthoredOffer:  e.AuthoredOffer,
 		QuotedAnchorID: nonZeroID(e.QuotedAnchorID),
 		StatedCountry:  statedCountryJSON(e.RecipientCountries),
+		SenderCountry:  string(sender),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("consent: render the staged evidence: %w", err)
@@ -88,6 +93,16 @@ func evidenceJSON(e commsauthz.Evidence) ([]byte, error) {
 // before this file existed — a review naming what could not be evidenced.
 // Failing the dispatch instead would turn one malformed row into a stuck
 // delivery.
+// stagedSenderFrom is the sender's country a staged row was judged under, or
+// empty for a row staged before it was recorded.
+func stagedSenderFrom(raw []byte) jurisdiction.Code {
+	var in stagedEvidence
+	if len(raw) == 0 || json.Unmarshal(raw, &in) != nil {
+		return ""
+	}
+	return jurisdiction.Code(in.SenderCountry)
+}
+
 func evidenceFrom(raw []byte, address string) commsauthz.Evidence {
 	if len(raw) == 0 {
 		return commsauthz.Evidence{}

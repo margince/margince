@@ -12,6 +12,8 @@ import {
 } from "../../components/recordlist";
 import { Avatar, Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
+import { ReadOnlyValue } from "../../design-system/readonlyvalue";
+import { taskDueOnDay } from "../../format/calendarday";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import type { useLocale, useT } from "../../i18n";
 import { type LeadOrigin, originLabelFor } from "../../lib/leadorigins";
@@ -82,19 +84,22 @@ export function leadColumns(
       key: "score",
       header: t("lead.score"),
       cell: (lead: Lead) => (
-        <CellStrip>
+        <ReadOnlyValue
+          reason={
+            lead.score_reason
+              ? scoreFactorLabel(lead.score_reason, t)
+              : t("lead.scoreNoSignals")
+          }
+          tabStop={false}
+        >
           <Badge tone={scoreTone(lead.score)}>
             {formatNumber(lead.score, locale)}
           </Badge>
-          <span className="t-caption">
-            {lead.score_reason
-              ? scoreFactorLabel(lead.score_reason, t)
-              : t("lead.scoreNoSignals")}
-          </span>
-        </CellStrip>
+        </ReadOnlyValue>
       ),
       sort: "score",
       numeric: true,
+      holds: "score",
     },
     {
       key: "status",
@@ -120,7 +125,7 @@ export function leadColumns(
             ? ` · ${openTaskCountLabel(locale, lead.open_task_count)}`
             : ""}
           {lead.next_task_due_at
-            ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, recordZone)}`
+            ? ` · ${formatDateAbbrev(nextTaskDueOn(lead, recordZone), locale, recordZone)}`
             : ""}
         </span>
       ),
@@ -132,23 +137,31 @@ export function leadColumns(
       header: t("log.dueAt"),
       cell: (lead: Lead) =>
         lead.next_task_subject && lead.next_task_due_at
-          ? formatDateAbbrev(lead.next_task_due_at, locale, recordZone)
+          ? formatDateAbbrev(
+              nextTaskDueOn(lead, recordZone),
+              locale,
+              recordZone,
+            )
           : null,
       phone: "caption",
       phoneOnly: true,
     },
     // The shared column, now that this header can offer a sort.
-    lastActivityColumn<Lead>(t, locale, recordZone),
+    {
+      ...lastActivityColumn<Lead>(t, locale, recordZone),
+      initiallyHidden: true,
+    },
     {
       key: "origin",
       header: t("lead.origin"),
+      initiallyHidden: true,
       sort: "origin", // the catalog's label, which is what the cell prints
       cell: (lead: Lead) => (
         <span>{originLabelFor(lead, origins) ?? t("lead.originUnset")}</span>
       ),
     },
     ...partnerColumns(t, partners),
-    tagsColumn<Lead>(t),
+    { ...tagsColumn<Lead>(t), initiallyHidden: true },
     ownerColumn<Lead>(t),
     createdColumn<Lead>(t, locale, recordZone),
   ];
@@ -165,6 +178,7 @@ function partnerColumns(
     {
       key: "partner",
       header: t("lead.partner"),
+      initiallyHidden: true,
       cell: (lead: Lead) =>
         lead.partner_company_id ? (
           <CellStrip>
@@ -178,4 +192,14 @@ function partnerColumns(
         ),
     },
   ];
+}
+
+/** The instant that reads as the lead's next task's due day in the record's zone. */
+function nextTaskDueOn(lead: Lead, zone: string): string {
+  return taskDueOnDay(
+    lead.next_task_due_at ?? "",
+    lead.next_task_due_has_time,
+    lead.next_task_due_intent,
+    zone,
+  );
 }

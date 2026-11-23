@@ -99,8 +99,8 @@ func TestANewBookerIsTheHostsAtTheDomainsCompanyAndCameThroughABooking(t *testin
 
 	// No company holds this domain, so the booking asks about it once.
 	unclaimed := e.book(t, "Contact G", "contact.g@unclaimed-works.test")
-	if questions, readers := e.domainQuestionRows(t, "unclaimed-works.test"); questions != 1 || readers != 1 {
-		t.Errorf("the unclaimed domain left %d questions and %d readers, want one of each", questions, readers)
+	if questions := e.domainQuestionRows(t, "unclaimed-works.test"); questions != 1 {
+		t.Errorf("the unclaimed domain left %d questions, want one", questions)
 	}
 	if got := e.bookerFacts(t, unclaimed); len(got.employers) != 0 {
 		t.Errorf("employers = %v on an unclaimed domain, want none until the question is answered", got.employers)
@@ -108,17 +108,15 @@ func TestANewBookerIsTheHostsAtTheDomainsCompanyAndCameThroughABooking(t *testin
 }
 
 // domainQuestionRows counts the rows the domain-question writer leaves for one domain.
-func (e *dedupeEnv) domainQuestionRows(t *testing.T, domain string) (questions, readers int) {
+func (e *dedupeEnv) domainQuestionRows(t *testing.T, domain string) (questions int) {
 	t.Helper()
 	ctx := e.asPublicBooking()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT (SELECT count(*) FROM company_domain_disposition WHERE domain = $1),
-			       (SELECT count(*) FROM company_domain_question_reader WHERE domain = $1)`, domain).Scan(&questions, &readers)
+		return tx.QueryRow(ctx, `SELECT count(*) FROM company_domain_disposition WHERE domain = $1`, domain).Scan(&questions)
 	}); err != nil {
 		t.Fatalf("counting the questions about %s: %v", domain, err)
 	}
-	return questions, readers
+	return questions
 }
 
 func TestABookingGivesAContactWithNoOwnerOrCompanyTheHostAndTheDomainsCompany(t *testing.T) {

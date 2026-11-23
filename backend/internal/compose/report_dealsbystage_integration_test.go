@@ -5,17 +5,15 @@
 
 package compose
 
-// The deals-by-stage report's weighted figure (AC-F1): the per-stage
-// weighted total must equal the sum of each constituent deal's OWN rounded
-// weighted value, not the stage's probability applied once to the summed
-// raw total — the same invariant the forecast report already proves for
-// itself in report_forecast_integration_test.go. The reports screen's
-// deals-by-stage table reads a server aggregate with no per-deal rows to
-// round client-side, so the engine has to compute it the AC-F1 way.
+// The deals-by-stage report's weighted figure (AC-F1). The per-stage total is
+// the sum of each deal's own rounded weighted value. It is not the stage's
+// probability applied once to the summed raw total. The reports screen reads a server aggregate with
+// no per-deal rows to round, so the engine computes it the AC-F1 way.
 
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,10 +55,8 @@ func TestDealsByStageWeightedReconcilesToPerDealRounding(t *testing.T) {
 	}
 }
 
-// "Explain This Number" must resolve the new measure too: its drill-through
-// source rows carry weighted_amount_minor and reconcile exactly to the
-// displayed weighted_minor, the same AC-F1 guarantee the forecast report
-// proves for itself in TestForecastDerivationDrillThroughReconcilesExactly.
+// "Explain This Number" resolves the measure too: its drill-through rows
+// reconcile to the cent with the displayed weighted_minor, as AC-F1 asks.
 func TestDealsByStageWeightedDerivationReconcilesExactly(t *testing.T) {
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Alpha", 60, nil, new(int64(12341)))
@@ -96,11 +92,9 @@ func TestDealsByStageWeightedDerivationReconcilesExactly(t *testing.T) {
 	}
 }
 
-// The board's column totals measure every deal the reader may see, which is
-// the set the board draws as cards, and the drill-through opens that same set.
-//
-// Deals are readable by every seat holding the deal grant, whatever the tier.
-// A total narrowed to the reader's own work printed "1 deal" above eight cards.
+// The board's column totals measure every deal the reader may see, the set it
+// draws as cards and the drill-through opens. A total narrowed to the reader's
+// own work printed "1 deal" above eight cards.
 func TestDealsByStageMeasuresEveryDealTheReaderMaySee(t *testing.T) {
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Mine", 60, &e.Rep1, new(int64(10000)))
@@ -137,17 +131,14 @@ func TestDealsByStageRefusesARepsOwnerDialOnAColleague(t *testing.T) {
 	rep := e.dealReadCtx(e.Rep1, nil, principal.RowScopeOwn)
 	status, body := e.runReportStatus(rep, t, "deals-by-stage",
 		fmt.Sprintf(`{"group_by":["stage_id","currency"],"filters":{"owner_id":%q}}`, e.Rep3.String()))
-	if status != http.StatusForbidden {
-		t.Fatalf("a rep's owner dial on a colleague got %d %s, want 403", status, body)
+	if status != http.StatusForbidden || !strings.Contains(body, `"code":"owner_not_measurable"`) {
+		t.Fatalf("a rep's owner dial on a colleague got %d %s, want 403 owner_not_measurable", status, body)
 	}
 }
 
-// An unowned deal — the ordinary shape of one nobody has claimed yet — must
-// count toward a rep's own population the same way it counts toward their
-// ordinary, unscoped deal list: `owner_id = $me` matches nothing against a
-// NULL owner_id under ordinary SQL null semantics, so without an explicit
-// unowned-is-shared arm the deal would silently vanish from the rep's own
-// board while still sitting on their worklist one click away.
+// An unowned deal counts toward a rep's own population as it does in their
+// deal list. `owner_id = $me` never matches NULL, so without the unowned arm
+// the deal would vanish from the rep's board while it sits on their worklist.
 func TestDealsByStageCountsAnUnownedDealForARep(t *testing.T) {
 	e := setupForecast(t)
 	e.seedOpenDeal(t, "Unowned", 60, nil, new(int64(10000)))
@@ -194,11 +185,8 @@ func TestDealsByStageCountsAnUnrelatedSeatsDealForATeamManager(t *testing.T) {
 	}
 }
 
-// The board's per-column totals need deals-by-stage to accept
-// every filter dial the board itself exposes, and to split a stage's total
-// by currency so a mixed-currency column can still decline to sum (the same
-// rule the board already gets right client-side, now proven server-side).
-
+// The board's column totals split a stage's total by currency, so a
+// mixed-currency column can decline to sum.
 func TestDealsByStageGroupsByCurrencySeparately(t *testing.T) {
 	e := setupForecast(t)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, source, captured_by)
@@ -285,12 +273,8 @@ func TestDealsByStageGroupsRevenueByPartner(t *testing.T) {
 }
 
 // Grouping by partner must not report a partner the caller could not open.
-//
-// A normal deal read masks partner_company_id per row when the referenced
-// company is out of reach (deals/fieldmask.go). The report engine gates
-// only the deal entity, so without the reference-scope clause an aggregate
-// would hand back exactly the id the same caller's own read withholds — and an
-// aggregate has no per-row place to write "withheld".
+// A deal read masks partner_company_id when the company is out of reach, and
+// without the reference-scope clause an aggregate would hand back that id.
 func TestGroupingByPartnerDoesNotNameAPartnerTheCallerCannotOpen(t *testing.T) {
 	e := setupForecast(t)
 	// Capture-private to Rep3: readable to its owner, invisible to every other
@@ -349,11 +333,8 @@ func TestDealsByStageFiltersByPartnerSourced(t *testing.T) {
 	}
 }
 
-// deals-by-stage joins stage, which has its own created_at — so the stalled
-// predicate (deals.StalledSQL) must reach this query alias-qualified, or an
-// unqualified reference to a column both tables carry is ambiguous SQL. A
-// regression to an unqualified spelling does not produce a wrong number; it
-// 500s before ever reaching the assertions below.
+// deals-by-stage joins stage, which has its own created_at, so the stalled
+// predicate must arrive alias-qualified or the query fails as ambiguous SQL.
 func TestDealsByStageStalledFilterWorksUnderTheStageJoin(t *testing.T) {
 	e := setupForecast(t)
 	e.seedID(t, `INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, source, captured_by, created_at)
@@ -371,12 +352,9 @@ func TestDealsByStageStalledFilterWorksUnderTheStageJoin(t *testing.T) {
 	}
 }
 
-// The Go predicate (deals.IsStalled) and the SQL clause (deals.StalledSQL)
-// are two spellings of the same rule (formulas-and-rules §8) and must agree.
-// Margins here are wide (tens of days) on purpose: the SQL side evaluates
-// against the live `now()` at query time, seconds after this test captured
-// its own `now`, so a boundary-exact case would be flaky by construction —
-// that exact case is formulas_test.go's job, against a fixed clock.
+// deals.IsStalled and deals.StalledSQL spell one rule and must agree. The
+// margins are tens of days because the SQL side reads the live now(); the
+// boundary-exact case is formulas_test.go's job, against a fixed clock.
 func TestDealsByStageStalledFilterAgreesWithIsStalled(t *testing.T) {
 	e := setupForecast(t)
 	now := time.Now().UTC()
@@ -417,11 +395,8 @@ func TestDealsByStageStalledFilterAgreesWithIsStalled(t *testing.T) {
 	}
 }
 
-// dealsByStageRow picks the aggregate row for one stage out of a
-// group-by-stage_id result — the report is fetched with no stage_id
-// filter (there is no caller for one; grouping already answers "per
-// stage"), so the test selects its row the way TestForecastByOwnerCounts…
-// selects by owner_id.
+// dealsByStageRow picks one stage's row out of a group-by-stage_id result,
+// since the report takes no stage_id filter.
 func dealsByStageRow(t *testing.T, result reportResultWire, stageID string) map[string]any {
 	t.Helper()
 	for _, row := range result.Rows {
@@ -433,11 +408,9 @@ func dealsByStageRow(t *testing.T, result reportResultWire, stageID string) map[
 	return nil
 }
 
-// The board's own totals are read from this report with the deals screen's
-// filter dials, so every dial the screen offers must be one this report
-// accepts. A dial it refuses answers 422 and the board falls back to counting
-// the cards it happens to have loaded — which looks exactly like a working
-// total and is not one.
+// The board reads its totals from this report with the screen's dials, so
+// the report accepts every dial. A refused one answers 422, and the board
+// would count its loaded cards as though they were the total.
 func TestDealsByStageNarrowsToOnePartner(t *testing.T) {
 	e := setupForecast(t)
 	wanted := e.seedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Wanted', 'manual', 'human:x')`)

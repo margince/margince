@@ -50,15 +50,17 @@ it("previews only a named report, with the assessment and the question it was gi
   ).toHaveValue(
     "Margince sales in Germany this quarter: bookings, lead conversion and open pipeline by country.",
   );
-  await user.type(
-    screen.getByRole("textbox", { name: "Report name" }),
-    "Germany sales review",
-  );
   await user.click(
     screen.getByRole("checkbox", { name: "Include the assessment" }),
   );
   await user.click(screen.getByRole("button", { name: "Add this question" }));
   await waitFor(() => expect(preview).toBeEnabled());
+  const name = screen.getByRole("textbox", { name: "Report name" });
+  await user.click(preview);
+  expect(screen.getByText("Report name is required.")).toBeTruthy();
+  expect(document.activeElement).toBe(name);
+  expect(heldCustomReport(VIEWER)).toBeUndefined();
+  await user.type(name, "Germany sales review");
 
   await user.click(preview);
   expect(heldCustomReport("someone-else")).toBeUndefined();

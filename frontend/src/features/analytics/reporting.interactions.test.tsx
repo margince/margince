@@ -39,6 +39,30 @@ afterEach(() => {
   vi.restoreAllMocks();
   window.location.hash = "";
 });
+it("names a blank report name on the save press and sends nothing", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "POST /analytics/reports": write,
+  });
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryEvaluation.selection}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  const name = await screen.findByRole("textbox", { name: "Report name" });
+  const save = screen.getByRole("button", { name: "Save report" });
+  expect(save).toBeEnabled();
+  await user.click(save);
+  expect(name).toHaveAccessibleDescription("This field is required.");
+  expect(write).not.toHaveBeenCalled();
+});
+
 it("saves the full selected graph layout and context", async () => {
   const user = userEvent.setup({ delay: null });
   const saved = vi.fn();
@@ -378,7 +402,7 @@ it("carries the date range across tabs and keeps the sales pipeline", async () =
   await pickOption(
     user,
     screen.getByRole("combobox", { name: "Date range" }),
-    "Last month",
+    "Last completed month",
   );
   await user.click(screen.getByRole("button", { name: "Performance" }));
   expect(
@@ -386,7 +410,7 @@ it("carries the date range across tabs and keeps the sales pipeline", async () =
   ).toHaveTextContent("Sales");
   expect(
     screen.getByRole("combobox", { name: "Date range" }),
-  ).toHaveTextContent("Last month");
+  ).toHaveTextContent("Last completed month");
 });
 
 it("requires confirmation before archiving and explains the schedule effect", async () => {
@@ -439,7 +463,7 @@ it("restores the selected period and close window after reopening performance", 
   await pickOption(
     user,
     await screen.findByRole("combobox", { name: "Date range" }),
-    "Last month",
+    "Last completed month",
   );
   await pickOption(
     user,
@@ -454,7 +478,7 @@ it("restores the selected period and close window after reopening performance", 
   );
   expect(
     await screen.findByRole("combobox", { name: "Date range" }),
-  ).toHaveTextContent("Last month");
+  ).toHaveTextContent("Last completed month");
   expect(
     screen.getByRole("combobox", { name: "Expected close window" }),
   ).toHaveTextContent("Fiscal quarter");

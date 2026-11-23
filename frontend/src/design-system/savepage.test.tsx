@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -15,12 +15,17 @@ import {
   useFieldFaults,
   useSaveDraft,
 } from "./savepage";
+import { ToastProvider, ToastRegion } from "./toast";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 const SAVE = translate("en", "saveBar.save");
 const DISCARD = translate("en", "saveBar.discard");
 const UNSAVED = translate("en", "saveBar.unsaved");
+const SAVED = translate("en", "settings.saved");
 
 function Card({
   name,
@@ -53,11 +58,14 @@ function Page({
 }>) {
   return (
     <LocaleProvider initial="en">
-      <SavePageProvider>
-        <Card name="Name" write={writes.Name} />
-        <Card name="Title" write={writes.Title} />
-        <PageSaveBar />
-      </SavePageProvider>
+      <ToastProvider>
+        <SavePageProvider>
+          <Card name="Name" write={writes.Name} />
+          <Card name="Title" write={writes.Title} />
+          <PageSaveBar />
+        </SavePageProvider>
+        <ToastRegion />
+      </ToastProvider>
     </LocaleProvider>
   );
 }
@@ -117,6 +125,20 @@ describe("PageSaveBar", () => {
     expect(button(SAVE)).toBeNull();
   });
 
+  it("says Saved once the page's drafts are written, whichever cards held them", async () => {
+    // The toast leaves on a timer, so the clock is the test's.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<Page />);
+    await user.type(field("Name"), "Jane");
+    await user.type(field("Title"), "CEO");
+    await user.click(screen.getByRole("button", { name: SAVE }));
+
+    expect(await screen.findAllByText(SAVED)).toHaveLength(1);
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+    expect(screen.queryByText(SAVED)).toBeNull();
+  });
+
   it("keeps the bar and every refused draft, and says why once", async () => {
     const user = userEvent.setup();
     render(
@@ -135,6 +157,7 @@ describe("PageSaveBar", () => {
     expect(await screen.findAllByRole("alert")).toHaveLength(1);
     expect(field("Name")).toHaveValue("Jane");
     expect(button(SAVE)).toBeVisible();
+    expect(screen.queryByText(SAVED)).toBeNull();
   });
 
   it("holds Discard while the save runs", async () => {

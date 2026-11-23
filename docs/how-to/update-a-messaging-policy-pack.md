@@ -169,21 +169,106 @@ jurisdiction pack for, and the boot refuses two units that declare one code.
 The installation can then choose the code in `workspace.country`, at the setup claim or on the
 Jurisdiction settings page; see [Deploy Margince](deploy-margince.md#choose-the-country).
 
+## Citations
+
+`citations` link an engine code to the provision a rep is shown beside the warning. Each entry
+names:
+
+- `code`: the refusal or finding it explains, such as `no_marketing_consent` or `objection_route`.
+  `TestEveryCitationExplainsACodeTheEngineEmits` in `backend/gates/messagingruleapplied_test.go`
+  refuses a code the engine never reports.
+- `territorial-test`: `any_sender`, `sender_here` or `sender_elsewhere`, for where the sending legal
+  entity is established.
+- `instrument`: the `name` of one instrument the compiled pack declares, in this layer or one below.
+- `provision` and `source-url`: the part of the law, and its official text over https. Either may be
+  left out to take the instrument's own.
+
+```yaml
+citations:
+  - code: no_marketing_consent
+    territorial-test: any_sender
+    instrument: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7 Abs. 2 Nr. 2"
+```
+
+One code is cited once per sender across all layers. A citation in `regional/eu.md` therefore holds
+for every member state, and a country layer cites only the codes the region leaves out.
+`Validate` in `backend/pkg/extension/messaging/provenance.go` checks each citation when the pack
+compiles.
+
 ## Drafts and reviewed packs
 
-A pack is a draft until a legal review stamps it. A draft applies all its rules, and shows a rep no
-citation. These keys record the review, and the compiler takes the weakest value across the layers:
+A pack cites its law whether or not a review stamps it. The packs are refreshed against their
+sources at each release, and no human sign-off is a condition for a citation. These keys record a
+review where one took place, and the compiler takes the weakest value across the layers:
 
 - `reviewed`: the date a named reviewer approved the layer. A pack with no date is a draft.
 - `reviewer`: who approved it. A review with no reviewer is refused.
-- `source-checked`: the date the instruments were last compared with their published texts. A pack
-  that cites must have checked its sources on or before its review.
-- `review-due`: when the next review is owed. Once it passes, the pack still applies and its
-  citations are withheld.
+- `source-checked`: the date the instruments were last compared with their published texts. The
+  refresh writes it. A reviewed pack that cites must have checked its sources on or before its
+  review.
+- `review-due`: when the next review of a reviewed pack is owed. Once it passes, the pack still
+  applies and its citations are withheld. A draft has no review to fall due.
 
-`citations` link an engine finding to the provision a rep is shown. `Validate` in
-`backend/pkg/extension/messaging/provenance.go` refuses a citation on a draft, and `citationFor` in
-`backend/internal/modules/consent/citation.go` decides when a reviewed one is shown.
+`citationFor` in `backend/internal/modules/consent/citation.go` decides when a citation is shown. It
+withholds one whose instrument is not yet in force or has expired, and every citation of a reviewed
+pack whose `review-due` has passed.
+
+## Sources and the refresh
+
+`make policy-refresh` compares every pack with its official sources. It is a step of each release;
+[Cut a release](cut-a-release.md#refresh-the-policy-packs) says when to run it and how to read its
+report. The command reads and writes these keys of an instrument:
+
+- `source-url`: the official page of the law, which a rep is linked to.
+- `text-url`: where the refresh reads the text instead, over https. State it when the official page
+  loads its text with a script, and a PDF or an XML form of the same law exists.
+- `text-digest`: the SHA-256 of the text the refresh last read, in lower-case hex.
+- `text-fetched`: the day of that read.
+- `checked-by-hand`: the day someone read a source that no plain HTTP request can read. The refresh
+  does not fetch such an instrument, and it states no `text-url` and no `text-digest`.
+
+```yaml
+instruments:
+  - name: "Gesetz gegen den unlauteren Wettbewerb (UWG)"
+    provision: "§ 7"
+    source-url: https://www.gesetze-im-internet.de/uwg_2004/__7.html
+    text-digest: 5f2b8a0c9d3e4f6a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c
+    text-fetched: 2026-11-21
+```
+
+You write `text-url` and `checked-by-hand`. The refresh writes `text-digest`, `text-fetched` and the
+`source-checked` of the layer, so do not type those. The digest above is an example and not the
+digest of that page.
+
+How the refresh reads a source:
+
+- It sends one GET request and runs no script. `httpSource` in
+  [`backend/tools/policy-refresh/main.go`](../../backend/tools/policy-refresh/main.go) is that
+  request.
+- From a page it drops scripts, styles and tags, and joins the white space. It then takes the
+  digest of that text. So two reads of one page give one digest while the law stays the same.
+- A page with fewer than 500 characters of text holds no law, and the report says `not read`.
+- Another kind of answer, such as a PDF, is digested as its bytes.
+
+`RefreshSources` in
+[`backend/internal/platform/messagingpolicy/refresh.go`](../../backend/internal/platform/messagingpolicy/refresh.go)
+does this. It sets `source-checked` on a layer when it read every instrument of the layer, or the
+instrument is checked by hand. The date is the day of the run, or the oldest `checked-by-hand` of
+the layer when that is earlier. A layer with an instrument it could not read keeps its old date.
+
+The refresh changes those lines and leaves every other line of the file as it is. It needs the
+instruments as a block list, with one `- name:` item for each instrument, as above.
+
+A refresh changes the text of a layer and not its rules, so it needs no new `version`. The digest
+of the pack does change, which is why the command builds `messagingrules_gen.go` again. A refresh of
+a reviewed pack moves `source-checked` past `reviewed`. The compiler refuses that until a reviewer
+sets `reviewed` again.
+
+The compiler accepts an instrument with none of these keys, and the shipped packs had none when the
+keys were added. `Validate` in `backend/pkg/extension/messaging/provenance.go` checks the keys an
+instrument does state: a digest has its day, and one instrument states a digest or a check by hand,
+never both.
 
 ## Roll a change back
 

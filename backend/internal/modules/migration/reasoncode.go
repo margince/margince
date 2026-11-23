@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -54,9 +55,9 @@ func (r Reason) In(lang textlang.Lang) string {
 	}
 	template, ok := entry.text[lang]
 	if !ok {
-		template = entry.text[textlang.English]
+		template, lang = entry.text[textlang.English], textlang.English
 	}
-	return renderTemplate(template, r.Params)
+	return renderTemplate(template, r.Params, lang)
 }
 
 // WithoutTheLink is the reason of a link cell the run dropped rather than
@@ -94,11 +95,12 @@ func ReasonTemplate(code ReasonCode, lang textlang.Lang) string {
 }
 
 // renderTemplate fills {name} with the value as it is. It fills {name:q} with
-// the value in Go quotes, which is how English sentences always quoted a cell.
-func renderTemplate(template string, params Params) string {
+// the value in the language's own quotation marks, escaping nothing.
+func renderTemplate(template string, params Params, lang textlang.Lang) string {
+	said := langcopy.For(string(lang))
 	args := make([]string, 0, 4*len(params))
 	for name, value := range params {
-		args = append(args, "{"+name+"}", value, "{"+name+":q}", strconv.Quote(value))
+		args = append(args, "{"+name+"}", value, "{"+name+":q}", said.Quote(value))
 	}
 	return strings.NewReplacer(args...).Replace(template)
 }

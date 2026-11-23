@@ -57,7 +57,6 @@ work_dir: .tmp/aitask
 
 activities:
   follow_up_after_days: 2
-  inline_send_review: false
   private_mail_requests: true
   share_private_quote_requests: true
 
@@ -120,6 +119,8 @@ consent:
   controller_particulars: null
 
 contacts:
+  dormancy_days: [30,60,90]
+  dormancy_follow_up_enabled: true
   first_response_enabled: false
   first_response_target_minutes: 240
   shared_merge_reviews: false
@@ -217,6 +218,8 @@ mcp:
   client_registration:
     dynamic: true
     metadata_document: true
+    unused_limit: 1000
+    unused_retention: 24h0m0s
   connector_enabled: false
 
 operations:

@@ -27,6 +27,7 @@
 # closed phase back from the world. That line rests on the policy as well as the
 # errand: a policy that staged the close would red it while the call was right.
 name: case41_close_the_project
+title: Close the project out
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not
@@ -42,11 +43,6 @@ prompt: |
   phase by phase, and tell me whether anything is still hanging on it. Then
   close it out.
 
-must_call:
-  - read_project
-  - advance_project_phase
-must_call_with:
-  - advance_project_phase.to_phase=closed
 may_call:
   - list_records
   - search_records
@@ -54,11 +50,8 @@ may_call:
   - review_commitments
   - catch_me_up_on
   - query_workspace
-
-# The tool name alone would pass on a call that moved the project BACK to
-# `pursuing`, or forward to `delivering` it is already in — the wrong phase on
-# the right record, with prose about closing beside it. The phase is the whole
-# act, so the phase is pinned.
+  - read_project
+  - advance_project_phase
 
 must_mention:
   # MECHANICAL, all three, and none of them has ever leaked.

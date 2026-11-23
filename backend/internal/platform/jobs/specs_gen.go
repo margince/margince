@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "da1766763fad21c207e711c5b6aa7e653b60538d2922efead5c7ab03561f7e1d"
+const JobContractHash = "401df0b031076f276af35df743ece8f223f2b6826efd9ce4c200fe5ab94b5a49"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -239,17 +239,6 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 20 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 10 * time.Minute},
-	},
-	"capture_digest": {
-		Kind:         "capture_digest",
-		GoType:       "CaptureDigestArgs",
-		Role:         Worker,
-		Fleet:        true,
-		Queue:        "default",
-		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
-		OptsOwner:    OptsCaller,
-		Cadence:      Cadence{Fixed: 24 * time.Hour},
-		Registration: Registration{When: []string{"GmailRegistry"}},
 	},
 	"capture_enrich": {
 		Kind:         "capture_enrich",
@@ -825,6 +814,16 @@ var specs = map[string]Spec{
 		Fault:     FaultPolicy{NilAfterLogging: "ONE branch, and it is a mis-wired ROLE rather than a failed send: a worker composed with no operator relay says so at Warn, claims nothing, and returns nil. No durable retry stands behind that, and none is wanted — each role reads its own config, so returning a failure would have an installation that deliberately runs no operator mail discard a row per decision, and would leave a relay-less replica bouncing rows rather than sending them. What makes the green row honest is that the thing the product promises still happened: the notice is on the recipient's Worklist, which is where every notice is, and this message is only a nudge toward it. The log is how an operator tells one unconfigured worker from a quiet week.\nIt waives THAT branch and no other. The failures above the claim are returned and River retries them. A relay that never took the message (mailer.NotTaken) releases the claims and is returned too, so the next rung sends it; no relay holds a copy, so the retry cannot send a second one. Any other relay failure, and the last rung, writes its cause into notice.email_error beside a claim that is never released, and cancels the job so job health counts it as dead. SMTP returns no receipt, so a message the relay may have taken is never sent again."},
 		Args:      []ArgField{{Name: "NoticeID"}, {Name: "Workspace"}},
 	},
+	"oauth_client_unused_sweep": {
+		Kind:        "oauth_client_unused_sweep",
+		GoType:      "OAuthClientUnusedSweepArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 1 * time.Hour},
+	},
 	"owed_verdict": {
 		Kind:         "owed_verdict",
 		GoType:       "OwedVerdictArgs",
@@ -987,7 +986,17 @@ var specs = map[string]Spec{
 		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"StageEvidenceBrain"}},
-		Args:         []ArgField{{Name: "ActivityID"}, {Name: "DealID"}, {Name: "Workspace"}},
+		Args:         []ArgField{{Name: "ActivityID"}, {Name: "DealID"}, {Name: "RereadFor"}, {Name: "Workspace"}},
+	},
+	"stage_evidence_reread": {
+		Kind:         "stage_evidence_reread",
+		GoType:       "StageEvidenceRereadArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"StageEvidenceBrain"}, AbsentRegistersAnyway: true},
+		Args:         []ArgField{{Name: "After"}, {Name: "Domain", Scalar: true, Reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}, {Name: "Removal"}, {Name: "Workspace"}},
 	},
 	"stored_object_reap": {
 		Kind:         "stored_object_reap",

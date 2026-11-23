@@ -3,10 +3,8 @@
 
 package compose
 
-// The pre-flight's branches, one table. Each row decides whether a sender is
-// handed an actionable 422 or a 202 for a message that can only park — and which
-// TABLE was consulted to decide it, which is the half a mail-only suite cannot
-// see going wrong.
+// The pre-flight's branches, one table. Each row decides whether a sender gets an
+// actionable 422 or a 202 for a message that can only park, and which table said so.
 
 import (
 	"context"
@@ -26,21 +24,21 @@ import (
 
 type stubGrants struct {
 	granted []string
-	// grantedFor answers per provider, for the cases about choosing between two
-	// mailboxes. nil falls back to `granted` for all of them.
+	// grantedFor answers per provider; nil falls back to `granted` for all.
 	grantedFor map[string][]string
 	err        error
 	calls      int
-	// channelBound is what the WORKSPACE lookup answers, and channelCalls counts
-	// it separately: the two lookups read different tables, and a pre-flight
-	// that asked the wrong one is exactly the defect that refused every channel
-	// reply while every mail test still passed.
+	// channelBound answers the WORKSPACE lookup and channelCalls counts it apart:
+	// asking the wrong table is what once refused every channel reply.
 	channelBound bool
 	channelErr   error
 	channelCalls int
 }
 
 func (s *stubGrants) ChooseSendingMailbox(ctx context.Context, user ids.UserID, _ ids.UUID, _ ids.ActivityID, providers []string, canSend func(capture.SendingMailbox) (bool, error)) (capture.SendingMailbox, error) {
+	if user.IsZero() || len(providers) == 0 {
+		return capture.SendingMailbox{}, errors.New("a mailbox lookup must name the sender and the mail providers")
+	}
 	for _, provider := range providers {
 		scopes, err := s.GrantedScopesFor(ctx, user, provider)
 		if can, canErr := canSend(capture.SendingMailbox{Provider: provider, ProviderScopes: scopes}); err != nil || canErr != nil || can {
@@ -265,9 +263,8 @@ func TestSendCapableAsksTheUnitRatherThanTheWorkspaceBotTable(t *testing.T) {
 	}
 }
 
-// Which mailbox a send goes out through — the question this pre-flight was
-// extended to answer, and the one a hard-coded provider got wrong for every rep
-// whose only mailbox is the other vendor.
+// Which mailbox a send goes out through, a question a hard-coded provider got
+// wrong for every rep whose only mailbox is the other vendor.
 func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testing.T) {
 	human := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
@@ -298,8 +295,7 @@ func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testin
 		"only the first vendor":  {sendable(first), first},
 		// Holding both is not something any surface asks for, and the answer is
 		// the census's own order — stable beats arbitrary-looking.
-		"both":    {sendable(mail...), first},
-		"neither": {map[string][]string{}, ""},
+		"both": {sendable(mail...), first},
 	} {
 		t.Run(name, func(t *testing.T) {
 			authority := mailboxAuthority{

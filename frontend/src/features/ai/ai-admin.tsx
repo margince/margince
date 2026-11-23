@@ -21,9 +21,10 @@ import { Meter } from "../../design-system/readings";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { lockFor } from "../../format/settinglocks";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { wholeNumberFault } from "../../lib/wholenumber";
 import { AiFeatureTable } from "./ai-feature-table";
 import { formatTokens } from "./tokens";
 import "./ai-admin.css";
@@ -155,6 +156,7 @@ function BandNote({ band }: Readonly<{ band: Budget["band"] }>) {
 
 function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const number = (value: number) => formatNumber(value, locale);
   const tokens = (value: number) => formatTokens(value, locale);
@@ -162,7 +164,7 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
   const basis =
     budget.source === "company_override"
       ? t("aiAdmin.fixed")
-      : t("aiAdmin.formula", {
+      : plural("aiAdmin.formula", budget.config.tokens_per_full_user, {
           users: number(budget.eligible_full_users),
           tokens: tokens(budget.config.tokens_per_full_user),
         });
@@ -241,9 +243,8 @@ function companyText(config: Budget["config"]): string {
     : String(config.company_monthly_tokens);
 }
 
-function validTokenAllowance(value: string) {
-  return /^\d+$/.test(value) && Number(value) > 0 && Number(value) <= 1e12;
-}
+// The server's bounds on either allowance, in whole tokens.
+const ALLOWANCE_BOUNDS = { min: 1, max: 1e12 } as const;
 
 function BudgetEditor({
   budget,
@@ -251,6 +252,7 @@ function BudgetEditor({
   onSaved,
 }: Readonly<{ budget: Budget; onClose: () => void; onSaved: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const client = useQueryClient();
   const [perUser, setPerUser] = useState(() =>
     String(budget.config.tokens_per_full_user),
@@ -286,13 +288,27 @@ function BudgetEditor({
       ]);
     },
   });
-  const valid =
-    validTokenAllowance(perUser) &&
-    (company === "" || validTokenAllowance(company));
+  const perUserFault = wholeNumberFault(
+    perUser,
+    locale,
+    t("aiAdmin.perUser"),
+    ALLOWANCE_BOUNDS,
+  );
+  const companyFault =
+    company.trim() === ""
+      ? undefined
+      : wholeNumberFault(
+          company,
+          locale,
+          t("aiAdmin.companyName"),
+          ALLOWANCE_BOUNDS,
+        );
+  const valid = perUserFault === undefined && companyFault === undefined;
   const change: Change = {
     config: {
-      tokens_per_full_user: Number(perUser),
-      company_monthly_tokens: company === "" ? null : Number(company),
+      tokens_per_full_user: Number(perUser.trim()),
+      company_monthly_tokens:
+        company.trim() === "" ? null : Number(company.trim()),
     },
     expected_revision: revision,
   };
@@ -310,7 +326,11 @@ function BudgetEditor({
   return (
     <>
       <div className="form-row">
-        <Field label={t("aiAdmin.perUser")} hint={t("aiAdmin.range")}>
+        <Field
+          label={t("aiAdmin.perUser")}
+          hint={t("aiAdmin.range")}
+          error={perUserFault}
+        >
           {(control) => (
             <TextInput
               {...control}
@@ -325,7 +345,11 @@ function BudgetEditor({
             />
           )}
         </Field>
-        <Field label={t("aiAdmin.company")} hint={t("aiAdmin.overrideHint")}>
+        <Field
+          label={t("aiAdmin.company")}
+          hint={t("aiAdmin.overrideHint")}
+          error={companyFault}
+        >
           {(control) => (
             <TextInput
               {...control}
@@ -358,7 +382,8 @@ function BudgetEditor({
       {preview.data && <BudgetPreview preview={preview.data} />}
       <div className="card-actions">
         <Button
-          disabled={!valid || revision !== budget.revision}
+          disabled={revision !== budget.revision}
+          reason={valid ? undefined : t("aiAdmin.fixToPreview")}
           pending={preview.isPending}
           onClick={() => preview.mutate(change)}
         >

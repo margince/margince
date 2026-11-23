@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/dealcoverage"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
@@ -167,6 +168,7 @@ type reportSpec struct {
 	measures     map[string]string
 	// sumCoverage finalizes nullable sums after grouping, keeping empty rows from hiding unknown money.
 	sumCoverage map[string]string
+	partialSums bool // a covered sum adds the deals that convert
 	filters     map[string]string
 	// rowKeys are the dimensions that each name one row. A listing report
 	// groups by them to list its records. A typed question that does so asks
@@ -205,6 +207,9 @@ type reportSpec struct {
 	// silently included those deals under a null key would still disclose that
 	// somebody's partner brought them.
 	referenceScopes map[string]string
+	// drillColumns are shown on the drill-through's rows and nowhere else: never
+	// grouped by. A reference among them is blanked like a dimension's.
+	drillColumns map[string]string
 	// customFields are the reportable custom fields this spec was extended
 	// with in one installation, keyed by their SQL expression. Empty on every
 	// prebuilt entry; analyticsCatalog fills it per request.
@@ -371,11 +376,14 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 		return reportOutcome{}, err
 	}
 
-	fetched, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, selects, columns)
+	covered := partialSumAliases(spec, aggregates)
+	fetchSelects, fetchColumns := dealcoverage.Attach(covered, pipelineBaseValueExpr, spec.dimensions[fieldCurrency], selects, columns)
+	fetched, err := e.fetchRows(ctx, report, grantedSpec(ctx, spec), req, groupBy, fetchSelects, fetchColumns)
 	if err != nil {
 		return reportOutcome{}, err
 	}
 	rows, frame := fetched.rows, fetched.frame
+	dealcoverage.Fold(rows, covered)
 
 	return reportOutcome{
 		ExcludedByPermission: fetched.excluded,

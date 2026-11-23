@@ -59,6 +59,7 @@ function held(
 
 // One stakeholder edge on the deal, as GET /relationships?deal_id answers it.
 const EDGE = {
+  can_archive: true,
   id: "rel-1",
   kind: "deal_stakeholder",
   deal_id: DEAL,
@@ -79,6 +80,7 @@ function stubFetch(
   ],
   team: readonly RecordAssignment[] = [],
   deleted: string[] = [],
+  edge: object = EDGE,
 ) {
   vi.stubGlobal(
     "fetch",
@@ -88,7 +90,7 @@ function stubFetch(
         return new Response(null, { status: 204 });
       }
       if (request.url.includes("/relationships")) {
-        return json({ data: [EDGE], page: { next_cursor: null } });
+        return json({ data: [edge], page: { next_cursor: null } });
       }
       if (request.url.endsWith("/v1/me")) {
         return json(meFixture({ allow: { relationship: grants } }));
@@ -106,6 +108,7 @@ function stubFetch(
 
 const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   deal_id: DEAL,
+  max_engaged_seats: 1,
   stakeholders: [
     {
       contact_id: "c-1",
@@ -128,7 +131,11 @@ const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
 
 function draw(
   view: DealCoverage | undefined,
-  state: Partial<{ withheld: boolean; pending: boolean }> = {},
+  state: Partial<{
+    withheld: boolean;
+    pending: boolean;
+    canWrite: boolean;
+  }> = {},
 ) {
   render(
     <QueryClientProvider
@@ -138,7 +145,7 @@ function draw(
     >
       <LocaleProvider initial="en">
         <DealCommitteeCard
-          canWrite
+          canWrite={state.canWrite ?? true}
           dealId={DEAL}
           ownerId={OWNER}
           coverage={view}
@@ -352,10 +359,49 @@ describe("the deal's committee card", () => {
     );
   });
 
-  // A reader who may neither change nor remove an edge is offered no fold.
-  it("offers no change for a reader without the grants", async () => {
-    stubFetch(["read", "create"]);
+  // The default member holds no relationship delete grant. Writing the deal is
+  // what lets that seat take a stakeholder off, as the server admits.
+  it("offers Remove to a deal writer who holds no delete grant", async () => {
+    const deleted: string[] = [];
+    stubFetch(["read", "create", "update"], [], deleted);
+    const user = userEvent.setup();
     draw(coverage());
+    await user.click(
+      await screen.findByText(translate("en", "deal.committee.change")),
+    );
+    await user.click(await screen.findByTestId("remove-relationship"));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: translate("en", "rel.remove"),
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(deleted).toEqual(["/v1/relationships/rel-1"]),
+    );
+  });
+
+  // The list says per edge whether the caller may archive it. A stakeholder on
+  // a deal the seat cannot write gets no Remove, whatever the delete grant.
+  it("offers no Remove on an edge the server says the caller may not archive", async () => {
+    stubFetch(["read", "create", "update", "delete"], [], [], {
+      ...EDGE,
+      can_archive: false,
+    });
+    const user = userEvent.setup();
+    draw(coverage());
+    await user.click(
+      await screen.findByText(translate("en", "deal.committee.change")),
+    );
+    await screen.findByRole("button", {
+      name: translate("en", "rel.editStakeholder"),
+    });
+    expect(screen.queryByTestId("remove-relationship")).toBeNull();
+  });
+
+  // A reader who may not write the deal is offered no fold.
+  it("offers no change for a reader who cannot write the deal", async () => {
+    stubFetch(["read", "create", "update", "delete"]);
+    draw(coverage(), { canWrite: false });
     await screen.findByText("Mai Trần");
     expect(
       screen.queryByText(translate("en", "deal.committee.change")),

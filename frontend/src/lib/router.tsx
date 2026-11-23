@@ -173,6 +173,7 @@ export function navigateReplacing(route: Route, dials?: UrlParams): void {
     "",
     dials ? hashWithParams(routeHash(route), dials) : routeHash(route),
   );
+  movedFromOutside = false;
   announce();
 }
 
@@ -312,10 +313,20 @@ function announce(): void {
   }
 }
 
+// Whether the last move came from outside the app: a link, typing or history.
+// A move the app writes itself clears it.
+let movedFromOutside = true;
+
+/** Whether the address last moved by a link, typing or history. */
+export function addressMovedFromOutside(): boolean {
+  return movedFromOutside;
+}
+
 function addressChanged(): void {
   if (liveEntry() === lastEntry) {
     return;
   }
+  movedFromOutside = true;
   // A second link pasted into an open tab is a hash change and nothing else:
   // the screen does not remount for one, and whatever renders next is decided
   // above the route. So the credential comes out of the new address before
@@ -369,6 +380,7 @@ export function watchAddress(onChange: () => void): () => void {
  * already announced and does nothing.
  */
 export function announceAddressChanged(): void {
+  movedFromOutside = false;
   announce();
 }
 

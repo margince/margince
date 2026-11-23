@@ -55,7 +55,12 @@ func seedWorklistPromise(t *testing.T, e *integration.Env, contact ids.UUID, bod
 // logged for it.
 func seedClaim(t *testing.T, e *integration.Env, contact ids.UUID, body, kind string) crmcontracts.BulkItem {
 	t.Helper()
-	subject := "Questions about the offer"
+	return seedClaimAbout(t, e, contact, "Questions about the offer", body, kind)
+}
+
+// seedClaimAbout is seedClaim from a message with the given subject.
+func seedClaimAbout(t *testing.T, e *integration.Env, contact ids.UUID, subject, body, kind string) crmcontracts.BulkItem {
+	t.Helper()
 	message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},

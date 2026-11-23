@@ -19,7 +19,7 @@ module code is reached by:
 
 - the REST surface (`internal/compose/server.go`),
 - the MCP tool surface (`/mcp` on the api),
-- agent runs (the runner of Surface B, acting under a passport; see [agent-surface.md](agent-surface.md)),
+- agent runs (the runner of the night helpers, acting under a passport; see [agent-surface.md](agent-surface.md)),
 - workers (retention, the job that checks data still agrees, the close date sweep, the readers of the
   outbox relay),
 - compose flows (briefs, reports, exports, enrich).
@@ -266,6 +266,8 @@ below the transport, so REST and MCP act the same:
   - `enrich` is the standing case. The model names the URL the server fetches. So a prompt that changes
     what the model says reaches an address that nobody with the credential picked. That is a question about
     data leaving, not about rights.
+  - Filing activities under a project waits too, even for a user's own agent. It sets a retention floor that
+    only a member can undo, so a call naming up to 500 activities does not set it with nobody looking.
   - An installation can also set a verb back to confirm first, per record type, by declaring
     `tier: confirmation_required` on the operation. Every verb still has the staging code that sends
     such a call to a human's inbox, so it does not just end as a refusal.

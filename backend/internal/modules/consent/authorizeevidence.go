@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -51,7 +52,7 @@ type subjectRef struct {
 	ChannelProvider string
 	ChannelUserID   string
 	// Country is the recipient's country as the decision resolved it once,
-	// before deciding (recipientCountries).
+	// before deciding (resolveRecipientCountries).
 	Country RecipientCountry
 }
 
@@ -395,16 +396,9 @@ func liveDealInLinks(ctx context.Context, tx pgx.Tx, links []ids.UUID, subject s
 }
 
 // liveStakeholderSQL is "deal d is open and the contact bound to $2 is a
-// current stakeholder on it, through relationship r".
-//
-// It reads both end markers on the edge, and they are different facts.
-// ended_at is a business date somebody types. archived_at is how the edge is
-// removed: every delete and every cascade (contact archive, merge, deal archive)
-// writes archived_at and leaves ended_at alone. With only ended_at, a
-// stakeholder removed from the deal would keep supporting mail about it.
-const liveStakeholderSQL = `d.status = 'open'
+// current stakeholder on it, through relationship r". An archived edge and an
+// edge whose End day has arrived both stop supporting mail about the deal.
+var liveStakeholderSQL = `d.status = 'open'
 			   AND d.archived_at IS NULL
-			   AND r.kind = 'deal_stakeholder'
-			   AND r.contact_id = $2::uuid
-			   AND r.ended_at IS NULL
-			   AND r.archived_at IS NULL`
+			   AND ` + dealseat.CurrentSQL("r") + `
+			   AND r.contact_id = $2::uuid`

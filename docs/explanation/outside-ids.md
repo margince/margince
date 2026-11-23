@@ -12,7 +12,7 @@ A separate table also allows several ids for one record in one system. The pair 
 
 ## Why the fields on a deal are not enough
 
-`source` and `acquisition_source` name a channel. They say how a deal came in, not which record it is in another system. Many deals share one channel, so a lookup by either returns many deals.
+`source` and `acquisition_source` name a channel. They say how a deal came in, not which record it is in another system. Many deals share one channel, so a lookup by either returns many deals. A deal's `source` holds only a value from a short fixed list, so it has no room for an id.
 
 ## What it costs
 

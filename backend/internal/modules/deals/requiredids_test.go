@@ -40,6 +40,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr/faulttest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // requiredIDFields reports the wire names of every non-pointer UUID field on a
@@ -79,6 +80,9 @@ func completeBody(t *testing.T, shape reflect.Type, omit string) map[string]any 
 			body[name] = ids.NewV7().String()
 		case reflect.TypeFor[string]():
 			body[name] = "probe"
+			if name == "source" {
+				body[name] = provenance.RecordSourceManual
+			}
 		case reflect.TypeFor[int]():
 			body[name] = 1
 		default:

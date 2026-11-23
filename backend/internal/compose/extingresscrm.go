@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -167,8 +168,7 @@ func (l crmLanding) company(ctx context.Context, key string, f extension.Company
 		}
 		skipped = left
 		in.AdoptSource = adopt
-		_, err = l.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
-		return err
+		return l.contacts.ApplyCompanyUpdate(ctx, ids.From[ids.CompanyKind](id), in)
 	}
 	id, err := upsertByOutsideID(find, create, update)
 	if err == nil {
@@ -304,7 +304,7 @@ func (l crmLanding) deal(ctx context.Context, key string, f extension.DealFields
 		made, err := l.deals.CreateDeal(ctx, deals.CreateDealInput{
 			Name: f.Name, AmountMinor: f.AmountMinor, Currency: nonEmpty(f.Currency), CustomFields: f.CustomFields, CompanyID: company,
 			PipelineID: ids.From[ids.PipelineKind](pipeline), StageID: ids.From[ids.StageKind](stage),
-			ReferencesFromRequest: true, Source: l.system, SourceSystem: &l.system, SourceID: &key,
+			ReferencesFromRequest: true, Source: provenance.RecordSourceImport, SourceSystem: &l.system, SourceID: &key,
 		})
 		return ids.UUID(made.Id), err
 	}
@@ -367,7 +367,7 @@ func (l crmLanding) moveDeal(ctx context.Context, id, stage ids.UUID, f extensio
 	}
 	in.CustomFields = custom
 	skipped = append(skipped, heldBack...)
-	if _, err := l.deals.UpdateDeal(ctx, dealID, in); err != nil {
+	if err := l.deals.ApplyDealUpdate(ctx, dealID, in); err != nil {
 		return nil, err
 	}
 	return skipped, l.advanceDeal(ctx, dealID, current, stage, f)

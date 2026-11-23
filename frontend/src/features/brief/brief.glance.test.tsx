@@ -291,3 +291,32 @@ describe("BriefGlance — the chips in the morning's sentence", () => {
     expect(screen.queryByText(/^Briefed by Margince at /)).toBeNull();
   });
 });
+
+describe("BriefGlance — a kept day served after the reader's own write", () => {
+  function glance(servedStale: boolean | undefined) {
+    return rtlRender(
+      <LocaleProvider initial="en">
+        <BriefGlance
+          view="morning"
+          firstName="Ada"
+          now={new Date(2026, 6, 5, 9, 30, 0)}
+          day={{ ...readingsDay({}), served_stale: servedStale }}
+          week={undefined}
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  it("says it is updating while the server reads the day again", () => {
+    glance(true);
+    expect(screen.getByText("Updating…")).toBeTruthy();
+  });
+
+  it("says nothing for a current day", () => {
+    glance(undefined);
+    expect(screen.queryByText("Updating…")).toBeNull();
+    cleanup();
+    glance(false);
+    expect(screen.queryByText("Updating…")).toBeNull();
+  });
+});

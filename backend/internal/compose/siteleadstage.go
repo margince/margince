@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // stageSiteLeads records the published contacts of ONE act as thin "site_lead"
@@ -172,7 +173,7 @@ func (w *siteDeepReadWorker) probeCtx(ctx context.Context) (context.Context, err
 	if actor.UserID.IsZero() {
 		return ctx, nil
 	}
-	rbac, err := w.authority.EffectiveRBAC(ctx, workspaceID, actor.UserID)
+	member, err := authz.MemberPrincipal(ctx, w.authority, workspaceID, actor.UserID)
 	if err != nil {
 		// A requester who has lost their grants since starting the read cannot
 		// lend any scope, so nothing is suppressed on their behalf.
@@ -181,14 +182,9 @@ func (w *siteDeepReadWorker) probeCtx(ctx context.Context) (context.Context, err
 		}
 		return nil, fmt.Errorf("resolving the requester's scope for the already-on-file probe: %w", err)
 	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          actor.ID,
-		UserID:      actor.UserID,
-		OnBehalfOf:  actor.UserID,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), nil
+	member.ID = actor.ID
+	member.OnBehalfOf = actor.UserID
+	return principal.WithActor(ctx, member), nil
 }
 
 // siteLeadStageInput builds the staging for one published contact, INCLUDING

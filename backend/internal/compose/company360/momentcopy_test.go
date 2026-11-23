@@ -71,12 +71,30 @@ func TestAccountMomentLanguageKeepsEvidenceAndActions(t *testing.T) {
 	}
 }
 
-func TestAccountDeadlineOneDayUsesSingularCopy(t *testing.T) {
-	for _, tc := range []struct{ lang, want string }{
-		{"en", "Due in one day."}, {"de", "In einem Tag fällig."}, {"vi", "Đến hạn sau một ngày."},
+// 23:00 and 01:00 the next morning in Bangkok share a UTC date, so the card
+// says "tomorrow" only if it counts in the zone it was given.
+func TestAccountDeadlineCountsCalendarDaysInTheInstallationZone(t *testing.T) {
+	bangkok := time.FixedZone("UTC+7", 7*60*60)
+	lateEvening := time.Date(2026, 9, 2, 23, 0, 0, 0, bangkok)
+	tonight := time.Date(2026, 9, 2, 23, 30, 0, 0, bangkok)
+	tomorrowMorning := time.Date(2026, 9, 3, 1, 0, 0, 0, bangkok)
+	earlyMorning := time.Date(2026, 9, 2, 1, 0, 0, 0, bangkok)
+	yesterdayEvening := time.Date(2026, 9, 1, 23, 0, 0, 0, bangkok)
+	for _, tc := range []struct{ lang, today, tomorrow, late string }{
+		{"en", "Due today.", "Due tomorrow.", "Due one day ago and still open."},
+		{"de", "Heute fällig.", "Morgen fällig.", "Seit einem Tag fällig und noch offen."},
+		{"vi", "Đến hạn hôm nay.", "Đến hạn ngày mai.", "Quá hạn một ngày và vẫn đang mở."},
 	} {
-		if got := momentCopyFor(tc.lang).owedWhyNow(momentNow, due(1)); got != tc.want {
-			t.Errorf("%s: %q", tc.lang, got)
+		said := momentCopyFor(tc.lang)
+		said.zone = bangkok
+		if got := said.owedWhyNow(lateEvening, &tonight); got != tc.today {
+			t.Errorf("%s, due 23:30 tonight: %q, want %q", tc.lang, got, tc.today)
+		}
+		if got := said.owedWhyNow(lateEvening, &tomorrowMorning); got != tc.tomorrow {
+			t.Errorf("%s, due 01:00 tomorrow: %q, want %q", tc.lang, got, tc.tomorrow)
+		}
+		if got := said.owedWhyNow(earlyMorning, &yesterdayEvening); got != tc.late {
+			t.Errorf("%s, due 23:00 yesterday, read at 01:00: %q, want %q", tc.lang, got, tc.late)
 		}
 	}
 }

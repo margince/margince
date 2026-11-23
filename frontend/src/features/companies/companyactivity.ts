@@ -2,23 +2,45 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { omitted } from "../../design-system/surfacestate";
-import { activityDay, activityDaysAway } from "../../format/activitywhen";
+import type { ReadingTone } from "../../design-system/readingtone";
+import { formatNumber } from "../../format/format";
 import { formatDayMonthNearYear } from "../../format/format.dates";
 import type { Locale, Translator } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { labelFor, valueFor } from "../../lib/labelfor";
 import type { CompanyVerdict } from "./companystanding";
 
 type Company360 = components["schemas"]["Company360"];
+type DormancyRung = components["schemas"]["DormancyRung"];
 
-// An account last spoken to inside a month counts as active.
-const ACTIVE_DAYS = 30;
-// Past this, an account with nothing open is dormant rather than going quiet.
-const DORMANT_DAYS = 180;
+// The rungs, warmest first, in the order a filter offers them.
+export const DORMANCY_RUNGS: readonly DormancyRung[] = [
+  "active",
+  "cooling",
+  "dormant",
+  "stale",
+];
+
+// The word for each rung of the server's dormancy ladder.
+export const DORMANCY_LABELS: Record<DormancyRung, MessageKey> = {
+  active: "co.verdict.active",
+  cooling: "co.verdict.cooling",
+  dormant: "co.verdict.dormant",
+  stale: "co.verdict.stale",
+};
+
+const DORMANCY_TONES: Record<DormancyRung, ReadingTone> = {
+  active: "success",
+  cooling: "warning",
+  dormant: "warning",
+  stale: "neutral",
+};
 
 /**
- * The account's call when nobody has rated it: how recently anyone here was
- * spoken to, and whether anything is open. Undefined when the page may not
- * read the last exchange, because no call is better than a guess.
+ * The account's call when nobody has rated it: the rung of the dormancy ladder
+ * the server read from the account's last activity. The sentence names the
+ * silent days and the ladder's own days, so a reader can check the call.
+ * Undefined when the page carries no reading.
  */
 export function companyActivityVerdict(
   view: Company360,
@@ -28,56 +50,37 @@ export function companyActivityVerdict(
     zone,
   }: Readonly<{ t: Translator; locale: Locale; zone: string }>,
 ): CompanyVerdict | undefined {
-  if (omitted(view, "last_touch")) {
+  const reading = view.state_strip?.dormancy;
+  if (!reading) {
     return undefined;
   }
   const asOf = new Date(view.as_of);
-  const day = (at: string, l: Locale, z: string) =>
-    formatDayMonthNearYear(at, l, z, asOf);
-  const last = view.last_contact;
-  if (!last) {
+  const day = (at: string) => formatDayMonthNearYear(at, locale, zone, asOf);
+  const word = labelFor(DORMANCY_LABELS, reading.rung);
+  const tone = valueFor(DORMANCY_TONES, reading.rung, "neutral");
+  if (reading.no_activity || !reading.last_activity_at) {
     return {
-      word: "co.verdict.noContact",
-      sentence: t("co.verdict.addedOn", {
-        date: day(view.company.created_at, locale, zone),
+      word,
+      sentence: t("co.verdict.noActivity", {
+        date: day(view.company.created_at),
       }),
-      tone: "neutral",
+      tone,
     };
   }
-  const date = activityDay(last.at, last.occurred_precision, locale, zone, day);
-  const days = -activityDaysAway(
-    last.at,
-    last.occurred_precision,
-    Date.parse(view.as_of),
-    zone,
-    zone,
-  );
-  if (days <= ACTIVE_DAYS) {
-    return {
-      word: "co.verdict.active",
-      sentence: t("co.verdict.lastExchange", { date }),
-      tone: "success",
-    };
+  const date = day(reading.last_activity_at);
+  if (reading.rung === "active") {
+    return { word, sentence: t("co.verdict.lastExchange", { date }), tone };
   }
-  if (days > DORMANT_DAYS && nothingOpen(view)) {
-    return {
-      word: "co.verdict.dormant",
-      sentence: t("co.verdict.dormantSince", { date }),
-      tone: "neutral",
-    };
-  }
+  const [cooling = 0, dormant = 0, stale = 0] = reading.ladder_days;
   return {
-    word: "co.verdict.goingQuiet",
-    sentence: t("co.verdict.quietSince", { date }),
-    tone: "warning",
+    word,
+    sentence: t("co.verdict.silentFor", {
+      days: formatNumber(reading.silent_days, locale),
+      date,
+      cooling: formatNumber(cooling, locale),
+      dormant: formatNumber(dormant, locale),
+      stale: formatNumber(stale, locale),
+    }),
+    tone,
   };
-}
-
-// A cut deal list may hide an open deal, so only a whole one can say none is.
-function nothingOpen(view: Company360): boolean {
-  const deals = view.deals;
-  if (omitted(view, "deals") || !deals || deals.page.has_more) {
-    return false;
-  }
-  return deals.data.every((deal) => deal.status !== "open");
 }

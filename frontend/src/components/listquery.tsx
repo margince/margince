@@ -11,6 +11,7 @@ import type { ListChip, ListView } from "../design-system/listtable";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useHealthScope } from "../lib/healthscope";
+import { problemFieldErrorsOf } from "../lib/problem";
 import { useTagVocabulary } from "../lib/tags.queries";
 import { currentParams, useUrlParams } from "../lib/urlstate";
 import "./listquery.css";
@@ -134,6 +135,12 @@ export type RailView = ListView &
     includeArchived: boolean;
     perPage?: number;
   }>;
+
+/** The codes a list read's `sort` field error carries for a sort it does not take. */
+const SORT_REFUSALS: ReadonlySet<string> = new Set([
+  "sort_field_not_allowed",
+  "sort_unsupported",
+]);
 
 export function useListQuery<Row>({
   key,
@@ -292,6 +299,23 @@ export function useListQuery<Row>({
     ...listInfiniteOptions(key, readerScope ?? "", query, fetchPage),
     enabled: readerScope !== undefined && (enabled?.(query) ?? true),
   });
+  // A bookmark from an older build can name a sort the server no longer
+  // offers. The list then opens in its own order. If that one is refused too,
+  // it asks for no sort at all, which the server always takes.
+  const sortRefused = problemFieldErrorsOf(infinite.error).some(
+    (refusal) => refusal.field === "sort" && SORT_REFUSALS.has(refusal.code),
+  );
+  // Keyed on the sort too. A cached read that kept its rows also keeps its
+  // refusal, so going back to a refused opening order changes nothing else.
+  useEffect(() => {
+    if (!sortRefused || query.sort === "") {
+      return;
+    }
+    setQuery((prev) => ({
+      ...prev,
+      sort: prev.sort === opening.sort ? "" : opening.sort,
+    }));
+  }, [sortRefused, query.sort, setQuery, opening.sort]);
   const rows = (infinite.data?.pages ?? []).flatMap((page) => page.data);
   return {
     rows,
@@ -302,10 +326,11 @@ export function useListQuery<Row>({
     paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
-    // Read off the LAST page fetched rather than the first: each response
-    // recounts against the same filters, so the newest answer is the one that
-    // has seen the most recent writes.
-    total: infinite.data?.pages.at(-1)?.page.total,
+    // The newest page that counted. A record list counts on its first page
+    // only; a refetch re-reads that page, so a later write still reaches it.
+    total: infinite.data?.pages.findLast(
+      (page) => page.page.total !== undefined,
+    )?.page.total,
     isPending: infinite.isPending,
     isError: infinite.isError,
     error: infinite.error,

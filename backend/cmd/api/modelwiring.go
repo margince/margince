@@ -249,6 +249,7 @@ func coldStartOptions(modelPath *compose.ModelPath) []compose.Option {
 		compose.WithReaderRendering(modelPath.ReaderRendering),
 		// The rewrite verbs, in the composer and in Add task, ride their own premium-first lane.
 		compose.WithRewrite(modelPath.Rewrite),
+		compose.WithChatTasks(modelPath.ChatTaskReading),
 		// The Sales review's assessment caches per reader, so it carries the
 		// routing version like the other cached writers.
 		compose.WithSalesAssessment(modelPath.ReportInterpret, routingVersion),

@@ -53,6 +53,8 @@ const fieldDroppedParts = "dropped_parts"
 type FileKeeper interface {
 	// Stage writes each file's bytes to object storage.
 	Stage(ctx context.Context, files []CapturedFile) ([]StagedFile, error)
+	// Discard deletes the bytes Stage wrote for files no row ended up naming.
+	Discard(ctx context.Context, staged []StagedFile) error
 	// Record writes the rows, inside the transaction that captured the message.
 	Record(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 		from FileSource, staged []StagedFile) error
@@ -248,7 +250,7 @@ func (s *Sink) keepParts(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	rec connector.NormalizedRecord, fields ActivityFields,
 ) (connector.NormalizedRecord, []StagedFile, error) {
-	private, verdict, err := messageIsPrivateTx(ctx, tx, rec, fields)
+	private, verdict, err := capturedMessageIsPrivateTx(ctx, tx, rec, fields)
 	if err != nil {
 		return rec, nil, err
 	}
@@ -351,6 +353,19 @@ type retryFileKeeper struct {
 	FileKeeper
 	fingerprints []capturedFileFingerprint
 	staged       []StagedFile
+	// recorded says the current attempt's transaction named the staged files.
+	recorded bool
+	// committing says the current attempt's work ended and its commit was sent,
+	// so a failure may still have committed it.
+	committing bool
+	// superseded are files staged for this record and then replaced, which no
+	// row can name.
+	superseded []StagedFile
+}
+
+func (k *retryFileKeeper) Record(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, from FileSource, staged []StagedFile) error {
+	k.recorded = true
+	return k.FileKeeper.Record(ctx, tx, activityID, from, staged)
 }
 
 func (k *retryFileKeeper) Stage(ctx context.Context, files []CapturedFile) ([]StagedFile, error) {
@@ -365,8 +380,17 @@ func (k *retryFileKeeper) Stage(ctx context.Context, files []CapturedFile) ([]St
 	if err != nil {
 		return nil, err
 	}
+	k.superseded = append(k.superseded, k.staged...)
 	k.fingerprints, k.staged = fingerprints, staged
 	return staged, nil
+}
+
+// unnamed is what this capture staged that its committed transaction named nowhere.
+func (k *retryFileKeeper) unnamed() []StagedFile {
+	if k.recorded {
+		return k.superseded
+	}
+	return append(slices.Clip(k.superseded), k.staged...)
 }
 
 func (s *Sink) withRetryFileStage() *Sink {

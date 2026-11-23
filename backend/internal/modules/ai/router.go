@@ -75,7 +75,7 @@ type Router struct {
 	// (MCP-SESS-COST). Nil in every role that serves no inbound agent.
 	agentSpend      AgentTokenSpender
 	budget          BudgetPolicy
-	stripper        model.SecretStripper
+	stripper        textStripper
 	cache           *resultCache
 	calls           callStore
 	capturePayloads bool
@@ -88,10 +88,12 @@ type Router struct {
 	// the cert lane and scripted repeat-call tests need every call to reach
 	// the model, not collapse onto a cached answer.
 	cacheOff bool
-	// decisionCertified answers whether the decisions lane may serve one site:
-	// the generated certification table, except on the certification lane's
-	// own DB-less router (WithEveryDecisionCertified).
-	decisionCertified func(DecisionCertKey) bool
+	// unlimited sends every task at CallCeiling with no walk bound
+	// (ai.WithoutInteractiveLimits), for a lane that measures latency.
+	unlimited bool
+	// tryDeadline replaces context.WithTimeout for one try, so a test can read
+	// the timeout a try was given without a real clock.
+	tryDeadline func(context.Context, time.Duration) (context.Context, context.CancelFunc)
 	// overrides is the admin's per-task thinking level and deadlines
 	// (ai.task_overrides), republished by the routing watcher.
 	overrides atomic.Pointer[TaskOverrides]
@@ -156,7 +158,7 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 	r := &Router{
 		meter:           meter,
 		budget:          budget,
-		stripper:        NewSecretStripper(),
+		stripper:        secretStripper{},
 		cache:           newResultCache(resultCacheTTL),
 		calls:           calls,
 		capturePayloads: capturePayloads,
@@ -165,9 +167,8 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 		// coldStartOptions and offerDraftOptions each mint their own Router
 		// over the same routing config, and /metrics must report one honest
 		// total across both, rendered exactly once.
-		metrics:           sharedCallMetrics,
-		now:               time.Now,
-		decisionCertified: decisionIsCertified,
+		metrics: sharedCallMetrics,
+		now:     time.Now,
 	}
 	r.install(binding{clients: clients, embedder: embedder, profile: profile, routeMeta: meta})
 	return r
@@ -244,12 +245,6 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	if req.SecretStripper == nil {
 		req.SecretStripper = r.stripper
 	}
-	// Wrapped HERE, which is the one place a request's stripper is settled —
-	// so what it removed reaches the trace row without four adapters each
-	// having to thread a report back, and a fifth records its strips by
-	// existing. striprecorder.go says why that matters.
-	strips := newStripRecorder(req.SecretStripper)
-	req.SecretStripper = strips
 	req = r.withTaskThinking(lc, task, req)
 	key, keyErr := cacheKey(wsID, task, req)
 	if keyErr == nil {
@@ -268,14 +263,11 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	// with no tenant there is no row to write and no occurrence to
 	// announce.
 	start := r.now()
-	trace := r.newAttemptTrace(ctx, task, key, reason, req)
+	trace := newAttemptTrace(ctx, task, reason, req)
 	defer func() {
 		if refusedUncalled(err) {
 			return
 		}
-		// BEFORE finalize, which is what buffers the row: a field set after it
-		// would be written to a copy nobody reads.
-		trace.SecretsRemoved, trace.SecretKinds = strips.report()
 		r.finalizeAttempt(ctx, b, lc, &trace, req, resp, err, start)
 	}()
 	if budgetErr != nil {

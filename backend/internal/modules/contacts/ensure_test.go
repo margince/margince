@@ -15,25 +15,25 @@ import (
 // pass it as a no-op. Without the floor the embedded-address tell compares
 // against the empty string and flags every display name containing an "@" —
 // suppressing a legitimate conversation for a reason that cannot apply to it.
-func TestQuarantineSuspectNeedsADomainToJudge(t *testing.T) {
+func TestAnImpersonationSignNeedsADomainToJudge(t *testing.T) {
 	cases := []struct {
 		name        string
 		displayName string
 		domain      string
-		want        bool
+		want        string
 	}{
-		{"a punycode domain is a homoglyph vector", "Acme Billing", "xn--80ak6aa92e.com", true},
-		{"a punycode label below the apex counts too", "Acme Billing", "mail.xn--80ak6aa92e.com", true},
-		{"an embedded address on a foreign domain is the spoof tell", "ceo@real-corp.example", "spoof.test", true},
-		{"an embedded address on the sending domain is just a signature", "ceo@acme.test", "acme.test", false},
-		{"an ordinary name on an ordinary domain", "Carol Example", "acme.test", false},
-		{"a channel sender's name that happens to contain an address", "ceo@real-corp.example", "", false},
-		{"a channel sender with a plain name", "Anna Schmidt", "", false},
+		{"a punycode domain is a homoglyph vector", "Acme Billing", "xn--80ak6aa92e.com", impersonationPunycodeDomain},
+		{"a punycode label below the apex counts too", "Acme Billing", "mail.xn--80ak6aa92e.com", impersonationPunycodeDomain},
+		{"an embedded address on a foreign domain is the spoof sign", "ceo@real-corp.example", "spoof.test", impersonationDisplayNameOtherDomain},
+		{"an embedded address on the sending domain is just a signature", "ceo@acme.test", "acme.test", ""},
+		{"an ordinary name on an ordinary domain", "Carol Example", "acme.test", ""},
+		{"a channel sender's name that happens to contain an address", "ceo@real-corp.example", "", ""},
+		{"a channel sender with a plain name", "Anna Schmidt", "", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := quarantineSuspect(tc.displayName, tc.domain); got != tc.want {
-				t.Fatalf("quarantineSuspect(%q, %q) = %t, want %t", tc.displayName, tc.domain, got, tc.want)
+			if got := impersonationSign(tc.displayName, tc.domain); got != tc.want {
+				t.Fatalf("impersonationSign(%q, %q) = %q, want %q", tc.displayName, tc.domain, got, tc.want)
 			}
 		})
 	}

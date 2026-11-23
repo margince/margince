@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -95,6 +96,14 @@ func stampCaptureParticipants(
 	// put the owner at both ends of their own message. A seat's address
 	// is no outside party either. The caller read it under the claim lock the ladder takes.
 	if us.self.Covers(address) {
+		// Any seat that receives at a shared address may have written its mail.
+		// The address is kept as the sender, and the row names no seat.
+		if theirRole == roleFrom && us.self.SharedWithAnotherSeat(address) {
+			if err := insertParticipant(ctx, tx, activityID, roleFrom, nil, nil, address, ""); err != nil {
+				return fmt.Errorf("capture: stamping a shared address as the sender: %w", err)
+			}
+			return nil
+		}
 		address = ""
 	}
 	var channelUserID string
@@ -377,8 +386,8 @@ func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, part
 		return 0, err
 	}
 	tag, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name, address_domain_folded, roster_seat, response)
-		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name, inp.domain_folded, $10::uuid, NULLIF(inp.response, '')
+		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name, address_domain_folded, roster_seats, response)
+		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name, inp.domain_folded, `+storekit.RosterOfSeatSQL("$10")+`, NULLIF(inp.response, '')
 		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[], $8::text[], $9::bool[], $11::text[]) AS inp(address, role, display_name, account, domain_folded, bind, response)
 		  LEFT JOIN app_user u
 		         ON $4 AND inp.bind AND inp.address <> '' AND `+seatMatch+`

@@ -27,6 +27,11 @@ import {
 import { problemMessageOf } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
+  DefaultEntityJurisdiction,
+  jurisdictionOptions,
+  useInstallationJurisdiction,
+} from "./jurisdictionentities";
+import {
   ADDRESS_KEYS,
   DEFAULT_ENTITY_KEYS,
   type Draft,
@@ -56,6 +61,7 @@ function draftOf(entity: LegalEntity): Draft {
     city: orEmpty(address.city),
     region: orEmpty(address.region),
     country: orEmpty(entity.country),
+    jurisdiction: orEmpty(entity.jurisdiction),
     vat_id: orEmpty(entity.vat_id),
     register_court: orEmpty(entity.register_court),
     register_number: orEmpty(entity.register_number),
@@ -153,7 +159,7 @@ export function EditEntityDialog({
         name: entity.display_name || t("legalEntities.defaultUnnamed"),
       })}
       onClose={onClose}
-      fieldCount={own ? 21 : 7}
+      fieldCount={own ? 22 : 6}
       unsaved={dirty}
       closeDisabled={busy}
       form={
@@ -180,7 +186,14 @@ export function EditEntityDialog({
           ) : (
             <p className="t-caption">{t("legalEntities.defaultFromCompany")}</p>
           )}
-          <CountryField required={own} {...text("country")} />
+          {own ? (
+            <>
+              <CountryField {...text("country")} />
+              <JurisdictionField {...text("jurisdiction")} />
+            </>
+          ) : (
+            <DefaultEntityJurisdiction />
+          )}
           {own && (
             <>
               <SectionHeader
@@ -271,12 +284,10 @@ export function EditEntityDialog({
 }
 
 export function CountryField({
-  required,
   value,
   error,
   onChange,
 }: Readonly<{
-  required: boolean;
   value: string;
   error?: string;
   onChange: (value: string) => void;
@@ -291,8 +302,8 @@ export function CountryField({
   return (
     <Field
       label={t("legalEntities.country")}
-      hint={required ? undefined : t("legalEntities.countryInstallationHint")}
-      required={required}
+      hint={t("legalEntities.countryHint")}
+      required
       error={error}
     >
       {(control) => (
@@ -300,14 +311,40 @@ export function CountryField({
           {...control}
           value={value}
           placeholder={t("legalEntities.countryPlaceholder")}
-          options={
-            required
-              ? options
-              : [
-                  { value: "", label: t("legalEntities.countryInstallation") },
-                  ...options,
-                ]
-          }
+          options={options}
+          onChange={onChange}
+        />
+      )}
+    </Field>
+  );
+}
+
+/** The law a further entity follows: one of the packs this build offers. */
+export function JurisdictionField({
+  value,
+  error,
+  onChange,
+}: Readonly<{
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const query = useInstallationJurisdiction();
+  return (
+    <Field
+      label={t("legalEntities.jurisdiction")}
+      hint={t("legalEntities.jurisdictionHint")}
+      required
+      error={query.isError ? t("common.error") : error}
+    >
+      {(control) => (
+        <Select
+          {...control}
+          value={value}
+          placeholder={t("jurisdiction.change.placeholder")}
+          options={jurisdictionOptions(query.data?.available ?? [], locale)}
           onChange={onChange}
         />
       )}
