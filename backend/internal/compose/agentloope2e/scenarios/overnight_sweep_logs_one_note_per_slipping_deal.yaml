@@ -1,0 +1,21 @@
+name: overnight_sweep_logs_one_note_per_slipping_deal
+agent: overnight_at_risk_sweep
+worklist: [pump_station_retrofit, office_hvac_service]
+criteria:
+  - Does the note on Pump Station Retrofit name that the deal has had no recorded activity for about four weeks?
+  - Does the note on Office HVAC Service name that the deal has had no recorded activity for nearly three weeks?
+  - Does each note cite the record or field it rests on?
+  - Is every cause in the notes one the seeded records carry, with no invented lost champion, competitor or price dispute?
+  - Does no note tell anyone to advance a stage, send a message or archive a deal?
+seed:
+  deals:
+    - name: pump_station_retrofit
+      activities:
+        - days_ago: 27
+          subject: Site survey
+          body: "Survey done; the client will come back after the budget meeting."
+    - name: office_hvac_service
+      activities:
+        - days_ago: 19
+          subject: Service terms
+          body: "We sent the service terms for review and heard nothing since."
