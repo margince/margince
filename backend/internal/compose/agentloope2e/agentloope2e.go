@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -85,10 +86,17 @@ func LoadScenarios(dir string) ([]Scenario, error) {
 	return out, nil
 }
 
+// safeName is a verdict's file name and its folder entry: one path component.
+var safeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+
 func (s Scenario) validate() error {
 	switch {
-	case s.Name == "":
-		return errors.New("the scenario has no name")
+	case !safeName.MatchString(s.Name):
+		return fmt.Errorf("the scenario name %q is not a plain file name, which a verdict is filed under", s.Name)
+	case slices.Contains(s.Worklist, "") || slices.Contains(s.Forbidden, ""):
+		return errors.New("a worklist or forbidden subject may not be empty")
+	case slices.ContainsFunc(s.Worklist, func(subject string) bool { return slices.Contains(s.Forbidden, subject) }):
+		return errors.New("a subject is both on the worklist and forbidden, so no run could pass")
 	case s.Agent != MorningBrief && s.Agent != OvernightSweep:
 		return fmt.Errorf("agent %q is not one the lane covers", s.Agent)
 	case s.NoWrites && len(s.Worklist) > 0:

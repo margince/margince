@@ -36,14 +36,18 @@ func TestScenariosLoadInNameOrder(t *testing.T) {
 
 func TestAScenarioThatCannotBeJudgedIsRefused(t *testing.T) {
 	for name, tc := range map[string]struct{ body, want string }{
-		"no name":                   {strings.Replace(goodScenario, "name: annotates", "name: \"\"", 1), "no name"},
-		"an agent the lane omits":   {strings.Replace(goodScenario, "morning_brief", "enrichment", 1), "not one the lane covers"},
-		"writes expected, no list":  {strings.Replace(goodScenario, "worklist: [deal_a]", "worklist: []", 1), "names no worklist"},
-		"no writes, but a list":     {goodScenario + "no_writes: true\n", "names a worklist"},
-		"no criterion":              {strings.Replace(goodScenario, "criteria: [Names the evidence.]\n", "", 1), "at least one criterion"},
-		"an empty criterion":        {strings.Replace(goodScenario, "[Names the evidence.]", "[\"\"]", 1), "none may be empty"},
-		"an unknown key":            {goodScenario + "worklst: [x]\n", "field worklst not found"},
-		"yaml that does not decode": {"name: [", "agentloope2e"},
+		"no name":                       {strings.Replace(goodScenario, "name: annotates", "name: \"\"", 1), "not a plain file name"},
+		"an agent the lane omits":       {strings.Replace(goodScenario, "morning_brief", "enrichment", 1), "not one the lane covers"},
+		"writes expected, no list":      {strings.Replace(goodScenario, "worklist: [deal_a]", "worklist: []", 1), "names no worklist"},
+		"no writes, but a list":         {goodScenario + "no_writes: true\n", "names a worklist"},
+		"a name that leaves the folder": {strings.Replace(goodScenario, "name: annotates", "name: ../../x", 1), "not a plain file name"},
+		"a name with a slash":           {strings.Replace(goodScenario, "name: annotates", "name: nested/case", 1), "not a plain file name"},
+		"an empty subject":              {strings.Replace(goodScenario, "[deal_a]", "[\"\"]", 1), "may not be empty"},
+		"a subject on both lists":       {goodScenario + "forbidden: [deal_a]\n", "both on the worklist and forbidden"},
+		"no criterion":                  {strings.Replace(goodScenario, "criteria: [Names the evidence.]\n", "", 1), "at least one criterion"},
+		"an empty criterion":            {strings.Replace(goodScenario, "[Names the evidence.]", "[\"\"]", 1), "none may be empty"},
+		"an unknown key":                {goodScenario + "worklst: [x]\n", "field worklst not found"},
+		"yaml that does not decode":     {"name: [", "agentloope2e"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := LoadScenarios(plant(t, map[string]string{"s.yaml": tc.body}))

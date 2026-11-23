@@ -91,7 +91,7 @@ func TestAVerdictRoundTripsUnderItsBindingFolder(t *testing.T) {
 	if err := v.Write(root); err != nil {
 		t.Fatal(err)
 	}
-	if want := filepath.Join(root, "gemini-3.8-flash@premium", "annotates.json"); v.Path(root) != want {
+	if want := filepath.Join(root, "gemini@gemini-3.8-flash@premium", "annotates.json"); v.Path(root) != want {
 		t.Errorf("path = %s, want %s", v.Path(root), want)
 	}
 	raw, err := os.ReadFile(v.Path(root))
@@ -125,5 +125,25 @@ func TestAnUnreadableVerdictIsRefusedByName(t *testing.T) {
 	}
 	if _, err := ReadVerdicts(root); err == nil || !strings.Contains(err.Error(), "broken.json") {
 		t.Errorf("err = %v, want one naming the broken file", err)
+	}
+}
+
+// Two bindings that differ in one part, or whose names only look alike once a
+// separator is replaced, keep their own verdicts.
+func TestBindingsThatDifferInAnyPartKeepTheirOwnVerdicts(t *testing.T) {
+	root := t.TempDir()
+	for _, binding := range []Binding{
+		{Provider: "gemini", Model: "a/b", Tier: "premium"},
+		{Provider: "gemini", Model: "a_b", Tier: "premium"},
+		{Provider: "vertex", Model: "a/b", Tier: "premium"},
+		{Provider: "gemini", Model: "a/b", Tier: "cheap"},
+	} {
+		if err := (Verdict{Scenario: "s", Binding: binding}).Write(root); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := ReadVerdicts(root)
+	if err != nil || len(got) != 4 {
+		t.Errorf("read %d verdicts, %v; want 4, none overwritten", len(got), err)
 	}
 }

@@ -6,6 +6,7 @@ package agentloope2e
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -115,9 +116,13 @@ type Verdict struct {
 	RanAt      string  `json:"ran_at"`
 }
 
-// Path is where a verdict lives under root: one folder per binding.
+// Path is where a verdict lives under root: one folder per binding. Each part
+// of the binding is escaped. The parts are joined by an "@", which the escape
+// never leaves in a part, so two bindings never share a folder.
 func (v Verdict) Path(root string) string {
-	folder := strings.NewReplacer("/", "_", ":", "_").Replace(v.Binding.Model + "@" + v.Binding.Tier)
+	folder := strings.Join([]string{
+		url.QueryEscape(v.Binding.Provider), url.QueryEscape(v.Binding.Model), url.QueryEscape(v.Binding.Tier),
+	}, "@")
 	return filepath.Join(root, folder, v.Scenario+".json")
 }
 
