@@ -272,7 +272,7 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 		// employer is the field they will look for first and not find.
 		return "A contact's employer is NOT a field here: employment is a relationship, created and " +
 			"archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched. " +
-			"To correct a wrong employer, find the edge with read_view listRelationships (contact_id, kind=employment), " +
+			"To correct a wrong employer, find the edge with read_view view=relationships (contact_id, kind=employment), " +
 			"end it with update_record on that relationship (employment_status=former, ended_at), then create the right one."
 	}
 	// REQUIRES, not "and rejects any other". The schema's shape CHECKs pin the
