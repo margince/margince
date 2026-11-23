@@ -470,6 +470,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if in.WithOutsideParty || in.AwaitingOutcomeAsOf != nil {
 			in.outsideParty = outsidePartyClause(ctx, tx)
 		}
+		in.countOnly = true
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {
 			return err

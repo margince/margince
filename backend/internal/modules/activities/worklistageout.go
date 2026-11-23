@@ -57,6 +57,6 @@ func worklistClauses(in ListActivitiesInput, reader ids.UUID, arg func(any) int)
 	pinner := sprintf("$%d", arg(reader))
 	return []string{
 		auth.LiveIntakeTaskClause("a"),
-		worklistAgeOutClause(*in.WorklistAsOf, pinner, sprintf("$%d::jsonb", arg(in.mailIdentities)), storekit.DayZoneSQL(in.DayZone), arg),
+		worklistAgeOutClause(*in.WorklistAsOf, pinner, sprintf("$%d::jsonb", arg(in.mailIdentities)), storekit.DayZoneSQL(in.DayZone, arg), arg),
 	}
 }

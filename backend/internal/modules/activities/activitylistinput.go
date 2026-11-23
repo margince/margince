@@ -27,6 +27,8 @@ type ListActivitiesInput struct {
 	ClockDirection     string
 	DirectionClockAsOf *time.Time
 	mailIdentities     map[string][]string
+	// countOnly builds the filter for a count: no sort, so no sort arguments.
+	countOnly bool
 	// foldBounds replaces the collapsed fold's bounds; a test reads the
 	// unbounded fold with []int{0} to compare it with the bounded one.
 	foldBounds []int

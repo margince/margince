@@ -4,7 +4,7 @@
 package storekit
 
 import (
-	"regexp"
+	"fmt"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
@@ -20,19 +20,15 @@ func datedOnlySQL(alias string) string {
 	return `(` + alias + `.due_wall IS NOT NULL AND ` + alias + `.due_has_time IS NOT TRUE)`
 }
 
-// zoneName is what an IANA zone name looks like. It is checked again after the
-// name has loaded as a location, so a name never carries a quote into SQL.
-var zoneName = regexp.MustCompile(`^[A-Za-z0-9_+/-]{1,64}$`)
-
-// DayZoneSQL is the zone a task read counts its days in. A person's own list
-// names its IANA zone, written as a literal because it comes from a loaded
-// location and not from a request. Empty, or a name that does not load, means
-// the installation's zone.
-func DayZoneSQL(zone string) string {
-	if _, err := time.LoadLocation(zone); zone == "" || err != nil || !zoneName.MatchString(zone) {
+// DayZoneSQL is the zone a task read counts its days in. A member's own list
+// names its IANA zone, bound as a typed argument. Empty, or a name that does not
+// load as a location, means the installation's zone. The caller must emit the
+// returned fragment, or the argument it bound is left unreferenced.
+func DayZoneSQL(zone string, arg func(any) int) string {
+	if _, err := time.LoadLocation(zone); zone == "" || err != nil {
 		return occurredday.InstallationZoneSQL
 	}
-	return "'" + zone + "'::text"
+	return fmt.Sprintf("$%d::text", arg(zone))
 }
 
 // dayInZoneSQL is the calendar day that an instant falls on in a zone.
