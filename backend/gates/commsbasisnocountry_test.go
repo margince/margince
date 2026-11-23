@@ -6,10 +6,10 @@
 package gates
 
 // The communication basis vocabulary is closed and names no market. A pack
-// supplies the legal citation for a basis; core never learns a jurisdiction one
-// value at a time. The constants are read from commsauthz itself and the codes
-// from the ISO 3166-1 list the address check already holds, so neither side is
-// a second list kept here.
+// supplies the legal citation for a basis. Core never learns a jurisdiction one
+// value at a time. The constants are read from commsauthz itself. The codes come
+// from the ISO 3166-1 list the address check already holds. Neither is a second
+// list kept here.
 
 import (
 	"go/ast"
@@ -75,7 +75,7 @@ func catalogCheckValues(t *testing.T, constraint string) map[string]bool {
 	if err != nil {
 		t.Fatalf("reading the schema catalog: %v", err)
 	}
-	for _, line := range strings.Split(string(raw), "\n") {
+	for line := range strings.SplitSeq(string(raw), "\n") {
 		if !strings.Contains(line, "."+constraint+" CHECK") {
 			continue
 		}
@@ -138,9 +138,9 @@ func sameSet(a, b map[string]bool) bool {
 }
 
 // TestNoCommunicationBasisNamesACountry holds the vocabulary in all four places
-// that own it. The relations are: the API enum is the Go set plus "none" (no
-// basis recorded); the decision CHECK is the Go set; the basis-kind CHECK is the
-// Go set without "consent", which lives in the consent tables.
+// that own it. The API enum is the Go set plus "none", meaning no basis is
+// recorded. The decision CHECK is the Go set. The basis-kind CHECK is the Go set
+// without "consent", which lives in the consent tables.
 func TestNoCommunicationBasisNamesACountry(t *testing.T) {
 	t.Parallel()
 	goValues := map[string]bool{}
@@ -190,7 +190,7 @@ func TestNoCommunicationBasisNamesACountry(t *testing.T) {
 		}
 	}
 	for value := range every {
-		for _, part := range strings.Split(value, "_") {
+		for part := range strings.SplitSeq(value, "_") {
 			if codes[strings.ToUpper(part)] {
 				t.Errorf("basis value %q contains the country code %q: core names no market, and the pack that grants a basis supplies the legal citation", value, strings.ToUpper(part))
 			}

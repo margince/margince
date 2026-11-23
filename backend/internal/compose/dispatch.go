@@ -37,10 +37,9 @@ func enumerateWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, e
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
-// enumerateEveryWorkspace reads EVERY workspace, archived ones included —
-// unlike the passes that work on behalf of a live tenant. Archiving a workspace
-// does not un-store the data inside it, and both retention passes fan out over
-// this enumeration for that reason.
+// enumerateEveryWorkspace reads every workspace, archived ones included,
+// unlike the passes that work on behalf of a live tenant. Both retention passes
+// fan out over this enumeration, because archiving does not un-store data.
 //
 // GDPR storage limitation does not pause because a tenant stopped logging in:
 // skipping archived rows would hold personal data past its retention floor in
