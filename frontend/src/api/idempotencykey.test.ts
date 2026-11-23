@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { intentKeys } from "./idempotencykey";
 import { keyedIntents } from "./intentkeys";
 
@@ -126,5 +126,33 @@ describe("keyedIntents", () => {
     expect(seen.get("a")?.[1]).not.toBe(seen.get("a")?.[0]);
     await open("c");
     expect(seen.get("c")?.[1]).toBe(seen.get("c")?.[0]);
+  });
+});
+
+describe("randomKey", () => {
+  it("makes a version 4 UUID where randomUUID is absent, as in a sandboxed card frame", async () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: crypto.getRandomValues.bind(crypto),
+    });
+    try {
+      const keyed = keyedIntents((r: { done: boolean }) => r.done);
+      const seen: string[] = [];
+      await keyed("a", async (key) => {
+        seen.push(key);
+        return { done: true };
+      });
+      await keyed("a", async (key) => {
+        seen.push(key);
+        return { done: true };
+      });
+      for (const key of seen) {
+        expect(key).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+        );
+      }
+      expect(seen[0]).not.toBe(seen[1]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
