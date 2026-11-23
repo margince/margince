@@ -27,24 +27,25 @@ import (
 // openDealSQL is what makes a deal a candidate: open and not archived.
 const openDealSQL = `d.status = 'open' AND d.archived_at IS NULL`
 
-// candidateDealSQL is openDealSQL, widened to one named deal that is not
-// archived, whatever its status. A zero admit is the plain open rule, so the
-// open rule is stated once for both forms.
-func candidateDealSQL(admit ids.UUID, arg func(any) int) string {
-	if admit.IsZero() {
+// candidateDealSQL is openDealSQL, or with a non-zero only the one named deal
+// that is not archived, whatever its status. The open rule is stated once for
+// both forms.
+func candidateDealSQL(only ids.UUID, arg func(any) int) string {
+	if only.IsZero() {
 		return openDealSQL
 	}
-	return fmt.Sprintf(`(%s OR (d.id = $%d AND d.archived_at IS NULL))`, openDealSQL, arg(admit))
+	return fmt.Sprintf(`(d.id = $%d AND d.archived_at IS NULL)`, arg(only))
 }
 
-// CandidatesAdmitting reads candidates as the open-deal reads do, and also
-// admits deal while it is not archived. The capture repair files mail on a
-// deal Margince closed for silence through it.
-func (s *Store) CandidatesAdmitting(deal ids.UUID) *ClosedDealCandidates {
+// CandidatesOnly reads candidates as the open-deal reads do, but answers no
+// deal other than the one named. The capture repair files old mail on a deal
+// Margince closed for silence through it, so a deal opened since cannot take
+// that mail.
+func (s *Store) CandidatesOnly(deal ids.UUID) *ClosedDealCandidates {
 	return &ClosedDealCandidates{store: s, admit: deal}
 }
 
-// ClosedDealCandidates is capture.DealCandidates with one closed deal admitted.
+// ClosedDealCandidates is capture.DealCandidates narrowed to one deal.
 type ClosedDealCandidates struct {
 	store *Store
 	admit ids.UUID
@@ -55,7 +56,7 @@ func (s *Store) OpenDealsOfProject(ctx context.Context, tx pgx.Tx, projectID ids
 	return dealsOfProject(ctx, tx, projectID, ids.Nil)
 }
 
-// OpenDealsOfProject is Store.OpenDealsOfProject with the admitted deal.
+// OpenDealsOfProject is Store.OpenDealsOfProject narrowed to its one deal.
 func (c *ClosedDealCandidates) OpenDealsOfProject(ctx context.Context, tx pgx.Tx, projectID ids.UUID) ([]ids.UUID, error) {
 	return dealsOfProject(ctx, tx, projectID, c.admit)
 }
@@ -75,7 +76,7 @@ func (s *Store) OpenDealsOfCompany(ctx context.Context, tx pgx.Tx, companyID ids
 	return dealsOfCompany(ctx, tx, companyID, ids.Nil)
 }
 
-// OpenDealsOfCompany is Store.OpenDealsOfCompany with the admitted deal.
+// OpenDealsOfCompany is Store.OpenDealsOfCompany narrowed to its one deal.
 func (c *ClosedDealCandidates) OpenDealsOfCompany(ctx context.Context, tx pgx.Tx, companyID ids.UUID) ([]ids.UUID, error) {
 	return dealsOfCompany(ctx, tx, companyID, c.admit)
 }
@@ -96,7 +97,7 @@ func (s *Store) OpenDealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID
 	return dealsOfCompanyUpTo(ctx, tx, companyID, limit, ids.Nil)
 }
 
-// OpenDealsOfCompanyUpTo is Store.OpenDealsOfCompanyUpTo with the admitted deal.
+// OpenDealsOfCompanyUpTo is Store.OpenDealsOfCompanyUpTo narrowed to its one deal.
 func (c *ClosedDealCandidates) OpenDealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int) ([]ids.UUID, error) {
 	return dealsOfCompanyUpTo(ctx, tx, companyID, limit, c.admit)
 }
@@ -135,7 +136,7 @@ func (s *Store) OpenDealsWithStakeholders(
 	return openDealsStaked(ctx, tx, &companyID, contacts, 2, ids.Nil)
 }
 
-// OpenDealsWithStakeholders is Store.OpenDealsWithStakeholders with the admitted deal.
+// OpenDealsWithStakeholders is Store.OpenDealsWithStakeholders narrowed to its one deal.
 func (c *ClosedDealCandidates) OpenDealsWithStakeholders(
 	ctx context.Context, tx pgx.Tx, companyID ids.UUID, contacts []ids.UUID,
 ) ([]ids.UUID, error) {
@@ -149,7 +150,7 @@ func (s *Store) OpenDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts
 	return openDealsStaked(ctx, tx, nil, contacts, limit, ids.Nil)
 }
 
-// OpenDealsOfStakeholders is Store.OpenDealsOfStakeholders with the admitted deal.
+// OpenDealsOfStakeholders is Store.OpenDealsOfStakeholders narrowed to its one deal.
 func (c *ClosedDealCandidates) OpenDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts []ids.UUID, limit int) ([]ids.UUID, error) {
 	return openDealsStaked(ctx, tx, nil, contacts, limit, c.admit)
 }

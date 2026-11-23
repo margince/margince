@@ -53,6 +53,6 @@ func mailDealRepair(pool *pgxpool.Pool) capture.DealRepair {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return capture.DealRepair{
 		Candidates: store, Authority: identity.NewService(pool), Filer: ActivityDealFiler{},
-		AdmitClosed: func(deal ids.UUID) capture.DealCandidates { return store.CandidatesAdmitting(deal) },
+		AdmitClosed: func(deal ids.UUID) capture.DealCandidates { return store.CandidatesOnly(deal) },
 	}
 }

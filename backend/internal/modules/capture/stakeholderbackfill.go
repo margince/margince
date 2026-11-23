@@ -35,15 +35,17 @@ type StakeholderBackfillState struct {
 	Window  int       `json:"window_days"`
 	AsOf    time.Time `json:"as_of"`
 	Ceiling ids.UUID  `json:"ceiling"`
-	// OpenAfter is the last mail the first phase inspected; OpenDone ends it.
-	OpenAfter ids.UUID `json:"open_after"`
-	OpenDone  bool     `json:"open_done"`
-	// ClosesAfter is the last close of the second phase that was finished.
-	// MailAfter and FiledOnClose are the position inside the close in hand.
-	ClosesAfter  ids.UUID   `json:"closes_after"`
-	MailAfter    ids.UUID   `json:"mail_after"`
-	FiledOnClose int        `json:"filed_on_close"`
-	FinishedAt   *time.Time `json:"finished_at,omitempty"`
+	// The closes come first, so mail from before a close goes to the deal
+	// that was closed before an open deal can claim it. ClosesAfter is the
+	// last close finished, and ClosesDone ends that phase. MailAfter and
+	// FiledOnClose are the position inside the close in hand.
+	ClosesAfter  ids.UUID `json:"closes_after"`
+	ClosesDone   bool     `json:"closes_done"`
+	MailAfter    ids.UUID `json:"mail_after"`
+	FiledOnClose int      `json:"filed_on_close"`
+	// OpenAfter is the last mail the open phase inspected.
+	OpenAfter  ids.UUID   `json:"open_after"`
+	FinishedAt *time.Time `json:"finished_at,omitempty"`
 	// The counts are what the pass did, for the one log row it writes at the end.
 	Inspected  int `json:"inspected"`
 	Filed      int `json:"filed"`
@@ -81,6 +83,9 @@ type BackfillResult struct {
 	Asked bool
 	// Filed is whether the mail now sits on a deal.
 	Filed bool
+	// Deferred is whether the model was blocked or out of budget, so the mail
+	// was not decided and a later pass must try it again.
+	Deferred bool
 }
 
 // stakeholderMailSQL selects live captured mail that has no deal link and
@@ -106,7 +111,7 @@ func (r DealRepair) StakeholderBackfillCandidatesTx(
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
-	query := stakeholderMailSQL(``) + ` AND a.occurred_at >= $1::timestamptz - make_interval(days => $2) -- occurred_at raw: the window is whole days
+	query := stakeholderMailSQL(``) + ` AND a.occurred_at <= $1::timestamptz AND a.occurred_at >= $1::timestamptz - make_interval(days => $2) -- occurred_at raw: the window is whole days
  AND a.id > $3 AND a.id <= $4 ORDER BY a.id LIMIT $5`
 	return collectIDs(ctx, tx, query, asOf, windowDays, after, ceiling, limit)
 }
@@ -144,7 +149,8 @@ func (r DealRepair) BackfillStakeholderMail(
 	}
 	plan := refilePlan{
 		eligible: func(arg func(any) int) string {
-			return fmt.Sprintf(`a.occurred_at >= $%d::timestamptz - make_interval(days => $%d) -- occurred_at raw: the window is whole days`+"\n", arg(asOf), arg(windowDays))
+			at := arg(asOf)
+			return fmt.Sprintf(`a.occurred_at <= $%d::timestamptz AND a.occurred_at >= $%d::timestamptz - make_interval(days => $%d) -- occurred_at raw: the window is whole days`+"\n", at, at, arg(windowDays))
 		},
 		candidates: r.Candidates, ask: r.Ask,
 	}
@@ -172,6 +178,5 @@ func (r DealRepair) FileOnSilentClose(
 }
 
 func (r DealRepair) backfill(ctx context.Context, db TxRunner, activity ids.ActivityID, plan refilePlan) (BackfillResult, error) {
-	asked, outcome, err := r.checkedRefile(ctx, db, activity, plan)
-	return BackfillResult{Asked: asked, Filed: outcome == DealLinked}, err
+	return r.checkedRefile(ctx, db, activity, plan)
 }

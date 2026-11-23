@@ -100,8 +100,8 @@ func (r DealRepair) Refile(ctx context.Context, db TxRunner, activity ids.Activi
 		eligible:   func(arg func(any) int) string { return refileHorizonSQL(asOf, arg) },
 		candidates: r.Candidates, ask: r.Ask,
 	}
-	asked, _, err := r.checkedRefile(ctx, db, activity, plan)
-	return asked, err
+	result, err := r.checkedRefile(ctx, db, activity, plan)
+	return result.Asked, err
 }
 
 // refilePlan is what varies between the refile passes. It names which mail may
@@ -117,16 +117,19 @@ type refilePlan struct {
 	ask   AskWhichDeal
 }
 
-// checkedRefile runs refileTx with the topic check between its transactions,
-// and reports whether it asked the model and the outcome of the last decision.
-func (r DealRepair) checkedRefile(ctx context.Context, db TxRunner, activity ids.ActivityID, plan refilePlan) (bool, DealOutcome, error) {
+// checkedRefile runs refileTx with the topic check between its transactions.
+// It reports whether the model was asked, whether the last decision filed the
+// mail, and whether the check was deferred.
+func (r DealRepair) checkedRefile(ctx context.Context, db TxRunner, activity ids.ActivityID, plan refilePlan) (BackfillResult, error) {
 	var outcome DealOutcome
+	var deferred bool
 	asked, err := checkedFiling(ctx, db, r.Check, func(tx pgx.Tx, topic *dealTopicState) (*topicQuestion, error) {
 		question, decided, err := r.refileTx(ctx, tx, activity, plan, topic)
 		outcome = decided
+		deferred = topic != nil && topic.answer != nil && topic.answer.deferred
 		return question, err
 	})
-	return asked, outcome, err
+	return BackfillResult{Asked: asked, Filed: outcome == DealLinked, Deferred: deferred}, err
 }
 
 // refileTx is one transaction of a refile pass.

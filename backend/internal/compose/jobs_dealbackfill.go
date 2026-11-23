@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -63,10 +65,10 @@ func (w *capturedDealRefileWorker) backfillStep(ctx context.Context, args Captur
 	}
 	step := &backfillStep{state: state, startCalls: state.ModelCalls}
 	var more bool
-	if !step.state.OpenDone {
-		more, err = w.backfillOpenPhase(ctx, step)
-	} else {
+	if !step.state.ClosesDone {
 		more, err = w.backfillClosePhase(ctx, step)
+	} else {
+		more, err = w.backfillOpenPhase(ctx, step)
 	}
 	if err != nil {
 		return false, err
@@ -140,8 +142,8 @@ func (w *capturedDealRefileWorker) backfillOpenPhase(ctx context.Context, step *
 	repair := w.repairAt(state.AsOf)
 	for _, mail := range scanned {
 		result, err := repair.BackfillStakeholderMail(ctx, w.db, ids.From[ids.ActivityKind](mail), state.AsOf, state.Window)
-		if err := w.backfillFault(ctx, mail, err); err != nil {
-			return false, err
+		if err := w.backfillFault(ctx, mail, deferredAsFault(result, err)); err != nil {
+			return false, errors.Join(err, w.storeBackfill(ctx, *state))
 		}
 		state.OpenAfter = mail
 		state.Count(result)
@@ -149,11 +151,7 @@ func (w *capturedDealRefileWorker) backfillOpenPhase(ctx context.Context, step *
 			return true, nil
 		}
 	}
-	if len(scanned) == w.page {
-		return true, nil
-	}
-	state.OpenDone = true
-	return true, nil
+	return len(scanned) == w.page, nil
 }
 
 // backfillClosePhase works one close for silence at a time. It files the mail
@@ -168,8 +166,12 @@ func (w *capturedDealRefileWorker) backfillClosePhase(ctx context.Context, step 
 		closes, err = w.closes.SilentClosesTx(ctx, tx, since, state.ClosesAfter, 1)
 		return err
 	})
-	if err != nil || len(closes) == 0 {
+	if err != nil {
 		return false, err
+	}
+	if len(closes) == 0 {
+		state.ClosesDone = true
+		return true, nil
 	}
 	closed := closes[0]
 	var scanned []ids.UUID
@@ -184,8 +186,8 @@ func (w *capturedDealRefileWorker) backfillClosePhase(ctx context.Context, step 
 	repair := w.repairAt(state.AsOf)
 	for _, mail := range scanned {
 		result, err := repair.FileOnSilentClose(ctx, w.db, ids.From[ids.ActivityKind](mail), closed.Deal.UUID, closed.ClosedAt, state.Window)
-		if err := w.backfillFault(ctx, mail, err); err != nil {
-			return false, err
+		if err := w.backfillFault(ctx, mail, deferredAsFault(result, err)); err != nil {
+			return false, errors.Join(err, w.storeBackfill(ctx, *state))
 		}
 		state.MailAfter = mail
 		state.Count(result)
@@ -200,7 +202,7 @@ func (w *capturedDealRefileWorker) backfillClosePhase(ctx context.Context, step 
 		return true, nil
 	}
 	if state.FiledOnClose > 0 {
-		offered, err := w.offerBack(ctx, closed)
+		offered, err := w.offerBack(ctx, closed, state.Window)
 		if err != nil {
 			return false, err
 		}
@@ -212,26 +214,40 @@ func (w *capturedDealRefileWorker) backfillClosePhase(ctx context.Context, step 
 	return true, nil
 }
 
-// backfillFault logs a fault of one mail and goes on, as the refile pass does.
+// errBackfillDeferred is a mail the model could not judge yet.
+var errBackfillDeferred = errors.New("compose: the deal topic check is deferred, so the mail is tried again next pass")
+
+// deferredAsFault turns a deferred answer into the transient fault it is.
+func deferredAsFault(result capture.BackfillResult, err error) error {
+	if err == nil && result.Deferred {
+		return errBackfillDeferred
+	}
+	return err
+}
+
+// backfillFault logs a fault of one mail. A mail that is gone is permanent, so
+// the pass skips it. Any other fault, a model outage included, is transient.
+// It is returned, so the pass stops with its position kept. The next hourly
+// pass retries the same mail, and the pass finishes only when none is left.
 func (w *capturedDealRefileWorker) backfillFault(ctx context.Context, mail ids.UUID, cause error) error {
 	if cause == nil {
 		return nil
 	}
-	return w.db.Tx(ctx, func(tx pgx.Tx) error {
+	logErr := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := storekit.LogSystem(ctx, tx, "capture_stakeholder_backfill_fault", map[string]any{"activity_id": mail, "error": cause.Error()})
 		return err
 	})
+	if errors.Is(cause, apperrors.ErrNotFound) {
+		return logErr
+	}
+	return errors.Join(cause, logErr)
 }
 
 // offerBack puts a close back on its owner's Home when, with the mail now
 // filed, the customer had written within the threshold before the close.
-func (w *capturedDealRefileWorker) offerBack(ctx context.Context, closed deals.SilentClose) (bool, error) {
+func (w *capturedDealRefileWorker) offerBack(ctx context.Context, closed deals.SilentClose, threshold int) (bool, error) {
 	var premature bool
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
-		threshold, err := config.StoredApplyTx(ctx, tx, config.Bound(), deals.SilentCloseDays)
-		if err != nil {
-			return fmt.Errorf("compose: reading the silent close threshold: %w", err)
-		}
 		zone, err := installationZoneTx(ctx, tx)
 		if err != nil {
 			return err

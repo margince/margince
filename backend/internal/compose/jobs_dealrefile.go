@@ -104,7 +104,9 @@ func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[Capt
 	if job.Args.AsOf.IsZero() || job.Args.Correlation.IsZero() {
 		return jobs.FaultContext(ctx, apperrors.ErrInvalidArgument)
 	}
-	if job.Args.Ceiling.IsZero() {
+	// A workspace with no live activity has a zero ceiling and nothing to
+	// refile, but the backfill must still run its phases to finish.
+	if job.Args.Ceiling.IsZero() && !job.Args.Scope.Backfill {
 		return nil
 	}
 	var cursor dealRefileCursor

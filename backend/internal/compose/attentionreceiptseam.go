@@ -113,8 +113,8 @@ func (r attentionReceipts) RecentWithMore(ctx context.Context, since time.Time, 
 	// recent news would be the furthest down the card.
 	// The id breaks a tie, so every read of one window pages it alike.
 	sort.Slice(decided, func(i, j int) bool {
-		if !decided[i].OccurredAt.Equal(decided[j].OccurredAt) {
-			return decided[i].OccurredAt.After(decided[j].OccurredAt)
+		if !listed(decided[i]).Equal(listed(decided[j])) {
+			return listed(decided[i]).After(listed(decided[j]))
 		}
 		return decided[i].ID.String() > decided[j].ID.String()
 	})
@@ -149,4 +149,12 @@ func (r attentionReceipts) withChangeReviews(ctx context.Context, receipts []att
 		}
 	}
 	return receipts, nil
+}
+
+// listed is the instant a receipt orders by: when it joined the list.
+func listed(r attention.Receipt) time.Time {
+	if r.ListedAt.IsZero() {
+		return r.OccurredAt
+	}
+	return r.ListedAt
 }
