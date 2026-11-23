@@ -283,7 +283,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithDealMoves(attentionDealMoves{cards: newDealStatusService(pool, now).WithManagerStandings(managermove.Standings(newForecastStore(db)))}).
 		WithDealStandings(attentionDealStandings{cards: cards}).
 		WithBaseMoney(AttentionBaseMoney{Pool: pool}).
-		WithWeeklyPlans(attentionWeeklyPlan{store: weeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
+		WithWeeklyPlans(attentionWeeklyPlan{store: WeeklyPlanStore(pool), pool: pool}).WithNamedTeams(newTeammatesSeam(pool)).WithTeammates(newTeammatesSeam(pool)).WithFormerTeammates(newTeammatesSeam(pool)).
 		WithOverdueLoad(attentionOverdue{store: activities.NewStore(db)})
 }
 

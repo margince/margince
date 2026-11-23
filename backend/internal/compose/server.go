@@ -300,7 +300,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// be about the same seven days, and weekly owns that answer. A module
 		// may not import compose, so it takes the function.
 		weeklyPlanHandlers: weeklyplan.NewHandlers(
-			weeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
+			WeeklyPlanStore(pool), func() time.Time { return time.Now().UTC() },
 		),
 		recordLinksHandlers: recordlinks.NewHandlers(recordlinks.NewStore(InstallationDB(pool))),
 		// The forecast owns its arithmetic and nothing about deals, so the deal

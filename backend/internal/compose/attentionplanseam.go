@@ -42,13 +42,14 @@ func (s attentionWeeklyPlan) DuePlan(ctx context.Context, owner ids.UUID, now ti
 	if plan.Status != weeklyplan.StateOpen {
 		return nil, nil
 	}
-	// The reader's own plan reads their day. Another person's plan, opened by
-	// name on a team screen, reads the installation's.
-	who := owner
-	if who.IsZero() {
-		who = dayrule.ActingUser(ctx)
+	// The reader's own plan reads their day. A plan opened by id, including
+	// the reader's own on a team screen, reads the installation's.
+	var own *ids.UUID
+	if owner.IsZero() {
+		me := dayrule.ActingUser(ctx)
+		own = &me
 	}
-	location, _, err := dayrule.ForAssignee(ctx, s.pool, &who)
+	location, _, err := dayrule.ForAssignee(ctx, s.pool, own)
 	if err != nil {
 		return nil, err
 	}
