@@ -37,7 +37,7 @@ const upcomingDays = 14
 // upcomingWindow runs from at to midnight at the start of the fourteenth day
 // after today, in the reporting zone.
 func upcomingWindow(ctx context.Context, tx pgx.Tx, at time.Time) (crmcontracts.SdrUpcomingWindow, error) {
-	name, err := identity.TimezoneOf(ctx, tx)
+	name, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return crmcontracts.SdrUpcomingWindow{}, err
 	}

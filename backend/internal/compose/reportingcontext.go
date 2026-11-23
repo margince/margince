@@ -38,7 +38,7 @@ func (b *reportingBindings) add(value any) string { return fmt.Sprintf("$%d", b.
 func reportingCalendar(ctx context.Context, tx pgx.Tx) (reporting.Calendar, error) {
 	var out reporting.Calendar
 	var err error
-	out.Timezone, err = identity.TimezoneOf(ctx, tx)
+	out.Timezone, err = identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return out, err
 	}

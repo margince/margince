@@ -26,7 +26,7 @@ import (
 //
 // A SEAM rather than a read of its own: this package binds no module and opens
 // no transaction, and the installation's timezone is a fact the composition
-// root already resolves for the morning brief through identity.TimezoneOf.
+// root already resolves for the morning brief through identity.TimezoneAppliedTx.
 type Zone func(ctx context.Context) (*time.Location, error)
 
 // Option adjusts a service after its seams are bound.

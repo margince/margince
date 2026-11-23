@@ -329,7 +329,7 @@ func scoreDeals(
 	// The reporting zone, because expected_close_date is a DATE and the window
 	// is an instant: cast without it and Postgres uses the session zone, which
 	// puts a deal closing near midnight on the wrong side of the boundary.
-	zone, err := identity.TimezoneOf(ctx, tx)
+	zone, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}

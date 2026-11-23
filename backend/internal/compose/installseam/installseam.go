@@ -46,7 +46,6 @@ func Deals() deals.Installation {
 		KnownCountry: func(code string) (bool, error) {
 			return contacts.IsAssignedCountry(code), nil
 		},
-		Timezone: identity.TimezoneOf,
 		// identity owns teams and leads, so whose requests a caller manages is
 		// read there and the edge is injected here.
 		ManagerOwners: identity.ManagerOwnersTx,

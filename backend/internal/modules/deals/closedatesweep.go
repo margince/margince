@@ -136,7 +136,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 
 	if err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if tzName, err = c.installation.Timezone(ctx, tx); err != nil {
+		if tzName, err = c.installation.TimezoneApplied(ctx, tx); err != nil {
 			return fmt.Errorf("read the installation's timezone: %w", err)
 		}
 		loc, err := installationZone(tzName)

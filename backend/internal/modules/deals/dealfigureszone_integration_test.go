@@ -23,7 +23,7 @@ func TestADealCloseDateIsOverdueInTheZoneTheScreenReadsIn(t *testing.T) {
 	e := setupConfigEnv(t)
 	at := time.Date(2026, 6, 15, 18, 30, 0, 0, time.UTC)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
-		Timezone:                func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
+		TimezoneApplied:         func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
 		BaseCurrency:            func(context.Context, pgx.Tx) (string, error) { return "EUR", nil },
 		StampCorrespondence:     func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
 		StartDeliveryForWonDeal: func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },

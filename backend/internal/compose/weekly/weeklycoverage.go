@@ -102,7 +102,7 @@ func mayReadPlans(ctx context.Context) (bool, error) {
 func (said teamCopy) planCoverage(
 	ctx context.Context, tx pgx.Tx, owner ids.UUID, start, end time.Time,
 ) (*crmcontracts.WeeklyFigureCoverage, error) {
-	zone, err := identity.TimezoneOf(ctx, tx)
+	zone, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
