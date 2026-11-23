@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance/rules.go backend/internal/compose/assurancebundle.go backend/internal/compose/viabilitytasks/viabilitytasks.go backend/internal/compose/dealcloselost.go backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts backend/internal/modules/activities/dealrelevance.go frontend/src/features/records/dealdecline.tsx -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance/rules.go backend/internal/compose/assurancebundle.go backend/internal/compose/viabilitytasks/viabilitytasks.go backend/internal/compose/dealcloselost.go frontend/src/features/deals/deal360/dealmarginceline.tsx backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts backend/internal/modules/activities/dealrelevance.go frontend/src/features/records/dealdecline.tsx -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -69,16 +69,17 @@ Margince closes a deal only when all of these hold:
 A message from the customer that only its participants can see also keeps the
 deal open. Margince reads only its date.
 
-Margince closes the deal for its owner. The close shows on the owner's **Home**
-under **Done for you**, with the reason and **Undo**. When the customer said no,
-it also links the message Margince read as the no, for each reader who may open
-that message. It stays there for 7 days unless the owner undoes it. The deal's
-timeline gets a note about the close, which points to **Done for you** for that
-message.
+Margince closes the deal for its owner. A line under the deal's header says
+that Margince closed it, why, and offers **Undo**. When the customer said no, the
+line also links the message Margince read as the no, for each reader who may
+open that message. The close also shows on the owner's **Home** under
+**Done for you** for 7 days, and the deal's History note about the close carries
+**Undo** too. All three press the same Undo.
 
 **Undo** puts the deal back in the stage it was closed from. Changes made to the
-deal since the close stay as they are. Undo is refused when someone moved the
-deal to another stage after the close.
+deal since the close stay as they are. It stays possible until someone moves the
+deal to another stage or edits a field the close changed. After that, the line
+under the header offers **Reopen** instead.
 
 After an Undo, add a note on why the deal is still open. A note, a logged call
 or a meeting after the Undo starts the 120 days again. With none, Margince
@@ -88,7 +89,7 @@ To stop it for your own deals, turn off **Close silent deals as lost** among
 the automatic changes. [Approvals](approvals.md) says where the switches are.
 
 ### Why did Margince close my deal as lost, and how do I undo it?
-Margince closes an open deal as lost, with the reason **Stopped responding**, after 120 days with no word from the customer. To undo it, open **Home**, find the deal under **Done for you** and choose **Undo** within 7 days. To stop it for your own deals, turn off **Close silent deals as lost** among the automatic changes.
+Margince closes an open deal as lost, with the reason **Stopped responding**, after 120 days with no word from the customer. To undo it, open the deal and choose **Undo** in the line under its header, or on the close note in **History**. It works until someone moves the deal or edits a field the close changed; after that the line offers **Reopen**. Home lists the close for 7 days with the same **Undo**. To stop it for your own deals, turn off **Close silent deals as lost** among the automatic changes.
 Also called: deal closed automatically, auto-lost, reopen a deal Margince closed, why is my deal lost.
 
 ### What does "You replied" on a deal mean?
@@ -168,7 +169,7 @@ as confirmed. **Undo** marks it as an estimate again.
 Each change shows on the owner's **Home** under **Done for you**, with the
 old and new value, the reason and **Undo**. It stays there for 7 days unless
 the owner undoes it. The deal's timeline gets one note for the night's
-changes.
+changes, and the note carries **Undo** while it works.
 
 **Undo** puts the old value back. It is refused when someone changed the field
 since. After an Undo, Margince does not make that change on the deal again.
@@ -192,7 +193,8 @@ Margince looks for a company with no open deal where a customer asked for an
 offer or a proposal. If the company has an owner, Margince opens the
 deal for that owner at the first stage. It sets an amount only when the
 customer wrote a number and a currency. Home, the morning mail and the deal show
-what it read, and when.
+what it read, and when. A line under the header and the note on the timeline
+carry **Undo**.
 
 **Undo** archives the deal. Margince then does not open a deal on the same
 evidence; a new request opens one again. If your team added notes or tasks to
@@ -225,7 +227,8 @@ Margince reopens a deal only when all of these hold:
 
 The reopen shows on the owner's **Home**, in the morning mail and on the deal,
 with the reason and **Undo**. Only the owner reads the reason. The deal's
-timeline gets a note about the reopen.
+timeline gets a note about the reopen. A line under the header and the note
+both carry **Undo** while it works.
 
 **Undo** closes the deal as lost again, with the reason and the close date it
 had. Undo is refused when someone moved the deal to another stage since. If

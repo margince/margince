@@ -185,7 +185,12 @@ export function HandledForYouPanel() {
                     // is nothing here to take back.
                     key: "undo",
                     header: t("worklist.handled.wayBack"),
-                    render: (row: Receipt) => <ReceiptVerbs receipt={row} />,
+                    render: (row: Receipt) => (
+                      <ReceiptVerbs
+                        receipt={row}
+                        undoable={row.review?.writable}
+                      />
+                    ),
                   },
                 ]}
               />

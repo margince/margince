@@ -119,7 +119,7 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 			again, err := closeDecisions(ctx, tx, now, []ids.UUID{decision.deal.UUID})
 			return len(again) == 1 && again[0] == decision, err
 		},
-		Record: func(ctx context.Context, tx pgx.Tx, _ ids.UUID) error {
+		Record: func(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 			return c.recordOnTimeline(ctx, tx, decision)
 		},
 		AsOwner: ownersAgentTx(c.users, decision.owner, marginceActorID),
@@ -129,7 +129,7 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 // recordOnTimeline writes the close on the deal's timeline as a note. Its
 // origin keeps it out of every recency clock, so it never reads as the
 // deal being worked on.
-func (c silentDealCloser) recordOnTimeline(ctx context.Context, tx pgx.Tx, decision closeDecision) error {
+func (c silentDealCloser) recordOnTimeline(ctx context.Context, tx pgx.Tx, decision closeDecision) (ids.UUID, error) {
 	subject := systemtext.Literal("deal.lost")
 	tail := []string{"deal.lost_undo"}
 	if !decision.refusal.IsZero() {
@@ -153,15 +153,15 @@ func (c silentDealCloser) recordOnTimeline(ctx context.Context, tx pgx.Tx, decis
 		component = systemtext.Sequence(component, following...)
 		component.Layout = "sentences"
 	}
-	_, _, err := c.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
+	note, _, err := c.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.lost"), Body: component},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: decision.deal.UUID}},
 	})
 	if err != nil {
-		return fmt.Errorf("compose: writing the close on the deal's timeline: %w", err)
+		return ids.Nil, fmt.Errorf("compose: writing the close on the deal's timeline: %w", err)
 	}
-	return nil
+	return ids.UUID(note.Id), nil
 }
 
 // closeDecisions reads the open deals the check would close now, narrowed to

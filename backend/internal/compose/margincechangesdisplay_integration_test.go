@@ -264,7 +264,7 @@ func TestAnAgentActingForTheOwnerReadsNoReasonOnEitherRead(t *testing.T) {
 	v := setupDealVerdict(t)
 	v.run(t)
 	agent := v.ownersAgentReader()
-	applied, _, err := v.Deals.DealChanges(agent, ids.From[ids.DealKind](v.deal), nil, 10)
+	applied, _, err := v.Deals.DealChanges(agent, ids.From[ids.DealKind](v.deal), nil, 10, deals.DealChangeFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}

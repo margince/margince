@@ -6746,6 +6746,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.movePipelinePick": "Pipeline wählen",
   "deal.movePipelineDone": "Nach {pipeline} verschoben.",
   "deal.reopen": "Wieder öffnen",
+  "deal.marginceLine.closed":
+    "Margince hat diesen Deal am {date} als verloren geschlossen.",
+  "deal.marginceLine.opened": "Margince hat diesen Deal am {date} eröffnet.",
+  "deal.marginceLine.reopened":
+    "Margince hat diesen Deal am {date} wieder geöffnet.",
+  "deal.marginceLine.undoOff":
+    "Das Schließen lässt sich nicht mehr rückgängig machen, weil sich der Deal seitdem geändert hat. Öffne ihn stattdessen wieder.",
+  "deal.note.undoAll": "Alles rückgängig machen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
   "deal.correctCloseDay": "Abschlusstag korrigieren",

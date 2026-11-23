@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 288733,
+    "tool_catalog_bytes": 289034,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 73588,
-    "largest_tool_bytes": 18033,
+    "approx_wire_tokens_total": 73664,
+    "largest_tool_bytes": 18334,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 55541,
-      "input_schema_bytes": 168099,
+      "input_schema_bytes": 168400,
       "output_schema_bytes": 52985,
-      "description_plus_input_schema_bytes": 223640
+      "description_plus_input_schema_bytes": 223941
     }
   },
   "tools": {
@@ -8544,6 +8544,13 @@
               ],
               "type": "string"
             },
+            "change_kind": {
+              "description": "deal_margince_changes only",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
             "company_id": {
               "description": "deal_suggestions only",
               "format": "uuid",
@@ -8651,6 +8658,13 @@
               "description": "company_contracts, contact_overrides, deal_suggestions, field_history, lead_score, legal_reviews, magic, magic_line_records, my_linkedin_reach, notices only",
               "type": "integer"
             },
+            "note_activity_id": {
+              "description": "deal_margince_changes only",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
             "owner_id": {
               "description": "deal_suggestions, teammate_weekly_plan only",
               "type": "string"
@@ -8710,6 +8724,11 @@
             "since": {
               "description": "magic, magic_line_records, team_margince_changes only",
               "format": "date-time",
+              "type": "string"
+            },
+            "stage_history_id": {
+              "description": "deal_margince_changes only",
+              "format": "uuid",
               "type": "string"
             },
             "stage_id": {
@@ -25206,7 +25225,10 @@
             "id"
           ],
           "query": [
-            "cursor"
+            "change_kind",
+            "cursor",
+            "note_activity_id",
+            "stage_history_id"
           ],
           "route": "GET /v1/deals/{id}/margince-changes"
         },

@@ -6715,6 +6715,12 @@ export const en = {
   "deal.movePipelinePick": "Pick a pipeline",
   "deal.movePipelineDone": "Moved to {pipeline}.",
   "deal.reopen": "Reopen",
+  "deal.marginceLine.closed": "Margince closed this deal as lost on {date}.",
+  "deal.marginceLine.opened": "Margince opened this deal on {date}.",
+  "deal.marginceLine.reopened": "Margince reopened this deal on {date}.",
+  "deal.marginceLine.undoOff":
+    "This close can no longer be undone, because the deal changed since. Reopen it instead.",
+  "deal.note.undoAll": "Undo all",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
   "deal.correctCloseDay": "Correct close day",

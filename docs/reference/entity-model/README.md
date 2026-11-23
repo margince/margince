@@ -31,8 +31,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 358 |
-| Columns | 4479 |
-| Foreign keys | 622 |
+| Columns | 4480 |
+| Foreign keys | 623 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -43,8 +43,8 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 155 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 46 | 51 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 50 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 46 | 50 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 49 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 52 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
@@ -60,16 +60,16 @@ erDiagram
     legal_entity ||--o{ company : assess_against_entity_id
     app_user ||--o{ company : owner_id
     app_user ||--o{ company : source_author_id
-    lead ||--o{ contact : converted_from_lead_id
-    activity ||--o{ contact : created_from_activity_id
-    app_user ||--o{ contact : owner_id
-    app_user ||--o{ contact : source_author_id
     app_user ||--o{ activity : assignee_id
     app_user ||--o{ activity : host_user_id
     app_user ||--o{ activity : invitation_sender
     legal_entity ||--o{ activity : legal_entity_id
     app_user ||--o{ activity : sent_by_colleague
     app_user ||--o{ activity : source_author_id
+    lead ||--o{ contact : converted_from_lead_id
+    activity ||--o{ contact : created_from_activity_id
+    app_user ||--o{ contact : owner_id
+    app_user ||--o{ contact : source_author_id
     company ||--o{ deal : company_id
     app_user ||--o{ deal : owner_id
     company ||--o{ deal : partner_company_id
@@ -139,7 +139,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 90 | 49 |
+| [`activity`](activities.md#activity) | activities | 90 | 50 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
@@ -280,7 +280,7 @@ erDiagram
 | [`data_task_run`](platform.md#data_task_run) | platform | 23 | 0 |
 | [`deal`](deals.md#deal) | deals | 52 | 30 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 12 | 1 |
-| [`deal_correction`](deals.md#deal_correction) | deals | 19 | 0 |
+| [`deal_correction`](deals.md#deal_correction) | deals | 20 | 0 |
 | [`deal_document_hide`](activities.md#deal_document_hide) | activities | 4 | 0 |
 | [`deal_line_item`](deals.md#deal_line_item) | deals | 22 | 0 |
 | [`deal_loss_reason`](deals.md#deal_loss_reason) | deals | 12 | 3 |

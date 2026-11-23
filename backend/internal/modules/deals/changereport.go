@@ -134,7 +134,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			  FROM bundle b JOIN deal d ON d.id = b.deal_id
 			 ORDER BY 8 DESC NULLS LAST, b.latest DESC, b.deal_id
 			 LIMIT $%d`,
-			correctionFieldsStillAppliedSQL("to_jsonb(d)"), correctionStageStillNewestSQL(stagePos),
+			correctionFieldsUntouchedSQL(), correctionStageStillNewestSQL(stagePos),
 			heldPos, sincePos, sincePos, listedFromPos, ownerPos, where, value, counts, capPos)
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
@@ -172,10 +172,19 @@ type ChangeCursor struct {
 	AuditLogID ids.UUID
 }
 
+// DealChangeFilter narrows a deal's changes to the ones a page is about. It
+// names the change that wrote one stage move, the changes History notes
+// report, or changes of given correction kinds. The zero value narrows nothing.
+type DealChangeFilter struct {
+	StageHistoryID *ids.UUID
+	NoteActivityID []ids.UUID
+	Kinds          []string
+}
+
 // DealChanges reads every change Margince made to one deal, newest first and
 // paged, whether accepted, undone or still open. It answers 404 for a deal
 // the reader may not see.
-func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *ChangeCursor, limit int) ([]CorrectionReceipt, bool, error) {
+func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *ChangeCursor, limit int, only DealChangeFilter) ([]CorrectionReceipt, bool, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, false, err
 	}
@@ -191,6 +200,15 @@ func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *Chang
 			return err
 		}
 		query += " WHERE c.deal_id = $1"
+		if only.StageHistoryID != nil {
+			query += storekit.SQLf(" AND c.stage_history_id = $%d", arg(*only.StageHistoryID))
+		}
+		if len(only.NoteActivityID) > 0 {
+			query += storekit.SQLf(" AND c.note_activity_id = ANY($%d)", arg(only.NoteActivityID))
+		}
+		if len(only.Kinds) > 0 {
+			query += storekit.SQLf(" AND c.correction = ANY($%d)", arg(only.Kinds))
+		}
 		if after != nil {
 			query += storekit.SQLf(" AND (c.applied_at, c.audit_log_id) < ($%d, $%d)", arg(after.AppliedAt), arg(after.AuditLogID))
 		}

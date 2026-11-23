@@ -6570,6 +6570,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.movePipelinePick": "Chọn pipeline",
   "deal.movePipelineDone": "Đã chuyển sang {pipeline}.",
   "deal.reopen": "Mở lại",
+  "deal.marginceLine.closed": "Margince đã đóng deal này là thua vào {date}.",
+  "deal.marginceLine.opened": "Margince đã mở deal này vào {date}.",
+  "deal.marginceLine.reopened": "Margince đã mở lại deal này vào {date}.",
+  "deal.marginceLine.undoOff":
+    "Không thể hoàn tác việc đóng này nữa vì deal đã thay đổi. Hãy mở lại deal.",
+  "deal.note.undoAll": "Hoàn tác tất cả",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",
   "deal.correctCloseDay": "Sửa ngày chốt deal",

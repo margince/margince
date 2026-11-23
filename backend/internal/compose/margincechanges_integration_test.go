@@ -166,7 +166,7 @@ func TestAColleagueSeesWhatMarginceChangedButNotWhy(t *testing.T) {
 	h := newMarginceChangeHandlers(v.Pool)
 	dealID := ids.From[ids.DealKind](v.deal)
 
-	owned, _, err := h.deals.DealChanges(v.owner(t), dealID, nil, 10)
+	owned, _, err := h.deals.DealChanges(v.owner(t), dealID, nil, 10, deals.DealChangeFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func TestAColleagueSeesWhatMarginceChangedButNotWhy(t *testing.T) {
 		t.Fatalf("owner's list = %+v, want the reason Margince gave", owned)
 	}
 
-	seen, _, err := h.deals.DealChanges(v.colleague(), dealID, nil, 10)
+	seen, _, err := h.deals.DealChanges(v.colleague(), dealID, nil, 10, deals.DealChangeFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ func TestAnOwnerWhoseAmountIsMaskedSeesTheChangeButNoAmount(t *testing.T) {
 		RowScope:   principal.RowScopeTeam,
 		FieldMasks: []principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}},
 	})
-	rows, _, err := newMarginceChangeHandlers(v.Pool).deals.DealChanges(masked, ids.From[ids.DealKind](v.deal), nil, 10)
+	rows, _, err := newMarginceChangeHandlers(v.Pool).deals.DealChanges(masked, ids.From[ids.DealKind](v.deal), nil, 10, deals.DealChangeFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}

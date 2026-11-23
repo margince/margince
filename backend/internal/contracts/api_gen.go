@@ -36573,8 +36573,14 @@ type AppliedDealChangeReview struct {
 	CanAccept bool                        `json:"can_accept"`
 	CanUndo   bool                        `json:"can_undo"`
 	Kind      AppliedDealChangeReviewKind `json:"kind"`
-	Reversed  bool                        `json:"reversed"`
-	Version   int64                       `json:"version"`
+
+	// NoteActivityId The History note that reports this change. Null for a change made before notes were linked.
+	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
+	Reversed       bool                `json:"reversed"`
+
+	// StageHistoryId The stage-history row this change wrote, for a change that moved the stage. It equals the deal's `closing_occurrence_id` while the deal is on the close Margince made.
+	StageHistoryId *openapi_types.UUID `json:"stage_history_id,omitempty"`
+	Version        int64               `json:"version"`
 
 	// Writable Whether this reader may write this deal.
 	Writable bool `json:"writable"`
@@ -80710,6 +80716,15 @@ type RemoveDealLineParams struct {
 type ListDealMarginceChangesParams struct {
 	// Cursor The `next_cursor` of the page before. A token this server did not mint is refused with 422.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// StageHistoryId Only the change that wrote this stage-history row. A client asks for the close the deal is on without paging for it.
+	StageHistoryId *openapi_types.UUID `form:"stage_history_id,omitempty" json:"stage_history_id,omitempty"`
+
+	// NoteActivityId Only the changes that these History notes report.
+	NoteActivityId *[]openapi_types.UUID `form:"note_activity_id,omitempty" json:"note_activity_id,omitempty"`
+
+	// ChangeKind Only changes of these correction kinds, such as close_lost, deal_open or deal_revive.
+	ChangeKind *[]string `form:"change_kind,omitempty" json:"change_kind,omitempty"`
 }
 
 // MoveDealPipelineParams defines parameters for MoveDealPipeline.
@@ -135631,6 +135646,45 @@ func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "stage_history_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "stage_history_id", r.URL.Query(), &params.StageHistoryId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "stage_history_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stage_history_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "note_activity_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "note_activity_id", r.URL.Query(), &params.NoteActivityId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "note_activity_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "note_activity_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "change_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "change_kind", r.URL.Query(), &params.ChangeKind, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "change_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "change_kind", Err: err})
 		}
 		return
 	}

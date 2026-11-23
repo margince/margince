@@ -5075,6 +5075,7 @@ public.deal_correction.deal_correction_audit_log_id_fkey FOREIGN KEY (audit_log_
 public.deal_correction.deal_correction_audit_once UNIQUE (audit_log_id)
 public.deal_correction.deal_correction_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.deal_correction.deal_correction_moves_something CHECK ((cardinality(fields) > 0))
+public.deal_correction.deal_correction_note_activity_id_fkey FOREIGN KEY (note_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.deal_correction.deal_correction_pkey PRIMARY KEY (id)
 public.deal_correction.deal_correction_reversal_audit_id_fkey FOREIGN KEY (reversal_audit_id) REFERENCES audit_log(id) ON DELETE SET NULL
 public.deal_correction.deal_correction_reversal_is_whole CHECK (((reversed_at IS NULL) = (reversed_by IS NULL)))
@@ -5085,6 +5086,7 @@ public.deal_correction.deal_correction_version_js_safe CHECK (((version >= '-900
 public.deal_correction.deal_id uuid NOT NULL gen=- def=-
 public.deal_correction.fields text[] NOT NULL gen=- def=-
 public.deal_correction.id uuid NOT NULL gen=- def=uuidv7()
+public.deal_correction.note_activity_id uuid gen=- def=-
 public.deal_correction.remaining_open_stages text NOT NULL gen=- def=-
 public.deal_correction.reversal_audit_id uuid gen=- def=-
 public.deal_correction.reversed_at timestamp with time zone gen=- def=-
@@ -5098,6 +5100,7 @@ public.deal_correction.updated_at timestamp with time zone NOT NULL gen=- def=no
 public.deal_correction.version bigint NOT NULL gen=- def=1
 public.deal_correction_audit_once CREATE UNIQUE INDEX deal_correction_audit_once ON public.deal_correction USING btree (audit_log_id)
 public.deal_correction_live CREATE INDEX deal_correction_live ON public.deal_correction USING btree (deal_id, applied_at DESC) WHERE (reversed_at IS NULL)
+public.deal_correction_note_ix CREATE INDEX deal_correction_note_ix ON public.deal_correction USING btree (note_activity_id) WHERE (note_activity_id IS NOT NULL)
 public.deal_correction_pkey CREATE UNIQUE INDEX deal_correction_pkey ON public.deal_correction USING btree (id)
 public.deal_correction_reversed CREATE INDEX deal_correction_reversed ON public.deal_correction USING btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL)
 public.deal_document_hide acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
