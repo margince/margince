@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -62,6 +63,8 @@ type Source struct {
 	Named bool
 }
 
+// LockSQL takes the per-deal advisory lock that proposalLock holds; tests take
+// it to hold a raise or retire mid-flight.
 const LockSQL = `SELECT pg_advisory_xact_lock(hashtextextended('deal_proposal_stage:' || $1::text, 0))`
 
 // proposalLock serializes everything that raises or retires the questions of
@@ -425,7 +428,9 @@ func obsoleteOr(reason string, err error) error {
 // skipped, because redelivering it would never make it readable.
 func (s *Suggester) OnOfferSent(ctx context.Context, offer ids.UUID, eventPayload json.RawMessage) error {
 	var payload crmcontracts.PublicEventOfferSent
-	if json.Unmarshal(eventPayload, &payload) != nil {
+	if err := json.Unmarshal(eventPayload, &payload); err != nil {
+		slog.WarnContext(ctx, "an offer.sent payload could not be read; no proposal-stage question was raised",
+			"offer_id", offer, "error", err)
 		return nil
 	}
 	snippet := "Offer sent"

@@ -393,7 +393,8 @@ func cmpOr(value, fallback string) string {
 
 func (p *proposalEnv) read(t *testing.T, brain interface {
 	Complete(context.Context, model.Request) (model.Response, error)
-}, activity ids.UUID) {
+}, activity ids.UUID,
+) {
 	t.Helper()
 	reader := compose.NewStageEvidenceReader(p.Pool, p.Deals, staticDomains{proposalOurDomain}, brain, func() time.Time { return clocktest.Now(t) }, slog.Default())
 	if _, err := reader.Read(p.Admin(), p.deal, activity); err != nil {
