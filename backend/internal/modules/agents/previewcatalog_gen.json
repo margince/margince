@@ -210,6 +210,8 @@
      "Confirmation destination",
     "confirmed":
      "confirmed",
+    "consent":
+     "consent",
     "consent_contact":
      "Consent contact",
     "consent_policy_version":
@@ -3489,6 +3491,26 @@
     "confirmed/lifecycle/unknown":
      "Unknown",
     "confirmed/boolean/true":
+     "Yes",
+    "consent/lifecycle/customer":
+     "Customer",
+    "consent/lifecycle/disqualified":
+     "Disqualified",
+    "consent/lifecycle/former_customer":
+     "Former customer",
+    "consent/lifecycle/live":
+     "Live",
+    "consent/lifecycle/onboarding":
+     "Onboarding",
+    "consent/lifecycle/opportunity":
+     "Opportunity",
+    "consent/lifecycle/prospect":
+     "Prospect",
+    "consent/lifecycle/target":
+     "Target",
+    "consent/lifecycle/unknown":
+     "Unknown",
+    "consent/boolean/true":
      "Yes",
     "consent_contact/lifecycle/customer":
      "Customer",
@@ -11846,6 +11868,8 @@
      "Unknown",
     "promotion_basis_from/boolean/true":
      "Yes",
+    "promotion_basis_kind/text/consent":
+     "Recipient agreement",
     "promotion_basis_kind/text/contract":
      "Contract",
     "promotion_basis_kind/text/existing_customer_exception":
@@ -11860,6 +11884,8 @@
      "Correspondence initiated by the recipient",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Vital or security interest",
+    "promotion_basis_kind/lifecycle/consent":
+     "Recipient agreement",
     "promotion_basis_kind/lifecycle/contract":
      "Contract",
     "promotion_basis_kind/lifecycle/existing_customer_exception":
@@ -16842,6 +16868,12 @@
      "Not set",
     "confirmed/execution":
      "Set when applied",
+    "consent/boolean":
+     "No",
+    "consent/empty":
+     "Not set",
+    "consent/execution":
+     "Set when applied",
     "consent_contact/boolean":
      "No",
     "consent_contact/empty":
@@ -20552,6 +20584,8 @@
      "Zieladresse der Bestätigung",
     "confirmed":
      "confirmed",
+    "consent":
+     "consent",
     "consent_contact":
      "Kontakt der Einwilligung",
     "consent_policy_version":
@@ -23831,6 +23865,26 @@
     "confirmed/lifecycle/unknown":
      "Unbekannt",
     "confirmed/boolean/true":
+     "Ja",
+    "consent/lifecycle/customer":
+     "Kunde",
+    "consent/lifecycle/disqualified":
+     "Disqualifiziert",
+    "consent/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "consent/lifecycle/live":
+     "Live",
+    "consent/lifecycle/onboarding":
+     "Onboarding",
+    "consent/lifecycle/opportunity":
+     "Chance",
+    "consent/lifecycle/prospect":
+     "Interessent",
+    "consent/lifecycle/target":
+     "Zielunternehmen",
+    "consent/lifecycle/unknown":
+     "Unbekannt",
+    "consent/boolean/true":
      "Ja",
     "consent_contact/lifecycle/customer":
      "Kunde",
@@ -32188,6 +32242,8 @@
      "Unbekannt",
     "promotion_basis_from/boolean/true":
      "Ja",
+    "promotion_basis_kind/text/consent":
+     "Zustimmung der empfangenden Person",
     "promotion_basis_kind/text/contract":
      "Vertrag",
     "promotion_basis_kind/text/existing_customer_exception":
@@ -32202,6 +32258,8 @@
      "Von der empfangenden Person begonnene Korrespondenz",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lebenswichtiges Interesse oder Sicherheitsinteresse",
+    "promotion_basis_kind/lifecycle/consent":
+     "Zustimmung der empfangenden Person",
     "promotion_basis_kind/lifecycle/contract":
      "Vertrag",
     "promotion_basis_kind/lifecycle/existing_customer_exception":
@@ -37184,6 +37242,12 @@
      "Nicht gesetzt",
     "confirmed/execution":
      "Wird beim Anwenden festgelegt",
+    "consent/boolean":
+     "Nein",
+    "consent/empty":
+     "Nicht gesetzt",
+    "consent/execution":
+     "Wird beim Anwenden festgelegt",
     "consent_contact/boolean":
      "Nein",
     "consent_contact/empty":
@@ -40894,6 +40958,8 @@
      "Địa chỉ nhận xác nhận",
     "confirmed":
      "confirmed",
+    "consent":
+     "consent",
     "consent_contact":
      "Liên hệ đồng ý",
     "consent_policy_version":
@@ -44173,6 +44239,26 @@
     "confirmed/lifecycle/unknown":
      "Chưa rõ",
     "confirmed/boolean/true":
+     "Có",
+    "consent/lifecycle/customer":
+     "Khách hàng",
+    "consent/lifecycle/disqualified":
+     "Đã loại",
+    "consent/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "consent/lifecycle/live":
+     "Đang vận hành",
+    "consent/lifecycle/onboarding":
+     "Đang triển khai",
+    "consent/lifecycle/opportunity":
+     "Cơ hội",
+    "consent/lifecycle/prospect":
+     "Tiềm năng",
+    "consent/lifecycle/target":
+     "Mục tiêu",
+    "consent/lifecycle/unknown":
+     "Chưa rõ",
+    "consent/boolean/true":
      "Có",
     "consent_contact/lifecycle/customer":
      "Khách hàng",
@@ -52530,6 +52616,8 @@
      "Chưa rõ",
     "promotion_basis_from/boolean/true":
      "Có",
+    "promotion_basis_kind/text/consent":
+     "Sự đồng ý của người nhận",
     "promotion_basis_kind/text/contract":
      "Hợp đồng",
     "promotion_basis_kind/text/existing_customer_exception":
@@ -52544,6 +52632,8 @@
      "Trao đổi do người nhận bắt đầu",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lợi ích thiết yếu hoặc an ninh",
+    "promotion_basis_kind/lifecycle/consent":
+     "Sự đồng ý của người nhận",
     "promotion_basis_kind/lifecycle/contract":
      "Hợp đồng",
     "promotion_basis_kind/lifecycle/existing_customer_exception":
@@ -57525,6 +57615,12 @@
     "confirmed/empty":
      "Chưa đặt",
     "confirmed/execution":
+     "Được xác định khi áp dụng",
+    "consent/boolean":
+     "Không",
+    "consent/empty":
+     "Chưa đặt",
+    "consent/execution":
      "Được xác định khi áp dụng",
     "consent_contact/boolean":
      "Không",

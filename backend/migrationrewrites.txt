@@ -249,4 +249,5 @@
 1795388838_the_ai_call_text_limits_follow_its_columns.up.sql | * | replaces the two text-bound triggers on ai_call, which act on later writes only; no existing row is changed
 1795388838_the_ai_call_text_limits_follow_its_columns.down.sql | * | restores the two text-bound triggers on ai_call as they stood before; no existing row is changed
 1795388887_the_basis_vocabulary_names_no_country.up.sql | *, communication_decision | the UPDATE reads communication_decision once, sequentially, because basis is unindexed (the same read VALIDATE CONSTRAINT does in the next migration), and writes only rows holding the retired vn_subject_agreement value, which no code path ever wrote, so it rewrites none in practice; the finite exception fits start-up because the cost is one scan and no row write, and the DO block only checks communication_basis and raises, never changing it
+1795388888_the_basis_vocabulary_names_no_country_validated.up.sql | * | the procedural body only counts rows, drops or validates constraints; it writes no row
 1795388888_the_basis_vocabulary_names_no_country_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

@@ -797,6 +797,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.linkIssued": "Link erstellt",
   "approval.preview.linkExpires": "Link läuft ab",
   "approval.preview.recordRevoked": "Widerrufen",
+  "approval.preview.basisAgreement": "Zustimmung der empfangenden Person",
   "approval.preview.basisKind": "Erfasste Kommunikationsgrundlage",
   "approval.preview.basisFrom": "Grundlage gültig ab",
   "approval.preview.basisUntil": "Grundlage gültig bis",
@@ -4858,6 +4859,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.employer_change": "Neuen Arbeitgeber prüfen",
   "approval.kind.deal_proposal_stage": "Deal in die Angebotsphase verschieben",
   "approval.kind.dealProposalStageNamed": "In die Phase „{stage}“ verschieben?",
+  "approval.proposalStageAsked":
+    "Zu {deal} ist ein Angebot rausgegangen. Den Deal in die Phase „{stage}“ verschieben?",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",

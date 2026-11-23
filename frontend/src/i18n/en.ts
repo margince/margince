@@ -758,6 +758,7 @@ export const en = {
   "approval.preview.linkIssued": "Link issued",
   "approval.preview.linkExpires": "Link expires",
   "approval.preview.recordRevoked": "Revoked",
+  "approval.preview.basisAgreement": "Recipient agreement",
   "approval.preview.basisKind": "Recorded communication basis",
   "approval.preview.basisFrom": "Basis valid from",
   "approval.preview.basisUntil": "Basis valid until",
@@ -4812,6 +4813,8 @@ export const en = {
   "approval.kind.employer_change": "Check a new employer",
   "approval.kind.deal_proposal_stage": "Move the deal to the proposal stage",
   "approval.kind.dealProposalStageNamed": "Move to {stage}?",
+  "approval.proposalStageAsked":
+    "A proposal went out on {deal}. Move the deal to “{stage}”?",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",

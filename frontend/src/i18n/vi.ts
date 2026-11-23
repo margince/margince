@@ -781,6 +781,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.linkIssued": "Ngày tạo liên kết",
   "approval.preview.linkExpires": "Ngày hết hạn liên kết",
   "approval.preview.recordRevoked": "Đã thu hồi",
+  "approval.preview.basisAgreement": "Sự đồng ý của người nhận",
   "approval.preview.basisKind": "Căn cứ liên lạc đã ghi nhận",
   "approval.preview.basisFrom": "Căn cứ có hiệu lực từ",
   "approval.preview.basisUntil": "Căn cứ có hiệu lực đến",
@@ -4733,6 +4734,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.employer_change": "Kiểm tra nơi làm việc mới",
   "approval.kind.deal_proposal_stage": "Chuyển deal sang giai đoạn đề xuất",
   "approval.kind.dealProposalStageNamed": "Chuyển sang giai đoạn “{stage}”?",
+  "approval.proposalStageAsked":
+    "Một đề xuất đã được gửi cho {deal}. Chuyển deal sang giai đoạn “{stage}”?",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
