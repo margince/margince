@@ -58,15 +58,17 @@ func run(args []string, stdout io.Writer) error {
 	}
 	report, changed := basis.RestampAll(records)
 	for _, line := range report {
-		fmt.Fprintln(stdout, line)
+		if _, err := fmt.Fprintln(stdout, line); err != nil {
+			return err
+		}
 	}
 	if *write {
 		if err := writeRecords(*dir, changed); err != nil {
 			return err
 		}
 	}
-	fmt.Fprintf(stdout, "%d restamped, %d left stale (written: %t)\n", len(changed), len(report)-len(changed), *write)
-	return nil
+	_, err = fmt.Fprintf(stdout, "%d restamped, %d left stale (written: %t)\n", len(changed), len(report)-len(changed), *write)
+	return err
 }
 
 func writeRecords(dir string, records []aicert.Record) error {
