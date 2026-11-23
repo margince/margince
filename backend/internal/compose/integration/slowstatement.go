@@ -69,10 +69,9 @@ type slowSeen struct {
 	query   string
 	seconds float64
 	cut     bool
-	// waitsOn is the wait event the statement sat in when seen, empty while
-	// it ran on the CPU; blockers counts the sessions holding a lock it needs.
-	// A statement stalled on a lock and one that is slow to run look the same
-	// without them.
+	// waitsOn is the statement's wait event when seen, and empty while it runs.
+	// blockers counts the sessions holding a lock it needs. Without them, a
+	// statement stalled on a lock looks like one that is slow to run.
 	waitsOn  string
 	blockers int
 }
