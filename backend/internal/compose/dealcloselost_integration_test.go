@@ -38,6 +38,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -415,8 +417,8 @@ func TestARefusalCloseNamesTheMailItRead(t *testing.T) {
 	}
 	note := c.WsScalar(t, `SELECT a.body FROM activity a JOIN activity_link l ON l.activity_id = a.id
 		WHERE l.deal_id = $1 AND a.subject = 'Margince closed this deal as lost'`, c.supported)
-	if !strings.Contains(note, "linked at the top of this deal") {
-		t.Fatalf("timeline note = %q, want it to point to the mail linked at the top of the deal", note)
+	if want := systemtext.Copy("deal.lost_refusal_linked", textlang.English); !strings.Contains(note, want) {
+		t.Fatalf("timeline note = %q, want it to say where the refusing mail is linked: %q", note, want)
 	}
 }
 
@@ -650,7 +652,7 @@ func (c *closeLostEnv) acceptsAMeetingAhead(t *testing.T, writer pgx.Tx) {
 		t.Fatal(err)
 	}
 	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
-	c.WsExec(t, `UPDATE activity_participant SET address = $3, roster_seats = ARRAY[$4::uuid]
+	c.WsExec(t, `UPDATE activity_participant SET address = $3, roster_seat = $4
 		WHERE activity_id = $1 AND contact_id = $2`, id, c.buyer, guest, c.Rep1)
 	roster := capture.MeetingRoster{Seat: c.Rep1, Current: true, Parties: connector.Parties{
 		Participants: []connector.MessageParticipant{{Email: guest, Response: connector.ResponseAccepted}},

@@ -167,7 +167,7 @@ func rollupInstallationMeta(ctx context.Context, tx pgx.Tx) (string, *time.Locat
 	if err != nil {
 		return "", nil, 0, err
 	}
-	tzName, err := identity.TimezoneOf(ctx, tx)
+	tzName, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return "", nil, 0, err
 	}

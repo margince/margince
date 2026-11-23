@@ -76,7 +76,7 @@ type reportFrame struct {
 func readReportFrame(ctx context.Context, tx pgx.Tx) (reportFrame, error) {
 	var frame reportFrame
 	var err error
-	if frame.Timezone, err = identity.TimezoneOf(ctx, tx); err != nil {
+	if frame.Timezone, err = identity.TimezoneAppliedTx(ctx, tx); err != nil {
 		return reportFrame{}, err
 	}
 	if frame.BaseCurrency, err = identity.BaseCurrencyOf(ctx, tx); err != nil {

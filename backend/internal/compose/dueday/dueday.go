@@ -50,7 +50,7 @@ func DayOf(ctx context.Context, tx pgx.Tx, at time.Time) (string, error) {
 func EndOf(ctx context.Context, tx pgx.Tx, day, zone string) (time.Time, error) {
 	if zone == "" {
 		var err error
-		if zone, err = identity.TimezoneOf(ctx, tx); err != nil {
+		if zone, err = identity.TimezoneAppliedTx(ctx, tx); err != nil {
 			return time.Time{}, err
 		}
 	}
@@ -88,7 +88,7 @@ func ComingDay(ctx context.Context, tx pgx.Tx, field, day, zone string, now time
 		return crmcontracts.IntentTime{}, err
 	}
 	if zone == "" {
-		if zone, err = identity.TimezoneOf(ctx, tx); err != nil {
+		if zone, err = identity.TimezoneAppliedTx(ctx, tx); err != nil {
 			return crmcontracts.IntentTime{}, err
 		}
 	}

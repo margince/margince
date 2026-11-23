@@ -31,7 +31,7 @@ func eurInstallation() Installation {
 	eur := func(context.Context, pgx.Tx) (string, error) { return "EUR", nil }
 	return Installation{
 		BaseCurrency: eur, BaseCurrencyApplied: eur,
-		Timezone:            func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
+		TimezoneApplied:     func(context.Context, pgx.Tx) (string, error) { return "UTC", nil },
 		Name:                func(context.Context, pgx.Tx) (string, error) { return "Margince Test", nil },
 		IssuerLegalName:     func(context.Context, pgx.Tx) (string, error) { return "Margince Test GmbH", nil },
 		StampCorrespondence: func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
