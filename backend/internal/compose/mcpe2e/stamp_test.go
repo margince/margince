@@ -45,8 +45,9 @@ func tree(t *testing.T) string {
 		write(name, "# "+name)
 	}
 	write(transcriptFile, "SERVER = 'x'\n\ndef tool_name(bare):\n    return bare\n\n"+
-		"def from_codex(lines):\n    return 'codex'\n\nCODEX_ONLY_AFTER = 1\n\n"+
-		"def _agy_step(step):\n    return 'agy'\n\ndef from_agy(lines):\n    return _agy_step(lines)\n")
+		"# codex reads its own stream\ndef from_codex(lines):\n    return 'codex'\n\nCODEX_ONLY_AFTER = 1\n\n"+
+		"_CODEX_SKIPPED = {'a'}\n\n# agy steps\n@staticmethod\ndef _agy_step(step):\n    \"\"\"Doc.\n"+
+		"def from_codex(not_real):\n    \"\"\"\n    return 'agy'\n\ndef from_agy(lines):\n    return _agy_step(lines)\n")
 	write(filepath.Join(ScenarioDir, "case1-log.yaml"), "name: case1_log\nprompt: |\n  Log it.\n"+
 		"must_call:\n  - log_activity\nmust_call_with:\n  - move_deal.stage=won\njudge:\n  - it says so\n")
 	write(filepath.Join(ScenarioDir, "case2-read.yaml"), "name: case2_read\nmust_call: [read_record]\n")
@@ -468,6 +469,12 @@ func TestAParserChangeStalesOnlyTheDriverWhoseStreamItReads(t *testing.T) {
 			"gpt:cli": {"harness"}, "gemini:cli": {"harness"}, "claude:cli": {"harness"}}},
 		{"a constant after a parser", "CODEX_ONLY_AFTER = 1", "CODEX_ONLY_AFTER = 2", map[string][]string{
 			"gpt:cli": {"harness"}, "gemini:cli": {"harness"}, "claude:cli": {"harness"}}},
+		{"a constant only codex reads", "_CODEX_SKIPPED = {'a'}", "_CODEX_SKIPPED = {'b'}", map[string][]string{
+			"gpt:cli": {"transcript parser"}, "gemini:cli": nil, "claude:cli": nil}},
+		{"the comment above the agy parser", "# agy steps", "# agy steps, once", map[string][]string{
+			"gpt:cli": nil, "gemini:cli": {"transcript parser"}, "claude:cli": nil}},
+		{"a def inside a docstring is not a parser", "not_real", "still_not_real", map[string][]string{
+			"gpt:cli": nil, "gemini:cli": {"transcript parser"}, "claude:cli": nil}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := tree(t)
@@ -526,13 +533,19 @@ func TestEveryListedResourceHasItsTextInThePublishedSurface(t *testing.T) {
 	}
 }
 
-// A function in the transcript module that names a driver belongs to that
-// driver's parser. One left in the shared part would stale every driver for a
-// fix only one of them needs.
-func TestEveryDriverSpecificTranscriptFunctionHasAnOwner(t *testing.T) {
+// A top-level function or constant in the transcript module that names a driver
+// belongs to that driver's parser. One left in the shared part would stale every
+// driver for a fix only one of them needs. The names come from routeParsers.
+func TestEveryDriverSpecificTranscriptNameHasAnOwner(t *testing.T) {
 	body, err := os.ReadFile(filepath.Join("..", "..", "..", "..", transcriptFile))
 	if err != nil {
 		t.Fatal(err)
+	}
+	var words []string
+	for _, prefixes := range routeParsers {
+		for _, prefix := range prefixes {
+			words = append(words, strings.Trim(strings.TrimPrefix(prefix, "from_"), "_"))
+		}
 	}
 	owned := 0
 	for line := range strings.Lines(string(body)) {
@@ -540,7 +553,7 @@ func TestEveryDriverSpecificTranscriptFunctionHasAnOwner(t *testing.T) {
 		if !declares {
 			continue
 		}
-		named := strings.Contains(strings.ToLower(name), "codex") || strings.Contains(strings.ToLower(name), "agy")
+		named := slices.ContainsFunc(words, func(word string) bool { return strings.Contains(strings.ToLower(name), word) })
 		if named && ownerOf(name) == "" {
 			t.Errorf("%s names a driver but no route owns it, so it sits in the shared part", name)
 		}
@@ -549,6 +562,72 @@ func TestEveryDriverSpecificTranscriptFunctionHasAnOwner(t *testing.T) {
 		}
 	}
 	if owned == 0 {
-		t.Error("no transcript function belongs to a driver, so the split reads nothing")
+		t.Error("no transcript name belongs to a driver, so the split reads nothing")
+	}
+}
+
+// No name is claimed by two drivers, since the owner would then depend on map order.
+func TestNoTwoDriversClaimTheSameTranscriptName(t *testing.T) {
+	for driver, prefixes := range routeParsers {
+		for other, rivals := range routeParsers {
+			for _, prefix := range prefixes {
+				for _, rival := range rivals {
+					if driver != other && (strings.HasPrefix(prefix, rival) || strings.HasPrefix(rival, prefix)) {
+						t.Errorf("%s (%s) and %s (%s) overlap", driver, prefix, other, rival)
+					}
+				}
+			}
+		}
+	}
+}
+
+// A verdict's driver is its candidate and route, and the parser is chosen by
+// the route's wire. Every route that reaches a CLI wire has an entry, and every
+// entry is a real route, so a new candidate cannot go unstamped.
+func TestEveryCommandLineRouteHasAParserEntry(t *testing.T) {
+	var table map[string]struct {
+		Routes map[string]struct {
+			Wire string `json:"wire"`
+		} `json:"routes"`
+	}
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", candidatesFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var whole map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &whole); err != nil {
+		t.Fatal(err)
+	}
+	table = map[string]struct {
+		Routes map[string]struct {
+			Wire string `json:"wire"`
+		} `json:"routes"`
+	}{}
+	for name, entry := range whole {
+		var candidate struct {
+			Routes map[string]struct {
+				Wire string `json:"wire"`
+			} `json:"routes"`
+		}
+		if json.Unmarshal(entry, &candidate) == nil && candidate.Routes != nil {
+			table[name] = candidate
+		}
+	}
+	real := map[string]bool{}
+	for name, candidate := range table {
+		for via, route := range candidate.Routes {
+			if !strings.HasSuffix(route.Wire, "-cli") {
+				continue
+			}
+			real[name+":"+via] = true
+			if _, keyed := routeParsers[name+":"+via]; !keyed {
+				t.Errorf("%s:%s reaches the %s wire but routeParsers has no entry, so a parser fix would not stale its verdicts", name, via, route.Wire)
+			}
+		}
+	}
+	for driver := range routeParsers {
+		if !real[driver] {
+			t.Errorf("routeParsers names %s, which is no command-line route in %s", driver, candidatesFile)
+		}
 	}
 }

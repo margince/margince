@@ -6,6 +6,7 @@ package mcpe2e
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -25,20 +26,42 @@ var routeParsers = map[string][]string{
 }
 
 // splitTranscript separates the transcript source into what every driver's
-// transcript passes through and each driver's own parser. A top-level def or
-// class belongs to the driver whose prefix its name carries. Anything else at
-// the left margin is shared, so a constant after a parser is not its own.
+// transcript passes through and each driver's own parser. A top-level def,
+// class or constant belongs to the driver whose prefix its name carries.
+// Anything else at the left margin is shared. Comments, blank lines and
+// decorators belong to the declaration below them, so a driver's comment moves
+// that driver's verdicts only.
 func splitTranscript(src string) (shared string, byDriver map[string]string) {
 	lines := map[string][]string{}
+	var leading []string
 	owner := ""
-	for line := range strings.Lines(src) {
-		if name, declares := declaredName(line); declares {
-			owner = ownerOf(name)
-		} else if line != "" && line[0] != ' ' && line[0] != '\t' && line[0] != '\n' && line[0] != '\r' && !strings.ContainsRune(")]}#", rune(line[0])) {
-			owner = ""
-		}
-		lines[owner] = append(lines[owner], line)
+	inString := false
+	place := func(to, line string) {
+		lines[to] = append(lines[to], leading...)
+		leading = nil
+		lines[to] = append(lines[to], line)
+		owner = to
 	}
+	for line := range strings.Lines(src) {
+		switch {
+		case inString:
+			lines[owner] = append(lines[owner], line)
+		case isMarginLead(line):
+			leading = append(leading, line)
+		case line[0] == ' ' || line[0] == '\t' || strings.ContainsRune(")]}", rune(line[0])):
+			place(owner, line)
+		default:
+			if name, declares := declaredName(line); declares {
+				place(ownerOf(name), line)
+			} else {
+				place("", line)
+			}
+		}
+		if strings.Count(line, `"""`)%2 == 1 || strings.Count(line, "'''")%2 == 1 {
+			inString = !inString
+		}
+	}
+	lines[owner] = append(lines[owner], leading...)
 	byDriver = map[string]string{}
 	for driver := range routeParsers {
 		byDriver[driver] = strings.Join(lines[driver], "")
@@ -46,7 +69,16 @@ func splitTranscript(src string) (shared string, byDriver map[string]string) {
 	return strings.Join(lines[""], ""), byDriver
 }
 
-// declaredName answers the name a top-level def or class line declares.
+// isMarginLead says a line waits for the declaration below it: blank, a
+// comment or a decorator.
+func isMarginLead(line string) bool {
+	return strings.TrimSpace(line) == "" || line[0] == '#' || line[0] == '@'
+}
+
+var assignedName = regexp.MustCompile(`^([A-Za-z_]\w*)\s*(?::[^=]+)?=[^=]`)
+
+// declaredName answers the name a top-level def, class or assignment line
+// declares.
 func declaredName(line string) (string, bool) {
 	for _, keyword := range []string{"async def ", "def ", "class "} {
 		if rest, found := strings.CutPrefix(line, keyword); found {
@@ -57,13 +89,17 @@ func declaredName(line string) (string, bool) {
 			return rest[:end], true
 		}
 	}
+	if match := assignedName.FindStringSubmatch(line); match != nil {
+		return match[1], true
+	}
 	return "", false
 }
 
 // ownerOf names the driver whose parser a function name belongs to, or "".
 func ownerOf(name string) string {
+	lower := strings.ToLower(name)
 	for driver, prefixes := range routeParsers {
-		if slices.ContainsFunc(prefixes, func(prefix string) bool { return strings.HasPrefix(name, prefix) }) {
+		if slices.ContainsFunc(prefixes, func(prefix string) bool { return strings.HasPrefix(lower, prefix) }) {
 			return driver
 		}
 	}
