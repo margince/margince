@@ -28643,9 +28643,23 @@ export interface components {
             counterparty?: string | null;
             /** @description Only when payload_capture_enabled, and never for an erased subject. */
             subject?: string | null;
+            filing?: components["schemas"]["CaptureTraceFiling"];
             /** Format: date-time */
             occurred_at: string;
         };
+        /** @description Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later. */
+        CaptureTraceFiling: {
+            actor: string;
+            /**
+             * @description Which hook point, for an extension actor. Absent for `core`.
+             * @enum {string|null}
+             */
+            hook?: "parties" | "deal" | null;
+            /** @enum {string} */
+            result: "linked" | "none" | "ambiguous" | "parties_changed" | "failed" | "ignored" | "moved" | "retracted";
+            /** @description For `core`, the rung that decided (`project`, `thread`, `sole_open_deal` and the rest). For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. */
+            reason?: string | null;
+        } | null;
         /** @description What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages. */
         CaptureTraceResolution: {
             /** @enum {string} */
@@ -44063,6 +44077,12 @@ export interface components {
             /** @description The fields that together identify one record. The unit's table holds them unique. */
             natural_key: string[];
             /**
+             * @description The path segment under the unit's screen that shows one record of the kind, as the unit
+             *     declared it. Absent when the unit's screen itself shows it. A link to a record opens
+             *     `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
+             */
+            view: string;
+            /**
              * @description What removing a record of the kind means. `archive_only` keeps the row.
              * @enum {string}
              */
@@ -52227,6 +52247,15 @@ export interface components {
             routes: components["schemas"]["ComposedExtensionRoute"][];
             /** @description The scheduled jobs this boot actually RUNS for the unit — a job the unit declared with no handler ticks nothing and is deliberately absent, because an operator reading this list is asking what runs, not what was written down. Sorted. */
             jobs: string[];
+            /** @description The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none. */
+            needs?: components["schemas"]["ComposedExtensionNeed"][];
+        };
+        /** @description One core capability a unit declares it uses. */
+        ComposedExtensionNeed: {
+            /** @description What the unit uses. `models` is the installation's AI models; `objects` is a key prefix of its own in the object store. */
+            capability: string;
+            /** @description One sentence from the unit's author saying what it does with the capability. */
+            reason: string;
         };
         /** @description The governance settings of one composed extension unit. */
         ExtensionSettings: {

@@ -19,10 +19,13 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -357,5 +360,107 @@ func TestBoundExtensionRuntimeDepsReachTheHandler(t *testing.T) {
 	}
 	if got.deps.pool != pool || got.deps.vault != vault {
 		t.Fatalf("the per-call Runtime was built over pool=%p vault=%v, not the bound pair", got.deps.pool, got.deps.vault)
+	}
+}
+
+type countingLane struct{ calls int }
+
+func (c *countingLane) Complete(context.Context, model.Request) (model.Response, error) {
+	c.calls++
+	return model.Response{Text: "ok"}, nil
+}
+
+// laneOf serves one completer for every extension task.
+func laneOf(c completer) func(ai.Task) completer {
+	return func(ai.Task) completer { return c }
+}
+
+// The tasks the "summaries" fixture unit declares: one interactive, one background.
+const (
+	askTask     = "ext_summaries_ask"
+	nightlyTask = "ext_summaries_nightly"
+)
+
+func registerSummariesTasks(t *testing.T) {
+	t.Helper()
+	err := ai.RegisterExtensionTasks([]ai.ExtensionTask{
+		{Task: askTask, Unit: "summaries", DisplayName: "Ask", Summary: "Answers a question.", Ladder: []ai.Tier{ai.TierCheapCloud}, Sites: []string{"one_shot"}},
+		{Task: nightlyTask, Unit: "summaries", DisplayName: "Nightly", Summary: "Summarises overnight.", Ladder: []ai.Tier{ai.TierCheapCloud}, Background: true, Sites: []string{"one_shot"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(ai.ResetExtensionTasks)
+}
+
+var oneMessage = extension.CompleteRequest{Messages: []extension.Message{{Role: "user", Text: "hi"}}, NoContactData: "a greeting"}
+
+// composeNeeds composes one unit, "summaries", declaring needs, and mints a
+// Runtime for it in a fresh workspace.
+func composeNeeds(t *testing.T, deps extensionRuntimeBinding, needs ...extension.Need) (*callRuntime, context.Context) {
+	t.Helper()
+	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0", Needs: needs}})
+	t.Cleanup(func() { setComposedExtensions(nil) })
+	registerSummariesTasks(t)
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	deps.pool = &pgxpool.Pool{}
+	rt := runtimeFor(ctx, "summaries", "1.0.0", "tool/probe", deps)
+	t.Cleanup(rt.release)
+	return rt, ctx
+}
+
+func TestAnUndeclaredCapabilityIsRefusedAndNeverReached(t *testing.T) {
+	lane, blob := &countingLane{}, blobstore.NewMemory()
+	rt, ctx := composeNeeds(t, extensionRuntimeBinding{models: laneOf(lane), blob: blob})
+	_, getErr := rt.Objects().Get(ctx, "report")
+	_, completeErr := rt.Models().Complete(ctx, askTask, oneMessage)
+	for name, err := range map[string]error{
+		"Complete": completeErr, "Get": getErr,
+		"Put": rt.Objects().Put(ctx, "report", []byte("x")), "Delete": rt.Objects().Delete(ctx, "report"),
+	} {
+		if !errors.Is(err, extension.ErrNotDeclared) {
+			t.Errorf("%s, undeclared: err = %v, want ErrNotDeclared", name, err)
+		}
+	}
+	if lane.calls != 0 {
+		t.Errorf("the model lane was reached %d times by a unit that declared no Models", lane.calls)
+	}
+}
+
+func TestAnUnattendedRuntimeRefusesInteractiveAndUndeclaredTasks(t *testing.T) {
+	lane := &countingLane{}
+	_, ctx := composeNeeds(t, extensionRuntimeBinding{}, extension.Need{Capability: extension.CapabilityModels, Reason: "Summarises a thread."})
+	deps := extensionRuntimeBinding{pool: &pgxpool.Pool{}, models: laneOf(lane)}
+	for name, mint := range map[string]func(context.Context, string, string, string, extensionRuntimeBinding) *callRuntime{
+		"job tick": jobRuntimeFor, "bus delivery": deliveryRuntimeFor,
+	} {
+		rt := mint(ctx, "summaries", "1.0.0", "probe", deps)
+		if _, err := rt.Models().Complete(ctx, askTask, oneMessage); !errors.Is(err, extension.ErrForbidden) {
+			t.Errorf("%s calling an interactive task: err = %v, want ErrForbidden", name, err)
+		}
+		if _, err := rt.Models().Complete(ctx, "ext_summaries_ghost", oneMessage); !errors.Is(err, extension.ErrNotDeclared) {
+			t.Errorf("%s calling an undeclared task: err = %v, want ErrNotDeclared", name, err)
+		}
+		rt.release()
+	}
+	// A background call is not made here: it would write the audit row, and this
+	// fixture has no database. extcapability's tests cover it.
+	if lane.calls != 0 {
+		t.Errorf("the lane was reached %d times by refused calls", lane.calls)
+	}
+}
+
+func TestADeclaredCapabilityGrantsOnlyItselfAndRemovingItCutsAccess(t *testing.T) {
+	rt, ctx := composeNeeds(t, extensionRuntimeBinding{models: laneOf(&countingLane{}), blob: blobstore.NewMemory()},
+		extension.Need{Capability: extension.CapabilityObjects, Reason: "Keeps generated files."})
+	if _, err := rt.Models().Complete(ctx, askTask, oneMessage); !errors.Is(err, extension.ErrNotDeclared) {
+		t.Errorf("Complete with only Objects declared: err = %v, want ErrNotDeclared", err)
+	}
+	if err := rt.Objects().Put(ctx, "a", []byte("x")); err != nil {
+		t.Fatalf("Put while declared: %v", err)
+	}
+	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0"}})
+	if err := rt.Objects().Put(ctx, "a", []byte("x")); !errors.Is(err, extension.ErrNotDeclared) {
+		t.Errorf("Put after the declaration was removed: err = %v, want ErrNotDeclared", err)
 	}
 }
