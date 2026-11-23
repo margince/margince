@@ -9,6 +9,7 @@ import type { Translator } from "../../i18n";
 import { useLocale, useT } from "../../i18n";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import type { Approval } from "../../lib/approvals.queries";
+import { useReaderApproval } from "../../lib/approvalstagenames";
 import { useViewerZone } from "../../lib/viewerzone";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
 import { useApprovalNames } from "./approvalresponsibility";
@@ -40,10 +41,11 @@ export function useApprovalDisplay(
   const t = useT();
   const { locale } = useLocale();
   const names = useApprovalNames([approval]);
+  const readerApproval = useReaderApproval();
   const zone = useViewerZone();
   return resolveDisplay(
     approval.kind,
-    approval.proposed_change ?? {},
+    readerApproval(approval).proposed_change ?? {},
     t,
     stagedDayFormatter(locale, zone),
     names,

@@ -62,6 +62,20 @@ type ProposalStageMove struct {
 	// taken for a proposal by its name, which the accept checks again.
 	SourceAttachmentID *ids.UUID `json:"source_attachment_id,omitempty"`
 	SourceFileNamed    bool      `json:"source_file_named,omitempty"`
+
+	// OwnerID and ToStageTranslations are read when the question is raised and
+	// never stored. The owner decides it, so the summary names the stage in
+	// the owner's language through these.
+	OwnerID             ids.UUID          `json:"-"`
+	ToStageTranslations map[string]string `json:"-"`
+}
+
+// ToStageNameIn is the target stage's name in language, else the stored name.
+func (m ProposalStageMove) ToStageNameIn(language string) string {
+	if named := strings.TrimSpace(m.ToStageTranslations[language]); named != "" {
+		return named
+	}
+	return m.ToStageName
 }
 
 // proposalWords name a proposal in German, English and Vietnamese, folded to
@@ -83,6 +97,8 @@ type proposalStageCandidate struct {
 	open     bool
 	names    []string
 	criteria []string
+	// translations are the stage's names by language, as stored.
+	translations map[string]string
 }
 
 // proposalPick is the stage chosen and how it was found.
@@ -187,10 +203,11 @@ func ProposalStageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (Propos
 	var status string
 	var hold, retired bool
 	var stage, pipeline ids.UUID
+	var owner *ids.UUID
 	err := tx.QueryRow(ctx, `
-		SELECT d.name, d.status, d.legal_hold, d.stage_id, d.pipeline_id, p.archived_at IS NOT NULL
+		SELECT d.name, d.status, d.legal_hold, d.stage_id, d.pipeline_id, p.archived_at IS NOT NULL, d.owner_id
 		  FROM deal d JOIN pipeline p ON p.id = d.pipeline_id
-		 WHERE d.id = $1 AND d.archived_at IS NULL FOR SHARE OF d`, dealID).Scan(&name, &status, &hold, &stage, &pipeline, &retired)
+		 WHERE d.id = $1 AND d.archived_at IS NULL FOR SHARE OF d`, dealID).Scan(&name, &status, &hold, &stage, &pipeline, &retired, &owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ProposalStageMove{}, false, nil
 	}
@@ -211,6 +228,10 @@ func ProposalStageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (Propos
 	move := ProposalStageMove{
 		DealID: dealID.UUID, DealName: name, FromStageID: stage, ToStageID: pick.stage.id,
 		ToStageName: pick.stage.names[0], MatchedBy: pick.matchedBy,
+		ToStageTranslations: pick.stage.translations,
+	}
+	if owner != nil {
+		move.OwnerID = *owner
 	}
 	from := stages[slices.IndexFunc(stages, func(s proposalStageCandidate) bool { return s.id == stage })]
 	for _, between := range stages {
@@ -245,6 +266,7 @@ func readProposalStageCandidates(ctx context.Context, tx pgx.Tx, pipeline ids.UU
 		}
 		s.open = StageSemantic(semantic) == SemanticOpen
 		s.names = []string{name}
+		s.translations = translations
 		for _, lang := range slices.Sorted(maps.Keys(translations)) {
 			s.names = append(s.names, translations[lang])
 		}

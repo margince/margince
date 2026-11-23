@@ -4846,6 +4846,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.employer_change": "Neuen Arbeitgeber prüfen",
   "approval.kind.deal_proposal_stage": "Deal in die Angebotsphase verschieben",
   "approval.kind.dealProposalStageNamed": "In die Phase „{stage}“ verschieben?",
+  "approval.proposalStageAsked":
+    "Zu {deal} ist ein Angebot rausgegangen. Den Deal in die Phase „{stage}“ verschieben?",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",
