@@ -27,6 +27,9 @@ const (
 	backendMakefile = "Makefile"
 	testLegsJob     = "deterministic-gates"
 	staticLegsJob   = "backend-lint"
+
+	mainHealthWorkflow = workflowDir + "/main-health.yml"
+	mainHealthGatesJob = "gates"
 )
 
 // makeCommand is one `make <target>` shell command: group 1 the target, group 2
@@ -106,6 +109,38 @@ func TestOneBackendLegRunsTheTreeGates(t *testing.T) {
 	if !slices.ContainsFunc(values, func(v string) bool { return v != "off" }) {
 		t.Errorf("every %s leg passes CHECK_TREE_GATES=off (%v), so the root script gates, drift and "+
 			"composition reproducibility run in no leg of CI", testLegsJob, values)
+	}
+}
+
+// main-health runs the no-database gate against main's tip, one runner per
+// leg. A leg its matrix leaves out is never checked on main, and the health
+// check still reports the backend gate green.
+func TestMainHealthRunsEveryCheckLeg(t *testing.T) {
+	t.Parallel()
+	all, _ := backendCheckLegs(t)
+
+	raw, err := gatekit.ReadFile(mainHealthWorkflow) // #nosec G304 -- a fixed repo-relative path
+	if err != nil {
+		t.Fatalf("reading %s: %v", mainHealthWorkflow, err)
+	}
+	var wf stepRuns
+	if err := yaml.Unmarshal(raw, &wf); err != nil {
+		t.Fatalf("%s: %v", mainHealthWorkflow, err)
+	}
+	ran, ok := legsRunBy(t, wf, mainHealthGatesJob, "check-backend", "CHECK_LEGS", all)
+	if !ok {
+		t.Fatalf("%s job %q has no `make check-backend` step, so this test cannot tell which legs it runs", mainHealthWorkflow, mainHealthGatesJob)
+	}
+	for _, leg := range all {
+		if !slices.Contains(ran, leg) {
+			t.Errorf("CHECK_LEGS leg %q runs in a local `make check` but in no leg of %s job %q (%v). "+
+				"Add it to a matrix entry, or main's health check passes without it.", leg, mainHealthWorkflow, mainHealthGatesJob, ran)
+		}
+	}
+	trees, _ := legsRunBy(t, wf, mainHealthGatesJob, "check-backend", "CHECK_TREE_GATES", []string{"on"})
+	if !slices.ContainsFunc(trees, func(v string) bool { return v != "off" }) {
+		t.Errorf("every leg of %s job %q passes CHECK_TREE_GATES=off (%v), so main's health check runs no drift "+
+			"or composition check", mainHealthWorkflow, mainHealthGatesJob, trees)
 	}
 }
 
