@@ -116,8 +116,8 @@ func TestOneBackendLegRunsTheTreeGates(t *testing.T) {
 }
 
 // main-health runs the no-database gate against main's tip. On one runner the
-// legs share its cores and the slow packages pass their test timeouts, so its
-// matrix splits the legs exactly as ci.yml's two backend jobs do. A leg it left
+// legs share its cores, and the slow packages run past their test timeouts.
+// So its matrix splits the legs as ci.yml's two backend jobs do. A leg it left
 // out, or a step it skipped by `if:`, would leave main unchecked and green.
 func TestMainHealthSplitsTheCheckLegsAsCIDoes(t *testing.T) {
 	t.Parallel()
