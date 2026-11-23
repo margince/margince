@@ -1,8 +1,9 @@
-import type { QueryClient } from "@tanstack/react-query";
+import type { Query, QueryClient, QueryKey } from "@tanstack/react-query";
 import type { components } from "../../../api/schema";
 import { formatNumber } from "../../../format/format";
 import type { Locale } from "../../../i18n";
 import type { NarrationEntry, ResumePoint } from "./conversation-types";
+import { SummaryOrder } from "./summary-order";
 
 // Session restore as a pure decision: server state in, a start plan out.
 // The wizard state's `path` field is THE member signal; a described
@@ -39,32 +40,56 @@ export type ProbeChange = (
   old: VoiceRestoreProbe,
 ) => Partial<VoiceRestoreProbe>;
 
+const emptyProbe: VoiceRestoreProbe = {
+  built: false,
+  summary: null,
+  sources: [],
+};
+
 // The screen keeps the probe mounted, so an invalidation would read it again
 // at once. Each change is written in instead, and a Back remount reads it.
-export function patchVoiceProbe(client: QueryClient, change: ProbeChange) {
-  client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, (old) =>
-    old === undefined ? undefined : { ...old, ...change(old) },
-  );
+// A probe the screen never read starts empty, so the step's corpus still
+// outlives the step.
+function patchVoiceProbe(client: QueryClient, change: ProbeChange) {
+  client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, (old) => {
+    const base = old ?? emptyProbe;
+    return { ...base, ...change(base) };
+  });
 }
 
-/** Reads the restore probe again and answers its summary, or null when that
- *  read failed or the probe is not on screen to be read. */
-export async function refreshedProbeSummary(
-  client: QueryClient,
-): Promise<VoiceRestoreProbe["summary"]> {
-  const probe = client
-    .getQueryCache()
-    .find<VoiceRestoreProbe>({ queryKey: VOICE_PROBE_KEY });
-  if (probe === undefined || !probe.isActive()) {
-    await client.invalidateQueries({ queryKey: VOICE_PROBE_KEY });
-    return null;
-  }
-  // The read's own answer, never a timestamp: a write in the same millisecond
-  // would otherwise pass for a fresh read.
-  return probe.fetch(undefined, { cancelRefetch: true }).then(
-    (fresh) => fresh.summary,
-    () => null,
-  );
+/** The one owner of the voice corpus: every voice step that opens over the
+ *  same probe entry shares its write order, and writes through it. */
+export type VoiceCorpusOwner = Readonly<{
+  order: SummaryOrder;
+  patch: (change: ProbeChange) => void;
+}>;
+
+type ProbeEntry = Query<VoiceRestoreProbe, Error, VoiceRestoreProbe, QueryKey>;
+
+const owners = new WeakMap<ProbeEntry, VoiceCorpusOwner>();
+
+// Keyed by the probe's cache entry, not the client. A seat change removes the
+// entry, so a write the last seat left in flight lands in no corpus.
+export function voiceCorpusOwner(client: QueryClient): VoiceCorpusOwner {
+  const cache = client.getQueryCache();
+  const probe = cache.build<
+    VoiceRestoreProbe,
+    Error,
+    VoiceRestoreProbe,
+    QueryKey
+  >(client, { queryKey: VOICE_PROBE_KEY });
+  const current = () =>
+    cache.find<VoiceRestoreProbe>({ queryKey: VOICE_PROBE_KEY, exact: true });
+  const known = owners.get(probe);
+  if (known !== undefined) return known;
+  const owner: VoiceCorpusOwner = {
+    order: new SummaryOrder(),
+    patch: (change) => {
+      if (current() === probe) patchVoiceProbe(client, change);
+    },
+  };
+  owners.set(probe, owner);
+  return owner;
 }
 
 export type RestoreInputs = Readonly<{

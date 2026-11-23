@@ -165,7 +165,10 @@ type companyScanCase struct {
 // builder — the reply schema included, with this fixture's ids as the
 // citation enum.
 func (c *companyScanCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := companyscan.ScanRequest(c.in, string(textlang.English))
+	req, err := withCertCompanyContext(ctx, ai.TaskAccountScan, companyscan.ScanRequest(c.in, string(textlang.English)))
+	if err != nil {
+		return aitasks.Trace{}, err
+	}
 	trace := aitasks.Trace{Requests: []model.Request{req}}
 	resp, err := completer.Complete(ctx, req)
 	if err != nil {

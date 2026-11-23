@@ -358,6 +358,10 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		// a malformed set, compose's preflightMessagingRules refuses a
 		// duplicate jurisdiction before any is registered, and the registry's
 		// own Register panics on either as the wiring-defect backstop.
+	case "MailHooks":
+		// Recognized and skipped: two pure functions with no context and no
+		// Runtime. They read and write nothing, so no operator resolves anything.
+		// Core vets what they return in capture/mailhooks.go.
 	case "FailureClasses":
 		// Recognized and deliberately skipped, for the reason a jurisdiction
 		// pack is: a failure vocabulary is inert operator-facing text — the

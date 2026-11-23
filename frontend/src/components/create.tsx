@@ -179,9 +179,8 @@ export function CreateAction<Created extends { id: string }>({
   // a dependent picker whose options only the server can narrow. See
   // usePublishedValues.
   onValuesChange?: (values: Record<string, string>) => void;
-  // The key is one per open dialog and per record. A repeat of the same save
-  // carries it, so a double press answers the first record. A POST that takes
-  // no Idempotency-Key ignores it.
+  // One key per attempt, renewed once the record exists or the dialog reopens.
+  // A double press answers the first record; a resend with `extra` takes a new key.
   create: CreateTransport<Created>;
   // A refusal this screen answers with its own verbs, or null for the
   // ordinary error line. `resend` sends the last submit again with `extra`.
@@ -283,7 +282,10 @@ export function CreateAction<Created extends { id: string }>({
         mutation.error,
         (extra) => {
           const last = mutation.variables;
-          if (last) mutation.mutate({ ...last, extra });
+          // Another body under the spent key is refused by the server.
+          if (last) {
+            mutation.mutate({ ...last, extra, idempotencyKey: renew() });
+          }
         },
         mutation.isPending,
       )

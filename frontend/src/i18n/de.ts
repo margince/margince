@@ -1267,7 +1267,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.questionBoundPeriod":
     "Diese Frage hat Filter. Die Zeiträume darin behalten die Daten vom Zeitpunkt des Platzierens: ein Geschäftsjahr ab {month}, in {zone}.",
   "reporting.fiscalQuarterNote":
-    "Dieses Quartal folgt dem Geschäftsjahr, das im {month} beginnt.",
+    "Quartale und Jahre folgen hier dem Geschäftsjahr, das im {month} beginnt.",
   "reporting.previewChart": "Vorschau",
   "reporting.previewLoading": "Vorschau wird geladen…",
   "reporting.previewEmpty":
@@ -1627,9 +1627,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wurde in einer Währung festgelegt, die nicht mehr die Basiswährung ist. Lege das Ziel neu fest, um zu vergleichen.",
   "reporting.this_week": "Diese Woche",
   "reporting.this_month": "Dieser Monat",
-  "reporting.last_month": "Letzter Monat",
+  "reporting.last_month": "Letzter abgeschlossener Monat",
   "reporting.last_week": "Letzte abgeschlossene Woche",
   "reporting.this_quarter": "Dieses Geschäftsquartal",
+  "reporting.last_quarter": "Letztes abgeschlossenes Quartal",
+  "reporting.last_year": "Letztes abgeschlossenes Jahr",
   "reporting.custom": "Eigener Zeitraum",
   "reporting.start": "Startdatum",
   "reporting.end": "Enddatum (nicht eingeschlossen)",
@@ -2867,6 +2869,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erfasster Austausch zurückgenommen",
   "history.field.acquisition_request_retracted":
     "Anfrage aus der Herkunft zurückgenommen",
+  "history.field.impersonation_warning_cleared":
+    "Warnung vor möglicher Täuschung aufgehoben",
+  "history.field.impersonation_warning_carried":
+    "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
   "history.field.reason": "Grund",
   "history.field.recorded_at_level": "Erfasst auf Ebene",
   "history.field.relationship_types": "Beziehungstypen",
@@ -2905,6 +2911,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.value.meeting_status.no_show": "Nicht erschienen",
   "history.value.meeting_status.canceled": "Abgesagt",
   "history.value.relationship_mark.vendor_marketing": "Anbieter-Werbung",
+  "history.value.impersonation.punycode_domain": "Kodierte E-Mail-Domain",
+  "history.value.impersonation.display_name_other_domain":
+    "Andere Domain im Anzeigenamen",
+  "history.value.impersonation.unrecorded": "Anzeichen nicht festgehalten",
 
   "confidence.high": "hoch",
   "confidence.med": "mittel",
@@ -4097,6 +4107,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.for": "für {name}",
   "co.overview.noDate": "Kein Datum",
   "co.overview.allDeals": "Alle Deals",
+  "co.overview.allContacts": "Alle Kontakte",
   "co.overview.noWork": "Kein offener Deal und kein Projekt",
   "co.overview.project": "Projekt",
   "co.overview.ends": "endet {date}",
@@ -5106,7 +5117,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.deals.col.close": "Abschluss",
   "co.deals.col.status": "Status",
   "co.rail.contacts.empty": "Noch keine Kontakte.",
-  "co.rail.contacts.add": "Kontakt hinzufügen",
 
   "co.commercial.title": "Geschäftliches",
   "linkedinImport.title": "LinkedIn-Verbindungen",
@@ -6042,6 +6052,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
   "lead.source.crawl": "Webrecherche",
+  "lead.source.api": "Integration",
+  "lead.source.automation": "Automatisierung",
+  "lead.source.capture": "Aus einer Unterhaltung erfasst",
   "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.unknown": "Unbekannte Quelle",
   "leadSources.removeOnlyTitle":
@@ -8893,6 +8906,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.completeNamed": "{subject} erledigen",
   "tasks.snooze": "1 Tag zurückstellen",
   "tasks.moveTo": "Verschieben auf",
+  "tasks.remind.menu": "Erinnerung",
+  "tasks.remind.inAnHour": "In 1 Stunde",
+  "tasks.remind.tomorrowMorning": "Morgen früh",
+  "tasks.remind.beforeDue": "1 Stunde vor Fälligkeit",
+  "tasks.remind.pick": "Zeit wählen",
+  "tasks.remind.remove": "Erinnerung entfernen",
+  "tasks.remind.current": "Erinnerung am {when}",
+  "tasks.remind.set": "Erinnerung am {when} gesetzt.",
+  "tasks.remind.removed": "Erinnerung entfernt.",
+  "tasks.remind.failed":
+    "Die Erinnerung wurde nicht gespeichert. Versuche es erneut.",
+  "tasks.remind.pickTitle": "Erinnerung am",
+  "tasks.remind.day": "Tag",
+  "tasks.remind.time": "Uhrzeit",
+  "tasks.remind.save": "Erinnerung setzen",
+  "tasks.remind.needsTime": "Gib einen Tag und eine Uhrzeit ein.",
+  "tasks.remind.past": "Wähle eine Zeit, die noch bevorsteht.",
   "tasks.log.action": "Ergebnis erfassen",
   "tasks.log.record": "Zu welchem Datensatz gehört diese Aktivität?",
   "tasks.log.chooseRecord": "Anderen Datensatz wählen",
@@ -9056,7 +9086,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.prospect.upcomingTitle": "Anstehende Termine",
   "analytics.prospect.cohortTitle": "Was aus deinen Übergaben wurde",
   "analytics.prospect.cohortPeriods":
-    "Für eine Woche oder einen Monat angezeigt. Wähle einen dieser Zeiträume.",
+    "Für dieses Geschäftsquartal und einen eigenen Zeitraum nicht angezeigt. Wähle einen anderen Zeitraum.",
   "analytics.prospect.cohortCaption_one":
     "{count} Übergabe, die du {period} eingereicht hast, nach aktuellem Stand",
   "analytics.prospect.cohortCaption_other":
@@ -9757,6 +9787,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "explain.col.stage": "Phase",
   "explain.col.owner": "Verantwortlich",
   "explain.col.pipeline": "Pipeline",
+  "explain.col.inCurrency": "{label} ({currency})",
 
   "settings.profileTitle": "Profil",
   "unsaved.title": "Ungespeicherte Änderungen verwerfen?",
@@ -10647,7 +10678,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tierWait": "Anreicherung aus dem Web: wartet in Freigaben.",
   "settings.tierAdvance":
     "Deal-Phase ändern oder Deal abschließen, Aktivitäten einem Projekt zuordnen: läuft sofort, wenn der Agent die Berechtigung hat.",
-  "settings.locked": "Gesperrt",
   "settings.purposes": "Einwilligungszwecke",
   "settings.purposesSub":
     "Wofür diese Installation Einwilligungen einholt und welche Zwecke ein Double-Opt-in brauchen.",
@@ -11920,6 +11950,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.action.openDeal": "Deal öffnen",
   "notifications.action.openLead": "Lead öffnen",
   "notifications.action.openProject": "Projekt öffnen",
+  "notifications.action.openExtensionRecord": "Datensatz öffnen",
   "notifications.action.review": "Anfrage prüfen",
   "notifications.action.systemHealth": "Systemzustand öffnen",
   "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
@@ -12831,6 +12862,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // die Art von Zugangsdaten trägt, mit der die jeweilige Einheit konfiguriert
   // wird.
   "extUnits.openNamed": "Einstellungen für {name}",
+  "extUnits.openApp": "{name} öffnen",
   "extUnits.user.title": "Weitere Konten",
   "extUnits.user.sub":
     "Erweiterungen dieser Installation, die sich in deinem Namen anmelden. Jede ist privat, und das Trennen betrifft nur dich.",
@@ -15742,6 +15774,36 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Absendeadresse gehört zur E-Mail-Infrastruktur, nicht zu einem Unternehmen, mit dem du arbeitest",
   "captureActivity.reason.transactional_prefix":
     "Die Absendeadresse wirkt wie ein automatisierter Versand, nicht wie eine Person",
+  "captureActivity.filing.core": "Vom CRM einem Deal zugeordnet: {reason}",
+  "captureActivity.filing.core.moved":
+    "Das CRM hat die Deal-Zuordnung verschoben: {reason}",
+  "captureActivity.filing.core.retracted":
+    "Das CRM hat die Deal-Zuordnung zurückgenommen: {reason}",
+  "captureActivity.filing.basis.project": "das Projekt der Mail",
+  "captureActivity.filing.basis.thread": "eine frühere Mail im Thread",
+  "captureActivity.filing.basis.sole_open_deal":
+    "der einzige offene Deal des Unternehmens",
+  "captureActivity.filing.basis.stakeholder": "ein Beteiligter am Deal",
+  "captureActivity.filing.basis.named_stakeholder":
+    "ein in der Mail genannter Beteiligter",
+  "captureActivity.filing.basis.ambiguous":
+    "mehrere Deals passen, ein Mitglied wurde gefragt",
+  "captureActivity.filing.ext.linked":
+    "{unit} hat sie einem Deal zugeordnet: {reason}",
+  "captureActivity.filing.ext.none":
+    "{unit} hat sie von jedem Deal ferngehalten: {reason}",
+  "captureActivity.filing.ext.ambiguous":
+    "{unit} hat die möglichen Deals eingegrenzt: {reason}",
+  "captureActivity.filing.ext.parties_changed":
+    "{unit} hat Kontakte und Unternehmen geändert, nach denen sie gelesen wurde: {reason}",
+  "captureActivity.filing.ext.failed":
+    "{unit} ist ausgefallen, deshalb bleibt die Mail unzugeordnet und wird später erneut versucht",
+  "captureActivity.filing.ext.ignored":
+    "Die Antwort von {unit} wurde ignoriert: {reason}",
+  "captureActivity.filing.ext.moved":
+    "{unit} hat die Deal-Zuordnung verschoben: {reason}",
+  "captureActivity.filing.ext.retracted":
+    "{unit} hat die Deal-Zuordnung zurückgenommen: {reason}",
   "captureActivity.outcome.deferred_capped": "Nicht geplant",
   "captureActivity.outcome.deferred_sent":
     "Zur Prüfung der Absendeadresse gesendet",
@@ -16462,6 +16524,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.objects": "Berechtigungsobjekte",
   "extAccess.brings.routes": "Routen",
   "extAccess.brings.jobs": "Hintergrund-Jobs",
+  "extAccess.brings.needs": "Nutzt vom Kern",
+  "extAccess.need.models": "KI-Modelle",
+  "extAccess.need.objects": "Dateispeicher",
   "extAccess.brings.none": "Keine",
   "extAccess.noObjects":
     "Es gibt nichts zu vergeben, da diese Einheit keine Berechtigungsobjekte registriert.",
@@ -16781,9 +16846,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companyManualSub":
     "Die Website-Analyse ist für diese Installation nicht aktiviert. Diese 3 Antworten ergeben einen nutzbaren Unternehmenskontext, ohne Modellaufruf und ohne externe Anfrage.",
   "settings.companyCreateWorkspace": "Unternehmenskontext erstellen",
-  "settings.auditActorExample": "agent:sdr",
-  "settings.auditEntityExample": "deal",
   "settings.auditAnyAction": "Alle Aktionen",
+  "settings.auditAnyActor": "Alle",
+  "settings.auditActorDelegated":
+    "Mit allem, was ein KI-Assistent in ihrem Auftrag getan hat.",
+  "settings.auditAnyEntity": "Alle Typen",
+  "settings.auditEntityIdHint":
+    "Füge die ganze Datensatz-ID ein. Nutze dafür „Datensatz-ID kopieren“ in einer Zeile.",
+  "settings.auditRangeReversed":
+    "Wähle ein Bis-Datum am oder nach dem Von-Datum.",
   "product.title": "Produkte",
   "product.readOnly":
     "Nur Lesezugriff. Deine Rolle darf keine Produkte ändern.",
@@ -17183,9 +17254,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.fiscalImpactKept_other":
     "{count} Berichte haben eine Karte, die nach einem Zeitraum filtert, und behalten ihre Daten.",
   "installationSettings.fiscalImpactRelative_one":
-    "{count} Bericht liest dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgt dem neuen Beginn.",
+    "{count} Bericht liest dieses Quartal, das letzte abgeschlossene Quartal oder Jahr, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgt dem neuen Beginn.",
   "installationSettings.fiscalImpactRelative_other":
-    "{count} Berichte lesen dieses Quartal, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgen dem neuen Beginn.",
+    "{count} Berichte lesen dieses Quartal, das letzte abgeschlossene Quartal oder Jahr, ein Quartalsziel oder ein Abschlussfenster im Geschäftsquartal und folgen dem neuen Beginn.",
   "installationSettings.fiscalImpactLoading":
     "Gespeicherte Arbeit, die diese Änderung betrifft, wird gezählt…",
   "installationSettings.forwardMeasure": "Grundlage der Hochrechnung",
@@ -17931,7 +18002,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird im Schlüsseltresor gespeichert und nie wieder angezeigt.",
   "firstRun.ai.chatModel": "Modell",
   "firstRun.ai.modelHint":
-    "Ein Ausgangspunkt. Jedes Modell, das der Anbieter bereitstellt, funktioniert.",
+    "Jedes Modell, das der Anbieter bereitstellt, funktioniert. Die Tests haben die Zusammenstellung oben bewertet, nicht ein Modell für jede Stufe.",
+  "firstRun.ai.setupTitle.consumer_class_brokered":
+    "Gemma 4 zum Selbstbetrieb, über OpenRouter",
+  "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
+  "firstRun.ai.setupTitle.gemini_vertex_eu":
+    "Google Gemini in der EU, über Google Cloud",
+  "firstRun.ai.setupTitle.gemma4_local_ollama":
+    "Gemma 4 auf deinem eigenen Server, über Ollama",
+  "firstRun.ai.setupTitle.openrouter_cloud":
+    "Offene Modelle von OpenAI und Mistral, über OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_cloud_eu":
+    "Mistral-Modelle in der EU, über OpenRouter",
+  "firstRun.ai.setupTitle.openrouter_openai": "OpenAI GPT-6, über OpenRouter",
+  "firstRun.ai.setupTitle.qwen3_local_vllm":
+    "Qwen3 auf deinem eigenen Server, über vLLM",
+  "firstRun.ai.setup": "Modelle: {setup}",
+  "firstRun.ai.setupHint":
+    "Die Zusammenstellung, die die Tests für diesen Anbieter bewertet haben, ein Modell pro Stufe. Du kannst jedes davon später in den Einstellungen unter KI ändern.",
+  "firstRun.ai.oneModel": "Stattdessen ein Modell für jede Stufe verwenden",
+  "aiCert.ready": "Bereit",
+  "aiCert.withCare": "Mit Vorsicht nutzbar",
+  "aiCert.notReliable": "Noch nicht zuverlässig",
+  "aiCert.notMeasured": "Nicht gemessen",
+  "aiCert.recheckPending": "{grade}, neue Prüfung ausstehend",
+  "aiCert.title": "Testnote von {model} für diese Funktion",
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.ai.keyFailed": "Schlüssel nicht gespeichert",
   "firstRun.ai.bindFailed": "Anbieter nicht zugeordnet",
@@ -22451,6 +22546,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.follow.setAside":
     "Du hast diesen Kontakt bis {date} zurückgestellt.",
   "contact.follow.resume": "Wieder verfolgen",
+  "contact.impersonation.title":
+    "Diese Absendeadresse gibt sich möglicherweise als jemand anderes aus",
+  "contact.impersonation.clear": "Als unbedenklich einstufen",
+  "contact.impersonation.reason.punycodeDomain":
+    "Die E-Mail-Domain nutzt eine kodierte Schreibweise, die einer anderen Domain ähneln kann.",
+  "contact.impersonation.reason.displayNameOtherDomain":
+    "Der Anzeigename enthält eine Adresse auf einer anderen Domain als der, von der die E-Mail kam.",
+  "contact.impersonation.reason.unrecorded":
+    "Die Prüfung hat nicht festgehalten, welches Anzeichen gefunden wurde.",
   "worklist.verb.completeUndo": "Rückgängig",
   "worklist.verb.completeUndoFailed":
     "Die Aufgabe konnte nicht wieder geöffnet werden. Bitte versuche es erneut.",

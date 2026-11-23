@@ -51,7 +51,13 @@ type aiCertFamily struct {
 	Ready          int `json:"ready"`
 	UsableWithCare int `json:"usable_with_care"`
 	NotReliableYet int `json:"not_reliable_yet"`
+	// TooFewRuns counts places right on every case with too few tries to grade
+	// alone: measured, and neither ready nor weak.
+	TooFewRuns     int `json:"too_few_runs"`
 	RecheckPending int `json:"recheck_pending"`
+	// Judges are the models that scored this family's answers, so a reader can
+	// see when two families' quality grades come from different judges.
+	Judges []string `json:"judges"`
 	// Models are the family's bindings folded over only the features a preset
 	// routes to them, so a model no preset reaches is not in any family.
 	Models []aiCertBinding `json:"models"`
@@ -70,6 +76,7 @@ type aiCertFamilySite struct {
 	Runs    int              `json:"runs"`
 	Passed  int              `json:"passed"`
 	Records int              `json:"records"`
+	Judge   string           `json:"judge,omitempty"`
 }
 
 // buildAICertFamilies folds the document's records by model family. A family is
@@ -99,7 +106,7 @@ func buildAICertFamilies(doc aiCertDoc, rows []aicert.ReadinessRow) []aiCertFami
 			}
 			fam.Sites = append(fam.Sites, aiCertFamilySite{
 				Key: site.Key, Task: site.Task, Best: rec.Binding, Band: rec.Band, State: rec.State,
-				Runs: rec.Runs, Passed: rec.Passed, Records: count[name],
+				Runs: rec.Runs, Passed: rec.Passed, Records: count[name], Judge: rec.Judge,
 			})
 		}
 	}
@@ -159,10 +166,13 @@ func aiCertRouteKey(task string, binding aiCertBindingRef) string {
 
 func countAICertFamily(fam *aiCertFamily) {
 	fam.SitesMeasured = len(fam.Sites)
+	judges := map[string]bool{}
 	for _, s := range fam.Sites {
 		switch s.Band {
 		case aicert.VerdictCertified:
 			fam.Ready++
+		case aicert.SiteTooFewRuns:
+			fam.TooFewRuns++
 		case aicert.VerdictSupportedDegraded:
 			fam.UsableWithCare++
 		default:
@@ -171,20 +181,27 @@ func countAICertFamily(fam *aiCertFamily) {
 		if s.State == aicert.StatusStale {
 			fam.RecheckPending++
 		}
+		if s.Judge != "" && !judges[s.Judge] {
+			judges[s.Judge] = true
+			fam.Judges = append(fam.Judges, s.Judge)
+		}
 	}
+	sort.Strings(fam.Judges)
 	fam.Answer = familyAnswer(fam)
 }
 
-// familyAnswer grades a family, and both halves of the page state its rule: not enough tested
-// when the family covers under half the features, yes when every measured one is
-// ready, mostly when at least familyMostlyPercent are usable, not yet otherwise.
+// familyAnswer grades a family, and both halves of the page state its rule.
+// Under half the features covered reads not enough tested. Every graded one
+// ready reads yes, familyMostlyPercent usable reads mostly, else not yet.
+// A place with too few tries to grade alone counts toward coverage and no grade.
 func familyAnswer(fam *aiCertFamily) string {
+	graded := fam.SitesMeasured - fam.TooFewRuns
 	switch {
 	case fam.SitesMeasured*familyCoverageDivisor < fam.SitesShipped:
 		return familyNotEnough
-	case fam.Ready == fam.SitesMeasured:
+	case fam.Ready == graded:
 		return familyYes
-	case (fam.Ready+fam.UsableWithCare)*100 >= fam.SitesMeasured*familyMostlyPercent:
+	case (fam.Ready+fam.UsableWithCare)*100 >= graded*familyMostlyPercent:
 		return familyMostly
 	default:
 		return familyNotYet
@@ -243,6 +260,9 @@ func familyPlainWords(fam aiCertFamily) string {
 	if fam.NotReliableYet > 0 {
 		words += fmt.Sprintf("; %d not reliable yet", fam.NotReliableYet)
 	}
+	if fam.TooFewRuns > 0 {
+		words += fmt.Sprintf("; %d more right every time, on too few tries to grade alone", fam.TooFewRuns)
+	}
 	return words + "."
 }
 
@@ -276,16 +296,56 @@ func writeAICertFamilySummary(page *strings.Builder, families []aiCertFamily) {
 	page.WriteString("family of AI models, across everything Margince AI does. A *place* is one spot in the\n")
 	page.WriteString("product where a feature calls a model; one feature can call from several places. To start\n")
 	page.WriteString("from a ready-made setup instead, go to [Can I use this model setup?](#can-i-use-this-model-setup).\n\n")
-	page.WriteString("| Family | Models we tested | Can I trust it? | In plain words |\n|---|---|---|---|\n")
+	page.WriteString("| Family | Models we tested | Can I trust it? | In plain words | Tries right | Quality scored by |\n|---|---|---|---|---|---|\n")
 	for _, fam := range families {
-		fmt.Fprintf(page, "| %s | %s | %s | %s |\n", fam.Name, familyModelNames(fam), familyAnswerWords(fam.Answer), familyPlainWords(fam))
+		fmt.Fprintf(page, "| %s | %s | %s | %s | %s | %s |\n", fam.Name, familyModelNames(fam), familyAnswerWords(fam.Answer),
+			familyPlainWords(fam), familyTriesRight(fam), familyJudges(fam))
 	}
 	page.WriteString("\n")
+	if familiesDisagreeOnJudges(families) {
+		page.WriteString("**The families above were scored by different judges.** A judge is the second model that scores how good an\n" +
+			"answer is, and two judges do not score on one scale. Until one judge has scored them all, compare families on\n" +
+			"*Tries right*: how often the answer passed its mechanical check, which no judge decides.\n\n")
+	}
 	fmt.Fprintf(page, "A family rated **Yes** is ready in every place we tested. One rated **Mostly** has at least %d in every 100 "+
 		"tested places ready or working with a check, and one rated **Not yet** has fewer. We say **Not enough tested yet** "+
 		"when we tested it in under half of the places. A family is judged on its best "+
 		"model for each place, and only on the models a model setup uses, each in the places that setup "+
 		"sends to it.\n\n", familyMostlyPercent)
+}
+
+// familyTriesRight is the family's pooled mechanical pass count over its best
+// model per place, which no judge's scale moves.
+func familyTriesRight(fam aiCertFamily) string {
+	runs, passed := 0, 0
+	for _, s := range fam.Sites {
+		runs += s.Runs
+		passed += s.Passed
+	}
+	return fmt.Sprintf("%d of %d", passed, runs)
+}
+
+func familyJudges(fam aiCertFamily) string {
+	if len(fam.Judges) == 0 {
+		return "checked mechanically"
+	}
+	names := make([]string, len(fam.Judges))
+	for i, judge := range fam.Judges {
+		names[i] = "`" + judge + "`"
+	}
+	return strings.Join(names, ", ")
+}
+
+// familiesDisagreeOnJudges says two families' quality grades rest on different
+// judges, or one family's on more than one.
+func familiesDisagreeOnJudges(families []aiCertFamily) bool {
+	seen := map[string]bool{}
+	for _, fam := range families {
+		for _, judge := range fam.Judges {
+			seen[judge] = true
+		}
+	}
+	return len(seen) > 1
 }
 
 // writeAICertFamilyDetail is the engineers' half: every model in each family and
@@ -314,10 +374,10 @@ func writeAICertFamilySection(page *strings.Builder, fam aiCertFamily) {
 			m.Sites, m.Bands.Certified, m.Bands.SupportedDegraded, m.Bands.NotSupported, aicert.ReliabilityCell(m.Passed, m.Runs))
 	}
 	page.WriteString("\n<details>\n<summary>Best model for each place</summary>\n\n")
-	page.WriteString("| Place | Best model in the family | Grade | Right in |\n|---|---|---|---|\n")
+	page.WriteString("| Place | Best model in the family | Grade | Right in | Quality scored by |\n|---|---|---|---|---|\n")
 	for _, s := range fam.Sites {
-		fmt.Fprintf(page, "| [`%s`](#%s) | `%s` | %s%s | %d of %d tries |\n", s.Key, aiCertSiteAnchor(s.Key),
-			s.Best.label(), bandGrade(s.Band), staleMark(s.State), s.Passed, s.Runs)
+		fmt.Fprintf(page, "| [`%s`](#%s) | `%s` | %s%s | %s | %s |\n", s.Key, aiCertSiteAnchor(s.Key),
+			s.Best.label(), bandGrade(s.Band), staleMark(s.State), aiCertTriesWords(s.Runs, s.Passed), judgeCell(s.Judge))
 	}
 	page.WriteString("\n</details>\n\n")
 }
@@ -326,6 +386,8 @@ func bandGrade(band string) string {
 	switch band {
 	case aicert.VerdictCertified:
 		return aiCertReady
+	case aicert.SiteTooFewRuns:
+		return aiCertTooFew
 	case aicert.VerdictSupportedDegraded:
 		return aiCertCare
 	default:

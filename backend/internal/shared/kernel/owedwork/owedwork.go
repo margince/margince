@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
@@ -71,22 +72,16 @@ type Item struct {
 // never overdue: nothing with no date can have missed it.
 func (i Item) Overdue(now time.Time) bool { return deadline.Passed(i.DueAt, now) }
 
-// LateWords says how late an overdue promise is, in the reader's terms, and
-// whether it is late at all. Both record pages' task cards read it, so the
-// same lateness is worded the same way whichever record it is seen from.
-//
-// Hours late is late by no whole days, and "0 days ago" reads as a counter
-// that broke rather than as a date that just passed. Not "today" either: a
-// promise due at 23:00 is in that state at 01:00, and that is yesterday's
-// date on the reader's calendar.
-func LateWords(due *time.Time, now time.Time, language string) (string, bool) {
-	said := langcopy.For(language)
-	past, ok := deadline.DaysPast(due, now)
-	if !ok {
+// LateWords says how late an overdue promise is, and whether it is late. It
+// counts calendar days in loc, as the page's late badge beside it does.
+func LateWords(due *time.Time, now time.Time, loc *time.Location, language string) (string, bool) {
+	if !deadline.Passed(due, now) {
 		return "", false
 	}
-	if past == 0 {
-		return said.Say(lateWords.Hours), true
+	said := langcopy.For(language)
+	past := elapsed.Days(*due, now, loc)
+	if past <= 0 {
+		return said.Say(lateWords.Today), true
 	}
 	if past == 1 {
 		return said.Say(lateWords.Day), true

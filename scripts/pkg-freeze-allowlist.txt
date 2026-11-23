@@ -15,3 +15,8 @@
 # so the gate only warns about it; remove it with the next edit here.
 # Package removals are never allowlistable (deprecate-then-major cycle,
 # ADR-0120 §3).
+github.com/margince/margince/backend/pkg/extension: Runtime.Models: added # an extension unit calls the core's AI models; only the core implements Runtime, so no outside code breaks (#11447)
+github.com/margince/margince/backend/pkg/extension: Runtime.Objects: added # an extension unit reads and writes the core's file store; only the core implements Runtime, so no outside code breaks (#11447)
+github.com/margince/margince/backend/pkg/extension: Runtime.Companies: added # a background job reads companies visible to the workspace; only the core implements Runtime, so no outside code breaks (#11449)
+github.com/margince/margince/backend/pkg/extension: Runtime.MailContent: added # a background job reads one mail's subject and body; only the core implements Runtime, so no outside code breaks (#11449)
+github.com/margince/margince/backend/pkg/extension: Directory.ByRole: added # a job finds members by role key; only the core implements Directory, so no outside code breaks (#11449)

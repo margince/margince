@@ -161,7 +161,8 @@ func TestAProjectCreatedFromADealLinksItUnderTheDealsWriteCheck(t *testing.T) {
 		t.Helper()
 		c := companyIDOf(companyID)
 		d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-			Name: name, PipelineID: pipeline, StageID: open, CompanyID: &c, OwnerID: userIDPtr(&owner),
+			Source: "manual",
+			Name:   name, PipelineID: pipeline, StageID: open, CompanyID: &c, OwnerID: userIDPtr(&owner),
 		})
 		if err != nil {
 			t.Fatal(err)

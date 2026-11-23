@@ -21,10 +21,13 @@ const (
 //
 // Here rather than in a test, because the order is a property of the verdicts.
 // Anything this does not know ranks with not_supported: an absent record is
-// not evidence that a model copes.
+// not evidence that a model copes. A site's SiteTooFewRuns sits under certified
+// and over degraded: nothing it measured was weak.
 func VerdictRank(verdict string) int {
 	switch verdict {
 	case VerdictCertified:
+		return 3
+	case SiteTooFewRuns:
 		return 2
 	case VerdictSupportedDegraded:
 		return 1
@@ -161,10 +164,11 @@ type ScenarioRuns struct {
 // K of N is the pooled pass count, k of n one case's, and a score is one run's
 // median judge opinion:
 //
-//	certified          = K/N ≥ 90% ∧ WilsonLower(K, N) ≥ 80%
+//	certified          = N ≥ 12 ∧ K/N ≥ 90% ∧ WilsonLower(K, N) ≥ 80%
 //	                   ∧ every case passes ≥ 50% of its own n runs
 //	                   ∧ TLower(score − its case's certified_min, over every graded run) ≥ 0
 //	                   ∧ every case's TUpper(scores) ≥ its certified_min
+//	                   ∧ every judged case has ≥ 3 graded runs
 //	                   ∧ every graded run's score ≥ its case's floor
 //	                   ∧ no case vetoed
 //	supported_degraded = K ≥ ⌈2N/3⌉
@@ -252,7 +256,7 @@ func caseJudgeBand(c caseStats) string {
 	switch {
 	case upper < float64(c.bands.DegradedMin) || upper < float64(c.bands.Floor):
 		return VerdictNotSupported
-	case upper < float64(c.bands.CertifiedMin) || underFloor(c):
+	case upper < float64(c.bands.CertifiedMin) || underFloor(c) || len(c.scores) < minJudgeScores:
 		return VerdictSupportedDegraded
 	default:
 		return VerdictCertified
@@ -381,7 +385,8 @@ func verdictOver(cases []caseStats) (verdict string, reliability float64) {
 // mechanicalBand is the best grade the pass counts alone reach.
 func mechanicalBand(cases []caseStats, passed, runs int) string {
 	lower, _ := wilsonBounds(passed, runs)
-	certified := passed*100 >= certifiedPassPercent*runs && lower*100 >= certifiedPassBoundPercent
+	certified := runs >= certifiedMinRuns &&
+		passed*100 >= certifiedPassPercent*runs && lower*100 >= certifiedPassBoundPercent
 	for _, c := range cases {
 		if passVetoed(c) {
 			return VerdictNotSupported
@@ -421,7 +426,7 @@ func judgeBand(cases []caseStats) string {
 		if upper < float64(c.bands.DegradedMin) {
 			vetoed = true
 		}
-		if upper < float64(c.bands.CertifiedMin) || underFloor(c) {
+		if upper < float64(c.bands.CertifiedMin) || underFloor(c) || len(c.scores) < minJudgeScores {
 			belowCertified = true
 		}
 	}

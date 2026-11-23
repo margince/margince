@@ -374,7 +374,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	// price of a valid closed deal.
 	e.SeedID(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, fx_rate_to_base, status, closed_at)
-		VALUES ($1, 'Converted deal', $2, $3, 'seed', 'system:test',
+		VALUES ($1, 'Converted deal', $2, $3, 'manual', 'system:test',
 		        100000, 'EUR', 1.0850000000, 'won', now())`,
 		pipeline, stage)
 
@@ -447,12 +447,12 @@ func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 		VALUES ($1, $2, 'Qualified', 1, 'open', 40)`, pipeline)
 	deal := e.SeedID(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, status)
-		VALUES ($1, 'Open deal', $2, $3, 'seed', 'system:test', 100000, 'EUR', 'open')`,
+		VALUES ($1, 'Open deal', $2, $3, 'manual', 'system:test', 100000, 'EUR', 'open')`,
 		pipeline, stage)
 	e.SeedID(t, `
 		INSERT INTO offer (id, deal_id, offer_number, currency, status,
 		                   fx_rate_to_base, fx_rate_date, source, captured_by)
-		VALUES ($1, $2, 'A-2026001', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`,
+		VALUES ($1, $2, 'A-2026001', 'EUR', 'sent', 1.0850000000, current_date, 'manual', 'system:test')`,
 		deal)
 
 	// Prove the fixture is the one this test claims: no deal froze anything.
@@ -544,11 +544,11 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		VALUES ($1, $2, 'Won', 1, 'won', 100)`, pipeline)
 	deal := e.SeedID(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, fx_rate_to_base, status, closed_at)
-		VALUES ($1, 'Converted deal', $2, $3, 'seed', 'system:test', 100000, 'EUR', 1.0850000000, 'won', now())`,
+		VALUES ($1, 'Converted deal', $2, $3, 'manual', 'system:test', 100000, 'EUR', 1.0850000000, 'won', now())`,
 		pipeline, stage)
 	e.SeedID(t, `
 		INSERT INTO offer (id, deal_id, offer_number, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
-		VALUES ($1, $2, 'A-2026002', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`, deal)
+		VALUES ($1, $2, 'A-2026002', 'EUR', 'sent', 1.0850000000, current_date, 'manual', 'system:test')`, deal)
 	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Census GmbH', 'seed', 'system:test')`)
 	e.SeedID(t, `
 		INSERT INTO contract (id, company_id, title, value_minor, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)

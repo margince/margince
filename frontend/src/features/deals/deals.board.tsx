@@ -29,7 +29,10 @@ import {
   type useStageTotals,
 } from "../../lib/deals.queries";
 import { useMemberAvatars, useMemberNames } from "../../lib/membernames";
-import type { usePipelines } from "../../lib/pipelines.queries";
+import {
+  inPositionOrder,
+  type usePipelines,
+} from "../../lib/pipelines.queries";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -41,7 +44,7 @@ import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
 import { probabilityReason } from "./dealprobability";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
-import { boardDealCount, buildColumns, stagesInOrder } from "./deals.columns";
+import { boardDealCount, buildColumns } from "./deals.columns";
 
 // Under a column's cards: its first read's wait or failure, then its "Load more".
 // A failed later read keeps the cards and is named, with Retry once no page is left.
@@ -234,7 +237,7 @@ export function DealBoardBody({
             columnExtras={columnExtras}
             menu={{
               deals: loadedDeals,
-              stages: stagesInOrder(effectivePipeline.stages ?? []),
+              stages: inPositionOrder(effectivePipeline.stages ?? []),
               onAdvance: requestAdvance,
             }}
           />

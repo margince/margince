@@ -7,6 +7,7 @@ import {
   foldForSearch,
   forReader,
   holdsEveryWord,
+  holdsEveryWordStart,
   searchWords,
   stable,
 } from "./collate";
@@ -142,5 +143,35 @@ describe("foldForSearch reads through what a keyboard leaves out", () => {
     expect(words).toEqual(["dong", "bo", "khoang"]);
     expect(holdsEveryWord(words, ["Khoảng", "đồng bộ (giây)"])).toBe(true);
     expect(holdsEveryWord(words, ["Khoảng"])).toBe(false);
+  });
+});
+
+describe("holdsEveryWordStart matches a word only where a word begins", () => {
+  it("matches the start of a field's word, folded like any search", () => {
+    expect(holdsEveryWordStart(["pip"], ["Pipelines"])).toBe(true);
+    expect(holdsEveryWordStart(["mul"], ["Alice Müller"])).toBe(true);
+    expect(holdsEveryWordStart(searchWords("ＡＬＩ"), ["Alice"])).toBe(true);
+  });
+
+  it("refuses a word that only sits inside another", () => {
+    expect(holdsEveryWordStart(["ali"], ["Qualification"])).toBe(false);
+    expect(holdsEveryWord(["ali"], ["Qualification"])).toBe(true);
+  });
+
+  it("counts a separator as the end of a word", () => {
+    expect(holdsEveryWordStart(["mail"], ["E-mail signature"])).toBe(true);
+    expect(holdsEveryWordStart(["port"], ["http.port"])).toBe(true);
+    expect(holdsEveryWordStart(["e-mail"], ["E-mail signature"])).toBe(true);
+  });
+
+  it("finds a later word start after an earlier mid-word hit", () => {
+    expect(holdsEveryWordStart(["ali"], ["Qualified alias"])).toBe(true);
+  });
+
+  it("needs every word, each in any field", () => {
+    expect(holdsEveryWordStart(["new", "le"], ["New lead"])).toBe(true);
+    expect(holdsEveryWordStart(["new", "ead"], ["New lead"])).toBe(false);
+    expect(holdsEveryWordStart(["new", "le"], ["New", "Leads"])).toBe(true);
+    expect(holdsEveryWordStart([], [])).toBe(true);
   });
 });

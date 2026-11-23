@@ -110,6 +110,9 @@ when you import. A record is archived, not deleted: an archive operation sets `a
 record stays readable by id. A few operations remove a part of a record, such as
 `removeOfferLineItem`.
 
+On a deal, an offer and a project, `source` is one of the values the contract lists for that field.
+A program that calls the API sends `api`. Any other value is refused with `422 invalid_source`.
+
 ## An id from your system
 
 A contact, company, deal or project can keep `source_id`, its id in your system. You set it on

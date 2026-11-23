@@ -93,3 +93,24 @@ describe("Your access", () => {
     );
   });
 });
+
+describe("Your role", () => {
+  it("shows a custom role by the name its admin gave it", async () => {
+    mountHome({
+      ...meFixture({ roles: ["rep", "custom_sales_assistant"] }),
+      role_names: { rep: "Rep", custom_sales_assistant: "Sales assistant" },
+    });
+
+    expect(await fact(en["settings.home.rolesLabel"])).toBe(
+      `${en["role.rep"]}Sales assistant`,
+    );
+  });
+
+  it("shows the key of a role the server did not name", async () => {
+    mountHome(meFixture({ roles: ["custom_sales_assistant"] }));
+
+    expect(await fact(en["settings.home.rolesLabel"])).toBe(
+      "custom_sales_assistant",
+    );
+  });
+});

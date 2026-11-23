@@ -106,9 +106,9 @@ that names a kind accepts it as a pattern.
 | Row check | A link, a tag or a Shortlist member needs the kind's `read` right and a live row in the unit's table. A caller without the right gets not found, so the id is not disclosed. |
 | Natural key | The unit's table keeps a unique index over the declared fields and no others. The readiness probe fails while a declared table, a column or that index is missing. |
 | Delete policy | `archive_only` (the default) keeps the row. `erasable` lets the row be erased through the erasure path. |
-| `GET /v1/record-kinds` | Lists the kinds the signed-in seat may read, with fields, natural key, delete policy and the actions the seat holds. |
+| `GET /v1/record-kinds` | Lists the kinds the signed-in seat may read, with fields, natural key, the `view` the unit declared, delete policy and the actions the seat holds. |
 | Audit | A change to an extension record is written with the `ext:<unit>:<kind>` name as its entity type and the existing actions. No new action is needed. |
-| Frontend | `isExtensionEntityKind` reads the spelling and `useRecordKindDirectory` loads the declared kinds. An extension kind has no record page, so `recordRoute` names none. |
+| Frontend | `isExtensionEntityKind` reads the spelling and `useRecordKindDirectory` loads the declared kinds. A core page does not show an extension kind, so `recordRoute` names none. A notice about one opens the unit's screen at the kind's `view`. |
 
 The database accepts the spelling in every column that named a kind. The columns are listed in the table below. A gate
 fails a new column that restates a closed list.

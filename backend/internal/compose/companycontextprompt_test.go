@@ -56,6 +56,29 @@ func TestEveryContractScopeNameResolves(t *testing.T) {
 
 // An unknown scope name is a contract defect and must be named as one, not
 // silently dropped from the prompt it was supposed to widen.
+// An extension task has no company context, and the model path must not refuse
+// it for lacking a policy.
+func TestAnExtensionTaskPassesTheCompanyContextBoundary(t *testing.T) {
+	t.Cleanup(ai.ResetExtensionTasks)
+	task := ai.Task("ext_dealmirror_summary")
+	err := ai.RegisterExtensionTasks([]ai.ExtensionTask{{
+		Task: task, Unit: "dealmirror", DisplayName: "Summary", Summary: "Summarises a note.",
+		Ladder: []ai.Tier{ai.TierCheapCloud}, Sites: []string{"summary"},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader := &contextReaderStub{}
+	req := model.Request{IncludeCompanyContext: true}
+	out, err := newCompanyContextProvider(reader).Prepare(context.Background(), task, req)
+	if err != nil {
+		t.Fatalf("an extension task was refused: %v", err)
+	}
+	if out.IncludeCompanyContext || len(reader.calls) != 0 {
+		t.Errorf("context rode an extension task: %+v, reads %d", out, len(reader.calls))
+	}
+}
+
 func TestAnUnknownScopeNameIsRefused(t *testing.T) {
 	if _, err := resolveScopeNames([]string{"identity", "not_a_scope"}); err == nil {
 		t.Fatal("an unknown scope name resolved successfully")
@@ -299,6 +322,30 @@ func TestTheOwnCompanyIDSurvivesTruncationAndIsAbsentWhenUnset(t *testing.T) {
 	}
 	if strings.Contains(block, "company_id") {
 		t.Fatalf("an unset anchor still rendered an id field: %s", block)
+	}
+}
+
+// The own company's id reaches only an agent, whose tools take record ids. A
+// drafting or reading site names records by short refs, and is never shown it.
+func TestTheOwnCompanyIDReachesOnlyAnAgent(t *testing.T) {
+	companyID := ids.From[ids.CompanyKind](ids.NewV7())
+	reader := &contextReaderStub{result: contacts.CompanyContext{
+		CompanyID: companyID, Fingerprint: "fp",
+		Scopes: []contacts.CompanyContextSection{{
+			Scope: contacts.CompanyContextPositioning,
+			Items: []contacts.CompanyContextItem{{Key: "icp", Value: "Manufacturers", Source: contacts.CompanySourceHuman}},
+		}},
+	}}
+	for task, want := range map[ai.Task]bool{ai.TaskAgentLoop: true, ai.TaskDraftReply: false, ai.TaskOfferDraft: false} {
+		req, err := newCompanyContextProvider(reader).Prepare(context.Background(), task, model.Request{
+			Messages: []model.Message{{Role: chatRoleUser, Content: "hello"}},
+		})
+		if err != nil {
+			t.Fatalf("%s: %v", task, err)
+		}
+		if shown := strings.Contains(req.Messages[0].Content, companyID.String()); shown != want {
+			t.Errorf("%s: the own company id shown = %v, want %v:\n%s", task, shown, want, req.Messages[0].Content)
+		}
 	}
 }
 

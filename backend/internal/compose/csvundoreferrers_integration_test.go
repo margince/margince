@@ -27,7 +27,8 @@ func TestUndoKeepsACompanyWhileALiveRecordStillNamesIt(t *testing.T) {
 	company := e.SeedCompany(t, "Referenced GmbH", nil)
 	companyID := ids.From[ids.CompanyKind](company)
 	deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Kept deal", PipelineID: pipeline, StageID: stage, CompanyID: &companyID,
+		Source: "manual",
+		Name:   "Kept deal", PipelineID: pipeline, StageID: stage, CompanyID: &companyID,
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)

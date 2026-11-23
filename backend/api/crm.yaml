@@ -34,7 +34,7 @@ openapi: 3.1.0
 #     request) is minted SERVER-SIDE per request and is NEVER client-supplied — no request header
 #     is honored for it. Clients do not set it.
 #   - Autonomy gate applies identically on REST and MCP (ADR-0055): when the caller is an AGENT
-#     principal (bearer/Passport), a mutating operation whose mapped autonomy tier is 🟡 does NOT
+#     principal (bearer/Passport), a mutating operation whose autonomy tier for that caller is 🟡 does NOT
 #     perform the change — it stages an approval (ErrRequiresApproval) exactly as the MCP tool does,
 #     keyed by operationId→ToolSpec, and returns the approval-required response (403 code:
 #     approval_required, or 202 where a staging ref is returned). REST is NOT read-only for agents;
@@ -6990,12 +6990,13 @@ paths:
       description: |
         The `advance_deal` MCP verb. Writes one `deal_stage_history` row + one audit row
         (action `advance_stage`) recording prior + next stage; closed-won emits `deal.stage_changed` (to_status=won).
-        A move with a closed-won/closed-lost stage at EITHER end is 🟡 confirm-first
-        (irreversible / touches money) — for an agent caller this requires an approval
-        token. Closing a deal is the obvious half; REOPENING one is the other, and it is
-        the same money: moving a won deal back to an open stage clears its close date,
-        its lost reason and the FX rate frozen at close, and takes revenue out of a
-        quarter that has already been reported.
+        An agent on a user's passport moves the deal at once, closing or reopening it
+        included: it may do unaided what its user may do. A move with a closed-won/closed-lost
+        stage at EITHER end is 🟡 confirm-first only for automatic work with no passport and
+        no user behind it, which needs an approval token. Closing a deal is the obvious half;
+        REOPENING one is the other, and it is the same money: moving a won deal back to an
+        open stage clears its close date, its lost reason and the FX rate frozen at close,
+        and takes revenue out of a quarter that has already been reported.
 
         A move to the stage the deal already holds changes nothing and answers 200 with the
         deal as it stands: a retried call must not close a closed deal again and move its
@@ -7008,7 +7009,8 @@ paths:
       # advance_deal is the one TierDynamic tool (ADR-0026): the gate resolves the tier from the
       # stage semantics at BOTH ENDS of the move, not statically. open→open = 🟢 (no token); a
       # terminal won/lost stage at either end = 🟡 (approval token required), so closing a deal and
-      # reopening one are both gated. The resolver reads each stage's `semantic` from pipeline
+      # reopening one are both gated. A passport agent acting as its user is 🟢 before the resolver
+      # runs (auth.TierFor), so this tier governs only passportless automatic work. The resolver reads each stage's `semantic` from pipeline
       # config, not just the request args — and it may only
       # ever RAISE, so an unknown or malformed semantic at either end fails toward the approval gate.
       # See interfaces.md §2.1 (TierDynamic) and events.md §5.3.
@@ -7027,7 +7029,7 @@ paths:
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c2
               closeWon:
-                summary: Closing won (🟡 — requires approval token for agents)
+                summary: Closing won (runs at once for a passport agent; 🟡 approval token for passportless automatic work)
                 value:
                   to_stage_id: 018f3a1b-0000-7000-8000-0000000000c9
                   status: won
@@ -7039,7 +7041,7 @@ paths:
               schema: { $ref: '#/components/schemas/DealAdvanced' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
-          description: RBAC denied, or a 🟡 transition attempted without an approval token.
+          description: RBAC denied, or passportless automatic work attempted a 🟡 transition without an approval token.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -7177,10 +7179,12 @@ paths:
         the deal moves as `POST /deals/{id}/advance` moves it, then `note` is logged on its
         timeline. The answer is the deal as it now stands and the note's activity id.
 
-        The tier is the advance's. A move to or from a won or lost stage is confirm-first for
-        an agent: the call stages one approval and answers 403 `approval_required` naming it.
-        Repeat the same call with that id as `approval_id`, or as the `X-Approval-Token`
-        header, once a human has approved it. A human's own call is its approval.
+        The tier is the advance's. An agent on a user's passport moves the deal at once, to or
+        from a won or lost stage included. For automatic work with no passport and no user
+        behind it, such a move is confirm-first: the call stages one approval and answers 403
+        `approval_required` naming it. Repeat the same call with that id as `approval_id`, or as
+        the `X-Approval-Token` header, once a human has approved it. A human's own call is its
+        approval.
 
         A retry with the same `idempotency_key` answers the first call's result and moves
         nothing. An `Idempotency-Key` header is taken as that key.
@@ -15729,6 +15733,8 @@ paths:
           - last_month
           - last_week
           - this_quarter
+          - last_quarter
+          - last_year
           - custom
       - &id007
         name: start_at
@@ -15907,6 +15913,8 @@ paths:
           - last_month
           - last_week
           - this_quarter
+          - last_quarter
+          - last_year
           - custom
       - &id007
         name: start_at
@@ -29101,6 +29109,46 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/impersonation-warning/clear:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: clearContactImpersonationWarning
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      x-human-only-reason: security   # mail an agent reads could ask it to clear the warning about its own sender
+      summary: Answer a contact's impersonation warning as fine.
+      description: |
+        Clears the warning `impersonation_warning` serves on the contact. The verdict stays on the
+        record with the moment and the user who cleared it, as the record of what was answered.
+        Requires permission to update the contact. A contact the caller cannot see answers `404`.
+
+        The body names the warning the caller read by its `detected_at`. A contact that now carries
+        a different open warning answers `409`, so nobody clears a warning they were not shown.
+        A contact with no open warning answers `204` and writes nothing.
+        One transaction: the row, its audit row and its `contact.updated` event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [detected_at]
+              properties:
+                detected_at:
+                  type: string
+                  format: date-time
+                  description: The `detected_at` of the `impersonation_warning` the caller read.
+      responses:
+        '204': { description: The contact carries no open warning. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /records/{record_type}/{id}/claim:
     parameters:
       - name: record_type
@@ -34755,7 +34803,7 @@ paths:
           description: The team or owner named by `scope_kind`.
         - name: period
           in: query
-          schema: { type: string, enum: [this_week, last_week, this_month, last_month], default: this_week }
+          schema: { type: string, enum: [this_week, last_week, this_month, last_month, last_quarter, last_year], default: this_week }
           description: The period, in the installation's reporting zone.
       responses:
         '200':
@@ -41961,7 +42009,35 @@ components:
         subject:
           type: [string, 'null']
           description: 'Only when payload_capture_enabled, and never for an erased subject.'
+        filing:
+          $ref: '#/components/schemas/CaptureTraceFiling'
         occurred_at: { type: string, format: date-time }
+
+    CaptureTraceFiling:
+      type: [object, 'null']
+      description: >-
+        Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for
+        the installation's own rule, or the name of the extension whose hook changed or failed the
+        decision. A hook that failed decided nothing: the mail keeps the link it had and is tried
+        again later.
+      required: [actor, result]
+      properties:
+        actor: { type: string }
+        hook:
+          type: [string, 'null']
+          enum: [parties, deal, null]
+          x-extensible-enum: true
+          description: 'Which hook point, for an extension actor. Absent for `core`.'
+        result:
+          type: string
+          enum: [linked, none, ambiguous, parties_changed, failed, ignored, moved, retracted]
+          x-extensible-enum: true
+        reason:
+          type: [string, 'null']
+          description: >-
+            For `core`, the rung that decided (`project`, `thread`, `sole_open_deal` and the rest).
+            For an extension, a key the extension declared for its hook. Read it together with the
+            actor: the label comes from that extension's own translations.
 
     CaptureTraceResolution:
       type: [object, 'null']
@@ -43157,6 +43233,16 @@ components:
           $ref: '#/components/schemas/AiEmbeddingsBinding'
         decisions:
           $ref: '#/components/schemas/AiDecisionsBinding'
+        task_ladders:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+          description: |
+            A task name to the order its rungs are walked in under this binding, for a task this
+            binding walks otherwise than the task contract does. The order must name exactly the
+            task's own rungs; anything else is refused with a 422. A task left out keeps its
+            contract order.
         providers:
           type: object
           additionalProperties: { $ref: '#/components/schemas/AiProviderSettings' }
@@ -46669,6 +46755,24 @@ components:
         decides: { type: boolean, description: 'The task declares a decision form, so a decision model may answer it first and its decision timeout applies.' }
         overrides: { $ref: '#/components/schemas/AiTaskOverride' }
         defaults: { $ref: '#/components/schemas/AiTaskSettings' }
+        certification: { $ref: '#/components/schemas/AiTaskCertification' }
+    AiTaskCertification:
+      type: object
+      required: [grade, model, recheck_pending]
+      description: |
+        The certification grade of the model that answers this feature first (the lead of
+        `normal_candidates`), read from the committed certification records by the readiness
+        report's rule: the worst grade over every site the feature ships, and not measured when
+        any site has no record for that model. Absent when no model is bound, and for embeddings.
+      properties:
+        grade:
+          type: string
+          enum: [ready, usable_with_care, not_reliable, not_measured]
+          x-extensible-enum: true
+          x-go-type: string
+          description: 'ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.'
+        model: { type: string, description: 'The model the grade is for.' }
+        recheck_pending: { type: boolean, description: 'The product has changed since the grade was measured: the grade is the last one there is, and a re-run replaces it.' }
     AiTaskOverride:
       type: object
       additionalProperties: false
@@ -47127,7 +47231,7 @@ components:
         address:
           type: string
           maxLength: 500
-          description: The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+          description: The chat's web address, such as `https://chat.example.com`; a bare host means https. Required for Dispact, which every team hosts itself; refused for Telegram.
         eventsSecret:
           type: string
           maxLength: 200
@@ -49179,6 +49283,13 @@ components:
             name. A rep sets it once and every draft to the contact uses it ahead of what the
             thread suggests. Null means nobody set it, and a draft reads the register from the
             correspondence.
+        impersonation_warning:
+          allOf: [{ $ref: '#/components/schemas/ContactImpersonationWarning' }]
+          readOnly: true
+          description: >-
+            Set while the sender check holds an unanswered sign that this sender pretends to be
+            someone else. Absent when there is none, and after a user cleared it
+            (`clearContactImpersonationWarning`).
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -52609,6 +52720,7 @@ components:
       type: object
       required: [contact_id, items]
       properties:
+        changed: { type: boolean, description: 'Whether this apply changed an employment edge or an evidence outcome. False means neither moved; claim processing bookkeeping and the duplicate recheck still run.' }
         warnings: { type: array, items: { type: string }, description: Retained evidence that requires administrator review. }
         contact_id: { type: string, format: uuid }
         items: { type: array, items: { $ref: '#/components/schemas/EmploymentImportItem' } }
@@ -57173,7 +57285,7 @@ components:
         country: { $ref: '#/components/schemas/ReportingCountry' }
         period:
           type: string
-          enum: [this_week, this_month, last_month, last_week, this_quarter]
+          enum: [this_week, this_month, last_month, last_week, this_quarter, last_quarter, last_year]
           x-extensible-enum: true
         metrics:
           type: array
@@ -57794,7 +57906,7 @@ components:
             participants must not move a date every colleague reads, and a mail the
             installation sent itself is not the buyer engaging. The rows a reader may
             discover through `GET /activities` can therefore be newer than this instant.
-        source: { type: string }
+        source: { type: string, description: 'The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.' }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         created_by:
           allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
@@ -57907,7 +58019,7 @@ components:
         project_id: { type: [string, 'null'], format: uuid, description: 'The body of work this deal belongs to; must name the same company as the deal.' }
         owner_id: { type: [string, 'null'], format: uuid }
         expected_close_date: { type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).' }
-        source: { type: string }
+        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
         source_system: { type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
         source_id: { type: [string, 'null'], maxLength: 128, description: 'The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`.' }
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
@@ -58479,7 +58591,7 @@ components:
           format: date-time
           readOnly: true
           description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
-        source: { type: string }
+        source: { type: string, description: 'The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.' }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.' }
         author:
           allOf: [{ $ref: '#/components/schemas/SourceAuthor' }]
@@ -58816,7 +58928,7 @@ components:
         description: { type: [string, 'null'] }
         started_at: { type: [string, 'null'], format: date }
         target_end_date: { type: [string, 'null'], format: date }
-        source: { type: string }
+        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
         source_id: { type: [string, 'null'], maxLength: 128, description: 'The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409.' }
         source_system: { type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
@@ -60632,7 +60744,7 @@ components:
           items: { $ref: '#/components/schemas/RecordKindOption' }
     RecordKindOption:
       type: object
-      required: [name, unit, kind, display_name, fields, natural_key, delete_policy, actions]
+      required: [name, unit, kind, display_name, fields, natural_key, view, delete_policy, actions]
       properties:
         name:
           type: string
@@ -60656,6 +60768,12 @@ components:
           type: array
           description: The fields that together identify one record. The unit's table holds them unique.
           items: { type: string }
+        view:
+          type: string
+          description: |
+            The path segment under the unit's screen that shows one record of the kind, as the unit
+            declared it. Absent when the unit's screen itself shows it. A link to a record opens
+            `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
         delete_policy:
           type: string
           enum: [archive_only, erasable]
@@ -66794,6 +66912,8 @@ components:
           - last_month
           - last_week
           - this_quarter
+          - last_quarter
+          - last_year
           - custom
           x-extensible-enum: true
           description: |
@@ -66801,6 +66921,8 @@ components:
             evaluation time. Read at that exact moment, the week holds no time
             yet and the context's interval starts where it ends. A month target
             beside it still counts the whole month up to the evaluation time.
+            `last_quarter` and `last_year` are the last completed fiscal quarter
+            and fiscal year, in the installation's fiscal calendar.
         interval:
           $ref: '#/components/schemas/ReportingWindow'
         target_basis:
@@ -66983,7 +67105,7 @@ components:
         reports_with_relative_periods:
           type: integer
           minimum: 0
-          description: Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
+          description: Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window.
     ReportingCard:
       type: object
       additionalProperties: false
@@ -69252,6 +69374,14 @@ components:
           description: >
             Effective role keys for this principal, and the one authority for them —
             `user.roles` is deliberately left unset here rather than repeating the same fact.
+        role_names:
+          type: object
+          additionalProperties: { type: string }
+          description: >
+            The name an admin gave each live role in `roles`, keyed by role key. A member may not
+            read the role directory, so this is how a screen shows a custom role by its name. A
+            client may still show a seeded role in its own translation. Absent from an older
+            server; a key it does not name is shown as the key.
         teams:
           type: array
           items: { type: string, format: uuid }
@@ -71691,6 +71821,27 @@ components:
             with no handler ticks nothing and is deliberately absent, because an operator
             reading this list is asking what runs, not what was written down. Sorted.
           items: { type: string }
+        needs:
+          type: array
+          description: >-
+            The core capabilities the unit declares it uses, each with the reason its author gave.
+            The core grants exactly these and refuses the rest, so this list is the whole of what
+            the unit can borrow from the core (its AI models, its object store). Sorted by
+            capability; absent for a unit that declares none.
+          items: { $ref: '#/components/schemas/ComposedExtensionNeed' }
+
+    ComposedExtensionNeed:
+      type: object
+      additionalProperties: false
+      required: [capability, reason]
+      description: One core capability a unit declares it uses.
+      properties:
+        capability:
+          type: string
+          description: What the unit uses. `models` is the installation's AI models; `objects` is a key prefix of its own in the object store.
+        reason:
+          type: string
+          description: One sentence from the unit's author saying what it does with the capability.
 
     ExtensionSettings:
       type: object
@@ -73944,6 +74095,7 @@ components:
       required: [router, actions]
       properties:
         router: { type: string }
+        ask_user_first_means: { type: string, description: 'What ask_user_first asks of the model; present when an action here has it.' }
         actions:
           type: array
           items:
@@ -79937,7 +80089,7 @@ components:
           items: { $ref: '#/components/schemas/OfferLineItem' }
         money_withheld: { type: boolean, readOnly: true, description: 'True for a reader the deal''s amount is masked from. Such a reader gets zero totals, no lines, no exchange rate and no PDF: the offer states the deal''s amount by another name.' }
         source_commercial_revision: { type: [integer, 'null'], format: int64, readOnly: true, description: 'The deal''s `commercial_revision` the lines were copied from. Such an offer''s lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.' }
-        source: { type: string }
+        source: { type: string, description: 'The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.' }
         captured_by: { type: string, readOnly: true, description: Server-stamped from the authenticated principal; never client-supplied. }
         version: { $ref: '#/components/schemas/RowVersion' }
         created_at: { type: string, format: date-time }
@@ -80021,7 +80173,7 @@ components:
             Copy the deal's lines at this `commercial_revision` into the offer. Required for a deal in
             `lines` mode, which refuses `line_items`, and refused for any other deal. Another revision
             answers 409 `version_skew`. The currency must be the deal's.
-        source: { type: string }
+        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
       additionalProperties: false
 
     UpdateOfferRequest:
@@ -80091,6 +80243,26 @@ components:
           items: { type: string }
         on_behalf_of: { type: string, format: uuid, description: The human whose RBAC bounds every call this passport makes. }
         expires_at:   { type: string, format: date-time }
+
+    ContactImpersonationWarning:
+      type: object
+      description: >-
+        The sign of impersonation the sender check saw when capture made this contact from a mail.
+      required: [detected_at]
+      properties:
+        reason:
+          type: string
+          enum: [punycode_domain, display_name_other_domain]
+          x-extensible-enum: true
+          description: >-
+            Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can
+            look like another domain. `display_name_other_domain`: the display name holds an
+            address on a domain other than the one the mail came from. Absent on a warning
+            recorded before the reason was stored.
+        detected_at:
+          type: string
+          format: date-time
+          description: When the sender check recorded it.
 
     ContactAcquisitionRequest:
       type: object

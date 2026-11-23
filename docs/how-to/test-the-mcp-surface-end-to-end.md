@@ -208,8 +208,7 @@ model wrote on the way, or a call the server refused, does not count. A send tha
 refuses by design still counts when the case lists its tool under `counts_when_refused:`.
 
 The checks that rule something out read every word and every call: `must_not_mention` and
-`must_not_call_with`. `check.py --lint` runs before the stack boots. It refuses an unknown key, a
-line it cannot place, a pattern that does not compile and a value of the wrong shape.
+`must_not_call_with`. `e2e/llm/scenariolint.py` runs before the stack boots. It refuses an unknown key, a line it cannot place, a pattern that does not compile and a value of the wrong shape. It also refuses a judged criterion that needs a tool's answer to check, and a pin that reads `not` but no short form of it.
 
 A scenario that fails lists what failed to hold. That can be a tool it never called,
 a fact it never said, or something it must not say. It can be a judged criterion, with the

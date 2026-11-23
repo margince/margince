@@ -199,6 +199,14 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
     "acquisition_request_retracted",
     "history.field.acquisition_request_retracted",
   ],
+  [
+    "impersonation_warning_carried",
+    "history.field.impersonation_warning_carried",
+  ],
+  [
+    "impersonation_warning_cleared",
+    "history.field.impersonation_warning_cleared",
+  ],
   ["reachability", "history.field.reachability"],
   ["readiness", "history.field.readiness"],
   ["reason", "history.field.reason"],

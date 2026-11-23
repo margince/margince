@@ -514,6 +514,7 @@ public.activity_participant.relinked_at timestamp with time zone gen=- def=-
 public.activity_participant.response text gen=- def=-
 public.activity_participant.role text NOT NULL gen=- def=-
 public.activity_participant.roster_seat uuid gen=- def=-
+public.activity_participant.roster_seats uuid[] gen=- def=-
 public.activity_participant.settlement_evidence_share CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()
 public.activity_participant.stamp_participant_domain_evidence CREATE TRIGGER stamp_participant_domain_evidence BEFORE INSERT OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION stamp_participant_domain_evidence()
 public.activity_participant.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_participant FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"role": 20000, "address": 20000, "response": 20000, "channel_user_id": 20000, "address_domain_folded": 20000, "domain_evidence_precision": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"address_domain_folded":20000,"channel_user_id":20000,"domain_evidence_precision":20000,"response":20000,"role":20000}')
@@ -2671,6 +2672,7 @@ public.capture_trace.capture_trace_stage_outcome_check CHECK ((((stage = 'intern
 public.capture_trace.capture_trace_subject_check CHECK (((subject IS NULL) OR (char_length(subject) <= 300)))
 public.capture_trace.connector text NOT NULL gen=- def=-
 public.capture_trace.counterparty text gen=- def=-
+public.capture_trace.filing jsonb gen=- def=-
 public.capture_trace.id uuid NOT NULL gen=- def=uuidv7()
 public.capture_trace.occurred_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_trace.outcome text NOT NULL gen=- def=-
@@ -4031,6 +4033,10 @@ public.contact.contact_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(
 public.contact.contact_owner_id_retirement_guard CREATE TRIGGER contact_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.contact FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.contact.contact_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
 public.contact.contact_pkey PRIMARY KEY (id)
+public.contact.contact_quarantine_cleared_by_pairs CHECK (((quarantine_cleared_at IS NULL) = (quarantine_cleared_by IS NULL)))
+public.contact.contact_quarantine_cleared_needs_a_verdict CHECK (((quarantine_cleared_at IS NULL) OR (quarantined_at IS NOT NULL)))
+public.contact.contact_quarantine_reason_check CHECK ((quarantine_reason = ANY (ARRAY['punycode_domain'::text, 'display_name_other_domain'::text])))
+public.contact.contact_quarantine_reason_needs_a_verdict CHECK (((quarantine_reason IS NULL) OR (quarantined_at IS NOT NULL)))
 public.contact.contact_relationship_mark_check CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'::text])))
 public.contact.contact_relationship_mark_set_by_pairs CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL)))
 public.contact.contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
@@ -4057,6 +4063,9 @@ public.contact.narrowing_reason text gen=- def=-
 public.contact.owner_id uuid gen=- def=-
 public.contact.photo_object_key text gen=- def=-
 public.contact.photo_origin text gen=- def=-
+public.contact.quarantine_cleared_at timestamp with time zone gen=- def=-
+public.contact.quarantine_cleared_by text gen=- def=-
+public.contact.quarantine_reason text gen=- def=-
 public.contact.quarantined_at timestamp with time zone gen=- def=-
 public.contact.relationship_mark text gen=- def=-
 public.contact.relationship_mark_set_by text gen=- def=-
@@ -4073,8 +4082,8 @@ public.contact.strength_last_inbound_day boolean gen=- def=-
 public.contact.strength_last_interaction_at timestamp with time zone gen=- def=-
 public.contact.strength_last_outbound_at timestamp with time zone gen=- def=-
 public.contact.strength_last_outbound_day boolean gen=- def=-
-public.contact.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
-public.contact.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
+public.contact.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "quarantine_reason": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "quarantine_cleared_by": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"quarantine_cleared_by":20000,"quarantine_reason":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
+public.contact.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.contact FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "quarantine_reason": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "quarantine_cleared_by": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"quarantine_cleared_by":20000,"quarantine_reason":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')
 public.contact.title text gen=- def=-
 public.contact.trg_contact_address_country_stale CREATE TRIGGER trg_contact_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.contact FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()
 public.contact.trg_contact_updated CREATE TRIGGER trg_contact_updated BEFORE UPDATE ON public.contact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -4908,6 +4917,8 @@ public.deal.deal_priority_check CHECK (((priority IS NULL) OR (priority = ANY (A
 public.deal.deal_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.deal.deal_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.deal.deal_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.deal.deal_source_channel CREATE TRIGGER deal_source_channel BEFORE UPDATE ON public.deal FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_source_onto_its_channel()
+public.deal.deal_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.deal.deal_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
 public.deal.deal_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
 public.deal.deal_stage_in_pipeline FOREIGN KEY (stage_id, pipeline_id) REFERENCES stage(id, pipeline_id)
@@ -6382,6 +6393,7 @@ public.idx_analytics_share_scope_user CREATE INDEX idx_analytics_share_scope_use
 public.idx_analytics_share_snapshot CREATE INDEX idx_analytics_share_snapshot ON public.analytics_share USING btree (snapshot_id)
 public.idx_aparticipant_address CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL)
 public.idx_aparticipant_contact CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL)
+public.idx_aparticipant_one_roster_seat CREATE INDEX idx_aparticipant_one_roster_seat ON public.activity_participant USING btree (id) WHERE (roster_seat IS NOT NULL)
 public.idx_aparticipant_sender_domain_reversed CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL))
 public.idx_aparticipant_user CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL)
 public.idx_aparticipant_waiting_address_time CREATE INDEX idx_aparticipant_waiting_address_time ON public.activity_participant USING btree (lower(address), domain_evidence_at DESC) WHERE ((role = 'to'::text) AND (address IS NOT NULL))
@@ -6415,6 +6427,7 @@ public.idx_audit_claim_status CREATE INDEX idx_audit_claim_status ON public.audi
 public.idx_audit_entity CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC)
 public.idx_audit_erasure_reason CREATE INDEX idx_audit_erasure_reason ON public.audit_log USING btree (((evidence ->> 'reason'::text))) WHERE ((action = 'erase'::text) AND (entity_type = 'contact'::text))
 public.idx_audit_log_batch CREATE INDEX idx_audit_log_batch ON public.audit_log USING btree (batch_id) WHERE (batch_id IS NOT NULL)
+public.idx_audit_on_behalf_of CREATE INDEX idx_audit_on_behalf_of ON public.audit_log USING btree (on_behalf_of, occurred_at DESC) WHERE (on_behalf_of IS NOT NULL)
 public.idx_audit_scrub_boundary CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))
 public.idx_audit_time CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC)
 public.idx_auth_token_hash CREATE UNIQUE INDEX idx_auth_token_hash ON public.auth_token USING btree (token_hash)
@@ -7976,6 +7989,12 @@ BEGIN
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
 
+public.move_source_onto_its_channel() secdef=false cfg=- acl=- 
+BEGIN
+ NEW.source := record_source_channel(NEW.source);
+ RETURN NEW;
+END;
+
 public.named_time_zone(zone_name text) secdef=false cfg=search_path=pg_catalog acl=- 
 DECLARE
  canonical text;
@@ -8172,6 +8191,8 @@ public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)
 public.offer.offer_number_shape CHECK ((offer_number ~ '^A-[0-9]+$'::text))
 public.offer.offer_pkey PRIMARY KEY (id)
 public.offer.offer_revision_check CHECK ((revision >= 1))
+public.offer.offer_source_channel CREATE TRIGGER offer_source_channel BEFORE UPDATE ON public.offer FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_source_onto_its_channel()
+public.offer.offer_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.offer.offer_source_commercial_revision_js_safe CHECK (((source_commercial_revision >= 0) AND (source_commercial_revision <= '9007199254740991'::bigint)))
 public.offer.offer_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'sent'::text, 'accepted'::text, 'rejected'::text, 'expired'::text, 'superseded'::text])))
 public.offer.offer_tax_minor_js_safe CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint)))
@@ -8334,6 +8355,7 @@ public.partner.partner_partner_kinds_check CHECK ((partner_kinds <@ ARRAY['hosti
 public.partner.partner_pkey PRIMARY KEY (id)
 public.partner.partner_relationship_stage_fkey FOREIGN KEY (relationship_stage) REFERENCES partner_stage(key) ON UPDATE RESTRICT ON DELETE RESTRICT
 public.partner.partner_retention_rate_check CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))
+public.partner.partner_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text])))
 public.partner.partner_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.partner.relationship_stage text NOT NULL gen=- def=-
 public.partner.renews_at date gen=- def=-
@@ -8600,6 +8622,8 @@ public.project.project_phase_check CHECK ((phase = ANY (ARRAY['initiative'::text
 public.project.project_pkey PRIMARY KEY (id)
 public.project.project_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.project.project_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.project.project_source_channel CREATE TRIGGER project_source_channel BEFORE UPDATE ON public.project FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_source_onto_its_channel()
+public.project.project_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.project.project_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
 public.project.project_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
 public.project.project_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -9006,6 +9030,15 @@ public.record_role.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.record_role.version bigint NOT NULL gen=- def=1
 public.record_role_key_key CREATE UNIQUE INDEX record_role_key_key ON public.record_role USING btree (key)
 public.record_role_pkey CREATE UNIQUE INDEX record_role_pkey ON public.record_role USING btree (id)
+public.record_source_channel(source text) secdef=false cfg=- acl=- 
+ SELECT CASE
+  WHEN source IN ('api', 'automation', 'capture', 'import', 'manual', 'webform') THEN source
+  WHEN source IN ('mcp', 'ui') OR source LIKE 'lead:%' THEN 'manual'
+  WHEN source LIKE 'mirror:%' OR source LIKE 'ext:%' OR source LIKE 'import:%' THEN 'import'
+  WHEN source LIKE 'agent:%' THEN 'automation'
+  ELSE 'api'
+ END
+
 public.record_stored_object_intent(requested_kind text, requested_key text) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner BEGIN
     INSERT INTO stored_object_intent (storage_key, kind)
     VALUES (requested_key, requested_kind)

@@ -24,9 +24,9 @@ func undated(ref string, filedDaysAgo int, source owedwork.Source) owedwork.Item
 	return owedwork.Item{Ref: ref, Source: source, FiledAt: now.AddDate(0, 0, -filedDaysAgo)}
 }
 
-// The overdue sentence never says "0 days ago": lateness under one whole day
-// has its own words, and undated or future work has none.
-func TestLateWordsCountWholeDaysBehind(t *testing.T) {
+// The overdue sentence never says "0 days ago": a date earlier today has its
+// own words, and undated or future work has none.
+func TestLateWordsCountCalendarDaysBehind(t *testing.T) {
 	twoHoursLate := now.Add(-2 * time.Hour)
 	fourDaysLate := now.AddDate(0, 0, -4)
 	stillAhead := now.Add(2 * time.Hour)
@@ -36,14 +36,14 @@ func TestLateWordsCountWholeDaysBehind(t *testing.T) {
 		want string
 		late bool
 	}{
-		{"hours late", &twoHoursLate, "Due less than a day ago and still open.", true},
+		{"hours late", &twoHoursLate, "Due earlier today and still open.", true},
 		{"days late", &fourDaysLate, "Due 4 days ago and still open.", true},
 		{"not yet due", &stillAhead, "", false},
 		{"undated", nil, "", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, late := owedwork.LateWords(tc.due, now, "en")
+			got, late := owedwork.LateWords(tc.due, now, time.UTC, "en")
 			if got != tc.want || late != tc.late {
 				t.Fatalf("LateWords = %q/%t, want %q/%t", got, late, tc.want, tc.late)
 			}

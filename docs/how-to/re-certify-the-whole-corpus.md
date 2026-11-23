@@ -46,6 +46,31 @@ Each cause needs a different answer, which is why the report keeps them separate
 
 Section 3 reads the file.
 
+## Re-stamp what only the grading rule moved
+
+If only `gradingRule` changed, some records need no new runs. Their rows still hold, and only the rule
+that pools them changed:
+
+```bash
+cd backend
+make e2e-ai-restamp FROM=grading-rule-13            # lists what it would do
+make e2e-ai-restamp FROM=grading-rule-13 WRITE=1    # writes it
+```
+
+Replace `grading-rule-13` with the rule the records carry. The tool grades a record again from its stored rows, with no model call. A row must pass three checks:
+
+- Its case and prompt parts of the stamp equal this build's.
+- Its grader part equals what the rule in `FROM` would stamp today. That shows the site check and the judge
+  request did not move.
+- The judge of the record is the default judge, and its wire rule is this build's.
+
+It also refuses a record that the new rule would run again, and a rule pair that `restampableRules` does
+not list. A reviewer adds a pair after reading a change that moved only how rows pool and grade. Do not add
+one after a change to how a judge reply becomes a score, or to which runs count. Those rows are not what
+this build would record.
+
+A record that fails a check stays stale, and the list says why. Those need the sweep below.
+
 ## 2. Run both preset sweeps
 
 The presets in [`config/presets/`](../../config/presets/README.md) are the two
@@ -59,8 +84,10 @@ cd backend
 make e2e-ai ROUTING=config/presets/gemini_cloud.yaml \
   TRACE="$PWD/../.tmp/aicert/gemini" RESUME="$PWD/../.tmp/aicert/gemini/resume"
 
-# openrouter_cloud: the default judge grades it too, as no task it certifies leads on Claude.
-make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml \
+# openrouter_cloud binds a Claude model for signal_extract, and the default judge refuses a
+# Claude candidate. So run each other task with TASK=<task> under the default judge, and
+# signal_extract alone with JUDGE=gemini:gemini-3.1-flash-lite.
+make e2e-ai ROUTING=config/presets/openrouter_cloud.yaml TASK=<task> \
   TRACE="$PWD/../.tmp/aicert/openrouter" RESUME="$PWD/../.tmp/aicert/openrouter/resume"
 ```
 
@@ -85,6 +112,22 @@ Keep one judge for a whole sweep; `judge_served_model` names it on every record.
 The judge rules and the default judge are in
 [certify-an-ai-model.md](certify-an-ai-model.md#prerequisites).
 
+A sweep takes longer than one window of the judge's Claude plan. When the window ends, the lane
+stops with `You've hit your 5-hour limit`. To have the sweep wait and go on, run it through
+`scripts/aicert-sweep.sh`. It runs `make -C backend e2e-ai` with your arguments from the repository
+root.
+
+When the judge reaches its limit or a provider does not answer, the script waits
+(`AICERT_SWEEP_WAIT`, 900 seconds by default). Then it runs the same command again, and the journal
+replays every run already scored. On a shared machine, set `AICERT_SWEEP_WRAP` to the lock command
+each attempt runs under, so the wait holds no lock. It
+refuses to start without `RESUME=`, and any other failure ends it with the lane's exit code:
+
+```bash
+AICERT_SWEEP_LOG=run.log scripts/aicert-sweep.sh ROUTING=config/presets/gemini_cloud.yaml \
+  TRACE="$PWD/.tmp/aicert/gemini" RESUME="$PWD/.tmp/aicert/gemini/resume"
+```
+
 The commands above also follow these rules:
 
 - **Use separate folders for each pass.** Give each pass its own `TRACE=` and `RESUME=`. Then they can run
@@ -103,8 +146,8 @@ Expect these outcomes:
   README of the preset says so.
 - **A sweep also measures fallbacks.** A routed run certifies every
   separate model that the ladder of a task points to. So a preset whose tiers point to different
-  models costs about twice as much as one with one model. `frontier` is on the ladder of no shipped
-  task, so a model set only there is never reached.
+  models costs about twice as much as one with one model. `frontier` leads only the ladder of
+  `signal_extract`, so a model set only there answers that task alone.
 - **A sweep skips what is already current** (`STALE_ONLY`, on by default). A
   change to the whole tree leaves records stale, so they run all the same. `STALE_ONLY=0` is
   for a new sample of current records, such as a check of how much one prompt moves between runs.
@@ -240,7 +283,7 @@ list price of the provider that served them.
 | `openai/gpt-oss-120b` | OpenRouter, mostly Cerebras (`fp16`) | 28 tasks | 57 minutes | 1,712 | 3,440,000 / 1,140,000 | about $2 |
 | `google/gemma-4-31b-it` | OpenRouter, provider `crusoe` (`bf16`), pinned | every task but `document_extract` | 53 minutes | 1,581 | 2,720,000 / 215,000 | about $0.50 |
 | `qwen/qwen3.8-27b` | OpenRouter, provider `deepinfra` (`bf16`), pinned | every task but `document_extract` | 254 minutes | 1,457 | 2,610,000 / 2,170,000 | about $4.50 |
-| Gemini preset (`gemini-3.6-flash`, `gemini-3.1-flash-lite`) | Gemini API | the stale tasks of both models | 56 minutes | 1,528 | 2,870,000 / 472,000 | about $3 |
+| Gemini preset (`gemini-3.8-flash`, `gemini-3.1-flash-lite`) | Gemini API | every task of both models | 103 minutes | 2,807 | 6,600,000 / 431,000 | about $4.30 |
 
 A run after a fix batch measures only the cases whose stamp moved. Each of those ran for 12 to 35 minutes.
 

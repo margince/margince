@@ -2,7 +2,7 @@ import type { components } from "../../api/schema";
 import { overdueReadingOf } from "../../components/financesummary";
 import { Badge } from "../../design-system/atoms";
 import { Meter } from "../../design-system/readings";
-import { formatMoney, formatNumber } from "../../format/format";
+import { formatMoneyWhole, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { medianDaysLabel } from "./company360";
 import { amountOf, FinanceFigure } from "./companyfinance";
@@ -65,12 +65,12 @@ export function OverdueLead({
           <p className="fin-legend">
             <Badge tone="danger">
               {t("finance.legendOverdue", {
-                amount: formatMoney(split.overdue, split.currency, locale),
+                amount: formatMoneyWhole(split.overdue, split.currency, locale),
               })}
             </Badge>
             <Badge tone="accent">
               {t("finance.legendOpen", {
-                amount: formatMoney(split.open, split.currency, locale),
+                amount: formatMoneyWhole(split.open, split.currency, locale),
               })}
             </Badge>
           </p>

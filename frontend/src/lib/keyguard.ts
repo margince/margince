@@ -45,13 +45,21 @@ function opensLayer(trigger: Element): boolean {
   );
 }
 
+// A trigger inside a leaving surface's `inert` still says expanded, but its
+// popup can take no key, as `liveDialogs` reads a leaving dialog.
+function liveTriggers(selector: string): Element[] {
+  return [...document.querySelectorAll(selector)].filter(
+    (trigger) => trigger.closest("[inert]") === null,
+  );
+}
+
 /** A dialog, menu or listbox is up, or the target sits in one. */
 export function layerIsOpen(target: EventTarget | null): boolean {
   return (
     liveDialogs().length > 0 ||
     (target instanceof Element && target.closest(LISTING_LAYER) !== null) ||
-    document.querySelector(OPEN_POPUP_TRIGGER) !== null ||
-    [...document.querySelectorAll(OPEN_TRIGGER)].some(opensLayer)
+    liveTriggers(OPEN_POPUP_TRIGGER).length > 0 ||
+    liveTriggers(OPEN_TRIGGER).some(opensLayer)
   );
 }
 

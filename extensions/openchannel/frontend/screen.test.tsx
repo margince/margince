@@ -577,15 +577,50 @@ describe("the openchannel screen", () => {
     vi.stubGlobal("fetch", vi.fn(fetchStub));
 
     renderScreen();
-    expect(
-      await screen.findByText(/no access to this connector’s endpoint/),
-    ).toBeTruthy();
-    expect(
-      await screen.findByText(/no access to incoming requests/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/no Read access to Endpoint/)).toBeTruthy();
+    expect(screen.getByText(/no Read access to Inbound/)).toBeTruthy();
+    expect(screen.getByText(/no Read access to Outbound/)).toBeTruthy();
+    // Told once where Read is granted, and not to grant it themselves.
+    expect(screen.getAllByText(/Settings → Extensions/)).toHaveLength(1);
+    expect(screen.getByText(/Someone who manages roles/)).toBeTruthy();
     expect(calls.filter((call) => call.path.startsWith("/ext/"))).toHaveLength(
       0,
     );
+  });
+
+  // An Admin without the unit's grants is the one who grants them, so the
+  // screen tells them where rather than sending them to an administrator.
+  it("tells a seat that edits roles to grant Read itself", async () => {
+    const { fetchStub } = stubTransport(
+      {
+        seat_type: "full",
+        objects: { role_admin: { read: true, update: true } },
+      },
+      QUIET,
+    );
+    vi.stubGlobal("fetch", vi.fn(fetchStub));
+
+    renderScreen();
+    expect(
+      await screen.findByText(
+        /Turn on Read for your role in Settings → Extensions/,
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Someone who manages roles/)).toBeNull();
+  });
+
+  it("shows no grant notice to a seat that reads every part", async () => {
+    const { fetchStub } = stubTransport(READ_ONLY_GRANT, {
+      ...QUIET,
+      "GET /ext/openchannel/endpoint": () => OPENED,
+    });
+    vi.stubGlobal("fetch", vi.fn(fetchStub));
+
+    renderScreen();
+    expect(await screen.findByTestId("openchannel-inbound-url")).toBeTruthy();
+    expect(
+      screen.queryByText("Some parts are hidden from your role"),
+    ).toBeNull();
   });
 
   // A body this screen cannot read is an error, not "no endpoint" — the second

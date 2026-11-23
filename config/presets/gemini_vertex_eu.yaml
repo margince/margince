@@ -41,6 +41,16 @@ seeds:
       cheap_cloud: { provider: gemini_vertex, model: gemini-3.1-flash-lite }
       premium:     { provider: gemini_vertex, model: gemini-3.8-flash, thinking_level: low }
       frontier:    { provider: gemini_vertex, model: gemini-3.8-flash, thinking_level: low }
+    # Three tasks answer on premium first, where Flash certifies and
+    # Flash-Lite does not: the scheduled agents (on Flash-Lite a line planted
+    # in a CRM record reached their findings), search planning and the voice
+    # profile. Every agent step, search plan and voice build pays premium
+    # tokens. Reply drafts stay on Flash-Lite first: there it is usable with
+    # care, and on Flash its account drafts fail two privacy cases.
+    task_ladders:
+      agent_loop: [premium, cheap_cloud]
+      nl_search: [premium, cheap_cloud]
+      voice_build: [premium, cheap_cloud]
     # The width is asked of the model as outputDimensionality, as on gemini.
     # The embedder keeps a location of its own, which overrides the provider's
     # for this lane alone.

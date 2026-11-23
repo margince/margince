@@ -12,14 +12,33 @@ import {
 import type { Dimensions } from "./reporting.dimensions";
 import type { ReportingSelection } from "./reporting.model";
 
-export const REPORTING_PERIODS: readonly ReportingSelection["period"][] = [
+// Every period the contract names, in the order a picker lists them.
+// reporting.selection.test.ts holds the list to the contract's enum.
+export const REPORTING_PERIODS = [
   "this_week",
+  "last_week",
   "this_month",
   "last_month",
-  "last_week",
   "this_quarter",
+  "last_quarter",
+  "last_year",
   "custom",
-];
+] as const satisfies readonly ReportingSelection["period"][];
+
+/** The periods words can name: all but a custom window, which they cannot bound. */
+export const PRESET_PERIODS = REPORTING_PERIODS.filter(
+  (period): period is Exclude<typeof period, "custom"> => period !== "custom",
+);
+
+/** Whether `period` is a fiscal quarter, so its target is one too. */
+export function readsFiscalQuarter(period: ReportingSelection["period"]) {
+  return period === "this_quarter" || period === "last_quarter";
+}
+
+/** Whether `period` moves with the installation's fiscal year start. */
+export function followsFiscalYear(period: ReportingSelection["period"]) {
+  return readsFiscalQuarter(period) || period === "last_year";
+}
 
 export type ValueBasis = NonNullable<ReportingSelection["value_basis"]>;
 
@@ -50,8 +69,11 @@ export function readOverviewFilters(
           ?.id ??
         defaultPipelineOf(pipelines)?.id ??
         "");
-  const targetBasis: ReportingSelection["target_basis"] =
-    period === "this_quarter" ? "fiscal_quarter" : "month";
+  const targetBasis: ReportingSelection["target_basis"] = readsFiscalQuarter(
+    period,
+  )
+    ? "fiscal_quarter"
+    : "month";
   const closeWindow: ReportingSelection["close_window"] =
     params.get("close") === "fiscal_quarter" ? "fiscal_quarter" : "all_open";
   const dimensions: Dimensions = {

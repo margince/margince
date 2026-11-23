@@ -318,7 +318,7 @@ func referenceKeyFromItsOwner(t *testing.T, e *integration.Env, kind storedobjec
 		e.WsExec(t, `
 			INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 				pdf_asset_ref, source, captured_by)
-			VALUES ($1, $2, 'A-1', 1, 'draft', 'EUR', $3, 'human', 'human:test')`,
+			VALUES ($1, $2, 'A-1', 1, 'draft', 'EUR', $3, 'manual', 'human:test')`,
 			ids.NewV7(), e.SeedWonDealLinkedTo(t), key)
 	case storedobjects.KindImport:
 		e.WsExec(t, `
@@ -487,7 +487,7 @@ func TestALogoOnlyASentOfferNamesSurvivesTheSweep(t *testing.T) {
 		INSERT INTO offer (id, deal_id, offer_number, revision, status, currency,
 			issuer_snapshot, source, captured_by)
 		VALUES ($1, $2, 'A-1', 1, 'sent', 'EUR',
-			jsonb_build_object('workspace_name', 'Acme Wien GmbH', 'logo_object_key', $3::text), 'human', 'human:test')`,
+			jsonb_build_object('workspace_name', 'Acme Wien GmbH', 'logo_object_key', $3::text), 'manual', 'human:test')`,
 		ids.NewV7(), e.SeedWonDealLinkedTo(t), printed)
 
 	worker := reapWorkerOver(e, blob)

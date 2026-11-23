@@ -36,7 +36,8 @@ func TestTheDealsListSortsByTheCloseDayItDraws(t *testing.T) {
 	create := func(name string, forecast *time.Time) ids.DealID {
 		t.Helper()
 		d, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{
-			Name: name, PipelineID: pipeline, StageID: openStage, ExpectedClose: forecast,
+			Source: "manual",
+			Name:   name, PipelineID: pipeline, StageID: openStage, ExpectedClose: forecast,
 		})
 		if err != nil {
 			t.Fatalf("creating %s: %v", name, err)

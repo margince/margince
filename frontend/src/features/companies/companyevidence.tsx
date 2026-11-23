@@ -10,7 +10,7 @@ import {
   Skeleton,
 } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatDateTimeAbbrev, formatNumber } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
@@ -273,14 +273,14 @@ function EvidenceTimes({
       {retrievedAt && (
         <p className="co-evidence-line">
           {t("co.evidence.retrievedAt", {
-            when: formatDateTime(retrievedAt, locale, readerZone),
+            when: formatDateTimeAbbrev(retrievedAt, locale, readerZone),
           })}
         </p>
       )}
       {lastVerifiedAt && (
         <p className="co-evidence-line">
           {t("co.evidence.verifiedAt", {
-            when: formatDateTime(lastVerifiedAt, locale, readerZone),
+            when: formatDateTimeAbbrev(lastVerifiedAt, locale, readerZone),
           })}
         </p>
       )}

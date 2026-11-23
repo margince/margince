@@ -5164,6 +5164,60 @@ func (e CaptureTraceEntryOutcomeNow) Valid() bool {
 	}
 }
 
+// Defines values for CaptureTraceFilingHook.
+const (
+	CaptureTraceFilingHookDeal    CaptureTraceFilingHook = "deal"
+	CaptureTraceFilingHookParties CaptureTraceFilingHook = "parties"
+)
+
+// Valid indicates whether the value is a known member of the CaptureTraceFilingHook enum.
+func (e CaptureTraceFilingHook) Valid() bool {
+	switch e {
+	case CaptureTraceFilingHookDeal:
+		return true
+	case CaptureTraceFilingHookParties:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureTraceFilingResult.
+const (
+	CaptureTraceFilingResultAmbiguous      CaptureTraceFilingResult = "ambiguous"
+	CaptureTraceFilingResultFailed         CaptureTraceFilingResult = "failed"
+	CaptureTraceFilingResultIgnored        CaptureTraceFilingResult = "ignored"
+	CaptureTraceFilingResultLinked         CaptureTraceFilingResult = "linked"
+	CaptureTraceFilingResultMoved          CaptureTraceFilingResult = "moved"
+	CaptureTraceFilingResultNone           CaptureTraceFilingResult = "none"
+	CaptureTraceFilingResultPartiesChanged CaptureTraceFilingResult = "parties_changed"
+	CaptureTraceFilingResultRetracted      CaptureTraceFilingResult = "retracted"
+)
+
+// Valid indicates whether the value is a known member of the CaptureTraceFilingResult enum.
+func (e CaptureTraceFilingResult) Valid() bool {
+	switch e {
+	case CaptureTraceFilingResultAmbiguous:
+		return true
+	case CaptureTraceFilingResultFailed:
+		return true
+	case CaptureTraceFilingResultIgnored:
+		return true
+	case CaptureTraceFilingResultLinked:
+		return true
+	case CaptureTraceFilingResultMoved:
+		return true
+	case CaptureTraceFilingResultNone:
+		return true
+	case CaptureTraceFilingResultPartiesChanged:
+		return true
+	case CaptureTraceFilingResultRetracted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureTraceResolutionStatus.
 const (
 	CaptureTraceResolutionStatusNoise      CaptureTraceResolutionStatus = "noise"
@@ -8905,6 +8959,24 @@ func (e ContactGraphRouteType) Valid() bool {
 	case ContactGraphRouteTypeContactGraphRouteTypeDirect:
 		return true
 	case ContactGraphRouteTypeContactGraphRouteTypeThroughContact:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactImpersonationWarningReason.
+const (
+	ContactImpersonationWarningReasonDisplayNameOtherDomain ContactImpersonationWarningReason = "display_name_other_domain"
+	ContactImpersonationWarningReasonPunycodeDomain         ContactImpersonationWarningReason = "punycode_domain"
+)
+
+// Valid indicates whether the value is a known member of the ContactImpersonationWarningReason enum.
+func (e ContactImpersonationWarningReason) Valid() bool {
+	switch e {
+	case ContactImpersonationWarningReasonDisplayNameOtherDomain:
+		return true
+	case ContactImpersonationWarningReasonPunycodeDomain:
 		return true
 	default:
 		return false
@@ -21406,7 +21478,9 @@ func (e ReportSetupRequestSite) Valid() bool {
 // Defines values for ReportSetupSelectionPeriod.
 const (
 	ReportSetupSelectionPeriodLastMonth   ReportSetupSelectionPeriod = "last_month"
+	ReportSetupSelectionPeriodLastQuarter ReportSetupSelectionPeriod = "last_quarter"
 	ReportSetupSelectionPeriodLastWeek    ReportSetupSelectionPeriod = "last_week"
+	ReportSetupSelectionPeriodLastYear    ReportSetupSelectionPeriod = "last_year"
 	ReportSetupSelectionPeriodThisMonth   ReportSetupSelectionPeriod = "this_month"
 	ReportSetupSelectionPeriodThisQuarter ReportSetupSelectionPeriod = "this_quarter"
 	ReportSetupSelectionPeriodThisWeek    ReportSetupSelectionPeriod = "this_week"
@@ -21417,7 +21491,11 @@ func (e ReportSetupSelectionPeriod) Valid() bool {
 	switch e {
 	case ReportSetupSelectionPeriodLastMonth:
 		return true
+	case ReportSetupSelectionPeriodLastQuarter:
+		return true
 	case ReportSetupSelectionPeriodLastWeek:
+		return true
+	case ReportSetupSelectionPeriodLastYear:
 		return true
 	case ReportSetupSelectionPeriodThisMonth:
 		return true
@@ -22040,7 +22118,9 @@ func (e ReportingSelectionCloseWindow) Valid() bool {
 const (
 	ReportingSelectionPeriodCustom      ReportingSelectionPeriod = "custom"
 	ReportingSelectionPeriodLastMonth   ReportingSelectionPeriod = "last_month"
+	ReportingSelectionPeriodLastQuarter ReportingSelectionPeriod = "last_quarter"
 	ReportingSelectionPeriodLastWeek    ReportingSelectionPeriod = "last_week"
+	ReportingSelectionPeriodLastYear    ReportingSelectionPeriod = "last_year"
 	ReportingSelectionPeriodThisMonth   ReportingSelectionPeriod = "this_month"
 	ReportingSelectionPeriodThisQuarter ReportingSelectionPeriod = "this_quarter"
 	ReportingSelectionPeriodThisWeek    ReportingSelectionPeriod = "this_week"
@@ -22053,7 +22133,11 @@ func (e ReportingSelectionPeriod) Valid() bool {
 		return true
 	case ReportingSelectionPeriodLastMonth:
 		return true
+	case ReportingSelectionPeriodLastQuarter:
+		return true
 	case ReportingSelectionPeriodLastWeek:
+		return true
+	case ReportingSelectionPeriodLastYear:
 		return true
 	case ReportingSelectionPeriodThisMonth:
 		return true
@@ -29990,7 +30074,9 @@ func (e EvaluateReportingParamsScopeKind) Valid() bool {
 const (
 	EvaluateReportingParamsPeriodCustom      EvaluateReportingParamsPeriod = "custom"
 	EvaluateReportingParamsPeriodLastMonth   EvaluateReportingParamsPeriod = "last_month"
+	EvaluateReportingParamsPeriodLastQuarter EvaluateReportingParamsPeriod = "last_quarter"
 	EvaluateReportingParamsPeriodLastWeek    EvaluateReportingParamsPeriod = "last_week"
+	EvaluateReportingParamsPeriodLastYear    EvaluateReportingParamsPeriod = "last_year"
 	EvaluateReportingParamsPeriodThisMonth   EvaluateReportingParamsPeriod = "this_month"
 	EvaluateReportingParamsPeriodThisQuarter EvaluateReportingParamsPeriod = "this_quarter"
 	EvaluateReportingParamsPeriodThisWeek    EvaluateReportingParamsPeriod = "this_week"
@@ -30003,7 +30089,11 @@ func (e EvaluateReportingParamsPeriod) Valid() bool {
 		return true
 	case EvaluateReportingParamsPeriodLastMonth:
 		return true
+	case EvaluateReportingParamsPeriodLastQuarter:
+		return true
 	case EvaluateReportingParamsPeriodLastWeek:
+		return true
+	case EvaluateReportingParamsPeriodLastYear:
 		return true
 	case EvaluateReportingParamsPeriodThisMonth:
 		return true
@@ -30080,7 +30170,9 @@ func (e ExportReportingEvaluationParamsScopeKind) Valid() bool {
 const (
 	ExportReportingEvaluationParamsPeriodCustom      ExportReportingEvaluationParamsPeriod = "custom"
 	ExportReportingEvaluationParamsPeriodLastMonth   ExportReportingEvaluationParamsPeriod = "last_month"
+	ExportReportingEvaluationParamsPeriodLastQuarter ExportReportingEvaluationParamsPeriod = "last_quarter"
 	ExportReportingEvaluationParamsPeriodLastWeek    ExportReportingEvaluationParamsPeriod = "last_week"
+	ExportReportingEvaluationParamsPeriodLastYear    ExportReportingEvaluationParamsPeriod = "last_year"
 	ExportReportingEvaluationParamsPeriodThisMonth   ExportReportingEvaluationParamsPeriod = "this_month"
 	ExportReportingEvaluationParamsPeriodThisQuarter ExportReportingEvaluationParamsPeriod = "this_quarter"
 	ExportReportingEvaluationParamsPeriodThisWeek    ExportReportingEvaluationParamsPeriod = "this_week"
@@ -30093,7 +30185,11 @@ func (e ExportReportingEvaluationParamsPeriod) Valid() bool {
 		return true
 	case ExportReportingEvaluationParamsPeriodLastMonth:
 		return true
+	case ExportReportingEvaluationParamsPeriodLastQuarter:
+		return true
 	case ExportReportingEvaluationParamsPeriodLastWeek:
+		return true
+	case ExportReportingEvaluationParamsPeriodLastYear:
 		return true
 	case ExportReportingEvaluationParamsPeriodThisMonth:
 		return true
@@ -30170,7 +30266,9 @@ func (e GetReportingEvidenceParamsScopeKind) Valid() bool {
 const (
 	GetReportingEvidenceParamsPeriodCustom      GetReportingEvidenceParamsPeriod = "custom"
 	GetReportingEvidenceParamsPeriodLastMonth   GetReportingEvidenceParamsPeriod = "last_month"
+	GetReportingEvidenceParamsPeriodLastQuarter GetReportingEvidenceParamsPeriod = "last_quarter"
 	GetReportingEvidenceParamsPeriodLastWeek    GetReportingEvidenceParamsPeriod = "last_week"
+	GetReportingEvidenceParamsPeriodLastYear    GetReportingEvidenceParamsPeriod = "last_year"
 	GetReportingEvidenceParamsPeriodThisMonth   GetReportingEvidenceParamsPeriod = "this_month"
 	GetReportingEvidenceParamsPeriodThisQuarter GetReportingEvidenceParamsPeriod = "this_quarter"
 	GetReportingEvidenceParamsPeriodThisWeek    GetReportingEvidenceParamsPeriod = "this_week"
@@ -30183,7 +30281,11 @@ func (e GetReportingEvidenceParamsPeriod) Valid() bool {
 		return true
 	case GetReportingEvidenceParamsPeriodLastMonth:
 		return true
+	case GetReportingEvidenceParamsPeriodLastQuarter:
+		return true
 	case GetReportingEvidenceParamsPeriodLastWeek:
+		return true
+	case GetReportingEvidenceParamsPeriodLastYear:
 		return true
 	case GetReportingEvidenceParamsPeriodThisMonth:
 		return true
@@ -30435,10 +30537,12 @@ func (e GetSdrTeamReviewParamsScopeKind) Valid() bool {
 
 // Defines values for GetSdrTeamReviewParamsPeriod.
 const (
-	GetSdrTeamReviewParamsPeriodLastMonth GetSdrTeamReviewParamsPeriod = "last_month"
-	GetSdrTeamReviewParamsPeriodLastWeek  GetSdrTeamReviewParamsPeriod = "last_week"
-	GetSdrTeamReviewParamsPeriodThisMonth GetSdrTeamReviewParamsPeriod = "this_month"
-	GetSdrTeamReviewParamsPeriodThisWeek  GetSdrTeamReviewParamsPeriod = "this_week"
+	GetSdrTeamReviewParamsPeriodLastMonth   GetSdrTeamReviewParamsPeriod = "last_month"
+	GetSdrTeamReviewParamsPeriodLastQuarter GetSdrTeamReviewParamsPeriod = "last_quarter"
+	GetSdrTeamReviewParamsPeriodLastWeek    GetSdrTeamReviewParamsPeriod = "last_week"
+	GetSdrTeamReviewParamsPeriodLastYear    GetSdrTeamReviewParamsPeriod = "last_year"
+	GetSdrTeamReviewParamsPeriodThisMonth   GetSdrTeamReviewParamsPeriod = "this_month"
+	GetSdrTeamReviewParamsPeriodThisWeek    GetSdrTeamReviewParamsPeriod = "this_week"
 )
 
 // Valid indicates whether the value is a known member of the GetSdrTeamReviewParamsPeriod enum.
@@ -30446,7 +30550,11 @@ func (e GetSdrTeamReviewParamsPeriod) Valid() bool {
 	switch e {
 	case GetSdrTeamReviewParamsPeriodLastMonth:
 		return true
+	case GetSdrTeamReviewParamsPeriodLastQuarter:
+		return true
 	case GetSdrTeamReviewParamsPeriodLastWeek:
+		return true
+	case GetSdrTeamReviewParamsPeriodLastYear:
 		return true
 	case GetSdrTeamReviewParamsPeriodThisMonth:
 		return true
@@ -35164,6 +35272,12 @@ type AiEmbeddingsBindingThinkingLevel string
 type AiFeatureRoute struct {
 	BudgetExempt bool `json:"budget_exempt"`
 
+	// Certification The certification grade of the model that answers this feature first (the lead of
+	// `normal_candidates`), read from the committed certification records by the readiness
+	// report's rule: the worst grade over every site the feature ships, and not measured when
+	// any site has no record for that model. Absent when no model is bound, and for embeddings.
+	Certification *AiTaskCertification `json:"certification,omitempty"`
+
 	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
 	Decides           *bool             `json:"decides,omitempty"`
 	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
@@ -35753,6 +35867,12 @@ type AiRouting struct {
 	// the map, so an entry it leaves out is removed.
 	Providers *map[string]AiProviderSettings `json:"providers,omitempty"`
 
+	// TaskLadders A task name to the order its rungs are walked in under this binding, for a task this
+	// binding walks otherwise than the task contract does. The order must name exactly the
+	// task's own rungs; anything else is refused with a 422. A task left out keeps its
+	// contract order.
+	TaskLadders *map[string][]string `json:"task_ladders,omitempty"`
+
 	// Tiers Tier name to the model bound on it. Empty means no models are bound.
 	Tiers map[string]AiTierBinding `json:"tiers"`
 }
@@ -35875,6 +35995,21 @@ type AiStatus struct {
 
 // AiTask AI task key from the task catalog, used to localize its display name.
 type AiTask string
+
+// AiTaskCertification The certification grade of the model that answers this feature first (the lead of
+// `normal_candidates`), read from the committed certification records by the readiness
+// report's rule: the worst grade over every site the feature ships, and not measured when
+// any site has no record for that model. Absent when no model is bound, and for embeddings.
+type AiTaskCertification struct {
+	// Grade ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.
+	Grade string `json:"grade"`
+
+	// Model The model the grade is for.
+	Model string `json:"model"`
+
+	// RecheckPending The product has changed since the grade was measured: the grade is the last one there is, and a re-run replaces it.
+	RecheckPending bool `json:"recheck_pending"`
+}
 
 // AiTaskFlow defines model for AiTaskFlow.
 type AiTaskFlow struct {
@@ -40601,9 +40736,12 @@ type CaptureTraceEntry struct {
 	Connector string `json:"connector"`
 
 	// Counterparty Only when payload_capture_enabled, and never for an erased subject.
-	Counterparty *string            `json:"counterparty,omitempty"`
-	Id           openapi_types.UUID `json:"id"`
-	OccurredAt   time.Time          `json:"occurred_at"`
+	Counterparty *string `json:"counterparty,omitempty"`
+
+	// Filing Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+	Filing     *CaptureTraceFiling `json:"filing,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	OccurredAt time.Time           `json:"occurred_at"`
 
 	// Outcome What the pipeline did with this message AT THE TIME. It never changes; `outcome_now` is what to count and to filter on.
 	Outcome CaptureTraceEntryOutcome `json:"outcome"`
@@ -40626,6 +40764,24 @@ type CaptureTraceEntryOutcome string
 
 // CaptureTraceEntryOutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
 type CaptureTraceEntryOutcomeNow string
+
+// CaptureTraceFiling Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+type CaptureTraceFiling struct {
+	Actor string `json:"actor"`
+
+	// Hook Which hook point, for an extension actor. Absent for `core`.
+	Hook *CaptureTraceFilingHook `json:"hook,omitempty"`
+
+	// Reason For `core`, the rung that decided (`project`, `thread`, `sole_open_deal` and the rest). For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations.
+	Reason *string                  `json:"reason,omitempty"`
+	Result CaptureTraceFilingResult `json:"result"`
+}
+
+// CaptureTraceFilingHook Which hook point, for an extension actor. Absent for `core`.
+type CaptureTraceFilingHook string
+
+// CaptureTraceFilingResult defines model for CaptureTraceFiling.Result.
+type CaptureTraceFilingResult string
 
 // CaptureTraceResolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
 type CaptureTraceResolution struct {
@@ -44082,6 +44238,9 @@ type ComposedExtension struct {
 	// Name The unit name — its `extensions/<name>` directory, and the namespace token in `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry here to a grant in `Role.objects`.
 	Name string `json:"name"`
 
+	// Needs The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none.
+	Needs *[]ComposedExtensionNeed `json:"needs,omitempty"`
+
 	// RbacObjects The `ext_<name>_<object>` names this unit's operations gate on, registered into the vocabulary at boot — exactly the objects `setRoleObjectGrant` will accept for this unit. Sorted, and empty for a unit that owns no records (the common case).
 	RbacObjects []string `json:"rbac_objects"`
 
@@ -44090,6 +44249,15 @@ type ComposedExtension struct {
 
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
+}
+
+// ComposedExtensionNeed One core capability a unit declares it uses.
+type ComposedExtensionNeed struct {
+	// Capability What the unit uses. `models` is the installation's AI models; `objects` is a key prefix of its own in the object store.
+	Capability string `json:"capability"`
+
+	// Reason One sentence from the unit's author saying what it does with the capability.
+	Reason string `json:"reason"`
 }
 
 // ComposedExtensionRoute One published extension operation.
@@ -44307,7 +44475,7 @@ type ConfirmSubmissionReceipt struct {
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
 type ConnectChannelRequest struct {
-	// Address The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+	// Address The chat's web address, such as `https://chat.example.com`; a bare host means https. Required for Dispact, which every team hosts itself; refused for Telegram.
 	Address *string `json:"address,omitempty"`
 
 	// BotToken The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back.
@@ -44770,6 +44938,9 @@ type Contact struct {
 	// GreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
 	GreetingRegister *ContactGreetingRegister `json:"greeting_register,omitempty"`
 	Id               openapi_types.UUID       `json:"id"`
+
+	// ImpersonationWarning Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`).
+	ImpersonationWarning *ContactImpersonationWarning `json:"impersonation_warning,omitempty"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -45727,6 +45898,18 @@ type ContactGraphRouteEvidence struct {
 
 // ContactGraphRouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 type ContactGraphRouteType string
+
+// ContactImpersonationWarning The sign of impersonation the sender check saw when capture made this contact from a mail.
+type ContactImpersonationWarning struct {
+	// DetectedAt When the sender check recorded it.
+	DetectedAt time.Time `json:"detected_at"`
+
+	// Reason Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+	Reason *ContactImpersonationWarningReason `json:"reason,omitempty"`
+}
+
+// ContactImpersonationWarningReason Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+type ContactImpersonationWarningReason string
 
 // ContactListResponse defines model for ContactListResponse.
 type ContactListResponse struct {
@@ -47249,7 +47432,9 @@ type CreateDealRequest struct {
 
 	// ProjectId The body of work this deal belongs to; must name the same company as the deal.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
-	Source    string              `json:"source"`
+
+	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -47617,7 +47802,9 @@ type CreateOfferRequest struct {
 	// for an agent, the human it acts for. An unknown or archived entity is refused as 422.
 	LegalEntityId *openapi_types.UUID   `json:"legal_entity_id,omitempty"`
 	LineItems     *[]OfferLineItemInput `json:"line_items,omitempty"`
-	Source        string                `json:"source"`
+
+	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// TemplateId Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
@@ -47785,8 +47972,10 @@ type CreateProjectRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase The phase the project starts in; initiative when omitted.
-	Phase  *CreateProjectRequestPhase `json:"phase,omitempty"`
-	Source string                     `json:"source"`
+	Phase *CreateProjectRequestPhase `json:"phase,omitempty"`
+
+	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -48583,7 +48772,9 @@ type Deal struct {
 	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
 	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
-	Source    string                  `json:"source"`
+
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
@@ -48755,7 +48946,9 @@ type DealAdvanced struct {
 	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
 	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
-	Source    string                  `json:"source"`
+
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
@@ -51359,6 +51552,8 @@ type EmploymentImportItemState string
 
 // EmploymentImportReport defines model for EmploymentImportReport.
 type EmploymentImportReport struct {
+	// Changed Whether this apply changed an employment edge or an evidence outcome. False means neither moved; claim processing bookkeeping and the duplicate recheck still run.
+	Changed   *bool                  `json:"changed,omitempty"`
 	ContactId openapi_types.UUID     `json:"contact_id"`
 	Items     []EmploymentImportItem `json:"items"`
 
@@ -54587,7 +54782,7 @@ type InstallationFiscalYearImpact struct {
 	// ReportsWithKeptPeriods Live reports with a card whose saved question filters on a period.
 	ReportsWithKeptPeriods int `json:"reports_with_kept_periods" minimum:"0"`
 
-	// ReportsWithRelativePeriods Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
+	// ReportsWithRelativePeriods Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window.
 	ReportsWithRelativePeriods int `json:"reports_with_relative_periods" minimum:"0"`
 
 	// SavedQuestions Saved questions, of every member, that filter on a period.
@@ -58168,6 +58363,9 @@ type MeResponse struct {
 	// ReaderRenderingAvailable Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
 	ReaderRenderingAvailable *bool `json:"reader_rendering_available,omitempty"`
 
+	// RoleNames The name an admin gave each live role in `roles`, keyed by role key. A member may not read the role directory, so this is how a screen shows a custom role by its name. A client may still show a seeded role in its own translation. Absent from an older server; a key it does not name is shown as the key.
+	RoleNames *map[string]string `json:"role_names,omitempty"`
+
 	// Roles Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact.
 	Roles []string `json:"roles"`
 
@@ -59776,8 +59974,10 @@ type Offer struct {
 	PdfAssetRef *string `json:"pdf_asset_ref,omitempty"`
 
 	// Revision Bumped when a sent offer is regenerated; the prior revision becomes superseded.
-	Revision *int   `json:"revision,omitempty"`
-	Source   string `json:"source"`
+	Revision *int `json:"revision,omitempty"`
+
+	// Source The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// SourceCommercialRevision The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.
 	SourceCommercialRevision *int64      `json:"source_commercial_revision,omitempty"`
@@ -61316,12 +61516,14 @@ type Project struct {
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction.
-	Phase         *ProjectPhase           `json:"phase,omitempty"`
-	Raw           *map[string]interface{} `json:"raw,omitempty"`
-	Source        string                  `json:"source"`
-	StartedAt     *openapi_types.Date     `json:"started_at,omitempty"`
-	TargetEndDate *openapi_types.Date     `json:"target_end_date,omitempty"`
-	UpdatedAt     time.Time               `json:"updated_at"`
+	Phase *ProjectPhase           `json:"phase,omitempty"`
+	Raw   *map[string]interface{} `json:"raw,omitempty"`
+
+	// Source The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source        string              `json:"source"`
+	StartedAt     *openapi_types.Date `json:"started_at,omitempty"`
+	TargetEndDate *openapi_types.Date `json:"target_end_date,omitempty"`
+	UpdatedAt     time.Time           `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -62913,6 +63115,11 @@ type RecordKindOption struct {
 
 	// Unit The extension that declared the kind.
 	Unit string `json:"unit"`
+
+	// View The path segment under the unit's screen that shows one record of the kind, as the unit
+	// declared it. Absent when the unit's screen itself shows it. A link to a record opens
+	// `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
+	View string `json:"view"`
 }
 
 // RecordKindOptionActions defines model for RecordKindOption.Actions.
@@ -64684,6 +64891,8 @@ type ReportingSelection struct {
 	// evaluation time. Read at that exact moment, the week holds no time
 	// yet and the context's interval starts where it ends. A month target
 	// beside it still counts the whole month up to the evaluation time.
+	// `last_quarter` and `last_year` are the last completed fiscal quarter
+	// and fiscal year, in the installation's fiscal calendar.
 	Period      ReportingSelectionPeriod      `json:"period"`
 	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
 	ProductId   *ReportingProductId           `json:"product_id,omitempty"`
@@ -64701,6 +64910,8 @@ type ReportingSelectionCloseWindow string
 // evaluation time. Read at that exact moment, the week holds no time
 // yet and the context's interval starts where it ends. A month target
 // beside it still counts the whole month up to the evaluation time.
+// `last_quarter` and `last_year` are the last completed fiscal quarter
+// and fiscal year, in the installation's fiscal calendar.
 type ReportingSelectionPeriod string
 
 // ReportingSelectionTargetBasis defines model for ReportingSelection.TargetBasis.
@@ -65410,7 +65621,10 @@ type RouterActions struct {
 		// UploadsAFile Whether it takes filename, content_type and content_base64.
 		UploadsAFile *bool `json:"uploads_a_file,omitempty"`
 	} `json:"actions"`
-	Router string `json:"router"`
+
+	// AskUserFirstMeans What ask_user_first asks of the model; present when an action here has it.
+	AskUserFirstMeans *string `json:"ask_user_first_means,omitempty"`
+	Router            string  `json:"router"`
 }
 
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
@@ -79235,6 +79449,12 @@ type CreateContactEnrichmentRunParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ClearContactImpersonationWarningJSONBody defines parameters for ClearContactImpersonationWarning.
+type ClearContactImpersonationWarningJSONBody struct {
+	// DetectedAt The `detected_at` of the `impersonation_warning` the caller read.
+	DetectedAt time.Time `json:"detected_at"`
+}
+
 // DraftIntroNoteJSONBody defines parameters for DraftIntroNote.
 type DraftIntroNoteJSONBody struct {
 	// ThroughContactId The intermediary on a route that runs through another contact, when it does. Absent means the colleague knows the target directly.
@@ -85557,6 +85777,9 @@ type ApplyContactEmploymentImportJSONRequestBody = EmploymentImportRequest
 // CreateContactEnrichmentRunJSONRequestBody defines body for CreateContactEnrichmentRun for application/json ContentType.
 type CreateContactEnrichmentRunJSONRequestBody = CreateContactEnrichmentRunRequest
 
+// ClearContactImpersonationWarningJSONRequestBody defines body for ClearContactImpersonationWarning for application/json ContentType.
+type ClearContactImpersonationWarningJSONRequestBody ClearContactImpersonationWarningJSONBody
+
 // DraftIntroNoteJSONRequestBody defines body for DraftIntroNote for application/json ContentType.
 type DraftIntroNoteJSONRequestBody DraftIntroNoteJSONBody
 
@@ -88544,6 +88767,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "id")
 	}
 
+	if raw, found := object["impersonation_warning"]; found {
+		err = json.Unmarshal(raw, &a.ImpersonationWarning)
+		if err != nil {
+			return fmt.Errorf("error reading 'impersonation_warning': %w", err)
+		}
+		delete(object, "impersonation_warning")
+	}
+
 	if raw, found := object["imported_from"]; found {
 		err = json.Unmarshal(raw, &a.ImportedFrom)
 		if err != nil {
@@ -88861,6 +89092,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.ImpersonationWarning != nil {
+		object["impersonation_warning"], err = json.Marshal(a.ImpersonationWarning)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'impersonation_warning': %w", err)
+		}
 	}
 
 	if a.ImportedFrom != nil {
@@ -101309,6 +101547,9 @@ type ServerInterface interface {
 	// Who around this contact could open a door, and through whom.
 	// (GET /contacts/{id}/graph)
 	GetContactGraph(w http.ResponseWriter, r *http.Request, id Id)
+	// Answer a contact's impersonation warning as fine.
+	// (POST /contacts/{id}/impersonation-warning/clear)
+	ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft the forwardable note a colleague can paste into their own introduction.
 	// (POST /contacts/{id}/intro-note-draft)
 	DraftIntroNote(w http.ResponseWriter, r *http.Request, id Id)
@@ -105980,6 +106221,12 @@ func (_ Unimplemented) GetContactEnrichmentRun(w http.ResponseWriter, r *http.Re
 // Who around this contact could open a door, and through whom.
 // (GET /contacts/{id}/graph)
 func (_ Unimplemented) GetContactGraph(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a contact's impersonation warning as fine.
+// (POST /contacts/{id}/impersonation-warning/clear)
+func (_ Unimplemented) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -129995,6 +130242,38 @@ func (siw *ServerInterfaceWrapper) GetContactGraph(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContactGraph(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClearContactImpersonationWarning operation middleware
+func (siw *ServerInterfaceWrapper) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearContactImpersonationWarning(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -161357,6 +161636,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/graph", wrapper.GetContactGraph)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/impersonation-warning/clear", wrapper.ClearContactImpersonationWarning)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/intro-note-draft", wrapper.DraftIntroNote)

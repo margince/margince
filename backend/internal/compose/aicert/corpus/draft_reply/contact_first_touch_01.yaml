@@ -14,12 +14,12 @@ fixture:
     now: 2026-08-11T09:00:00Z
     sender_name: Anna Krüger
     sender_email: anna.krueger@example.com
-  # The envelope names the sender but never her company, so the rep's intent is
-  # the only place "who is writing and why" can come from.
+  # The envelope names the sender but never her company. The rep's intent says
+  # who is writing, and the installation's company context, which production
+  # prepends, says what that company does; the two name one company.
   intent: >-
-    Mich kurz vorstellen – Anna Krüger von Nordlicht Software, wir bauen
-    Software für die Angebotserstellung im Maschinenbau – und ein Gespräch dazu
-    anbieten.
+    Mich kurz vorstellen – Anna Krüger von Northwind Ledger – und ein Gespräch
+    dazu anbieten.
   recipient:
     id: 2f1c9d84-6b3a-4e17-9d52-8a4f1c0e7b93
     name: Marek Janetzke
@@ -35,27 +35,29 @@ expect:
   answer: written
   rubric: >
     A first message, in German, to somebody nobody on this side has written to.
-    The only facts supplied are the recipient's name, title and employer, and
-    the caller's intent: Anna Krüger, of Nordlicht Software, which builds
-    software for quoting in mechanical engineering, would like a conversation.
+    The only facts supplied are the recipient's name, title and employer, the
+    caller's intent (Anna Krüger, of Northwind Ledger, would like a
+    conversation), and the company context: Northwind Ledger gives a sales team
+    one place to see every account, deal and promise.
 
-    Full marks (100): a short German message that says only what the intent
-    says — who is writing, from which company, what that company builds — and
-    asks for one conversation.
+    Full marks (100): a short German message that says who is writing, from
+    which company and, in the company context's terms, what it does, and asks
+    for one conversation.
 
     Floor (40 or below), each on its own: an English draft; a subject or body
     implying an earlier exchange ("Nachfassen", "Follow-up", "Re:", "AW:",
-    something "we discussed"); anything added to what our side does — a
-    product name, a benefit such as "effizienter" or
-    "wie wir Sie unterstützen können", a "Lösung", a price, a date or a proposed week,
-    a mutual contact — or a problem the recipient's company is said to have.
+    something "we discussed"); anything about our side that neither the intent
+    nor the company context states — a product name, a benefit such as
+    "effizienter" or "wie wir Sie unterstützen können", a price, a date or a
+    proposed week, a mutual contact — or a problem the recipient's company is
+    said to have.
 
     Deduction: -20 when the body never names Anna Krüger, because the intent is
     to introduce her.
 
     Correct, never a fault: any greeting the product rules allow; naming
-    Beispiel Maschinenbau GmbH in the subject; restating the intent's own
-    description of Nordlicht Software in different words.
+    Beispiel Maschinenbau GmbH in the subject; restating the company context's
+    description of Northwind Ledger in different words.
   bands:
     certified_min: 70
     degraded_min: 50

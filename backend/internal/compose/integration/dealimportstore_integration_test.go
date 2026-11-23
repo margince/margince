@@ -30,7 +30,7 @@ func TestOnlyADeclaredImporterReachesTheImportBirth(t *testing.T) {
 	closed := time.Date(2025, 6, 30, 0, 0, 0, 0, time.UTC)
 	birth := func(ctx context.Context) error {
 		return e.Deals.Tx(ctx, func(tx pgx.Tx) error {
-			_, err := e.Deals.ImportDealTx(ctx, tx, deals.CreateDealInput{Name: "Imported", PipelineID: pipeline, ExpectedClose: &closed},
+			_, err := e.Deals.ImportDealTx(ctx, tx, deals.CreateDealInput{Source: "manual", Name: "Imported", PipelineID: pipeline, ExpectedClose: &closed},
 				&deals.ImportTerminal{StageID: won, ClosedAt: &closed}, deals.CustomColumns{})
 			return err
 		})

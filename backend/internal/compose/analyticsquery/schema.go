@@ -122,7 +122,10 @@ type Entity struct {
 	// deals, live activities. Carried so a generic query over an entity
 	// answers the same population the prebuilt report does.
 	BaseWhere string
-	Fields    map[string]Field
+	// Rows is BaseWhere in plain words. A model then knows which entity holds the
+	// rows a question counts, when the name only says how they are grouped.
+	Rows   string
+	Fields map[string]Field
 	// Contributor is the seat each row is credited to, "" when the entity
 	// names none. The plan counts the seats behind each group from it.
 	Contributor string

@@ -15,6 +15,13 @@ export function defaultPipelineOf(
   return pipelines.find((each) => each.is_default) ?? pipelines[0];
 }
 
+/** Rows by `position`, which is not the order the server lists a pipeline's stages in. */
+export function inPositionOrder<T extends { position: number }>(
+  rows: readonly T[],
+): T[] {
+  return [...rows].sort((a, b) => a.position - b.position);
+}
+
 /** Each stage's name by its id, across every pipeline given. */
 export function stageNames(
   pipelines: readonly components["schemas"]["Pipeline"][],

@@ -605,6 +605,14 @@
           ],
           "default": 1
         },
+        "history_fetch_workers": {
+          "description": "Messages one history page downloads at once. 0 keeps the built-in 4 for Gmail and 2 for Microsoft. Microsoft allows four requests at once per mailbox, so it never uses more than 4. Memory held by Gmail downloads stays bounded at any value.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 0
+        },
         "history_hold": {
           "description": "Accept queued history requests without starting another page. Stop older history workers before starting workers with a new admission protocol.",
           "type": [
@@ -612,6 +620,30 @@
             "null"
           ],
           "default": false
+        },
+        "history_lookahead": {
+          "description": "How many messages a history page may download before the earlier ones are saved. 0 means twice the fetch workers; a value under the workers is raised to match.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 0
+        },
+        "history_page_delay": {
+          "description": "How long a history import waits after saving a page before it starts the next. 0 starts it at once. A longer wait lowers the load on the database and the worker and slows the import. Applies to Gmail and Microsoft.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "0s"
+        },
+        "history_page_size": {
+          "description": "Messages one history page lists, and so how many it works through before it saves its place. 0 keeps the built-in 100 for Gmail and for Microsoft.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "default": 0
         },
         "mail_sharing": {
           "description": "Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it.",
@@ -2386,6 +2418,24 @@
         "decisions": {
           "description": "The decision-model lane. Optional: absent, every call is the task's own ladder. Present, a task that declares a decision form is asked it first, with or without a certification record, and falls back to its ladder whenever the answer does not stand.",
           "$ref": "#/$defs/decisionsBinding"
+        },
+        "task_ladders": {
+          "description": "A task to the order its rungs are walked in under this binding, for a task walked otherwise than the task contract does. The order names exactly the task's own rungs; anything else is refused. A task left out keeps its contract order.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "cheap_cloud",
+                "frontier",
+                "local_large",
+                "local_small",
+                "premium"
+              ]
+            }
+          }
         },
         "providers": {
           "description": "Provider name to what that provider is configured with, independent of any lane: its host and the broker's upstream pins. Every lane binding a provider reads them from here, so a host is written once. A lane's own base_url or pins (the older spelling) are lifted here when the provider names none.",

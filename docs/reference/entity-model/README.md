@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 358 |
-| Columns | 4401 |
+| Columns | 4406 |
 | Foreign keys | 619 |
 | Owning areas | 40 |
 
@@ -43,7 +43,7 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 154 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 46 | 50 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 49 | 50 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 48 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 30 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
@@ -153,7 +153,7 @@ erDiagram
 | [`activity_meeting_rsvp_backfill`](compose.md#activity_meeting_rsvp_backfill) | compose | 3 | 0 |
 | [`activity_own_sent_mail_repair`](compose.md#activity_own_sent_mail_repair) | compose | 3 | 0 |
 | [`activity_own_sent_mail_repair_cutoff`](compose.md#activity_own_sent_mail_repair_cutoff) | compose | 2 | 0 |
-| [`activity_participant`](activities.md#activity_participant) | activities | 18 | 0 |
+| [`activity_participant`](activities.md#activity_participant) | activities | 19 | 0 |
 | [`activity_participant_replay`](compose.md#activity_participant_replay) | compose | 3 | 0 |
 | [`activity_reader_state`](activities.md#activity_reader_state) | activities | 10 | 0 |
 | [`activity_reminder_delivery`](activities.md#activity_reminder_delivery) | activities | 3 | 0 |
@@ -220,7 +220,7 @@ erDiagram
 | [`capture_sync_state`](capture.md#capture_sync_state) | capture | 8 | 0 |
 | [`capture_test_mailbox_sent`](capture.md#capture_test_mailbox_sent) | capture | 8 | 0 |
 | [`capture_thread_verdict`](capture.md#capture_thread_verdict) | capture | 16 | 0 |
-| [`capture_trace`](capture.md#capture_trace) | capture | 12 | 0 |
+| [`capture_trace`](capture.md#capture_trace) | capture | 13 | 0 |
 | [`channel_connection`](capture.md#channel_connection) | capture | 14 | 1 |
 | [`channel_provider`](compose.md#channel_provider) | compose | 5 | 2 |
 | [`chat_link`](chatlinks.md#chat_link) | chatlinks | 18 | 1 |
@@ -257,7 +257,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 8 | 8 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 17 | 2 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 46 | 50 |
+| [`contact`](contacts.md#contact) | contacts | 49 | 50 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 15 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |

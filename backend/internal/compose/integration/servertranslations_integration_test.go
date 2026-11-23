@@ -90,7 +90,8 @@ func TestTheCompanyPageAndTheMoveConfirmationNameStagesInTheReadersLanguage(t *t
 	// The confirmation a move answers names the stage the deal moved to.
 	companyID := ids.From[ids.CompanyKind](company)
 	second, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Second deal", PipelineID: ids.From[ids.PipelineKind](ids.UUID(*first.PipelineId)), StageID: open, CompanyID: &companyID,
+		Source: "manual",
+		Name:   "Second deal", PipelineID: ids.From[ids.PipelineKind](ids.UUID(*first.PipelineId)), StageID: open, CompanyID: &companyID,
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -1,4 +1,4 @@
-import { extensionCopy } from "@composition/copy";
+import { extensionCopy, extensionOverrides } from "@composition/copy";
 import {
   createContext,
   type ReactNode,
@@ -22,6 +22,7 @@ import {
   type CatalogLevel,
   catalogs,
   completeRequested,
+  loadEssentialLocale,
   loadLocale,
   localeLoaded,
   localeReady,
@@ -63,12 +64,30 @@ export {
 
 export { catalogs, loadLocale } from "./catalogs";
 
+// The gate wraps the children, so React never prerenders them before the copy.
+// A boundary first drawn gated keeps its gate, so an arrival remounts nothing.
 function LocaleReady({
   locale,
   children,
   level = "complete",
 }: Readonly<{ locale: Locale; children: ReactNode; level?: CatalogLevel }>) {
-  if (!localeLoaded(locale, level)) use(localeReady(locale, level));
+  const [gated] = useState(() => !localeLoaded(locale, level));
+  // Not always gated: under `act` even a settled thenable stops a synchronous flush.
+  return gated || !localeLoaded(locale, level) ? (
+    <AwaitCatalog locale={locale} level={level}>
+      {children}
+    </AwaitCatalog>
+  ) : (
+    children
+  );
+}
+
+function AwaitCatalog({
+  locale,
+  level,
+  children,
+}: Readonly<{ locale: Locale; level: CatalogLevel; children: ReactNode }>) {
+  use(localeReady(locale, level));
   return children;
 }
 
@@ -90,6 +109,14 @@ export type ExtensionMessageKey = `ext${string}`;
  */
 const unitCopy: Partial<Record<Locale, Record<string, string>>> = extensionCopy;
 
+/**
+ * Wording an enabled unit replaces for core keys, per locale, merged at build
+ * time by gen-composition. Empty on a vanilla tree. The installation owns the
+ * wording of every key listed here.
+ */
+const unitOverrides: Partial<Record<Locale, Record<string, string>>> =
+  extensionOverrides;
+
 // The endonym key for a locale. The template literal is checked against
 // MessageKey, so adding a locale without adding its `locale.name.<code>` key
 // fails the build rather than rendering a raw key at runtime.
@@ -103,17 +130,27 @@ function rememberLocale(locale: Locale): void {
   writeStored(STORAGE_KEYS.locale, locale);
 }
 
-// A transition keeps the page drawn in the old language until the new one's
-// catalogs arrive, where an urgent update would blank it.
+let requestedLocale: Locale | null = null;
+
+// Shown once its catalogs are in place: a boundary drawn without its gate would
+// otherwise gain one and remount its page. Until then the old language stays up.
 function switchLocale(next: Locale, show: (locale: Locale) => void): void {
   // A page that read the complete catalog will want the new one beside the essential.
-  if (completeRequested(effectiveDisplayLocale())) {
-    loadLocale(next).catch((error: unknown) =>
-      console.error("The selected language could not be loaded", error),
-    );
-  }
+  const complete = completeRequested(effectiveDisplayLocale());
+  requestedLocale = next;
   setEffectiveLocale(next);
-  startTransition(() => show(next));
+  const shown = () => {
+    if (requestedLocale === next) startTransition(() => show(next));
+  };
+  if (localeLoaded(next, complete ? "complete" : "essential")) {
+    shown();
+    return;
+  }
+  const loading = complete ? loadLocale(next) : loadEssentialLocale(next);
+  loading.then(shown, (error: unknown) => {
+    console.error("The selected language could not be loaded", error);
+    shown();
+  });
 }
 
 export function translate(
@@ -121,15 +158,14 @@ export function translate(
   key: MessageKey | ExtensionMessageKey,
   params?: Record<string, string>,
 ): string {
-  // CORE FIRST, and a unit second. The generator already refuses a key outside
-  // the unit's own namespace, so the two sets cannot overlap today — this
-  // ordering is what keeps that true if the namespace rule were ever loosened:
-  // a unit must not be able to change what a core string says.
+  // Overrides first, then core, then a unit's own copy. The generator keeps a
+  // unit's own keys inside its namespace. Only a declared override changes core
+  // wording.
   //
-  // A key neither side carries falls back to the key itself, which is what an
-  // untranslated string has always done here and reads as an obvious defect on
-  // the page rather than as an empty element.
+  // A key none of them carries falls back to the key itself. That reads as a
+  // defect on the page, not as an empty element.
   const message =
+    unitOverrides[locale]?.[key] ??
     (catalogs[locale] as Record<string, string>)[key] ??
     unitCopy[locale]?.[key] ??
     key;

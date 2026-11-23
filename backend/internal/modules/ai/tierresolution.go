@@ -14,17 +14,6 @@ package ai
 
 import "slices"
 
-// LeadingTier is the rung a task is served on when nothing has gone wrong: the
-// first entry of its ladder. Zero value for a task with no ladder, which
-// TaskLadder's callers already treat as "not a routable task".
-func LeadingTier(task Task) Tier {
-	ladder := taskLadders[task]
-	if len(ladder) == 0 {
-		return ""
-	}
-	return ladder[0]
-}
-
 // ServableTiers returns the tiers that can end up serving a task: its ladder,
 // plus the transitive closure of degradeTo over those rungs.
 //

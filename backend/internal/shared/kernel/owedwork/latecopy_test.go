@@ -19,20 +19,20 @@ func TestLateCopyCensus(t *testing.T) {
 
 func TestLateWordsKeepDeadlineMeaningInEveryLanguage(t *testing.T) {
 	now := time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC)
-	for _, tc := range []struct{ lang, days, hours string }{
-		{"en", "Due 4 days ago and still open.", "Due less than a day ago and still open."},
-		{"de", "Seit 4 Tagen fällig und noch offen.", "Seit weniger als einem Tag fällig und noch offen."},
-		{"vi", "Quá hạn 4 ngày và vẫn đang mở.", "Quá hạn chưa đến một ngày và vẫn đang mở."},
+	for _, tc := range []struct{ lang, days, today string }{
+		{"en", "Due 4 days ago and still open.", "Due earlier today and still open."},
+		{"de", "Seit 4 Tagen fällig und noch offen.", "Seit heute fällig und noch offen."},
+		{"vi", "Quá hạn 4 ngày và vẫn đang mở.", "Quá hạn từ sớm hôm nay và vẫn đang mở."},
 	} {
 		for _, span := range []time.Duration{-96 * time.Hour, -time.Hour, 0, time.Hour} {
 			due := now.Add(span)
-			got, late := LateWords(&due, now, tc.lang)
+			got, late := LateWords(&due, now, time.UTC, tc.lang)
 			want := ""
 			if span == -96*time.Hour {
 				want = tc.days
 			}
 			if span == -time.Hour {
-				want = tc.hours
+				want = tc.today
 			}
 			if got != want || late != (span < 0) {
 				t.Errorf("%s %s: %q/%t, want %q", tc.lang, span, got, late, want)
@@ -40,7 +40,7 @@ func TestLateWordsKeepDeadlineMeaningInEveryLanguage(t *testing.T) {
 		}
 	}
 	due := now.Add(-time.Hour)
-	got, _ := LateWords(&due, now, "unknown")
+	got, _ := LateWords(&due, now, time.UTC, "unknown")
 	if !strings.HasPrefix(got, "Due ") {
 		t.Fatalf("unknown language lost fallback: %s", got)
 	}
@@ -51,12 +51,26 @@ func TestOneDayLateUsesSingularCopy(t *testing.T) {
 	for _, tc := range []struct{ lang, want string }{
 		{"en", "Due one day ago and still open."}, {"de", "Seit einem Tag fällig und noch offen."}, {"vi", "Quá hạn một ngày và vẫn đang mở."},
 	} {
-		for _, hours := range []int{24, 47} {
-			due := now.Add(-time.Duration(hours) * time.Hour)
-			got, late := LateWords(&due, now, tc.lang)
+		for _, clock := range []int{0, 12, 23} {
+			due := time.Date(2026, 9, 1, clock, 30, 0, 0, time.UTC)
+			got, late := LateWords(&due, now, time.UTC, tc.lang)
 			if !late || got != tc.want {
-				t.Errorf("%s/%d: %q %t", tc.lang, hours, got, late)
+				t.Errorf("%s/%02d:30: %q %t", tc.lang, clock, got, late)
 			}
 		}
+	}
+}
+
+// Due at 23:00, read at 01:00 in Bangkok: two hours late, and the page's badge
+// beside the sentence says "1 day late" because the date has turned.
+func TestLateWordsCountTheDateInTheReadersZone(t *testing.T) {
+	bangkok := time.FixedZone("UTC+7", 7*60*60)
+	due := time.Date(2026, 9, 1, 23, 0, 0, 0, bangkok)
+	now := time.Date(2026, 9, 2, 1, 0, 0, 0, bangkok)
+	if got, _ := LateWords(&due, now, bangkok, "en"); got != "Due one day ago and still open." {
+		t.Errorf("in Bangkok: %q", got)
+	}
+	if got, _ := LateWords(&due, now, time.UTC, "en"); got != "Due earlier today and still open." {
+		t.Errorf("both instants are 1 Sep in UTC: %q", got)
 	}
 }

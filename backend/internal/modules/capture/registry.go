@@ -46,6 +46,7 @@ type Registry struct {
 	// mailbox import may reach, or 0 for none. See backfillcap.go.
 	maxBackfillMonths int
 	backfillLimit     int
+	backfillPageDelay time.Duration
 	backfillHeld      bool
 	// vault seals and resolves a connection's credential bundle. The row
 	// carries an opaque credential_ref, never the credential bytes; the vault

@@ -1675,9 +1675,11 @@ rls-store-path:
 ## one, and a genuinely bad answer is still a finding. It also holds the judged
 ## half offline, against verdicts a real judge gave the committed fixtures: a
 ## judge that agreed with everything fails every defect fixture, and a judge that
-## cannot be reached is a stop rather than a pass.
+## cannot be reached is a stop rather than a pass. The aicert sweep wrapper
+## waits out a judge limit or an outage and stops on any other failure.
 test-e2e-llm-check:
 	@./scripts/test-e2e-llm-sweep.sh
+	@./scripts/test-aicert-sweep.sh
 	@./scripts/test-e2e-llm-check.sh
 
 ## test-dev-postgres-container — prove the dev tooling names ONE database: the

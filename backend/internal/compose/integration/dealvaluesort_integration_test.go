@@ -157,7 +157,8 @@ func seedValueSortDeals(
 	pipeline, open, _ := DealFixture(t, e)
 	for _, seed := range seeds {
 		if _, err := e.Deals.CreateDeal(admin, deals.CreateDealInput{
-			Name: seed.name, PipelineID: pipeline, StageID: open,
+			Source: "manual",
+			Name:   seed.name, PipelineID: pipeline, StageID: open,
 			AmountMinor: &seed.amountMinor, Currency: &seed.currency,
 		}); err != nil {
 			t.Fatalf("creating %s: %v", seed.name, err)
