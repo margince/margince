@@ -15,6 +15,7 @@ seed:
           subject: Site survey
           body: "Survey done; the client will come back after the budget meeting."
     - name: office_hvac_service
+      title: Office HVAC Service
       activities:
         - days_ago: 19
           subject: Service terms

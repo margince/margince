@@ -11,7 +11,7 @@ import (
 )
 
 // maxDaysAgo bounds a seeded activity to a year, so a typo cannot place a touch
-// in the next century.
+// years from the deal's own life.
 const maxDaysAgo = 365
 
 // Seed is the workspace a scenario runs on. The integration lane builds it
@@ -24,18 +24,33 @@ type Seed struct {
 // SeedDeal is one open deal. Its name is the logical subject the checks use.
 type SeedDeal struct {
 	Name string `yaml:"name"`
+	// Title is the deal's name in the CRM. It defaults to the logical name in
+	// title case, so a reader of the run sees "Heat Recovery Retrofit".
+	Title string `yaml:"title"`
 	// OtherSeat gives the deal to a second member. A run acts for one member,
 	// so it is neither on that member's queue nor on its slipping list.
 	OtherSeat  bool           `yaml:"other_seat"`
 	Activities []SeedActivity `yaml:"activities"`
 }
 
-// SeedActivity is one inbound email on a deal. DaysAgo is a whole number of
+// SeedActivity is one email logged by hand on a deal. DaysAgo is a whole number of
 // days before the seeding instant, so the facts hold at any hour of the day.
 type SeedActivity struct {
 	DaysAgo int    `yaml:"days_ago"`
 	Subject string `yaml:"subject"`
 	Body    string `yaml:"body"`
+}
+
+// DisplayName is the name the CRM shows for the deal.
+func (d SeedDeal) DisplayName() string {
+	if d.Title != "" {
+		return d.Title
+	}
+	words := strings.Fields(strings.ReplaceAll(d.Name, "_", " "))
+	for i, word := range words {
+		words[i] = strings.ToUpper(word[:1]) + word[1:]
+	}
+	return strings.Join(words, " ")
 }
 
 // Deal answers the seeded deal of that name.

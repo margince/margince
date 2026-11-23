@@ -12,9 +12,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/agentloope2e"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // briefItem is one row of the acting rep's persisted queue as the REST read
@@ -32,6 +37,8 @@ type loopWorld struct {
 	deals map[string]string
 	// activities lists each deal's seeded activity ids in seed order.
 	activities map[string][]string
+	// seededAt is the one instant every seeded offset counts from.
+	seededAt time.Time
 	// day and queue describe the persisted brief run of a morning brief: its
 	// local day, and each queued deal's item.
 	day   string
@@ -67,13 +74,13 @@ func (re *runnerEnv) created(t *testing.T, path string, body integration.AnyMap)
 // offset counts from one instant read at the start.
 func (re *runnerEnv) seedLoopWorld(t *testing.T, sc agentloope2e.Scenario) *loopWorld {
 	t.Helper()
-	now := time.Now().UTC()
+	now := wallNow()
 	stages := apptest.DiscoverSeededPipeline(t, re.AppEnv)
-	world := &loopWorld{deals: map[string]string{}, activities: map[string][]string{}}
+	world := &loopWorld{seededAt: now, deals: map[string]string{}, activities: map[string][]string{}}
 	var otherSeat string
 	for _, deal := range sc.Seed.Deals {
 		body := integration.AnyMap{
-			"name": deal.Name, "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual",
+			"name": deal.DisplayName(), "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual",
 		}
 		if deal.OtherSeat {
 			if otherSeat == "" {
@@ -100,8 +107,9 @@ func (re *runnerEnv) seedLoopWorld(t *testing.T, sc agentloope2e.Scenario) *loop
 	return world
 }
 
-// persistBrief assembles today's brief for the rep the passport acts for. The
-// route shares its engine with the overnight pass. The queue it persisted must
+// persistBrief assembles today's brief for the rep the passport acts for.
+// POST /v1/brief is not the worker's brief_generate. Both call the same engine,
+// but the order of the worker's queue may differ. The queue persisted here must
 // be the scenario's worklist, so a drifting seed fails before any model runs.
 func (re *runnerEnv) persistBrief(t *testing.T, sc agentloope2e.Scenario, world *loopWorld) {
 	t.Helper()
@@ -129,12 +137,59 @@ func (re *runnerEnv) persistBrief(t *testing.T, sc agentloope2e.Scenario, world 
 	}
 }
 
-// assertBriefDayHeld fails the test as a harness error when the rep's local day
-// moved since seeding. The tools read the clock when they run, so a run that
-// straddled midnight read another morning's brief, which says nothing about the
-// model.
-func (re *runnerEnv) assertBriefDayHeld(t *testing.T, world *loopWorld) {
+// wallNow is the real clock. The tools read it as they run, so the seed and the
+// day guards must too, and no fixture clock can stand in.
+func wallNow() time.Time { return time.Now().UTC() }
+
+// dayHeadroom is the time a case needs before a day boundary. The tools read the
+// clock as they run, so a case that straddles midnight reads another day.
+const dayHeadroom = 10 * time.Minute
+
+// requireDayHeadroom fails as a harness error when a day boundary a case depends
+// on is too close. The sweep counts a note per UTC day. The brief is one run per
+// local day. Rerunning a few minutes later is the whole remedy.
+func (re *runnerEnv) requireDayHeadroom(t *testing.T, sc agentloope2e.Scenario) {
 	t.Helper()
+	now := wallNow()
+	loc := time.UTC
+	if sc.Agent == agentloope2e.MorningBrief {
+		loc = re.installationZone(t)
+	}
+	local := now.In(loc)
+	midnight := time.Date(local.Year(), local.Month(), local.Day()+1, 0, 0, 0, 0, loc)
+	if left := midnight.Sub(now); left < dayHeadroom {
+		t.Fatalf("harness: only %s remain of the day this case reads, and it needs %s; rerun", left.Round(time.Second), dayHeadroom)
+	}
+}
+
+func (re *runnerEnv) installationZone(t *testing.T) *time.Location {
+	t.Helper()
+	var name string
+	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+		var err error
+		name, err = identity.TimezoneAppliedTx(re.wsCtx, tx)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("reading the installation's timezone: %v", err)
+	}
+	loc, err := storekit.LoadZone(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return loc
+}
+
+// assertDayHeld fails as a harness error when the seeded day moved during the
+// run. That day is the brief's local day, or the sweep's UTC day.
+func (re *runnerEnv) assertDayHeld(t *testing.T, sc agentloope2e.Scenario, world *loopWorld) {
+	t.Helper()
+	if sc.Agent == agentloope2e.OvernightSweep {
+		if was, is := world.seededAt.Format(time.DateOnly), wallNow().Format(time.DateOnly); was != is {
+			t.Fatalf("harness: the sweep was seeded on %s (UTC) and ended on %s; rerun the case", was, is)
+		}
+		return
+	}
 	var run struct {
 		LocalDay string `json:"local_day"`
 	}

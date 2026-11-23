@@ -7,11 +7,11 @@ package jobfanout
 
 import (
 	"context"
+	"encoding/json"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -21,30 +21,48 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// auditedCall is the audit rows one tool call caused. They share one
-// transaction, so they share one timestamp.
+// unrecordedCall is the Tool of a write no executed tool call accounts for.
+const unrecordedCall = "unrecorded call"
+
+// auditedCall is the audit rows one tool call caused. A call commits in one
+// transaction, so its rows share one transaction id. A tool that committed in
+// two would leave a call with no step. snapshotOf reports it as unrecorded and
+// the lane fails.
 type auditedCall struct {
-	// text holds what the call wrote about each seeded deal, keyed by the deal's
-	// logical name. The key "" holds a call that changed a record the seed does
-	// not name.
+	// text is what the call wrote about each seeded deal, keyed by the deal's
+	// logical name. The key "" holds a record the seed does not name.
 	text map[string]string
 	// stamp is what the call wrote about no deal, such as an annotation's
 	// narrative. It belongs to every deal the call was about.
 	stamp string
 }
 
+// observedRun is the end state of one run and what the lane needs to judge it.
+type observedRun struct {
+	snap agentloope2e.Snapshot
+	// unchanged is the tools of executed write calls that changed nothing.
+	unchanged []string
+	// raw holds the audit after-images the run left, whole, for the planted-text
+	// check that must not depend on which fields the judge reads.
+	raw string
+}
+
 var uuidText = regexp.MustCompile(`[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
+
+// judgedFields are the after-image fields a judge reads, in reading order.
+var judgedFields = []string{"subject", "body", "finding", "narrative"}
 
 // snapshotOf reads the end state of one run. A Write is one tool call that
 // changed something. The call comes from the run's trace and its changes from
 // the passport's audit rows, so no list of tables is kept here. A call that
-// changed nothing, such as a repeated note the store absorbs, is no Write.
-func (re *runnerEnv) snapshotOf(t *testing.T, world *loopWorld, trigger string) agentloope2e.Snapshot {
+// changed nothing, such as a repeated note the store absorbs, is no Write and
+// is reported in unchanged, never dropped.
+func (re *runnerEnv) snapshotOf(t *testing.T, world *loopWorld, trigger string) observedRun {
 	t.Helper()
 	status, trace, _ := re.runRow(t, trigger)
-	calls := re.auditedCalls(t, world)
+	calls, raw := re.auditedCalls(t, world)
 	registry := compose.NewRegistry(re.pool, compose.SendPath{})
-	snap := agentloope2e.Snapshot{RunStatus: runner.Outcome(status)}
+	out := observedRun{snap: agentloope2e.Snapshot{RunStatus: runner.Outcome(status)}, raw: raw}
 	for _, step := range trace {
 		spec, known := registry.Spec(step.Tool)
 		if step.Admission != "executed" || !known || spec.ReadOnly() {
@@ -53,15 +71,22 @@ func (re *runnerEnv) snapshotOf(t *testing.T, world *loopWorld, trigger string) 
 		touched := world.namesIn(string(step.Args))
 		i := slices.IndexFunc(calls, func(call auditedCall) bool { return call.touchesAny(touched) })
 		if i < 0 {
+			out.unchanged = append(out.unchanged, step.Tool)
 			continue
 		}
-		snap.Writes = append(snap.Writes, calls[i].writes(step.Tool)...)
+		out.snap.Writes = append(out.snap.Writes, calls[i].writes(step.Tool)...)
 		calls = slices.Delete(calls, i, i+1)
 	}
 	for _, call := range calls {
-		snap.Writes = append(snap.Writes, call.writes("unrecorded call")...)
+		out.snap.Writes = append(out.snap.Writes, call.writes(unrecordedCall)...)
 	}
-	return snap
+	slices.SortFunc(out.snap.Writes, func(a, b agentloope2e.Write) int {
+		if c := strings.Compare(a.Subject, b.Subject); c != 0 {
+			return c
+		}
+		return strings.Compare(a.Tool, b.Tool)
+	})
+	return out
 }
 
 // namesIn is the seeded names of every id a text carries, or "" when it carries
@@ -97,14 +122,20 @@ func (c auditedCall) writes(tool string) []agentloope2e.Write {
 	return out
 }
 
+type auditRow struct {
+	xact, entityType, entityID, after string
+}
+
 // auditedCalls reads the run passport's audit rows in the order they landed and
-// groups the rows of one transaction into one call.
-func (re *runnerEnv) auditedCalls(t *testing.T, world *loopWorld) []auditedCall {
+// groups the rows of one transaction into one call. It also answers every
+// after-image whole.
+func (re *runnerEnv) auditedCalls(t *testing.T, world *loopWorld) ([]auditedCall, string) {
 	t.Helper()
 	var calls []auditedCall
+	var raw strings.Builder
 	err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		found, err := tx.Query(context.Background(), `
-			SELECT occurred_at, entity_type, entity_id::text, coalesce(after::text, '')
+			SELECT xmin::text, entity_type, entity_id::text, coalesce(after::text, '')
 			FROM audit_log WHERE passport_id = $1 ORDER BY occurred_at, id`, re.passportID)
 		if err != nil {
 			return err
@@ -112,7 +143,7 @@ func (re *runnerEnv) auditedCalls(t *testing.T, world *loopWorld) []auditedCall 
 		var rows []auditRow
 		for found.Next() {
 			var r auditRow
-			if err := found.Scan(&r.at, &r.entityType, &r.entityID, &r.after); err != nil {
+			if err := found.Scan(&r.xact, &r.entityType, &r.entityID, &r.after); err != nil {
 				return err
 			}
 			rows = append(rows, r)
@@ -122,10 +153,11 @@ func (re *runnerEnv) auditedCalls(t *testing.T, world *loopWorld) []auditedCall 
 			return err
 		}
 		for i, r := range rows {
-			if i == 0 || !r.at.Equal(rows[i-1].at) {
+			if i == 0 || r.xact != rows[i-1].xact {
 				calls = append(calls, auditedCall{text: map[string]string{}})
 			}
-			if err := calls[len(calls)-1].add(tx, world, r); err != nil {
+			raw.WriteString(" " + r.after)
+			if err := calls[len(calls)-1].add(tx, world, r, &raw); err != nil {
 				return err
 			}
 		}
@@ -139,22 +171,37 @@ func (re *runnerEnv) auditedCalls(t *testing.T, world *loopWorld) []auditedCall 
 			calls[i].text[""] = ""
 		}
 	}
-	return calls
+	return calls, raw.String()
 }
 
-type auditRow struct {
-	at                          time.Time
-	entityType, entityID, after string
+// judgedText is the fields of an after-image a judge reads, without the JSON
+// around them.
+func judgedText(after string) string {
+	var image map[string]json.RawMessage
+	if json.Unmarshal([]byte(after), &image) != nil {
+		return ""
+	}
+	var parts []string
+	for _, field := range judgedFields {
+		var value string
+		if json.Unmarshal(image[field], &value) == nil && value != "" {
+			parts = append(parts, value)
+		}
+	}
+	return strings.Join(parts, " ")
 }
 
 // add files one audit row under the seeded deals it is about. A note is about
-// the deals it links and an item finding about its item's deal. A row about no
-// deal, such as the run's own stamp, is the call's stamp. A note linked to no
-// deal is about a record the seed does not name.
-func (c *auditedCall) add(tx pgx.Tx, world *loopWorld, r auditRow) error {
-	text := r.after
+// the deals it links, an item finding about its item's deal, and a deal's own
+// row about that deal. A row about no deal, such as the run's own stamp, is the
+// call's stamp. A note linked to no deal is about a record the seed does not name.
+func (c *auditedCall) add(tx pgx.Tx, world *loopWorld, r auditRow, raw *strings.Builder) error {
 	var linked string
+	text := judgedText(r.after)
 	switch r.entityType {
+	case "deal":
+		c.text[world.nameOf(r.entityID)] += " " + text
+		return nil
 	case "activity":
 		linked = `SELECT deal_id::text FROM activity_link WHERE activity_id = $1 AND deal_id IS NOT NULL`
 		var subject, body string
@@ -162,7 +209,8 @@ func (c *auditedCall) add(tx pgx.Tx, world *loopWorld, r auditRow) error {
 			`SELECT coalesce(subject, ''), coalesce(body, '') FROM activity WHERE id = $1`, r.entityID).Scan(&subject, &body); err != nil {
 			return err
 		}
-		text += " " + subject + " " + body
+		text = subject + " " + body
+		raw.WriteString(" " + text)
 	case "brief_item":
 		linked = `SELECT deal_id::text FROM brief_item WHERE id = $1`
 	default:

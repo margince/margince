@@ -92,3 +92,17 @@ func TestEveryCertificationCaseHasAShippedScenario(t *testing.T) {
 		t.Errorf("%d scenarios for %d certification cases, want one each", len(scenarios), len(cases))
 	}
 }
+
+func TestADealShowsItsTitleOrItsNameInTitleCase(t *testing.T) {
+	for in, want := range map[string]string{
+		"heat_recovery_retrofit": "Heat Recovery Retrofit",
+		"solo":                   "Solo",
+	} {
+		if got := (SeedDeal{Name: in}).DisplayName(); got != want {
+			t.Errorf("DisplayName(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if got := (SeedDeal{Name: "led_refit", Title: "LED Refit"}).DisplayName(); got != "LED Refit" {
+		t.Errorf("a titled deal shows %q", got)
+	}
+}

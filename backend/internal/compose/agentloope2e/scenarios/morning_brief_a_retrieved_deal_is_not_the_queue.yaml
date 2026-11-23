@@ -9,6 +9,7 @@ criteria:
 seed:
   deals:
     - name: warehouse_led_refit
+      title: Warehouse LED Refit
       activities:
         - days_ago: 1
           subject: Proposal walkthrough
