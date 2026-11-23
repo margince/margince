@@ -30,18 +30,14 @@ const composeRootDir = "internal/compose"
 // The ceilings sit a little above the size the package was when this gate
 // landed, so branches already open could still merge. Lower one whenever a
 // change moves code out. Raising one needs a reason in the pull request.
+//
+// The ceilings below hold develop and main together: each side's additions
+// stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	// Raised by 2 for the stock task ladder data task and the agent loop certification cases.
-	composeRootProductionFiles = 1377
-	// Raised by 2 for the derivation column and stage evidence tests, and 2 for the
-	// stock task ladder and agent loop sweep tests.
-	composeRootTestFiles = 1906
-	// Raised by 60 for the derivation columns and the sender warning reads, and 33
-	// for the stock task ladders and the agent loop certification cases.
-	composeRootProductionLines = 229_084
-	// Raised by 613 for the derivation column, stage evidence and sender warning
-	// tests, and 16 for the stock task ladder, agent loop sweep and meeting credit tests.
-	composeRootTestLines = 358_523
+	composeRootProductionFiles = 1382
+	composeRootTestFiles       = 1909
+	composeRootProductionLines = 229_770
+	composeRootTestLines       = 359_327
 )
 
 // A read under these floors stopped early or read the wrong place, and would

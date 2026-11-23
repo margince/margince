@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p01151d7b1ade02f53395dc2869594b4f",
+  "prompt_version": "p1f74067d7d1294421f9081ac0ae98c9e",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 12,
@@ -36,7 +36,7 @@
     {
       "scenario": "grades_a_well_grounded_answer_highly",
       "site": "judge",
-      "stamp": "6080a4122d95deddb68939cbfbbb969bee2634f94245ceea3794126f5fb151d11f53cbe0f7ef6caf64d6760a8cf4482d5b751d7c7e3630c0465ab2f5c694ab6abad658418182fb3673a01503038712ca1c3d680724d9f615941612ac6acd814c",
+      "stamp": "6080a4122d95deddb68939cbfbbb969bee2634f94245ceea3794126f5fb151d11f53cbe0f7ef6caf64d6760a8cf4482d5b751d7c7e3630c0465ab2f5c694ab6a90034f29c3e39fe7fe8fb639f0352debb11c407e0fa46dcd992d44a4753397c4",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,
@@ -50,7 +50,7 @@
     {
       "scenario": "grades_a_fabricated_answer_poorly",
       "site": "judge",
-      "stamp": "abf2f506cc666ea3895547292dec9291d3f4e68167c9be906b198977aeb4e211a970f4cd71fb899ad290810f4264a97bb8529b9808478c4bcf6ec6b18c0bfa9abad658418182fb3673a01503038712ca1c3d680724d9f615941612ac6acd814c",
+      "stamp": "abf2f506cc666ea3895547292dec9291d3f4e68167c9be906b198977aeb4e211a970f4cd71fb899ad290810f4264a97bb8529b9808478c4bcf6ec6b18c0bfa9a90034f29c3e39fe7fe8fb639f0352debb11c407e0fa46dcd992d44a4753397c4",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 6,

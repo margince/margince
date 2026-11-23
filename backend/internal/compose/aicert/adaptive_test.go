@@ -19,13 +19,17 @@ func caseRuns(passes int, scores ...int) ScenarioRuns {
 
 func nineties(n int) []int { return slices.Repeat([]int{90}, n) }
 
-// ungradedOnce is set with its first run's grade lost, as a judge call that
-// failed leaves it.
-func ungradedOnce(set ScenarioRuns) ScenarioRuns {
+// ungradedFirst is set with the grades of its first n runs lost, as judge calls
+// that failed leave it.
+func ungradedFirst(set ScenarioRuns, n int) ScenarioRuns {
 	set.Runs = slices.Clone(set.Runs)
-	set.Runs[0].Ungraded = true
+	for i := range n {
+		set.Runs[i].Ungraded = true
+	}
 	return set
 }
+
+func ungradedOnce(set ScenarioRuns) ScenarioRuns { return ungradedFirst(set, 1) }
 
 // A case is extended exactly when it sits within one standard error of a line
 // it is graded against, and never past the cap. Six settled cases of 90 keep
@@ -47,6 +51,7 @@ func TestABorderlineCaseIsExtendedAndASettledOneIsNot(t *testing.T) {
 		{"a median exactly at degraded_min is borderline", caseRuns(3, 40, 50, 60), 6},
 		{"a mean near a bar is borderline though the median is far from it", caseRuns(3, 40, 90, 91), 6},
 		{"a judged case with two scores of three runs is extended", ungradedOnce(caseRuns(3, nineties(3)...)), 6},
+		{"a lone score just under certified_min is extended: a second could lift it", ungradedFirst(caseRuns(3, 69, 69, 69), 2), 6},
 		{"a case its pass rate fails is not extended for its scores", ungradedOnce(caseRuns(0, nineties(3)...)), 3},
 		{"a case whose two scores sit under the bar is not extended for them", ungradedOnce(caseRuns(3, 30, 30, 30)), 3},
 		{"a borderline case at ten runs stops at the cap", caseRuns(5, nineties(10)...), adaptiveMaxRuns},

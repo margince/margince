@@ -8,13 +8,13 @@ An extension can tell a member, or everyone in a role, about a core record with 
 |---|---|
 | `Member` | A user id. Name this or `Role`, never both. |
 | `Role` | A role key. The notice goes to every live member who holds it. |
-| `Record` | The record the notice is about: `Type` is `contact`, `company` or `deal`, and `ID` is its id. |
+| `Record` | The record the notice is about. `Type` is `contact`, `company` or `deal`, or a record kind your unit declared, spelled `ext:<unit>:<kind>`. A kind another unit declared is refused. `ID` is its id. |
 | `Subject` | One short line in your own words. The core cuts it at 200 characters. |
 | `Key` | Optional. A name for the event. A second send with the same key to the same member writes nothing. |
 
 `Send` answers `NoticeSent.Recipients`, the number of members it newly told. A member a retry under the same `Key` had already told is not counted, so a full retry answers zero. Zero is a normal answer.
 
-You never pass an address or a channel. The core picks how each member is reached from their own notification settings. The notice has no body: it points at the record, so what a reader sees of the record is decided when they open it, and no personal data is copied into the notice. The types are in `backend/pkg/extension/notices.go`.
+You never pass an address or a channel. The core picks how each member is reached from their own notification settings. The notice has no body: it points at the record, so what a reader sees of the record is decided when they open it, and no personal data is copied into the notice. The types are in `backend/pkg/extension/notices.go`. A notice about one of your own records opens your screen at the kind's `View`, set in the record kind declaration ([add-an-extension.md](add-an-extension.md)).
 
 ## What the core does with a send
 

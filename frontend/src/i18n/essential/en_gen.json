@@ -3777,6 +3777,7 @@
   "ob.field.history": "Company history",
   "backfill.restartedNote": "The import started over because the mailbox lost its place. The email count begins again; contacts already found stay.",
   "backfill.retryNote": "The import hit a connection problem and is trying again. The last page is read again, so its emails are counted again.",
+  "extUnits.openNamed": "Settings for {name}",
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Calendar",
   "connectors.provGdocs": "Google Docs",

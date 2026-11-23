@@ -78,6 +78,8 @@ type DealRepair struct {
 	Authority  authz.Resolver
 	Filer      DealFiler
 	Check      DealTopicCheck
+	// Hooks are the extension hooks the rule decides with. The zero value is none.
+	Hooks MailHooks
 }
 
 // BatchTx repairs one page of mail. A second run changes nothing, because
@@ -226,7 +228,7 @@ func (r DealRepair) asMailbox(
 		if err != nil {
 			return "", err
 		}
-		f := dealFiling{decider: acting, writer: ctx, filer: r.Filer, evidence: map[string]any{"reason": reason, "decided_as": seat}}
+		f := dealFiling{decider: acting, writer: ctx, filer: r.Filer, hooks: r.Hooks, evidence: map[string]any{"reason": reason, "decided_as": seat}}
 		decided, err := decide(f)
 		if err != nil || decided.Changed() || decided == DealMachineConfirmed || decided == dealTopicPending {
 			return decided, err
@@ -245,13 +247,16 @@ func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	if live, err := lockForDeal(f.writer, tx, mail); err != nil || !live {
 		return DealNone, err
 	}
-	facts, err := readDealFacts(f.decider, tx, mail, true)
+	facts, err := readDealFacts(f.decider, tx, mail, true, f.hooks)
 	if err != nil || facts.outcome != "" {
 		return facts.outcome, err
 	}
-	verdict, err := decideDeal(f.decider, tx, facts, candidates)
+	verdict, err := decideDeal(f.decider, tx, facts, candidates, f.hooks)
 	if err != nil {
 		return "", err
+	}
+	if verdict.Outcome == DealHookFailed {
+		return DealHookFailed, recordFiling(f.writer, tx, mail, verdict, "")
 	}
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
 		return DealMachineConfirmed, nil
@@ -259,7 +264,11 @@ func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	if verdict.Basis.NeedsTopicCheck() {
 		return DealNone, nil
 	}
-	return replaceMachineDeal(f, tx, mail, current, verdict, candidates)
+	outcome, err := replaceMachineDeal(f, tx, mail, current, verdict, candidates)
+	if err != nil {
+		return outcome, err
+	}
+	return outcome, recordRepairFiling(f.writer, tx, mail, verdict, outcome)
 }
 
 // replaceMachineDeal takes the rule's old link back and writes the deal the

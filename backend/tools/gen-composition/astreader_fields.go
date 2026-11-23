@@ -31,6 +31,8 @@ func (r *unitReader) readDeclaredField(name string, kv *ast.KeyValueExpr, file *
 		m.SignalTypes, err = r.readSignalTypes(kv.Value, file)
 	case "Panels":
 		m.Panels, err = r.readPanels(kv.Value, file)
+	case "App":
+		m.App, err = r.readApp(kv.Value, file)
 	case "Instrumentation":
 		m.Instrumentation, err = r.readInstrumentation(kv.Value, file)
 	case "Inbound":
@@ -39,6 +41,8 @@ func (r *unitReader) readDeclaredField(name string, kv *ast.KeyValueExpr, file *
 		m.AITasks, err = r.readAITasks(kv.Value, file)
 	case "SystemReads":
 		m.SystemReads, err = r.readSystemReads(kv.Value, file)
+	case "Needs":
+		m.Needs, err = r.readNeeds(kv.Value, file)
 	case "OAuthApps":
 		m.OAuthApps, err = r.readOAuthApps(kv.Value, file)
 	default:

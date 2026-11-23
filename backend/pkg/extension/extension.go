@@ -334,17 +334,17 @@ type Extension struct {
 	// operator which secrets a unit expects before it ever runs.
 	Secrets []SecretsRequest
 
+	MailHooks MailHooks // the two mail-capture hooks, see MailHooks
 	// Jobs are the scheduled background jobs the unit contributes: named
 	// cadenced passes that fan out over the fleet, one workspace per tick.
 	// Like a Tool this carries BEHAVIOR only — the cadence, wall clocks,
 	// queue and attempt cap are MECHANICS and live in the unit's
 	// api/jobs.yaml fragment, reaching the process as a JobDeclaration.
 	//
-	// A job is not a tool with a timer, and the difference is who is there
-	// when it runs: nobody. That is why the job seam refuses a confirm-first
-	// tier outright (a confirmation nobody can ever give) and refuses an
-	// outbound scope (autonomous outbound authority on a clock), where the
-	// served-tool seam refuses the same two shapes for weaker reasons.
+	// A job is not a tool with a timer: nobody is there when it runs. So the
+	// job seam refuses a confirm-first tier outright (a confirmation nobody can
+	// ever give) and an outbound scope (autonomous outbound authority on a
+	// clock). The served-tool seam refuses both shapes for weaker reasons.
 	Jobs []Job
 
 	// Subscriptions are the events the unit reacts to: named listeners over the
@@ -419,6 +419,8 @@ type Extension struct {
 	// reads without opening its source.
 	SystemReads []SystemRead
 
+	// Needs are the core capabilities the unit uses, with a reason each (see need.go).
+	Needs []Need
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
 	// pairs, which a unit supplies with `//go:embed migrations`. A unit
@@ -486,6 +488,8 @@ type Extension struct {
 	// Panels are the unit's components drawn inline on core pages, such as a
 	// deal page's side column. See Panel.
 	Panels []Panel
+	// App is the unit's own screen in the home side drawer. Nil means none.
+	App *App
 
 	// Instrumentation observes the whole process and the browser: logs,
 	// requests, jobs, panics, errors and navigation. See Instrumentation.

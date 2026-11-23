@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p5aa9a3fc2a080ff58937eb9b2dd80744",
+  "prompt_version": "p1c813dfd63d618bd91956a0a6bd4f59e",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 21,
@@ -36,7 +36,7 @@
     {
       "scenario": "our_own_hunch_does_not_lower_the_chances",
       "site": "deal_verdict",
-      "stamp": "4c5271e50663465b2e9af027cba80bf05bbd6b7cb85d97c8a00b793cc79e43e22bcd646167ac20fee863fbff9833f10b700e8c3161c629318fe3138c20a5d62703962b509fa2e57e951340d08262f0d46e5986d08feab19e14b501cab1aacbfe",
+      "stamp": "4c5271e50663465b2e9af027cba80bf05bbd6b7cb85d97c8a00b793cc79e43e22bcd646167ac20fee863fbff9833f10b700e8c3161c629318fe3138c20a5d6273b2cb81793a01984291c5808455caf0e8456a801e3cc11c09569cba8a63ebec2",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -50,7 +50,7 @@
     {
       "scenario": "the_buyers_budget_freeze_lowers_the_chances",
       "site": "deal_verdict",
-      "stamp": "5203457808628722e7fa00942073f7d05a4ce690f7c8a07c7f5cd5dee6da3929b68929d67cdbb25a149afab55d6751fa7776ac341ddd8f67cccdba7bc1568219b24a64e6a714e7d557f41a2f4ae05f54aea74485e975588546d61d28fd08aab0",
+      "stamp": "5203457808628722e7fa00942073f7d05a4ce690f7c8a07c7f5cd5dee6da3929b68929d67cdbb25a149afab55d6751fa7776ac341ddd8f67cccdba7bc1568219e7c08b4780749c6b03db9bc9a5d505787b64ed00b9accdbf8822d78a7628630d",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -73,7 +73,7 @@
     {
       "scenario": "a_verbal_yes_names_the_price_and_moves_the_chances",
       "site": "deal_verdict",
-      "stamp": "50bc10caa37435d32c90552b5b7f538c5ff602bc2ed7d57f0c48039a6629d090e86e57f8c2202132be4f27b216a1fe458e0c266cf3769cbb67d1ef17813b904b568a563829f442b4a37f1635f0414b2705d0feb5ebf9010d1c00583bf9999f43",
+      "stamp": "50bc10caa37435d32c90552b5b7f538c5ff602bc2ed7d57f0c48039a6629d090e86e57f8c2202132be4f27b216a1fe458e0c266cf3769cbb67d1ef17813b904b8a68db685adc662096e2c148b221016947b24ffc5d11f7afcf9d916a7307cd72",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -96,7 +96,7 @@
     {
       "scenario": "an_old_price_in_quoted_history_sets_no_amount",
       "site": "deal_verdict",
-      "stamp": "8cb7033b402eee4cf0e8b3ed8371c41acec804ad15914f8411309a1ecc04f05df0477c126765c43282d1c9a284a6425d53852677823be9f7c7a170f8d2f6dc7303962b509fa2e57e951340d08262f0d46e5986d08feab19e14b501cab1aacbfe",
+      "stamp": "8cb7033b402eee4cf0e8b3ed8371c41acec804ad15914f8411309a1ecc04f05df0477c126765c43282d1c9a284a6425d53852677823be9f7c7a170f8d2f6dc733b2cb81793a01984291c5808455caf0e8456a801e3cc11c09569cba8a63ebec2",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -110,7 +110,7 @@
     {
       "scenario": "a_friendly_check_in_changes_nothing",
       "site": "deal_verdict",
-      "stamp": "d0da7adf07d4f5177bdce05b0ee90feaf35d480db0a679cb7281c0b4a420bc6df66060b73211645b1eb4ec804d86cb0d0020d94411fbb8c671b49d6c875adf1503962b509fa2e57e951340d08262f0d46e5986d08feab19e14b501cab1aacbfe",
+      "stamp": "d0da7adf07d4f5177bdce05b0ee90feaf35d480db0a679cb7281c0b4a420bc6df66060b73211645b1eb4ec804d86cb0d0020d94411fbb8c671b49d6c875adf153b2cb81793a01984291c5808455caf0e8456a801e3cc11c09569cba8a63ebec2",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -124,7 +124,7 @@
     {
       "scenario": "the_buyer_asks_for_the_contract_and_the_deal_moves_on",
       "site": "deal_verdict",
-      "stamp": "43649fa96999979114aedd918e0f37183eb76eb992a377355843c3f5d85c845176dfff47cc7c5336b59c61c79548c58d44567bfb25282768b7abf952dfddc6e7570e7ba52d9a219c0e18ae0005b869844483d54f0feb8754fded758935c270c1",
+      "stamp": "43649fa96999979114aedd918e0f37183eb76eb992a377355843c3f5d85c845176dfff47cc7c5336b59c61c79548c58d44567bfb25282768b7abf952dfddc6e75d673aa325e297f2bbb5c1861a1f2220d861cd54f83e3872b6df66c5a5b084b7",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -147,7 +147,7 @@
     {
       "scenario": "the_customer_names_a_new_signing_date",
       "site": "deal_verdict",
-      "stamp": "549713924ea60853d41d5d3a5d8b2eb6b979fed4fb4626762ef84f4dad5c26a9be959eaef066f0cf58676e5022337a2132f29e1bb76cba225b415e7ad23ff55cc72f95480ad6f0f380e5454cca2c5fdc441b2fbdd5cabea341762727d73de15c",
+      "stamp": "549713924ea60853d41d5d3a5d8b2eb6b979fed4fb4626762ef84f4dad5c26a9be959eaef066f0cf58676e5022337a2132f29e1bb76cba225b415e7ad23ff55c87910132a1478ad0ac04e9afa17a003ad58af0e62dc1a0d1aa9e649b4c5bd835",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,

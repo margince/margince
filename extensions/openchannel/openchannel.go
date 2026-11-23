@@ -167,6 +167,15 @@ func New() extension.Extension {
 			Icon:   extension.IconPlug,
 			Object: "ext_openchannel_endpoint",
 		}},
+		// The connector's own destination in the home side drawer, for a member
+		// who may read the endpoint the screen opens on.
+		App: &extension.App{
+			Icon:   extension.IconPlug,
+			Label:  "extOpenchannel.title",
+			Group:  extension.AppGroupWork,
+			Object: "ext_openchannel_endpoint",
+			Export: "OpenchannelApp",
+		},
 	}
 }
 
