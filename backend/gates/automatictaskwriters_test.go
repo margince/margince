@@ -77,6 +77,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
 	"compose/dealroomtimeline.go:write":                                   {writesNoTask},
 	"compose/chatsync/summary.go:fileNote":                                {writesNoTask},
+	"compose/jobs_dealbackfill.go:recordOfferedBack":                      {writesNoTask},
 	"compose/dealcloselost.go:recordOnTimeline":                           {writesNoTask},
 	"compose/dealscoutopen.go:recordOnTimeline":                           {writesNoTask},
 	"compose/dealscoutrevive.go:recordRevivalOnTimeline":                  {writesNoTask},

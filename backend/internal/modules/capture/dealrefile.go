@@ -140,8 +140,9 @@ func (r DealRepair) refileTx(ctx context.Context, tx pgx.Tx, activity ids.Activi
 	args := []any{activity}
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	var eligible bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id=$1
- AND a.kind IN ('email','meeting') AND `+capturedConnectorActivitySQL+` AND `+plan.eligible(arg)+`)`, args...).Scan(&eligible); err != nil || !eligible {
+	query := `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id=$1
+ AND a.kind IN ('email','meeting') AND ` + capturedConnectorActivitySQL + ` AND ` + plan.eligible(arg) + `)`
+	if err := tx.QueryRow(ctx, query, args...).Scan(&eligible); err != nil || !eligible {
 		return nil, DealNone, err
 	}
 	links, _, human, _, err := readDealProvenance(ctx, tx, activity)

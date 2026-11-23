@@ -89,21 +89,26 @@ func reofferCloseTx(ctx context.Context, tx pgx.Tx, closed SilentClose, record f
 		}
 		return false, err
 	}
-	var held bool
+	var version int64
 	err := tx.QueryRow(ctx, storekit.SQLf(`
-		SELECT EXISTS (SELECT 1 FROM deal_correction c JOIN deal d ON d.id = c.deal_id
+		SELECT c.version FROM deal_correction c JOIN deal d ON d.id = c.deal_id
 		 WHERE c.id = $1 AND c.deal_id = $2 AND c.correction = $3 AND c.reversed_at IS NULL
-		   AND c.accepted_at IS NULL AND c.reoffered_at IS NULL AND d.lost_reason_code = $4 AND %s)`,
-		correctionStageStillNewestSQL(5)), closed.CorrectionID, closed.Deal, CloseLostCorrection, LossReasonWentSilent, stageCorrectionKinds).Scan(&held)
+		   AND c.accepted_at IS NULL AND c.reoffered_at IS NULL AND d.lost_reason_code = $4 AND %s
+		   FOR UPDATE OF c`,
+		correctionStageStillNewestSQL(5)), closed.CorrectionID, closed.Deal, CloseLostCorrection, LossReasonWentSilent, stageCorrectionKinds).Scan(&version)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
 		return false, fmt.Errorf("deals: re-reading the close to offer back: %w", err)
 	}
-	if !held {
-		return false, nil
-	}
-	if _, err := tx.Exec(ctx, `UPDATE deal_correction SET reoffered_at = now(), updated_at = now(), version = version + 1
-		 WHERE id = $1`, closed.CorrectionID); err != nil {
+	tag, err := tx.Exec(ctx, `UPDATE deal_correction SET reoffered_at = now(), updated_at = now(), version = version + 1
+		 WHERE id = $1 AND version = $2`, closed.CorrectionID, version)
+	if err != nil {
 		return false, fmt.Errorf("deals: offering the close back: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return false, nil
 	}
 	change := func(offered bool) map[string]any {
 		return map[string]any{"applied_change": map[string]any{"id": closed.CorrectionID.String(), "offered_again": offered}}

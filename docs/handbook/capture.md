@@ -169,9 +169,7 @@ Meetings use the same contact and company rules. They never follow an email thre
 
 Margince checks recent mail and meetings again when a deal opens or changes company, a lead becomes a contact, or a contact's employer changes. A guest found later is checked too. These checks run in the background and ask nobody. Existing deal links stay where you put them.
 
-An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work. It also checks, once, the deal links Margince suggested on mail of the last 90 days before the AI check existed. A link the AI says is not about its deal comes off.
-
-Once, the same pass also files older mail of a deal's stakeholders. It reads mail from the last `deals.silent_close_days` days, by the rules above, and puts it on a deal that Margince closed for silence in that time too. Mail inside the waiting horizon asks the question above. Older mail asks nobody.
+An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work. It also checks, once, the deal links Margince suggested on mail of the last 90 days before the AI check existed. A link the AI says is not about its deal comes off. Once, it also files older mail of a deal's stakeholders, from the last `deals.silent_close_days` days, by the rules above. That includes a deal Margince closed in that time. Mail inside the waiting horizon may ask the question above; older mail asks nobody.
 
 An email only its participants can read still appears on the deal's timeline. It moves the deal's last activity date by its date alone, so the deal does not read as stalled. The deal's last email and stakeholder engagement ignore it, as do contact and company dates.
 To put an email on a deal yourself, [use **Relink**](#how-do-i-move-an-email-to-the-right-contact-or-deal).

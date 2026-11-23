@@ -128,7 +128,14 @@ func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[Capt
 		}
 	}
 	if cursor.RecheckDone {
-		return w.backfill(ctx, passCtx, job.Args)
+		more, err := w.backfill(passCtx, job.Args)
+		if err != nil {
+			return jobs.FaultContext(ctx, err)
+		}
+		if more {
+			return river.JobSnooze(0)
+		}
+		return nil
 	}
 	// The refile pages run first, then, for the recovery sweep, the recheck
 	// pages. Each phase keeps its own cursor across snoozes.
@@ -140,6 +147,7 @@ func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[Capt
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
+	backfillDone := false
 	switch {
 	case more:
 		// A crash before metadata is saved replays completed writes under their normal locks.
@@ -152,10 +160,15 @@ func (w *capturedDealRefileWorker) Work(ctx context.Context, job *river.Job[Capt
 				return jobs.FaultContext(ctx, err)
 			}
 		}
-		return w.backfill(ctx, passCtx, job.Args)
+		var left bool
+		left, err = w.backfill(passCtx, job.Args)
+		backfillDone = !left
 	}
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
+	}
+	if backfillDone {
+		return nil
 	}
 	return river.JobSnooze(0)
 }

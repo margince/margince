@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/riverqueue/river"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -26,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -34,19 +32,12 @@ import (
 )
 
 // backfill runs one bounded step of the backfill when the pass asks for it,
-// and snoozes while work remains.
-func (w *capturedDealRefileWorker) backfill(ctx, passCtx context.Context, args CapturedDealRefileArgs) error {
+// and reports whether work remains, so the worker snoozes.
+func (w *capturedDealRefileWorker) backfill(ctx context.Context, args CapturedDealRefileArgs) (bool, error) {
 	if !args.Scope.Backfill {
-		return nil
+		return false, nil
 	}
-	more, err := w.backfillStep(passCtx, args)
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	if more {
-		return river.JobSnooze(0)
-	}
-	return nil
+	return w.backfillStep(ctx, args)
 }
 
 // backfillStep is the state one step reads and writes back, with the model

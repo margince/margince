@@ -28,8 +28,7 @@ import (
 const openDealSQL = `d.status = 'open' AND d.archived_at IS NULL`
 
 // candidateDealSQL is openDealSQL, or with a non-zero only the one named deal
-// that is not archived, whatever its status. The open rule is stated once for
-// both forms.
+// that is not archived, whatever its status.
 func candidateDealSQL(only ids.UUID, arg func(any) int) string {
 	if only.IsZero() {
 		return openDealSQL
@@ -67,8 +66,9 @@ func dealsOfProject(ctx context.Context, tx pgx.Tx, projectID, admit ids.UUID) (
 	}
 	args := []any{projectID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d WHERE d.project_id = $1 AND `+candidateDealSQL(admit, arg)+`
-		ORDER BY d.id LIMIT 2`, args...)
+	query := `SELECT d.id FROM deal d WHERE d.project_id = $1 AND ` + candidateDealSQL(admit, arg) + `
+		ORDER BY d.id LIMIT 2`
+	return collectCandidates(ctx, tx, query, args...)
 }
 
 // OpenDealsOfCompany answers up to two open deals of one company.
@@ -87,8 +87,9 @@ func dealsOfCompany(ctx context.Context, tx pgx.Tx, companyID, admit ids.UUID) (
 	}
 	args := []any{companyID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d WHERE d.company_id = $1 AND `+candidateDealSQL(admit, arg)+`
-		ORDER BY d.id LIMIT 2`, args...)
+	query := `SELECT d.id FROM deal d WHERE d.company_id = $1 AND ` + candidateDealSQL(admit, arg) + `
+		ORDER BY d.id LIMIT 2`
+	return collectCandidates(ctx, tx, query, args...)
 }
 
 // OpenDealsOfCompanyUpTo answers up to limit open deals of one company, the
@@ -178,13 +179,14 @@ func openDealsStaked(ctx context.Context, tx pgx.Tx, company *ids.UUID, contacts
 		companyClause = fmt.Sprintf(" AND d.company_id = $%d", arg(*company))
 	}
 	limitPos := fmt.Sprintf("$%d", arg(limit))
-	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d
-		 WHERE `+candidateDealSQL(admit, arg)+companyClause+`
+	query := `SELECT d.id FROM deal d
+		 WHERE ` + candidateDealSQL(admit, arg) + companyClause + `
 		   AND EXISTS (SELECT 1 FROM relationship r
-		                WHERE r.deal_id = d.id AND `+dealseat.CurrentSQL("r")+`
+		                WHERE r.deal_id = d.id AND ` + dealseat.CurrentSQL("r") + `
 		                  AND r.contact_id = ANY($1)
-		                  AND (`+edgeScope+`))
-		 ORDER BY d.id LIMIT `+limitPos, args...)
+		                  AND (` + edgeScope + `))
+		 ORDER BY d.id LIMIT ` + limitPos
+	return collectCandidates(ctx, tx, query, args...)
 }
 
 // maxOfferedDeals bounds the deals one deal question records as offered.

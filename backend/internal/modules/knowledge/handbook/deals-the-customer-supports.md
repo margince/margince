@@ -69,14 +69,15 @@ Margince closes a deal only when all of these hold:
 A message from the customer that only its participants can see also keeps the
 deal open. Margince reads only its date.
 
-Margince closes no deal for silence until it has checked, once, the mail of the
+Margince closes no quiet deal until it has checked, once, the mail of the
 deal's stakeholders from the last 120 days (the value of `deals.silent_close_days`).
-That mail may never have reached the deal, for example because the contact became
-a stakeholder after it arrived. Margince files it by the rules in [Why was my
+That mail may never have reached the deal, for example because the contact
+joined the deal after it arrived. Margince files it by the rules in [Why was my
 email not linked to a deal?](capture.md#why-was-my-email-not-linked-to-a-deal).
-A close for silence from the last 120 days that this mail shows to be wrong comes
-back under **Done for you** with **Undo**, even after its 7 days, and a note on
-the deal says why. A refusal from the customer still closes the deal at once.
+
+That mail may show that a close from the last 120 days was wrong. The
+close then comes back under **Done for you** with **Undo**, even after its 7
+days. A note on the deal says why. A refusal from the customer still closes the deal at once.
 
 Margince closes the deal for its owner. A line under the deal's header says
 that Margince closed it, why, and offers **Undo**. When the customer said no, the

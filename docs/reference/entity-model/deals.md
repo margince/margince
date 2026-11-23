@@ -269,6 +269,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `fields` | `text[]` | yes |  |
 | `note_activity_id` | `uuid` |  | Points at `activity.id`. |
 | `remaining_open_stages` | `text` | yes |  |
+| `reoffered_at` | `timestamp with time zone` |  |  |
 | `reversal_audit_id` | `uuid` |  | Points at `audit_log.id`. |
 | `reversed_at` | `timestamp with time zone` |  |  |
 | `reversed_by` | `text` |  |  |
