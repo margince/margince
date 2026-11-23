@@ -256,7 +256,6 @@ const PARENT_SCREENS: Readonly<Partial<Record<Screen, Screen>>> = {
   partners: "companies",
 };
 
-// The rail destination an off-rail screen belongs to, if it has one.
 export function parentScreenOf(route: Route): Screen | undefined {
   return PARENT_SCREENS[route.screen];
 }
