@@ -144,12 +144,23 @@ export function PaletteEmpty({
   query: string;
   nothingFound: boolean;
   listed: number;
-  search: Readonly<{ pending: boolean; failed: boolean }>;
+  search: Readonly<{
+    pending: boolean;
+    failed: boolean;
+    timedOut: readonly string[];
+  }>;
 }>) {
   const t = useT();
   if (nothingFound) {
     return <EmptyState>{t("search.empty", { q: query })}</EmptyState>;
   }
-  if (listed > 0 || search.pending || search.failed) return null;
+  if (
+    listed > 0 ||
+    search.pending ||
+    search.failed ||
+    search.timedOut.length > 0
+  ) {
+    return null;
+  }
   return <EmptyState>{t("palette.empty")}</EmptyState>;
 }

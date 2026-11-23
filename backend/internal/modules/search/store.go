@@ -143,6 +143,9 @@ type Page struct {
 	// TypesWithMore is non-nil on a grouped page alone: the types that matched
 	// more hits than PerType let it carry, in searchBranches order.
 	TypesWithMore []string
+	// TypesTimedOut is non-nil on a grouped page alone: the types the time
+	// budget stopped, which hold no hits here, in the order of TypesWithMore.
+	TypesTimedOut []string
 	// NearMatches is set only when NearMatches was asked for and a plain first
 	// page found nothing: names spelt close to the query, never hits.
 	NearMatches []NearMatch
@@ -229,6 +232,11 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 
 	var page Page
 	err := s.db.Read(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		if grouped, isGrouped := shape.(groupedShape); isGrouped {
+			var err error
+			page, err = s.groupedPage(ctx, tx, in, query, types, grouped)
+			return err
+		}
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 
@@ -249,15 +257,7 @@ func (s *Store) Search(ctx context.Context, in Input) (Page, error) {
 			return err
 		}
 		page = shape.page(hits)
-		if wantsNearMatches(in, query, page) {
-			if page.NearMatches, err = nearMatches(ctx, tx, types, query); err != nil {
-				return err
-			}
-		}
-		if err := noteCaptureWithheld(ctx, tx, types); err != nil {
-			return err
-		}
-		return s.decorate(ctx, tx, page.Hits)
+		return s.finishPage(ctx, tx, in, query, types, &page, time.Time{})
 	})
 	if err != nil {
 		return Page{}, err
@@ -275,6 +275,23 @@ func rankedStatement(ctx context.Context, in Input, query string, types []string
 	bound := slices.DeleteFunc([]string{withinClause(in.Within, arg), excludeClause(in.Exclude, arg)},
 		func(clause string) bool { return clause == "" })
 	return shape.statement(branches, strings.Join(bound, " AND "), arg), nil
+}
+
+// finishPage adds what follows the ranking: near matches, the capture-withheld
+// note and the hit decoration. answered is the types whose ranking finished.
+// A type that ran out of time is not read again here. deadline is the page's,
+// zero on a ranked page.
+func (s *Store) finishPage(ctx context.Context, tx pgx.Tx, in Input, query string, answered []string, page *Page, deadline time.Time) error {
+	if wantsNearMatches(in, query, *page) {
+		var err error
+		if page.NearMatches, err = nearMatchesBefore(ctx, tx, deadline, answered, query); err != nil {
+			return err
+		}
+	}
+	if err := noteCaptureWithheld(ctx, tx, answered); err != nil {
+		return err
+	}
+	return s.decorate(ctx, tx, page.Hits)
 }
 
 func rank(ctx context.Context, tx pgx.Tx, statement string, args []any) ([]Hit, error) {
@@ -371,17 +388,11 @@ func rankingFault(ctx context.Context, err error) error {
 // and narrowing the query is the reader's move — which is what an actionable
 // fault is supposed to say.
 //
-// Not a partial page either. This operation has no member to carry "these hits
-// are what fitted" — unlike the agent query surface, whose Coverage says so —
-// and returning the rows that happened to rank before the ceiling would present
-// an arbitrary prefix of a ranking as the ranking.
-// It WRAPS the database error rather than replacing it, and that is what keeps
-// the other reader of this statement working. The agent query surface wants the
-// same spent ceiling as a DEGRADED ANSWER — rows dropped, a note, a coverage
-// verdict saying the plan was abandoned — and it recognises one by asking
-// storekit.IsQueryCanceled. A fault that hid the SQLSTATE would turn that
-// surface's honest partial answer into an error, which is the opposite of what
-// #1847 built it for.
+// Not a partial list either: a ranking cut short would present an arbitrary
+// prefix as the ranking. A grouped page names each stopped type in
+// types_timed_out instead.
+// It WRAPS the database error. The agent query surface reads the SQLSTATE with
+// storekit.IsQueryCanceled and answers a degraded plan.
 type QueryTooBroadError struct{ Err error }
 
 func (e *QueryTooBroadError) Error() string {

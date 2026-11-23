@@ -2905,6 +2905,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kontakte, Unternehmen, Deals, Projekte, Produkte, Aktivitäten, Leads durchsuchen…",
   "search.prompt": "Gib einen Suchbegriff ein.",
   "search.empty": "Keine Treffer für „{q}“.",
+  "search.timedOut":
+    "{kind} konnten für dieses Wort nicht rechtzeitig durchsucht werden. Füge ein weiteres Wort hinzu, um sie zu durchsuchen.",
   "search.nearMatches": "Meintest du:",
   "search.group.contact": "Kontakte",
   "search.group.company": "Unternehmen",

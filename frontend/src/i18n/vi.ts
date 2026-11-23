@@ -2817,6 +2817,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tìm liên hệ, công ty, deal, dự án, sản phẩm, hoạt động, lead…",
   "search.prompt": "Nhập từ khóa tìm kiếm.",
   "search.empty": "Không có kết quả cho “{q}”.",
+  "search.timedOut":
+    "Không kịp tìm {kind} cho từ này. Hãy thêm một từ khác để tìm lại.",
   "search.nearMatches": "Có phải bạn muốn tìm:",
   "search.group.contact": "Liên hệ",
   "search.group.company": "Công ty",

@@ -4,6 +4,7 @@
 package search
 
 import (
+	"slices"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -135,6 +136,19 @@ func TestTypesWithMoreIsPresentOnAGroupedPageAlone(t *testing.T) {
 	if cut.TypesWithMore == nil || len(*cut.TypesWithMore) != 1 ||
 		(*cut.TypesWithMore)[0] != "activity" {
 		t.Errorf("a grouped page that cut activities rendered %v", cut.TypesWithMore)
+	}
+}
+
+func TestTypesTimedOutIsPresentOnAGroupedPageAlone(t *testing.T) {
+	t.Parallel()
+	if ranked := wirePage(Page{}); ranked.TypesTimedOut != nil {
+		t.Errorf("a ranked page carries types_timed_out = %v", *ranked.TypesTimedOut)
+	}
+	if whole := wirePage(Page{TypesTimedOut: []string{}}); whole.TypesTimedOut == nil || len(*whole.TypesTimedOut) != 0 {
+		t.Errorf("a grouped page where every type answered rendered %v, want a present, empty list", whole.TypesTimedOut)
+	}
+	if cut := wirePage(Page{TypesTimedOut: []string{"activity"}}); cut.TypesTimedOut == nil || !slices.Equal(*cut.TypesTimedOut, []string{"activity"}) {
+		t.Errorf("a grouped page that lost activities rendered %v", cut.TypesTimedOut)
 	}
 }
 

@@ -13870,7 +13870,7 @@ paths:
           in: query
           schema: {type: integer, minimum: 1, maximum: 20}
           description: >-
-            Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest.
+            Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. A type the time budget stopped is left out of `data` and named in `types_timed_out`.
         - name: with_employees
           in: query
           schema: {type: boolean, default: false}
@@ -51369,6 +51369,11 @@ components:
           items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           description: >-
             On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
+        types_timed_out:
+          type: array
+          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+          description: >-
+            On a `per_type` answer only: the types whose search did not finish within the time budget. `data` holds no hits of these types, and none of them is in `types_with_more`. Empty when every type answered. Absent on a ranked answer, which answers 422 `query_too_broad` instead.
         near_matches:
           type: array
           maxItems: 5

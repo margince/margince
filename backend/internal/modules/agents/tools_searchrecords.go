@@ -48,6 +48,9 @@ type RecordSearchPage struct {
 	Hits          []RecordSearchHit
 	NextCursor    string
 	TypesWithMore []string
+	// TypesTimedOut is non-nil on a grouped page alone: the types the time
+	// budget stopped, which hold no hits here.
+	TypesTimedOut []string
 	// NearMatches is set when nothing matched: names spelt close to the words.
 	NearMatches []RecordNearMatch
 }
@@ -88,6 +91,9 @@ type SearchRecordsResult struct {
 	// TypesWithMore is present on a grouped (per_type) page alone, and empty
 	// there when every type fit.
 	TypesWithMore *[]string `json:"types_with_more,omitempty"`
+	// TypesTimedOut is present on a grouped page alone, and empty there when
+	// every type answered. The types it names are not on this page.
+	TypesTimedOut *[]string `json:"types_timed_out,omitempty"`
 	// Coverage is complete_exact only on a page holding every match, each read
 	// back. Not omitempty: an absent coverage would read as a complete one.
 	Coverage string `json:"coverage"`
@@ -114,6 +120,10 @@ const CodeNearMatchesOnly = "near_matches_only"
 // CodeMoreRecordsMatch is search_records' note for a page with a remainder:
 // more records match than it holds.
 const CodeMoreRecordsMatch = "more_records_match"
+
+// CodeTypesTimedOut is search_records' note for a grouped page missing the types
+// the time budget stopped. Not plan_exceeded_time_budget, which says no rows at all.
+const CodeTypesTimedOut = "types_timed_out"
 
 // searchedRecord is a ranked record and why it matched.
 type searchedRecord struct {
@@ -176,7 +186,7 @@ func (t searchRecords) Spec() mcp.ToolSpec {
 			"record_type":{"type":"string","enum":%[1]s,"description":"Search one type."},
 			"record_types":{"type":"array","items":{"type":"string","enum":%[1]s},"description":"Search these types, in place of record_type. Omit both for contact, company, deal, lead and project."},
 			"with_employees":{"type":"boolean","description":"Also find the contacts who work at a matching company; each carries match.works_at."},
-			"per_type":{"type":"integer","minimum":1,"maximum":20,"description":"Answer up to this many of each type instead of one ranked list, at most %[2]d records in all. Takes no cursor or limit; types_with_more names the types holding more."},
+			"per_type":{"type":"integer","minimum":1,"maximum":20,"description":"Answer up to this many of each type instead of one ranked list, at most %[2]d records in all. Takes no cursor or limit; types_with_more names the types holding more, and types_timed_out the types that could not be searched in time."},
 			"exclude_ids":{"type":"array","maxItems":%[4]d,"items":{"type":"string","format":"uuid"},"description":"Record ids, of any type, to leave out. They are dropped before ranking, so a page stays full."},
 			"limit":{"type":"integer","minimum":1,"maximum":%[2]d,"description":"Records on one page; %[3]d when left out."},
 			"cursor":{"type":"string","description":"next_cursor from the previous page."}},
@@ -321,6 +331,14 @@ func (t searchRecords) hydrate(ctx context.Context, page RecordSearchPage) (Sear
 	}
 	if page.TypesWithMore != nil {
 		result.TypesWithMore = &page.TypesWithMore
+	}
+	if page.TypesTimedOut != nil {
+		result.TypesTimedOut = &page.TypesTimedOut
+	}
+	if len(page.TypesTimedOut) > 0 {
+		result.Coverage = CoveragePartialDegraded
+		result.Notes = append(result.Notes, QueryNote{Code: CodeTypesTimedOut, Detail: "the types in types_timed_out " +
+			"could not be searched in time and are not on this page; add another word, or search one of them with record_type"})
 	}
 	if more := remainderNote(page); more != nil {
 		result.Coverage = CoveragePartialDegraded
