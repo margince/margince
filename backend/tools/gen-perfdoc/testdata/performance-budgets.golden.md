@@ -18,8 +18,13 @@ Re-measure with `make bench-perf`, `make bench-record`,
 `make bench-perf-check` and `make bench-mobile-check` measure
 without recording. The weekly scheduled job records the SMB tier of
 `bench-perf` and `bench-mobile` and opens a pull request with the
-records, so a row changes only when a maintainer merges it. It also
-measures the mid-market tier with `bench-perf-check`, which records nothing.
+records, so a row changes only when a maintainer merges it.
+
+The weekly job also checks the mid-market tier with `bench-perf-check`, which records
+nothing. Five runs on CI runners, on generated demo data, read the PERF-3 `p95`
+at 147 to 186 ms against its 200 ms budget, about 7% headroom at the worst run,
+and the PERF-7 `p95` at 47 to 71 ms against 300 ms. The budgets are unchanged,
+and that run fails when a `p95` reaches one.
 
 ## The budgets
 

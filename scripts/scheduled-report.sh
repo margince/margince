@@ -252,15 +252,26 @@ elif [[ "${RENOVATE_RESULT:-}" = "success" ]]; then
   resolve "Renovate is running but opens no pull requests"
 fi
 
+# One reporter for both PERF tiers, so one tier cannot drift from the other in
+# what it files. The arguments are the tier's name as its issue titles carry it
+# ("" for SMB, whose titles predate the second tier), its job result and step
+# outcome, the command it ran, the seed it times out in, what a breach means at
+# that tier, and what happens to its numbers.
+#
 # Two findings, not one, because the job result cannot tell them apart: a failed
 # checkout, a cold cache, a refused database or a hung seed all arrive here as
 # `failure`. Filing "a budget is breaching" for those sends somebody bisecting a
 # regression that never happened — which is the failure this whole lane keeps
-# learning about. PERF_OUTCOME is set by the step from the harness's own breach
+# learning about. The outcome is set by the step from the harness's own breach
 # message, so only a MEASURED breach is reported as one.
-if [[ "${PERF_RESULT:-}" = "failure" ]] && [[ "${PERF_OUTCOME:-}" != "breach" ]]; then
-  report "the weekly PERF-3/PERF-7 run could not complete" "priority: normal,area: ci-tests,bug" \
-"\`make bench-perf BENCH_PERF_TIER=smb\` failed on the weekly run of \`main\` WITHOUT
+perf_report() {
+  local tier="$1" result="$2" outcome="$3" cmd="$4" seed="$5" meaning="$6" record="$7"
+  local cannot="the weekly PERF-3/PERF-7 run${tier:+ on the $tier tier} could not complete"
+  local breaching="a PERF-3/PERF-7 budget is breaching on main${tier:+ ($tier tier)}"
+
+  if [[ "$result" = "failure" ]] && [[ "$outcome" != "breach" ]]; then
+    report "$cannot" "priority: normal,area: ci-tests,bug" \
+"\`$cmd\` failed on the weekly run of \`main\` WITHOUT
 reaching a budget verdict: $RUN_URL
 
 No budget is known to be breaching, and none is known to hold — the lane did not
@@ -268,44 +279,57 @@ get far enough to say. The step separates the two outcomes precisely so this
 issue does not claim a regression that was never measured.
 
 Likely causes, in the order they occur: the runner could not reach the Postgres
-service, \`bench_db\` could not create \`margince_bench\`, or the SMB seed
-outran \`go test\`'s 20m budget (which would have printed a goroutine dump — if
-the job was killed at 30m instead, the runner was slower than the budget assumes
+service, \`bench_db\` could not create \`margince_bench\`, or the $seed
+outran \`go test\`'s budget (which would have printed a goroutine dump — if
+the job was killed first, the runner was slower than the budget assumes
 and the two timeouts need re-deriving, not raising).
 
-Reproduce with \`make db-up && make bench-perf-check\`. No record reached the
-tree: a record is proposed as a pull request, and this run measured nothing to
-propose."\
-    || unreported=1
-elif [[ "${PERF_RESULT:-}" = "success" ]] || [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
-  # A MEASURED BREACH IS PROOF THE LANE RAN, which is the only thing this
-  # title claims — so it retracts here as well as on a pass, and the arm below
-  # files the breach under its own title.
-  resolve "the weekly PERF-3/PERF-7 run could not complete"
-fi
+Reproduce with \`make db-up && make bench-perf-check${tier:+ BENCH_PERF_CHECK_TIER=mid_market}\`. No record reached the
+tree: this run measured nothing to propose."\
+      || unreported=1
+  elif [[ "$result" = "success" ]] || [[ "$outcome" = "breach" ]]; then
+    # A MEASURED BREACH IS PROOF THE LANE RAN, which is the only thing this
+    # title claims — so it retracts here as well as on a pass, and the arm below
+    # files the breach under its own title.
+    resolve "$cannot"
+  fi
 
-if [[ "${PERF_OUTCOME:-}" = "breach" ]]; then
-  report "a PERF-3/PERF-7 budget is breaching on main" "priority: normal,area: ci-tests,bug" \
-"\`make bench-perf BENCH_PERF_TIER=smb\` failed on the weekly run of \`main\`: $RUN_URL
+  if [[ "$outcome" = "breach" ]]; then
+    report "$breaching" "priority: normal,area: ci-tests,bug" \
+"\`$cmd\` failed on the weekly run of \`main\`: $RUN_URL
 
-This alarm runs the SMB tier only, and that shapes what the finding means: SMB
-is the corpus most installations look like, while the PERF-7 SLO binds at
-mid-market. So a breach here is worse than it sounds — the SMALLER corpus is
-already over a bound the larger one has to meet. The weekly run also measures
-mid-market in its own job, which files nothing until its budget is set.
+$meaning
 
-The breach is recorded, and the run proposes the record as a pull request. Merge
-it only once the breach is understood; until then the published page shows the
-last record a maintainer merged. Reproduce with \`make db-up && make bench-perf-check\`.
+$record Reproduce with \`make db-up && make bench-perf-check${tier:+ BENCH_PERF_CHECK_TIER=mid_market}\`.
 
 This budget carried no merge gate: PERF-3/PERF-7 left the integration lane
 because a mid-market SLO gated on an SMB corpus renders \`inconclusive\`, never
 \`within budget\`. So the breach may predate this run by up to a week, and
 bisecting is the honest first move rather than assuming the newest commit."\
-    || unreported=1
-elif [[ "${PERF_RESULT:-}" = "success" ]]; then
-  resolve "a PERF-3/PERF-7 budget is breaching on main"
-fi
+      || unreported=1
+  elif [[ "$result" = "success" ]]; then
+    resolve "$breaching"
+  fi
+}
+
+perf_report "" "${PERF_RESULT:-}" "${PERF_OUTCOME:-}" \
+  "make bench-perf BENCH_PERF_TIER=smb" "SMB seed" \
+"This alarm runs the SMB tier, and that shapes what the finding means: SMB
+is the corpus most installations look like, while the PERF-7 SLO binds at
+mid-market. So a breach here is worse than it sounds — the SMALLER corpus is
+already over a bound the larger one has to meet. The mid-market tier has its own
+finding." \
+"The breach is recorded, and the run proposes the record as a pull request. Merge
+it only once the breach is understood; until then the published page shows the
+last record a maintainer merged."
+
+perf_report "mid-market" "${PERF_MM_RESULT:-}" "${PERF_MM_OUTCOME:-}" \
+  "make bench-perf-check BENCH_PERF_CHECK_TIER=mid_market" "mid-market seed" \
+"This is the tier the PERF-7 SLO binds at. The budgets are the shared PERF-3 and
+PERF-7 ones; five runs on runners read the PERF-3 p95 at 147 to 186 ms against
+200 ms, so a breach can be real drift or the spread between runners. Read the
+p95 lines in the job log, and rerun once before bisecting." \
+"This run records nothing."
 
 # The mobile budget splits the same two ways and for the same reason. Its
 # discriminator is the spec's own log line rather than a failure message: the

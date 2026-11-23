@@ -335,8 +335,8 @@ func benchExec(t *testing.T, owner *pgx.Conn, tier search.BenchTier, sql string,
 // seedSlice is a window of row ordinals, from exclusive to inclusive.
 type seedSlice struct{ from, to int }
 
-// seedSlices cuts a load of total rows into a small first slice and about
-// twenty more, so a table has statistics before most of it is written.
+// seedSlices cuts a load into a small first slice and about twenty more.
+// A table then has statistics before most of it is written.
 func seedSlices(total int) []seedSlice {
 	const first, rest = 1_000, 20
 	step := max(total/rest, first)
@@ -371,11 +371,10 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 	}
 
 	// JIT off for the seeding connection. The company clock a relationship insert
-	// refreshes plans three arms over tables the seed has not filled (deal stays
-	// empty), the planner prices the whole above jit_above_cost, and every call
-	// then compiles the query: about 65ms a row, so 50k relationships took
-	// close to an hour. No statistics fix helps, because an empty analysed table
-	// is priced even higher. The measured queries run on the pool, not here.
+	// refreshes is priced above jit_above_cost, because the empty `deal` table
+	// is never analysed. Every call then compiled the query, about 65ms a row.
+	// Analysing the empty table prices it higher still. The measured queries
+	// run on the pool, not here.
 	exec(`SET jit = off`)
 
 	exec(`INSERT INTO workspace (id) VALUES ($1)`, ws)
@@ -404,28 +403,19 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 	      FROM generate_series(1, $1) AS i`, spec.bulkActivities)
 	analyze(`activity`)
 
-	// The link fan-out and the employment edges below each fire a
-	// denormalisation trigger per row, and the trigger's read is planned
-	// against whatever statistics its tables carry. That is why the inserts
-	// are separate statements with an ANALYZE between them rather than the
-	// one chained CTE they used to be: a CTE cannot analyse what it is still
-	// writing, so every trigger call planned against an empty `activity` and
-	// drove the lookup from there: one scan of the whole activity table per
-	// link, quadratic in the tier. No installation plans that way; none of
-	// them is unanalysed.
+	// The link fan-out and the employment edges below fire a trigger per row,
+	// planned against the statistics its tables carry. So each load is its own
+	// statement with an ANALYZE after it. A CTE cannot analyse what it is still
+	// writing, and the trigger then scanned the whole `activity` table per link.
 	//
-	// The table being filled is read by its own triggers too (activity_link by
-	// the link ceiling, relationship by the company clock), and a statement
-	// cannot analyse what it is still writing. With no statistics the planner
-	// reads the whole of idx_relationship_dedupe_scan once per inserted row, so
-	// the load is quadratic in the tier. Each load therefore runs in slices
-	// with an ANALYZE after every one: only the first slice, kept small, plans
-	// on an empty table.
+	// The table being filled is read by its own triggers too, so each load runs
+	// in slices with an ANALYZE after every one. Only the first, small slice
+	// plans on an empty table. Without that the planner read all of
+	// idx_relationship_dedupe_scan per inserted row.
 	//
-	// The cyclic assignment precomputes each row's target ordinal so the
-	// join is a plain hashable equijoin; an expression joining both
-	// sides' row_numbers forces the planner into a nested loop that is
-	// pathological at the mid-market tier.
+	// The cyclic assignment precomputes each row's target ordinal so the join is
+	// a plain hashable equijoin. Joining both sides' row_numbers forces a nested
+	// loop that is pathological at the mid-market tier.
 	for _, w := range seedSlices(spec.bulkActivities) {
 		exec(`WITH total AS (
 		        SELECT count(*) AS n FROM contact

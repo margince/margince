@@ -334,6 +334,9 @@ expect_split growth GROWTH_RESULT GROWTH_OUTCOME breach \
 expect_split perf PERF_RESULT PERF_OUTCOME breach \
 	"the weekly PERF-3/PERF-7 run could not complete" \
 	"a PERF-3/PERF-7 budget is breaching on main"
+expect_split perf-mid-market PERF_MM_RESULT PERF_MM_OUTCOME breach \
+	"the weekly PERF-3/PERF-7 run on the mid-market tier could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main (mid-market tier)"
 
 expect_split renovate RENOVATE_RESULT RENOVATE_OUTCOME quiet \
 	"the Renovate liveness check could not run" \
