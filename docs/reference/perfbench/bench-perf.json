@@ -1,6 +1,6 @@
 {
   "target": "bench-perf",
-  "measured_on": "2026-11-13",
+  "measured_on": "2026-11-23",
   "machine": {
     "os": "linux",
     "arch": "amd64",
@@ -8,24 +8,24 @@
     "cores": 4,
     "memory_gib": 15,
     "toolchain": "go1.27.4",
-    "postgres": "16.15"
+    "postgres": "16.16"
   },
   "budgets": [
     {
       "id": "PERF-3",
       "name": "search_fts (smb tier)",
-      "p50_ms": 131.102001,
-      "p95_ms": 140.4021,
-      "p99_ms": 146.813543,
+      "p50_ms": 87.289568,
+      "p95_ms": 122.382326,
+      "p99_ms": 122.773898,
       "budget_ms": 200,
       "samples": 20
     },
     {
       "id": "PERF-7",
       "name": "context_graph (smb tier)",
-      "p50_ms": 17.725762,
-      "p95_ms": 112.197027,
-      "p99_ms": 119.706724,
+      "p50_ms": 12.962546,
+      "p95_ms": 52.646962,
+      "p99_ms": 55.049088,
       "budget_ms": 300,
       "samples": 20,
       "caveat": "measured on the smb tier; the SLO binds at mid_market"
