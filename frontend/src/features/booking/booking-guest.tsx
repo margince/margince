@@ -256,7 +256,7 @@ export function BookingGuestScreen({
     if (!next.startsWith(monthKey)) setMonth(monthOf(next));
   };
   const publicUnavailable = !preview && profile.data?.paused !== false;
-  useBookingTitle(preview ? null : guestTitle(t, profile.data));
+  useBookingTitle(preview ? null : guestTitle(t, profile.data), profile.data);
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">

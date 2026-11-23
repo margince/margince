@@ -407,6 +407,8 @@ describe("the service worker", () => {
       "/healthz",
       "/readyz",
       "/metrics",
+      // The web tier sends every booking page fetch to the api's card.
+      "/book/anna-meyer",
     ]) {
       expect(worker.request(url, "navigate"), url).toBeUndefined();
     }
@@ -453,16 +455,12 @@ describe("the service worker", () => {
     }
   });
 
-  it("gives the offline page to a failed navigation to a record card or a booking page, which the web tier serves as the app", async () => {
+  it("gives the offline page to a failed navigation to a record card, which the web tier serves as the app", async () => {
     const worker = await installed();
     worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
-    for (const url of [
-      "/r/deals/0b6f3c1e-5d2a-4c8e-9f10-2a3b4c5d6e7f",
-      "/book/anna-meyer",
-    ]) {
-      const answer = await worker.request(url, "navigate");
-      expect(await answer?.text(), url).toBe(page());
-    }
+    const url = "/r/deals/0b6f3c1e-5d2a-4c8e-9f10-2a3b4c5d6e7f";
+    const answer = await worker.request(url, "navigate");
+    expect(await answer?.text(), url).toBe(page());
   });
 
   it("leaves the failure to the browser when its own cache is gone", async () => {

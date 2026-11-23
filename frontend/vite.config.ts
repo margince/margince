@@ -335,20 +335,16 @@ export default defineConfig({
         rewrite: (path) =>
           path.replace(/^\/r\//, "/v1/public/record-previews/"),
       },
-      // A booking page's path, split the way nginx.conf splits it: a browser
-      // navigation gets the app, any other fetch the api's booking preview.
+      // A booking page's path, as nginx.conf answers it: every fetch, a
+      // browser's navigation included, gets the api's booking card.
       "/book": {
         target: proxyTarget,
         changeOrigin: false,
         secure: false,
-        bypass: (request) =>
-          request.headers["sec-fetch-dest"] === "document"
-            ? "/index.html"
-            : undefined,
         rewrite: (path) =>
           path.replace(
-            /^\/book\/([A-Za-z0-9_-]+)\/?(?:\?.*)?$/,
-            "/v1/public/booking/$1/preview",
+            /^\/book\/([A-Za-z0-9_-]+)\/?(\?.*)?$/,
+            "/v1/public/booking/$1/preview$2",
           ),
       },
       "/v1": { target: proxyTarget, changeOrigin: false, secure: false },

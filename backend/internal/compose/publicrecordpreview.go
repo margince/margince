@@ -85,8 +85,8 @@ type recordPreview struct {
 
 // previewCard is the escaped HTML a link-preview fetcher reads in place of the
 // app shell. Record cards and booking pages share it. Each caller names its own
-// site and link text, so a record card says Margince and a booking page names
-// only the host's company. html/template escapes every field.
+// site, icon and link text, so a record card says Margince and a booking page
+// names only the host's company. html/template escapes every field.
 type previewCard struct {
 	Locale  textlang.Lang
 	Title   string
@@ -99,6 +99,9 @@ type previewCard struct {
 	// text-only card.
 	Image    string
 	ImageAlt string
+	// Icon is the tab icon. Empty gives a blank one, so the browser never
+	// falls back to the app's own /favicon.ico.
+	Icon string
 	// Href is where the page's script sends a browser that reached the card.
 	Href     string
 	LinkText string
@@ -122,12 +125,12 @@ func recordPreviewCard(preview recordPreview, locales ...textlang.Lang) previewC
 			preview.Summary = fmt.Sprintf(systemtext.Copy("preview.record_empty", language), label)
 		}
 	}
-	return previewCard{Title: preview.Title, Summary: preview.Summary, SiteName: "Margince", Href: preview.Href, LinkText: systemtext.Copy("preview.open_record", language)}
+	return previewCard{Title: preview.Title, Summary: preview.Summary, SiteName: "Margince", Icon: "/icon.svg", Href: preview.Href, LinkText: systemtext.Copy("preview.open_record", language)}
 }
 
 var previewCardHTML = template.Must(template.New("preview-card").Parse(`<!doctype html>
 <html lang="{{.Locale}}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{.Title}}</title>{{if .Canonical}}<link rel="canonical" href="{{.Canonical}}">{{end}}{{if .Summary}}<meta property="og:type" content="website">{{if .SiteName}}<meta property="og:site_name" content="{{.SiteName}}">{{end}}
+<title>{{.Title}}</title><link rel="icon" href="{{if .Icon}}{{.Icon}}{{else}}data:,{{end}}">{{if .Canonical}}<link rel="canonical" href="{{.Canonical}}">{{end}}{{if .Summary}}<meta property="og:type" content="website">{{if .SiteName}}<meta property="og:site_name" content="{{.SiteName}}">{{end}}
 <meta property="og:title" content="{{.Title}}"><meta property="og:description" content="{{.Summary}}">{{if .Canonical}}<meta property="og:url" content="{{.Canonical}}">{{end}}
 {{if .Image}}<meta property="og:image" content="{{.Image}}"><meta property="og:image:alt" content="{{.ImageAlt}}"><meta name="twitter:image" content="{{.Image}}">
 {{end}}<meta name="description" content="{{.Summary}}"><meta name="twitter:card" content="summary">

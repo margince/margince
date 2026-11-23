@@ -297,17 +297,18 @@ describe("a booking page has a real path a preview fetcher can read", () => {
     "/book/ALEX",
     "/book/alex-sales/",
   ])(
-    "sends a non-browser fetch of %s to the booking preview and a navigation to the shell",
+    "sends every fetch of %s, a browser's navigation and a preview fetcher's alike, to the booking card",
     (path) => {
       const where = locate(path);
       expect(where.pattern).toBe("^/book/([A-Za-z0-9_-]+)/?$");
-      expect(where.body).toContain(
-        "if ($http_sec_fetch_dest != document) {\n            return 302 /v1/public/booking/$1/preview;",
+      expect(where.body).toMatch(
+        /^\s*return 302 \/v1\/public\/booking\/\$1\/preview\$is_args\$args;\s*$/m,
       );
-      // The shell is the one file tried, so a navigation always gets the app.
-      expect(where.body).toContain("try_files /index.html =404;");
+      // No branch on the request: the shell's head names Margince, so no
+      // header variant may reach it here.
+      expect(where.body).not.toMatch(/\bif\s*\(|try_files|sec_fetch_dest/);
       expect(headers(where.body).get("Cache-Control")).toBe("no-store");
-      expect(headers(where.body).get("Vary")).toBe("Sec-Fetch-Dest");
+      expect(headers(where.body).has("Vary")).toBe(false);
     },
   );
 
