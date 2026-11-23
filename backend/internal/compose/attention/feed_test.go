@@ -191,7 +191,7 @@ type stubTasks struct {
 }
 
 func (s *stubTasks) CountOpenForViewer(
-	_ context.Context, _, _ time.Time, _ TaskScope, _ ids.UUID, _ []ids.UUID,
+	_ context.Context, _, _ time.Time, _ TaskScope, _ string, _ ids.UUID, _ []ids.UUID,
 ) (int, error) {
 	if s.countErr != nil {
 		return 0, s.countErr

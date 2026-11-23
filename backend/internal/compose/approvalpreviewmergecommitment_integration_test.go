@@ -27,7 +27,7 @@ func TestMergePreviewNamesCarriedCommitmentsAndChecksPlanReader(t *testing.T) {
 			perms.Objects["weekly_plan"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 			ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, perms)
 			source, target := mergeContentPair(t, e, kind)
-			store := weeklyPlanStore(e.Pool)
+			store := WeeklyPlanStore(e.Pool)
 			now := time.Date(2026, time.June, 10, 9, 0, 0, 0, time.UTC)
 			if _, err := store.StartWeek(ctx, now); err != nil {
 				t.Fatal(err)

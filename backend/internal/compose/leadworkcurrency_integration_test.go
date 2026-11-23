@@ -205,7 +205,7 @@ func TestUndatedContactArrivalStillReachesItsOwnersWorklist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	total, err := tasks.CountOpenForViewer(owner, now, now.Add(24*time.Hour), attention.TasksMine, ids.Nil, nil)
+	total, err := tasks.CountOpenForViewer(owner, now, now.Add(24*time.Hour), attention.TasksMine, "", ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +361,7 @@ func assertLeadAdviceOnWorklist(t *testing.T, l *leadMailEnv, now time.Time, wan
 	if err != nil {
 		t.Fatal(err)
 	}
-	total, err := tasks.CountOpenForViewer(reader, now, now.Add(24*time.Hour), attention.TasksMine, ids.Nil, nil)
+	total, err := tasks.CountOpenForViewer(reader, now, now.Add(24*time.Hour), attention.TasksMine, "", ids.Nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -350,15 +350,15 @@ func earlierAnswerSQL(deal, asOf string, arg func(any) int) string {
 		    WHEN EXISTS (SELECT 1 FROM activity pa JOIN activity_link pl ON pl.activity_id = pa.id
 		                  WHERE pl.deal_id = %[1]s.id AND pa.archived_at IS NULL
 		                    AND NOT %[8]s AND %[7]s) THEN NULL
-		    WHEN r.outcome = $%[3]d AND `+capped+` > %[2]s THEN `+capped+`
-		    WHEN r.outcome IN ($%[4]d, $%[5]d) AND r.expires_at > %[2]s THEN r.expires_at END
+		    WHEN r.outcome = '%[3]s' AND `+capped+` > %[2]s THEN `+capped+`
+		    WHEN r.outcome IN ('%[4]s', '%[5]s') AND r.expires_at > %[2]s THEN r.expires_at END
 		  FROM assurance_resolution r
 		  JOIN assurance_exception x ON x.id = r.exception_id
 		 WHERE x.subject_kind = 'deal' AND x.subject_id = %[1]s.id AND x.type = $%[6]d
 		 ORDER BY r.created_at DESC, r.id DESC
 		 LIMIT 1)`,
-		deal, asOf, arg(assurance.OutcomeRemindLater), arg(assurance.OutcomeValueCorrect),
-		arg(assurance.OutcomeNotRelevant), arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", "pl.deal_id", asOf),
+		deal, asOf, assurance.OutcomeRemindLater, assurance.OutcomeValueCorrect,
+		assurance.OutcomeNotRelevant, arg(assurance.TypeBuyerSilent), customerProgressSQL("pa", "pl.deal_id", asOf),
 		occurredday.BegunSQL("pa", "r.created_at"))
 }
 

@@ -40,6 +40,9 @@ func (s *Service) forOwner(owner ids.UUID) *Service {
 func (s *Service) forReader() *Service {
 	narrowed := *s
 	narrowed.taskScope = TasksMine
+	if s.personalZone != nil {
+		narrowed.zone = zoneOncePerRead(s.personalZone)
+	}
 	return &narrowed
 }
 
