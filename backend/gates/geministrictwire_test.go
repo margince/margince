@@ -72,7 +72,7 @@ func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
 	}
 }
 
-// wireSchemas are every schema a Gemini tool call is sent under: each
+// wireSchemas holds the schemas a Gemini tool call is sent under: each
 // registered tool's arguments, and the runner's step schemas over them.
 func wireSchemas(t *testing.T) map[string]json.RawMessage {
 	t.Helper()

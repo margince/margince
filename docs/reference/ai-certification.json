@@ -425,31 +425,31 @@
         {
           "task": "draft_reply",
           "label": "Reply drafting",
-          "tier": "premium",
+          "tier": "cheap_cloud",
           "model": {
             "provider": "gemini",
-            "model": "gemini-3.8-flash",
-            "env": "cloud_frontier",
-            "thinking_level": "low"
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
           },
-          "band": "not_supported",
+          "band": "supported_degraded",
           "state": "current",
           "fallback": {
-            "tier": "cheap_cloud",
+            "tier": "premium",
             "model": {
               "provider": "gemini",
-              "model": "gemini-3.1-flash-lite",
-              "env": "cloud_frontier"
+              "model": "gemini-3.8-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
             },
             "same_model": false,
-            "band": "supported_degraded",
+            "band": "not_supported",
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 99,
-          "passed": 99,
+          "runs": 141,
+          "passed": 141,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 1,
+          "cases_below_quality_bar": 6,
           "scope": "full_invocation",
           "judge": "claude-sonnet-5-5"
         },
@@ -1128,8 +1128,8 @@
       ],
       "bands": {
         "certified": 26,
-        "supported_degraded": 11,
-        "not_supported": 1,
+        "supported_degraded": 12,
+        "not_supported": 0,
         "too_few_runs": 0
       },
       "untested": 0,
@@ -1679,41 +1679,41 @@
         {
           "task": "draft_reply",
           "label": "Reply drafting",
-          "tier": "premium",
+          "tier": "cheap_cloud",
           "model": {
             "provider": "gemini_vertex",
-            "model": "gemini-3.8-flash",
-            "env": "eu_hosted",
-            "thinking_level": "low"
+            "model": "gemini-3.1-flash-lite",
+            "env": "eu_hosted"
           },
-          "band": "not_supported",
+          "band": "supported_degraded",
           "state": "current",
           "fallback": {
-            "tier": "cheap_cloud",
+            "tier": "premium",
             "model": {
               "provider": "gemini_vertex",
-              "model": "gemini-3.1-flash-lite",
-              "env": "eu_hosted"
+              "model": "gemini-3.8-flash",
+              "env": "eu_hosted",
+              "thinking_level": "low"
             },
             "same_model": false,
-            "band": "supported_degraded",
+            "band": "not_supported",
             "state": "current",
             "measured_on": {
               "provider": "gemini",
-              "model": "gemini-3.1-flash-lite",
-              "env": "cloud_frontier"
+              "model": "gemini-3.8-flash",
+              "env": "cloud_frontier",
+              "thinking_level": "low"
             }
           },
           "abandoned": 0,
-          "runs": 99,
-          "passed": 99,
+          "runs": 141,
+          "passed": 141,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 1,
+          "cases_below_quality_bar": 6,
           "measured_on": {
             "provider": "gemini",
-            "model": "gemini-3.8-flash",
-            "env": "cloud_frontier",
-            "thinking_level": "low"
+            "model": "gemini-3.1-flash-lite",
+            "env": "cloud_frontier"
           },
           "scope": "full_invocation",
           "judge": "claude-sonnet-5-5"
@@ -2627,8 +2627,8 @@
       ],
       "bands": {
         "certified": 26,
-        "supported_degraded": 11,
-        "not_supported": 1,
+        "supported_degraded": 12,
+        "not_supported": 0,
         "too_few_runs": 0
       },
       "untested": 0,

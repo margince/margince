@@ -20,8 +20,8 @@ Also called: which model should I use, best model, recommended model, which LLM,
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 26 | 11 | 1 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 26 | 11 | 1 | 0 |
+| Google Gemini | global cloud | 26 | 12 | 0 | 0 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 26 | 12 | 0 | 0 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
 | Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
