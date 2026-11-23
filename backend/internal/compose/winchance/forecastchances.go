@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package winchance
 
 // The chance each open deal is weighted by, and the risk signals on it.
 //
@@ -12,8 +12,8 @@ package compose
 import (
 	"context"
 	"fmt"
-	"maps"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -27,73 +27,125 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/stagemove"
+	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
 // forecastChanceActor names the system reads behind a deal's chance.
 const forecastChanceActor = "system:forecast_chances"
 
-// forecastChanceModel is what an installation's own evidence says, read once
+// Model is what an installation's own evidence says, read once
 // per forecast.
-type forecastChanceModel struct {
-	SelfCorrecting bool
+type Model struct {
+	forecasting.ChanceModel
 	// Cutoff is the start of the as-of local day; no outcome after it counts.
 	Cutoff time.Time
-	// Stages holds each open stage's recorded evidence, keyed by stage id.
-	Stages map[string]forecasting.StageEvidence
-	// Effects holds each risk signal's odds ratio; a signal missing is 1.
-	Effects map[string]float64
 }
 
-// readForecastChanceModel reads the evidence a forecast with this cutoff, the
+// ReadModel reads the evidence a forecast with this cutoff, the
 // start of its as-of local day, stands on. While the installation switched
 // self-correction off it reads nothing.
-func readForecastChanceModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (forecastChanceModel, error) {
+func ReadModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (Model, error) {
+	if model, ok := chanceModelMemo.get(tx, cutoff); ok {
+		return model, nil
+	}
+	model, err := buildModel(ctx, tx, cutoff)
+	if err == nil {
+		chanceModelMemo.put(tx, cutoff, model)
+	}
+	return model, err
+}
+
+// chanceModelMemo keeps the model one transaction last read. A request reads it
+// for its list page, its filter and its reports on one transaction. That
+// transaction sees one snapshot of the evidence, so the answer is the same each
+// time. It is not a cache across requests: another transaction never matches.
+var chanceModelMemo modelMemo
+
+type modelMemo struct {
+	mu     sync.Mutex
+	tx     pgx.Tx
+	cutoff time.Time
+	model  Model
+}
+
+func (m *modelMemo) get(tx pgx.Tx, cutoff time.Time) (Model, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.tx == nil || m.tx != tx || !m.cutoff.Equal(cutoff) {
+		return Model{}, false
+	}
+	return m.model, true
+}
+
+func (m *modelMemo) put(tx pgx.Tx, cutoff time.Time, model Model) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.tx, m.cutoff, m.model = tx, cutoff, model
+}
+
+func buildModel(ctx context.Context, tx pgx.Tx, cutoff time.Time) (Model, error) {
 	on, err := identity.ForecastSelfCorrectingTx(ctx, tx)
 	if err != nil {
-		return forecastChanceModel{}, err
+		return Model{}, err
 	}
-	out := forecastChanceModel{SelfCorrecting: on, Cutoff: cutoff}
+	out := Model{SelfCorrecting: on, QuietSignal: assurance.SignalQuiet, Cutoff: cutoff}
 	if !on {
 		return out, nil
 	}
 	system := principal.SystemActing(ctx, forecastChanceActor)
-	if out.Stages, err = forecastStageEvidence(system, tx, out.Cutoff); err != nil {
-		return forecastChanceModel{}, err
+	if out.Stages, err = StageEvidence(system, tx, out.Cutoff); err != nil {
+		return Model{}, err
 	}
-	if out.Effects, err = forecastRiskEffects(system, tx, out.Cutoff); err != nil {
-		return forecastChanceModel{}, err
+	tallies, err := forecastRiskTallies(system, tx, out.Cutoff)
+	if err != nil {
+		return Model{}, err
 	}
+	out.Effects, out.Samples = riskEffectsAndSamples(tallies)
 	return out, nil
 }
 
-// applyForecastChances sets each deal's typed chance, chance in use, evidence
-// count, risk signals and effect. Off, the typed chance stays the chance in use
-// and nothing else is set. A probability set on the deal is used as it is:
-// self-correction moves only a probability that comes from the stage.
-func applyForecastChances(ctx context.Context, tx pgx.Tx, model forecastChanceModel, at time.Time, in []forecasting.Deal) error {
-	for i := range in {
-		in[i].TypedProbability = new(in[i].StageProbability)
-	}
-	if !model.SelfCorrecting {
-		return nil
-	}
-	signals, err := forecastRiskSignals(principal.SystemActing(ctx, forecastChanceActor), tx, at, in)
+// Apply sets each deal's typed chance, chance in use, evidence
+// count, risk signals and effect from the one resolver. It also sets the
+// figure the forecast weights by and tests for Likely.
+func (e *Engine) Apply(ctx context.Context, tx pgx.Tx, model Model, at time.Time, in []forecasting.Deal) error {
+	chances, signals, err := e.resolve(ctx, tx, model, at, in)
 	if err != nil {
 		return err
 	}
-	for i := range in {
-		if in[i].Source != forecasting.SourceStage {
-			continue
+	for i, chance := range chances {
+		in[i].TypedProbability = new(chance.Typed)
+		if in[i].Source == forecasting.SourceStage {
+			in[i].StageProbability = chance.InUse
+			in[i].EvidenceN = chance.EvidenceN
+			in[i].Effect = chance.Effect
+			in[i].Signals = signals[in[i].ID]
 		}
-		evidence := model.Stages[in[i].StageID]
-		in[i].StageProbability = forecasting.ChanceInUse(*in[i].TypedProbability, evidence)
-		in[i].EvidenceN = new(evidence.Resolved)
-		if found, ok := signals[in[i].ID]; ok {
-			in[i].Signals = found
-			in[i].Effect = forecasting.StrongestEffect(forecasting.SignalCodes(found), model.Effects)
-		}
+		in[i].WinProbability = chance.Percent
+		in[i].Explanation = chance.Line()
 	}
 	return nil
+}
+
+// resolve runs every deal through forecasting.ResolveWinChance,
+// in the deals' order, and answers the risk signals it read.
+func (e *Engine) resolve(
+	ctx context.Context, tx pgx.Tx, model Model, at time.Time, in []forecasting.Deal,
+) ([]winprobability.Chance, map[string][]forecasting.Signal, error) {
+	var signals map[string][]forecasting.Signal
+	if model.SelfCorrecting {
+		var err error
+		if signals, err = e.riskSignals(principal.SystemActing(ctx, forecastChanceActor), tx, at, in); err != nil {
+			return nil, nil, err
+		}
+	}
+	out := make([]winprobability.Chance, len(in))
+	for i := range in {
+		out[i] = forecasting.ResolveWinChance(model.ChanceModel, forecasting.ChanceInput{
+			StageID: in[i].StageID, Typed: in[i].StageProbability, Own: in[i].WinProbability,
+			Source: in[i].Source, Signals: signals[in[i].ID],
+		})
+	}
+	return out, signals, nil
 }
 
 // forecastStandingSQL is a deal's latest stage move before the cutoff, in the
@@ -136,10 +188,13 @@ var forecastStageEntriesSQL = `
 		   AND (left_pipeline.at IS NULL OR standing.at <= left_pipeline.at)
 	  ) closed ON true`
 
-// forecastStageEvidence reads every open stage's recorded entries and
+// EvidenceWindowYears is how far back a stage's recorded entries count.
+const EvidenceWindowYears = 2
+
+// StageEvidence reads every open stage's recorded entries and
 // estimates its won share.
-func forecastStageEvidence(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[string]forecasting.StageEvidence, error) {
-	since := cutoff.AddDate(-conversionWindowYears, 0, 0)
+func StageEvidence(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[string]forecasting.StageEvidence, error) {
+	since := cutoff.AddDate(-EvidenceWindowYears, 0, 0)
 	rows, err := tx.Query(ctx, forecastStageEntriesSQL, since, cutoff)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the recorded stage entries: %w", err)
@@ -186,9 +241,33 @@ var forecastSettledSignalsSQL = `
 	   AND standing.semantic IN ('won', 'lost') AND standing.at > s.taken_at
 	 ORDER BY c.deal_id, s.taken_at DESC, s.id DESC`
 
-// forecastRiskEffects tallies frozen deals settled by the cutoff per signal
-// and answers each signal's shrunk odds ratio. With none, every effect is 1.
-func forecastRiskEffects(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[string]float64, error) {
+// RiskEffects answers each signal's shrunk odds ratio from the frozen
+// deals settled by the cutoff. With none, every effect is 1.
+func RiskEffects(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[string]float64, error) {
+	tallies, err := forecastRiskTallies(ctx, tx, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	effects, _ := riskEffectsAndSamples(tallies)
+	return effects, nil
+}
+
+// riskEffectsAndSamples turns each signal's tally into its odds ratio and the
+// counts of settled deals that carried it and that did not.
+func riskEffectsAndSamples(tallies map[string]*forecasting.RiskTally) (map[string]float64, map[string]forecasting.RiskSample) {
+	effects := make(map[string]float64, len(tallies))
+	samples := make(map[string]forecasting.RiskSample, len(tallies))
+	for name, tally := range tallies {
+		effects[name] = forecasting.RiskEffect(*tally)
+		samples[name] = forecasting.RiskSample{
+			Present: tally.PresentWon + tally.PresentLost, Absent: tally.AbsentWon + tally.AbsentLost,
+		}
+	}
+	return effects, samples
+}
+
+// forecastRiskTallies tallies frozen deals settled by the cutoff per signal.
+func forecastRiskTallies(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[string]*forecasting.RiskTally, error) {
 	rows, err := tx.Query(ctx, forecastSettledSignalsSQL, assurance.RiskSignalsVersion, cutoff)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the settled forecast signals: %w", err)
@@ -221,16 +300,12 @@ func forecastRiskEffects(ctx context.Context, tx pgx.Tx, cutoff time.Time) (map[
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("compose: reading the settled forecast signals: %w", err)
 	}
-	out := make(map[string]float64, len(tallies))
-	for name, tally := range tallies {
-		out[name] = forecasting.RiskEffect(*tally)
-	}
-	return out, nil
+	return tallies, nil
 }
 
-// forecastRiskSignals assesses the open deals through the assurance subjects,
+// riskSignals assesses the open deals through the assurance subjects,
 // the evidence the nightly check reads, and answers their signals by deal id.
-func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []forecasting.Deal) (map[string][]forecasting.Signal, error) {
+func (e *Engine) riskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []forecasting.Deal) (map[string][]forecasting.Signal, error) {
 	open := make([]ids.UUID, 0, len(in))
 	for _, deal := range in {
 		if deal.Won || deal.Lost {
@@ -246,19 +321,18 @@ func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []fore
 	if len(open) == 0 {
 		return out, nil
 	}
-	zone, err := installationZoneTx(ctx, tx)
+	zone, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
-	subjects, err := assuranceSubjects(ctx, tx, at, AssuranceCoverage(ctx, tx, at), open)
+	subjects, cfg, err := e.RiskSubjects(ctx, tx, at, open)
 	if err != nil {
 		return nil, err
 	}
-	stuck, err := forecastStuckAfter(ctx, tx, open)
+	stuck, err := stuckAfter(ctx, tx, open)
 	if err != nil {
 		return nil, err
 	}
-	cfg := AssuranceConfig()
 	for _, subject := range subjects {
 		var threshold *time.Duration
 		if pace, ok := stuck[subject.StageID]; ok {
@@ -269,34 +343,18 @@ func forecastRiskSignals(ctx context.Context, tx pgx.Tx, at time.Time, in []fore
 	return out, nil
 }
 
-// forecastStuckAfter reads the won-deal stage pace of every pipeline the deals
-// sit in, keyed by stage id.
-func forecastStuckAfter(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID) (map[string]time.Duration, error) {
-	rows, err := tx.Query(ctx, `SELECT DISTINCT pipeline_id FROM deal WHERE id = ANY($1) AND pipeline_id IS NOT NULL`, dealIDs)
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading the forecast's pipelines: %w", err)
-	}
-	pipelines, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("compose: reading the forecast's pipelines: %w", err)
-	}
-	out := map[string]time.Duration{}
-	for _, pipeline := range pipelines {
-		pace, err := deals.StuckAfter(ctx, tx, pipeline, analyticsquery.PercentileSampleFloor)
-		if err != nil {
-			return nil, err
-		}
-		maps.Copy(out, pace)
-	}
-	return out, nil
+// stuckAfter reads the won-deal stage pace of every pipeline the deals
+// sit in, keyed by stage id, in one read.
+func stuckAfter(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID) (map[string]time.Duration, error) {
+	return deals.StuckAfterDealPipelines(ctx, tx, dealIDs, analyticsquery.PercentileSampleFloor)
 }
 
-// ForecastStageChances answers every live open stage's typed chance, its
+// StageChances answers every live open stage's typed chance, its
 // recorded evidence and the chance the forecast uses, as of `at`. The evidence
 // is read even while self-correction is off, so an admin sees what turning it
 // on would do.
-func ForecastStageChances(ctx context.Context, tx pgx.Tx, at time.Time) (forecasting.StageChances, error) {
-	period, _, err := ForecastPeriodAt(ctx, tx, forecasting.PeriodQuarter, at)
+func (e *Engine) StageChances(ctx context.Context, tx pgx.Tx, at time.Time) (forecasting.StageChances, error) {
+	period, err := e.PeriodAt(ctx, tx, forecasting.PeriodQuarter, at)
 	if err != nil {
 		return forecasting.StageChances{}, err
 	}
@@ -304,8 +362,12 @@ func ForecastStageChances(ctx context.Context, tx pgx.Tx, at time.Time) (forecas
 	if err != nil {
 		return forecasting.StageChances{}, err
 	}
-	out := forecasting.StageChances{SelfCorrecting: on, EvidenceCutoff: period.LocalDay(at)}
-	evidence, err := forecastStageEvidence(principal.SystemActing(ctx, forecastChanceActor), tx, out.EvidenceCutoff)
+	accuracy, err := e.Accuracy(ctx, tx, at)
+	if err != nil {
+		return forecasting.StageChances{}, err
+	}
+	out := forecasting.StageChances{SelfCorrecting: on, EvidenceCutoff: period.LocalDay(at), Accuracy: accuracy}
+	evidence, err := StageEvidence(principal.SystemActing(ctx, forecastChanceActor), tx, out.EvidenceCutoff)
 	if err != nil {
 		return forecasting.StageChances{}, err
 	}
@@ -313,7 +375,7 @@ func ForecastStageChances(ctx context.Context, tx pgx.Tx, at time.Time) (forecas
 	for _, stage := range evidence {
 		groups = append(groups, stage.Seats)
 	}
-	if err := requireNoLoneColleague(ctx, tx, groups); err != nil {
+	if err := e.NoLoneColleague(ctx, tx, groups); err != nil {
 		return forecasting.StageChances{}, err
 	}
 	rows, err := tx.Query(ctx, `

@@ -6373,6 +6373,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Leere das Feld, um wieder der Phase zu folgen.",
   "deal.winProbability.reason.stageNamed": "die Phase {name}",
   "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
+  "deal.winChance.typed": "Hinterlegt: {percent} für {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} Deal von hier ist abgeschlossen, {percent} gewonnen.",
+  "deal.winChance.evidence_other":
+    "{count} Deals von hier sind abgeschlossen, {percent} gewonnen.",
+  "deal.winChance.learningOff":
+    "Das Lernen aus abgeschlossenen Deals ist ausgeschaltet.",
+  "deal.winChance.signal.quiet": "seit {days} Tagen still",
+  "deal.winChance.signal.close_pushed": "das Abschlussdatum wurde verschoben",
+  "deal.winChance.signal.no_next_step": "kein nächster Schritt",
+  "deal.winChance.signal.stuck": "seit {days} Tagen festgefahren",
+  "deal.winChance.effect.lowers_one":
+    "{signal} senkt sie (gelernt aus {count} abgeschlossenem Deal).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} senkt sie (gelernt aus {count} abgeschlossenen Deals).",
+  "deal.winChance.effect.raises_one":
+    "{signal} erhöht sie (gelernt aus {count} abgeschlossenem Deal).",
+  "deal.winChance.effect.raises_other":
+    "{signal} erhöht sie (gelernt aus {count} abgeschlossenen Deals).",
+  "deal.winChance.effect.halved":
+    "{signal} halbiert sie, weil noch zu wenige abgeschlossene Deals die echte Wirkung zeigen.",
+  "deal.winChance.result": "Die Gewinnchance beträgt {percent}.",
   "deal.winProbability.band.90_plus": "90 % oder mehr",
   "deal.winProbability.band.60_89": "60 bis 89 %",
   "deal.winProbability.band.30_59": "30 bis 59 %",
@@ -17025,6 +17047,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Die Abschlusschance, ab der ein offener Deal mit bestätigtem Abschlussdatum als wahrscheinlich zählt.",
   "forecast.landing": "Erwartetes Ergebnis",
+  "forecast.accuracy.title": "Genauigkeit der Prognose",
+  "forecast.accuracy.none":
+    "Noch zu wenige abgeschlossene Deals. Sobald Deals der Prognose abgeschlossen sind, vergleicht dieser Bereich, was sie sagte, mit dem, was geschah.",
+  "forecast.accuracy.calibration_one":
+    "{count} abgeschlossener Deal, gruppiert nach der Chance, die die Prognose ihm {days} Tage vor dem Abschluss gab.",
+  "forecast.accuracy.calibration_other":
+    "{count} abgeschlossene Deals, gruppiert nach der Chance, die die Prognose ihnen {days} Tage vor dem Abschluss gab.",
+  "forecast.accuracy.band_one": "Chance {mean}, gewonnen {won} ({count} Deal)",
+  "forecast.accuracy.band_other":
+    "Chance {mean}, gewonnen {won} ({count} Deals)",
+  "forecast.accuracy.fewDeals_one": "{count} Deal, zu wenig für einen Anteil",
+  "forecast.accuracy.fewDeals_other":
+    "{count} Deals, zu wenige für einen Anteil",
+  "forecast.accuracy.landings":
+    "Abgeschlossene Quartale: was die Prognose vier Wochen vor dem Ende sagte, im Vergleich zum Gewonnenen.",
+  "forecast.accuracy.landing": "Prognose {said}, gewonnen {landed}",
+  "forecast.accuracy.saidOn": "Prognose vom {date}",
   "forecast.landingSection": "Wo der Zeitraum landet",
   "forecast.landingRecords": "Aus den Deal-Daten",
   "forecast.landingUnrecorded": "Nicht erfasst",

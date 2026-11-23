@@ -6203,6 +6203,27 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.reason.clear": "Xóa con số để theo lại giai đoạn.",
   "deal.winProbability.reason.stageNamed": "giai đoạn {name}",
   "deal.winProbability.reason.stageUnnamed": "giai đoạn của deal",
+  "deal.winChance.typed": "Được đặt ở mức {percent} cho {stage}.",
+  "deal.winChance.evidence_one":
+    "{count} deal từ đây đã đóng, {percent} thắng.",
+  "deal.winChance.evidence_other":
+    "{count} deal từ đây đã đóng, {percent} thắng.",
+  "deal.winChance.learningOff": "Việc học từ các deal đã đóng đang tắt.",
+  "deal.winChance.signal.quiet": "im lặng {days} ngày",
+  "deal.winChance.signal.close_pushed": "ngày chốt đã bị lùi",
+  "deal.winChance.signal.no_next_step": "chưa có bước tiếp theo",
+  "deal.winChance.signal.stuck": "kẹt {days} ngày",
+  "deal.winChance.effect.lowers_one":
+    "{signal} làm giảm tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.lowers_other":
+    "{signal} làm giảm tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.raises_one":
+    "{signal} làm tăng tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.raises_other":
+    "{signal} làm tăng tỷ lệ (học từ {count} deal đã đóng).",
+  "deal.winChance.effect.halved":
+    "{signal} làm tỷ lệ giảm một nửa, vì còn quá ít deal đã đóng cho thấy tác động thật.",
+  "deal.winChance.result": "Tỷ lệ thắng là {percent}.",
   "deal.winProbability.band.90_plus": "Từ 90% trở lên",
   "deal.winProbability.band.60_89": "60 đến 89%",
   "deal.winProbability.band.30_59": "30 đến 59%",
@@ -16569,6 +16590,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.likelyThreshold.help":
     "Xác suất mà từ đó một deal đang mở có ngày chốt đã xác nhận được tính là khả năng cao.",
   "forecast.landing": "Dự kiến cuối kỳ",
+  "forecast.accuracy.title": "Độ chính xác của dự báo",
+  "forecast.accuracy.none":
+    "Chưa có đủ deal đã đóng. Khi các deal mà dự báo đã tính được đóng, phần này so sánh điều dự báo nói với điều đã xảy ra.",
+  "forecast.accuracy.calibration_one":
+    "{count} deal đã đóng, nhóm theo tỷ lệ dự báo đã gán cho chúng {days} ngày trước khi đóng.",
+  "forecast.accuracy.calibration_other":
+    "{count} deal đã đóng, nhóm theo tỷ lệ dự báo đã gán cho chúng {days} ngày trước khi đóng.",
+  "forecast.accuracy.band_one": "Tỷ lệ {mean}, thắng {won} ({count} deal)",
+  "forecast.accuracy.band_other": "Tỷ lệ {mean}, thắng {won} ({count} deal)",
+  "forecast.accuracy.fewDeals_one": "{count} deal, quá ít để nêu tỷ lệ",
+  "forecast.accuracy.fewDeals_other": "{count} deal, quá ít để nêu tỷ lệ",
+  "forecast.accuracy.landings":
+    "Các quý đã kết thúc: dự báo nói gì bốn tuần trước khi hết quý so với số đã thắng.",
+  "forecast.accuracy.landing": "Dự báo {said}, thắng {landed}",
+  "forecast.accuracy.saidOn": "Dự báo ngày {date}",
   "forecast.landingSection": "Điểm kết thúc kỳ này",
   "forecast.landingRecords": "Theo dữ liệu deal",
   "forecast.landingUnrecorded": "Chưa ghi nhận",

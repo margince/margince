@@ -141,6 +141,15 @@ func (s *Store) WithDealAmount(expr string) *Store {
 	return s
 }
 
+// WithWinChance injects the win chance of every deal as a SQL expression. A
+// filter on the deal's win probability reads it. So a saved list, its count and
+// its export select deals by the number each deal shows. Unset, the filter reads
+// the stored probability.
+func (s *Store) WithWinChance(render func(ctx context.Context, tx pgx.Tx, deal string, arg func(any) int) (string, error)) *Store {
+	s.winChance = render
+	return s
+}
+
 // WithBaseCurrency injects the reader of the installation's base currency,
 // which a core money field is counted in. identity owns the setting.
 func (s *Store) WithBaseCurrency(read func(ctx context.Context, tx pgx.Tx) (string, error)) *Store {
