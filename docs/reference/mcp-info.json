@@ -27085,7 +27085,7 @@
           "route": "GET /v1/capture/email-domains"
         }
       ],
-      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will change and get it before calling, unless they asked for this call themselves",
+      "ask_user_first_means": "Where ask_user_first is true, the user's yes is needed, so tell them what the call will surface and get it before calling, unless they asked for this call themselves",
       "router": "read_workspace"
     },
     "run_research": {

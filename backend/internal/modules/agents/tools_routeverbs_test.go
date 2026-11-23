@@ -297,13 +297,25 @@ func TestAnUploadVerbRefusesAFileItCannotSend(t *testing.T) {
 }
 
 // A model reads ask_user_first bare unless the answer says what it asks, and
-// then it drops the exception. The sentence ends as the tool descriptions' do.
-// An answer with no ask-first action carries none.
+// then it drops the exception. The consequence follows what the actions do: a
+// write changes, a read surfaces. An action a human approves anyway carries
+// no ask, and an answer with no ask-first action carries no sentence.
 func TestTheCatalogSaysWhatAskUserFirstAsksOfTheModel(t *testing.T) {
-	d := describeRouterActions{verbs: []RouteVerb{shareRecordVerb, revertStageVerb}}
-	answer := func(router string) map[string]any {
+	readsFirst := RouteVerb{
+		Verb: "read_audit_call", Router: "read_workspace", Action: "ai_call", Op: "getAiCall",
+		Summary: "Read one call", Method: "GET", Pattern: "/v1/ai/calls/{id}", Scope: principal.ScopeRead,
+		PathParams: []string{"id"}, AskUserFirst: true,
+	}
+	runs := func(router, action string) (mcp.ToolSpec, bool) {
+		if router == "change_access" && action == "approved_anyway" {
+			return mcp.ToolSpec{Description: "A human approves it.", AskUserFirst: true, Tier: mcp.TierConfirmationRequired}, true
+		}
+		return mcp.ToolSpec{}, false
+	}
+	d := describeRouterActions{verbs: []RouteVerb{shareRecordVerb, revertStageVerb, readsFirst}, runs: runs}
+	answer := func(request string) map[string]any {
 		t.Helper()
-		out, err := d.Handle(context.Background(), json.RawMessage(`{"router":"`+router+`"}`))
+		out, err := d.Handle(context.Background(), json.RawMessage(request))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -313,12 +325,27 @@ func TestTheCatalogSaysWhatAskUserFirstAsksOfTheModel(t *testing.T) {
 		}
 		return decoded
 	}
-	means, _ := answer("change_state")[askFirstMeansField].(string)
-	if !strings.HasSuffix(means, askFirstGetYes) {
-		t.Errorf("%s = %q, want a sentence ending %q", askFirstMeansField, means, askFirstGetYes)
+	for name, tc := range map[string]struct{ request, want string }{
+		"a write router":  {`{"router":"change_state"}`, "tell them what the call will change and " + askFirstGetYes},
+		"a read router":   {`{"router":"read_workspace"}`, "tell them what the call will surface and " + askFirstGetYes},
+		"no ask-first":    {`{"router":"change_access"}`, ""},
+		"approved anyway": {`{"router":"change_access","action":"approved_anyway"}`, ""},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, present := answer(tc.request)[askFirstMeansField].(string)
+			if tc.want == "" {
+				if present {
+					t.Errorf("%s = %q, want none", askFirstMeansField, got)
+				}
+				return
+			}
+			if !present || !strings.Contains(got, tc.want) {
+				t.Errorf("%s = %q, want it to contain %q", askFirstMeansField, got, tc.want)
+			}
+		})
 	}
-	if _, present := answer("change_access")[askFirstMeansField]; present {
-		t.Errorf("an answer with no ask-first action carries %s", askFirstMeansField)
+	if got := (askedWrites | askedReads).consequence(); got != "what the call will change or surface" {
+		t.Errorf("a router with writes and reads says %q", got)
 	}
 }
 
