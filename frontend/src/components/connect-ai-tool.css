@@ -71,7 +71,6 @@
   width: 1.75rem;
   height: 1.75rem;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
   font-weight: var(--fontWeightMedium);

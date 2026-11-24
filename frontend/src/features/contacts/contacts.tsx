@@ -1,4 +1,3 @@
-import { useId } from "react";
 import type { components } from "../../api/schema";
 import { usePageName } from "../../app/pagemeta";
 import { useBulkSelection } from "../../components/bulkverbs";
@@ -18,6 +17,10 @@ import {
 import { Badge } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { ContactLink, CopyEmail } from "../../design-system/contactlink";
+import {
+  type ListRefusal,
+  useListRefusal,
+} from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -82,17 +85,21 @@ export function ContactsScreen({
 
 // The ways a contact comes to exist. The vCard import is last: a reader
 // reaches for it with a stack of cards in hand. A seat refused them reads why
-// once, and each refused verb points at that sentence.
-function ContactListActions({
-  startCreating,
-}: Readonly<{ startCreating: boolean }>) {
-  const refusalId = useId();
+// once, under the list's head, and each refused verb points at that sentence.
+function useContactListRefusal(): ListRefusal | undefined {
   const createRefusal = useActionRefusal({
     object: "contact",
     action: "create",
   });
   const importRefusal = useVCardImportRefusal();
-  const refusal = createRefusal ?? importRefusal;
+  return useListRefusal(createRefusal ?? importRefusal);
+}
+
+function ContactListActions({
+  startCreating,
+  refusalId,
+}: Readonly<{ startCreating: boolean; refusalId: string | undefined }>) {
+  const importRefusal = useVCardImportRefusal();
   return (
     <>
       <ContactCreateActions
@@ -102,11 +109,6 @@ function ContactListActions({
       <VCardImportAction
         refusalId={importRefusal === undefined ? undefined : refusalId}
       />
-      {refusal !== undefined && (
-        <span className="t-caption" id={refusalId}>
-          {refusal}
-        </span>
-      )}
     </>
   );
 }
@@ -131,6 +133,7 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
     recordType: "contact",
     labelOf: (contact) => contact.full_name,
   });
+  const refusal = useContactListRefusal();
 
   return (
     <div className="wrap">
@@ -143,7 +146,13 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
           mineEmptyLine({ t, state, viewerId, unit: "unit.contacts" }) ??
           sharedEmptyLine({ t, state, unit: "unit.contacts" })
         }
-        action={<ContactListActions startCreating={startCreating} />}
+        refusal={refusal}
+        action={
+          <ContactListActions
+            startCreating={startCreating}
+            refusalId={refusal?.id}
+          />
+        }
         columns={[
           {
             key: "name",

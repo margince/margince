@@ -135,7 +135,6 @@
   border: 2.5px solid var(--infoBorder);
   border-top-color: var(--info);
   border-radius: 50%;
-  corner-shape: round;
   animation: obSpin 0.7s linear infinite;
   display: inline-block;
   vertical-align: -3px;

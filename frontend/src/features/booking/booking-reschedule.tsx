@@ -36,8 +36,9 @@ export function BookingReschedule({
   const { locale } = useLocale();
   // A guest on the public token link has only the browser's clock; a
   // signed-in host starts from their own zone.
+  const guest = Boolean(token);
   const readerZone = useViewerZone();
-  const [zone, setZone] = useState(() => (token ? browserZone() : readerZone));
+  const [zone, setZone] = useState(() => (guest ? browserZone() : readerZone));
   const [from, setFrom] = useState(() => new Date().toISOString());
   const [selected, setSelected] = useState<{
     start: string;
@@ -64,7 +65,7 @@ export function BookingReschedule({
   const shownDay = dayInZone(new Date(from).getTime(), zone);
   return (
     <div className="book-form">
-      <p>{t("scheduling.rescheduleHelp")}</p>
+      <p>{t(guest ? "book.rescheduleHelp" : "scheduling.rescheduleHelp")}</p>
       <BookingZone value={zone} onChange={setZone} />
       <Field label={t("scheduling.date")}>
         {(control) => (
@@ -90,7 +91,7 @@ export function BookingReschedule({
               }))}
               selected={selected?.start}
               onSelect={setSelected}
-              empty={t("scheduling.noTimes")}
+              empty={t(guest ? "book.noTimes" : "scheduling.noTimes")}
             />
             {value.truncated && (
               <Button

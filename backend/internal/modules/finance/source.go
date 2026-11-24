@@ -59,7 +59,7 @@ func (s *Store) readSourceState(ctx context.Context, tx pgx.Tx) (crmcontracts.Fi
 	if s.sources != nil {
 		for _, option := range s.sources.Providers() {
 			out.Available = append(out.Available, crmcontracts.FinanceSourceOption{
-				Provider: option.Provider, Description: option.Description,
+				Provider: option.Provider, ProviderName: option.readerName(), Description: option.Description,
 			})
 		}
 	}
@@ -72,6 +72,7 @@ func (s *Store) readSourceState(ctx context.Context, tx pgx.Tx) (crmcontracts.Fi
 		 LIMIT 1`).Scan(&conn.Id, &conn.Provider, &conn.Status, &conn.ConnectedAt,
 		&conn.LastAttemptAt, &conn.LastSuccessAt, &conn.LastErrorCode)
 	if err == nil {
+		conn.ProviderName = s.sourceOption(conn.Provider).readerName()
 		out.Connection = &conn
 		return out, nil
 	}

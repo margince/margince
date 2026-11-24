@@ -86,3 +86,16 @@ func (h Handlers) WithListsAvailable(available bool) Handlers {
 	h.listsAvailable = available
 	return h
 }
+
+// WithVatRegisterAvailable injects whether a VAT check can be queued here.
+// Without it /me reports the register absent, failing closed.
+func (h Handlers) WithVatRegisterAvailable(available bool) Handlers {
+	h.vatRegisterAvailable = available
+	return h
+}
+
+// VatRegisterAvailable reports what /me will say about the VAT register, so the
+// composition root can assert it agrees with the check it wired.
+func (h Handlers) VatRegisterAvailable() bool {
+	return h.vatRegisterAvailable
+}

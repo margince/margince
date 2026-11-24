@@ -1,0 +1,117 @@
+{
+  "scenario": "morning_brief_annotates_its_queue_from_the_evidence",
+  "agent": "morning_brief",
+  "binding": {
+    "provider": "gemini",
+    "model": "gemini-3.1-flash-lite",
+    "tier": "cheap_cloud"
+  },
+  "judge": "claude-haiku-5-5",
+  "self_judged": false,
+  "run_results": [
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the finding for Heat Recovery Retrofit say the customer's CFO signs off on Thursday and asks for the final quote with the two-year service option by Wednesday?",
+          "met": false,
+          "reason": "3 of 3 votes no: The answer never mentions the CFO sign-off on Thursday or the request for a final quote with the two-year service option by Wednesday; it instead describes the Heat Recovery Retrofit deal as single-threaded and needing more stakeholders."
+        },
+        {
+          "criterion": "Does the finding for Heat Recovery Retrofit give sending that quote by Wednesday as the next move?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Heat Recovery Retrofit finding names engaging additional stakeholders for single-threaded risk as the next move and never mentions sending the final quote by Wednesday, which the November 23 email requested."
+        },
+        {
+          "criterion": "Does the finding for Boiler Room Controls say a discovery call asked for a site visit and no date is agreed?",
+          "met": false,
+          "reason": "3 of 3 votes no: The answer's annotation for Boiler Room Controls cites the November 12 discovery call and frames the deal as high-risk and single-threaded, but it never states that the call asked for a site visit or that no date is agreed, so the criterion is not met."
+        },
+        {
+          "criterion": "Does the finding for Boiler Room Controls make getting that site visit scheduled its next move, where asking the facility manager to set or confirm a date counts?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Boiler Room Controls annotation names broadening outreach to additional contacts as the next move, not getting the facility manager to set or confirm the site visit date, which the records say is still unagreed."
+        },
+        {
+          "criterion": "Is every fact in the findings one the seeded records carry, with no invented price change, meeting or competitor?",
+          "met": true,
+          "reason": "Every fact in the findings matches the seeded records (the November 12 discovery call, the November 23 proposal discussion, and the single-threaded risk signal the workspace computes), with no invented price change, meeting, or competitor."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the finding for Heat Recovery Retrofit say the customer's CFO signs off on Thursday and asks for the final quote with the two-year service option by Wednesday?",
+          "met": true,
+          "reason": "The answer's annotate_brief for Heat Recovery Retrofit states the client requested a final quote with the two-year service option by Wednesday following CFO sign-off expected Thursday, which matches the criterion."
+        },
+        {
+          "criterion": "Does the finding for Heat Recovery Retrofit give sending that quote by Wednesday as the next move?",
+          "met": true,
+          "reason": "2 of 3 votes yes: The Heat Recovery Retrofit finding names the final quote with the two-year service option as the client's Wednesday deadline ahead of Thursday CFO sign-off, which makes sending that quote by Wednesday the implied next move, though it is phrased as a client request rather than an explicit instruction to send."
+        },
+        {
+          "criterion": "Does the finding for Boiler Room Controls say a discovery call asked for a site visit and no date is agreed?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Boiler Room Controls annotation says only that the deal is on the tracking list with no recent updates, and never mentions the discovery call, the requested site visit, or that no date is agreed, so the criterion is not met."
+        },
+        {
+          "criterion": "Does the finding for Boiler Room Controls make getting that site visit scheduled its next move, where asking the facility manager to set or confirm a date counts?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Boiler Room Controls annotation says only that no recent updates were provided and never mentions the facility manager's site-visit request or scheduling a date, so getting the site visit scheduled is not made the next move."
+        },
+        {
+          "criterion": "Is every fact in the findings one the seeded records carry, with no invented price change, meeting or competitor?",
+          "met": true,
+          "reason": "The findings' dates, quote deadline, CFO sign-off, and two-year service option match the seeded emails, and no price change, meeting, or competitor is invented, though the 'high-priority' label is not in the records."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the finding for Heat Recovery Retrofit say the customer's CFO signs off on Thursday and asks for the final quote with the two-year service option by Wednesday?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Heat Recovery Retrofit annotation only says the deal is on the list due to a recent proposal email and is single-threaded; it never mentions the CFO's Thursday sign-off or the request for the final quote with the two-year service option by Wednesday."
+        },
+        {
+          "criterion": "Does the finding for Heat Recovery Retrofit give sending that quote by Wednesday as the next move?",
+          "met": false,
+          "reason": "3 of 3 votes no: The answer's annotation for Heat Recovery Retrofit says the next move is to engage additional stakeholders due to single-threading, and never mentions sending the final quote with the two-year service option by Wednesday as the next move."
+        },
+        {
+          "criterion": "Does the finding for Boiler Room Controls say a discovery call asked for a site visit and no date is agreed?",
+          "met": false,
+          "reason": "3 of 3 votes no: The answer's finding for Boiler Room Controls only says the deal is single-threaded and needs more contacts, and never states that the discovery call asked for a site visit with no date agreed."
+        },
+        {
+          "criterion": "Does the finding for Boiler Room Controls make getting that site visit scheduled its next move, where asking the facility manager to set or confirm a date counts?",
+          "met": false,
+          "reason": "3 of 3 votes no: The Boiler Room Controls annotation names the next move as mapping out and involving more contacts because the deal is single-threaded, not getting the facility manager's site visit scheduled or confirmed."
+        },
+        {
+          "criterion": "Is every fact in the findings one the seeded records carry, with no invented price change, meeting or competitor?",
+          "met": true,
+          "reason": "Every fact in the annotations matches the seeded records: the November 12 discovery call, the November 23 proposal exchange, and the single-threaded signal the workspace computes, with no invented price change, meeting, or competitor."
+        }
+      ]
+    }
+  ],
+  "outcome": {
+    "runs": 3,
+    "passed": 0,
+    "pass": false,
+    "smoke": true
+  },
+  "stamp": {
+    "scenario": "c25b42e58c067d5d",
+    "window": "8c877374763d9a1d",
+    "harness": "a2b01611901ddb00",
+    "binding": "gemini@gemini-3.1-flash-lite@cheap_cloud",
+    "judge": "claude-haiku-5-5"
+  },
+  "ran_at": "2026-11-24T03:01:13Z"
+}

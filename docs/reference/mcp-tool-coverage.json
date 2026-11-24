@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 5,
     "permitted_but_never_required": 1,
-    "tokens_served_but_never_driven": 3265,
+    "tokens_served_but_never_driven": 3318,
     "use_case_cases": 83,
     "acceptance_criteria_named": 133,
     "tools_added_by_shipped_units": 0,
@@ -8237,6 +8237,20 @@
       "measured_by_model": {}
     },
     {
+      "name": "enrich",
+      "tokens": 448,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "called_in_held_runs": null,
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
+    },
+    {
       "name": "annotate_brief",
       "tokens": 417,
       "agents": [
@@ -8254,20 +8268,6 @@
       "near_miss_in_certification_tasks": [
         "agent_loop"
       ],
-      "measured_by_model": {}
-    },
-    {
-      "name": "enrich",
-      "tokens": 395,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "called_in_held_runs": null,
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
       "measured_by_model": {}
     },
     {
@@ -8370,7 +8370,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3209,
+      "tokens": 3239,
       "agents": [],
       "required_by_cases": [
         "case116_the_rate_and_the_logo",

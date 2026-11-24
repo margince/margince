@@ -47,7 +47,9 @@ function head(over: Partial<Lead> = {}) {
   return (
     <StoryProviders>
       <LeadSubtitle lead={lead(over)} />
-      <LeadPulse lead={lead(over)} />
+      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <LeadPulse lead={lead(over)} />
+      </div>
     </StoryProviders>
   );
 }

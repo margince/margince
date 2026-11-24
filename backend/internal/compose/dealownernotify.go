@@ -23,8 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
-// Deal stores have no job client; this inserter uses the caller's transaction.
-var ownerChangeMail = sync.OnceValues(func() (*jobs.Runner, error) {
+// Stores with no job client stage jobs through this inserter, in the caller's transaction.
+var callerTxJobs = sync.OnceValues(func() (*jobs.Runner, error) {
 	return jobs.NewTxInserter(slog.Default())
 })
 
@@ -52,7 +52,7 @@ func followDealOwnerAndTell(ctx context.Context, tx pgx.Tx, dealID ids.UUID, fro
 	if !ok {
 		return errors.New("compose: a deal's owner changed outside a bound workspace")
 	}
-	queue, err := ownerChangeMail()
+	queue, err := callerTxJobs()
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func tellNewDecider(ctx context.Context, tx pgx.Tx, store *notices.Store, decide
 	if err != nil {
 		return err
 	}
-	mail, err := ownerChangeMail()
+	mail, err := callerTxJobs()
 	if err != nil {
 		return err
 	}

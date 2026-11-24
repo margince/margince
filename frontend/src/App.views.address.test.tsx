@@ -168,10 +168,7 @@ describe("the frame over a held draft", () => {
 
     act(() => vi.advanceTimersByTime(1000));
 
-    const trail = screen.getByRole("navigation", { name: "Breadcrumb" });
-    expect(trail).toHaveTextContent("Contacts");
-    expect(trail).not.toHaveTextContent("Companies");
-    expect(document.title.startsWith("Contacts ·")).toBe(true);
+    expect(document.title).toBe("Contacts · Margince");
     expect(
       document.querySelector("nav.rail a.navitem.active")?.textContent,
     ).toBe("Contacts");

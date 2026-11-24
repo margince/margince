@@ -348,7 +348,7 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 func compileShapedLeaf(p Predicate, field Field, arg func(any) int) (sql string, shaped bool, err error) {
 	switch {
 	case field.Withheld:
-		return "FALSE", true, nil
+		return matchesNoRow, true, nil
 	case field.Link != "":
 		sql, err = compileLinkLeaf(p, field, arg)
 		return sql, true, err

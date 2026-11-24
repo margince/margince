@@ -26,6 +26,32 @@ const (
 	fieldTeamAnswer  = "state"
 )
 
+// TeamRequestNotice tells a colleague that a host named them on a booking link,
+// in the same save. It takes the line back once they answer or leave the list.
+type TeamRequestNotice interface {
+	TeamRequestTx(ctx context.Context, tx pgx.Tx, request TeamRequest) error
+	TeamRequestSettledTx(ctx context.Context, tx pgx.Tx, host, member ids.UserID) error
+}
+
+// TeamRequest is a host's request that a colleague join their booking link.
+type TeamRequest struct {
+	Host, Member    ids.UserID
+	HostName, Title string
+}
+
+// WithTeamRequestNotice binds the line a colleague gets when named on a link.
+func (s *Store) WithTeamRequestNotice(notice TeamRequestNotice) *Store {
+	clone := *s
+	clone.teamRequests = notice
+	return &clone
+}
+
+// WithTeamRequestNotice binds the line a colleague gets when named on a link.
+func (h Handlers) WithTeamRequestNotice(notice TeamRequestNotice) Handlers {
+	h.store = h.store.WithTeamRequestNotice(notice)
+	return h
+}
+
 // teamCalendar is a member whose calendar a page may read: their invited
 // address and their own booking settings, which name the calendars to read.
 type teamCalendar struct {
@@ -183,7 +209,7 @@ func (s *Store) admitTeam(ctx context.Context, host ids.UserID, stored, next crm
 			return &SchedulingArgumentError{Field: fieldTeamMembers, Code: faultInvalid, Message: "Name each colleague once, and not yourself"}
 		}
 		seen[user.UUID] = true
-		if slices.ContainsFunc(teamMembers(stored), func(was crmcontracts.SchedulingTeamMember) bool { return was.UserId == m.UserId }) {
+		if slices.ContainsFunc(teamMembers(stored), sameMember(m)) {
 			continue
 		}
 		if _, standing, err := s.memberCalendar(ctx, user); err != nil {
@@ -211,10 +237,52 @@ func mergeTeam(before *storedSchedulingProfile, next *[]crmcontracts.SchedulingT
 	merged := make([]crmcontracts.SchedulingTeamMember, 0, len(*next))
 	for _, m := range *next {
 		state := crmcontracts.SchedulingTeamMemberStatePending
-		if i := slices.IndexFunc(was, func(old crmcontracts.SchedulingTeamMember) bool { return old.UserId == m.UserId }); i >= 0 {
+		if i := slices.IndexFunc(was, sameMember(m)); i >= 0 {
 			state = memberState(was[i])
 		}
 		merged = append(merged, crmcontracts.SchedulingTeamMember{UserId: m.UserId, State: &state})
 	}
 	return &merged
+}
+
+// tellTeamChanges asks each colleague new to the list to confirm, and settles
+// the request of each one taken off it. A member kept on the list hears nothing.
+func (s *Store) tellTeamChanges(ctx context.Context, tx pgx.Tx, host ids.UserID, before *storedSchedulingProfile, after crmcontracts.SchedulingProfile) error {
+	if s.teamRequests == nil {
+		return nil
+	}
+	var was []crmcontracts.SchedulingTeamMember
+	if before != nil {
+		was = teamMembers(before.SchedulingProfile)
+	}
+	named := teamMembers(after)
+	for _, m := range was {
+		if !slices.ContainsFunc(named, sameMember(m)) {
+			if err := s.teamRequests.TeamRequestSettledTx(ctx, tx, host, memberUser(m)); err != nil {
+				return err
+			}
+		}
+	}
+	hostName := ""
+	for _, m := range named {
+		if slices.ContainsFunc(was, sameMember(m)) {
+			continue
+		}
+		if hostName == "" {
+			name, err := schedulingAccountName(ctx, tx, host)
+			if err != nil {
+				return err
+			}
+			hostName = name
+		}
+		request := TeamRequest{Host: host, Member: memberUser(m), HostName: hostName, Title: after.Title}
+		if err := s.teamRequests.TeamRequestTx(ctx, tx, request); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func sameMember(m crmcontracts.SchedulingTeamMember) func(crmcontracts.SchedulingTeamMember) bool {
+	return func(other crmcontracts.SchedulingTeamMember) bool { return other.UserId == m.UserId }
 }

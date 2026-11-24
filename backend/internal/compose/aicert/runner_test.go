@@ -86,8 +86,8 @@ func TestCertifyTaskCertifiesWhenEveryRunPassesAndScoresHigh(t *testing.T) {
 	if rec.Runs != adaptiveMaxRuns || rec.Reliability != 1 {
 		t.Fatalf("runs=%d reliability=%v, want %d and 1", rec.Runs, rec.Reliability, adaptiveMaxRuns)
 	}
-	if rec.JudgeScoreP50 != 90 || rec.JudgeScoreMin != 90 {
-		t.Fatalf("judge_score_p50=%d judge_score_min=%d, want 90 and 90", rec.JudgeScoreP50, rec.JudgeScoreMin)
+	if JudgeScoreCell(rec.JudgeScoreP50) != "90" || JudgeScoreCell(rec.JudgeScoreMin) != "90" {
+		t.Fatalf("judge_score_p50=%s judge_score_min=%s, want 90 and 90", JudgeScoreCell(rec.JudgeScoreP50), JudgeScoreCell(rec.JudgeScoreMin))
 	}
 	if !rec.SelfJudged {
 		t.Fatalf("both candidate and judge served through the fake provider — want self_judged true, record: %+v", rec)
@@ -230,8 +230,8 @@ func TestCertifyTaskJudgeRetriesOnceOnAParseFailureThenScores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
-	if rec.JudgeScoreP50 != 80 {
-		t.Fatalf("judge_score_p50 = %d, want 80 (the retry's score)", rec.JudgeScoreP50)
+	if JudgeScoreCell(rec.JudgeScoreP50) != "80" {
+		t.Fatalf("judge_score_p50 = %s, want 80 (the retry's score)", JudgeScoreCell(rec.JudgeScoreP50))
 	}
 	if got := rec.Scenarios[0].JudgeScores; !slices.Equal(got, []int{80}) {
 		t.Fatalf("graded scores = %v, want the one run scored 80 from its two agreeing opinions", got)
@@ -255,8 +255,8 @@ func TestCertifyTaskLeavesARunUngradedWhenEveryJudgeAttemptFailsToParse(t *testi
 	if err != nil {
 		t.Fatalf("certifyTask: %v", err)
 	}
-	if rec.JudgeScoreP50 != 90 || rec.JudgeScoreMin != 90 {
-		t.Fatalf("judge_score_p50=%d judge_score_min=%d, want 90 and 90 — the unparsed run must not count as a 0", rec.JudgeScoreP50, rec.JudgeScoreMin)
+	if JudgeScoreCell(rec.JudgeScoreP50) != "90" || JudgeScoreCell(rec.JudgeScoreMin) != "90" {
+		t.Fatalf("judge_score_p50=%s judge_score_min=%s, want 90 and 90 — the unparsed run must not count as a 0", JudgeScoreCell(rec.JudgeScoreP50), JudgeScoreCell(rec.JudgeScoreMin))
 	}
 	if rec.Verdict != VerdictCertified {
 		t.Fatalf("verdict = %q, want %q", rec.Verdict, VerdictCertified)

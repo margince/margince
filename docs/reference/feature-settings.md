@@ -72,8 +72,9 @@ confirmed company data.
 to hide them:
 
 - the `/v1/lists` routes answer 404;
-- the `list_id` filter of the contact, company, deal and lead lists answers 404, and the filtered
-  export refuses a `list_id` source;
+- the `list_id` filter of the contact, company, deal and lead lists answers no rows, as for a list
+  that does not exist;
+- the filtered export refuses a `list_id` source;
 - the company page names no list, and no agent list tool is registered;
 - `/me` reports `settings_availability.lists: false`, so no screen offers them;
 - the 15-minute Live List check of the worker records nothing. So no list history grows, and no

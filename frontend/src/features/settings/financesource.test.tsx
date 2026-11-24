@@ -29,7 +29,11 @@ const ADMIN: GrantSpec = {
 
 const AVAILABLE = [
   { provider: "ledger_books", description: "Reads the ledger books." },
-  { provider: "other_books", description: "Reads the other books." },
+  {
+    provider: "other_books",
+    provider_name: "Other Books",
+    description: "Reads the other books.",
+  },
 ];
 
 const CONNECTION = {
@@ -140,7 +144,7 @@ describe("FinanceSourceCard", () => {
     await pickOption(
       user,
       await screen.findByRole("combobox", { name: /Source/ }),
-      "other_books",
+      "Other Books",
     );
     await user.click(screen.getByTestId("finance-source-connect"));
 
@@ -150,6 +154,47 @@ describe("FinanceSourceCard", () => {
       }),
     );
     expect(await screen.findByText("No customers yet")).toBeTruthy();
+  });
+
+  it("names each source on offer, and the connected one, never by its key", async () => {
+    backend({
+      "GET /finance/source": () =>
+        jsonResponse({
+          available: AVAILABLE,
+          connection: { ...CONNECTION, provider_name: "Ledger Books" },
+        }),
+      "GET /finance/source/customers": () => jsonResponse({ data: [], page }),
+    });
+    render(<FinanceSourceCard />);
+    expect(await screen.findByText("Ledger Books")).toBeTruthy();
+    expect(screen.queryByText("ledger_books")).toBeNull();
+  });
+
+  it("labels a source that declares no name by what it is for", async () => {
+    backend({
+      "GET /finance/source": () => jsonResponse({ available: AVAILABLE }),
+    });
+    const user = userEvent.setup();
+    render(<FinanceSourceCard />);
+    await user.click(await screen.findByRole("combobox", { name: /Source/ }));
+    const options = (await screen.findAllByRole("option")).map(
+      (option) => option.textContent,
+    );
+    expect(options).toEqual(["Reads the ledger books.", "Other Books"]);
+  });
+
+  it("calls a connected source with no name or description Unnamed source", async () => {
+    backend({
+      "GET /finance/source": () =>
+        jsonResponse({
+          available: [{ provider: "ledger_books" }],
+          connection: CONNECTION,
+        }),
+      "GET /finance/source/customers": () => jsonResponse({ data: [], page }),
+    });
+    render(<FinanceSourceCard />);
+    expect(await screen.findByText("Unnamed source")).toBeTruthy();
+    expect(screen.queryByText("ledger_books")).toBeNull();
   });
 
   it("shows why a source that cannot be read was refused", async () => {

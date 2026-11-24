@@ -205,6 +205,13 @@ func WithInputStateKey(key string) HTTPOption {
 	return func(d *Dispatcher) { d.inputState = newInputStateSigner([]byte(key)) }
 }
 
+// WithConfirmGuard lets a call that waits for its own user be confirmed in the
+// conversation, spending each code once through guard. It needs the input-state
+// key too; without either, such calls stage into the approval inbox.
+func WithConfirmGuard(guard ConfirmGuard) HTTPOption {
+	return func(d *Dispatcher) { d.confirmGuard = guard }
+}
+
 // WithHeldViews tells the tool surface which `ui://` documents are actually
 // being served, so a tool never names one this deployment does not publish.
 func WithHeldViews(held func(uri string) bool) HTTPOption {
@@ -227,16 +234,20 @@ func WithTaskStore(tasks Tasks, approvals TaskApprovals) HTTPOption {
 // long-lived pipe rather than one request.
 func bindAuthenticated(ctx context.Context) (context.Context, error) { return ctx, nil }
 
+// mcpAllowedMethods leaves DELETE out: it authenticates, but always answers 405.
+const mcpAllowedMethods = http.MethodPost
+
 func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost, http.MethodDelete:
 	default:
 		// The GET stream is a later phase; every other verb is refused
 		// outright.
+		w.Header().Set("Allow", mcpAllowedMethods)
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusMethodNotAllowed,
 			Code:   "method_not_allowed",
-			Detail: "MCP is POST and DELETE only on this transport.",
+			Detail: "MCP is POST only on this transport.",
 		})
 		return
 	}
@@ -280,6 +291,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// and this server no longer mints one, so a legacy client has nothing
 		// to name here either — and telling it so beats a 404 it would read as
 		// "your session expired" and re-handshake over.
+		w.Header().Set("Allow", mcpAllowedMethods)
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusMethodNotAllowed,
 			Code:   "method_not_allowed",

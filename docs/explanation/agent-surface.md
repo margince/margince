@@ -128,6 +128,17 @@ their tool `ask_user_first`. Who acts on that mark depends on the surface.
   directly, and only the MCP server sets a call up for a form. So no form can reach a run, and a change
   to many records goes ahead as it does for a client that cannot show one.
 
+A tool marked `WaitsEvenForItsUser`, called from a live MCP conversation, asks its user there. It needs the
+signing key and Redis.
+The first call changes nothing and answers a preview and a `confirm_code`. The same call with that code runs
+once (`internal/modules/agents/confirmcode.go`). Only the MCP `Dispatcher` arms this, so REST calls and the
+runner still stage into the inbox. The code is offered only where `ReleasableByCaller` says the passport could
+release the call itself.
+
+A change that cannot be undone still waits in the inbox for a colleague. So does a
+call from a passport with no OAuth connection, or on a deployment without the signing key or Redis. When Redis
+cannot answer as the code is spent, the call is refused and runs nothing.
+
 Three things bound a run instead. Its passport holds its scopes, the work it may touch, and its user's
 grants and seat. Its catalog entry names its tools, and the tier decides the rest. The runner marks both fresh and resumed work as having nobody there. `auth.TierFor` makes
 every tool with the `send` scope wait for approval, even on the user's passport.

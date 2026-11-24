@@ -266,7 +266,7 @@ critical_part() {
 #     `integration`. Only those packages are held to the allowlist below; a
 #     package the lane never runs may use any tag.
 #   - `integration` tags a file. `!integration`, the opt-in lanes (e2e_llm,
-#     livesmoke, voicelive) and the `integration && bench|rolesweep` lanes are
+#     livesmoke, voicelive) and the `integration && bench|rolesweep|e2e_agent_loop` lanes are
 #     never in this build, so their files are left out as the compiler leaves
 #     them out. Any other constraint fails, `(integration)` included: a
 #     built-in tag such as linux compiles under `go test` yet would land in no
@@ -349,7 +349,7 @@ lane_discover() { # untagged module-dir...
           if (e == "") continue
           if (e == "integration") tagged = 1
           else if (e == "!integration" || e == "e2e_llm" || e == "livesmoke" || e == "voicelive" \
-            || e == "integration && bench" || e == "integration && rolesweep") skip = 1
+            || e == "integration && bench" || e == "integration && rolesweep" || e == "integration && e2e_agent_loop") skip = 1
           else fail(path[i] " carries build constraint \047" e "\047, not one the static shard discovery knows\n" \
             "  teach the allowlist in scripts/lib-laneorder.sh or simplify the constraint")
         }

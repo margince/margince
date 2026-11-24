@@ -5,7 +5,7 @@ early warning within 24 hours of becoming aware, and "we know it is being
 exploited and little else" is a valid early warning. The 72-hour notification
 is where the detail goes.
 
-Recipients, at the same time: the coordinator CSIRT (BSI) and ENISA, through the
+Recipients, at the same time: the coordinator CSIRT (CERT-Bund, at the BSI) and ENISA, through the
 single reporting platform. The runbook holds the route:
 [README.md](README.md).
 

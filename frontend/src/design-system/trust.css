@@ -10,7 +10,6 @@
   width: 9px;
   height: 9px;
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .dot-auto {
   background: var(--success);

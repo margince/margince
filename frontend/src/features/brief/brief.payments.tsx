@@ -20,6 +20,7 @@ import {
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { companyTabRoute } from "../../lib/companytab";
+import { financeProvenance } from "../../lib/financeprovenance";
 import { problemCodeOf } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -65,10 +66,11 @@ export function CustomerPaymentsCard({
       footer={
         summary?.last_synced_at && !failed ? (
           <span className="t-caption">
-            {t("finance.syncedFrom", {
-              provider: summary.provider ?? "",
-              when: formatDateTime(summary.last_synced_at, locale, zone),
-            })}
+            {financeProvenance(
+              t,
+              summary.provider_name,
+              formatDateTime(summary.last_synced_at, locale, zone),
+            )}
           </span>
         ) : undefined
       }

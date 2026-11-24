@@ -455,6 +455,9 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
 			return err
 		}
+		if err := s.tellTeamChanges(ctx, tx, host, before, profile); err != nil {
+			return err
+		}
 		var audit ids.UUID
 		if before == nil {
 			audit, err = storekit.AuditEvent(ctx, tx, "create", "booking_page", id, stored)

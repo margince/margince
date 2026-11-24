@@ -821,6 +821,7 @@
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/apply": "apply_voice_version",
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/reject": "reject_voice_version",
     "POST /v1/voice-profiles/{id}/versions/{profileVersion}/rollback": "rollback_voice_version",
+    "POST /v1/web-forms": "create_web_form",
     "POST /v1/web-forms/{id}/handling/existing": "handle_website_inquiries",
     "POST /v1/web-forms/{id}/handling/preview": "preview_website_inquiries",
     "POST /v1/weekly-plans/commitments": "add_weekly_plan_commitment",
@@ -1547,6 +1548,9 @@
       "idempotency_key",
       "request_body"
     ],
+    "create_web_form": [
+      "request_body"
+    ],
     "data_coverage": [],
     "deactivate_user": [
       "id",
@@ -1745,6 +1749,7 @@
     "enrich": [
       "approval_id",
       "company_id",
+      "confirm_code",
       "depth",
       "idempotency_key",
       "url"
@@ -2590,6 +2595,7 @@
     ],
     "merge_members": [
       "approval_id",
+      "confirm_code",
       "idempotency_key",
       "preview_token",
       "source_id",
@@ -3061,6 +3067,7 @@
     "relink_activities": [
       "activity_ids",
       "approval_id",
+      "confirm_code",
       "entity_id",
       "entity_type",
       "idempotency_key",
@@ -3069,6 +3076,7 @@
     "relink_activity": [
       "activity_id",
       "approval_id",
+      "confirm_code",
       "entity_id",
       "entity_type",
       "idempotency_key",
@@ -3076,6 +3084,7 @@
     ],
     "relink_thread": [
       "approval_id",
+      "confirm_code",
       "entity_id",
       "entity_type",
       "idempotency_key",
@@ -3512,6 +3521,7 @@
     "set_up_partner": [
       "approval_id",
       "company_id",
+      "confirm_code",
       "idempotency_key",
       "next_step",
       "next_step_due_at",
