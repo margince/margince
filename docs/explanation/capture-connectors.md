@@ -456,6 +456,7 @@ The sync of new mail uses a `syncToken`. A stale token
 (`ErrSyncTokenGone`) starts it again. No push, and no `Backfiller`. The first sync takes a full list
 that reaches 90 days back. Every pull keeps only meetings up to 365 days ahead. The connector takes a
 full list again after 30 days, so a later meeting comes in once it is within a year.
+A full list that landed whole retires a future meeting it left out (`RetireUnlistedMeetings`).
 
 **To run:** the *same* Google app as Gmail, with the calendar scope turned on and a
 `/connectors/gcal/callback` redirect URI added, + the vault key.

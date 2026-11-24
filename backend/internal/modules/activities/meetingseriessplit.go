@@ -16,13 +16,15 @@ import (
 // ReplacedSeriesMeetingsTx answers the live meetings of seat's calendar that a
 // split series replaced at meeting's slot. Such a row starts when meeting does
 // and belongs to another series. It has the same organizer and one more party
-// in common besides the seat. Two instances of one series moved onto one slot
-// stay two meetings, and a meeting called off is left alone.
+// in common besides the seat, and was stored first. Two instances of one
+// series moved onto one slot stay two meetings, and a meeting called off is
+// left alone.
 func ReplacedSeriesMeetingsTx(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID, seat ids.UUID) ([]ids.ActivityID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT old.id FROM activity new
 		  JOIN activity old ON old.source_system = new.source_system AND old.source_id <> new.source_id
 		   AND old.occurred_at = new.occurred_at AND old.kind = 'meeting'
+		   AND (old.created_at, old.id) < (new.created_at, new.id)
 		   AND old.archived_at IS NULL AND old.restricted_at IS NULL
 		   AND old.meeting_status IS DISTINCT FROM 'canceled'
 		   AND `+auth.ConnectorSeatSQL("old")+` = $2::text

@@ -137,6 +137,11 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	}); err != nil {
 		return nil, err
 	}
+	if relisted {
+		if err := retireUnlisted(ctx, sink, events, c.now(), edge); err != nil {
+			return nil, err
+		}
+	}
 
 	// selectEvents (through listPages) guarantees a non-empty syncToken on a
 	// successful pull, so the advanced watermark is always real here.
