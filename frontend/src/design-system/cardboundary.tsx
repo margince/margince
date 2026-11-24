@@ -11,15 +11,13 @@ import "./cardboundary.css";
 
 // CardBoundary contains ONE card's render failure inside that card.
 //
-// The app-level boundary (app/errorboundary.tsx) is the floor, not the whole
-// story: it catches the throw, but by then the whole routed shell has unmounted
-// and the reader is looking at a single apology where a page used to be — the
-// navigation rail included, so the one thing they could have done next (go
-// somewhere else) went with it. A page assembled from a dozen independent reads
-// has a dozen ways to throw, and every one of them costs the reader the page.
+// The screen boundary (app/errorboundary.tsx) is the floor: it catches the
+// throw, but the reader then sees one apology where the whole page used to be.
+// A page assembled from a dozen independent reads has a dozen ways to throw,
+// and every one of them costs the reader the page.
 //
 // This boundary keeps its own place. The card that failed says so and offers a
-// retry; the eleven beside it, and the rail, never learn anything happened.
+// retry; the eleven beside it never learn anything happened.
 //
 // It never shows the thrown error's text, for the same reason the app-level one
 // does not: a render throw is a defect in this app, not a message from the
