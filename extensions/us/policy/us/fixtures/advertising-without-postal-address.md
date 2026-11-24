@@ -1,5 +1,5 @@
 ---
-subject: "ADV: Our offer"
+subject: "Our offer"
 advertising: true
 sender: us
 mail-language: en

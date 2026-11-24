@@ -28,8 +28,8 @@ func TestTheUnitHoldsOnePackAndOneRuleSetForTheUnitedStates(t *testing.T) {
 }
 
 // The United States is an opt-out market with no route to name: advertising
-// needs no consent, so there is no exception and no cap. It does carry the
-// advertisement label of 7704(a)(5)(A)(i).
+// needs no consent, so there is no exception and no cap. It identifies an
+// advertisement by a footer line (7704(a)(5)(A)(i)), not a subject prefix.
 func TestTheUnitedStatesAllowsAdvertisingUntilARefusal(t *testing.T) {
 	r := New().Messaging[0]
 	if r.MarketingMode != messaging.MarketingOptOut {
@@ -38,13 +38,14 @@ func TestTheUnitedStatesAllowsAdvertisingUntilARefusal(t *testing.T) {
 	if r.ConsentOnly || len(r.MarketingExceptions) != 0 || r.FrequencyCap != nil {
 		t.Errorf("rules %+v state a consent rule, exception or cap the Act does not", r)
 	}
-	if r.SubjectPrefix != "ADV:" {
-		t.Errorf("subject prefix %q, want ADV:", r.SubjectPrefix)
+	if r.SubjectPrefix != "" {
+		t.Errorf("subject prefix %q, want none: the footer line identifies the advertisement", r.SubjectPrefix)
 	}
 }
 
 // CAN-SPAM 7704(a)(5)(A) asks every advertisement for a way to decline and the
 // sender's postal address, which the controller's identity carries.
+// It also asks that the message identify itself as an advertisement.
 func TestAnAdvertisementOwesTheSenderAddressAndAWayToDecline(t *testing.T) {
 	var kinds []messaging.DisclosureKind
 	for _, d := range New().Messaging[0].Disclosures {
@@ -54,7 +55,7 @@ func TestAnAdvertisementOwesTheSenderAddressAndAWayToDecline(t *testing.T) {
 		kinds = append(kinds, d.Kind)
 	}
 	slices.Sort(kinds)
-	if want := []messaging.DisclosureKind{messaging.ControllerIdentity, messaging.ObjectionRoute}; !slices.Equal(kinds, want) {
+	if want := []messaging.DisclosureKind{messaging.Advertisement, messaging.ControllerIdentity, messaging.ObjectionRoute}; !slices.Equal(kinds, want) {
 		t.Errorf("disclosures %v, want %v", kinds, want)
 	}
 }
