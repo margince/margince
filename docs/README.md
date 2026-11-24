@@ -320,7 +320,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 - [scheduling.md](explanation/scheduling.md): how the app finds a meeting time.
 - [privacy-and-consent.md](explanation/privacy-and-consent.md): whether a message may go, and the GDPR
   rules.
-- [messaging-policy-packs.md](explanation/messaging-policy-packs.md): where the mail rules of `extensions/eu` and `extensions/apac` are read.
+- [messaging-policy-packs.md](explanation/messaging-policy-packs.md): where the mail rules of `extensions/eu`, `extensions/apac` and `extensions/us` are read.
 
 #### AI, search and workflows
 

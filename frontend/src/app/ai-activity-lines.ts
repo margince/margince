@@ -249,7 +249,7 @@ export const ACTIVITY_LINE: Readonly<
     "the rewritten words replace the rep's own in the field they pressed the button under; a rail line would announce text already on screen",
   ),
   extension_task: notDisplayed(
-    "the answer returns to the extension screen that asked for it, under the reader's own eyes; a rail line would announce a result already on screen",
+    "a retired kind: nothing writes it, and a row written before it was retired is not news to anyone",
   ),
   chat_task_reading: notDisplayed(
     "the reading runs while the rep files the chat, and its change shows in Done for you with Undo; a rail line would announce it twice",

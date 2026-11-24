@@ -73,14 +73,35 @@ func TestDescribeForClientLeadsWithTheWrittenTextAndAppendsGovernance(t *testing
 	}
 }
 
-// A scope past read is named even when the call runs at once. A client choosing
-// tools for a passport cannot guess it.
-func TestDescribeForClientNamesEveryScopePastRead(t *testing.T) {
-	got := DescribeForClient(mcp.ToolSpec{
-		Name: "t", Description: "Does the thing.", RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
-	})
-	if !strings.Contains(got, `passport scope "write"`) || strings.Contains(got, "approve") {
-		t.Errorf("auto-execute write reads %q, want the scope named and no approval asked", got)
+// A scope past the defaults is named even when the call runs at once. Read and
+// write are the defaults the server instructions state, so neither is repeated.
+func TestDescribeForClientNamesEveryScopePastTheDefaults(t *testing.T) {
+	describe := func(scope principal.Scope) string {
+		return DescribeForClient(mcp.ToolSpec{
+			Name: "t", Description: "Does the thing.", RequiredScope: scope, Tier: mcp.TierAutoExecute,
+		})
+	}
+	for _, scope := range []principal.Scope{principal.ScopeRead, principal.ScopeWrite} {
+		if got := describe(scope); got != "Does the thing." {
+			t.Errorf("auto-execute %s reads %q, want the written text alone", scope, got)
+		}
+	}
+	if got := describe(principal.ScopeSend); got != `Does the thing. (Requires passport scope "send".)` {
+		t.Errorf("auto-execute send reads %q, want the scope named and no approval asked", got)
+	}
+}
+
+// The instructions carry what the descriptions leave out: the default tier and
+// scope, the ask-first rule and the retry key. A description is read beside them.
+func TestTheInstructionsStateWhatEveryDescriptionLeavesOut(t *testing.T) {
+	served := NewDispatcher(NewRegistry(nil, nil), bindAuthenticated, "margince-crm", "test").instructions()
+	for _, want := range []string{
+		"names no governance runs immediately", `"write" if it changes anything`,
+		askFirstOpening, askConsequenceWrite, askConsequenceRead, askFirstGetYes, mcp.ReservedIdempotencyKeyRule,
+	} {
+		if !strings.Contains(served, want) {
+			t.Errorf("the instructions lack %q:\n%s", want, served)
+		}
 	}
 }
 
@@ -111,9 +132,6 @@ func TestDescribeForClientStatesEachTierDistinctly(t *testing.T) {
 	if strings.Contains(dynamic, "approves every call") {
 		t.Errorf("dynamic reads %q, so an open→open move looks like it needs approval", dynamic)
 	}
-	if !strings.Contains(dynamic, `passport scope "read"`) {
-		t.Errorf("dynamic reads %q, want the scope named beside a tier that is not the default", dynamic)
-	}
 	// It must not name a deal: nothing holds TierDynamic to the deal moves that
 	// use it today, and a clause naming them would be false for the next one.
 	if strings.Contains(dynamic, "deal") {
@@ -130,11 +148,8 @@ func TestDescribeForClientSurfacesAnAskAReadRequires(t *testing.T) {
 		Name: "get_ai_call", Description: "Read one AI call.",
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, AskUserFirst: true,
 	})
-	if !strings.HasPrefix(got, "Read one AI call.") {
-		t.Errorf("description = %q, want it to open with the written text", got)
-	}
-	if !strings.Contains(got, "the user's yes is needed") {
-		t.Errorf("a read tool that asks first reads %q, want the ask-first sentence surfaced", got)
+	if got != "Read one AI call. (Ask the user first.)" {
+		t.Errorf("a read tool that asks first reads %q, want the ask-first mark after the written text", got)
 	}
 }
 
@@ -147,14 +162,13 @@ func TestDescribeForClientAsksTheUserFirstOnlyWhereNoHumanApproves(t *testing.T)
 			Tier: tier, AskUserFirst: askFirst,
 		})
 	}
-	const ask = "get it before calling"
-	if got := describe(mcp.TierAutoExecute, true); !strings.Contains(got, "the user's yes is needed for it") || !strings.Contains(got, ask) {
+	if got := describe(mcp.TierAutoExecute, true); got != "Retires the thing. (Ask the user first.)" {
 		t.Errorf("auto-execute archive reads %q, want the client told to ask the user first", got)
 	}
-	if got := describe(mcp.TierConfirmationRequired, true); strings.Contains(got, ask) {
+	if got := describe(mcp.TierConfirmationRequired, true); strings.Contains(got, askFirstOpening) {
 		t.Errorf("confirm-first archive reads %q, want no second confirmation asked", got)
 	}
-	if got := describe(mcp.TierAutoExecute, false); strings.Contains(got, ask) {
+	if got := describe(mcp.TierAutoExecute, false); strings.Contains(got, askFirstOpening) {
 		t.Errorf("an ordinary write reads %q, want no confirmation asked", got)
 	}
 }

@@ -17,6 +17,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Section is one part of the dossier: a heading's worth of claims about one
@@ -96,7 +98,24 @@ func Deterministic(in Input, lang string) []Section {
 		}
 		bySection[kind] = append(bySection[kind], sentence)
 	}
+	if sentence, ok := columnIndustrySentence(in, lang); ok {
+		bySection[sectionMarkets] = append(bySection[sectionMarkets], sentence)
+	}
 	return orderedSections(bySection)
+}
+
+// columnIndustrySentence states the company column's industry, which replaces
+// the industry profile field in the input, so the floor still says it.
+func columnIndustrySentence(in Input, lang string) (claims.Sentence, bool) {
+	label, ok := labelFor(crmcontracts.CompanyProfileFieldFieldIndustry, lang)
+	if in.Industry == "" || in.CompanyID == "" || !ok {
+		return claims.Sentence{}, false
+	}
+	return claims.Sentence{
+		Text:     label + ": " + claims.TerminateSentence(contacts.IndustryWords(in.Industry, textlang.Lang(lang))),
+		Nature:   natureFact,
+		Evidence: []claims.Evidence{{EntityType: citeCompany, EntityID: in.CompanyID}},
+	}, true
 }
 
 // fieldSentence renders one profile field as one cited sentence.

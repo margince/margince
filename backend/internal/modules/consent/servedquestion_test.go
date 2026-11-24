@@ -76,3 +76,30 @@ func TestTheRightsLinkIsThePrivacyPageThenTheContactThenNothing(t *testing.T) {
 		t.Errorf("an unstated privacy page left its placeholder in %q", served)
 	}
 }
+
+// TestAnUnstatedPrivacyPageDropsTheRightsSentence: a question with nowhere to
+// point keeps every other sentence and ends on a full stop, in every language.
+func TestAnUnstatedPrivacyPageDropsTheRightsSentence(t *testing.T) {
+	for _, key := range []string{TemplateSubscriptionQuestion, TemplateSubscriptionQuestionUnscheduled} {
+		for _, lang := range mailcopy.Languages() {
+			language := string(lang)
+			words := mailcopy.For(language)
+			with := fillQuestion(RenderQuestion(key, language), questionFields{privacyPage: "https://example.test/p", words: words})
+			without := fillQuestion(RenderQuestion(key, language), questionFields{words: words})
+			ask, _ := ServedQuestion{Text: without}.Parts()
+			if strings.Contains(ask, ": .") || !strings.HasSuffix(ask, ".") {
+				t.Errorf("%s/%s: no page served %q", key, language, ask)
+			}
+			if withAsk, _ := (ServedQuestion{Text: with}).Parts(); !strings.HasPrefix(withAsk, ask) || withAsk == ask {
+				t.Errorf("%s/%s: dropping the rights sentence changed the rest: %q against %q", key, language, ask, withAsk)
+			}
+		}
+	}
+	got, _ := ServedQuestion{Text: fillQuestion(RenderQuestion(TemplateSubscriptionQuestionUnscheduled, "en"),
+		questionFields{purpose: "news", words: mailcopy.For("en")})}.Parts()
+	want := "Confirm that you agree that the sender may use your name and email address to send you news by email. " +
+		"You can withdraw your consent at any time by replying to one of these emails."
+	if got != want {
+		t.Errorf("served %q, want %q", got, want)
+	}
+}

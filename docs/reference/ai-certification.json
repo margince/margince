@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 63,
-    "sites_best_current": 54,
+    "sites": 62,
+    "sites_best_current": 52,
     "sites_best_partial": 1,
-    "sites_best_stale": 7,
-    "sites_absent": 1,
-    "scenarios": 346,
+    "sites_best_stale": 9,
+    "sites_absent": 0,
+    "scenarios": 344,
     "records": 401,
     "bindings": 18,
     "self_judged_records": 0
@@ -483,39 +483,6 @@
           "scope": "full_invocation"
         },
         {
-          "task": "extension_task",
-          "label": "Extension AI task",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "gemini",
-              "model": "gemini-3.8-flash",
-              "env": "cloud_frontier",
-              "thinking_level": "low"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "unmeasured_sites": [
-            "extension_task/run"
-          ],
-          "scope": "full_invocation"
-        },
-        {
           "task": "growth_fit",
           "label": "Company fit assessment",
           "tier": "cheap_cloud",
@@ -525,7 +492,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -536,7 +503,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -995,7 +962,7 @@
             "env": "cloud_frontier"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1006,7 +973,7 @@
             },
             "same_model": false,
             "band": "supported_degraded",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 114,
@@ -1165,7 +1132,7 @@
         "not_supported": 0,
         "too_few_runs": 0
       },
-      "untested": 1,
+      "untested": 0,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -1791,39 +1758,6 @@
           "scope": "full_invocation"
         },
         {
-          "task": "extension_task",
-          "label": "Extension AI task",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "gemini_vertex",
-            "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "gemini_vertex",
-              "model": "gemini-3.8-flash",
-              "env": "eu_hosted",
-              "thinking_level": "low"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "unmeasured_sites": [
-            "extension_task/run"
-          ],
-          "scope": "full_invocation"
-        },
-        {
           "task": "growth_fit",
           "label": "Company fit assessment",
           "tier": "cheap_cloud",
@@ -1833,7 +1767,7 @@
             "env": "eu_hosted"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1844,7 +1778,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.8-flash",
@@ -2467,7 +2401,7 @@
             "env": "eu_hosted"
           },
           "band": "supported_degraded",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2478,7 +2412,7 @@
             },
             "same_model": false,
             "band": "supported_degraded",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.8-flash",
@@ -2697,7 +2631,7 @@
         "not_supported": 0,
         "too_few_runs": 0
       },
-      "untested": 1,
+      "untested": 0,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -3174,38 +3108,6 @@
           "passed": 12,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
-          "scope": "full_invocation"
-        },
-        {
-          "task": "extension_task",
-          "label": "Extension AI task",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-6-luna",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "openai/gpt-6-sol",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "unmeasured_sites": [
-            "extension_task/run"
-          ],
           "scope": "full_invocation"
         },
         {
@@ -3863,7 +3765,7 @@
         "not_supported": 3,
         "too_few_runs": 0
       },
-      "untested": 14,
+      "untested": 13,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -4334,38 +4236,6 @@
           "passed": 18,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
-          "scope": "full_invocation"
-        },
-        {
-          "task": "extension_task",
-          "label": "Extension AI task",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "mistralai/mistral-medium-3-5",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "unmeasured_sites": [
-            "extension_task/run"
-          ],
           "scope": "full_invocation"
         },
         {
@@ -5008,7 +4878,7 @@
         "not_supported": 8,
         "too_few_runs": 0
       },
-      "untested": 7,
+      "untested": 6,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -5509,38 +5379,6 @@
           "passed": 3,
           "cases_failing_often": 1,
           "cases_below_quality_bar": 0,
-          "scope": "full_invocation"
-        },
-        {
-          "task": "extension_task",
-          "label": "Extension AI task",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "google/gemma-4-31b-it",
-            "env": "cloud_frontier"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "unmeasured_sites": [
-            "extension_task/run"
-          ],
           "scope": "full_invocation"
         },
         {
@@ -6229,7 +6067,7 @@
         "not_supported": 4,
         "too_few_runs": 0
       },
-      "untested": 34,
+      "untested": 33,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6706,38 +6544,6 @@
           "passed": 12,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0,
-          "scope": "full_invocation"
-        },
-        {
-          "task": "extension_task",
-          "label": "Extension AI task",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-14b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "mistralai/mistral-medium-3-5",
-              "env": "eu_hosted"
-            },
-            "same_model": false,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "unmeasured_sites": [
-            "extension_task/run"
-          ],
           "scope": "full_invocation"
         },
         {
@@ -7395,7 +7201,7 @@
         "not_supported": 12,
         "too_few_runs": 0
       },
-      "untested": 14,
+      "untested": 13,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -7907,38 +7713,6 @@
           "scope": "full_invocation"
         },
         {
-          "task": "extension_task",
-          "label": "Extension AI task",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "ollama",
-            "model": "gemma4:12b",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "unmeasured_sites": [
-            "extension_task/run"
-          ],
-          "scope": "full_invocation"
-        },
-        {
           "task": "growth_fit",
           "label": "Company fit assessment",
           "tier": "cheap_cloud",
@@ -8629,7 +8403,7 @@
         "not_supported": 0,
         "too_few_runs": 0
       },
-      "untested": 39,
+      "untested": 38,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -9141,38 +8915,6 @@
           "scope": "full_invocation"
         },
         {
-          "task": "extension_task",
-          "label": "Extension AI task",
-          "tier": "cheap_cloud",
-          "model": {
-            "provider": "vllm",
-            "model": "mlx-community/Qwen3-14B-4bit",
-            "env": "sovereign"
-          },
-          "band": "",
-          "state": "",
-          "fallback": {
-            "tier": "premium",
-            "model": {
-              "provider": "vllm",
-              "model": "mlx-community/Qwen3-14B-4bit",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "",
-            "state": ""
-          },
-          "abandoned": 0,
-          "runs": 0,
-          "passed": 0,
-          "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "unmeasured_sites": [
-            "extension_task/run"
-          ],
-          "scope": "full_invocation"
-        },
-        {
           "task": "growth_fit",
           "label": "Company fit assessment",
           "tier": "cheap_cloud",
@@ -9863,7 +9605,7 @@
         "not_supported": 0,
         "too_few_runs": 0
       },
-      "untested": 39,
+      "untested": 38,
       "unbound": 0,
       "unrecognised": 0
     }
@@ -9872,13 +9614,13 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 63,
+      "sites_shipped": 62,
       "sites_measured": 62,
       "ready": 41,
       "usable_with_care": 4,
       "not_reliable_yet": 0,
       "too_few_runs": 17,
-      "recheck_pending": 7,
+      "recheck_pending": 9,
       "judges": [
         "claude-sonnet-5-5"
       ],
@@ -9890,9 +9632,9 @@
             "env": "cloud_frontier"
           },
           "sites": 55,
-          "sites_current": 47,
+          "sites_current": 45,
           "sites_partial": 1,
-          "sites_stale": 7,
+          "sites_stale": 9,
           "runs": 1425,
           "passed": 1377,
           "reliability": 0.9663157894736842,
@@ -9916,9 +9658,9 @@
             "thinking_level": "low"
           },
           "sites": 52,
-          "sites_current": 46,
+          "sites_current": 44,
           "sites_partial": 1,
-          "sites_stale": 5,
+          "sites_stale": 7,
           "runs": 981,
           "passed": 979,
           "reliability": 0.9979612640163099,
@@ -10358,7 +10100,7 @@
             "thinking_level": "low"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 2,
@@ -10695,7 +10437,7 @@
             "env": "cloud_frontier"
           },
           "band": "too_few_runs",
-          "state": "current",
+          "state": "stale",
           "runs": 3,
           "passed": 3,
           "records": 2,
@@ -10890,7 +10632,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 63,
+      "sites_shipped": 62,
       "sites_measured": 53,
       "ready": 23,
       "usable_with_care": 8,
@@ -11769,7 +11511,7 @@
     {
       "name": "Mistral",
       "answer": "not_yet",
-      "sites_shipped": 63,
+      "sites_shipped": 62,
       "sites_measured": 48,
       "ready": 15,
       "usable_with_care": 8,
@@ -12600,7 +12342,7 @@
     {
       "name": "Gemma",
       "answer": "not_enough_tested",
-      "sites_shipped": 63,
+      "sites_shipped": 62,
       "sites_measured": 5,
       "ready": 1,
       "usable_with_care": 0,
@@ -12721,9 +12463,9 @@
         "env": "cloud_frontier"
       },
       "sites": 58,
-      "sites_current": 47,
+      "sites_current": 45,
       "sites_partial": 1,
-      "sites_stale": 10,
+      "sites_stale": 12,
       "runs": 1584,
       "passed": 1519,
       "reliability": 0.9589646464646465,
@@ -12874,9 +12616,9 @@
         "thinking_level": "low"
       },
       "sites": 52,
-      "sites_current": 46,
+      "sites_current": 44,
       "sites_partial": 1,
-      "sites_stale": 5,
+      "sites_stale": 7,
       "runs": 981,
       "passed": 979,
       "reliability": 0.9979612640163099,
@@ -25378,53 +25120,13 @@
       ]
     },
     {
-      "task": "extension_task",
-      "site": "run",
-      "key": "extension_task/run",
-      "scope": "full_invocation",
-      "missing_context_scopes": [],
-      "best_state": "absent",
-      "recommended": null,
-      "scenarios": [
-        {
-          "name": "reads_a_total_into_the_declared_schema",
-          "expects": "accepted",
-          "graded_by": "mechanical",
-          "file": "backend/internal/compose/aicert/corpus/extension_task/schema_answer_01.yaml"
-        },
-        {
-          "name": "summarises_the_text_in_plain_words",
-          "expects": "accepted",
-          "graded_by": "mechanical",
-          "file": "backend/internal/compose/aicert/corpus/extension_task/text_answer_01.yaml"
-        }
-      ],
-      "records": []
-    },
-    {
       "task": "growth_fit",
       "site": "growth_fit",
       "key": "growth_fit/growth_fit",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.8-flash",
-          "env": "cloud_frontier",
-          "thinking_level": "low"
-        },
-        "band": "certified",
-        "runs": 12,
-        "passed": 12,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.879604,
-          "upper": 1
-        },
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "growth_fit_calls_a_company_outside_our_market_weak",
@@ -25446,10 +25148,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 18,
           "passed": 14,
@@ -25466,7 +25168,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -25536,8 +25248,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering; the provider's wire translation changed since the run",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering; the provider's wire translation changed since the run",
           "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
             "grader_changed": [
               "growth_fit_calls_a_company_outside_our_market_weak",
               "growth_fit_reads_their_facts_against_our_offering"
@@ -25571,8 +25287,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering; the provider's wire translation changed since the run",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering; the provider's wire translation changed since the run",
           "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
             "grader_changed": [
               "growth_fit_calls_a_company_outside_our_market_weak",
               "growth_fit_reads_their_facts_against_our_offering"
@@ -25586,10 +25306,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 2,
+          "scenarios_measured": 0,
           "scenarios_total": 2,
           "runs": 12,
           "passed": 12,
@@ -25606,7 +25326,17 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
+            "grader_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ]
+          }
         },
         {
           "binding": {
@@ -25634,8 +25364,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
           "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
             "grader_changed": [
               "growth_fit_calls_a_company_outside_our_market_weak",
               "growth_fit_reads_their_facts_against_our_offering"
@@ -25873,8 +25607,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
           "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
             "grader_changed": [
               "growth_fit_calls_a_company_outside_our_market_weak",
               "growth_fit_reads_their_facts_against_our_offering"
@@ -25907,8 +25645,12 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "2 scenarios it scored have changed since (how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
+          "stale_reason": "2 scenarios it scored have changed since (the prompt this build sends and how a run is graded): growth_fit_calls_a_company_outside_our_market_weak, growth_fit_reads_their_facts_against_our_offering",
           "stale_cause": {
+            "prompt_changed": [
+              "growth_fit_calls_a_company_outside_our_market_weak",
+              "growth_fit_reads_their_facts_against_our_offering"
+            ],
             "grader_changed": [
               "growth_fit_calls_a_company_outside_our_market_weak",
               "growth_fit_reads_their_facts_against_our_offering"
@@ -36396,23 +36138,8 @@
       "key": "summarize/company_dossier",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "too_few_runs",
-        "runs": 3,
-        "passed": 3,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.646204,
-          "upper": 1
-        },
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "dossier_describes_the_company_not_the_relationship",
@@ -36428,10 +36155,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "too_few_runs",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -36448,7 +36175,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
+            "grader_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ]
+          }
         },
         {
           "binding": {
@@ -36549,8 +36284,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it; the provider's wire translation changed since the run",
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it; the provider's wire translation changed since the run",
           "stale_cause": {
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
             "grader_changed": [
               "dossier_describes_the_company_not_the_relationship"
             ]
@@ -36563,10 +36301,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "too_few_runs",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 1,
+          "scenarios_measured": 0,
           "scenarios_total": 1,
           "runs": 3,
           "passed": 3,
@@ -36583,7 +36321,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "the prompt this build sends and how a run is graded changed under scenario dossier_describes_the_company_not_the_relationship since the record scored it",
+          "stale_cause": {
+            "prompt_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ],
+            "grader_changed": [
+              "dossier_describes_the_company_not_the_relationship"
+            ]
+          }
         },
         {
           "binding": {

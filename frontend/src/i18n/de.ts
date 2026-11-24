@@ -2304,6 +2304,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_credential_backfill":
     "Aktualisierung der E-Mail-Verbindung",
   "systemJob.capture_personal_purge": "Entfernung privater E-Mails",
+  "systemJob.capture_purge_receipt":
+    "Fehlende Löschbelege für E-Mails nachtragen",
   "systemJob.capture_part_slim_worker": "Bereinigung des E-Mail-Speichers",
   "systemJob.capture_trace_sweep": "Bereinigung der E-Mail-Spuren",
   "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
@@ -3461,6 +3463,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.add": "Beziehung hinzufügen",
   "rel.seatOnDeal": "Zu einem Deal hinzufügen",
   "rel.addStakeholder": "Stakeholder hinzufügen",
+  "rel.stakeholderOffer.title": "Die Kontakte dieser Mail zum Deal hinzufügen?",
+  "rel.stakeholderOffer.body":
+    "Als Stakeholder landet ihre nächste Mail von selbst beim Deal. Entferne den Haken bei allen, die nicht dazugehören.",
+  "rel.stakeholderOffer.legend": "Kontakte auf dieser Mail",
+  "rel.stakeholderOffer.confirm": "Zum Deal hinzufügen",
+  "rel.stakeholderOffer.decline": "Jetzt nicht",
+  "rel.stakeholderOffer.noneTicked":
+    "Setze bei mindestens einem Kontakt einen Haken.",
+  "rel.stakeholderOffer.added": "Zum Deal hinzugefügt",
+  "rel.stakeholderOffer.unread":
+    "Die Mail ist beim Deal. Margince konnte nicht lesen, wer auf ihr steht, und schlägt daher niemanden vor.",
   "rel.dealStakeholders": "Stakeholder",
   "rel.dealStakeholdersEmpty": "Keine Stakeholder zu diesem Deal",
   "rel.employerUnavailable":
@@ -3896,6 +3909,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.no_consent": "Keine Einwilligung erfasst",
   "consent.reason.existing_customer":
     "Der Kontakt hat bei dir gekauft und wurde dabei auf sein Widerspruchsrecht gegen Werbung hingewiesen",
+  "consent.reason.opt_out_allowed":
+    "Werbung ist erlaubt, bis der Kontakt widerspricht. Es ist kein Widerspruch erfasst.",
   "consent.reason.qualifying.inbound_message":
     "Der Kontakt hat dir am {date} geschrieben",
   "consent.reason.qualifying.inquiry": "Der Kontakt hat am {date} angefragt",
@@ -8572,6 +8587,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.footer.phone": "einer Telefonnummer",
   "sendPermission.footer.web": "einer Website oder einem Social-Media-Link",
   "sendPermission.footer.privacy": "Datenschutz-Kontaktangaben",
+  "sendPermission.footer.advertisement":
+    "die Zeile, die sie als Werbung kennzeichnet",
   "sendPermission.footer.advertiser":
     "Kontaktangaben des werbenden Unternehmens",
   "sendPermission.footer.identity": "Name und Anschrift des Unternehmens",
@@ -8600,6 +8617,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
+  "countryQuestion.title":
+    "In welchem Land ist der Kontakt {address} ansässig?",
+  "countryQuestion.body":
+    "Manche Länder erlauben Werbung, bis sich der Kontakt abmeldet. Für diesen Kontakt ist kein Land hinterlegt. Deshalb verlangt Margince die Einwilligung, die sonst überall nötig ist. Deine Antwort wird beim Kontakt gespeichert.",
+  "countryQuestion.label": "Land",
+  "countryQuestion.none": "Land wählen",
+  "countryQuestion.save": "Land speichern",
+  "countryQuestion.alreadySet":
+    "Für den Kontakt ist inzwischen ein Land hinterlegt. Die Versandprüfung läuft erneut.",
   "lawfulBasis.title": "Keine gültige Grundlage erfasst",
   "lawfulBasis.body":
     "Für diesen Kontakt ist keine nach vietnamesischem Recht gültige Grundlage erfasst: weder seine Einwilligung noch ein Fall, in dem das Gesetz die Verarbeitung ohne sie erlaubt. Du sendest auf eigenes Risiko.",
@@ -11263,8 +11289,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.resetDataConfirmName": "Gib diesen Unternehmensnamen ein:",
   "settings.resetDataResult":
     "Gelöscht: Tabellen {tables}, Job-Einträge {jobs}, Event-Streams {streams}, Cache-Schlüssel {keys}, gespeicherte Dateien {objects}.",
-  "settings.resetDataDrainWarning":
-    "Als das Zurücksetzen begann, lief ein Hintergrund-Job. Der Job schlägt an den gelöschten Daten fehl und protokolliert einen harmlosen Fehler.",
 
   "settings.jobs": "Hintergrund-Jobs",
   "settings.jobsSub":
@@ -14345,6 +14369,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "buyer.previewReadOnly":
     "Eine Vorschau ist schreibgeschützt. Schließe diesen Tab, um zur Seite des Deal Rooms zurückzukehren.",
   "buyer.closedNote": "Dieser Raum ist jetzt schreibgeschützt.",
+  "buyer.readOnly": "Sie haben für diesen Raum nur Lesezugriff.",
   "buyer.stewardUnknown": "Ihre Ansprechperson",
   "buyer.signOut": "Abmelden",
   "buyer.signedInAs": "Angemeldet als {name}.",
@@ -14441,7 +14466,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "threads.newLabel": "Neuer Thread",
   "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
-  "threads.readOnly": "Du hast nur Lesezugriff.",
   "deal360.blocker": "Blocker",
   "deal360.buyer": "Was die Käuferseite will",
   "deal360.verdict.live": "Im Plan",
@@ -15711,6 +15735,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureActivity.filing.core.retracted":
     "Das CRM hat die Deal-Zuordnung zurückgenommen: {reason}",
   "captureActivity.filing.basis.project": "das Projekt der Mail",
+  "captureActivity.filing.basis.chosen_thread":
+    "ein Deal, den ein Mitglied für eine frühere Mail im Thread gewählt hat",
   "captureActivity.filing.basis.thread": "eine frühere Mail im Thread",
   "captureActivity.filing.basis.sole_open_deal":
     "der einzige offene Deal des Unternehmens",
@@ -20227,6 +20253,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.strip.yesterday": "Gestern",
   "contact.strip.days": "{count} Tage",
   "contact.consent.fact.existingCustomer": "Bestandskunde, Werbung erlaubt",
+  "contact.consent.fact.optOutAllowed":
+    "Werbung erlaubt, bis der Kontakt widerspricht",
   "contact.consent.fact.saidWeMayWrite": "Erlaubnis zu schreiben erfasst",
   "contact.consent.fact.businessContact": "Aktueller Geschäftskontakt erfasst",
   "contact.consent.fact.serviceMessages": "Servicenachrichten erlaubt",
@@ -23958,7 +23986,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Dokumentenauswertung",
   "aiTask.name.draft_reply": "Antwortentwurf",
   "aiTask.name.enrich": "Ergänzung aus Signaturen",
-  "aiTask.name.extension_task": "KI-Aufgabe einer Erweiterung",
   "aiTask.name.growth_fit": "Bewertung der Unternehmenseignung",
   "aiTask.name.nl_search": "Suche in natürlicher Sprache",
   "aiTask.name.offer_draft": "Angebotsentwurf",
@@ -24564,6 +24591,35 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.openModels": "Modelle öffnen",
   "health.openConnections": "Verbindungen öffnen",
   "health.openRegional": "Region und Kalender öffnen",
+  "health.source.footer": "Firmenangaben in der Mail-Fußzeile",
+  "health.code.footer_complete":
+    "Jede Mail-Fußzeile enthält die nötigen Firmenangaben",
+  "health.code.footer_incomplete": "In Mail-Fußzeilen fehlen Firmenangaben",
+  "health.footerIncompleteFor":
+    "{entity}: In Mail-Fußzeilen fehlen Firmenangaben",
+  "health.footerDefaultEntity": "Die Standard-Rechtseinheit",
+  "health.effect.footer":
+    "Mails, die diese Angaben zeigen müssen, werden zur Prüfung zurückgehalten. Wer sie geschrieben hat, kann sie mit Begründung trotzdem senden. Ein Versand im Hintergrund, etwa eine Terminerinnerung, entfällt.",
+  "health.footerNext":
+    "Ergänze die fehlenden Angaben. Die Warnung verschwindet, sobald sie vollständig sind.",
+  "health.recovery.footer":
+    "Jede Firmenangabe, die die Rechtspakete verlangen, ist eingetragen.",
+  "health.footerMissing": "Fehlende Angaben",
+  "health.footerHeldByUser":
+    "Seit der letzten Änderung zurückgehaltene Sendungen von Mitgliedern",
+  "health.footerHeldInBackground":
+    "Seit der letzten Änderung zurückgehaltene oder entfallene Sendungen im Hintergrund",
+  "health.footerDetail.controller_identity": "Firmenname und Postanschrift",
+  "health.footerDetail.privacy_contact": "Datenschutzkontakt",
+  "health.footerDetail.objection_route": "Weg zum Widerspruch",
+  "health.footerDetail.advertisement": "Werbekennzeichnung",
+  "health.footerDetail.advertiser_contact": "Kontakt des Werbenden",
+  "health.footerDetail.entity_name": "Firmenname",
+  "health.measure.messages_one": "{count} Nachricht",
+  "health.measure.messages_other": "{count} Nachrichten",
+  "health.openLegalEntities": "Rechtseinheiten öffnen",
+  "health.openCompanyProfile": "Firmenprofil öffnen",
+  "health.openDisclosures": "Rechtsraum öffnen",
   "health.unit.runs": "Läufe",
   "health.history": "Aufbewahrter Fehlerverlauf",
   "health.historyWindow":

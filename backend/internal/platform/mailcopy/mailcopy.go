@@ -129,6 +129,7 @@ type Copy struct {
 	DisclosurePrivacyContact string
 	DisclosureObjection      string
 	DisclosureAdvertiser     string
+	AdvertisementLabel       string // identifies advertising as such; %s names the advertiser
 	AdvertisingRefusal       string // closes advertising where a pack asks; %s names the advertiser
 	AdvertisingDataChoice    string
 	// PoweredBy is the small line under the letterhead of mail the system

@@ -89,7 +89,7 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return 0, err
 	}
-	if e.blob == nil {
+	if e.journalStore() == nil {
 		// A deployment with no object store has nowhere to put the list, and
 		// saying so is better than reporting an export that did not happen:
 		// the whole value of this is that somebody can rely on it having run.
@@ -129,7 +129,7 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	keyed := storekit.SuppressionKeyID() != nil
 	for _, row := range entries {
 		body := journalEntryBody(row.kind, row.state)
-		if err := e.blob.Put(ctx, journalEntryKey(row.kind, row.hash, row.keyID != nil),
+		if err := e.journalStore().Put(ctx, journalEntryKey(row.kind, row.hash, row.keyID != nil),
 			bytes.NewReader(body), int64(len(body)), "text/plain"); err != nil {
 			return 0, fmt.Errorf("privacy: exporting suppression %s: %w", row.hash, err)
 		}
@@ -138,7 +138,7 @@ func (e *Eraser) ExportSuppressions(ctx context.Context) (int, error) {
 	// lets a reader of the store test an address against the list.
 	if keyed {
 		for _, kind := range suppressionKinds {
-			if _, err := e.blob.DeletePrefix(ctx, suppressionJournalPrefix+kind+"/"); err != nil {
+			if _, err := e.journalStore().DeletePrefix(ctx, suppressionJournalPrefix+kind+"/"); err != nil {
 				return 0, fmt.Errorf("privacy: removing the unkeyed suppression journal: %w", err)
 			}
 		}
@@ -273,10 +273,10 @@ func (e *Eraser) journalStatesInAnyForm(ctx context.Context, kind string, forms 
 // read as "this subject was never erased", so the error travels. An entry that
 // cannot be read travels as an error for the same reason.
 func (e *Eraser) journalEntry(ctx context.Context, entryKey string) (suppressionState, bool, error) {
-	if e.blob == nil {
+	if e.journalStore() == nil {
 		return suppressionState{}, false, nil
 	}
-	reader, _, err := e.blob.Get(ctx, entryKey)
+	reader, _, err := e.journalStore().Get(ctx, entryKey)
 	if err != nil {
 		if errors.Is(err, blobstore.ErrNotFound) {
 			return suppressionState{}, false, nil

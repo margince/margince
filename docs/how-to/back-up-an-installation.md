@@ -11,7 +11,7 @@ The cadence below meets the two recovery targets that [run-a-restore-drill.md](r
 | Part | Holds | Back it up |
 |---|---|---|
 | Postgres database | Every record, the audit log, settings, the event outbox and the restore-drill ledger | Yes, with point-in-time recovery or a dump at least every hour |
-| Object store (`MARGINCE_BLOBSTORE_*`, or the folder in `MARGINCE_BLOBSTORE_PATH`) | Attachments, documents, exports, and the erasure journal under `erasure-suppression/` | Yes, at the same cadence as the database |
+| Object store (`MARGINCE_BLOBSTORE_*`, or the folder in `MARGINCE_BLOBSTORE_PATH`) | Attachments, documents, exports, and, unless you set a separate journal store, the erasure journal under `erasure-suppression/` | Yes, at the same cadence as the database |
 | `MARGINCE_KEYVAULT_ROOT_KEY` | The key that seals mailbox credentials, provider keys, the mail relay password and the licence copy in the `vault_secret` table. The keys for the erasure list and the preference links are derived from it | Yes, in your secret store, apart from the data backups |
 | Deployment settings | `margince.yaml`, the DSNs, object store keys and `MARGINCE_LICENSE` | Yes, in your secret store or configuration repository |
 | Redis (`MARGINCE_REDIS`) | The event stream, event dedupe markers, provider health and rate-limit counters | Not for the records: every event is written to the database first, in the same transaction as the change. Events that reached Redis and no reader has taken yet are lost with it |
@@ -42,7 +42,14 @@ back:
   address) to `erasure-suppression/` in the object store every hour.
 - After a restore, `worker replay-erasures` erases those contacts again.
 
-So never restore `erasure-suppression/` from a backup: keep the newest copy from the live store. Keep your own
+To keep a restore of the object store from ever touching the journal, set a separate journal store with
+`MARGINCE_ERASURE_JOURNAL_ENDPOINT` (and its bucket, region and keys) or `MARGINCE_ERASURE_JOURNAL_PATH`. The job
+then writes there instead, and the replay reads from there. Both the worker that exports and the one that replays need
+the same settings. A partly set group is a startup error, and so is a journal store that is the same place as the
+main object store. The separate store needs its own backup routine, because the restore never touches it.
+
+Without a separate journal store, never restore `erasure-suppression/` from a backup: keep the newest copy from the
+live store. Keep your own
 record of completed erasure requests too, because the replay cannot cover an erasure the last export missed. The
 steps are in [run-a-restore-drill.md](run-a-restore-drill.md).
 
@@ -55,7 +62,8 @@ writes a `DONE` marker last. Run it every hour with cron or a systemd timer, and
 neither the database nor the live object store. It deletes folders older than `RETAIN_DAYS` (14 by default).
 
 `restore.sh <folder>` restores into a spare database and object store, takes the newest erasure journal from the live
-store, runs `margince-migrate up`, then `worker replay-erasures`. It stops on the first error, so a failed replay never
+store (or reads the separate journal store, when one is set), runs `margince-migrate up`, then
+`worker replay-erasures`. It stops on the first error, so a failed replay never
 reads as a finished restore. It appends the restore time to `restores.log` in `BACKUP_DIR`, which a restore does not
 roll back. Record the drill itself as [run-a-restore-drill.md](run-a-restore-drill.md) says.
 

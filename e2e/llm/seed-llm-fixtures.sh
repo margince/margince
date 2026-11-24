@@ -1559,7 +1559,7 @@ roster="$(api GET '/users?limit=100' | python3 -c 'import json,sys
 rows = json.load(sys.stdin).get("data", [])
 print("\n".join(r.get("email","") for r in rows if r.get("status") == "active"))')"
 for seat in sofia.meier@demo.test lena.fischer@demo.test; do
-  printf '%s\n' "$roster" | grep -qx "$seat" || {
+  grep -x "$seat" <<<"$roster" >/dev/null || {
     echo "$seat holds no ACTIVE seat, so list_colleagues will not name them and every case " \
          "that hands work to a colleague fails for the fixture's reason" >&2
     exit 1; }

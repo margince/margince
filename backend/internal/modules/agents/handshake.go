@@ -86,9 +86,8 @@ func (s *Dispatcher) startingTools() string {
 }
 
 // surfaceInstructions is the guidance for the model on the other side of the
-// client, kept to what is true of EVERY tool: the per-tool text is
-// DescribeForClient's, and a second description of the governance here would be
-// a second answer to the same question.
+// client, kept to what is true of every tool. governanceDefaults is the half of
+// each description DescribeForClient leaves out, so the two read as one text.
 //
 // One string for both eras. `initialize` and `server/discover` are the same
 // claim to two generations of client, and two spellings of one claim is how a
@@ -97,8 +96,8 @@ func (s *Dispatcher) startingTools() string {
 const surfaceInstructions = "A governed CRM tool surface. Every call re-authenticates and is bounded by " +
 	"the granting human's own permissions, so a tool may refuse a record this passport cannot " +
 	"reach. Tools that a human must approve say so in their own description; calling one " +
-	"stages the effect for review rather than performing it. A tool whose description names no " +
-	"governance runs immediately and needs only the read scope. " + mcp.UntrustedContentRule + " " +
+	"stages the effect for review rather than performing it. " + governanceDefaults + " " +
+	mcp.UntrustedContentRule + " " +
 	mcp.ConflictingSourcesRule + " " +
 	mcp.LocalTimeRule + " " + mcp.OwnershipRule
 

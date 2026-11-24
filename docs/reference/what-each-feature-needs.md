@@ -44,6 +44,7 @@ Each setting is explained in [Mail connectors and sign-in](connectors-and-sign-i
 | Feature | Settings | Read by | When one is missing |
 |---|---|---|---|
 | Attachments, company logos and import files | `blobstore_endpoint`, `blobstore_bucket`, `blobstore_region` and the two keys; or `blobstore_path` | api, worker | `/attachments` answers 501, and every company shows its letter mark. |
+| A restore-proof erasure journal | `erasure_journal_endpoint`, `erasure_journal_bucket`, `erasure_journal_region` and the two keys; or `erasure_journal_path` | worker | The journal stays in the main object store, and `worker replay-erasures` warns that a restore may have rolled it back. |
 | New custom fields and options | `schema_dsn` | api | Creating a field, or changing its options, answers 501. |
 | The data reset | `operations.allow_data_reset` | api, worker | `POST /v1/admin/reset-data` answers 404. |
 | `security.txt` | `web.security_txt` | api | `/.well-known/security.txt` answers 404. |
