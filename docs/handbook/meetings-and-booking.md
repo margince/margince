@@ -137,7 +137,7 @@ When you change or remove your short address, the old one stops working at once.
 <!-- opens: settings/meetings -->
 To offer only times when you and your colleagues are all free in Margince, open Settings → **Meetings** and use **Colleagues on this link**.
 1. Under **Add a colleague**, choose a colleague. Only colleagues with a connected calendar are offered. You can name up to five.
-2. Each colleague sees your link under **Colleagues' links that name you** in their own **Meetings** settings, and chooses **Confirm**.
+2. Each colleague gets a notice in the app and an email. Both say who named them on which link, and open their own **Meetings** settings. There they see your link under **Colleagues' links that name you**, and choose **Confirm**. The email follows their setting for **Approvals waiting on you**.
 3. Once all have confirmed, guests see only the times when all of you are free.
 Also called: team booking link, group booking link, shared free time.
 
