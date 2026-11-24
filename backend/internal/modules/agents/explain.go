@@ -47,6 +47,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		steppedUp      *StepUpStagedError
 		overQuota      *auth.VolumeExceededError
 		staged         *workflow.StagedApprovalError
+		confirmAsk     *ConfirmInConversationError
 		skew           *apperrors.VersionSkewError
 		areaOff        *auth.AreaOffError
 		archiveRefusal *auth.ArchiveAuthorityError
@@ -83,6 +84,8 @@ func (s *Dispatcher) explain(tool string, err error) string {
 		return "This agent has reached a volume limit for this window that no approval lifts. Stop calling this tool " +
 			"and tell the user what is blocking it; the same call can succeed after the window rolls. (" +
 			overQuota.Error() + ")"
+	case errors.As(err, &confirmAsk):
+		return confirmInConversationExplanation(confirmAsk)
 	case errors.As(err, &staged):
 		// A 🟡 call that reached the inbox, and the branch that says WHAT is
 		// waiting there. The contact answers it — in the CRM, or through this

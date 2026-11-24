@@ -338,3 +338,24 @@ func TestOnlyAnUnnegatedFinalSentenceCounts(t *testing.T) {
 		}
 	}
 }
+
+// A call that waits for its own user is confirmed in that user's conversation
+// with a preview of what it would do (agents/confirmcode.go). A tool that could
+// not describe its target would answer its user a bare refusal instead. The set
+// is read off the production registry, so a newly flagged tool is held too.
+func TestEveryToolThatWaitsForItsUserCanPreviewTheCall(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	held := 0
+	for _, spec := range registry.Specs() {
+		if !spec.WaitsEvenForItsUser {
+			continue
+		}
+		held++
+		if !registry.Stageable(spec.Name) {
+			t.Errorf("%s waits for its own user but cannot describe its target, so its user gets no preview to say yes to", spec.Name)
+		}
+	}
+	if held == 0 {
+		t.Fatal("no tool waits for its own user: the census read nothing, so it proves nothing")
+	}
+}

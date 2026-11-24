@@ -167,24 +167,38 @@ func (s inputStateSigner) sign(state wireInputState) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return s.seal(payload), nil
+}
+
+// seal signs payload into a token only this deployment's key can have made.
+func (s inputStateSigner) seal(payload []byte) string {
 	enc := base64.RawURLEncoding.EncodeToString(payload)
-	return enc + "." + base64.RawURLEncoding.EncodeToString(s.mac(enc)), nil
+	return enc + "." + base64.RawURLEncoding.EncodeToString(s.mac(enc))
+}
+
+// open answers the payload of a token seal made, or false for any other string.
+func (s inputStateSigner) open(token string) ([]byte, bool) {
+	enc, macPart, ok := strings.Cut(token, ".")
+	if !ok {
+		return nil, false
+	}
+	gotMAC, err := base64.RawURLEncoding.DecodeString(macPart)
+	if err != nil || subtle.ConstantTimeCompare(gotMAC, s.mac(enc)) != 1 {
+		return nil, false
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(enc)
+	if err != nil {
+		return nil, false
+	}
+	return payload, true
 }
 
 // verify reports whether token was minted for this very call. Any failure
 // is the same false: the caller is asked again, which is what the
 // specification asks of a retry the server cannot use.
 func (s inputStateSigner) verify(token string, want wireInputState) bool {
-	enc, macPart, ok := strings.Cut(token, ".")
+	payload, ok := s.open(token)
 	if !ok {
-		return false
-	}
-	gotMAC, err := base64.RawURLEncoding.DecodeString(macPart)
-	if err != nil || subtle.ConstantTimeCompare(gotMAC, s.mac(enc)) != 1 {
-		return false
-	}
-	payload, err := base64.RawURLEncoding.DecodeString(enc)
-	if err != nil {
 		return false
 	}
 	var got wireInputState
