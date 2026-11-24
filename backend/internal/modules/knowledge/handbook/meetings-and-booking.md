@@ -66,7 +66,7 @@ A held meeting shows **Add notes** on the timeline and the **Meetings** tab, or 
 Write the notes the next day if you need to, then press **Log**. Anyone who may change the meeting can do this.
 A meeting with a Margince invitation does not offer them.
 
-A meeting whose subject is about travel, such as a flight, an airport drop-off, a pickup or a hotel, does not ask for an outcome. It still asks when it is on a deal, lead or project.
+A meeting whose subject is about travel, such as a flight, an airport drop-off, a pickup or a taxi, does not ask for an outcome. It still asks when it is on a deal, lead or project.
 
 A colleague's meeting that you were in but cannot change shows as **No outcome yet for** the meeting. Its host records the outcome. Press **Done** to take it off your list.
 Also called: mark a meeting held, meeting outcome, no-show, meeting happened.

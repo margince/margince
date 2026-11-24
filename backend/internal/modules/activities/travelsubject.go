@@ -12,12 +12,16 @@ import (
 )
 
 // travelWords name travel logistics in a meeting subject, in English, German
-// and Vietnamese. Each matches as a whole word or phrase, any case.
+// and Vietnamese. Each matches as a whole word or phrase, any case. A word that
+// also names business ("transfer", "train", "hotel", "Zug", "tàu", "đón") counts
+// only inside a travel phrase, so "Knowledge transfer" still asks for an outcome.
 var travelWords = []string{
 	"flight", "flights", "airport", "drop-off", "drop off", "dropoff",
-	"pickup", "pick-up", "pick up", "transfer", "taxi", "train", "hotel",
-	"flug", "flüge", "abflug", "flughafen", "abholung", "zug", "bahnhof",
-	"chuyến bay", "sân bay", "đón", "đưa đón", "tàu", "khách sạn",
+	"pickup", "pick-up", "pick up", "taxi", "train station", "train ride",
+	"airport transfer", "hotel transfer", "hotel check-in", "hotel check-out",
+	"flug", "flüge", "abflug", "flughafen", "abholung", "bahnhof", "zugfahrt",
+	"chuyến bay", "sân bay", "đưa đón", "ga tàu", "tàu hỏa",
+	"nhận phòng khách sạn", "trả phòng khách sạn",
 }
 
 // travelSubjectPattern is travelWords as one PostgreSQL pattern. A word must
