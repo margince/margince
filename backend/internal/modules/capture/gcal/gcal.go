@@ -138,7 +138,7 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 		return nil, err
 	}
 	if relisted {
-		if err := retireUnlisted(ctx, sink, events, c.now(), edge); err != nil {
+		if relisted, err = retireUnlisted(ctx, sink, events, c.now(), edge); err != nil {
 			return nil, err
 		}
 	}

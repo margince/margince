@@ -72,12 +72,20 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 			c := New(fakeOAuth{access: "access-1"}, tc.api(t))
 			c.now = func() time.Time { return now }
 			sink := &retiringSink{failOn: tc.failOn}
-			prior, err := json.Marshal(cursorState{SyncToken: "sync-abc", ListedAt: now})
+			listedBefore := now.Add(-time.Hour)
+			prior, err := json.Marshal(cursorState{SyncToken: "sync-abc", ListedAt: listedBefore})
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := c.Sync(context.Background(), authBytes(t), prior, sink); (err != nil) != tc.fails {
+			next, err := c.Sync(context.Background(), authBytes(t), prior, sink)
+			if (err != nil) != tc.fails {
 				t.Fatalf("Sync: %v", err)
+			}
+			// Only a listing that settled dates the window; any other stays due.
+			if want := map[bool]time.Time{true: now, false: listedBefore}[tc.retired != nil]; !tc.fails {
+				if state, err := parseCursor(next); err != nil || !state.ListedAt.Equal(want) {
+					t.Errorf("the cursor dates the listing %v (%v), want %v", state.ListedAt, err, want)
+				}
 			}
 			if !slices.EqualFunc(sink.listings, tc.retired, slices.Equal) {
 				t.Fatalf("listings handed for retirement = %v, want %v", sink.listings, tc.retired)
