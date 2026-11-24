@@ -190,7 +190,7 @@ func (s *Store) DealChanges(ctx context.Context, dealID ids.DealID, after *Chang
 	}
 	var out []CorrectionReceipt
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, dealTable, dealID.UUID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
 		args := []any{dealID}

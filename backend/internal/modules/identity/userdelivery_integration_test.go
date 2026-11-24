@@ -13,11 +13,14 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The distinction the nullable columns exist for.
@@ -116,6 +119,28 @@ func TestAnUnknownDeliveryChoiceIsRefused(t *testing.T) {
 	hour := 47
 	if _, err := svc.SaveMyDelivery(ctx, Delivery{HourLocal: &hour}); err == nil {
 		t.Error("an hour outside a day was accepted")
+	}
+}
+
+// A team that is gone is a choice to correct on its field, not a missing route.
+func TestAGoneTeamIsRefusedOnItsField(t *testing.T) {
+	svc, ctx, userID := seatChoosingALanguage(t)
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + userID.String(), UserID: userID,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"deal":           {Read: true},
+				"team_oversight": {Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+
+	gone, team := ids.NewV7(), RoutineTeam
+	_, err := svc.SaveMyDelivery(ctx, Delivery{Scope: &team, TeamID: &gone})
+	var fault *values.ParseError
+	if !errors.As(err, &fault) || fault.Field != "routine_mail_team_id" || fault.Code != deliveryTeamGone {
+		t.Fatalf("a team no row holds answered %v, wanted %s on routine_mail_team_id", err, deliveryTeamGone)
 	}
 }
 

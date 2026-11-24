@@ -45,6 +45,18 @@ describe("the address checks, over planted catalogs", () => {
     ]);
   });
 
+  it("names du in a family an outsider reads, in any case", () => {
+    const outsider = Object.keys(READ_BY_AN_OUTSIDER)[0];
+    expect(
+      findings({
+        [`${outsider}y`]: "Prüfe deine Adresse. Du bist fast fertig.",
+      }),
+    ).toEqual([
+      `addresses an outside reader as du: de.ts ${outsider}y: "deine" in Prüfe deine Adresse. Du bist fast fertig.`,
+      `addresses an outside reader as du: de.ts ${outsider}y: "Du" in Prüfe deine Adresse. Du bist fast fertig.`,
+    ]);
+  });
+
   it("names an exempt prefix no key carries", () => {
     const [first] = Object.keys(READ_BY_AN_OUTSIDER);
     expect(

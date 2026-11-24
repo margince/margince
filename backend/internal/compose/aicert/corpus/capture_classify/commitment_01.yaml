@@ -26,7 +26,7 @@ expect:
     Then score the confidence as a real judgement rather than a formality: this
     message is about as unambiguous as the label gets, so a correct label hedged
     below the 0.7 floor scores lower than the same label held confidently,
-    because it buys a second call on the next rung that it did not need.
+    because it buys a second call that it did not need.
   bands:
     certified_min: 70
     degraded_min: 50

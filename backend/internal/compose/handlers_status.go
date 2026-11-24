@@ -26,3 +26,9 @@ func (s Server) GetStatus(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ServiceStatus{Status: crmcontracts.ServiceStatusStatusOk})
 }
+
+// HeadStatus implements (HEAD /status): GetStatus's status and headers. The
+// HTTP server drops the body of a HEAD answer.
+func (s Server) HeadStatus(w http.ResponseWriter, r *http.Request) {
+	s.GetStatus(w, r)
+}

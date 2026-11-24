@@ -25,8 +25,8 @@ expect:
     direction: a return date is not a proposed slot.
     Score the confidence too. An autoresponder is a case a model should be
     confident about, so a correct "other" hedged below the 0.7 floor scores lower
-    than a confident one: it buys a second call on the next rung of the ladder to
-    re-decide something that was never in doubt.
+    than a confident one: it buys a second call to re-decide something that was
+    never in doubt.
   bands:
     certified_min: 70
     degraded_min: 50

@@ -84,6 +84,10 @@ type CounterpartyVerdictEngine struct {
 	// skipReservedDomains closes a review row for a sender on a reserved name
 	// instead of staging its proposal (captureverdictsweeps.go).
 	skipReservedDomains bool
+	// ledger is what judgeOne settles a sender through. It is nil in production,
+	// which settles through the database; a certification run stands an
+	// in-memory one here. See ledgerOf.
+	ledger verdictLedger
 	// answeredPage is how many contacts one reconciling pass publishes.
 	answeredPage int
 	// markLift is where the vendor-mark pass continues on its next tick.
@@ -302,37 +306,14 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	// question; asking anyway would spend a call to be told something we then
 	// have to discard, and a machine that could overturn them would make every
 	// correction temporary.
-	decided, kind, err := e.ownerDecided(ctx, row)
+	decided, kind, err := e.ledgerOf().OwnerDecided(ctx, row)
 	if err != nil {
 		return 0, err
 	}
 	if decided {
 		return e.applyOwnerDecision(ctx, row, kind)
 	}
-	if addressIsARoleMailbox(row.Email) {
-		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
-	}
-	// Google's meeting mail is evidence a meeting took place, and a model's
-	// noise answer would hide every later message from that sender. Settled as
-	// a role mailbox: the mail stays visible and nobody is recorded.
-	if capture.IsGoogleMeetingMail(row.Email, row.SenderAuthenticated) {
-		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
-	}
-	// The other address-only refusal, and the one this lane was missing: an
-	// address nobody answers at all. See addressNamesNoContact for what the gap
-	// cost — a stray `contact` answer at 0.95 for an expense tool's receipts
-	// address, and the contact it minted.
-	//
-	// Settled as a ROLE MAILBOX rather than as transactional, and the difference
-	// is what the kind authorizes rather than what it reads like. `transactional`
-	// takes apply's noise arm, which suppresses the sender's whole DOMAIN for
-	// company creation and hides their mail — so one `noreply@` at a real
-	// customer would refuse that customer a company record for every colleague,
-	// on the strength of a local part. This kind creates no contact and touches
-	// nothing else, which is the whole claim being made here: nobody answers at
-	// this ADDRESS. What the domain is remains the model's question, and the
-	// mail stays where a human can read it.
-	if addressNamesNoContact(row.Email, row.Domain, e.transactional) {
+	if e.settledByTheAddress(row) {
 		return e.applyJudged(ctx, row, capture.KindRoleMailbox, capture.VerdictMeasurement{})
 	}
 	// Everything above answers from the address and the ledger alone; what
@@ -368,7 +349,7 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	if !budget.spend() {
 		// The same helper, asked with no retry answer to prefer: a human is
 		// owed what the model DID say, which here is the one answer it gave.
-		if err := e.pending.Retire(ctx, row, "below the confidence floor, and this pass had no re-ask left",
+		if err := e.ledgerOf().Retire(ctx, row, "below the confidence floor, and this pass had no re-ask left",
 			lastMeasurement(nil, answers)); err != nil {
 			return 0, err
 		}
@@ -399,9 +380,19 @@ func (e *CounterpartyVerdictEngine) judgeOne(
 	// the model had an opinion it could not hold confidently enough — "it said
 	// contact at 0.78 twice" is why a human is now being asked, and dropping it
 	// would hand them the question with none of the evidence.
-	if err := e.pending.Retire(ctx, row, "below the confidence floor on a re-ask",
+	if err := e.ledgerOf().Retire(ctx, row, "below the confidence floor on a re-ask",
 		lastMeasurement(retry, answers)); err != nil {
 		return 0, err
 	}
 	return 1, nil
+}
+
+// settledByTheAddress says whether the address alone settles the sender as a
+// role mailbox, with no model call. The certification case asks it too, since it
+// must refuse a sender the engine would never ask about.
+func (e *CounterpartyVerdictEngine) settledByTheAddress(row capture.PendingCounterparty) bool {
+	// Role mailbox and never noise: noise suppresses the sender's whole domain.
+	return addressIsARoleMailbox(row.Email) ||
+		capture.IsGoogleMeetingMail(row.Email, row.SenderAuthenticated) ||
+		addressNamesNoContact(row.Email, row.Domain, e.transactional)
 }

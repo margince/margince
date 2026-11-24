@@ -22,6 +22,7 @@ run:
     - voicelive
     - vendorlive
     - rolesweep
+    - e2e_agent_loop
     # The mail-import load test (docs/how-to/measure-mail-import.md).
     - loadrig
 

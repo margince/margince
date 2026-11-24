@@ -45,9 +45,12 @@ matches the list by whole path part: the way the served app routes them, rather 
 dev server does. `/mcp` and `/mcp/…` go to the network as they are.
 
 Some paths a page request opens in the app. A proxy key whose `bypass` hands a page request to the
-app stays out of the list. These are `/r/` for a record card and `/book` for a booking page. The
-nginx server answers a page request at both with the app as well, so a failed one there gets the
-offline page. The same holds for `/mcp-apps/…`, which is shipped files.
+app stays out of the list. That is `/r/` for a record card. The nginx server answers a page request
+there with the app as well, so a failed one there gets the offline page. The same holds for
+`/mcp-apps/…`, which is shipped files.
+
+A booking page at `/book` has no `bypass`. The nginx server sends every fetch of it to the API's
+booking card, so the worker leaves it to the network.
 
 The worker does **not** use `navigation preload`. With it on, the browser requests every page in
 scope before the worker decides, including the ones the worker then leaves alone. A page request

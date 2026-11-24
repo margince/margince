@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package readerlocale
 
 import (
 	"context"
@@ -33,7 +33,7 @@ func TestOnlyHumanDisplayChoicesOverrideTheSavedReaderLanguage(t *testing.T) {
 			request.Header.Set("X-Margince-Display-Locale", tc.header)
 			request.Header.Set("Accept-Language", "en")
 			response := httptest.NewRecorder()
-			handler := readerDisplayLocale(nil)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+			handler := Middleware(nil)(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 				if got := string(systemtext.Locale(r.Context())); got != tc.want {
 					t.Fatalf("locale = %q, want %q", got, tc.want)
 				}
@@ -57,7 +57,7 @@ func TestPublicPreviewLanguageHasNoAccountDependency(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "/booking"+tc.query, nil)
 		request.Header.Set("X-Margince-Display-Locale", tc.display)
 		request.Header.Set("Accept-Language", tc.browser)
-		if got := string(publicPreviewLocale(request)); got != tc.want {
+		if got := string(Anonymous(request)); got != tc.want {
 			t.Fatalf("%+v: %s", tc, got)
 		}
 	}

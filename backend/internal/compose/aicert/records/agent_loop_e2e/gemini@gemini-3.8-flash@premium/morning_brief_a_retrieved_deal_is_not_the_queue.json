@@ -1,0 +1,87 @@
+{
+  "scenario": "morning_brief_a_retrieved_deal_is_not_the_queue",
+  "agent": "morning_brief",
+  "binding": {
+    "provider": "gemini",
+    "model": "gemini-3.8-flash",
+    "tier": "premium"
+  },
+  "judge": "claude-haiku-5-5",
+  "self_judged": false,
+  "run_results": [
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the finding for Warehouse LED Refit say the operations director liked the payback figures and asked for two references from logistics customers?",
+          "met": true,
+          "reason": "The annotate_brief on Warehouse LED Refit states that the operations director liked the payback figures and requested two logistics customer references, matching the criterion."
+        },
+        {
+          "criterion": "Does the finding for Warehouse LED Refit give sending those two references as the next move?",
+          "met": true,
+          "reason": "The finding for Warehouse LED Refit states that the next move is to provide the requested logistics customer references, which is sending those two references."
+        },
+        {
+          "criterion": "Is every finding about a deal on the queue, with none about Lab Ventilation Upgrade?",
+          "met": true,
+          "reason": "The only finding in the answer is an annotation on Warehouse LED Refit, a deal on the queue, and nothing in it concerns Lab Ventilation Upgrade."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the finding for Warehouse LED Refit say the operations director liked the payback figures and asked for two references from logistics customers?",
+          "met": true,
+          "reason": "The answer's finding for Warehouse LED Refit states the operations director liked the payback figures and requested two logistics customer references, matching the criterion."
+        },
+        {
+          "criterion": "Does the finding for Warehouse LED Refit give sending those two references as the next move?",
+          "met": true,
+          "reason": "The finding says the next move is to provide the requested references, which matches the criterion of sending those two references as the next step."
+        },
+        {
+          "criterion": "Is every finding about a deal on the queue, with none about Lab Ventilation Upgrade?",
+          "met": true,
+          "reason": "The only finding in the answer is about Warehouse LED Refit, which is a queued deal, and nothing in the answer mentions Lab Ventilation Upgrade."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the finding for Warehouse LED Refit say the operations director liked the payback figures and asked for two references from logistics customers?",
+          "met": true,
+          "reason": "The answer's annotate_brief states that the operations director approved the payback figures and requested two logistics customer references, matching the criterion."
+        },
+        {
+          "criterion": "Does the finding for Warehouse LED Refit give sending those two references as the next move?",
+          "met": true,
+          "reason": "The finding says the next step is to provide the two logistics customer references, which matches the criterion of sending those references as the next move."
+        },
+        {
+          "criterion": "Is every finding about a deal on the queue, with none about Lab Ventilation Upgrade?",
+          "met": true,
+          "reason": "The only finding in the answer is the annotate_brief on Warehouse LED Refit, which is the queued deal, and nothing in the agent's written output concerns Lab Ventilation Upgrade."
+        }
+      ]
+    }
+  ],
+  "outcome": {
+    "runs": 3,
+    "passed": 3,
+    "pass": true,
+    "smoke": true
+  },
+  "stamp": {
+    "scenario": "446ad97a44059b87",
+    "window": "8c877374763d9a1d",
+    "harness": "a2b01611901ddb00",
+    "binding": "gemini@gemini-3.8-flash@premium",
+    "judge": "claude-haiku-5-5"
+  },
+  "ran_at": "2026-11-24T02:23:43Z"
+}

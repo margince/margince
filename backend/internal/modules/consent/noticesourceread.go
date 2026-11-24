@@ -16,13 +16,7 @@ import (
 
 // NoticeSourceReviewsTx keeps pending source work visible to authorized contact readers.
 func (s *Store) NoticeSourceReviewsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]ids.UUID, error) {
-	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
-		return nil, err
-	}
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	if err := auth.EnsureVisibleExisting(ctx, tx, "contact", contactID.UUID); err != nil {
+	if err := requireNoticeSourceRead(ctx, tx, contactID); err != nil {
 		return nil, err
 	}
 	var args []any
@@ -34,6 +28,18 @@ func (s *Store) NoticeSourceReviewsTx(ctx context.Context, tx pgx.Tx, contactID 
 		return nil, err
 	}
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+// requireNoticeSourceRead is the authority the contact page's source reads take:
+// privacy-request read, and the contact itself in row scope.
+func requireNoticeSourceRead(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
+	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
+		return err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return err
+	}
+	return auth.EnsureVisibleExisting(ctx, tx, "contact", contactID.UUID)
 }
 
 // UnverifiedNoticeSourceSQL keeps unproven deadlines off the agenda while corrections are pending.

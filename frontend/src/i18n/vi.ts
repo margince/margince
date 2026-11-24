@@ -1722,20 +1722,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.saveTime": "Xác nhận giờ mới",
   "scheduling.hostRecovery":
     "Kết nối lại lịch nếu cần, rồi thử lại. Thời gian vẫn được giữ trong lúc chưa rõ đã gửi được hay chưa.",
-  "scheduling.guestRecovery":
+  "book.recovery":
     "Người chủ trì cần kiểm tra lời mời này. Đã lưu yêu cầu đặt lịch.",
-  "scheduling.deliveryUnknown":
+  "book.deliveryUnknown":
     "Máy chủ chưa trả về lời mời. Liên hệ người chủ trì trước khi thử lại.",
-  "scheduling.personalGuest":
+  "book.personalGuest":
     "Lời mời này dành cho người nhận liên kết. Cuộc họp sẽ dùng địa chỉ email do người chủ trì chọn.",
-  "scheduling.proposalGreeting": "Xin chào,",
-  "scheduling.proposalChoose": "Chọn giờ tại đây hoặc tìm giờ trống khác:",
-  "scheduling.proposalReply":
-    "Bạn cũng có thể trả lời kèm một thời gian phù hợp.",
+  "book.proposalGreeting": "Xin chào,",
+  "book.proposalChoose": "Chọn giờ tại đây hoặc tìm giờ trống khác:",
+  "book.proposalReply":
+    "Quý khách cũng có thể trả lời kèm một thời gian phù hợp.",
   "scheduling.method": "Cách sắp xếp cuộc họp",
   "scheduling.propose": "Đề xuất thời gian",
   "scheduling.sharePersonal": "Chia sẻ liên kết cá nhân",
-  "scheduling.savedRequest":
+  "book.savedRequest":
     "Đã lưu yêu cầu cuộc họp. Mở yêu cầu để kiểm tra lời mời, đổi giờ hoặc hủy.",
   "scheduling.openMeeting": "Xem cuộc họp",
   "scheduling.emailReminder": "Nhắc qua email một giờ trước",
@@ -1815,7 +1815,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "scheduling.invite": "Gửi lời mời",
   "scheduling.contact": "Bạn sẽ gặp ai?",
-  "scheduling.guestAgenda": "Bạn muốn trao đổi về điều gì?",
+  "book.agenda": "Quý khách muốn trao đổi về điều gì?",
   "scheduling.agenda": "Lời nhắn cho khách",
   "scheduling.chooseTime": "Chọn giờ",
   "scheduling.date": "Ngày bắt đầu",
@@ -1840,7 +1840,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.book": "Xác nhận cuộc họp",
   "scheduling.pausedUnavailable":
     "{host} hiện không nhận đặt lịch qua trang này.",
-  "scheduling.unavailable":
+  "book.unavailable":
     "Trang đặt lịch này không khả dụng. Liên hệ người chủ trì.",
   "scheduling.publicUrlMissing":
     "Thiết lập địa chỉ công khai cho bản cài đặt này trước khi chia sẻ liên kết đặt lịch ra bên ngoài.",
@@ -1866,13 +1866,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.attentionTitle": "Lịch không chấp nhận lời mời",
   "scheduling.retryHelp":
     "Thử lại sẽ gửi lại đúng lời mời đó, nên khách sẽ không nhận được lời mời thứ hai.",
-  "scheduling.videoApp": "{app} · liên kết có trong lời mời",
+  "book.videoApp": "{app} · liên kết có trong lời mời",
   "scheduling.pickDay": "Chọn ngày",
   "scheduling.changeTime": "Đổi giờ",
   "scheduling.confirmAt": "Xác nhận {day}, {time}",
   "scheduling.suggestedTimes": "Giờ đề xuất",
-  "scheduling.noTimesDay": "Ngày này không còn giờ trống. Chọn ngày khác.",
-  "scheduling.noTimesMonth": "Tháng này không còn giờ trống. Thử tháng sau.",
+  "book.noTimesDay": "Ngày này không còn giờ trống. Chọn ngày khác.",
+  "book.noTimesMonth": "Tháng này không còn giờ trống. Thử tháng sau.",
+  "book.noTimes": "Không còn giờ trống trong khoảng này. Thử ngày khác.",
+  "book.rescheduleHelp":
+    "Giờ hiện tại vẫn được giữ cho đến khi lịch xác nhận thay đổi.",
+  "book.meetingChanged":
+    "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
+  "book.cancelConfirm": "Cuộc họp sẽ bị hủy.",
   "conversationSuggestions.title":
     "Trong cuộc trò chuyện, chưa có trong Margince",
   "conversationSuggestions.add": "Thêm làm liên hệ",
@@ -4337,6 +4343,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "finance.moreInvoices": "Còn hóa đơn khác trong hệ thống kế toán",
   "finance.syncedFrom": "Từ {provider} · đồng bộ {when}",
   "finance.fromNeverSynced": "Từ {provider} · chưa đồng bộ",
+  "finance.syncedFromAccounting":
+    "Từ hệ thống kế toán của bạn · đồng bộ {when}",
+  "finance.fromAccountingNeverSynced":
+    "Từ hệ thống kế toán của bạn · chưa đồng bộ",
   "finance.status.draft": "Bản nháp",
   "finance.status.open": "Chưa thanh toán",
   "finance.status.partiallyPaid": "Thanh toán một phần",
@@ -7548,6 +7558,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Giá trị này đã bị xóa theo yêu cầu của chủ sở hữu và không thể lưu lại.",
   "create.linkedinMalformed":
     "Đây không phải là đường liên kết. Hãy dán địa chỉ của trang LinkedIn.",
+  "create.domainMalformed":
+    "Đây không phải là tên miền. Hãy nhập một tên miền, ví dụ example.com.",
+  "create.parentCompanyBelow": "{name} đã nằm dưới công ty này.",
+  "create.parentCompanySelf":
+    "Một công ty không thể là công ty mẹ của chính nó. Hãy chọn công ty khác.",
   "create.linkedinNotLinkedin":
     "Hãy nhập đường liên kết tới một trang trên linkedin.com.",
   "create.linkedinNotProfile":
@@ -8588,6 +8603,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.completeNamed": "Đánh dấu {subject} đã xong",
   "tasks.snooze": "Tạm hoãn 1 ngày",
   "tasks.moveTo": "Chuyển sang",
+  "tasks.move": "Chuyển",
+  "tasks.moveAnyway": "Vẫn chuyển",
+  "tasks.moveSame":
+    "Việc cần làm đã có hạn vào lúc này. Chọn ngày hoặc giờ khác.",
+  "tasks.movePastTitle": "Ngày đã qua",
+  "tasks.movePastBody": "Chuyển sang ngày này sẽ làm việc cần làm bị quá hạn.",
+  "tasks.movedTo": "Đã chuyển sang {when}",
+  "tasks.moveUndoFailed": "Không thể chuyển việc cần làm về hạn cũ. Thử lại.",
   "tasks.remind.menu": "Nhắc tôi",
   "tasks.remind.inAnHour": "Sau 1 giờ",
   "tasks.remind.tomorrowMorning": "Sáng mai",
@@ -9564,6 +9587,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "delivery.scope.combined": "Việc của tôi và nhóm đã chọn",
   "delivery.teamHelp":
     "Chọn nhóm trước khi bật chế độ xem. Quyền truy cập được kiểm tra lại khi gửi.",
+  "delivery.noTeam": "Không có nhóm",
+  "delivery.teamGone": "Nhóm này không còn tồn tại. Hãy chọn nhóm khác.",
   "delivery.weekday1": "Thứ Hai",
   "delivery.weekday2": "Thứ Ba",
   "delivery.weekday3": "Thứ Tư",
@@ -11495,6 +11520,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa ai xác nhận nguồn đã ghi nhận của thông tin liên hệ này.",
   "notice.source.onRecord": "Đã ghi nhận",
   "notice.source.needsConfirmation": "Cần xác nhận nguồn",
+  "notice.source.confirmedSource": "{source} ngày {date}",
+  "notice.source.confirmedBy": "{actor} đã xác nhận ngày {date}",
+  "notice.source.confirmedByYou": "Bạn đã xác nhận ngày {date}",
+  "notice.source.confirmedAt": "Đã xác nhận ngày {date}",
+  "notice.source.saved": "Đã xác nhận nguồn",
   "notice.source.contactExplanation":
     "Bộ phận phụ trách quyền riêng tư sẽ xác nhận thông tin của họ đến từ đâu.",
   "notice.rule.art13": "Thông báo theo Điều 13",
@@ -13859,8 +13889,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "book.returnRequestAction": "Gửi liên kết cho tôi",
   "book.returnRequestSent":
     "Hãy kiểm tra hộp thư. Nếu địa chỉ này có thể được lưu lại, một liên kết xác nhận đang được gửi đến.",
-  "book.attendee": "Email người tham dự",
-  "book.subject": "Cuộc họp qua Margince",
+  "scheduling.attendeeEmail": "Email người tham dự",
+  "scheduling.defaultSubject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",
   "book.email": "Email",
   "book.consentWording":
@@ -13932,8 +13962,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quyền truy cập Deal Room này đã hết hạn. Vui lòng liên hệ {steward} nếu quý khách cần truy cập lại.",
   "buyer.eyebrow": "Deal Room",
   "buyer.closed": "Deal Room này đã đóng. Nội dung vẫn được lưu lại làm hồ sơ.",
-  "buyer.previewBannerTitle": "Đang xem trước Deal Room này",
-  "buyer.previewBanner":
+  "room.previewBannerTitle": "Đang xem trước Deal Room này",
+  "room.previewBanner":
     "Đây là giao diện phía người mua. Có thể đọc mọi nội dung nhưng không thể thay đổi.",
   "buyer.previewReadOnly":
     "Bản xem trước chỉ đọc. Đóng tab này để quay lại trang Deal Room.",
@@ -18204,6 +18234,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ownDomains.confirmLabel": "Xác nhận {domain}",
 
   "financeSource.title": "Nguồn kế toán",
+  "financeSource.unnamed": "Nguồn chưa đặt tên",
   "financeSource.sub":
     "Margince đọc hóa đơn và khoản thanh toán từ hệ thống kế toán và hiển thị chúng trong tab Tài chính của từng công ty. Margince không bao giờ ghi vào nguồn này.",
   "financeSource.readOnly":
@@ -20900,6 +20931,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.editDetails": "Sửa chi tiết",
   "deal.meetNeedsCompany":
     "Deal này chưa có công ty. Thêm công ty trong “Sửa chi tiết” để đặt lịch họp.",
+  "deal.meetCompanyWithheld":
+    "Công ty của deal này không được chia sẻ với bạn, nên không thể đặt lịch họp từ đây.",
   "deal.committee.card": "Hội đồng mua",
   "deal.committee.change": "Sửa hoặc gỡ bên liên quan",
   "deal.links.card": "Liên kết",
