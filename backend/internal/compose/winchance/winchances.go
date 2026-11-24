@@ -30,7 +30,7 @@ func (e *Engine) WinChances(ctx context.Context, tx pgx.Tx, at time.Time, dealID
 	if err != nil {
 		return nil, err
 	}
-	model, err := ReadModel(ctx, tx, forecasting.Period{Zone: zone}.LocalDay(at))
+	model, err := e.ReadModel(ctx, tx, forecasting.Period{Zone: zone}.LocalDay(at))
 	if err != nil {
 		return nil, err
 	}

@@ -193,6 +193,9 @@ func (e *runsEnv) plantSubject(t *testing.T) ids.ContactID {
 		RETURNING id`).Scan(&id); err != nil {
 		t.Fatal(err)
 	}
+	// The package's tests share one database. A subject edited a second ahead
+	// reads as fixed to the next test's sweep, so it leaves with its test.
+	t.Cleanup(func() { e.archive(t, id) })
 	return id
 }
 

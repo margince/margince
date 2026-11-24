@@ -36,7 +36,9 @@ const composeRootDir = "internal/compose"
 const (
 	composeRootProductionFiles = 1383
 	composeRootTestFiles       = 1909
-	composeRootProductionLines = 230_161
+	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
+	// by 1 for the import that binds one zone lookup to each attention read.
+	composeRootProductionLines = 230_269
 	composeRootTestLines       = 359_327
 )
 
