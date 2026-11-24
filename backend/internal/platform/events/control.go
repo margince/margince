@@ -43,16 +43,12 @@ func PublishReset(ctx context.Context, rdb *redis.Client, ws ids.UUID) error {
 }
 
 // SubscribeReset runs until ctx is canceled, invoking fn for every reset
-// announcement. A subscription that fails to start or drops later is logged and
-// opened again after a jittered backoff, because a process whose control channel
-// stays dead serves pre-reset cached answers until it restarts. Announcements
-// published while it was down are lost (pub/sub keeps no history); the caches'
-// own TTLs retire what they held.
+// announcement. A subscription that fails or drops is logged and reopened after
+// a backoff. Announcements published meanwhile are lost, and the caches' own
+// TTLs retire what they held.
 //
-// An unparseable payload is logged and skipped rather than killing the loop,
-// because a control channel that dies on one bad message stops flushing caches
-// for the life of the process — but the skip is never silent, so an encoding
-// drift between publishers is observable.
+// An unparseable payload is logged and skipped, so one bad publisher cannot
+// stop cache flushing for the process.
 func SubscribeReset(ctx context.Context, rdb *redis.Client, log *slog.Logger, fn func(ids.UUID)) {
 	superviseReset(ctx, log, func(ctx context.Context, ready chan<- struct{}) error {
 		return subscribeResetWithReady(ctx, rdb, log, fn, ready)
@@ -64,10 +60,9 @@ const (
 	resubscribeCeiling = 30 * time.Second
 )
 
-// superviseReset reopens a subscription until ctx ends. The failure count
-// restarts from zero once an attempt got as far as a confirmed subscription, so
-// a long-lived subscription that drops once retries quickly instead of inheriting
-// the delay of failures from hours ago. sleep is injected so a test does not wait.
+// superviseReset reopens a subscription until ctx ends. A confirmed subscription
+// restarts the failure count, so a drop after hours of uptime retries quickly.
+// sleep is injected so tests do not wait.
 func superviseReset(ctx context.Context, log *slog.Logger, run func(context.Context, chan<- struct{}) error, sleep func(context.Context, time.Duration) error) {
 	failures := 0
 	for ctx.Err() == nil {

@@ -19,10 +19,9 @@ import (
 )
 
 // errResetDrainTimedOut refuses a reset whose drain window expired with a job
-// still running. Sweeping anyway would leave that job writing against rows that
-// no longer exist, and a reset that reports success while rows survive leaves a
-// state nobody can describe. It is raised before anything is deleted, so the
-// deferred resume restores a fleet that is exactly as it was.
+// still running. A reset that reports success while rows survive leaves a state
+// nobody can describe. It is raised before anything is deleted, so the deferred
+// resume restores the fleet unchanged.
 var errResetDrainTimedOut = drainTimedOutError{}
 
 type drainTimedOutError struct{}
@@ -134,10 +133,8 @@ func (h dataResetHandlers) runRuntimePhase(ctx context.Context, rt ResetRuntime,
 const resetResumeTimeout = 15 * time.Second
 
 // resumeFailedError reports that the fleet pause a reset took could not be
-// lifted. It outranks whatever the reset itself answered, because an admin who
-// is told only "run it again" while every queue is still paused would wait on
-// jobs that never run. completed says whether the reset had already finished,
-// since that decides what retrying means.
+// lifted. It outranks the reset's own answer: an admin told only to retry would
+// wait on queues that never run. completed says whether the reset had finished.
 type resumeFailedError struct {
 	cause     error
 	completed bool
@@ -158,19 +155,14 @@ func (e resumeFailedError) MessageFault() (code, message string) {
 		" Run the reset again: it pauses and then resumes the queues. If that fails too, check that the database is reachable and restart the worker."
 }
 
-// resumeResetQueues lifts the fleet pause a reset took. It is called from a
-// deferred path on EVERY exit — including a panic, and including a Quiesce that
-// failed after its pause already landed — because a pause with nobody left to
-// lift it wedges every queue in the installation.
+// resumeResetQueues lifts the fleet pause a reset took. It runs from a deferred
+// path on every exit, because a pause with nobody left to lift it wedges every
+// queue in the installation.
 //
-// It deliberately does not run on the request context. A reset is a bounded
-// drain plus a full sweep and reseed, which is precisely the request an
-// operator's client abandons or times out on; a resume cancelled along with it
-// would leave the fleet paused for the very reason it most needs lifting. So it
-// runs detached, under its own deadline.
+// It runs detached from the request, under its own deadline. A client that
+// abandons the request must not leave the fleet paused.
 //
-// A failure is logged AND returned: the caller turns it into the answer, since
-// a queue that stays paused is a state the admin has to be told about whatever
+// A failure is logged and returned, so the caller can tell the admin whatever
 // else the reset reported.
 func resumeResetQueues(ctx context.Context, logger *slog.Logger, rt ResetRuntime) error {
 	if rt.ResumeQueues == nil {

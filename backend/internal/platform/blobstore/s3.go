@@ -158,16 +158,13 @@ func (s *s3Store) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// DeletePrefix lists every version and delete marker under the prefix and
-// removes each one by version id, so a versioned bucket keeps no retrievable
-// copy of what a reset or an erasure meant to destroy. On an unversioned bucket
-// the listing holds one entry per object and the result is the same as before.
+// DeletePrefix removes every version and delete marker under the prefix, so a
+// versioned bucket keeps nothing retrievable. On an unversioned bucket the
+// result is the same as before.
 //
-// Removal is one call per version so a single failure is attributable to the
-// key that caused it. A failure stops the sweep and returns the count so far,
-// leaving the prefix partially deleted; DeletePrefix is idempotent, so a retry
-// with the same prefix safely finishes it. The count is of distinct keys that
-// held at least one real version, the same number an unversioned bucket gives.
+// Removal is one call per version so a failure names its key. A failure stops
+// the sweep and returns the count so far. A retry finishes the job. The count
+// is distinct keys that held a real version.
 func (s *s3Store) DeletePrefix(ctx context.Context, prefix string) (int, error) {
 	if prefix == "" || !strings.HasSuffix(prefix, "/") {
 		return 0, ErrInvalidPrefix
