@@ -30,7 +30,7 @@ func TestAnIndustryOnlyTheColumnHoldsIsCitable(t *testing.T) {
 		claim string
 	}{
 		"industry":  {Input{CompanyID: ids.NewV7().String(), Industry: "healthcare"}, "They work in healthcare."},
-		"size band": {Input{CompanyID: ids.NewV7().String(), SizeBand: "51-200"}, "They employ 51-200 people."},
+		"size band": {Input{CompanyID: ids.NewV7().String(), SizeBand: "51-200"}, "They have 51-200 employees."},
 	} {
 		in := tc.in
 		t.Run(name, func(t *testing.T) {
