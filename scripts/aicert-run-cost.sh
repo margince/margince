@@ -37,7 +37,7 @@ if [[ -z $trace ]]; then
 	first=$(jq -nr --argjson t "$start" '$t | strftime("aicert-trace-%Y%m%dT%H%M%SZ")')
 	last=$(jq -nr --argjson t "$end" '$t | strftime("aicert-trace-%Y%m%dT%H%M%SZ")')
 	trace=$(find "$(dirname "$resume")" -maxdepth 1 -name 'aicert-trace-*.jsonl' -print 2>/dev/null | sort |
-		awk -F/ -v a="$first" -v b="$last" '{ n = $NF; sub(/\.jsonl$/, "", n) } n >= a && n <= b { print; exit }')
+		awk -F/ -v a="$first" -v b="$last" '{ n = $NF; sub(/\.jsonl$/, "", n) } n >= a && n <= b && !found { print; found = 1 }')
 fi
 
 calls=$(grep 'INFO ai.call' "$log" | grep -vc 'provider=claude_cli' || true)
