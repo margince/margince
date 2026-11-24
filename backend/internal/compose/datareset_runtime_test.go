@@ -289,6 +289,35 @@ func TestADrainTimeoutRefusesTheResetBeforeAnythingIsDeleted(t *testing.T) {
 	}
 }
 
+func TestAFailedResumeReachesTheAnswerOnTheRefusalAndTheSuccessPath(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		drained bool
+		want    string
+	}{
+		{"refusal", false, "The reset did not finish."},
+		{"success", true, "The reset finished."},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rt := ResetRuntime{
+				QuiesceQueues: func(context.Context) (bool, error) { return tc.drained, nil },
+				ResumeQueues:  func(context.Context) error { return errors.New("redis down") },
+			}
+
+			_, err := resetHandlers(rt).runQuiesced(context.Background(), ids.NewV7(), noOutbox, func(*resetCounts) error { return nil })
+
+			fault, ok := errors.AsType[apperrors.MessageFault](err)
+			if !ok {
+				t.Fatalf("err = %v, want the queues-not-resumed answer", err)
+			}
+			code, message := fault.MessageFault()
+			if code != "reset_queues_not_resumed" || !strings.Contains(message, tc.want) || !strings.Contains(message, "Run the reset again") {
+				t.Errorf("answer = %q %q, want the code, %q and what to do", code, message, tc.want)
+			}
+		})
+	}
+}
+
 func TestAResetWithoutARuntimeStillSweepsPostgres(t *testing.T) {
 	// A role that wired no runtime (no Redis, no River) resets what it can
 	// reach rather than refusing to reset at all.
@@ -395,21 +424,5 @@ func TestTheDataResetReachesTheObjectStoreInEitherOptionOrder(t *testing.T) {
 				t.Error("the reset holds no object store — the swept rows' bytes would survive the wipe")
 			}
 		})
-	}
-}
-
-// TestAFailedResumeDoesNotFailAnOtherwiseCleanReset: the fleet pause is this
-// process's doing, so a resume failure is the operator's problem to see in the
-// log — not a reason to report a completed reset as failed, which would send
-// an admin to re-run a wipe that already succeeded.
-func TestAFailedResumeDoesNotFailAnOtherwiseCleanReset(t *testing.T) {
-	rt := ResetRuntime{
-		QuiesceQueues: func(context.Context) (bool, error) { return true, nil },
-		ResumeQueues:  func(context.Context) error { return errors.New("river is unreachable") },
-	}
-
-	h := resetHandlers(rt)
-	if _, err := h.runQuiesced(context.Background(), ids.NewV7(), noOutbox, func(*resetCounts) error { return nil }); err != nil {
-		t.Fatalf("resume failure must not fail the reset: %v", err)
 	}
 }

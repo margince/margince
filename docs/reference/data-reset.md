@@ -108,6 +108,9 @@ cut off from the request. So an operator whose client drops part way through the
 leave the jobs paused. To end the process with SIGKILL runs no exit path, and does leave the pause
 in place; to run the reset again removes it.
 
+A resume that fails is not hidden behind the reset's own answer. The reset answers 409 with code
+`reset_queues_not_resumed`, says whether the reset had finished, and tells the admin to run it again.
+
 The Redis half covers the **whole installation**, from a declared key list: the stream catalog, the
 `gw:dedupe:` namespace and `ovb:<workspace>:`. It never runs `FLUSHDB`, so anything else that shares
 that Redis stays. The whole installation is right, because one installation serves one

@@ -10,6 +10,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -132,6 +133,31 @@ func (h dataResetHandlers) runRuntimePhase(ctx context.Context, rt ResetRuntime,
 // on purpose: this is one queue-resume round trip, not a drain.
 const resetResumeTimeout = 15 * time.Second
 
+// resumeFailedError reports that the fleet pause a reset took could not be
+// lifted. It outranks whatever the reset itself answered, because an admin who
+// is told only "run it again" while every queue is still paused would wait on
+// jobs that never run. completed says whether the reset had already finished,
+// since that decides what retrying means.
+type resumeFailedError struct {
+	cause     error
+	completed bool
+}
+
+func (e resumeFailedError) Error() string {
+	return fmt.Sprintf("data reset: resuming the queues: %v", e.cause)
+}
+
+func (resumeFailedError) Unwrap() error { return apperrors.ErrConflict }
+
+func (e resumeFailedError) MessageFault() (code, message string) {
+	state := "The reset did not finish."
+	if e.completed {
+		state = "The reset finished."
+	}
+	return "reset_queues_not_resumed", state + " The background job queues could not be started again and may still be paused." +
+		" Run the reset again: it pauses and then resumes the queues. If that fails too, check that the database is reachable and restart the worker."
+}
+
 // resumeResetQueues lifts the fleet pause a reset took. It is called from a
 // deferred path on EVERY exit — including a panic, and including a Quiesce that
 // failed after its pause already landed — because a pause with nobody left to
@@ -143,17 +169,20 @@ const resetResumeTimeout = 15 * time.Second
 // would leave the fleet paused for the very reason it most needs lifting. So it
 // runs detached, under its own deadline.
 //
-// A failure is logged rather than returned: a reset that already succeeded must
-// not report as failed and send an admin to wipe the installation twice.
-func resumeResetQueues(ctx context.Context, logger *slog.Logger, rt ResetRuntime) {
+// A failure is logged AND returned: the caller turns it into the answer, since
+// a queue that stays paused is a state the admin has to be told about whatever
+// else the reset reported.
+func resumeResetQueues(ctx context.Context, logger *slog.Logger, rt ResetRuntime) error {
 	if rt.ResumeQueues == nil {
-		return
+		return nil
 	}
 	resumeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), resetResumeTimeout)
 	defer cancel()
 	if err := rt.ResumeQueues(resumeCtx); err != nil {
 		logger.Error("data reset: resuming the queues", "err", err)
+		return err
 	}
+	return nil
 }
 
 // FlushResetCaches drops this process's cached answers for ws after a reset.

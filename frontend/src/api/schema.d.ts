@@ -65884,7 +65884,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description Refused with nothing deleted: another reset is running, or a background job was still running when the bounded drain window expired. The queues run again; run the reset again. */
+            /** @description Refused with nothing deleted: another reset is running, or a background job was still running when the bounded drain window expired (the queues run again; run the reset again), or the queues could not be resumed after the reset (code `reset_queues_not_resumed`; the body says whether the reset had finished). */
             409: {
                 headers: {
                     [name: string]: unknown;

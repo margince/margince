@@ -129,7 +129,7 @@ func (h dataResetHandlers) run(ctx context.Context, confirmation string) (resetC
 // polls the drain — is still lifted; and the fleet stays down until the last
 // post-commit purge is done, so no job resumes into a window where it reads
 // caches for data being deleted or writes objects the prefix sweep then removes.
-func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clearOutbox func() error, sweep func(*resetCounts) error) (resetCounts, error) {
+func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clearOutbox func() error, sweep func(*resetCounts) error) (counts resetCounts, err error) {
 	logger := h.log
 	if logger == nil {
 		logger = slog.Default()
@@ -154,7 +154,11 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 	// because a pause with nobody to lift it wedges every queue. What changes
 	// is who reaches this line: a caller that lost the lock returned above,
 	// having paused nothing, so it can no longer lift a pause it never took.
-	defer resumeResetQueues(ctx, logger, rt)
+	defer func() {
+		if resumeErr := resumeResetQueues(ctx, logger, rt); resumeErr != nil {
+			err = resumeFailedError{cause: resumeErr, completed: err == nil}
+		}
+	}()
 
 	counts, runErr := h.runRuntimePhase(ctx, rt, wsID, clearOutbox, sweep)
 	if runErr != nil {
