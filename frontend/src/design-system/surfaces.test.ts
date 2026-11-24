@@ -80,7 +80,7 @@ describe("a pane's ground is its depth", () => {
 
   // The scenarios run on a short list: the sheet is ladderSheet's output (asserted above), and the two tests at the end hold every entry.
   const used = [
-    ".panel",
+    ".panel:not(.analytics-sheet .panel)",
     ".card",
     ".record-card",
     ".page-pane",
@@ -185,6 +185,7 @@ describe("a pane's ground is its depth", () => {
   });
 
   it("counts again from an overlay, wherever the overlay sits", () => {
+    // A dialog is pinned to the page card's rung; its panes count from it.
     expect(
       groundsOf(`
         <section class="panel"><div class="panel"><div class="panel">
@@ -194,7 +195,7 @@ describe("a pane's ground is its depth", () => {
             </div></div>
           </div>
         </div></div></section>`),
-    ).toEqual({ o: OVERLAY_RUNG.ground, o2: two, o3: three, o4: four });
+    ).toEqual({ o: one, o2: two, o3: three, o4: four });
   });
 
   it("leaves a list inside a panel as a band of that panel", () => {
@@ -277,8 +278,12 @@ describe("a pane's ground is its depth", () => {
       mount(ladderSheet([".card"], chunk), placed);
       const grounds = readAll();
       for (const [at, selector] of chunk.entries()) {
+        // A pinned overlay keeps its own rung; what opens in it still counts
+        // from the overlay.
+        const pin = PINNED_RUNGS.find((one) => one.selector === selector);
+        const ground = pin ? PAGE_RUNGS[pin.level - 1].ground : undefined;
         expect([grounds[`o${at}`], grounds[`c${at}`]], selector).toEqual([
-          OVERLAY_RUNG.ground,
+          ground ?? OVERLAY_RUNG.ground,
           two,
         ]);
       }

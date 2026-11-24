@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { listAddress } from "../lib/listreturn";
 import { navigate, type Route, useRoute } from "../lib/router";
+import type { UrlParams } from "../lib/urlstate";
 import { sessionOnlyFetch } from "../testing/appharness";
 import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
 import { TopBar } from "./topbar";
@@ -26,7 +28,7 @@ afterEach(() => {
 // The bar as the shell mounts it: it re-renders with whatever the address says.
 function RoutedTopBar() {
   const route = useRoute();
-  return <TopBar route={route} collapsed={false} onOpenSearch={ignoreSearch} />;
+  return <TopBar route={route} onOpenSearch={ignoreSearch} />;
 }
 
 // Resolves once the browser has delivered the next `hashchange`. Listened for
@@ -49,9 +51,9 @@ async function mountAt(hash: string) {
   return renderWith(client, <RoutedTopBar />);
 }
 
-async function moveTo(route: Route) {
+async function moveTo(route: Route, dials?: UrlParams) {
   const moved = nextHashChange();
-  navigate(route);
+  navigate(route, dials);
   await moved;
 }
 
@@ -61,7 +63,6 @@ async function pressBack(user: ReturnType<typeof userEvent.setup>) {
   await moved;
 }
 
-const trail = () => screen.getByRole("navigation", { name: "Breadcrumb" });
 const ANNA: Route = { screen: "contacts", id: "p-anna" };
 
 describe("Top bar way back from a record", () => {
@@ -74,6 +75,26 @@ describe("Top bar way back from a record", () => {
 
     expect(window.location.hash).toBe("#/contacts");
     expect(go).not.toHaveBeenCalled();
+  });
+
+  // The company's Contacts tab is where its import was opened from, so a reload
+  // or a new tab still leads back there.
+  it("leads a company's import opened cold back to that company's contacts", async () => {
+    const user = userEvent.setup();
+    await mountAt("#/contacts/import?company=c-acme");
+
+    await pressBack(user);
+
+    expect(window.location.hash).toBe("#/companies/c-acme/contacts");
+  });
+
+  it("leads an import opened cold for no company back to the contacts", async () => {
+    const user = userEvent.setup();
+    await mountAt("#/contacts/import");
+
+    await pressBack(user);
+
+    expect(window.location.hash).toBe("#/contacts");
   });
 
   // The browser's own Back, where there is one, returns to the record opened
@@ -102,11 +123,6 @@ describe("Top bar way back from a record", () => {
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
 
     await moveTo(ANNA);
-    expect(
-      within(trail())
-        .getByRole("link", { name: "Contacts" })
-        .getAttribute("href"),
-    ).toBe("/#/contacts?city=Berlin&sort=name");
     await moveTo({ ...ANNA, id2: "activity" });
     await moveTo({ ...ANNA, id2: "deals" });
 
@@ -129,17 +145,45 @@ describe("Top bar way back from a record", () => {
     expect(window.location.hash).toBe("#/home");
   });
 
+  it("returns a record opened from the Worklist to the drawer, past the list behind it", async () => {
+    const user = userEvent.setup();
+    await mountAt("#/contacts");
+    await moveTo(ANNA);
+    await moveTo(
+      ANNA,
+      new Map([
+        ["filter", "tasks"],
+        ["from", "worklist"],
+        ["queue_scope", "team"],
+      ]),
+    );
+
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    const moved = nextHashChange();
+    await user.click(screen.getByRole("button", { name: "Back to Worklist" }));
+    await moved;
+
+    expect(window.location.hash).toBe(
+      "#/home?filter=tasks&queue=1&queue_scope=team",
+    );
+  });
+
+  it("keeps the way back to the Worklist on a record loaded cold", async () => {
+    const user = userEvent.setup();
+    await mountAt("#/contacts/p-anna/activity?from=worklist");
+
+    const moved = nextHashChange();
+    await user.click(screen.getByRole("button", { name: "Back to Worklist" }));
+    await moved;
+
+    expect(window.location.hash).toBe("#/home?queue=1");
+  });
+
   // The Ask dialog stands over a list and is not part of it. A way back must
   // not reopen a question the reader had already closed.
-  it("keeps the filter and drops the Ask dialog from the trail's parent", async () => {
+  it("notes the list it stands over with its filter and without the Ask dialog", async () => {
     await mountAt("#/contacts?ask=1&askq=Who&city=Hamburg");
 
-    await moveTo(ANNA);
-
-    expect(
-      within(trail())
-        .getByRole("link", { name: "Contacts" })
-        .getAttribute("href"),
-    ).toBe("/#/contacts?city=Hamburg");
+    expect(listAddress("contacts")).toBe("#/contacts?city=Hamburg");
   });
 });

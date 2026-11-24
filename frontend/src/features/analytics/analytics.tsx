@@ -144,7 +144,7 @@ export function AnalyticsScreen({
             <TabVerbs library={library} setup={setup} section={section} />
           }
         />
-        <div className="analytics-body">
+        <div className="analytics-body page-pane">
           <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
             {holding ? (
               <PendingBody label={t("analytics.sections")} />

@@ -12,7 +12,7 @@ import { Avatar, BusyMark } from "../design-system/atoms";
 import { SilentCardBoundary } from "../design-system/cardboundary";
 import { Heading } from "../design-system/heading";
 import { Logomark } from "../design-system/logomark";
-import { useTruncationTooltip } from "../design-system/tooltip";
+import { useTruncationTooltipAround } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
@@ -30,10 +30,12 @@ import {
   MOBILE_PRIMARY,
   NAV,
   type NavSection,
+  type NavTrailLevel,
 } from "./nav";
 import { DESTINATION_ROW, NavLevelView, useNavLevel } from "./navlevel";
 import { useNavTip } from "./navtip";
 import { usePopoverDismiss } from "./popover";
+import { NavRailToggle } from "./railtoggle";
 import type { ShellCounts } from "./shell";
 import { useSquareMark } from "./squaremark";
 
@@ -120,14 +122,15 @@ function BrandBlock() {
   const start = routeHash(firstAvailableRoute(useHiddenCoreFeatures()));
   const installation = useInstallationBrand();
   const homeLabel = useHomeLinkLabel();
-  // On the link, not the heading: the link already holds the tab stop, and the
-  // measure reaches into the heading it clips. Folded, the name has no width,
-  // so hovering the mark always shows it.
+  // On the whole head, so the tip stands under "Powered by" rather than on it.
+  // Folded, the name has no width, so hovering the mark always shows it.
   const {
-    ref: nameRef,
-    trigger: nameTrigger,
+    ref: headRef,
+    trigger: { "aria-describedby": nameTipId, ...headTrigger },
     tip: nameTip,
-  } = useTruncationTooltip<HTMLAnchorElement>(installation?.display_name ?? "");
+  } = useTruncationTooltipAround<HTMLDivElement>(
+    installation?.display_name ?? "",
+  );
   // With no profile (the shell mounted before onboarding described anybody),
   // the block falls back to the product's own mark and name. A company name is
   // never invented to fill the slot.
@@ -136,7 +139,7 @@ function BrandBlock() {
       <div className="railhead">
         <WorkspaceChip />
         <AppLink className="ws" href={start} aria-label={homeLabel}>
-          <Heading size="small" as="div" className="ws-name">
+          <Heading size="xsmall" as="div" className="ws-name">
             {t("shell.logoAria")}
           </Heading>
         </AppLink>
@@ -144,23 +147,26 @@ function BrandBlock() {
     );
   }
   return (
-    <div className="railhead railhead-attributed">
+    <div
+      className="railhead railhead-attributed"
+      ref={headRef}
+      {...headTrigger}
+    >
       <WorkspaceChip />
       <AppLink
         className="ws"
         href={start}
         aria-label={homeLabel}
-        ref={nameRef}
-        {...nameTrigger}
+        aria-describedby={nameTipId}
       >
         {/* `as="div"`: the workspace name is the rail's identity, not a section
             of the page, so an h5 here would be a level nothing opened. */}
-        <Heading size="small" as="div" className="ws-name">
+        <Heading size="xsmall" as="div" className="ws-name">
           {installation.display_name}
         </Heading>
-        {nameTip}
       </AppLink>
       <span className="ws-company">{t("shell.poweredBy")}</span>
+      {nameTip}
     </div>
   );
 }
@@ -205,6 +211,24 @@ function useMenuOpen(path: string, phone: boolean) {
   return [openedAt !== null, setOpen] as const;
 }
 
+/**
+ * A destination the phone bar hides behind More: there More is the current
+ * tab, and claims what the row it stands in for would (`currentClaim`).
+ * Settings is off the bar too, but its claim is the account menu's, which
+ * holds the way there (topbar.tsx).
+ */
+function moreStanding(level: NavTrailLevel): {
+  offBar: boolean;
+  moreClaim?: "page" | "true";
+} {
+  const shownRow = NAV.find((item) => item.screen === level.activeId);
+  if (!shownRow) {
+    return { offBar: level.activeId === "settings" };
+  }
+  const offBar = !MOBILE_PRIMARY.has(shownRow.screen);
+  return { offBar, moreClaim: offBar ? currentClaim(level) : undefined };
+}
+
 /** Whether focus sits in the menu, or fell to the body when a press left it. */
 function holdsOrDropsFocus(menu: HTMLElement | null): boolean {
   const active = document.activeElement;
@@ -219,12 +243,15 @@ export type RailProps = {
   route: Route;
   counts?: ShellCounts;
   collapsed?: boolean;
+  /** Folds or widens the panel; without it the panel draws no control for it. */
+  onToggle?: () => void;
 };
 
 export function WorkspaceRail({
   route,
   counts,
   collapsed = false,
+  onToggle,
   section,
 }: Readonly<RailProps & { section?: NavSection }>) {
   const t = useT();
@@ -312,17 +339,10 @@ export function WorkspaceRail({
     };
   }, [menuOpen]);
 
-  // A destination the phone bar hides behind More: there More is the current
-  // tab, and claims what the row it stands in for would (`currentClaim`).
-  const shownRow = NAV.find((item) => item.screen === level.shown.activeId);
-  const offBar = shownRow ? !MOBILE_PRIMARY.has(shownRow.screen) : false;
-  const moreClaim = offBar ? currentClaim(level.shown) : undefined;
+  const { offBar, moreClaim } = moreStanding(level.shown);
 
-  // The agent is app-level chrome: there is one of it, and it belongs to the
-  // whole session rather than to any destination. A drilled-in level is
-  // navigation inside one destination. An agent under it would read as that
-  // destination's own: re-parented under a sub-level, and a second one the
-  // moment a reader walks back out.
+  // A drilled-in level is one destination's own pages, so the agent is hidden
+  // there. It stays mounted, because it is what keeps the window's edge lit.
   const leveled = level.parent !== undefined;
 
   return (
@@ -401,16 +421,15 @@ export function WorkspaceRail({
             that reports rather than navigates, and it never claims the current
             page. It does not carry the licence: the banner over the page states
             a refused one and the agent panel's pill an absent or refused one.
-            On a drilled-in level it is reduced rather than removed
-            (app/agentrail.css). The agent belongs to the whole session, but the
-            column there is one section's own pages. The ball at rail size would
-            lead a list it is not about. It goes at phone width, where there is
-            no column to have a foot. There the agent stands in the bar's centre
-            cell above, and two would be two Cores. */}
+            At phone width it stands in the bar's centre cell instead, and two
+            would be two Cores. */}
         {!phone && (
-          <div className="railagent">
+          <div className="railagent" hidden={leveled}>
             <AgentRail />
           </div>
+        )}
+        {!phone && onToggle && (
+          <NavRailToggle state={navTip} onToggle={onToggle} />
         )}
       </nav>
     </>

@@ -7,7 +7,7 @@ import { expect, screen, userEvent, within } from "storybook/test";
 import { Badge, Button } from "./atoms";
 import { Panel, PanelBody } from "./panel";
 import { RecordDetails } from "./recorddetails";
-import { RecordBack, RecordView } from "./recordview";
+import { RecordView } from "./recordview";
 import type { TimelineEntry } from "./timelineentry";
 
 const emailEntry: TimelineEntry = {
@@ -130,14 +130,6 @@ export const DetailsOpen: Story = {
     await expect(
       canvas.getByRole("button", { name: "Hide empty fields" }),
     ).toHaveAttribute("aria-expanded", "true");
-  },
-};
-
-// Opened from a queue that offers the way back to it.
-export const WithWayBack: Story = {
-  args: {
-    ...Default.args,
-    back: <RecordBack href="#/home?queue=1" label="Back to Worklist" />,
   },
 };
 

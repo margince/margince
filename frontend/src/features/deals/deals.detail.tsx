@@ -36,7 +36,6 @@ import { useMe, useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { WorklistReturnLink } from "../worklist/worklist.return";
 import {
   type ClosedDeal,
   CloseReviewOffer,
@@ -286,7 +285,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           return (
             <DealRecordView
               deal={deal}
-              back={<WorklistReturnLink />}
               aside={<DealAside deal={deal} stages={stages} />}
               name={deal.name}
               identity={deal.id}

@@ -1,21 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Corner gate: one ladder, and the squircle that rides on it.
-//
-// 1. Every corner reads the ladder: `var(--r-*)`, `0`, `inherit`, `50%`, or a
-//    `calc()` over a rung. A raw px value is a rung nobody declared.
-// 2. A round thing opts out of the squircle. tokens.css sets
-//    `corner-shape: squircle` on `:where(*)`, so a pill or a circle cancels it
-//    with `corner-shape: round`, or an avatar draws as a squircle tile.
-// 3. Every cornered pseudo-element is named beside the universal selector, and
-//    `squircle` is declared nowhere else.
+// Corner gate: one ladder. Every corner reads it: `var(--r-*)`, `0`,
+// `inherit`, `50%`, or a `calc()` over a rung. A raw px value is a rung nobody
+// declared.
 //
 // The ladder is read from tokens.css rather than restated here. A unit ships
 // CSS into the same page from the same tokens, so the extension sheets count.
 
 import { join } from "node:path";
-import { selectorList } from "../../scripts/lib/css-rules";
 import { PHONE_MAX_WIDTH } from "../../src/lib/viewport";
 import { withoutComments } from "../../src/testing/css";
 import { type CensusFile, type CensusRule, srcDir } from "../tree";
@@ -25,9 +18,8 @@ const tokensFile = join(srcDir, "design-system", "tokens.css");
 /** The ladder, as `tokens.css` itself declares it. */
 export function ladder(tokens: string): Map<string, string> {
   const found = new Map<string, string>();
-  const base = tokens.slice(0, tokens.indexOf("@supports"));
   const decl = /(--r-[a-z]+)\s*:\s*([^;]+);/g;
-  for (let m = decl.exec(base); m; m = decl.exec(base)) {
+  for (let m = decl.exec(tokens); m; m = decl.exec(tokens)) {
     found.set(m[1], m[2].trim());
   }
   return found;
@@ -69,13 +61,7 @@ export function aliasOf(value: string): string | undefined {
   return /^var\((--r-[a-z]+)\)$/.exec(value)?.[1];
 }
 
-const SQUIRCLE = "@supports (corner-shape: squircle)";
 export const PHONE = `@media (max-width: ${PHONE_MAX_WIDTH}px)`;
-
-/** The same ladder as the squircle block redeclares it. */
-export function squircleLadder(tokens: string): Map<string, string> {
-  return rungDeclarations(atRules(tokens, SQUIRCLE)[0]?.text ?? "");
-}
 
 /** The phone blocks that redeclare a rung, each with where it sits. */
 export function phoneRungBlocks(
@@ -196,59 +182,6 @@ function namedRungs(text: string, rungs: Set<string>): string[] {
   return out;
 }
 
-/**
- * The selectors the squircle rule is declared against, read from the rule that
- * sets `corner-shape` rather than from the text of the file.
- */
-export function squircleSelectors(tokens: string): string[] {
-  const block = withoutComments(
-    tokens.slice(tokens.indexOf("@supports (corner-shape: squircle)")),
-  );
-  const rule = /([^{}]*)\{([^{}]*)\}/g;
-  for (let m = rule.exec(block); m; m = rule.exec(block)) {
-    // Declaration boundaries, not a substring: `--corner-shape: squircle` paints
-    // nothing, and `squircle-variant` is a different value.
-    if (
-      !/(?:^|;)\s*corner-shape\s*:\s*squircle\s*(?:!important\s*)?(?:;|$)/.test(
-        m[2],
-      )
-    ) {
-      continue;
-    }
-    // Whitespace inside a selector is the descendant combinator, so it is
-    // collapsed and not removed: `:where(*) ::before` is not the subject's own
-    // generated box.
-    return selectorList(m[1]).map((one) => one.replace(/\s+/g, " "));
-  }
-  return [];
-}
-
-/**
- * The pseudo-elements a rule gives a corner to. `*` matches elements only, so
- * each cornered generated box is named beside the universal selector. The
- * doubled tokens reach it anyway: a custom property inherits and
- * `corner-shape` does not.
- */
-export function corneredPseudoElements(text: string): string[] {
-  const out = new Set<string>();
-  const rule = /([^{}]*)\{([^{}]*)\}/g;
-  for (let m = rule.exec(text); m; m = rule.exec(text)) {
-    const selector = m[1].replace(/\/\*[\s\S]*?\*\//g, "");
-    if (!selector.includes("::") || radii(m[2]).length === 0) {
-      continue;
-    }
-    for (const pseudo of selector.match(/::[a-z-]+/g) ?? []) {
-      out.add(pseudo);
-    }
-  }
-  return [...out];
-}
-
-/** A corner that is fully round, and so has to cancel the squircle. */
-export function isRound(value: string): boolean {
-  return /var\(--r-full\)|50%/.test(value);
-}
-
 type Sheet = Pick<CensusFile, "rel" | "text">;
 
 function strays(sheets: readonly Sheet[], rungs: Set<string>): string[] {
@@ -263,47 +196,6 @@ function strays(sheets: readonly Sheet[], rungs: Set<string>): string[] {
             `${file.rel}: \`${radius.property}: ${radius.value}\` names a length, not a rung (${[...rungs].join(", ")})`,
         ),
     ),
-  );
-}
-
-function squareRounds(sheets: readonly Sheet[]): string[] {
-  return sheets.flatMap((file) =>
-    blocks(file.text).flatMap((block) => {
-      const round = radii(block.body).filter(
-        (radius) => isRound(radius.value) && !radius.waived,
-      );
-      if (round.length === 0 || /corner-shape\s*:\s*round/.test(block.body)) {
-        return [];
-      }
-      return [
-        `${file.rel}: \`${round[0].property}: ${round[0].value}\` is round and does not cancel the squircle; add \`corner-shape: round;\``,
-      ];
-    }),
-  );
-}
-
-// The universal form, not the bare name: `.card::before` under the query
-// covers none of the tree's own generated boxes.
-function unlistedPseudos(sheets: readonly Sheet[], tokens: string): string[] {
-  const listed = squircleSelectors(tokens);
-  return sheets.flatMap((file) =>
-    corneredPseudoElements(file.text)
-      .filter((pseudo) => !listed.includes(`:where(*)${pseudo}`))
-      .map(
-        (pseudo) =>
-          `${file.rel}: \`${pseudo}\` has a corner and is not named in the squircle rule; add \`:where(*)${pseudo}\` to design-system/tokens.css`,
-      ),
-  );
-}
-
-function otherShapes(sheets: readonly Sheet[]): string[] {
-  return sheets.flatMap((file) =>
-    [...file.text.matchAll(/corner-shape\s*:\s*([^;}]+)/g)]
-      .filter((m) => m[1].trim() !== "round")
-      .map(
-        (m) =>
-          `${file.rel}: \`${m[0]}\`; corner-shape is declared once, on :where(*) in tokens.css, and a call site says only \`round\``,
-      ),
   );
 }
 
@@ -323,18 +215,10 @@ export const rule: CensusRule = {
   across: (corpus, tree) => {
     const tokens = tree.at(tokensFile)?.text ?? "";
     const rungs = new Set(ladder(tokens).keys());
-    return [
-      ...strays(corpus, rungs),
-      ...squareRounds(corpus),
-      ...[...new Set(unlistedPseudos(corpus, tokens))],
-      ...otherShapes(corpus),
-    ];
+    return strays(corpus, rungs);
   },
   advice:
     "A corner reads a rung of the ladder in design-system/tokens.css; pick the " +
     "nearest rather than adding a value nobody chose, or waive a genuine " +
-    "one-off in line: /* ds:ignore <reason> */. A pill or circle adds " +
-    "`corner-shape: round;` beside its radius. A cornered pseudo-element is " +
-    "named as `:where(*)<pseudo>` in the squircle rule, and nothing else " +
-    "declares `squircle`.",
+    "one-off in line: /* ds:ignore <reason> */.",
 };

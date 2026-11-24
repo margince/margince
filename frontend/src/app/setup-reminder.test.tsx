@@ -122,20 +122,16 @@ function mountTopBar(hash = "#/deals", personal: "done" | "open" = "done") {
   }
   const view = renderWith(
     client,
-    <TopBar
-      route={parseHash(hash)}
-      collapsed={false}
-      onOpenSearch={ignoreSearch}
-    />,
+    <TopBar route={parseHash(hash)} onOpenSearch={ignoreSearch} />,
   );
-  const rerouted = (next: string) =>
+  const rerouted = (next: string, held = false) =>
     view.rerender(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
           <TopBar
             route={parseHash(next)}
-            collapsed={false}
             onOpenSearch={ignoreSearch}
+            held={held}
           />
         </LocaleProvider>
       </QueryClientProvider>,
@@ -254,6 +250,17 @@ describe("SetupReminder", () => {
     view.rerouted("#/settings/connections");
     expect((await trigger()).getAttribute("aria-expanded")).toBe("false");
     expect(screen.queryByRole("region", { name: /Finish setup/ })).toBeNull();
+  });
+
+  it("gives way to Back to setup while onboarding holds the reader", async () => {
+    serve();
+    const view = mountTopBar();
+    await trigger();
+
+    view.rerouted("#/deals", true);
+
+    expect(screen.queryByRole("button", { name: /Finish setup/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "Back to setup" })).toBeTruthy();
   });
 
   it("hides until the next sign-in, and comes back after it", async () => {

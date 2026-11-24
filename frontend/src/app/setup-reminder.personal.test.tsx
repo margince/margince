@@ -37,11 +37,7 @@ function mount(me: Me) {
   client.setQueryData(["me"], me);
   return renderWith(
     client,
-    <TopBar
-      route={parseHash("#/deals")}
-      collapsed={false}
-      onOpenSearch={ignoreSearch}
-    />,
+    <TopBar route={parseHash("#/deals")} onOpenSearch={ignoreSearch} />,
   );
 }
 

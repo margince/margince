@@ -85,6 +85,63 @@ function GermanSurface() {
   );
 }
 
+// A seat refused the create. The refused verb keeps the head's one row, and
+// the reason sits on the line under the head as the verb's description.
+function RefusedSurface() {
+  const refusalId = "list-surface-refusal";
+  return (
+    <ListSurface
+      title="Unternehmen"
+      views={VIEWS}
+      count={<CountLine unit="Unternehmen" first={1} last={25} total={1312} />}
+      refusal={{
+        id: refusalId,
+        text: "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",
+      }}
+      action={
+        <Button reasonId={refusalId}>
+          <Plus aria-hidden="true" />
+          Neues Unternehmen
+        </Button>
+      }
+    >
+      <p>Zeilen</p>
+    </ListSurface>
+  );
+}
+
+export const RefusedAction: Story = {
+  name: "Refused action, reason under the head",
+  parameters: WIDE,
+  globals: { viewport: { value: "wide" } },
+  tags: ["uat-wide"],
+  render: () => <RefusedSurface />,
+  play: async ({ canvasElement }) => {
+    const create = await within(canvasElement).findByRole("button", {
+      name: /Neues Unternehmen/,
+    });
+    await expect(create).toBeDisabled();
+    await expect(create).toHaveAccessibleDescription(/Leseplatz/);
+    const head = canvasElement.querySelector(".lt-head");
+    await expect(head?.contains(create)).toBe(true);
+    await expect(head?.textContent).not.toMatch(/Leseplatz/);
+  },
+};
+
+// Tabs wider than the head scroll sideways, and the end that hides some fades.
+export const ViewTabsFadePhone: Story = {
+  name: "View tabs fade where they are cut, phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => <GermanSurface />,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", { name: "Alle" });
+    const rail = canvasElement.querySelector(".lt-views");
+    await waitFor(() => expect(rail).toHaveClass("is-clipped-end"));
+    await expect(rail).not.toHaveClass("is-clipped-start");
+  },
+};
+
 // The verbs and the tab rail lie inside the card: neither is clipped or pushed
 // past its edge to keep the sentence on the first line. Below 1100px the verbs
 // are one overflow menu and a rail with more tabs than room scrolls sideways.

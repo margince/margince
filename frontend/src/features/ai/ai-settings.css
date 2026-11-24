@@ -202,7 +202,6 @@
   width: 0.625rem;
   height: 0.625rem;
   border-radius: 50%;
-  corner-shape: round;
 }
 
 .ai-health-dot-ok {
@@ -484,7 +483,6 @@
   width: var(--space-2);
   height: var(--space-2);
   border-radius: 50%;
-  corner-shape: round;
   background: var(--accent);
   transform: translate(-50%, -50%);
 }

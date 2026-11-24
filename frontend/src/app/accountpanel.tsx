@@ -107,6 +107,7 @@ export function AccountPanel({
   identity,
   id,
   panel,
+  fromEnd = false,
   onDismiss,
   onFocusLost,
   onShortcuts,
@@ -115,6 +116,8 @@ export function AccountPanel({
   identity: Identity;
   id: string;
   panel: RefObject<HTMLDivElement | null>;
+  /** Opened by the Up key, so the keyboard reader starts on the last row. */
+  fromEnd?: boolean;
   onDismiss: () => void;
   onFocusLost: () => void;
   onShortcuts: () => void;
@@ -130,11 +133,17 @@ export function AccountPanel({
   const booking = useSchedulingProfile().data;
   const canBook = useCanBook();
 
-  // Opening the menu must place the keyboard reader on its first row.
+  // Opening the menu places the keyboard reader on its first row, or on its
+  // last when the Up key opened it.
   const hasHead = Boolean(identity.label);
   const headless = useRef(!hasHead);
+  const startsAtEnd = useRef(fromEnd);
   useEffect(() => {
-    move(headless.current ? SETTINGS_SEAT : WHO_SEAT);
+    if (startsAtEnd.current) {
+      move(SIGN_OUT_SEAT);
+    } else {
+      move(headless.current ? SETTINGS_SEAT : WHO_SEAT);
+    }
   }, [move]);
   // A head that arrives late takes focus only from the row focus first landed
   // on. Once the reader has walked, even back to that row, focus stays put.

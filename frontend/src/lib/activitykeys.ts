@@ -1,5 +1,6 @@
 import type { QueryKey } from "@tanstack/react-query";
 import type { EntityKind } from "./entity";
+import { LISTS_KEY } from "./listkeys";
 
 // Which cached reads render a record's timeline. Writing an activity has to
 // invalidate ALL of them, and they are not the same set for every record kind:
@@ -165,7 +166,7 @@ export function derivedRecordKeys(
 // judges the record's fields, so any write to them can move a membership.
 // Every list read sits under ["lists"], which a list write invalidates whole.
 export const recordListsKey = (recordType: string, recordId: string) =>
-  ["lists", "record", recordType, recordId] as const;
+  [LISTS_KEY, "record", recordType, recordId] as const;
 
 // A deal's COVERAGE is written from its stakeholder edges: the rail's seats,
 // the committee map and the risk chips all read GET /deals/{id}/coverage, and
