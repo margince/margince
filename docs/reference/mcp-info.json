@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 263674,
+    "tool_catalog_bytes": 263885,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 67324,
+    "approx_wire_tokens_total": 67376,
     "largest_tool_bytes": 18455,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52248,
-      "input_schema_bytes": 165107,
+      "input_schema_bytes": 165318,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 217355
+      "description_plus_input_schema_bytes": 217566
     }
   },
   "tools": {
@@ -3095,6 +3095,11 @@
             "company_id": {
               "description": "The company to enrich",
               "format": "uuid",
+              "type": "string"
+            },
+            "confirm_code": {
+              "description": "Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+              "maxLength": 1024,
               "type": "string"
             },
             "depth": {

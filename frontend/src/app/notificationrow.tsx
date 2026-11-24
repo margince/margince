@@ -7,7 +7,11 @@ import { opensElsewhere } from "../lib/linkclick";
 import { useSourceOpener } from "../lib/opensource";
 import { displayedBody } from "../lib/systemdisplay";
 import { useViewerZone } from "../lib/viewerzone";
-import { noticeAction, type RecordKindViews } from "./noticeaction";
+import {
+  noticeAction,
+  noticeKindAction,
+  type RecordKindViews,
+} from "./noticeaction";
 import { noticeHeadline } from "./noticeheadline";
 
 // Delivery by automation does not make the original author an agent.
@@ -32,7 +36,8 @@ export function NoticeRow({
 }>) {
   const readerZone = useViewerZone();
   const t = useT();
-  const action = noticeAction(notice.target, kindViews);
+  const action =
+    noticeAction(notice.target, kindViews) ?? noticeKindAction(notice.kind);
   const href = action?.href;
   const sourceOpener = useSourceOpener();
   const openActivity =

@@ -83,7 +83,7 @@ Press **Acknowledge** to take the row off your list. If the same change fails ag
 Also called: approval failed, approved but nothing happened, retry an approval.
 
 ### Who approves agent actions?
-An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An agent running on a schedule, with nobody watching, approves nothing, and every message it would send waits for you. An administrator has no override past their own permissions.
+An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An agent running on a schedule, with nobody watching, approves nothing, and every message it would send waits for you. An administrator has no override past their own permissions. In a chat with your AI assistant, it asks you there instead, unless the change cannot be undone.
 
 Two kinds are the exception. Only the colleague who made a promise read from mail or a meeting may answer it. Only the colleague whose mailbox a new sender wrote to may answer **Add contact from mail**.
 Also called: approver, who signs off, permission to approve.

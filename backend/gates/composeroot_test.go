@@ -45,11 +45,14 @@ const (
 	// leave this package. Raised by 58 test lines for the system health footer
 	// cases, which read this package's unexported health sources. Raised by 29
 	// test lines for the data reset cases of a timed-out job drain. Raised by 72
-	// test lines for the extension mail-file and purge receipt cases. Raised by
-	// 29 test lines for the booking length card cases, which drive the
-	// unexported bookingCard and the booking page fixtures.
-	composeRootProductionLines = 230_518
-	composeRootTestLines       = 359_577
+	// test lines for the extension mail-file and purge receipt cases. Raised by 30
+	// production and 21 test lines for the approvals adapter and server option that
+	// confirm a call in the conversation. Raised by 191 test lines for the
+	// team-request mail cases, which drive this package's unexported mail worker
+	// and send basis. Raised by 2 production and 52 test lines for the booking length
+	// card cases, which drive the unexported bookingCard and the booking page fixtures.
+	composeRootProductionLines = 230_550
+	composeRootTestLines       = 359_812
 )
 
 // A read under these floors stopped early or read the wrong place, and would

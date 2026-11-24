@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 257.5 KB |
+| Tool catalog | 257.7 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 67324 |
+| Approx. wire tokens | 67376 |
 | Largest tool | `read_details` (18.0 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 33.7 KB | 13% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 51.0 KB | 19% | Yes, every step |
-| Input schemas | 161.2 KB | 62% | Yes, every step |
+| Input schemas | 161.4 KB | 62% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **212.3 KB** | **82%** | **the recurring cost** |
+| **Description + input schema** | **212.5 KB** | **82%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -86,7 +86,7 @@ descriptions and input schemas are what each step pays for.
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 891 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 465 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
-| [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
+| [`enrich`](#enrich) | Enrich a company from its website |  |  | 448 |
 | [`find_records`](#find_records) | Find records | yes |  | 2057 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 331 |
@@ -3703,6 +3703,11 @@ it runs; requires passport scope "enrich".)
     "company_id": {
       "description": "The company to enrich",
       "format": "uuid",
+      "type": "string"
+    },
+    "confirm_code": {
+      "description": "Only after the user said yes to this call's preview: the confirm_code that preview answered. Never invent one; call without it to get a preview.",
+      "maxLength": 1024,
       "type": "string"
     },
     "depth": {

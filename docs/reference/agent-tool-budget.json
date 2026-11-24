@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 53346,
+    "tokens": 53399,
     "median_tool_tokens": 806,
-    "mean_tool_tokens": 1110
+    "mean_tool_tokens": 1112
   },
   "agents": [
     {
@@ -216,16 +216,16 @@
       "tokens": 465
     },
     {
+      "name": "enrich",
+      "tokens": 448
+    },
+    {
       "name": "annotate_brief",
       "tokens": 417
     },
     {
       "name": "read_context",
       "tokens": 413
-    },
-    {
-      "name": "enrich",
-      "tokens": 395
     },
     {
       "name": "check_availability",
