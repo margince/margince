@@ -80,9 +80,9 @@ func TestATaskLadderOrderMustReorderARealTasksOwnRungs(t *testing.T) {
 	}
 }
 
-// A binding that orders a retired task still loads from the store and passes
-// the check the environment value takes, and keeps the orders of the tasks
-// that remain. An unknown name that was never a task is still refused.
+// A binding that orders a retired task still loads from the store. It also
+// passes the check the environment value takes, and keeps the other orders. An
+// unknown name that was never a task is still refused.
 func TestAnOrderOfARetiredTaskLoadsAndAnUnknownOneIsRefused(t *testing.T) {
 	cfg, err := ParseRouting([]byte(reorderedRouting))
 	if err != nil {
