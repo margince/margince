@@ -146,6 +146,14 @@ lane_bin_build_job() {
   [[ -n "$line" ]] || return 1
   echo "$line"
 }
+# download-artifact's lookups refuse the first $work/unserved asks, then serve.
+lane_bin_served() {
+  local left
+  left="$(cat "$work/unserved")"
+  (( left > 0 )) || return 0
+  echo $(( left - 1 )) > "$work/unserved"
+  return 1
+}
 sleep() { :; }
 # expect_wait LABEL ATTEMPT BUDGET WANT REST-CALLS SCRIPT-LINE... — WANT is the
 # printed name, or FAIL:<text the message must hold>.
@@ -154,6 +162,7 @@ expect_wait() {
   shift 5
   printf '%s\n' "$@" > "$work/script"
   echo 0 > "$work/polls"
+  echo "${UNSERVED:-0}" > "$work/unserved"
   : > "$work/rest"
   got="$(LANE_BIN_POLL_SECONDS=5 LANE_BIN_REST_AFTER=60 lane_bin_wait "$attempt" "$budget" 2> "$work/out")" || st=$?
   if [[ "$want" == FAIL:* ]]; then
@@ -189,7 +198,11 @@ expect_wait "a rate-limited REST API never decides, nor floods" 2 300 "$B-2" 2 \
   "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" \
   "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" "$B-1|" \
   "$B-1,$B-2|"
-unset -f lane_bin_artifacts lane_bin_build_job sleep
+UNSERVED=2 expect_wait "a listed upload the lookups do not serve yet" 1 600 "$B-1" 0 "$B-1|"
+grep -q "do not serve it yet" "$work/out" || fail "a listed, unserved upload must say so: $(cat "$work/out")"
+UNSERVED=1000 expect_wait "an upload the lookups never serve" 1 100 "FAIL:still did not serve it" 1 "$B-1|"
+UNSERVED=1 expect_wait "a re-run waits until the kept binaries are served" 2 600 "$B-1" 1 "$B-1|carried"
+unset -f lane_bin_artifacts lane_bin_build_job lane_bin_served sleep
 source "$root_dir/scripts/lib-lanebinaries.sh"
 
 # The two lists, read from the services' own answers. curl is the boundary.
@@ -210,6 +223,44 @@ printf '{}' > "$work/body"
 [[ -z "$(lane_bin_artifacts)" ]] || fail "a run with no artifacts must list none"
 printf '429' > "$work/code"
 lane_bin_artifacts > /dev/null 2>&1 && fail "a refused artifact list must fail, not read as empty"
+unset -f curl
+# download-artifact's lookups: one canned answer per filter, as the service
+# narrows them.
+curl() {
+  local out="" data=""
+  while (( $# )); do [[ "$1" == -o ]] && out="$2"; [[ "$1" == --data ]] && data="$2"; shift; done
+  printf '%s\n' "$data" >> "$work/asked"
+  if jq -e 'has("name_filter")' <<<"$data" > /dev/null; then cat "$work/by-name"
+  elif jq -e 'has("id_filter")' <<<"$data" > /dev/null; then cat "$work/by-id"
+  else printf '{}'; fi > "$out"
+  cat "$work/code"
+}
+served() { # want(yes|no) label by-name by-id
+  printf '%s' "$3" > "$work/by-name"
+  printf '%s' "$4" > "$work/by-id"
+  : > "$work/asked"
+  local got=no
+  lane_bin_served "$B-1" 2> /dev/null && got=yes
+  [[ "$got" == "$1" ]] || fail "lane_bin_served: $2: want $1, got $got"
+}
+printf '200' > "$work/code"
+served yes "both lookups find it" \
+  "{\"artifacts\":[{\"name\":\"$B-1\",\"database_id\":\"7\"},{\"name\":\"$B-1\",\"database_id\":\"9\"}]}" \
+  "{\"artifacts\":[{\"name\":\"$B-1\",\"database_id\":\"9\"}]}"
+jq -s -e --arg n "$B-1" '.[0].name_filter == $n and .[1].id_filter == "9" and .[1].workflow_run_backend_id == "run-1"' "$work/asked" > /dev/null \
+  || fail "lane_bin_served must ask by name, then by the newest match's id: $(cat "$work/asked")"
+served no "the lookup by name does not find it yet" '{}' "{\"artifacts\":[{\"name\":\"$B-1\",\"database_id\":\"9\"}]}"
+served no "the lookup by id does not find it yet" "{\"artifacts\":[{\"name\":\"$B-1\",\"database_id\":\"9\"}]}" '{}'
+served no "the lookup by name finds only another name" '{"artifacts":[{"name":"other","database_id":"9"}]}' '{"artifacts":[{"name":"other","database_id":"9"}]}'
+printf '503' > "$work/code"
+served no "a refused lookup" "{\"artifacts\":[{\"name\":\"$B-1\",\"database_id\":\"9\"}]}" "{\"artifacts\":[{\"name\":\"$B-1\",\"database_id\":\"9\"}]}"
+unset -f curl
+curl() { # writes the canned body to the -o file and prints its status
+  local out=""
+  while (( $# )); do [[ "$1" == -o ]] && out="$2"; shift; done
+  printf '%s' "$(cat "$work/body")" > "$out"
+  cat "$work/code"
+}
 GITHUB_TOKEN=t GITHUB_REPOSITORY=o/r GITHUB_RUN_ID=9 GITHUB_RUN_ATTEMPT=3
 build_job() { # want body
   printf '%s' "$2" > "$work/body"
