@@ -5164,6 +5164,60 @@ func (e CaptureTraceEntryOutcomeNow) Valid() bool {
 	}
 }
 
+// Defines values for CaptureTraceFilingHook.
+const (
+	CaptureTraceFilingHookDeal    CaptureTraceFilingHook = "deal"
+	CaptureTraceFilingHookParties CaptureTraceFilingHook = "parties"
+)
+
+// Valid indicates whether the value is a known member of the CaptureTraceFilingHook enum.
+func (e CaptureTraceFilingHook) Valid() bool {
+	switch e {
+	case CaptureTraceFilingHookDeal:
+		return true
+	case CaptureTraceFilingHookParties:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureTraceFilingResult.
+const (
+	CaptureTraceFilingResultAmbiguous      CaptureTraceFilingResult = "ambiguous"
+	CaptureTraceFilingResultFailed         CaptureTraceFilingResult = "failed"
+	CaptureTraceFilingResultIgnored        CaptureTraceFilingResult = "ignored"
+	CaptureTraceFilingResultLinked         CaptureTraceFilingResult = "linked"
+	CaptureTraceFilingResultMoved          CaptureTraceFilingResult = "moved"
+	CaptureTraceFilingResultNone           CaptureTraceFilingResult = "none"
+	CaptureTraceFilingResultPartiesChanged CaptureTraceFilingResult = "parties_changed"
+	CaptureTraceFilingResultRetracted      CaptureTraceFilingResult = "retracted"
+)
+
+// Valid indicates whether the value is a known member of the CaptureTraceFilingResult enum.
+func (e CaptureTraceFilingResult) Valid() bool {
+	switch e {
+	case CaptureTraceFilingResultAmbiguous:
+		return true
+	case CaptureTraceFilingResultFailed:
+		return true
+	case CaptureTraceFilingResultIgnored:
+		return true
+	case CaptureTraceFilingResultLinked:
+		return true
+	case CaptureTraceFilingResultMoved:
+		return true
+	case CaptureTraceFilingResultNone:
+		return true
+	case CaptureTraceFilingResultPartiesChanged:
+		return true
+	case CaptureTraceFilingResultRetracted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CaptureTraceResolutionStatus.
 const (
 	CaptureTraceResolutionStatusNoise      CaptureTraceResolutionStatus = "noise"
@@ -40682,9 +40736,12 @@ type CaptureTraceEntry struct {
 	Connector string `json:"connector"`
 
 	// Counterparty Only when payload_capture_enabled, and never for an erased subject.
-	Counterparty *string            `json:"counterparty,omitempty"`
-	Id           openapi_types.UUID `json:"id"`
-	OccurredAt   time.Time          `json:"occurred_at"`
+	Counterparty *string `json:"counterparty,omitempty"`
+
+	// Filing Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+	Filing     *CaptureTraceFiling `json:"filing,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	OccurredAt time.Time           `json:"occurred_at"`
 
 	// Outcome What the pipeline did with this message AT THE TIME. It never changes; `outcome_now` is what to count and to filter on.
 	Outcome CaptureTraceEntryOutcome `json:"outcome"`
@@ -40707,6 +40764,24 @@ type CaptureTraceEntryOutcome string
 
 // CaptureTraceEntryOutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
 type CaptureTraceEntryOutcomeNow string
+
+// CaptureTraceFiling Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+type CaptureTraceFiling struct {
+	Actor string `json:"actor"`
+
+	// Hook Which hook point, for an extension actor. Absent for `core`.
+	Hook *CaptureTraceFilingHook `json:"hook,omitempty"`
+
+	// Reason For `core`, the rung that decided (`project`, `thread`, `sole_open_deal` and the rest). For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations.
+	Reason *string                  `json:"reason,omitempty"`
+	Result CaptureTraceFilingResult `json:"result"`
+}
+
+// CaptureTraceFilingHook Which hook point, for an extension actor. Absent for `core`.
+type CaptureTraceFilingHook string
+
+// CaptureTraceFilingResult defines model for CaptureTraceFiling.Result.
+type CaptureTraceFilingResult string
 
 // CaptureTraceResolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
 type CaptureTraceResolution struct {
@@ -44163,6 +44238,9 @@ type ComposedExtension struct {
 	// Name The unit name — its `extensions/<name>` directory, and the namespace token in `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry here to a grant in `Role.objects`.
 	Name string `json:"name"`
 
+	// Needs The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none.
+	Needs *[]ComposedExtensionNeed `json:"needs,omitempty"`
+
 	// RbacObjects The `ext_<name>_<object>` names this unit's operations gate on, registered into the vocabulary at boot — exactly the objects `setRoleObjectGrant` will accept for this unit. Sorted, and empty for a unit that owns no records (the common case).
 	RbacObjects []string `json:"rbac_objects"`
 
@@ -44171,6 +44249,15 @@ type ComposedExtension struct {
 
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
+}
+
+// ComposedExtensionNeed One core capability a unit declares it uses.
+type ComposedExtensionNeed struct {
+	// Capability What the unit uses. `models` is the installation's AI models; `objects` is a key prefix of its own in the object store.
+	Capability string `json:"capability"`
+
+	// Reason One sentence from the unit's author saying what it does with the capability.
+	Reason string `json:"reason"`
 }
 
 // ComposedExtensionRoute One published extension operation.
@@ -63028,6 +63115,11 @@ type RecordKindOption struct {
 
 	// Unit The extension that declared the kind.
 	Unit string `json:"unit"`
+
+	// View The path segment under the unit's screen that shows one record of the kind, as the unit
+	// declared it. Absent when the unit's screen itself shows it. A link to a record opens
+	// `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
+	View string `json:"view"`
 }
 
 // RecordKindOptionActions defines model for RecordKindOption.Actions.

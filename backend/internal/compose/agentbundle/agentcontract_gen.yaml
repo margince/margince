@@ -27947,7 +27947,27 @@ components:
         subject:
           type: [string, 'null']
           description: 'Only when payload_capture_enabled, and never for an erased subject.'
+        filing:
+          $ref: '#/components/schemas/CaptureTraceFiling'
         occurred_at: {type: string, format: date-time}
+    CaptureTraceFiling:
+      type: [object, 'null']
+      description: >-
+        Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+      required: [actor, result]
+      properties:
+        actor: {type: string}
+        hook:
+          type: [string, 'null']
+          enum: [parties, deal, null]
+          description: 'Which hook point, for an extension actor. Absent for `core`.'
+        result:
+          type: string
+          enum: [linked, none, ambiguous, parties_changed, failed, ignored, moved, retracted]
+        reason:
+          type: [string, 'null']
+          description: >-
+            For `core`, the rung that decided (`project`, `thread`, `sole_open_deal` and the rest). For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations.
     CaptureTraceResolution:
       type: [object, 'null']
       description: >-
@@ -49712,6 +49732,23 @@ components:
           description: >-
             The scheduled jobs this boot actually RUNS for the unit — a job the unit declared with no handler ticks nothing and is deliberately absent, because an operator reading this list is asking what runs, not what was written down. Sorted.
           items: {type: string}
+        needs:
+          type: array
+          description: >-
+            The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none.
+          items: {$ref: '#/components/schemas/ComposedExtensionNeed'}
+    ComposedExtensionNeed:
+      type: object
+      additionalProperties: false
+      required: [capability, reason]
+      description: One core capability a unit declares it uses.
+      properties:
+        capability:
+          type: string
+          description: What the unit uses. `models` is the installation's AI models; `objects` is a key prefix of its own in the object store.
+        reason:
+          type: string
+          description: One sentence from the unit's author saying what it does with the capability.
     ExtensionSettings:
       type: object
       additionalProperties: false

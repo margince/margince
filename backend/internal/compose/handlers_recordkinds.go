@@ -46,7 +46,7 @@ func (channelProvidersHandlers) ListRecordKinds(w http.ResponseWriter, r *http.R
 		}
 		data = append(data, crmcontracts.RecordKindOption{
 			Name: d.Name, Unit: string(d.Unit), Kind: d.Kind, DisplayName: d.DisplayName,
-			Fields: fields, NaturalKey: d.NaturalKey,
+			Fields: fields, NaturalKey: d.NaturalKey, View: d.View,
 			DeletePolicy: crmcontracts.RecordKindOptionDeletePolicy(d.DeletePolicy), Actions: held,
 		})
 	}
