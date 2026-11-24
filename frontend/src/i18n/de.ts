@@ -1913,6 +1913,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein neuer Versuch sendet dieselbe Einladung erneut. Der Gast erhält also keine zweite Einladung.",
   "book.videoApp": "{app} · Link in Ihrer Einladung",
   "book.lengthChoice": "Dauer des Termins",
+  "book.lengthNotOffered":
+    "Diese Termindauer wird nicht mehr angeboten. Wähle eine andere Dauer.",
   "scheduling.pickDay": "Tag auswählen",
   "scheduling.changeTime": "Zeit ändern",
   "scheduling.confirmAt": "{day}, {time} bestätigen",

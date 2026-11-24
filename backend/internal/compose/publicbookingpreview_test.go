@@ -118,19 +118,25 @@ func TestBookingCardSendsABrowserOnWithTheMeetingLengthItAskedFor(t *testing.T) 
 }
 
 func TestBookingCardNamesTheLengthTheBookingPageOpensAt(t *testing.T) {
-	preview := activities.BookingPreview{Available: true, HostName: "Ada", Title: "Intro", DurationMinutes: 30, Lengths: []int{30, 15, 45}}
+	page := "https://crm.example.test/book/slug"
+	preview := activities.BookingPreview{Available: true, HostName: "Ada", Title: "Intro", DurationMinutes: 30, Lengths: []int{30, 15, 45}, PageURL: page}
 	for _, test := range []struct {
 		requested *int
 		summary   string
 		href      string
+		canonical string
 	}{
-		{new(15), "Intro: a 15-minute meeting with Ada.", "/#/book/slug?l=15"},
-		{new(7), "Intro: a 30-minute meeting with Ada.", "/#/book/slug"},
-		{nil, "Intro: a 30-minute meeting with Ada.", "/#/book/slug"},
+		{new(15), "Intro: a 15-minute meeting with Ada.", "/#/book/slug?l=15", page + "?l=15"},
+		{new(7), "Intro: a 30-minute meeting with Ada.", "/#/book/slug", page},
+		{nil, "Intro: a 30-minute meeting with Ada.", "/#/book/slug", page},
 	} {
 		card := bookingCard("slug", test.requested, preview)
-		if !strings.HasPrefix(card.Summary, test.summary) || card.Href != test.href {
-			t.Errorf("requested %v: %q at %q, want %q at %q", test.requested, card.Summary, card.Href, test.summary, test.href)
+		if !strings.HasPrefix(card.Summary, test.summary) || card.Href != test.href || card.Canonical != test.canonical {
+			t.Errorf("requested %v: %q at %q (%q), want %q at %q (%q)", test.requested, card.Summary, card.Href, card.Canonical, test.summary, test.href, test.canonical)
 		}
+	}
+	preview.PageURL = ""
+	if card := bookingCard("slug", new(15), preview); card.Canonical != "" {
+		t.Errorf("a card with no public origin names %q", card.Canonical)
 	}
 }

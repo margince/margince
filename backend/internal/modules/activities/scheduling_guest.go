@@ -120,7 +120,11 @@ func (h Handlers) reservePublicInvitation(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return crmcontracts.MeetingInvitation{}, false
 	}
-	profile = bookingLength(profile, length)
+	profile, err := chosenLength(profile, length)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return crmcontracts.MeetingInvitation{}, false
+	}
 	if req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
 		httperr.Write(w, r, apperrors.ErrPermissionDenied)
 		return crmcontracts.MeetingInvitation{}, false

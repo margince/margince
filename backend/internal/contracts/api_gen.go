@@ -83723,7 +83723,7 @@ type BookPublicMeetingJSONBody struct {
 
 // BookPublicMeetingParams defines parameters for BookPublicMeeting.
 type BookPublicMeetingParams struct {
-	// L Offered meeting length in minutes. Unknown lengths use the default.
+	// L Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.
 	L *int `form:"l,omitempty" json:"l,omitempty"`
 
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -83768,7 +83768,13 @@ type GetPublicAvailabilityParams struct {
 	To              time.Time `form:"to" json:"to"`
 	DurationMinutes *int      `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
 
-	// L Offered meeting length in minutes. Unknown lengths use the default.
+	// L Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
+}
+
+// GetPublicBookingPreviewParams defines parameters for GetPublicBookingPreview.
+type GetPublicBookingPreviewParams struct {
+	// L Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length.
 	L *int `form:"l,omitempty" json:"l,omitempty"`
 }
 
@@ -103604,7 +103610,7 @@ type ServerInterface interface {
 	GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams)
 	// Read the link-preview card for a host's public booking page.
 	// (GET /public/booking/{host_slug}/preview)
-	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string)
+	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicBookingPreviewParams)
 	// Read the host-approved booking page identity and meeting details.
 	// (GET /public/booking/{host_slug}/profile)
 	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams)
@@ -109643,7 +109649,7 @@ func (_ Unimplemented) GetPublicAvailability(w http.ResponseWriter, r *http.Requ
 
 // Read the link-preview card for a host's public booking page.
 // (GET /public/booking/{host_slug}/preview)
-func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicBookingPreviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -150367,8 +150373,24 @@ func (siw *ServerInterfaceWrapper) GetPublicBookingPreview(w http.ResponseWriter
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicBookingPreviewParams
+
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPublicBookingPreview(w, r, hostSlug)
+		siw.Handler.GetPublicBookingPreview(w, r, hostSlug, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

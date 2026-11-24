@@ -76,8 +76,8 @@ func (h Handlers) PublicBookingPreview(ctx context.Context, slug string) (Bookin
 }
 
 // ForLength is the card of a link that asks for requested minutes. It names
-// the length the booking page opens at, by the rule the guest endpoints use,
-// and says whether that is the length the link asked for.
+// the length the booking page opens at, by the guest endpoints' rule. The
+// bool says whether that is the length the link asked for.
 func (p BookingPreview) ForLength(requested *int) (BookingPreview, bool) {
 	if len(p.Lengths) == 0 {
 		return p, false

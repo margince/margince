@@ -21,6 +21,7 @@ import {
   formatDayMonth,
   formatNumber,
   formatTimeOfDay,
+  identifierNumber,
 } from "../../format/format";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { useLocale, useT } from "../../i18n";
@@ -73,6 +74,7 @@ export function GuestHost({
   host,
   videoApp,
   lengths,
+  length = host.duration_minutes,
   onLength,
   selected,
   zone,
@@ -89,6 +91,7 @@ export function GuestHost({
   // The lengths a guest may pick between, the default first; with one or none
   // the page states its length instead.
   lengths?: readonly number[];
+  length?: number;
   onLength?: (length: number) => void;
   selected: GuestSlot | null;
   zone: string;
@@ -110,17 +113,20 @@ export function GuestHost({
           <Clock aria-hidden="true" />
           <SegmentedControl
             label={t("book.lengthChoice")}
-            options={lengths.map(String)}
+            options={lengths.map(identifierNumber)}
             labels={Object.fromEntries(
-              lengths.map((length) => [String(length), minutes(length)]),
+              lengths.map((option) => [
+                identifierNumber(option),
+                minutes(option),
+              ]),
             )}
-            value={String(host.duration_minutes)}
+            value={identifierNumber(length)}
             onChange={(next) => onLength(Number(next))}
           />
         </div>
       ) : (
         <HostLine icon={<Clock aria-hidden="true" />}>
-          {minutes(host.duration_minutes)}
+          {minutes(length)}
         </HostLine>
       )}
       {videoApp ? (

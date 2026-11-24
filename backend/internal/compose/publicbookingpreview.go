@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/readerlocale"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -37,13 +38,13 @@ func bookingPreviewSlug(path string) (string, bool) {
 
 // GetPublicBookingPreview renders the card. The booking edge has already
 // resolved the slug and bound the public booking principal.
-func (s Server) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (s Server) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string, params crmcontracts.GetPublicBookingPreviewParams) {
 	preview, err := s.PublicBookingPreview(systemtext.WithLocale(r.Context(), readerlocale.Anonymous(r)), hostSlug)
 	if err != nil {
 		s.writeBookingPreviewUnavailable(w, r, hostSlug, err)
 		return
 	}
-	s.writePreviewCard(w, r, bookingCard(hostSlug, linkLength(r.URL.Query()), preview, readerlocale.Anonymous(r)), "booking", nil)
+	s.writePreviewCard(w, r, bookingCard(hostSlug, params.L, preview, readerlocale.Anonymous(r)), "booking", nil)
 }
 
 // writeBookingPreviewUnavailable answers a missing, revoked, throttled or
@@ -84,6 +85,10 @@ func bookingCard(hostSlug string, requested *int, preview activities.BookingPrev
 		requested = nil
 	}
 	card := previewCard{Href: bookingAppHref(hostSlug, requested), LinkText: systemtext.Copy("preview.open_booking", language), Canonical: preview.PageURL}
+	// A card per length, so a chat app never reuses one length's card for another.
+	if requested != nil && preview.PageURL != "" {
+		card.Canonical += "?l=" + strconv.Itoa(*requested)
+	}
 	if !preview.Available {
 		// A paused page keeps its host's identity in the app, where the guest
 		// reads why it is unavailable. A card shared onward names nobody.

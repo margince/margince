@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -239,7 +238,11 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, httperr.Validation("duration_minutes", "duration", "Choose the duration offered by this booking page"))
 		return
 	}
-	profile = bookingLength(profile, params.L)
+	profile, err = chosenLength(profile, params.L)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	duration := time.Duration(profile.DurationMinutes) * time.Minute
 	slots, truncated, err := h.store.PageAvailability(r.Context(), page.HostUserID, team, params.From, params.To, duration)
 	if err != nil {
@@ -341,7 +344,11 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writeStoreErr(w, r, err)
 		return
 	}
-	profile = bookingLength(profile, params.L)
+	profile, err = chosenLength(profile, params.L)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	if req.End.Sub(req.Start) != time.Duration(profile.DurationMinutes)*time.Minute {
 		httperr.Write(w, r, httperr.Validation("end", "duration", "Choose a time offered by this booking page"))
 		return
@@ -475,33 +482,4 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 		return false
 	}
 	return true
-}
-
-// bookingLength is the profile at the length a guest asked for, or at its
-// default when the page does not offer that length.
-func bookingLength(profile crmcontracts.SchedulingProfile, requested *int) crmcontracts.SchedulingProfile {
-	profile.DurationMinutes = offeredLength(bookingLengths(profile), requested)
-	return profile
-}
-
-// bookingLengths are the meeting lengths a page offers, its default first.
-func bookingLengths(profile crmcontracts.SchedulingProfile) []int {
-	lengths := []int{profile.DurationMinutes}
-	if profile.OfferedLengths != nil {
-		for _, length := range *profile.OfferedLengths {
-			if !slices.Contains(lengths, length) {
-				lengths = append(lengths, length)
-			}
-		}
-	}
-	return lengths
-}
-
-// offeredLength is the length a booking runs at: the requested one when
-// lengths offers it, else the default that lengths names first.
-func offeredLength(lengths []int, requested *int) int {
-	if requested != nil && slices.Contains(lengths, *requested) {
-		return *requested
-	}
-	return lengths[0]
 }

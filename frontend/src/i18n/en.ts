@@ -1842,6 +1842,8 @@ export const en = {
     "Retry sends the same invitation again, so the guest does not get a second one.",
   "book.videoApp": "{app} · link in your invite",
   "book.lengthChoice": "Meeting length",
+  "book.lengthNotOffered":
+    "This meeting length is no longer offered. Choose another length.",
   "scheduling.pickDay": "Choose a day",
   "scheduling.changeTime": "Change time",
   "scheduling.confirmAt": "Confirm {day}, {time}",

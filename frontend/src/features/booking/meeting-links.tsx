@@ -14,7 +14,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { StatusBadge, type StatusKind } from "../../design-system/statusbadge";
 import { Switch } from "../../design-system/switch";
-import { formatNumber } from "../../format/format";
+import { formatNumber, identifierNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
@@ -215,7 +215,8 @@ function videoText(t: Translator, profile: Profile): string {
 }
 
 // The lengths the main link offers its guest, its default first, as the
-// server lists them on the public page.
+// server's bookingLengths lists them. The host profile's offered_lengths is
+// the list of extras a save writes, so it cannot carry the default too.
 function bookingLengths(profile: Profile): number[] {
   return [
     ...new Set([profile.duration_minutes, ...(profile.offered_lengths ?? [])]),
@@ -247,6 +248,13 @@ function LinkCell({
   );
 }
 
+// The link that opens the main page at one of its extra lengths.
+function lengthLink(publicUrl: string, minutes: number): string {
+  const link = new URL(publicUrl);
+  link.searchParams.set("l", identifierNumber(minutes));
+  return link.href;
+}
+
 // Every length the main link offers. An extra length keeps a link of its own
 // (?l=N) that opens the page at that length, so a host can still share it.
 function LengthCell({ profile }: Readonly<{ profile: Profile }>) {
@@ -265,7 +273,7 @@ function LengthCell({ profile }: Readonly<{ profile: Profile }>) {
             {length}
             {minutes !== profile.duration_minutes && profile.public_url && (
               <CopyAction
-                text={`${profile.public_url}?l=${minutes}`}
+                text={lengthLink(profile.public_url, minutes)}
                 labels={{
                   copy: t("scheduling.copyLengthLink", { length }),
                   copied: t("scheduling.copied"),

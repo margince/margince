@@ -1868,6 +1868,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thử lại sẽ gửi lại đúng lời mời đó, nên khách sẽ không nhận được lời mời thứ hai.",
   "book.videoApp": "{app} · liên kết có trong lời mời",
   "book.lengthChoice": "Thời lượng cuộc hẹn",
+  "book.lengthNotOffered":
+    "Thời lượng cuộc hẹn này không còn được cung cấp. Hãy chọn thời lượng khác.",
   "scheduling.pickDay": "Chọn ngày",
   "scheduling.changeTime": "Đổi giờ",
   "scheduling.confirmAt": "Xác nhận {day}, {time}",
