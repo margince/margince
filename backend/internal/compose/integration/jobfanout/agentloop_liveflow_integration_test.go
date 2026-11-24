@@ -81,9 +81,6 @@ func (l liveLane) attempt(t *testing.T, sc agentloope2e.Scenario, run int) live.
 	}
 	if recorder != nil {
 		trace.Calls = recorder.Calls()
-		if runner.Outcome(status) != runner.OutcomeCompleted && !recorder.Answered() {
-			t.Fatalf("harness: the run ended %s and the model route answered no call; check the key and the model name", status)
-		}
 	}
 	if l.traceDir != "" {
 		path, err := trace.Write(l.traceDir)
@@ -91,6 +88,9 @@ func (l liveLane) attempt(t *testing.T, sc agentloope2e.Scenario, run int) live.
 			t.Fatalf("harness: writing the trace: %v", err)
 		}
 		t.Logf("trace: %s", path)
+	}
+	if recorder != nil && runner.Outcome(status) != runner.OutcomeCompleted && !recorder.Answered() {
+		t.Fatalf("harness: the run ended %s and the model route answered no call; check the key and the model name", status)
 	}
 	return live.Observed{Snapshot: observed.snap, SeededAt: world.seededAt}
 }

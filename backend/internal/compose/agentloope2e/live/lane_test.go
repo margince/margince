@@ -301,7 +301,7 @@ func TestCertifyFilesAVerdictTheReportReadsBackAsCurrent(t *testing.T) {
 	if current, err := IsCurrent(root, dir, "", sc, testBinding); err != nil || !current {
 		t.Errorf("IsCurrent = %v, %v", current, err)
 	}
-	if current, _ := IsCurrent(root, dir, "", sc, agentloope2e.Binding{Provider: "gemini", Model: "gemini-3.1-flash-lite", Tier: "cheap_cloud"}); current {
+	if current, err := IsCurrent(root, dir, "", sc, agentloope2e.Binding{Provider: "gemini", Model: "gemini-3.1-flash-lite", Tier: "cheap_cloud"}); err != nil || current {
 		t.Error("a verdict on another binding counted as current")
 	}
 }
@@ -317,7 +317,7 @@ func TestAVerdictGoesStaleNamingThePartThatMoved(t *testing.T) {
 	if err != nil || len(lines) != 1 || !slices.Equal(lines[0].Moved, []string{"harness"}) {
 		t.Fatalf("lines = %+v, %v; want one stale on the harness", lines, err)
 	}
-	if current, _ := IsCurrent(root, dir, "", sc, testBinding); current {
+	if current, err := IsCurrent(root, dir, "", sc, testBinding); err != nil || current {
 		t.Error("a stale verdict counted as current")
 	}
 	if err := os.Remove(filepath.Join(root, ScenarioDir, briefScenario+".yaml")); err != nil {
@@ -341,8 +341,8 @@ func TestAVerdictGoesStaleWhenThePresetBindsAnotherModelAtItsTier(t *testing.T) 
 	}
 	writeFile(t, preset, strings.ReplaceAll(string(body), testBinding.Model, "gemini-9-flash"))
 	lines, err := Lines(root, dir, "")
-	if err != nil || len(lines) != 1 || !slices.Equal(lines[0].Moved, []string{"binding"}) {
-		t.Fatalf("lines = %+v, %v; want one stale on the binding", lines, err)
+	if err != nil || len(lines) != 1 || !slices.Equal(lines[0].Moved, []string{"harness", "binding"}) {
+		t.Fatalf("lines = %+v, %v; want one stale on the harness and the binding", lines, err)
 	}
 }
 

@@ -98,7 +98,7 @@ func windowDigest(agent agentloope2e.Agent) (string, error) {
 // come from the folders, so a new file moves the digest by existing. A scenario
 // file is not here, since every scenario's stamp holds its own file whole.
 func harnessDigest(root string) (string, error) {
-	names := slices.Clone(judgeFiles)
+	names := append(slices.Clone(judgeFiles), DefaultPreset)
 	for _, pattern := range []string{
 		filepath.Join(lanePackage, "*.go"),
 		filepath.Join(lanePackage, "live", "*.go"),
@@ -121,7 +121,7 @@ func harnessDigest(root string) (string, error) {
 			names = append(names, filepath.ToSlash(rel))
 		}
 	}
-	if len(names) == len(judgeFiles) {
+	if len(names) == len(judgeFiles)+1 {
 		return "", fmt.Errorf("live: no lane source or harness file under %s, so nothing would move the harness digest", root)
 	}
 	slices.Sort(names)

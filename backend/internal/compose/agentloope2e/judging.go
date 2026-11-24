@@ -82,23 +82,37 @@ type CommandJudge struct {
 	Env []string
 }
 
-func (j CommandJudge) command(ctx context.Context, args ...string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, "python3", append([]string{filepath.Join(j.Root, "e2e", "llm", "judge_cli.py")}, args...)...) // #nosec G204 -- a fixed script of this repository
+// command builds the judge door's process. The interpreter is resolved to an
+// absolute path first, so the launch never searches PATH a second time.
+func (j CommandJudge) command(ctx context.Context, args ...string) (*exec.Cmd, error) {
+	python, err := exec.LookPath("python3")
+	if err != nil {
+		return nil, fmt.Errorf("%w: python3 is not installed", ErrJudgeUnavailable)
+	}
+	cmd := exec.CommandContext(ctx, python, append([]string{filepath.Join(j.Root, "e2e", "llm", "judge_cli.py")}, args...)...) // #nosec G204 -- a fixed script of this repository
 	cmd.Dir = filepath.Join(j.Root, "e2e", "llm")
 	cmd.Env = j.Env
-	return cmd
+	return cmd, nil
 }
 
 // Ready fails before any model is paid for when no verdict could be reached. It
 // names the judge's own reason.
 func (j CommandJudge) Ready(ctx context.Context) error {
-	_, err := j.run(j.command(ctx, "--ready"))
+	cmd, err := j.command(ctx, "--ready")
+	if err != nil {
+		return err
+	}
+	_, err = j.run(cmd)
 	return err
 }
 
 // Model is the judge model the lane is pinned to.
 func (j CommandJudge) Model(ctx context.Context) (string, error) {
-	out, err := j.run(j.command(ctx, "--model"))
+	cmd, err := j.command(ctx, "--model")
+	if err != nil {
+		return "", err
+	}
+	out, err := j.run(cmd)
 	return strings.TrimSpace(out), err
 }
 
@@ -112,7 +126,10 @@ func (j CommandJudge) Grade(ctx context.Context, criteria []string, answer strin
 	if err != nil {
 		return nil, err
 	}
-	cmd := j.command(ctx)
+	cmd, err := j.command(ctx)
+	if err != nil {
+		return nil, err
+	}
 	cmd.Stdin = bytes.NewReader(request)
 	out, err := j.run(cmd)
 	if err != nil {

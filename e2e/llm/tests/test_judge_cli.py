@@ -83,7 +83,9 @@ class JudgeCliTest(unittest.TestCase):
     def test_the_model_flag_names_the_pinned_model_and_asks_nothing(self):
         code, out, _ = run({}, {"E2E_LLM_JUDGE_MODEL": "claude-test-1"}, argv=["--model"])
         self.assertEqual((code, out), (0, "claude-test-1\n"))
-        code, out, _ = run({}, {}, argv=["--model"])
+        with unittest.mock.patch.dict(os.environ):
+            os.environ.pop("E2E_LLM_JUDGE_MODEL", None)
+            code, out, _ = run({}, {}, argv=["--model"])
         self.assertEqual(out.strip(), judge.DEFAULT_MODEL)
 
 

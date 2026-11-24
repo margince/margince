@@ -33,8 +33,14 @@ func TestTheChoiceIsTheModelThePresetBindsAtThatTier(t *testing.T) {
 			t.Errorf("tier %q resolved to %+v", tier, got.Binding)
 		}
 	}
-	premium, _ := ResolveChoice(gemini(t), "premium", "", "")
-	lower, _ := ResolveChoice(gemini(t), "cheap_cloud", "", "")
+	premium, err := ResolveChoice(gemini(t), "premium", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lower, err := ResolveChoice(gemini(t), "cheap_cloud", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if premium.Binding.Model == lower.Binding.Model || premium.Binding.Model == "" || lower.Binding.Model == "" {
 		t.Errorf("the premium and lower tier name the same model: %q and %q", premium.Binding.Model, lower.Binding.Model)
 	}

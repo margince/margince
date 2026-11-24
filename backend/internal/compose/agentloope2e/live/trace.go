@@ -76,6 +76,6 @@ func (r *Recorder) Answered() bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return slices.ContainsFunc(r.calls, func(call ai.Call) bool {
-		return call.IsTerminal && !call.Degraded && call.ErrorSentinel == ""
+		return call.Kind != "embedding" && call.IsTerminal && !call.Degraded && call.ErrorSentinel == ""
 	})
 }
