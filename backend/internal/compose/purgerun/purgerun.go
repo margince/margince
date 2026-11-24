@@ -94,7 +94,7 @@ func Hold(ctx context.Context, pool *pgxpool.Pool, subject Subject, fn func(ctx 
 			return fmt.Errorf("purge run: locking the subject: %w", err)
 		}
 		if held {
-			defer lease.Close(context.WithoutCancel(ctx))
+			defer closeLease(ctx, lease)
 			run := NewRunID(subject.ID)
 			return fn(storekit.WithBatch(ctx, run), run)
 		}
@@ -284,11 +284,19 @@ func repairIfIdle(ctx context.Context, pool *pgxpool.Pool, s Subject) (int, erro
 	if err != nil || !held {
 		return 0, err
 	}
-	defer lease.Close(context.WithoutCancel(ctx))
+	defer closeLease(ctx, lease)
 	written := 0
 	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) (err error) {
 		written, err = RepairTx(ctx, tx, s)
 		return err
 	})
 	return written, err
+}
+
+// closeLease releases the subject's lock even when ctx was cancelled, within
+// the budget the session lease sets for its own cleanup.
+func closeLease(ctx context.Context, lease *database.SessionLease) {
+	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), database.SessionLeaseCleanupTimeout)
+	defer cancel()
+	lease.Close(cleanup)
 }
