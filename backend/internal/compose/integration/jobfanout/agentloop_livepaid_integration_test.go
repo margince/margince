@@ -58,7 +58,7 @@ func TestE2EAgentLoopLive(t *testing.T) {
 	for _, sc := range scenarios {
 		if current, err := live.IsCurrent(root, lane.cfg.VerdictDir, lane.cfg.JudgeModel, sc, lane.cfg.Binding); err != nil {
 			t.Fatal(err)
-		} else if current && os.Getenv(envStaleOnly) != "0" {
+		} else if current && os.Getenv(envStaleOnly) != "0" && !offDefaultRoute(t, root) {
 			t.Logf("%s: the verdict on %s is current; STALE_ONLY=0 measures it again", sc.Name, lane.cfg.Binding.Key())
 			continue
 		}
@@ -100,7 +100,7 @@ func paidLane(t *testing.T, root string) (liveLane, []agentloope2e.Scenario) {
 	if err != nil {
 		t.Fatalf("harness: the model route is not configured: %v", err)
 	}
-	if envPresetSet := os.Getenv(envPreset); envPresetSet != "" && filepath.Clean(envPresetSet) != filepath.Join(root, live.DefaultPreset) {
+	if otherPreset(t, root) {
 		// A tier read from another preset cannot be checked against the default one.
 		choice.Binding.Tier = live.NamedTier
 	}
@@ -158,4 +158,29 @@ func scenariosMatching(t *testing.T, root, pattern string) []agentloope2e.Scenar
 		t.Fatalf("%s=%q matches none of the %d scenarios", envScenario, pattern, len(all))
 	}
 	return picked
+}
+
+// otherPreset says whether the run reads its tiers from a preset other than the
+// default one. Both paths are made absolute first, so a relative spelling of the
+// default preset is still the default.
+func otherPreset(t *testing.T, root string) bool {
+	t.Helper()
+	named := os.Getenv(envPreset)
+	if named == "" {
+		return false
+	}
+	got, err := filepath.Abs(named)
+	if err != nil {
+		t.Fatalf("harness: %s: %v", envPreset, err)
+	}
+	return got != filepath.Join(root, live.DefaultPreset)
+}
+
+// offDefaultRoute says whether the model is reached by a route the verdict's key
+// does not name: another preset, or an endpoint given by hand. Such a run is
+// measured every time, since a verdict filed for one route must not stand in for
+// another.
+func offDefaultRoute(t *testing.T, root string) bool {
+	t.Helper()
+	return os.Getenv(envBaseURL) != "" || otherPreset(t, root)
 }

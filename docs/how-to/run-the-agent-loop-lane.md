@@ -38,7 +38,7 @@ make e2e-agent-loop TIER=cheap_cloud
 ```
 
 Each tier is read from `config/presets/gemini_cloud.yaml`, and the run serves every tier with that one model, so a
-verdict names one model. `MODEL=provider:model` names a model by hand instead. Pass `TIER` or `MODEL`, not both. A tier read from another `PRESET` is filed as a named model, since only the default preset can say whether the tier still binds it. `BASE_URL` points a named model at another endpoint, and the stamp does not hold it, so use it for a single run only.
+verdict names one model. `MODEL=provider:model` names a model by hand instead. Pass `TIER` or `MODEL`, not both. A tier read from another `PRESET` is filed as a named model, since only the default preset can say whether the tier still binds it. `BASE_URL` points a named model at another endpoint, and the stamp does not hold it. A run on another `PRESET` or a `BASE_URL` is measured again every time, so use it for a single run only.
 
 The make target takes these settings:
 
