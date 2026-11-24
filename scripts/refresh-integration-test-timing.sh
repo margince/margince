@@ -50,6 +50,7 @@ done
   # A malformed line stops the refresh, so the old weights stay: awk reads a
   # non-numeric duration as 0, which would weigh that test as free.
   cat "$work"/in-*.txt | awk -F'|' -v slow="${SLOW_TEST:-1}" '
+# early-pipe-ok: the first exit is on a malformed line, which fails the whole refresh anyway
     NF != 4 || $4 !~ /^[0-9]+(\.[0-9]+)?$/ {
       printf "FAIL: not `dir|package|Test|seconds`: %s\n", $0 > "/dev/stderr"; bad = 1; exit 1
     }
