@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/resetfault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -48,7 +49,6 @@ type resetCounts struct {
 	StreamsPurged  int
 	CacheKeys      int
 	ObjectsDeleted int
-	DrainTimedOut  bool
 	// SecretsPurged counts the sealed credentials redeemed from the vault.
 	SecretsPurged int
 	// secretRefs carries the handles collected inside the sweep's transaction
@@ -82,7 +82,9 @@ func (h dataResetHandlers) runRuntimePhase(ctx context.Context, rt ResetRuntime,
 		if err != nil {
 			return counts, err
 		}
-		counts.DrainTimedOut = !drained
+		if !drained {
+			return counts, resetfault.DrainTimedOut
+		}
 	}
 	if err := clearOutbox(); err != nil {
 		return counts, err
@@ -111,28 +113,20 @@ func (h dataResetHandlers) runRuntimePhase(ctx context.Context, rt ResetRuntime,
 // on purpose: this is one queue-resume round trip, not a drain.
 const resetResumeTimeout = 15 * time.Second
 
-// resumeResetQueues lifts the fleet pause a reset took. It is called from a
-// deferred path on EVERY exit — including a panic, and including a Quiesce that
-// failed after its pause already landed — because a pause with nobody left to
-// lift it wedges every queue in the installation.
-//
-// It deliberately does not run on the request context. A reset is a bounded
-// drain plus a full sweep and reseed, which is precisely the request an
-// operator's client abandons or times out on; a resume cancelled along with it
-// would leave the fleet paused for the very reason it most needs lifting. So it
-// runs detached, under its own deadline.
-//
-// A failure is logged rather than returned: a reset that already succeeded must
-// not report as failed and send an admin to wipe the installation twice.
-func resumeResetQueues(ctx context.Context, logger *slog.Logger, rt ResetRuntime) {
+// resumeResetQueues lifts the fleet pause from a deferred path on every exit,
+// detached from the request so an abandoned client cannot leave the fleet
+// paused. A failure is logged and returned for the caller to report.
+func resumeResetQueues(ctx context.Context, logger *slog.Logger, rt ResetRuntime) error {
 	if rt.ResumeQueues == nil {
-		return
+		return nil
 	}
 	resumeCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), resetResumeTimeout)
 	defer cancel()
 	if err := rt.ResumeQueues(resumeCtx); err != nil {
 		logger.Error("data reset: resuming the queues", "err", err)
+		return err
 	}
+	return nil
 }
 
 // FlushResetCaches drops this process's cached answers for ws after a reset.

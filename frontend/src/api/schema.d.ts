@@ -65838,7 +65838,7 @@ export interface operations {
         responses: {
             /**
              * @description Installation reset to first-boot state.
-             *     Five of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`, `objects_deleted` and `drain_timed_out` — exist here and not in the retired upstream copy of this contract, and that is deliberate rather than drift anyone should reconcile away. A reset clears the job queue, the event bus, the Redis counters and the object bytes, and an operator who is told only how many table rows went has no way to tell "nothing to delete" from "this build cannot tell you". This file is the authority and the build follows it; the note is here so the next reader meets the divergence rather than re-deriving it.
+             *     Four of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted` and `objects_deleted` — exist here and not in the retired upstream copy of this contract, and that is deliberate rather than drift anyone should reconcile away. A reset clears the job queue, the event bus, the Redis counters and the object bytes, and an operator who is told only how many table rows went has no way to tell "nothing to delete" from "this build cannot tell you". This file is the authority and the build follows it; the note is here so the next reader meets the divergence rather than re-deriving it.
              */
             200: {
                 headers: {
@@ -65857,7 +65857,10 @@ export interface operations {
                         cache_keys_deleted: number;
                         /** @description Objects removed from the blob store under this workspace's key prefix. */
                         objects_deleted: number;
-                        /** @description True when a job was still running when the bounded drain window expired. The reset proceeded — a long pass must not make an installation unresettable — and the surviving job's completion write will fail against rows that no longer exist. */
+                        /**
+                         * @deprecated
+                         * @description Always false. A reset whose job drain timed out is refused with 409 before anything is deleted, so a successful reset never has this state. Kept so existing clients keep parsing.
+                         */
                         drain_timed_out: boolean;
                     };
                 };
@@ -65874,6 +65877,15 @@ export interface operations {
             };
             /** @description This installation did not arm `operations.allow_data_reset`, so the operation does not exist here. Checked before authentication, so it is a 404 rather than a 403 for every caller — the answer discloses nothing about who asked. The body is the standard problem document. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Refused with nothing deleted: another reset is running, or a background job was still running when the bounded drain window expired (the queues run again; run the reset again), or the queues could not be resumed after the reset (code `reset_queues_not_resumed`; the body says whether the reset had finished). */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

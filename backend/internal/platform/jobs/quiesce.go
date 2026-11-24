@@ -97,9 +97,8 @@ func CountRunning(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 // installation wiped back to first-boot state must not carry a job record of
 // the work it no longer has the rows for.
 //
-// Running rows go too. After a completed drain there are none; after a drain
-// timeout the surviving job's completion write fails and logs, which is what
-// the caller's drain_timed_out flag is telling the operator.
+// Running rows go too. The reset refuses to reach this point after a drain
+// timeout, so after a completed drain there are none.
 func PurgeWorkspace(ctx context.Context, pool *pgxpool.Pool, ws ids.UUID) (int, error) {
 	tag, err := pool.Exec(ctx, `
 		DELETE FROM river_job
