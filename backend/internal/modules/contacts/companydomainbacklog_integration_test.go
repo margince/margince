@@ -179,9 +179,9 @@ func TestTheSweepSkipsADomainWhoseContactsThePlantWillRefuse(t *testing.T) {
 // The selector matches a subdomain address, and only a real subdomain.
 //
 // It reads through a reversed-domain index range. The range must not drop an
-// address at a subdomain of the company's domain, which the plant attaches. It
-// must not offer an address whose domain only ends in the same letters, which
-// the plant refuses, so that domain would come back on every tick.
+// address at a subdomain of the company's domain, which the plant attaches.
+// It must not offer a domain that only ends in the same letters. The plant
+// refuses that address, so the domain would come back on every tick.
 func TestTheSweepOffersASubdomainAndNotALookalike(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

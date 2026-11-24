@@ -422,10 +422,7 @@ func (s *Store) DomainsOwedTheirContacts(ctx context.Context, limit int) ([]Doma
 			    -- The SAME two arms the plant matches on, subdomain included. A
 			    -- selector narrower than the write leaves a backlog nothing ever
 			    -- offers; one wider offers work the write will not take, and the
-			    -- domain is returned on every tick for ever. The indexed form
-			    -- adds only a reversed-domain range in front of the same two
-			    -- arms, so the set is unchanged; without it the OR leaves the
-			    -- planner a nested loop over every (domain, address) pair.
+			    -- domain is returned on every tick for ever. The index range keeps it fast.
 			   AND `+owndomain.CoversIndexedSQL("pe.email_domain_folded", "od.domain_folded")+`
 			  JOIN contact p ON p.id = pe.contact_id
 			 WHERE od.archived_at IS NULL
