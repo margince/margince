@@ -108,6 +108,12 @@ type Rules struct {
 	// default.
 	ConsentOnly bool
 
+	// MarketingMode says whether advertising here needs the recipient's prior
+	// consent or is allowed until they object. The empty value is MarketingOptIn,
+	// so a pack that states nothing keeps requiring consent. It applies to recipients in this country, whatever country the sender is in. An objection, an
+	// unsubscribe or a withdrawal stops advertising in either mode.
+	MarketingMode MarketingMode
+
 	// Disclosures are what a first message to somebody must carry.
 	//
 	// The send path renders them into the message footer. Held by
@@ -443,6 +449,12 @@ func (r Rules) Validate() error {
 		if err := r.FrequencyCap.Validate(); err != nil {
 			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 		}
+	}
+	if err := r.MarketingMode.Validate(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	if r.MarketingMode.OptOut() && r.ConsentOnly {
+		return fmt.Errorf("messaging rules for %q allow advertising until the recipient refuses and also ask for prior consent only", string(r.Jurisdiction))
 	}
 	if err := r.validateClaims(); err != nil {
 		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)

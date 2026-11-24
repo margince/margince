@@ -162,6 +162,9 @@ func owedDisclosures(sender jurisdiction.Code, recipients []jurisdiction.Code) (
 	for _, code := range recipients {
 		if marketingRules, _, found := applicableRules(code); found {
 			owed = appendOwed(owed, marketingRules.Disclosures, false)
+			// A pack may owe the controller's identity on advertising alone, as
+			// an anti-spam law does; the sender's own pack cannot say so for it.
+			owed = appendOwed(owed, advertisingOnlyIdentity(marketingRules.Disclosures), true)
 			// One body leads with one language, so the first recipient's
 			// pack that names one decides it.
 			if layout.packLanguage == "" {
@@ -200,6 +203,13 @@ func appendOwed(owed, declared []messagingrules.Disclosure, dataProtection bool)
 		}
 	}
 	return owed
+}
+
+// advertisingOnlyIdentity is the data-protection kinds a pack owes on advertising only.
+func advertisingOnlyIdentity(declared []messagingrules.Disclosure) []messagingrules.Disclosure {
+	return slices.DeleteFunc(slices.Clone(declared), func(d messagingrules.Disclosure) bool {
+		return !d.MarketingOnly || !dataProtectionDisclosure(d.Kind)
+	})
 }
 
 // dataProtectionDisclosure reports whether a kind discharges a data-protection

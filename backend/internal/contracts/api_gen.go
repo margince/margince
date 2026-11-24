@@ -8655,6 +8655,7 @@ const (
 	ContactConsentGuardEntryReasonCodeNoConsent                    ContactConsentGuardEntryReasonCode = "no_consent"
 	ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered ContactConsentGuardEntryReasonCode = "no_consent_exception_not_offered"
 	ContactConsentGuardEntryReasonCodeObjection                    ContactConsentGuardEntryReasonCode = "objection"
+	ContactConsentGuardEntryReasonCodeOptOutAllowed                ContactConsentGuardEntryReasonCode = "opt_out_allowed"
 	ContactConsentGuardEntryReasonCodeQualifyingEvent              ContactConsentGuardEntryReasonCode = "qualifying_event"
 	ContactConsentGuardEntryReasonCodeSaidWeMayWrite               ContactConsentGuardEntryReasonCode = "said_we_may_write"
 	ContactConsentGuardEntryReasonCodeSuppressed                   ContactConsentGuardEntryReasonCode = "suppressed"
@@ -8685,6 +8686,8 @@ func (e ContactConsentGuardEntryReasonCode) Valid() bool {
 	case ContactConsentGuardEntryReasonCodeNoConsentExceptionNotOffered:
 		return true
 	case ContactConsentGuardEntryReasonCodeObjection:
+		return true
+	case ContactConsentGuardEntryReasonCodeOptOutAllowed:
 		return true
 	case ContactConsentGuardEntryReasonCodeQualifyingEvent:
 		return true
@@ -67880,6 +67883,13 @@ type SendAuthorizationPreview struct {
 // SendAuthorizationPreviewRecipient One recipient's answer. It describes the MESSAGE, never the contact's file.
 type SendAuthorizationPreviewRecipient struct {
 	Address openapi_types.Email `json:"address"`
+
+	// AskCountry The record states no country for this recipient, the refusal is for want of marketing
+	// consent, and an installed pack allows advertising until the recipient refuses. A composer
+	// asks the sender for the country, saves it on the contact with `PATCH /contacts/{id}`
+	// (`address_country`) and asks the preview again. Absent or false when no answer could
+	// change the decision, and for a recipient the caller cannot read.
+	AskCountry *bool `json:"ask_country,omitempty"`
 
 	// Basis The lawful ground an allow would rest on.
 	Basis *string `json:"basis,omitempty"`

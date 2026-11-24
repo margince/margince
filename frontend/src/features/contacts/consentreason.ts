@@ -31,6 +31,7 @@ const REASON: Record<GuardEntry["reason_code"], MessageKey> = {
     "consent.reason.no_consent_exception_not_offered",
   no_consent: "consent.reason.no_consent",
   existing_customer: "consent.reason.existing_customer",
+  opt_out_allowed: "consent.reason.opt_out_allowed",
 };
 
 // Partial: the retired active_deal kind has no sentence, and an unnamed kind
