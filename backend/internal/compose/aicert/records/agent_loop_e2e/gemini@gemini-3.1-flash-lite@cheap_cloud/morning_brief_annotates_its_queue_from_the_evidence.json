@@ -109,7 +109,7 @@
   "stamp": {
     "scenario": "c25b42e58c067d5d",
     "window": "8c877374763d9a1d",
-    "harness": "4a23f999d8cc7d46",
+    "harness": "09a0d49dc9b0d21b",
     "binding": "gemini@gemini-3.1-flash-lite@cheap_cloud",
     "judge": "claude-haiku-5-5"
   },

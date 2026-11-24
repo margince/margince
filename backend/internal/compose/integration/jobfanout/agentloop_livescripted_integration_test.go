@@ -13,7 +13,6 @@ package jobfanout
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -58,7 +57,7 @@ func scriptedLane(t *testing.T, name string, runs int) (liveLane, agentloope2e.S
 	lane := liveLane{
 		cfg: live.Config{
 			Root: root, VerdictDir: verdicts, Judge: judge, Runs: runs,
-			Binding: agentloope2e.Binding{Provider: "fake", Model: "scripted", Tier: "premium"},
+			Binding: agentloope2e.Binding{Provider: "fake", Model: "scripted", Tier: live.NamedTier},
 		},
 		setup: func(t *testing.T) (*runnerEnv, *live.Recorder) { return setupRunner(t), nil },
 	}
@@ -113,7 +112,7 @@ func TestLiveLaneFilesAPassingVerdictFromAScriptedRoute(t *testing.T) {
 			t.Errorf("the judge was not shown %q", want)
 		}
 	}
-	if regexp.MustCompile(`\bdone\b`).MatchString(judged) {
+	if strings.Contains(judged, finalSummary) {
 		t.Errorf("the judge was shown the agent's own final summary")
 	}
 }
