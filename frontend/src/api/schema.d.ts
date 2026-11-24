@@ -32804,7 +32804,7 @@ export interface components {
             processing: "cloud_provider" | "configured_endpoint";
             certification?: components["schemas"]["AiRouteCertification"];
         };
-        /** @description What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified. */
+        /** @description What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured. */
         AiRouteCertification: {
             /**
              * @description The worst verdict across the task's sites and across the records of this model.

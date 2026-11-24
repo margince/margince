@@ -36019,7 +36019,7 @@ type AiProviderSettings struct {
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
-	// Certification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+	// Certification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
 	Certification *AiRouteCertification `json:"certification,omitempty"`
 	Model         string                `json:"model"`
 	Processing    string                `json:"processing"`
@@ -36027,7 +36027,7 @@ type AiRouteCandidate struct {
 	Tier          string                `json:"tier"`
 }
 
-// AiRouteCertification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+// AiRouteCertification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
 type AiRouteCertification struct {
 	// Current Every record behind the verdict still describes the prompts this build sends.
 	Current bool `json:"current"`
