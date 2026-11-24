@@ -193,7 +193,7 @@ func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMes
 	}
 	served.Output, served.Records, err = r.InvokeServing(ctx, target, args)
 	settle()
-	return served, err
+	return served, r.forRareAction(name, target, in, err)
 }
 
 // InvokeServing is Invoke, plus the number of records the answer handed over.
