@@ -13,6 +13,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"sync"
@@ -352,6 +353,11 @@ func TestARefoldWaitsForATransactionStillOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err := open.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
 	if _, err := open.Exec(context.Background(), `SELECT 1`); err != nil {
 		t.Fatal(err)
 	}
