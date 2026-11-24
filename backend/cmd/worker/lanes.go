@@ -52,7 +52,7 @@ type workerLanes struct {
 	inserter  *jobs.Runner
 	deliverer func(*database.DB) *webhooks.Deliverer
 	blob      blobstore.Store
-	// journal is the separate erasure journal store; nil keeps the journal in blob.
+	// journal is the resolved erasure journal store: the separate one, else blob.
 	journal blobstore.Store
 	// providers is the licensed-data-provider adapter registry this boot was
 	// configured with (MARGINCE_PROVIDER_SURFE). Nil is a deployment with no

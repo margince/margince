@@ -167,14 +167,8 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 	}
 	// Before the runner lane: an offer a Surface-B run changes reclaims its
 	// retired rendering from this store.
-	lanes.blob = blob
-	journal, journalSeparate, err := compose.ResolveJournalStore(laneCtx, cfg.settings, blob)
-	if err != nil {
-		return lanes, fmt.Errorf("worker: %w", err)
-	}
-	if journalSeparate {
-		lanes.journal = journal
-		_, _ = fmt.Fprintln(stdout, "worker exporting the erasure journal to its own object store")
+	if err := lanes.bindStores(laneCtx, cfg.settings, blob, stdout); err != nil {
+		return lanes, err
 	}
 	// What a unit's Models and Objects reach on a job tick or a bus delivery.
 	compose.BindExtensionModels(modelPath.ExtensionTasks)

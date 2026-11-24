@@ -7,12 +7,14 @@
 # spare stack (MARGINCE_DSN, MARGINCE_BLOBSTORE_PATH, MARGINCE_KEYVAULT_ROOT_KEY), and
 # LIVE_BLOBSTORE_PATH, the live object store that holds the newest erasure journal. With
 # MARGINCE_ERASURE_JOURNAL_ENDPOINT or MARGINCE_ERASURE_JOURNAL_PATH set, the journal is in its
-# own store, no copy is made and LIVE_BLOBSTORE_PATH is not needed.
+# own store (and not the spare store), no copy is made and LIVE_BLOBSTORE_PATH is not needed.
+# The worker refuses a journal store that is the same place as its main store.
 set -euo pipefail
 
 src="${1:?usage: restore.sh <backup folder>}"
 : "${SPARE_OWNER_DSN:?}" "${SPARE_BLOBSTORE_PATH:?}" "${BACKUP_DIR:?}"
-if [[ -z "${MARGINCE_ERASURE_JOURNAL_ENDPOINT:-}${MARGINCE_ERASURE_JOURNAL_PATH:-}" ]]; then : "${LIVE_BLOBSTORE_PATH:?}"; fi
+own_journal_store() { [[ -n "${MARGINCE_ERASURE_JOURNAL_ENDPOINT:-}${MARGINCE_ERASURE_JOURNAL_PATH:-}" && "${MARGINCE_ERASURE_JOURNAL_PATH:-}" != "$SPARE_BLOBSTORE_PATH" ]]; }
+if ! own_journal_store; then : "${LIVE_BLOBSTORE_PATH:?}"; fi
 [[ -f "$src/DONE" ]] || { echo "refusing: $src has no DONE marker (unfinished backup)" >&2; exit 1; }
 
 started=$(date +%s)
@@ -21,7 +23,7 @@ mkdir -p "$SPARE_BLOBSTORE_PATH"
 cp -a "$src/objects/." "$SPARE_BLOBSTORE_PATH/"
 
 # The backup's journal is older than the live one; the replay needs the newest.
-if [[ -z "${MARGINCE_ERASURE_JOURNAL_ENDPOINT:-}${MARGINCE_ERASURE_JOURNAL_PATH:-}" ]]; then
+if ! own_journal_store; then
   rm -rf "$SPARE_BLOBSTORE_PATH/erasure-suppression"
   cp -a "$LIVE_BLOBSTORE_PATH/erasure-suppression" "$SPARE_BLOBSTORE_PATH/erasure-suppression"
 fi

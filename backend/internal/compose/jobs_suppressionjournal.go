@@ -69,11 +69,7 @@ func suppressionJournalExporterFor(
 // addSuppressionJournalJobs registers the export worker when there is somewhere
 // to write to.
 func addSuppressionJournalJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
-	journal := cfg.JournalBlobstore
-	if journal == nil {
-		journal = cfg.Blobstore
-	}
-	exporter := suppressionJournalExporterFor(pool, journal, log)
+	exporter := suppressionJournalExporterFor(pool, cfg.JournalBlobstore, log)
 	if exporter == nil {
 		return
 	}
