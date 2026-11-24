@@ -162,6 +162,8 @@ func TestEveryHiddenFileAnswersAsOneThatDoesNotExist(t *testing.T) {
 	files["withheld file"], files["archived file"] = e.file(t, open, "withheld"), e.file(t, open, "archived")
 	e.WsExec(t, `UPDATE attachment SET bytes_withheld = true WHERE id = $1`, files["withheld file"])
 	e.WsExec(t, `UPDATE attachment SET archived_at = now() WHERE id = $1`, files["archived file"])
+	files["file a user uploaded"] = e.file(t, open, "uploaded")
+	e.WsExec(t, `UPDATE attachment SET category = 'other', source = 'upload' WHERE id = $1`, files["file a user uploaded"])
 	files["no such file"] = ids.NewV7()
 
 	ctx, reader := e.reader(t, principal.RowScopeAll), Files{Unit: "mirror", ActAs: ids.NewV7(), Blob: e.blob}
@@ -178,7 +180,7 @@ func TestEveryHiddenFileAnswersAsOneThatDoesNotExist(t *testing.T) {
 	}
 	var left []extension.MailAttachment
 	if err := e.in(t, ctx, func(tx pgx.Tx) (err error) { left, err = reader.List(ctx, tx, open); return err }); err != nil || len(left) != 0 {
-		t.Errorf("a mail whose files are withheld or archived listed %+v, %v; want none", left, err)
+		t.Errorf("a mail whose files are withheld, archived or uploaded listed %+v, %v; want none", left, err)
 	}
 	if rows := e.WsCount(t, `SELECT count(*) FROM system_log WHERE detail->>'kind' = $1`, Opened); rows != 0 {
 		t.Errorf("refused opens left %d export rows, want 0", rows)
