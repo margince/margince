@@ -90,8 +90,8 @@ type Offer = Readonly<{
 
 /**
  * After a colleague links a mail to a deal by hand, offers to make the mail's
- * contacts stakeholders, so their next mail lands on the deal by the stakeholder
- * rule. `offer` resolves once it knows whether to ask; `done` runs when the
+ * contacts stakeholders. Their next mail then lands on the deal by the
+ * stakeholder rule. `offer` resolves once it knows whether to ask; `done` runs when the
  * offer is answered, or at once when nobody is left to offer.
  */
 export function useDealStakeholderOffer(): Readonly<{

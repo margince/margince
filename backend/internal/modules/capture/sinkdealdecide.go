@@ -237,9 +237,9 @@ func decideByCompany(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates
 	if company.IsZero() {
 		return DealVerdict{Outcome: DealNone}, nil
 	}
-	// The thread a mail claims is typed by its sender, so a sibling's deal
-	// the machine chose counts only when the mail's own company corroborates
-	// it. Only a colleague's choice crosses companies (decideByRule).
+	// The thread a mail claims is typed by its sender. A sibling's deal the
+	// machine chose counts only when the mail's own company corroborates it.
+	// Only a colleague's choice crosses companies (decideByRule).
 	switch len(facts.thread) {
 	case 1:
 		return DealVerdict{Outcome: DealLinked, Deal: facts.thread[0], Basis: DealBasisThread}, nil

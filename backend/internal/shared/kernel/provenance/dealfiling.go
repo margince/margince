@@ -33,7 +33,7 @@ func HumanDealFilingSQL(activity string) string {
 }
 
 // HumanChoseDealSQL is the test that a human or an agent chose deal for
-// activity: their latest decision about that deal files the activity there, or
+// activity. Their latest decision about that deal files the activity there, or
 // a colleague marked the link. Both arguments are compile-time SQL expressions.
 func HumanChoseDealSQL(activity, deal string) string {
 	return `(` + humanFilingSQL(activity, `'deal'`, deal) + ` AND h.after->>'entity_id' = (` + deal + `)::text
