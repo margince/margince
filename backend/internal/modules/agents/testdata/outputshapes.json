@@ -5249,13 +5249,17 @@
         "type": "object",
         "required": [
           "router",
-          "actions"
+          "actions",
+          "how_to_call"
         ],
         "properties": {
           "router": {
             "type": "string"
           },
           "ask_user_first_means": {
+            "type": "string"
+          },
+          "how_to_call": {
             "type": "string"
           },
           "actions": {

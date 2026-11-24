@@ -173,3 +173,32 @@ func TestTheActionCatalogAnswersOnlyForWhatTheCallerIsOffered(t *testing.T) {
 		t.Errorf("a write passport asking for %s's actions = %s, %v", f.router, out, err)
 	}
 }
+
+// A refused call to a rare action says where its arguments go and where to
+// read them. The listing a client holds does not name them.
+func TestARareActionsRefusalSaysWhereItsArgumentsGo(t *testing.T) {
+	f := newRareListingFixture(t)
+	catalog := "read_workspace with topic=actions, router=" + f.router + " and action="
+	for _, c := range []struct{ call, want string }{
+		{`{"action":"` + rareRouted + `","request_body":{"id":"d1"}}`, "move `id` out of request_body: this action takes it at the top level, beside `action`"},
+		{`{"action":"` + rareInProcess + `"}`, "add `rare_only` at the top level, beside `action`"},
+		{`{"action":"` + rareRouted + `","id":"d1","entity_type":"deal"}`, "leave out `entity_type`, which " + rareRouted + " does not take"},
+	} {
+		_, err := f.r.InvokeServed(agentCtx(), f.router, json.RawMessage(c.call))
+		var bad *BadArgsError
+		if !errors.As(err, &bad) {
+			t.Errorf("%s answered %v, want a refusal", c.call, err)
+			continue
+		}
+		action := rareRouted
+		if strings.Contains(c.call, rareInProcess) {
+			action = rareInProcess
+		}
+		if !strings.Contains(bad.Guidance, c.want) || !strings.Contains(bad.Guidance, catalog+action) {
+			t.Errorf("%s was refused with %q, want %q and the catalog to read", c.call, bad.Guidance, c.want)
+		}
+		if strings.Contains(err.Error(), "tools/list") {
+			t.Errorf("%s was refused pointing at tools/list, which leaves this action's arguments out: %v", c.call, err)
+		}
+	}
+}

@@ -54254,6 +54254,8 @@ export interface components {
             router: string;
             /** @description What ask_user_first asks of the model; present when an action here has it. */
             ask_user_first_means?: string;
+            /** @description Where an action's arguments go in the router call: top-level members beside action, a routed body in request_body. */
+            how_to_call: string;
             actions: {
                 /** @description The value the router's action argument takes. */
                 action: string;

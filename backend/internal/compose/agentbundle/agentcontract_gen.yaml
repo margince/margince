@@ -51703,10 +51703,11 @@ components:
     RouterActions:
       type: object
       description: The actions of one MCP router, with the arguments each takes.
-      required: [router, actions]
+      required: [router, actions, how_to_call]
       properties:
         router: {type: string}
         ask_user_first_means: {type: string, description: 'What ask_user_first asks of the model; present when an action here has it.'}
+        how_to_call: {type: string, description: 'Where an action''s arguments go in the router call: top-level members beside action, a routed body in request_body.'}
         actions:
           type: array
           items:

@@ -431,8 +431,8 @@ func (d describeRouterActions) Spec() mcp.ToolSpec {
 			"router's whole list is long.",
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeRouterActions",
-		OutputSchema: schema(`{"type":"object","required":["router","actions"],"properties":{` +
-			`"router":{"type":"string"},"ask_user_first_means":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
+		OutputSchema: schema(`{"type":"object","required":["router","actions","how_to_call"],"properties":{` +
+			`"router":{"type":"string"},"ask_user_first_means":{"type":"string"},"how_to_call":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
 			`"required":["action","does","route"],"properties":{"action":{"type":"string"},` +
 			`"does":{"type":"string"},"route":{"type":"string"},"ids":{"type":"array","items":{"type":"string"}},` +
 			`"query":{"type":"array","items":{"type":"object","required":["name","type"],"properties":{"name":{"type":"string"},` +
@@ -446,7 +446,7 @@ func (d describeRouterActions) Spec() mcp.ToolSpec {
 
 // routerRunRoute stands in the route column for an action the router runs in
 // process: the arguments go to the router itself, beside its action field.
-const routerRunRoute = "in process: call the router with these arguments"
+const routerRunRoute = "in process: send body's members at the top level, beside action"
 
 type routeActionShape struct {
 	Action       string          `json:"action"`

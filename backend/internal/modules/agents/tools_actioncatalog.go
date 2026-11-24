@@ -86,7 +86,7 @@ func (d describeRouterActions) catalog(router, action string, seen func(string) 
 	}
 	actions = append(actions, ranInProcess...)
 	slices.SortFunc(actions, func(a, b routeActionShape) int { return strings.Compare(a.Action, b.Action) })
-	answer := map[string]any{"router": args.Router, "actions": actions}
+	answer := map[string]any{"router": args.Router, "actions": actions, howToCallField: howToCall}
 	if asked != 0 {
 		answer[askFirstMeansField] = "Where ask_user_first is true, the user's yes is needed, so tell them " +
 			asked.consequence() + " and " + askFirstGetYes
@@ -131,6 +131,15 @@ func (d describeRouterActions) inProcess(router, action string, seen func(string
 	}
 	return out, nil
 }
+
+// howToCall says where each part of an action's arguments goes in the router
+// call, once per answer, since a model nests a top-level argument otherwise.
+const (
+	howToCallField = "how_to_call"
+	howToCall      = "Call the router with action and the action's arguments as top-level members. ids, query " +
+		"and if_version are top-level members too. Only a routed action's body goes inside request_body; " +
+		"an in-process action's body members are top-level members."
+)
 
 // askedKinds is which ask-first actions a router has: ones that write, ones
 // that only read, or both.

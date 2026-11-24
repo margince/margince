@@ -66167,7 +66167,10 @@ type RouterActions struct {
 
 	// AskUserFirstMeans What ask_user_first asks of the model; present when an action here has it.
 	AskUserFirstMeans *string `json:"ask_user_first_means,omitempty"`
-	Router            string  `json:"router"`
+
+	// HowToCall Where an action's arguments go in the router call: top-level members beside action, a routed body in request_body.
+	HowToCall string `json:"how_to_call"`
+	Router    string `json:"router"`
 }
 
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
