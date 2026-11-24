@@ -47,7 +47,14 @@ func runReplayErasures(
 	if err != nil {
 		return fmt.Errorf("replay-erasures: blobstore: %w", err)
 	}
-	replay, err := compose.ReplayErasureSuppressions(ctx, pool, blob, *emptyJournalOK)
+	journal, separate, err := blobstore.ResolveJournal(ctx, settings, blob)
+	if err != nil {
+		return fmt.Errorf("replay-erasures: %w", err)
+	}
+	if !separate {
+		_, _ = fmt.Fprintln(stdout, sharedJournalWarning)
+	}
+	replay, err := compose.ReplayErasureSuppressions(ctx, pool, blob, journal, *emptyJournalOK)
 	if errors.Is(err, compose.ErrReplayNeedsObjectStore) || errors.Is(err, compose.ErrReplayJournalEmpty) {
 		return err
 	}
@@ -56,6 +63,12 @@ func runReplayErasures(
 	writeErasureReplayReport(stdout, replay)
 	return err
 }
+
+// sharedJournalWarning is printed when no separate journal store is set: the
+// list then sits in the store a restore may have rolled back.
+const sharedJournalWarning = "WARNING: no separate erasure journal store is set (MARGINCE_ERASURE_JOURNAL_ENDPOINT or " +
+	"MARGINCE_ERASURE_JOURNAL_PATH), so the erasure journal lives in the restored object store and may have been rolled " +
+	"back with it. Erasures newer than the restored copy can be missing from it."
 
 // writeErasureReplayReport says what the replay took and, as plainly, what it
 // could not cover.
