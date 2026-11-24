@@ -8,14 +8,17 @@ package footerhealth
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -39,6 +42,37 @@ const (
 type Gap struct {
 	consent.FooterGap
 	Name string
+}
+
+// Summary reads the source and its findings. A seat that may not change the
+// details sees the source withheld. base builds a finding counting held messages.
+func Summary(
+	ctx context.Context, pool *pgxpool.Pool, store *consent.Store, source crmcontracts.HealthSource, now time.Time,
+	base func(held int) crmcontracts.HealthFinding,
+) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+	source.Permission = Object + ":" + string(principal.ActionUpdate)
+	if !auth.Allows(ctx, Object, principal.ActionUpdate) {
+		source.Availability, source.Code = crmcontracts.HealthSourceAvailabilityWithheld, string(crmcontracts.HealthSourceAvailabilityWithheld)
+		return source, nil, nil
+	}
+	var gaps []Gap
+	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		gaps, err = GapsTx(ctx, tx, store)
+		return err
+	})
+	if err != nil {
+		return source, nil, err
+	}
+	source.ObservedAt, source.Condition, source.Code = &now, crmcontracts.HealthSourceConditionClear, "footer_complete"
+	findings := make([]crmcontracts.HealthFinding, 0, len(gaps))
+	for _, gap := range gaps {
+		f := Finding(ctx, base(gap.HeldByUser+gap.HeldInBackground), gap)
+		f.ObservedAt = &now
+		findings = append(findings, f)
+		source.Condition, source.Code = crmcontracts.HealthSourceConditionWaitingHuman, IncompleteCode
+	}
+	return source, findings, nil
 }
 
 // GapsTx names each entity and keeps the ones with a gap. store is the

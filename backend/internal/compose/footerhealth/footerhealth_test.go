@@ -7,6 +7,7 @@ import (
 	"context"
 	"slices"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -72,5 +73,24 @@ func TestAFooterButtonIsOffForASeatThatCannotChangeItsPage(t *testing.T) {
 	editor := seat(map[string]principal.ObjectGrant{"legal_entity": {Update: true}})
 	if !remedyAllowed(editor, crmcontracts.HealthActionDestinationLegalEntities) {
 		t.Error("a legal entity editor's button is off")
+	}
+}
+
+// Only a seat that may fill in the company details is told they are missing.
+// A seat that only reads the settings sees the source withheld, and no
+// database is asked.
+//
+// Mutation: ask principal.ActionRead in Summary and this fails.
+func TestTheFooterWarningIsWithheldFromASeatThatCannotFillTheDetails(t *testing.T) {
+	reader := seat(map[string]principal.ObjectGrant{"installation_settings": {Read: true}})
+	source, findings, err := Summary(reader, nil, nil, crmcontracts.HealthSource{Id: SourceID}, time.Time{}, func(int) crmcontracts.HealthFinding {
+		t.Fatal("a withheld source built a finding")
+		return crmcontracts.HealthFinding{}
+	})
+	if err != nil || len(findings) != 0 || source.Availability != crmcontracts.HealthSourceAvailabilityWithheld || source.ObservedAt != nil {
+		t.Fatalf("a read-only seat got %+v %v %v, want the source withheld", source, findings, err)
+	}
+	if source.Permission != "installation_settings:update" {
+		t.Errorf("the withheld source names %q, want the grant it needs", source.Permission)
 	}
 }
