@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { createContext, type ReactNode, useContext } from "react";
-import { RecordBack } from "../../design-system/recordview";
-import { useT } from "../../i18n";
+import type { ReactNode } from "react";
 import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
+import { RecordHrefScope } from "../../lib/recordhref";
 import {
   navigate,
   parseHash,
@@ -19,13 +18,16 @@ import {
   type UrlParams,
   useUrlParams,
 } from "../../lib/urlstate";
-import { WORKLIST_FILTER_PARAM, WORKLIST_VIEW_PARAM } from "./worklist.header";
+import {
+  WORKLIST_FILTER_PARAM,
+  WORKLIST_VIEW_PARAM,
+} from "../../lib/worklistrouting";
 
 // The way back from a record to the Worklist drawer it was opened from.
 //
 // The drawer lives on Home's address, so opening a record from it leaves that
 // address and the drawer with it. The record's own address carries the
-// drawer's dials instead, and the record head turns them into a link back.
+// drawer's dials instead, and the top bar's Back turns them into the way back.
 
 const FROM_PARAM = "from";
 const FROM_WORKLIST = "worklist";
@@ -36,9 +38,8 @@ const DRAWER_DIALS = [
   "owner",
 ] as const;
 
-// The records whose head draws the way back. Any other destination a row
-// links to (a settings queue, a privacy case) gets an untouched address, so
-// its own dials are never shadowed by the drawer's.
+// The records that keep the way back. Any other destination a row links to
+// keeps an untouched address, so the drawer's dials never shadow its own.
 const RETURNING_SCREENS: ReadonlySet<Screen> = new Set([
   "contacts",
   "companies",
@@ -80,18 +81,15 @@ export function openContactTab(id: string, tab: ContactTab): void {
   navigateKeepingReturn(contactTabRoute(id, tab));
 }
 
-/** The record `href` opens, when it is one whose head draws the way back. */
+/** The record `href` opens, when it is one that keeps the way back. */
 export function returningRecord(href: string): Route | undefined {
   const route = parseHash(href);
   return route.id && RETURNING_SCREENS.has(route.screen) ? route : undefined;
 }
 
 /** `href` with the drawer's dials added, when it addresses a returning record. */
-export function withWorklistReturn(
-  href: string,
-  drawer: UrlParams | null,
-): string {
-  if (!drawer || !returningRecord(href)) {
+export function withWorklistReturn(href: string, drawer: UrlParams): string {
+  if (!returningRecord(href)) {
     return href;
   }
   const merged = new Map(parseParams(href));
@@ -103,49 +101,35 @@ export function withWorklistReturn(
   return hashWithParams(href, merged);
 }
 
-/** Home with the drawer open on the dials the record carried back. */
-export function worklistReturnHref(carried: UrlParams): string {
+/**
+ * Home with the drawer open on the dials the record at `hash` carried, when
+ * the record was opened from the drawer.
+ */
+export function worklistReturnHref(hash: string): string | undefined {
+  const carried = returningRecord(hash) && worklistReturn(parseParams(hash));
+  if (!carried) {
+    return undefined;
+  }
   const dials = new Map(carried);
   dials.delete(FROM_PARAM);
   dials.set("queue", "1");
   return hashWithParams(routeHash({ screen: "home" }), dials);
 }
 
-const DrawerDials = createContext<UrlParams | null>(null);
-
 /**
- * Marks its rows as opened from the Worklist. The drawer's dials are the
- * address's; a list drawn elsewhere names its own.
+ * Marks every record link under it as opened from the Worklist, the shared
+ * components' included. The drawer's dials are the address's; a list drawn
+ * elsewhere names its own.
  */
 export function WorklistReturnScope({
   dials,
   children,
 }: Readonly<{ dials?: UrlParams; children: ReactNode }>) {
   const [params] = useUrlParams();
+  const drawer = dials ?? params;
   return (
-    <DrawerDials.Provider value={dials ?? params}>
+    <RecordHrefScope href={(href) => withWorklistReturn(href, drawer)}>
       {children}
-    </DrawerDials.Provider>
-  );
-}
-
-/** The drawer's dials when the caller is drawn inside it, null anywhere else. */
-export function useDrawerDials(): UrlParams | null {
-  return useContext(DrawerDials);
-}
-
-/** "Back to Worklist" on a record opened from the drawer; nothing otherwise. */
-export function WorklistReturnLink() {
-  const t = useT();
-  const [params] = useUrlParams();
-  const carried = worklistReturn(params);
-  if (!carried) {
-    return null;
-  }
-  return (
-    <RecordBack
-      href={worklistReturnHref(carried)}
-      label={t("brief.queue.back")}
-    />
+    </RecordHrefScope>
   );
 }

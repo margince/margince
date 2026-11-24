@@ -115,7 +115,41 @@ function PendingWrite() {
   return null;
 }
 
+/** A deal create the reader starts and the server never answers, under the
+ *  key the ticker names. */
+function DealCreateButton() {
+  const write = useMutation({
+    mutationKey: ["deal-new"],
+    mutationFn: () => new Promise<void>(() => {}),
+  });
+  return (
+    <button type="button" onClick={() => write.mutate()}>
+      create
+    </button>
+  );
+}
+
 describe("AgentRail", () => {
+  it("shows the reader's own write on the line, and heads the orb's state with the agent's line", async () => {
+    stubAgentRailApi();
+    const user = userEvent.setup();
+    const { container } = render({ children: <DealCreateButton /> });
+    await settlesOnLine(container, en["agent.line.allClear"]);
+
+    await user.click(screen.getByRole("button", { name: "create" }));
+
+    await settlesOnLine(container, en["agent.ticker.write.dealNew"]);
+
+    expect(block(container).getAttribute("data-core-state")).toBe("idle");
+    const toggle = container.querySelector(".artoggle");
+    const said = document.getElementById(
+      toggle?.getAttribute("aria-describedby") ?? "",
+    );
+    expect(said?.textContent).toBe(
+      `${en["agent.state.idle"]}. ${en["agent.line.allClear"]}`,
+    );
+  });
+
   // The resting line is a rotation of TRUE readings, and an installation with a
   // clean queue has only one true thing to say. Which is the point of the case:
   // a resting surface says nothing rather than inventing something to report.
@@ -534,9 +568,6 @@ describe("AgentRail", () => {
       ),
     );
     expect(container.querySelector(".arspend")).toBeNull();
-    // Whether the panel is open is a fact about the block rather than about the
-    // money, so the line the two share outlives the figure on it.
-    expect(container.querySelector(".arlast > .archev")).not.toBeNull();
   });
 
   // The exact figure, not merely a figure: 120 minor units of the summary's
@@ -557,11 +588,8 @@ describe("AgentRail", () => {
     );
     expect(paths.some((path) => path.endsWith("/ai/usage/summary"))).toBe(true);
     expect(paths.some((path) => path.endsWith("/ai/usage"))).toBe(false);
-    // And on the same line as the disclosure: one row of chrome, not a figure
-    // with a chevron half a line below it.
-    const foot = container.querySelector(".arlast");
-    expect(foot?.querySelector(".arspend")).not.toBeNull();
-    expect(foot?.querySelector(".archev")).not.toBeNull();
+    // Inside the words' block, so it folds and centres with the line.
+    expect(container.querySelector(".arwords > .arspend")).not.toBeNull();
   });
 
   // A priced month that cost under a cent is a real zero and draws one.

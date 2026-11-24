@@ -2744,7 +2744,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.companyLogoAria": "Trang chủ {company}, chạy trên Margince",
   "shell.poweredBy": "Chạy trên Margince",
   "shell.searchEverything": "Tìm kiếm hoặc hỏi Margince",
-  "shell.breadcrumbAria": "Đường dẫn điều hướng",
   "shell.back": "Quay lại",
   "shell.backToSetup": "Quay lại thiết lập",
   "shell.license.none": "Chưa có giấy phép",
@@ -3462,7 +3461,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Đang tải…",
   "ref.nameLoadFailed": "Không thể tải tên",
   "ref.memberLeft": "{name} (đã nghỉ)",
-  "ref.leadUnnamed": "Lead chưa có tên",
   "roster.failedUsers": "Không thể tải danh sách thành viên.",
   "roster.failedTeams": "Không thể tải danh sách nhóm.",
   "owner.rosterFailed":
@@ -7484,7 +7482,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tệp .vcf, định dạng xuất danh bạ của điện thoại và ứng dụng thư, hoặc ảnh chụp một hay nhiều danh thiếp. vCard do chính chủ cung cấp, nên vCard nhập vào không cần qua bước duyệt. Ảnh do mô hình đọc và có thể sai, nên mỗi danh thiếp đọc từ ảnh đều chờ bạn duyệt.",
   "vcardImport.choose": "Chọn tệp hoặc ảnh",
   "vcardImport.working": "Đang đọc danh thiếp…",
-  "vcardImport.back": "Quay lại Liên hệ",
   "vcardImport.noCards": "Tệp này không chứa danh thiếp nào.",
   "vcardImport.failed": "Danh thiếp chưa được nhập.",
   "vcardImport.outcome.created": "Đã thêm",
@@ -7497,7 +7494,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "vcardImport.field.kept": "Giữ giá trị trong hồ sơ",
   "vcardImport.field.notInCard": "Không có trong thẻ",
   "vcardImport.next": "vCard tiếp theo",
-  "vcardImport.backToCompany": "Quay lại công ty",
   "vcardImport.forCompany": "Liên hệ tạo từ các thẻ này làm việc tại",
   "vcardImport.companyPhotoTitle": "Ảnh không được gắn vào công ty",
   "vcardImport.companyPhoto":

@@ -2727,7 +2727,6 @@ export const en = {
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.searchEverything": "Search or ask Margince",
-  "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
   "shell.backToSetup": "Back to setup",
   "shell.license.none": "No license",
@@ -3486,7 +3485,6 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "ref.memberLeft": "{name} (left)",
-  "ref.leadUnnamed": "Unnamed lead",
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
@@ -7688,7 +7686,6 @@ export const en = {
     "A .vcf file, the contact export format of phones and mail clients, or a photo of one or more business cards. A vCard comes from its owner, so imported vCards skip approval. A photo is read by a model and can be wrong, so every card read from a photo waits for your approval.",
   "vcardImport.choose": "Select file or photo",
   "vcardImport.working": "Reading cards…",
-  "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
   "vcardImport.failed": "The cards were not imported.",
   "vcardImport.outcome.created": "Added",
@@ -7701,7 +7698,6 @@ export const en = {
   "vcardImport.field.kept": "Record value kept",
   "vcardImport.field.notInCard": "Not in the card",
   "vcardImport.next": "Next vCard",
-  "vcardImport.backToCompany": "Back to the company",
   "vcardImport.forCompany": "Contacts created from these cards work for",
   "vcardImport.companyPhotoTitle": "Photos are not filed under a company",
   "vcardImport.companyPhoto":

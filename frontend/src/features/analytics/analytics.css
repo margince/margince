@@ -58,6 +58,7 @@
   grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   align-items: start;
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
 }
 @media (max-width: 1100px) {
   .analytics-pair {
@@ -202,6 +203,7 @@
   grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
   align-items: stretch;
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
 }
 /* One column of the lead row: its cards stacked at the gap between cards. */
 .analytics-column {

@@ -472,7 +472,7 @@ slot.
 ### The installation's second mark
 
 The record above shows one picture. The installation's own company stores two. The sidebar head draws
-only a **square icon**, open or closed. A wordmark scaled into its `40px` square is a row of lines nobody
+only a **square icon**, open or closed. A wordmark scaled into its `32px` square is a row of lines nobody
 can read. The wide lockup is kept for the places that draw a company as a full lockup.
 
 The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_origin`). It is

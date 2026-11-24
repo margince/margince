@@ -40,7 +40,6 @@
   max-width: 100%;
   padding: var(--space-2) var(--space-4) var(--space-2) var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgInkField);
   color: var(--textOnAccent);
   box-shadow: var(--shadow-pop);

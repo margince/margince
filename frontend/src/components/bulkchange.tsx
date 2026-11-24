@@ -23,7 +23,7 @@ import {
   dealStageMoveKeys,
   derivedRecordKeys,
 } from "../lib/activitykeys";
-import { LISTS_KEY } from "../lib/lists.queries";
+import { LISTS_KEY } from "../lib/listkeys";
 import { executeBulkChange, previewBulkChange } from "./bulkchangeapi";
 import { BulkUndoContext } from "./bulkundo";
 import {

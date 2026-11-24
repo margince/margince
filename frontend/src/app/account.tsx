@@ -44,10 +44,16 @@ type DialogState = "unopened" | "open" | "closed";
  * feedback with the keyboard shortcuts and About Margince, and sign-out. At
  * phone width it also carries the setup reminder.
  */
-export function AccountMenu() {
+export function AccountMenu({
+  current = false,
+}: Readonly<{
+  /** The page on screen is one this menu leads to, and nothing else says so. */
+  current?: boolean;
+}>) {
   const t = useT();
   const me = useMe();
   const [open, setOpen] = useState(false);
+  const [fromEnd, setFromEnd] = useState(false);
   const [shortcuts, setShortcuts] = useState<DialogState>("unopened");
   const [about, setAbout] = useState<DialogState>("unopened");
   // From Help, focus returns to the trigger; from `?`, to wherever the key was pressed.
@@ -108,12 +114,25 @@ export function AccountMenu() {
         aria-labelledby={identity.label ? `${faceId} ${nameId}` : nameId}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-current={current ? "page" : undefined}
         aria-controls={open ? menuId : undefined}
         // Who is signed in, for a screen reader: a description, because the name
         // above leaves it out. The `title` is the pointer's copy, never the name.
         aria-describedby={identity.spoken ? spokenId : undefined}
         title={identity.spoken || undefined}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          setFromEnd(false);
+          setOpen((current) => !current);
+        }}
+        // The menu button's keys: Down opens on the first row, Up on the last.
+        onKeyDown={(event) => {
+          if (open || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) {
+            return;
+          }
+          event.preventDefault();
+          setFromEnd(event.key === "ArrowUp");
+          setOpen(true);
+        }}
       >
         {identity.label ? (
           <span className="account-face" id={faceId} aria-hidden="true">
@@ -141,6 +160,7 @@ export function AccountMenu() {
             identity={identity}
             id={menuId}
             panel={menu}
+            fromEnd={fromEnd}
             onDismiss={dismiss}
             onFocusLost={closeFromLostFocus}
             onShortcuts={() => {

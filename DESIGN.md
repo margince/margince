@@ -69,8 +69,7 @@ screen against it. The sources are listed at the end of the section.
 
    Rule: a pane, a card and a control share one radius, 8px, at every width. `--r-lg`,
    `--r-md` and `--r-control` all read `--r-sm`, and a keycap takes 4. The ladder runs in fours
-   (4 / 8 and the pill). It is twice as large under `corner-shape: squircle`, where a superellipse of
-   radius R looks about as round as a plain round corner of R/2.
+   (4 / 8 and the pill).
 5. **Text is near-black slate**; greys carry the hue. Stripe sets text in deep slate on an
    almost white ground, never plain black.
 
@@ -208,7 +207,7 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 | Token | Value | Role |
 |---|---|---|
 | `--bgPage` | `#eff6f3` | The paper the page is read on: one flat colour, with no light painted into it. |
-| `--pane` / `--paneEdge` | `#fcfffe` / `#d8e2de` | A zone on the page, the details panel, a control at rest. The sidebar is the same pane, painted solid. The top bar is the same pane, with `blur(20px)` behind it. |
+| `--pane` / `--paneEdge` | `#fcfffe` / `#d8e2de` | A zone on the page, the details panel, a control at rest. Above the phone layout the sidebar and the top bar paint nothing and show this page ground; the content card is `--pageCard`, the first ladder rung, solid. At phone width the top bar is the pane with `blur(20px)` behind it. |
 | `--ladder1` … `--ladder4` | [`tokens.css`](frontend/src/design-system/tokens.css) | The ground of a pane by depth: on the page, in a pane, two deep, then three deep or more. `surfaces.css` paints them. |
 | `--ladder1Edge` … `--ladder4Edge` | [`tokens.css`](frontend/src/design-system/tokens.css) | The hairline of a pane and of its head, by the same depth. A pane reads its own as `--groundEdge`. |
 | `--bgHover` / `--bgStrip` | `#d7ede5` / `#e3f1ec` | A pointer resting on a row; a toolbar or footer band on the ground. |
@@ -237,7 +236,7 @@ then `[data-theme="dark"]`.
 
 ### How colour is spent
 
-- **The ground is the chrome**. The sidebar and the top bar are panes over the flat ground. The
+- **The ground is the page**. The sidebar and the top bar show `--bgPage` around the white page card (`--pageCard`). Panels in the card are the same white and separate by a hairline. The
   sidebar is never a green column, and there is no coloured bar on any screen.
 - **At most one filled control in view**, in the accent: the move the page names. Every other button is
   a pane with an outline.
@@ -372,7 +371,7 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 
 ```
 ┌────────┬───────────────────────────────────────────────────────────────┐
-│ sidebar│ crumb        [ Search or run a command  ⌘K ]                me │
+│ sidebar│ [ Search or run a command  ⌘K ]                             me │
 │ (pane  ├───────────────────────────────────────────────────────────────┤
 │  over  │ mark  NAME (display)  badges                  verbs, right     │
 │  the   │       facts line                                               │
@@ -388,27 +387,41 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
-- **The sidebar is light, never green**. It is the `--pane`, painted solid over the flat ground,
-  one `--paneEdge` hairline on its right, no shadow and no corner. It is the same colour open and
-  folded, and in dark it is the same pane with the lights down. No screen or mock paints its ground
-  dark green or in the accent. The dark green `--bgInkField` is only for what passes over the page,
-  such as a tooltip. The only accent in the column is the current row and the workspace mark of a
-  company that has no logo of its own.
+- **The sidebar is light, never green**. On a wide window (over `700px`) it paints nothing and shows `--bgPage`, as the top bar does. It has no edge, no shadow and no corner.
+  The page is a rounded card against it (see Top bar). It is the same open and
+  folded, and in dark it is the same ground with the lights down. A row, the fold row and the workspace head take the neutral `--railHover` tint under the pointer.
+- **No dark ground**: no screen or mock paints the sidebar dark green or in the accent. The dark green
+  `--bgInkField` is only for what passes over the page, such as a tooltip. The only accent in the
+  column is the current row and the workspace mark of a company that has no logo of its own.
 - **Its parts**: 256px open, 56px folded, and open is the default (the reader's last choice is kept).
-  At the top is the workspace head: the company's mark in a 40px square and its name. While open,
-  it is one card with an edge. Then come the rows, 32px each with an 18px icon. Their order is the
+  At the top is the workspace head: the company's mark in a 32px square and its name. The head has the
+  top bar's height, so the mark and the bar's controls share one centre line. No card
+  frames it; under the pointer it takes the rows' tint.
+- **Its rows**: they come the rows, 32px each with an 18px icon. Their order is the
   one `frontend/src/app/nav.ts` holds, under the group labels Records, Work and Insights.
 - **Its states**: the group labels are quiet sentence case. The current row is an accent tint with
-  accent text, in medium weight. The agent's orb is pinned to the foot.
+  accent text, in medium weight.
+- **The agent row**: it is pinned to the foot, with no chevron. Its orb sits on the icons' axis, and
+  its line and the month's cost sit on the labels' edge. Under the pointer it takes the rows' tint.
+- **The fold control**: it sits under the agent row. It is a row with the label **Collapse sidebar**
+  while open, and an icon with a tooltip while folded. `⌘B` does the same, and a phone has neither.
+- **Folding**: the column, the icons and the labels move as one. A label keeps one line and is cut at
+  the edge, with its full text in the row's tooltip. A group label is hidden and takes no height
+  while folded. On a window from `701px` to `1024px` with no stored choice, the sidebar starts folded.
+  A stored choice wins both ways.
 - The sidebar has no badges. The approval and task lists are lanes of the Worklist, which reports
   its counts on the page. Settings is not a row; it opens from the account menu.
 - While a settings route is open, the sidebar shows the settings second level: Overview, then the
   subject groups. It has its own width and its own head. It is the same column showing a
   different list. The level names itself with the heading over its first group, and the way out of
   it reads "Back to app". The agent's orb stays at the foot.
-- **Top bar**: 50px, glass, with a hairline under it. The breadcrumb is on the left, the command
-  field in the middle (`⌘K`), and the reader's monogram on the right. It is the app's one bar, and
-  every screen has it. Nothing of a record sits in it: the record's head and details are in
+- **Top bar**: 50px. On a wide window it paints nothing, with no hairline and no blur.
+  The page below it is a card on `--pageCard`, with a `--groundEdge` hairline and `--r-lg` corners. The card
+  touches the sidebar and the bar, and leaves `--space-2` free on the right and at the foot.
+- **Top bar on a phone**: the page scrolls under the bar. The bar is see-through and blurred, with a hairline.
+- **Top bar parts**: a row with no breadcrumb. A record page's Back control comes first, then the command
+  field (`⌘K`), then the actions and the reader's monogram, pushed to the right. The bar's side padding is half the page gutter. The field's own padding is the full gutter, so its icon lines up with the page content. It is the app's one bar, and
+  every screen has it, settings included. Nothing of a record sits in it: the record's head and details are in
   the page.
 - **Record head**: a 56px mark, and the name in the display face with its badges on the same line.
   One line of facts sits under it, and the verbs sit on the right. The verbs are the record type's base actions,
@@ -904,7 +917,7 @@ The primitives in the catalog keep their names and `props`; this is how each one
 | `EmptyState` | Aligned left in its own zone, `--ink3`, one sentence and one verb. |
 | `Callout` | A card on a soft wash of the tone's colour. The glyph of the tone and the heading sit on one line, with a body below if there is one. The glyph is in the ink of the tone: a filled Material mark, except `ai`, which keeps the lucide `Sparkles`. The heading (bold) and the body are in plain ink. The verbs are aligned right at the end of the heading line, with the dismiss after them. A callout must have a heading; a heading alone is the most common callout. In a narrow card the verbs drop under the words. Six tones: `info`, `success`, `warning`, `danger`, `discovery` (new to this reader; no verdict) and `ai`. Borders inside the card follow the wash. No `className`. |
 | `StagingCard` / `DecisionCard` | The agent's row: `--aiBg`, `--r-md` (8px) radius, the indigo mark on its own tile (no label beside it: the tile is the claim), the verdict word at 15px 600 (amber when warning, green when calm), the sentence in `--ink`, `What this rests on · n sources` in `--aiText`, and the agent's verb in `--ai`. A staged change is a row with a dashed `--aiLine` edge, Accept and Dismiss. |
-| `Kbd` | 10.5px in `--ink4` with a `--line` outline, 4px radius. On the search field and the ask field. |
+| `Kbd` | 10px legend on a 20px cap, at least 20px wide, with a `--line` outline and a 4px radius. On the search field and the ask field. |
 | `Spine` | The product's own spine: per stop a date, a 2px accent rule with a 9px dot at its start, a title, and a detail. The gap stop is at 1.5× width, as a 26px amber day count over a dashed amber rule with no dot. Today is a 2px black bar with TODAY and the date under it, and dotted grey and hollow dots come after it. |
 | `RecordTimeline` | The rail: a 76px date column in tabular figures, and a 1px rail of full height with a mark per kind (solid, hollow, indigo, dashed indigo, a glyph in a circle for a thread). Then the kind in upper case, direction words, title, the message text cut to three lines, and a meta line; threads as a card on the rail. |
 | `RelationshipMap` | Three lanes at 184/200/184 with 72px gutters; nodes with round corners by kind, and a dashed amber gap node. Route edges have bands, strong / developing / cold, and being part of something is a hairline. A selected node lights its route and fades the rest. A 280px panel holds the best route and the one write. |
