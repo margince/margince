@@ -175,3 +175,52 @@ func TestTheSweepSkipsADomainWhoseContactsThePlantWillRefuse(t *testing.T) {
 		}
 	}
 }
+
+// The selector matches a subdomain address, and only a real subdomain.
+//
+// It reads through a reversed-domain index range. The range must not drop an
+// address at a subdomain of the company's domain, which the plant attaches. It
+// must not offer an address whose domain only ends in the same letters, which
+// the plant refuses, so that domain would come back on every tick.
+func TestTheSweepOffersASubdomainAndNotALookalike(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	if _, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "sam@eu.reach.test", "Sam Reach", "eu.reach.test")); err != nil {
+		t.Fatalf("ensure subdomain contact: %v", err)
+	}
+	if _, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "zed@farnear.test", "Zed Far", "farnear.test")); err != nil {
+		t.Fatalf("ensure lookalike contact: %v", err)
+	}
+	reach, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Reach GmbH",
+		Domains:     []CompanyDomainInput{{Domain: "reach.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the subdomain's company: %v", err)
+	}
+	near, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Near GmbH",
+		Domains:     []CompanyDomainInput{{Domain: "near.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("creating the lookalike's company: %v", err)
+	}
+
+	owed, err := e.store.DomainsOwedTheirContacts(ctx, 50)
+	if err != nil {
+		t.Fatalf("listing the domains owed their contacts: %v", err)
+	}
+	var offeredReach bool
+	for _, d := range owed {
+		switch d.CompanyID.UUID {
+		case ids.UUID(reach.Id):
+			offeredReach = true
+		case ids.UUID(near.Id):
+			t.Error("the sweep offers near.test for an address at farnear.test, which is not its subdomain")
+		}
+	}
+	if !offeredReach {
+		t.Error("the sweep does not offer reach.test, whose subdomain eu.reach.test has a contact attached to nothing")
+	}
+}
