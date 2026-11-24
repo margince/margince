@@ -569,9 +569,15 @@ names, and the core keeps them apart from other units. No method takes another u
 
 ## Own a screen: `frontend/`
 
-Ship `extensions/<name>/frontend/package.json` and the module it names. The package may use its own
-packages. They live in the generated workspace under `build/composition-frontend/workspace/`, which
-`make composition` writes. The tracked `pnpm-lock.yaml` names only the core frontend.
+Ship `extensions/<name>/frontend/package.json` and the module it names. The package may use only packages
+the main app already ships. Each runtime or peer package must be a dependency of `frontend/` in the
+tracked `pnpm-lock.yaml`. Declare it at the range the main app declares, or at its locked version.
+
+No
+license check exists yet for an extension's own packages, so the generator refuses any other package. It
+also refuses `optionalDependencies`, and allows `devDependencies`. The unit installs in the generated
+workspace under `build/composition-frontend/workspace/`, which `make composition` writes. Each package is
+pinned there to the main app's locked version.
 
 ```json
 {
@@ -1713,53 +1719,6 @@ The rules:
   `google` or `microsoft`. `AuthURL` and `TokenURL` must use `https`.
 - `rt.OAuthDisconnect(ctx, "books")` drops the tokens. It does not end the grant at the vendor.
 
-## Ask a model: declare an AI task
-
-A unit that wants a model's help declares each task and runs it through the core. It never holds a provider
-client or a key:
-
-```go
-AITasks: []extension.AITask{{
-	Name:      "invoice_total",
-	Prompt:    "Read the invoice and return its total amount and currency.",
-	Schema:    `{"type":"object","required":["total","currency"],"properties":{"total":{"type":"number"},"currency":{"type":"string"}}}`,
-	Documents: true,
-}},
-```
-
-```go
-res, err := rt.AI().Run(ctx, "invoice_total", extension.AIInput{
-	Documents: []extension.AIDocument{{Filename: "inv.pdf", ContentType: "application/pdf", Body: pdf}},
-	NoContact: "a supplier invoice",
-})
-```
-
-Every call is one `extension_task` call on the core's router. The installation's routing setting picks the
-model. The region limit applies as it does to a core task. Secrets are stripped from the input. The input is
-never kept in the call log's payload store. The `ai_call` row names the unit and the task as
-`<unit>/<task>`.
-
-The rules:
-
-- **A task you did not declare is refused** with `ErrAITaskUndeclared`. `Name` is `snake_case`, at most 48
-  characters, and the call log keeps it, so a rename splits one task's history.
-- **Name the contacts the call carries** in `Contacts`, or say in `NoContact` why it carries none. A named contact
-  with a stop on its processing refuses the call. A call that does neither is refused with `ErrInvalid`.
-  The core cannot check the source of your input. So it also refuses every AI call while any contact in the
-  workspace has a stop on its processing. The error is `ErrAIUnavailable`, and the call may be tried
-  again once the stop is removed.
-- A document is read by its bytes, not its label. A PDF is read as text by the reader the core uses for its own documents. A scan with no text layer is refused
-  with `ErrAIScannedDocument`. No document goes to a model as bytes, and an image is refused with
-  `ErrAIDocumentType`.
-- **`Documents: true` is required** to pass documents. Text types go through as text.
-- **With a `Schema`**, the model is held to it, and the answer comes back as `AIResult.JSON`, one JSON object. Without one,
-  it comes back as `AIResult.Text`.
-- **The answer is advice.** `AIResult.MachineMade` is always true. A unit that shows or stores it says a model
-  wrote it.
-- **`ErrAIUnavailable`** means routing, the region limit, a stop on processing or the budget refused the call. It reached
-  no model, so a job may try again later.
-- The core's certification covers the one `extension_task` site. It does not run a unit's own examples yet.
-
 ## Call your provider
 
 Build each request with `extension.NewRequest`. It names the installation to your provider in the
@@ -1789,11 +1748,12 @@ Needs: []extension.Need{
 },
 ```
 
-Ask a model with `rt.Models().Complete`. Name the core records the text was built from in `About`, or say in
-`NoContactData` why it holds none of a contact's data:
+Ask a model with `rt.Models().Complete`, for a task the unit declares in its `api/ai-tasks.yaml` as
+`ext_<unit>_<task>`. Each such task has its own routing, budget and certification case. Name the core
+records the text was built from in `About`, or say in `NoContactData` why it holds none of a contact's data:
 
 ```go
-text, err := rt.Models().Complete(ctx, extension.CompleteRequest{
+text, err := rt.Models().Complete(ctx, "ext_books_summarise", extension.CompleteRequest{
     System:   "Summarise the change in one sentence.",
     Messages: []extension.Message{{Role: "user", Text: change}},
     About:    []extension.EntityRef{{Type: "deal", ID: dealID}},

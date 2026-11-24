@@ -88,11 +88,6 @@ func New() extension.Extension {
 			InvoicesFor:     invoicesFor,
 			InvoiceDocument: invoiceDocument,
 		}},
-		AITasks: []extension.AITask{{
-			Name:      "describe_invoice",
-			Prompt:    "Describe the invoice text in one sentence.",
-			Documents: true,
-		}},
 		OAuthApps: []extension.OAuthApp{{ //nolint:gosec // G101: TokenURL is an endpoint address, not a credential
 			Provider: "offline_demo",
 			Title:    "Demo accounting sign-in (example only, cannot connect)",

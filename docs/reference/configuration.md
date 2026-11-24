@@ -218,7 +218,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `ai_routing` | `MARGINCE_AI_ROUTING` | `--ai-routing` | `string` | — | api, worker | Ignored; kept so existing command lines parse. |
 | `api_base_url` | `MARGINCE_API_BASE_URL` | `--api-base-url` | `string` | — | api | External base of the api for the OAuth `redirect_uri` when the api and the SPA are on different origins; defaults to `--public-base-url`. |
 | `blobstore_access_key` | `MARGINCE_BLOBSTORE_ACCESS_KEY` | — | `string`, secret | — | api, migrate, worker | Access key for the object store. |
-| `blobstore_bucket` | `MARGINCE_BLOBSTORE_BUCKET` | — | `string` | — | api, migrate, worker | Bucket attachments are written to. |
+| `blobstore_bucket` | `MARGINCE_BLOBSTORE_BUCKET` | — | `string` | — | api, migrate, worker | Bucket attachments are written to. Its credentials need `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` and `s3:ListBucket`. Erasure also needs `s3:ListBucketVersions` and `s3:DeleteObjectVersion`, so no version of a deleted object stays behind. |
 | `blobstore_endpoint` | `MARGINCE_BLOBSTORE_ENDPOINT` | — | `string` | — | api, migrate, worker | Endpoint of an object store such as MinIO for attachment bytes; it wins over `MARGINCE_BLOBSTORE_PATH`, and with both unset the attachment endpoints answer 501. |
 | `blobstore_path` | `MARGINCE_BLOBSTORE_PATH` | — | `string` | — | api, migrate, worker | Directory attachment bytes are written to when there is no object storage service; ignored when `MARGINCE_BLOBSTORE_ENDPOINT` is set. |
 | `blobstore_region` | `MARGINCE_BLOBSTORE_REGION` | — | `string` | — | api, migrate, worker | Region the bucket lives in. |

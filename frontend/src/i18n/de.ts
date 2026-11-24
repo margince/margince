@@ -3456,6 +3456,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.add": "Beziehung hinzufügen",
   "rel.seatOnDeal": "Zu einem Deal hinzufügen",
   "rel.addStakeholder": "Stakeholder hinzufügen",
+  "rel.stakeholderOffer.title": "Die Kontakte dieser Mail zum Deal hinzufügen?",
+  "rel.stakeholderOffer.body":
+    "Als Stakeholder landet ihre nächste Mail von selbst beim Deal. Entferne den Haken bei allen, die nicht dazugehören.",
+  "rel.stakeholderOffer.legend": "Kontakte auf dieser Mail",
+  "rel.stakeholderOffer.confirm": "Zum Deal hinzufügen",
+  "rel.stakeholderOffer.decline": "Jetzt nicht",
+  "rel.stakeholderOffer.noneTicked":
+    "Setze bei mindestens einem Kontakt einen Haken.",
+  "rel.stakeholderOffer.added": "Zum Deal hinzugefügt",
+  "rel.stakeholderOffer.unread":
+    "Die Mail ist beim Deal. Margince konnte nicht lesen, wer auf ihr steht, und schlägt daher niemanden vor.",
   "rel.dealStakeholders": "Stakeholder",
   "rel.dealStakeholdersEmpty": "Keine Stakeholder zu diesem Deal",
   "rel.employerUnavailable":
@@ -11241,8 +11252,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.resetDataConfirmName": "Gib diesen Unternehmensnamen ein:",
   "settings.resetDataResult":
     "Gelöscht: Tabellen {tables}, Job-Einträge {jobs}, Event-Streams {streams}, Cache-Schlüssel {keys}, gespeicherte Dateien {objects}.",
-  "settings.resetDataDrainWarning":
-    "Als das Zurücksetzen begann, lief ein Hintergrund-Job. Der Job schlägt an den gelöschten Daten fehl und protokolliert einen harmlosen Fehler.",
 
   "settings.jobs": "Hintergrund-Jobs",
   "settings.jobsSub":
@@ -15684,6 +15693,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureActivity.filing.core.retracted":
     "Das CRM hat die Deal-Zuordnung zurückgenommen: {reason}",
   "captureActivity.filing.basis.project": "das Projekt der Mail",
+  "captureActivity.filing.basis.chosen_thread":
+    "ein Deal, den ein Mitglied für eine frühere Mail im Thread gewählt hat",
   "captureActivity.filing.basis.thread": "eine frühere Mail im Thread",
   "captureActivity.filing.basis.sole_open_deal":
     "der einzige offene Deal des Unternehmens",
@@ -23928,7 +23939,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Dokumentenauswertung",
   "aiTask.name.draft_reply": "Antwortentwurf",
   "aiTask.name.enrich": "Ergänzung aus Signaturen",
-  "aiTask.name.extension_task": "KI-Aufgabe einer Erweiterung",
   "aiTask.name.growth_fit": "Bewertung der Unternehmenseignung",
   "aiTask.name.nl_search": "Suche in natürlicher Sprache",
   "aiTask.name.offer_draft": "Angebotsentwurf",

@@ -3364,6 +3364,16 @@ export const en = {
   "rel.add": "Add relationship",
   "rel.seatOnDeal": "Add to a deal",
   "rel.addStakeholder": "Add stakeholder",
+  "rel.stakeholderOffer.title": "Add this mail’s contacts to the deal?",
+  "rel.stakeholderOffer.body":
+    "As stakeholders, their next mail goes onto the deal by itself. Untick anyone who is not part of it.",
+  "rel.stakeholderOffer.legend": "Contacts on this mail",
+  "rel.stakeholderOffer.confirm": "Add to deal",
+  "rel.stakeholderOffer.decline": "Not now",
+  "rel.stakeholderOffer.noneTicked": "Tick at least one contact to add.",
+  "rel.stakeholderOffer.added": "Added to the deal",
+  "rel.stakeholderOffer.unread":
+    "The mail is on the deal. Margince could not read who is on it, so it offers nobody to add.",
   "rel.dealStakeholders": "Stakeholders",
   "rel.dealStakeholdersEmpty": "No stakeholders on this deal",
   "rel.employerUnavailable":
@@ -11209,8 +11219,6 @@ export const en = {
   "settings.resetDataConfirmName": "Type this company name:",
   "settings.resetDataResult":
     "Cleared: tables {tables}, job rows {jobs}, event streams {streams}, cache keys {keys}, stored files {objects}.",
-  "settings.resetDataDrainWarning":
-    "A background job was running when the reset began. It fails against the deleted data and logs one harmless error.",
 
   "settings.jobs": "Background jobs",
   "settings.jobsSub": "Queued background jobs and failed jobs by owner.",
@@ -15598,6 +15606,8 @@ export const en = {
   "captureActivity.filing.core.retracted":
     "The CRM took its deal link back: {reason}",
   "captureActivity.filing.basis.project": "the mail’s project",
+  "captureActivity.filing.basis.chosen_thread":
+    "a deal a colleague chose for an earlier mail in the thread",
   "captureActivity.filing.basis.thread": "an earlier mail in the thread",
   "captureActivity.filing.basis.sole_open_deal": "the company’s only open deal",
   "captureActivity.filing.basis.stakeholder": "a stakeholder on the deal",
@@ -23575,7 +23585,6 @@ export const en = {
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",
   "aiTask.name.enrich": "Signature enrichment",
-  "aiTask.name.extension_task": "Extension AI task",
   "aiTask.name.growth_fit": "Company fit assessment",
   "aiTask.name.nl_search": "Natural-language search",
   "aiTask.name.offer_draft": "Offer drafting",

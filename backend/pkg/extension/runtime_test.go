@@ -54,7 +54,6 @@ func (r *fakeRuntime) Authority() Authority      { return nil }
 func (r *fakeRuntime) Directory() Directory      { return nil }
 func (r *fakeRuntime) Activities() Activities    { return nil }
 func (r *fakeRuntime) SetAside() SetAside        { return nil }
-func (r *fakeRuntime) AI() AI                    { return nil }
 func (r *fakeRuntime) Companies() Companies      { return nil }
 func (r *fakeRuntime) MailContent() MailContents { return nil }
 func (r *fakeRuntime) Models() Models            { return nil }
