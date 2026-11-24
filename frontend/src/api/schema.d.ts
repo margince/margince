@@ -7909,7 +7909,10 @@ export interface paths {
     };
     "/public/booking/{host_slug}/preview": {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length. */
+                l?: number;
+            };
             header?: never;
             path: {
                 host_slug: string;
@@ -7922,7 +7925,8 @@ export interface paths {
          *     preview reads the page without running the app. The HTML carries the host's name,
          *     company, meeting title and duration as escaped title, description, Open Graph and
          *     Twitter card fields. The canonical URL and `og:url` are the absolute `/book/{host_slug}`
-         *     address on the configured public origin, and are omitted when no usable origin is
+         *     address on the configured public origin, with `?l=` when the card names an offered
+         *     length the link asked for, and are omitted when no usable origin is
          *     configured. The company logo is the card image when there is one; otherwise the card
          *     has no image. A paused page answers generic metadata that names no host. A missing
          *     or revoked page answers 404 with no host metadata. Responses are `no-store` and
@@ -8376,7 +8380,7 @@ export interface paths {
     "/public/booking/{host_slug}/availability": {
         parameters: {
             query?: {
-                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                /** @description Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer. */
                 l?: number;
             };
             header?: never;
@@ -8403,7 +8407,7 @@ export interface paths {
     "/public/booking/{host_slug}": {
         parameters: {
             query?: {
-                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                /** @description Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer. */
                 l?: number;
             };
             header?: never;
@@ -43758,7 +43762,10 @@ export interface components {
             logo_url?: string;
             title: string;
             location: string;
+            /** @description The length this page books: the one `l` asked for when the page offers it, else the default. */
             duration_minutes: number;
+            /** @description Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal. */
+            offered_lengths?: number[];
             enabled: boolean;
             /** @description True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page. */
             paused: boolean;
@@ -54389,22 +54396,30 @@ export interface components {
         AgentToolListResponse: {
             data: components["schemas"]["AgentTool"][];
         };
-        /** @description The actions of one MCP router whose actions run REST routes. */
+        /** @description The actions of one MCP router, with the arguments each takes. */
         RouterActions: {
             router: string;
             /** @description What ask_user_first asks of the model; present when an action here has it. */
             ask_user_first_means?: string;
+            /** @description Where an action's arguments go in the router call: top-level members beside action, a routed body in request_body. */
+            how_to_call: string;
             actions: {
                 /** @description The value the router's action argument takes. */
                 action: string;
-                /** @description The route's summary. */
+                /** @description What the action does. */
                 does: string;
                 /** @description The method and route, for example POST /v1/record-grants. */
                 route: string;
                 /** @description The path ids the action takes as arguments. */
                 ids?: string[];
-                /** @description The query parameters it takes as arguments. */
-                query?: string[];
+                /** @description The query parameters it takes as arguments, each with its type and any closed values. */
+                query?: {
+                    name: string;
+                    type: string;
+                    required?: boolean;
+                    enum?: string[];
+                    format?: string;
+                }[];
                 /** @description Whether it takes if_version: the version you last read. */
                 if_version?: boolean;
                 /** @description Whether the app asks its user to confirm it first. */
@@ -54412,7 +54427,9 @@ export interface components {
                 /** @description Whether it takes filename, content_type and content_base64. */
                 uploads_a_file?: boolean;
                 /** @description The JSON schema of its body argument. */
-                body?: Record<string, never>;
+                body?: {
+                    [key: string]: unknown;
+                };
             }[];
         };
         /**
@@ -77846,7 +77863,10 @@ export interface operations {
     };
     getPublicBookingPreview: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length. */
+                l?: number;
+            };
             header?: never;
             path: {
                 host_slug: string;
@@ -77864,6 +77884,7 @@ export interface operations {
                     "text/html": string;
                 };
             };
+            422: components["responses"]["ValidationError"];
             /** @description The page is missing, revoked or unavailable; the HTML names no host. */
             default: {
                 headers: {
@@ -78921,7 +78942,7 @@ export interface operations {
     getPublicAvailability: {
         parameters: {
             query: {
-                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                /** @description Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer. */
                 l?: number;
                 from: string;
                 to: string;
@@ -78968,7 +78989,7 @@ export interface operations {
     bookPublicMeeting: {
         parameters: {
             query?: {
-                /** @description Offered meeting length in minutes. Unknown lengths use the default. */
+                /** @description Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer. */
                 l?: number;
             };
             header?: {

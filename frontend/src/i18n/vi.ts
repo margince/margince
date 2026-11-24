@@ -1867,6 +1867,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.retryHelp":
     "Thử lại sẽ gửi lại đúng lời mời đó, nên khách sẽ không nhận được lời mời thứ hai.",
   "book.videoApp": "{app} · liên kết có trong lời mời",
+  "book.lengthChoice": "Thời lượng cuộc hẹn",
+  "book.lengthNotOffered":
+    "Thời lượng cuộc hẹn này không còn được cung cấp. Hãy chọn thời lượng khác.",
   "scheduling.pickDay": "Chọn ngày",
   "scheduling.changeTime": "Đổi giờ",
   "scheduling.confirmAt": "Xác nhận {day}, {time}",
@@ -22702,6 +22705,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.videoNotSet": "Chưa thiết lập",
   "scheduling.video.ownShort": "Liên kết riêng",
   "scheduling.mainLink": "(liên kết chính)",
+  "scheduling.copyLengthLink": "Sao chép liên kết {length}",
   "scheduling.linkActions": "Thao tác khác cho {name}",
   "scheduling.editLink": "Sửa liên kết",
   "scheduling.createLink": "Tạo liên kết đặt lịch",

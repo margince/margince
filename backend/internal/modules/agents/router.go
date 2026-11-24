@@ -98,7 +98,7 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 		panic(fmt.Sprintf("crmagents: router %s must pick its target either by one argument or by the arguments named", spec.Name))
 	}
 	spec.ActionField = field
-	schema, err := routedSchema(spec.Name, field, choices, r.actionSentences(spec.Name, field, choices, targets), spec.InputSchema, targets)
+	schema, err := routedSchema(spec.Name, field, choices, r.actionSentences(spec.Name, field, choices, targets), spec.InputSchema, targets, nil)
 	if err != nil {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: " + err.Error())
@@ -148,7 +148,7 @@ func (r *Registry) routerRunSpec(routerName, action string) (mcp.ToolSpec, bool)
 	if !known {
 		return mcp.ToolSpec{}, false
 	}
-	return target.Spec(), true
+	return withConfirmCode(target.Spec()), true
 }
 
 // routeTarget is one registered target's own spec, refused unless a router may
@@ -161,9 +161,10 @@ func (r *Registry) routeTarget(routerName, name string) mcp.ToolSpec {
 	r.mu.RUnlock()
 	// The target's own spec: the registered one carries the members the
 	// surface adds, such as the retry key, which the router gains by itself.
+	// confirm_code is the exception, since only some actions take it.
 	var spec mcp.ToolSpec
 	if ok {
-		spec = t.Spec()
+		spec = withConfirmCode(t.Spec())
 	}
 	var why string
 	switch _, isRouter := t.(router); {
@@ -228,8 +229,11 @@ func readObjectSchema(owner string, raw json.RawMessage) (objectSchema, error) {
 // required only when every target requires it; the target's own check still
 // refuses a call missing one only it needs. The router may only word an
 // argument for every action at once, never restate its shape.
-// Each action of an action router is given a line saying what it does.
-func routedSchema(routerName, field string, choices, actionSentences []string, own json.RawMessage, targets []mcp.ToolSpec) (json.RawMessage, error) {
+// Each action of an action router is given a line saying what it does. An
+// argument only rare actions take is left out; the target still checks it.
+func routedSchema(routerName, field string, choices, actionSentences []string, own json.RawMessage, targets []mcp.ToolSpec,
+	rare func(choice string) bool,
+) (json.RawMessage, error) {
 	schemas, err := targetSchemas(targets)
 	if err != nil {
 		return nil, err
@@ -246,6 +250,14 @@ func routedSchema(routerName, field string, choices, actionSentences []string, o
 		return nil, err
 	}
 	describeArguments(field, choices, schemas, routerOwn, properties, takers)
+	if rare != nil {
+		for name, choicesTaking := range takers {
+			if !slices.ContainsFunc(choicesTaking, func(choice string) bool { return !rare(choice) }) {
+				delete(properties, name)
+			}
+		}
+		required = slices.DeleteFunc(required, func(name string) bool { _, kept := properties[name]; return !kept })
+	}
 	out := map[string]json.RawMessage{}
 	for name, arg := range properties {
 		out[name] = mustMarshal(arg)

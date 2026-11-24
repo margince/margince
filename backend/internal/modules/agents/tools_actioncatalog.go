@@ -4,6 +4,7 @@
 package agents
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -26,7 +27,19 @@ func (r *Registry) ActionCatalog(router string) (json.RawMessage, error) {
 	if !ok {
 		return nil, fmt.Errorf("no route verb is registered, so %s is not served", describeRouterActionsName)
 	}
-	return describe.catalog(router, "")
+	return describe.catalog(router, "", nil)
+}
+
+// offeredActions says which of a router's actions this caller's tools/list
+// offers, and false when it offers the router not at all.
+func (r *Registry) offeredActions(ctx context.Context, router string) (func(action string) bool, bool) {
+	spec, ok := r.offeredOne(ctx, router)
+	if !ok {
+		return nil, false
+	}
+	return func(action string) bool {
+		return slices.ContainsFunc(spec.Actions, func(a mcp.ToolAction) bool { return a.Action == action })
+	}, true
 }
 
 // ActionCatalogRouters names the routers ActionCatalog answers for.
@@ -39,8 +52,9 @@ func (r *Registry) ActionCatalogRouters() []string {
 	return nil
 }
 
-// catalog is the answer for one router, or for one of its actions.
-func (d describeRouterActions) catalog(router, action string) (json.RawMessage, error) {
+// catalog is the answer for one router, or for one of its actions. seen, when
+// set, keeps only the actions a caller is offered.
+func (d describeRouterActions) catalog(router, action string, seen func(string) bool) (json.RawMessage, error) {
 	args := struct{ Router, Action string }{router, action}
 	if !slices.Contains(d.routers(), args.Router) {
 		return nil, &BadArgsError{Field: catalogRouterArg, Cause: fmt.Errorf("router must be one of %s", strings.Join(d.routers(), ", "))}
@@ -48,15 +62,12 @@ func (d describeRouterActions) catalog(router, action string) (json.RawMessage, 
 	actions := []routeActionShape{}
 	var asked askedKinds
 	for _, v := range d.verbs {
-		if v.Router != args.Router || (args.Action != "" && v.Action != args.Action) {
+		if v.Router != args.Router || (args.Action != "" && v.Action != args.Action) || (seen != nil && !seen(v.Action)) {
 			continue
 		}
 		shape := routeActionShape{
 			Action: v.Action, Does: v.Summary, Route: v.Method + " " + v.Pattern, IDs: v.PathParams,
-			IfVersion: v.IfMatch, AskUserFirst: v.AskUserFirst,
-		}
-		for _, q := range v.Query {
-			shape.Query = append(shape.Query, q.Name)
+			IfVersion: v.IfMatch, AskUserFirst: v.AskUserFirst, Query: v.Query,
 		}
 		if v.Body && len(v.BodySchema) > 0 {
 			shape.Body = v.BodySchema
@@ -67,33 +78,68 @@ func (d describeRouterActions) catalog(router, action string) (json.RawMessage, 
 		}
 		actions = append(actions, shape)
 	}
-	if args.Action != "" && len(actions) == 0 {
-		// A client that reads tool schemas from a file has no inputSchema at hand.
-		// An action the router runs itself is described from its own spec.
-		spec, runs := d.runs(args.Router, args.Action)
-		if !runs {
-			return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
-				"router %s has no action %s; read_workspace with topic=actions and this router lists the ones it has",
-				args.Router, args.Action)}
-		}
-		// An action a human approves anyway is not one the model asks about first.
-		asks := spec.AskUserFirst && spec.Tier != mcp.TierConfirmationRequired
-		if asks {
-			asked |= askedKindOf(spec.ReadOnly())
-		}
-		actions = append(actions, routeActionShape{
-			Action: args.Action, Does: spec.Description, Route: routerRunRoute,
-			AskUserFirst: asks, Body: spec.InputSchema,
-		})
+	// An action the router runs itself has no route, so it is described from its
+	// own spec. Its arguments are named here even where tools/list leaves them out.
+	ranInProcess, err := d.inProcess(args.Router, args.Action, seen, actions, &asked)
+	if err != nil {
+		return nil, err
 	}
+	actions = append(actions, ranInProcess...)
 	slices.SortFunc(actions, func(a, b routeActionShape) int { return strings.Compare(a.Action, b.Action) })
-	answer := map[string]any{"router": args.Router, "actions": actions}
+	answer := map[string]any{"router": args.Router, "actions": actions, howToCallField: howToCall}
 	if asked != 0 {
 		answer[askFirstMeansField] = "Where ask_user_first is true, the user's yes is needed, so tell them " +
 			asked.consequence() + " and " + askFirstGetYes
 	}
 	return json.Marshal(answer)
 }
+
+// inProcess describes the actions router runs itself, or the one named. It
+// refuses a named action the router has under neither kind.
+func (d describeRouterActions) inProcess(router, action string, seen func(string) bool, routed []routeActionShape, asked *askedKinds) ([]routeActionShape, error) {
+	choices := []string{action}
+	if action == "" {
+		choices = nil
+		if d.choices != nil {
+			choices = d.choices(router)
+		}
+	}
+	var out []routeActionShape
+	for _, choice := range choices {
+		if slices.ContainsFunc(routed, func(a routeActionShape) bool { return a.Action == choice }) {
+			continue
+		}
+		spec, runs := d.runs(router, choice)
+		runs = runs && (seen == nil || seen(choice))
+		if !runs && action != "" {
+			return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
+				"router %s has no action %s; read_workspace with topic=actions and this router lists the ones it has",
+				router, action)}
+		}
+		if !runs {
+			continue
+		}
+		// An action a human approves anyway is not one the model asks about first.
+		asks := spec.AskUserFirst && spec.Tier != mcp.TierConfirmationRequired
+		if asks {
+			*asked |= askedKindOf(spec.ReadOnly())
+		}
+		out = append(out, routeActionShape{
+			Action: choice, Does: spec.Description, Route: routerRunRoute,
+			AskUserFirst: asks, Body: spec.InputSchema,
+		})
+	}
+	return out, nil
+}
+
+// howToCall says where each part of an action's arguments goes in the router
+// call, once per answer, since a model nests a top-level argument otherwise.
+const (
+	howToCallField = "how_to_call"
+	howToCall      = "Call the router with action and the action's arguments as top-level members. ids, query " +
+		"and if_version are top-level members too. Only a routed action's body goes inside request_body; " +
+		"an in-process action's body members are top-level members."
+)
 
 // askedKinds is which ask-first actions a router has: ones that write, ones
 // that only read, or both.

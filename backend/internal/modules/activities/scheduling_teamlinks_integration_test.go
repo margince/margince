@@ -6,9 +6,12 @@
 package activities
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -353,5 +356,38 @@ func TestARenamedLinkRewordsOnlyThePendingRequests(t *testing.T) {
 	}
 	if len(f.requests.retitled) != 1 {
 		t.Fatalf("a save that kept the name reworded again: %+v", f.requests.retitled)
+	}
+}
+
+// A team link offers the lengths of its host's personal page by the same rule.
+// An offered length gives times of that length, and any other is refused.
+func TestATeamLinkOffersThePersonalPagesLengths(t *testing.T) {
+	f := newTeamFixture(t)
+	profile, err := f.store.SchedulingProfile(f.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile.OfferedLengths = new([]int{45})
+	if _, err := f.store.SaveSchedulingProfile(f.ctx, profile); err != nil {
+		t.Fatal(err)
+	}
+	f.name(t, true, f.colleague(t, "Member"))
+	slug := f.teamLink(t).Slug
+	available := func(length int) *httptest.ResponseRecorder {
+		out := httptest.NewRecorder()
+		Handlers{store: f.store}.GetPublicAvailability(out, httptest.NewRequest(http.MethodGet, "/availability", nil).WithContext(f.door()), slug,
+			crmcontracts.GetPublicAvailabilityParams{From: monday(9), To: monday(17), L: &length})
+		return out
+	}
+	offered := available(45)
+	var times struct {
+		Slots []slot `json:"slots"`
+	}
+	if err := json.Unmarshal(offered.Body.Bytes(), &times); err != nil || offered.Code != http.StatusOK || len(times.Slots) == 0 ||
+		times.Slots[0].End.Sub(times.Slots[0].Start) != 45*time.Minute {
+		t.Fatalf("the team link's 45-minute times: %d %s", offered.Code, offered.Body.String())
+	}
+	if refused := available(50); refused.Code != http.StatusUnprocessableEntity || !strings.Contains(refused.Body.String(), "length_not_offered") {
+		t.Fatalf("a length the team link does not offer answered %d %s", refused.Code, refused.Body.String())
 	}
 }

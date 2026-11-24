@@ -47,6 +47,34 @@ func fetchBookingPreview(t *testing.T, server http.Handler, method, slug string)
 	return response
 }
 
+func TestALengthLinkPreviewNamesItsLengthThroughTheRealRoute(t *testing.T) {
+	e := integration.Setup(t)
+	slug := hostWithBookingPage(t, e, true)
+	store := e.Activities.WithPublicBaseURL(previewOrigin).WithSchedulingCalendar(privateCalendar{}).WithSchedulingBrand(e.Contacts)
+	profile, err := store.SchedulingProfile(e.Admin())
+	if err != nil {
+		t.Fatal(err)
+	}
+	profile.OfferedLengths = new([]int{15})
+	if _, err := store.SaveSchedulingProfile(e.Admin(), profile); err != nil {
+		t.Fatal(err)
+	}
+	server := New(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), withConnectedCalendar(), WithPublicBaseURL(previewOrigin))
+	page := previewOrigin + "/book/" + slug
+	for query, want := range map[string][]string{
+		"?l=15": {"a 15-minute meeting", `href="/#/book/` + slug + `?l=15"`, `<link rel="canonical" href="` + page + `?l=15">`, `<meta property="og:url" content="` + page + `?l=15">`},
+		"?l=7":  {"a 45-minute meeting", `href="/#/book/` + slug + `"`, `<link rel="canonical" href="` + page + `">`},
+	} {
+		response := httptest.NewRecorder()
+		server.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/public/booking/"+slug+"/preview"+query, nil))
+		for _, fragment := range want {
+			if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), fragment) {
+				t.Fatalf("%s: %d lacks %s:\n%s", query, response.Code, fragment, response.Body.String())
+			}
+		}
+	}
+}
+
 func expectNoMarginceOrHost(t *testing.T, body string) {
 	t.Helper()
 	for _, banned := range []string{"Margince", "margince.com", "Ada", "Acme", "og:image", "icon.svg", "company-logo"} {

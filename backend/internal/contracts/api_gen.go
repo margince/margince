@@ -62953,7 +62953,9 @@ type PublicOriginStatus struct {
 // every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
 // `video_app`), so the guest learns nothing about the calendar behind the page.
 type PublicSchedulingProfile struct {
-	CompanyName     string `json:"company_name"`
+	CompanyName string `json:"company_name"`
+
+	// DurationMinutes The length this page books: the one `l` asked for when the page offers it, else the default.
 	DurationMinutes int    `json:"duration_minutes"`
 	Enabled         bool   `json:"enabled"`
 	HostName        string `json:"host_name"`
@@ -62961,6 +62963,9 @@ type PublicSchedulingProfile struct {
 
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
+
+	// OfferedLengths Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal.
+	OfferedLengths *[]int `json:"offered_lengths,omitempty"`
 
 	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
 	Paused bool   `json:"paused"`
@@ -66199,7 +66204,7 @@ type RoleDirectory struct {
 // RoleDirectoryVerbs defines model for RoleDirectory.Verbs.
 type RoleDirectoryVerbs string
 
-// RouterActions The actions of one MCP router whose actions run REST routes.
+// RouterActions The actions of one MCP router, with the arguments each takes.
 type RouterActions struct {
 	Actions []struct {
 		// Action The value the router's action argument takes.
@@ -66211,7 +66216,7 @@ type RouterActions struct {
 		// Body The JSON schema of its body argument.
 		Body *map[string]interface{} `json:"body,omitempty"`
 
-		// Does The route's summary.
+		// Does What the action does.
 		Does string `json:"does"`
 
 		// Ids The path ids the action takes as arguments.
@@ -66220,8 +66225,14 @@ type RouterActions struct {
 		// IfVersion Whether it takes if_version: the version you last read.
 		IfVersion *bool `json:"if_version,omitempty"`
 
-		// Query The query parameters it takes as arguments.
-		Query *[]string `json:"query,omitempty"`
+		// Query The query parameters it takes as arguments, each with its type and any closed values.
+		Query *[]struct {
+			Enum     *[]string `json:"enum,omitempty"`
+			Format   *string   `json:"format,omitempty"`
+			Name     string    `json:"name"`
+			Required *bool     `json:"required,omitempty"`
+			Type     string    `json:"type"`
+		} `json:"query,omitempty"`
 
 		// Route The method and route, for example POST /v1/record-grants.
 		Route string `json:"route"`
@@ -66232,7 +66243,10 @@ type RouterActions struct {
 
 	// AskUserFirstMeans What ask_user_first asks of the model; present when an action here has it.
 	AskUserFirstMeans *string `json:"ask_user_first_means,omitempty"`
-	Router            string  `json:"router"`
+
+	// HowToCall Where an action's arguments go in the router call: top-level members beside action, a routed body in request_body.
+	HowToCall string `json:"how_to_call"`
+	Router    string `json:"router"`
 }
 
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
@@ -83783,7 +83797,7 @@ type BookPublicMeetingJSONBody struct {
 
 // BookPublicMeetingParams defines parameters for BookPublicMeeting.
 type BookPublicMeetingParams struct {
-	// L Offered meeting length in minutes. Unknown lengths use the default.
+	// L Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.
 	L *int `form:"l,omitempty" json:"l,omitempty"`
 
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -83828,7 +83842,13 @@ type GetPublicAvailabilityParams struct {
 	To              time.Time `form:"to" json:"to"`
 	DurationMinutes *int      `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
 
-	// L Offered meeting length in minutes. Unknown lengths use the default.
+	// L Offered meeting length in minutes. A length the page does not offer is refused with 422 `length_not_offered`; read the profile again for the lengths on offer.
+	L *int `form:"l,omitempty" json:"l,omitempty"`
+}
+
+// GetPublicBookingPreviewParams defines parameters for GetPublicBookingPreview.
+type GetPublicBookingPreviewParams struct {
+	// L Meeting length in minutes the shared link asks for. The card names it, links to it and gives it as the canonical address when the page offers it; otherwise the card names the default length.
 	L *int `form:"l,omitempty" json:"l,omitempty"`
 }
 
@@ -103670,7 +103690,7 @@ type ServerInterface interface {
 	GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams)
 	// Read the link-preview card for a host's public booking page.
 	// (GET /public/booking/{host_slug}/preview)
-	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string)
+	GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicBookingPreviewParams)
 	// Read the host-approved booking page identity and meeting details.
 	// (GET /public/booking/{host_slug}/profile)
 	GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicSchedulingProfileParams)
@@ -109721,7 +109741,7 @@ func (_ Unimplemented) GetPublicAvailability(w http.ResponseWriter, r *http.Requ
 
 // Read the link-preview card for a host's public booking page.
 // (GET /public/booking/{host_slug}/preview)
-func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string) {
+func (_ Unimplemented) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicBookingPreviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -150469,8 +150489,24 @@ func (siw *ServerInterfaceWrapper) GetPublicBookingPreview(w http.ResponseWriter
 		return
 	}
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicBookingPreviewParams
+
+	// ------------- Optional query parameter "l" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "l", r.URL.Query(), &params.L, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "l"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "l", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPublicBookingPreview(w, r, hostSlug)
+		siw.Handler.GetPublicBookingPreview(w, r, hostSlug, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
