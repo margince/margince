@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -112,21 +114,38 @@ func TestMeetingReminderRecordsARefusalWithoutSending(t *testing.T) {
 	}
 }
 
+// unheldRecordingStager refuses like recordingStager and keeps each refusal
+// offered to it as a background send that was dropped.
+type unheldRecordingStager struct {
+	recordingStager
+	offered []error
+}
+
+func (r *unheldRecordingStager) RecordUnheldRefusalTx(_ context.Context, _ pgx.Tx, refusal error) error {
+	r.offered = append(r.offered, refusal)
+	return nil
+}
+
 // A reminder the send rules refuse at staging, such as one whose footer lacks
 // the company's address, tells its host why. It is not held for later: a held
-// copy could go out after the meeting moved. The job run counts it as handled.
+// copy could go out after the meeting moved. The job run counts it as handled,
+// and the stager is told, so an admin's footer warning counts it.
 //
-// Mutation: return the refusal from meetingReminderNotSent and this fails.
+// Mutation: return the refusal from meetingReminderNotSent, or drop the
+// recordUnheldRefusalTx call, and this fails.
 func TestARefusedMeetingReminderTellsItsHost(t *testing.T) {
 	f, meeting, _ := reminderFixture(t)
 	told := &attentionRecorder{}
 	f.store = f.store.WithInvitationAttention(told)
-	stager := &recordingStager{err: apperrors.ErrConsentNotGranted}
+	stager := &unheldRecordingStager{recordingStager: recordingStager{err: apperrors.ErrConsentNotGranted}}
 	if err := f.store.SendMeetingReminder(f.ctx, ids.UUID(meeting.Id), stubConsentGate{}, stager); err != nil {
 		t.Fatalf("a refused reminder failed the job run: %v", err)
 	}
 	if len(told.reasons) != 1 || told.reasons[0] != AttentionReminderRefused {
 		t.Errorf("the host was told %v, want one %s notice", told.reasons, AttentionReminderRefused)
+	}
+	if len(stager.offered) != 1 || !errors.Is(stager.offered[0], apperrors.ErrConsentNotGranted) {
+		t.Errorf("the stager was offered %v, want the one refusal", stager.offered)
 	}
 	var held int
 	if err := f.env.owner.QueryRow(f.ctx, `SELECT count(*) FROM scheduled_send WHERE status = 'held'`).Scan(&held); err != nil {

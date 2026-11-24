@@ -29,12 +29,12 @@ func TestHealthCompositionNeverReadsAWithheldSource(t *testing.T) {
 		{"jobs", "job_health", func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 			t.Fatal("read without permission")
 			return crmcontracts.HealthSource{}, nil, nil
-		}},
+		}, principal.ActionRead},
 		{"search", "embedding_reindex", func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 			s := healthSource("search", "embedding_reindex")
 			s.Condition = "clear"
 			return s, nil, nil
-		}},
+		}, principal.ActionRead},
 	}
 	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	report := composeHealth(ctx, reads, func() time.Time { return at })
@@ -51,13 +51,13 @@ func TestHealthCompositionKeepsReadableEvidenceBesideAFailedSource(t *testing.T)
 	reads := []healthRead{
 		{"jobs", "job_health", func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 			return crmcontracts.HealthSource{}, nil, errors.New("synthetic source unavailable")
-		}},
+		}, principal.ActionRead},
 		{"capture", "job_health", func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 			s := healthSource("capture", "job_health")
 			s.Condition = "technical"
 			f := healthFinding(s, "capture_exhausted", "technical", 3, "records")
 			return s, []crmcontracts.HealthFinding{f}, nil
-		}},
+		}, principal.ActionRead},
 	}
 	report := composeHealth(ctx, reads, func() time.Time { return time.Time{} })
 	if report.Assessment != "attention" || report.Complete || len(report.Findings) != 2 || report.ActionCount != 2 || report.Sources[0].Availability != "failed" {
@@ -71,7 +71,7 @@ func TestHealthCompositionNeitherClearsAnUnknownSourceNorAlarmsOnInformation(t *
 		read := func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 			return s, nil, nil
 		}
-		report := composeHealth(healthTestContext(map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}}), []healthRead{{"providers", "ai_diagnostics", read}}, func() time.Time { return time.Time{} })
+		report := composeHealth(healthTestContext(map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}}), []healthRead{{"providers", "ai_diagnostics", read, principal.ActionRead}}, func() time.Time { return time.Time{} })
 		if report.Assessment != want || report.Complete != (want == "checked") || report.ActionCount != 0 {
 			t.Fatalf("%s/%s read as %+v, want %s", s.Availability, s.Condition, report, want)
 		}

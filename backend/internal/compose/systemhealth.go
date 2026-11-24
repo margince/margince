@@ -50,6 +50,8 @@ const (
 type healthRead struct {
 	id, object string
 	read       func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error)
+	// action is what the reader must hold on object to see the source.
+	action principal.Action
 }
 
 // GetSystemHealth never starts work or probes while reporting operational state.
@@ -184,17 +186,20 @@ func healthTx[T any](ctx context.Context, pool *pgxpool.Pool, read func(context.
 }
 
 func (s Server) healthReads() []healthRead {
+	read := principal.ActionRead
 	return []healthRead{
-		{"jobs", healthReadObject, s.jobsSummary},
-		{"capture", healthReadObject, s.captureSummary},
-		{"intake", healthReadObject, s.intakeSummary},
-		{"recovery", healthReadObject, s.recoverySummary},
-		{"automatic", healthReadObject, s.automaticSummary},
-		{"receipts", healthReadObject, s.receiptsSummary},
-		{healthSearchID, "embedding_reindex", s.searchSummary},
-		{"updates", healthDataTasks, s.updatesSummary},
-		{"providers", "ai_diagnostics", s.providersSummary},
-		{healthUnplacedID, "ai_diagnostics", s.unplacedSummary},
+		{"jobs", healthReadObject, s.jobsSummary, read},
+		{"capture", healthReadObject, s.captureSummary, read},
+		{"intake", healthReadObject, s.intakeSummary, read},
+		{"recovery", healthReadObject, s.recoverySummary, read},
+		{"automatic", healthReadObject, s.automaticSummary, read},
+		{"receipts", healthReadObject, s.receiptsSummary, read},
+		{healthSearchID, "embedding_reindex", s.searchSummary, read},
+		{"updates", healthDataTasks, s.updatesSummary, read},
+		{"providers", "ai_diagnostics", s.providersSummary, read},
+		{healthUnplacedID, "ai_diagnostics", s.unplacedSummary, read},
+		// Who may fill in the company details is who is told they are missing.
+		{healthFooterID, healthFooterObject, s.footerSummary, principal.ActionUpdate},
 	}
 }
 
@@ -262,8 +267,9 @@ func readHealthSources(ctx context.Context, reads []healthRead) []healthReadResu
 	var pending sync.WaitGroup
 	for i, read := range reads {
 		source := healthSource(read.id, read.object)
+		source.Permission = read.object + ":" + string(read.action)
 		results[i].source = source
-		if !auth.Allows(ctx, read.object, principal.ActionRead) {
+		if !auth.Allows(ctx, read.object, read.action) {
 			source.Availability, source.Code = healthWithheld, string(healthWithheld)
 			results[i].source = source
 			continue
@@ -271,6 +277,8 @@ func readHealthSources(ctx context.Context, reads []healthRead) []healthReadResu
 		pending.Go(func() {
 			source, findings, err := read.read(ctx)
 			if err == nil {
+				// The grant the gate above asked for, whatever the reader built.
+				source.Permission = results[i].source.Permission
 				results[i].source = source
 			}
 			results[i].findings, results[i].err = findings, err

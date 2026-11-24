@@ -50,6 +50,7 @@ var (
 	_ activities.DeliveryStager        = commsStager{}
 	_ activities.ChannelDeliveryStager = commsStager{}
 	_ activities.HoldRefusalRecorder   = commsStager{}
+	_ activities.UnheldRefusalRecorder = commsStager{}
 )
 
 // DeliveryMachinery is the ONE delivery path in both the shapes a message can be
@@ -228,8 +229,20 @@ func (s commsStager) RecordReviewForHoldTx(ctx context.Context, tx pgx.Tx, refus
 	if !errors.As(refusal, &pending) || s.authority == nil {
 		return nil
 	}
-	_, err := consent.OpenReviewTx(ctx, tx, pending.set, intentID)
-	return err
+	if _, err := consent.OpenReviewTx(ctx, tx, pending.set, intentID); err != nil {
+		return err
+	}
+	return consent.RecordFooterHoldTx(ctx, tx, pending.set, true)
+}
+
+// RecordUnheldRefusalTx records why a background send stopped when nothing
+// holds it for review, as a meeting reminder that is dropped instead.
+func (s commsStager) RecordUnheldRefusalTx(ctx context.Context, tx pgx.Tx, refusal error) error {
+	var pending *pendingReviewError
+	if !errors.As(refusal, &pending) {
+		return nil
+	}
+	return consent.RecordFooterHoldTx(ctx, tx, pending.set, true)
 }
 
 // StageChannelTx is the same staging for a channel reply: the channel-shaped row

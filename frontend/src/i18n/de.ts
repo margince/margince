@@ -24534,6 +24534,34 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.openModels": "Modelle öffnen",
   "health.openConnections": "Verbindungen öffnen",
   "health.openRegional": "Region und Kalender öffnen",
+  "health.source.footer": "Firmenangaben in der Mail-Fußzeile",
+  "health.code.footer_complete":
+    "Jede Mail-Fußzeile enthält die nötigen Firmenangaben",
+  "health.code.footer_incomplete": "In Mail-Fußzeilen fehlen Firmenangaben",
+  "health.footerIncompleteFor":
+    "{entity}: In Mail-Fußzeilen fehlen Firmenangaben",
+  "health.footerDefaultEntity": "Die Standard-Rechtseinheit",
+  "health.effect.footer":
+    "Mails, die diese Angaben zeigen müssen, werden zur Prüfung zurückgehalten. Eine Person kann sie mit Begründung trotzdem senden. Ein Versand im Hintergrund, etwa eine Terminerinnerung, entfällt.",
+  "health.footerNext":
+    "Ergänzen Sie die fehlenden Angaben. Die Warnung verschwindet, sobald sie vollständig sind.",
+  "health.recovery.footer":
+    "Jede Firmenangabe, die die Rechtspakete verlangen, ist eingetragen.",
+  "health.footerMissing": "Fehlende Angaben",
+  "health.footerHeldByPerson":
+    "Seit der letzten Änderung zurückgehaltene Sendungen von Personen",
+  "health.footerHeldInBackground":
+    "Seit der letzten Änderung zurückgehaltene oder entfallene Sendungen im Hintergrund",
+  "health.footerDetail.controller_identity": "Firmenname und Postanschrift",
+  "health.footerDetail.privacy_contact": "Datenschutzkontakt",
+  "health.footerDetail.objection_route": "Weg zum Widerspruch",
+  "health.footerDetail.advertiser_contact": "Kontakt des Werbenden",
+  "health.footerDetail.entity_name": "Firmenname",
+  "health.measure.messages_one": "{count} Nachricht",
+  "health.measure.messages_other": "{count} Nachrichten",
+  "health.openLegalEntities": "Rechtseinheiten öffnen",
+  "health.openCompanyProfile": "Firmenprofil öffnen",
+  "health.openDisclosures": "Rechtsraum öffnen",
   "health.unit.runs": "Läufe",
   "health.history": "Aufbewahrter Fehlerverlauf",
   "health.historyWindow":

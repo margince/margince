@@ -24,6 +24,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { jobKindNameKey } from "./jobkinds";
 import { MailReviewRequests } from "./mailreviewrequests";
 import {
+  footerDetails,
   healthCodes,
   healthMeasures,
   healthRecovery,
@@ -121,14 +122,23 @@ function FindingScope({ finding }: Readonly<{ finding: Finding }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   return (
-    <p className="t-caption">
-      {finding.count !== undefined && finding.unit
-        ? plural(healthMeasures[finding.unit], finding.count, {
-            count: formatNumber(finding.count, locale),
-          })
-        : t("health.scopeUnknown")}{" "}
-      · {t(labelFor(healthResponsible, finding.responsible))}
-    </p>
+    <>
+      <p className="t-caption">
+        {finding.count !== undefined && finding.unit
+          ? plural(healthMeasures[finding.unit], finding.count, {
+              count: formatNumber(finding.count, locale),
+            })
+          : t("health.scopeUnknown")}{" "}
+        · {t(labelFor(healthResponsible, finding.responsible))}
+      </p>
+      {finding.footer_gap && (
+        <FactList
+          facts={footerFacts(finding.footer_gap, t, (n) =>
+            formatNumber(n, locale),
+          )}
+        />
+      )}
+    </>
   );
 }
 
@@ -171,6 +181,12 @@ function FindingActions({
       navigate(settingsHref(destination));
     else if (destination === "regional")
       navigate(settingsHref("company", "regional"));
+    else if (destination === "legal_entities")
+      navigate(settingsHref("company", "entities"));
+    else if (destination === "company_profile")
+      navigate(settingsHref("company", "profile"));
+    else if (destination === "disclosures")
+      navigate(settingsHref("jurisdiction"));
     else
       navigate(
         {
@@ -257,6 +273,12 @@ function findingActionLabel(finding: Finding): MessageKey {
   if (finding.action.destination === "connections")
     return "health.openConnections";
   if (finding.action.destination === "regional") return "health.openRegional";
+  if (finding.action.destination === "legal_entities")
+    return "health.openLegalEntities";
+  if (finding.action.destination === "company_profile")
+    return "health.openCompanyProfile";
+  if (finding.action.destination === "disclosures")
+    return "health.openDisclosures";
   if (finding.source === "jobs")
     return finding.code === "queue_unverified"
       ? "health.inspectRuns"
@@ -273,6 +295,11 @@ function findingTitle(finding: Finding, t: Translator) {
       : undefined;
   if (finding.code === "queue_overdue" && kindKey)
     return t("health.jobDelayed", { kind: t(kindKey) });
+  if (finding.footer_gap)
+    return t("health.footerIncompleteFor", {
+      entity:
+        finding.footer_gap.legal_entity_name || t("health.footerDefaultEntity"),
+    });
   return finding.code === "queue_unverified" && kindKey
     ? t("health.jobStopped", { kind: t(kindKey) })
     : t(healthCodes[finding.code] ?? "health.unknown");
@@ -305,4 +332,30 @@ function FindingFacts({ finding }: Readonly<{ finding: Finding }>) {
       value: t(healthRecovery[finding.recovery] ?? "health.unknown"),
     });
   return <FactList facts={facts} />;
+}
+
+function footerFacts(
+  gap: NonNullable<Finding["footer_gap"]>,
+  t: Translator,
+  count: (n: number) => string,
+): Fact[] {
+  return [
+    {
+      key: "footer-missing",
+      term: t("health.footerMissing"),
+      value: gap.missing
+        .map((kind) => t(labelFor(footerDetails, kind)))
+        .join(", "),
+    },
+    {
+      key: "footer-person",
+      term: t("health.footerHeldByPerson"),
+      value: count(gap.held_by_person),
+    },
+    {
+      key: "footer-background",
+      term: t("health.footerHeldInBackground"),
+      value: count(gap.held_in_background),
+    },
+  ];
 }
