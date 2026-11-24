@@ -49,6 +49,9 @@ type openAICompatClient struct {
 	// reasoning is the broker's per-model reasoning metadata, which maps a
 	// request's thinking floor (openrouterreasoning.go); nil off the broker.
 	reasoning *catalogFact[openRouterCatalog]
+	// azure is set on an azure_openai binding, which changes the URL shape and
+	// the credential header (azureopenai.go) and nothing else about the wire.
+	azure *azureMode
 }
 
 // openAICompatSchemaName labels the structured-output schema; OpenAI's
@@ -63,7 +66,13 @@ type openAICompatChatWire struct {
 	Messages  []openAICompatMessage `json:"messages"`
 	Tools     []ollamaToolWire      `json:"tools,omitempty"`
 	MaxTokens int                   `json:"max_tokens,omitempty"`
-	Stream    bool                  `json:"stream"`
+	// MaxCompletionTokens replaces MaxTokens on OpenAI and Azure OpenAI hosts
+	// (sendsMaxCompletionTokens); never both.
+	MaxCompletionTokens int `json:"max_completion_tokens,omitempty"`
+	// ReasoningEffort is OpenAI's own knob; the broker's Reasoning object below
+	// is a different field for a different host.
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	Stream          bool   `json:"stream"`
 	// ResponseFormat carries the OpenAI-compatible json_schema structured
 	// output (vLLM guided decoding); set only when the request asks for a
 	// schema, so ordinary free-text calls are unchanged.
@@ -240,7 +249,11 @@ func (c *openAICompatClient) Embed(ctx context.Context, req model.EmbedRequest) 
 	// outright on models that aren't MRL-trained (a 400 on every embed call).
 	// Omit it — the store's width check catches a genuinely mismatched model.
 	req.Dimensions = 0
-	return openAIWireEmbed(ctx, c.post, c.defaultModel, req, c.routing.providerWire())
+	deployment := defaulted(req.Model, c.defaultModel)
+	post := func(ctx context.Context, path string, payload []byte) (io.ReadCloser, error) {
+		return c.postFor(ctx, deployment, path, payload)
+	}
+	return openAIWireEmbed(ctx, post, c.defaultModel, req, c.routing.providerWire())
 }
 
 // isFetchableURL reports whether an attachment's URI is a URL the vendor can
@@ -406,7 +419,7 @@ func (c *openAICompatClient) sendChat(ctx context.Context, req model.Request, st
 	if err != nil {
 		return nil, err
 	}
-	return c.post(ctx, "/v1/chat/completions", payload)
+	return c.postFor(ctx, wire.Model, "/v1/chat/completions", payload)
 }
 
 // chatWire assembles the request body. Separated from sendChat so the body a
@@ -423,6 +436,10 @@ func (c *openAICompatClient) chatWire(req model.Request, stream bool) openAIComp
 	if wire.MaxTokens <= 0 {
 		wire.MaxTokens = unsetMaxOutputTokens
 	}
+	if sendsMaxCompletionTokens(c.baseURL) {
+		wire.MaxCompletionTokens, wire.MaxTokens = wire.MaxTokens, 0
+	}
+	wire.ReasoningEffort = chatReasoningEffort(c.baseURL, wire.Model, req.ThinkingLevel, req.ThinkingFloor)
 	wire.Messages = openAICompatMessages(req.System, req.Messages, req.Attachments)
 	if len(req.ResponseSchema) > 0 {
 		wire.ResponseFormat = &openAICompatResponseFormat{
@@ -444,14 +461,19 @@ func (c *openAICompatClient) chatWire(req model.Request, stream bool) openAIComp
 	return wire
 }
 
-func (c *openAICompatClient) post(ctx context.Context, path string, payload []byte) (io.ReadCloser, error) {
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, bytes.NewReader(payload))
+// postFor posts to path for the model (the Azure deployment) the call names.
+func (c *openAICompatClient) postFor(ctx context.Context, deployment, path string, payload []byte) (io.ReadCloser, error) {
+	endpoint, err := c.requestURL(deployment, path)
+	if err != nil {
+		return nil, err
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
 		return nil, fmt.Errorf("ai: openai-compat: build request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	if c.apiKey != "" {
-		httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
+	if err := c.authorize(httpReq); err != nil {
+		return nil, err
 	}
 	resp, err := c.http.Do(httpReq)
 	if err != nil {

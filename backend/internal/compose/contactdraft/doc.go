@@ -23,10 +23,12 @@
 // the contact: the model router meters the workspace's AI usage and records the
 // call for audit, as it does for every model-backed read on this page.
 //
-// **It is written per viewer, from the caller's own contact 360.** The composite
-// read runs inside the normal gates, so a draft can only mention records the
-// caller could open themselves. A rep with no deal grant gets a draft that does
-// not know about the deal, rather than one that mentions it.
+// **It is written per viewer, from the caller's own contact 360, plus the
+// company profile.** The composite read runs inside the normal gates, so a draft
+// can only mention contact records the caller could open themselves. A rep with
+// no deal grant gets a draft that does not know about the deal, rather than one
+// that mentions it. The model also receives the installation's own company
+// profile, which every member may read.
 //
 // **It degrades rather than failing.** With no model lane configured, or the
 // workspace's budget spent, the deterministic floor writes the draft and

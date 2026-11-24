@@ -126,11 +126,14 @@ func Ungrounded(sentence Sentence, known map[Evidence]string) string {
 		cited.WriteString("\n")
 	}
 	// A citation is a POINTER: it proves the model named a real row, never that
-	// the sentence says what the row says. So every date, amount and percentage
-	// the sentence states has to be in the rows it points at — the connective
-	// prose, which is the reading, stays free.
+	// the sentence says what the row says. So every date, percentage and sum
+	// of money the sentence states has to be in the rows it points at. The
+	// connective prose, which is the reading, stays free.
 	if missing := specifics.Missing(sentence.Text, cited.String()); len(missing) > 0 {
 		return "it names " + specifics.Texts(missing) + ", which the records it cites do not"
+	}
+	if missing := specifics.MoneyMissing(sentence.Text, cited.String()); len(missing) > 0 {
+		return "it states the sum " + specifics.Texts(missing) + ", which neither the records it cites nor Margince's own totals carry"
 	}
 	return ""
 }
@@ -220,26 +223,61 @@ func CollapseSpace(s string) string { return values.CollapseSpace(s) }
 
 // Source renders one record as the text a sentence citing it is held against.
 //
-// The assemblers hand their inputs to the model as JSON, so the JSON is what
-// the model actually saw — including every field's rendering choice, which is
-// the point: a deal's amount reaches the prompt as major units, and a check
-// reading the minor-unit integer beside it would admit the figure a hundred
-// times too large that the rendering exists to prevent.
+// The JSON is what the model saw, with every field's rendering: a deal's
+// amount reaches the prompt in major units, never as the minor-unit integer.
+// Each amount beside a currency is also stated as a pair.
 //
 //craft:ignore naked-any every assembler's record types are its own, and this renders whatever it is handed exactly as the prompt did
 func Source(record any) string {
 	rendered, err := json.Marshal(record)
 	if err != nil {
-		// A record that cannot be rendered is a record no sentence can be
-		// checked against, so it contributes NOTHING rather than everything:
-		// sentences citing it lose their source and are dropped, which is the
-		// safe direction for a filter whose failure mode is admitting an
-		// invention. Unreachable for the inputs here — they are plain structs
-		// of strings, numbers and slices — and left as a value rather than an
-		// error so one unrenderable record cannot cost a reader the whole brief.
 		return ""
 	}
-	return string(rendered)
+	return string(rendered) + moneyLinesOf(rendered)
+}
+
+// moneyLinesOf is moneyLines over rendered JSON.
+func moneyLinesOf(rendered []byte) string {
+	var tree any //craft:ignore naked-any the rendered JSON is walked for its money fields whatever the record's type
+	if json.Unmarshal(rendered, &tree) != nil {
+		return ""
+	}
+	return moneyLines(tree)
+}
+
+// MoneyLine states a sum the way the money check reads a source: the rendered
+// amount, then its currency. An amount and a currency in two JSON fields would
+// match no sentence.
+func MoneyLine(amount, currency string) string {
+	if amount == "" || currency == "" {
+		return ""
+	}
+	return "\n" + amount + " " + currency
+}
+
+// moneyLines is MoneyLine for every object under node that carries an
+// `amount` beside a `currency`, the pair each assembler's deal renders.
+//
+//craft:ignore naked-any node is decoded JSON of any shape
+func moneyLines(node any) string {
+	var lines strings.Builder
+	switch typed := node.(type) {
+	case []any:
+		for _, item := range typed {
+			lines.WriteString(moneyLines(item))
+		}
+	case map[string]any:
+		amount, _ := typed["amount"].(string)
+		for key, value := range typed {
+			if currency, ok := value.(string); ok && strings.EqualFold(key, "currency") {
+				lines.WriteString(MoneyLine(amount, currency))
+			}
+		}
+		for _, value := range typed {
+			lines.WriteString(moneyLines(value))
+		}
+	}
+	return lines.String()
 }
 
 // BriefBounds is what one brief may hold once grounded: how many sentences,

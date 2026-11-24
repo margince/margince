@@ -78,9 +78,12 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 
 	// The sort FIRST: it may bind parameters of its own and the cursor clause
 	// below is rendered from it, so both count through one counter.
-	sorted, err = timelineSort(ctx, in, arg)
-	if err != nil {
-		return nil, "", nil, nil, err
+	// A count has no ORDER BY, so binding the sort's parameters would leave
+	// arguments the statement never mentions, which Postgres refuses.
+	if !in.countOnly {
+		if sorted, err = timelineSort(ctx, in, arg); err != nil {
+			return nil, "", nil, nil, err
+		}
 	}
 
 	// The timeline is DISCOVER-gated: a row reachable through a readable record

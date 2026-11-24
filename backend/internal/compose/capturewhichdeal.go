@@ -20,11 +20,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/dealfiler"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -45,6 +47,17 @@ type whichDealAsker struct {
 	tasks *activities.Store
 	deals offeredDeals
 	now   func() time.Time
+}
+
+// newWhichDealAsker is the one asker capture and the refile passes share, so
+// both raise the same question. now is the clock that decides which mail is
+// current.
+func newWhichDealAsker(pool *pgxpool.Pool, now func() time.Time) whichDealAsker {
+	return whichDealAsker{
+		tasks: activities.NewStore(InstallationDB(pool)),
+		deals: deals.NewStore(InstallationDB(pool), DealsInstallation()),
+		now:   now,
+	}
 }
 
 // offeredDeals reads the open deals a question offers, from the deals module.

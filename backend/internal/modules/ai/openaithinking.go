@@ -70,3 +70,13 @@ func openaiEffortFor(modelID, floor string) string {
 	}
 	return openaiTakenEffort(modelID, floor)
 }
+
+// openaiThinkingEffort is the effort an admin's level, else a floor, sends to
+// modelID, empty for none. The Responses and chat wires both ask it, so the
+// two cannot send a model different efforts for one request.
+func openaiThinkingEffort(modelID, level, floor string) string {
+	if _, reasons := openaiDefaultEffort(modelID); reasons && level != "" {
+		return openaiTakenEffort(modelID, level)
+	}
+	return openaiEffortFor(modelID, floor)
+}

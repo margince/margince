@@ -21,19 +21,28 @@ import type { Receipt } from "../lib/handled";
 import { useReceiptUndo } from "../lib/receiptundo";
 import { BundleUndo } from "./marginchanges";
 
+function rowWritable(receipt: Receipt, undoable: boolean | undefined): boolean {
+  return undoable ?? (receipt.review ? receipt.review.writable : true);
+}
+
 export function ReceiptUndo({
   receipt,
   onDone,
-  undoable = true,
+  undoable,
 }: Readonly<{
   receipt: Receipt;
   onDone?: () => void;
   // False where the page knows the reader may not write the changed record:
-  // the grant alone cannot see a colleague's deal shared read-only.
+  // the grant alone cannot see a colleague's deal shared read-only. Left out,
+  // the receipt's own review answers.
   undoable?: boolean;
 }>) {
   const t = useT();
-  const writable = useCanWrite("deal", "update") && undoable;
+  // The server's answer for this row decides when there is one: the grant
+  // alone cannot see a read-only row scope. A receipt from a server that sends
+  // no review has no answer, and the grant stands.
+  const writable =
+    useCanWrite("deal", "update") && rowWritable(receipt, undoable);
   const receiptUndo = useReceiptUndo();
 
   const undo = receipt.undo;

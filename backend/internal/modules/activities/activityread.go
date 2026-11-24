@@ -139,7 +139,7 @@ func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int
 				Message: "the request queue is ordered by what is owed and when it arrived, and cannot be re-ordered",
 			}
 		}
-		return storekit.ParseListSort(ctx, in.Sort, activitySortFields, arg)
+		return storekit.ParseListSort(ctx, in.Sort, activitySortFieldsIn(in.DayZone), arg)
 	}
 	spec := defaultTimelineSort
 	switch {
@@ -148,7 +148,7 @@ func timelineSort(ctx context.Context, in ListActivitiesInput, arg func(any) int
 	case in.OpenAndDueBy != nil || in.OpenAndDueAfter != nil:
 		spec = dueQueueSort
 	}
-	return storekit.ParseListSort(ctx, &spec, activitySortFields, arg)
+	return storekit.ParseListSort(ctx, &spec, activitySortFieldsIn(in.DayZone), arg)
 }
 
 // errRequestReviewWithCursor is refused rather than built into SQL, and it is
@@ -470,6 +470,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if in.WithOutsideParty || in.AwaitingOutcomeAsOf != nil {
 			in.outsideParty = outsidePartyClause(ctx, tx)
 		}
+		in.countOnly = true
 		where, content, _, args, err := listActivitiesFilter(ctx, in)
 		if err != nil {
 			return err

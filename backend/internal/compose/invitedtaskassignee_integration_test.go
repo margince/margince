@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -58,8 +58,8 @@ func TestANamedInvitedColleagueMayBeGivenANewTask(t *testing.T) {
 	// An automatic writer calls the store directly and is still refused.
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "task", Subject: &subject, DueAt: &due, AssigneeID: &invited, Source: "manual",
-	}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("an automatic task for an invited colleague got %v, want not found", err)
+	}); !seatRefused(err) {
+		t.Errorf("an automatic task for an invited colleague got %v, want the seat refusal", err)
 	}
 
 	// Moving an existing task onto an invited colleague is routing.
@@ -71,8 +71,8 @@ func TestANamedInvitedColleagueMayBeGivenANewTask(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := e.Activities.UpdateActivity(e.Admin(), ids.From[ids.ActivityKind](ids.UUID(other.Id)),
-		activities.UpdateActivityInput{AssigneeID: &invited}); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("moving a task onto an invited colleague got %v, want not found", err)
+		activities.UpdateActivityInput{AssigneeID: &invited}); !seatRefused(err) {
+		t.Errorf("moving a task onto an invited colleague got %v, want the seat refusal", err)
 	}
 
 	// A suspended seat stays refused on the HTTP door too.
@@ -80,7 +80,12 @@ func TestANamedInvitedColleagueMayBeGivenANewTask(t *testing.T) {
 	if status, _ := postActivity(e.Admin(), t, e, crmcontracts.CreateActivityRequest{
 		Source: "manual",
 		Kind:   "task", Subject: &subject, DueAt: &due, AssigneeId: &assignee,
-	}); status == http.StatusCreated {
-		t.Errorf("POST /activities for a suspended seat answered 201")
+	}); status != http.StatusUnprocessableEntity {
+		t.Errorf("POST /activities for a suspended seat answered %d, want 422", status)
 	}
+}
+
+func seatRefused(err error) bool {
+	_, ok := errors.AsType[*auth.AssigneeNotAllowedError](err)
+	return ok
 }

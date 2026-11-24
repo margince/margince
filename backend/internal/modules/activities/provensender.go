@@ -63,6 +63,9 @@ func stampProvenSender(ctx context.Context, tx pgx.Tx, activityID, contact ids.U
 // of one message. Every writer that names a sender after the fact calls this;
 // the caller holds the activities and audits the change.
 func StampProvenSendersTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, contact ids.UUID) ([]ids.UUID, error) {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityIDs...); err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
 		WITH proven AS (SELECT a.id FROM activity a WHERE a.id = ANY($1) AND `+provenSenderSQL("$2::uuid")+`),
 		promoted AS (
@@ -97,13 +100,13 @@ func provenLinkSQL() string {
 }
 
 // ProvenSenderActivitiesTx locks the next limit activities after the cursor,
-// in id order, whose sender a linked contact is proven to be.
+// in id order, whose sender a linked contact is proven to be, through LockMeetingAttendeePage.
 func ProvenSenderActivitiesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a WHERE a.id > $1 AND a.restricted_at IS NULL AND `+provenLinkSQL()+`
-		 ORDER BY a.id LIMIT $2 FOR UPDATE OF a`, after, limit)
+		 ORDER BY a.id LIMIT $2`, after, limit)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading received messages with a proven sender: %w", err)
 	}
@@ -111,7 +114,7 @@ func ProvenSenderActivitiesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, li
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading received messages with a proven sender: %w", err)
 	}
-	return found, nil
+	return found, storekit.LockMeetingAttendeePage(ctx, tx, found)
 }
 
 // CountProvenSenderActivities counts the activities the sender repair would
@@ -129,6 +132,9 @@ func CountProvenSenderActivities(ctx context.Context, q datatask.Querier, maximu
 // is read again under the row lock, so a replay changes nothing.
 func StampProvenSenderTx(ctx context.Context, tx pgx.Tx, activityID, runID ids.UUID) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
+		return false, err
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID); err != nil {
 		return false, err
 	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID, storekit.LiveOnly); err != nil {

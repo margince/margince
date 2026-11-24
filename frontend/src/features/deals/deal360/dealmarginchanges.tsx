@@ -82,7 +82,12 @@ export function DealMarginceChangesCard({
                 <ReceiptDetail receipt={change} />
               </>
             }
-            right={<ReceiptVerbs receipt={change} undoable={canWrite} />}
+            right={
+              <ReceiptVerbs
+                receipt={change}
+                undoable={canWrite && change.review?.writable !== false}
+              />
+            }
           />
         ))}
       </OverviewList>

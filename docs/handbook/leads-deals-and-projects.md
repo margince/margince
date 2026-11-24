@@ -247,7 +247,7 @@ No. A deal in Margince stays in the pipeline it was created in, and its stage ca
 Also called: change a deal's pipeline, switch pipeline.
 
 ### Can I set the win probability of one deal?
-Yes. Press **Edit** in the **About** section of the deal's **Details**, and enter a number from 0 to 100 under **Probability**. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's. The ⓘ beside the figure says where it comes from: the stage, who set it by hand, or why Margince lowered it.
+Yes. Press **Edit** in the **About** section of the deal's **Details**, and enter a number from 0 to 100 under **Probability**. Leave it empty to use the stage's probability again (**Settings → Deals**, **Win probability**). Moving the deal to another stage also sets it back to that stage's. The ⓘ beside the figure says how it was made ([how it is set](forecast-learning.md)).
 Also called: deal probability, likelihood, confidence, why this probability.
 
 ## Projects

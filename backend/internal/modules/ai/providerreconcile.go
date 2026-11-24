@@ -172,9 +172,10 @@ type missingHostError struct {
 func (e missingHostError) Error() string { return e.reason }
 
 // chatHostMissing is whether a chat lane on provider at host cannot be
-// served: the OpenAI wire has no default host to fall back on.
+// served: an adapter with no default host has nothing to fall back on.
 func chatHostMissing(provider, host string) bool {
-	return provider == providerOpenAICompatible && strings.TrimSpace(host) == ""
+	d, _ := providerByName(provider)
+	return d.hostRequired && strings.TrimSpace(host) == ""
 }
 
 // decisionHostMissing is whether a decisions lane on provider at host cannot

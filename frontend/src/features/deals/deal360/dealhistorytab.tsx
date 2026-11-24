@@ -20,7 +20,9 @@ import {
 import { GroupedTimelineList } from "../../../design-system/timeline";
 import { TimelineFilterBar } from "../../../design-system/timelinefilterbar";
 import { groupChronology } from "../../../design-system/timelinegroups";
+import { stable } from "../../../format/collate";
 import { useLocale, useT } from "../../../i18n";
+import { useDealChangesWhere } from "../../../lib/marginchanges";
 import { invalidateRecord } from "../../../lib/recordwritekeys";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { RecordHistoryTab } from "../../records/history";
@@ -36,7 +38,7 @@ import {
   RowAnswerActions,
   TimelineActions,
 } from "../../records/timelineactions";
-import { StartDeliveryPrompt } from "../dealproject";
+import { DealNoteUndo } from "./dealnoteundo";
 import { OutcomeReviewPanel } from "./outcomereview";
 
 type Deal = components["schemas"]["Deal"];
@@ -58,6 +60,18 @@ export function DealHistoryTab({
   const [filter, setFilter] = useChronologyFilter(deal.id);
   const [filters, setFilters] = useTimelineFilters(deal.id);
   const timeline = useRecordTimeline("deal", deal.id, { filters });
+  // The changes the notes on screen report, asked for by note so one older
+  // than a page of the deal's changes still finds its Undo.
+  const noteIds = timeline.activities
+    .filter((activity) => activity.kind === "note")
+    .map((activity) => activity.id)
+    .sort(stable)
+    .slice(0, 100);
+  const marginceReceipts = useDealChangesWhere(
+    deal.id,
+    { noteActivityIds: noteIds },
+    noteIds.length > 0,
+  );
   const chronology = useRecordChronology({
     onOpenEmail,
     kind: "deal",
@@ -70,20 +84,25 @@ export function DealHistoryTab({
     loadMore: timeline,
     values: { currency: deal.currency ?? null, locale, zone: readerZone },
     renderActions: (activity) => (
-      <TimelineActions
-        activity={activity}
-        entityType="deal"
-        entityId={deal.id}
-      />
+      <>
+        <TimelineActions
+          activity={activity}
+          entityType="deal"
+          entityId={deal.id}
+        />
+        <DealNoteUndo
+          activityId={activity.id}
+          dealId={deal.id}
+          dealName={deal.name}
+          receipts={marginceReceipts}
+        />
+      </>
     ),
   });
 
   return (
     <>
-      {/* A closed deal's own record sits above its chronology: the delivery
-          project a won deal is offered once, and the review of how it closed.
-          The Overview holds neither. */}
-      <StartDeliveryPrompt deal={deal} />
+      {/* A closed deal's review of how it closed sits above its chronology. */}
       <OutcomeReviewPanel
         dealId={deal.id}
         status={deal.status}

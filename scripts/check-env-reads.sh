@@ -33,7 +33,7 @@ WAIVERS="scripts/env-read-waivers.txt"
 # does not silently lose its exemption — and a product file cannot gain one by
 # being named like a test.
 tagged_integration() {
-    head -20 "$1" | grep -q '^//go:build .*\binteg''ration\b'
+    grep -q '^//go:build .*\binteg''ration\b' < <(head -20 "$1")
 }
 
 # Every way the standard library hands out the environment, not just the one

@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -233,6 +234,9 @@ func insertParticipantRow(ctx context.Context, tx pgx.Tx, activityID ids.Activit
 	// whole write for a participant row that is a nicety, not the point of the
 	// operation. Guarding here rather than pre-checking also avoids a race
 	// with a member being archived between the check and the insert.
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, role, address, address_domain_folded, display_name)
 		SELECT $1, $2, $3, $4, NULLIF($5, ''), $6, $7

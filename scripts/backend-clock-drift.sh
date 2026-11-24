@@ -6,6 +6,38 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# The suites in the order they run, one name per line. clock-drift-host.sh moves
+# the host clock for ONE slice at a time and puts it back between them, because
+# a hosted runner whose clock stays 200 days ahead for the whole run loses its
+# link to GitHub after about an hour. The names live here, beside what runs them.
+INTEGRATION_SLICES=6
+slices() {
+	# The unit legs are the prerequisites of `test:` in backend/Makefile, read
+	# from there so a leg added or dropped there changes the slices with it.
+	local leg
+	for leg in $(sed -n 's/^test:[[:space:]]*\([^#]*\).*/\1/p' backend/Makefile); do
+		printf 'unit-%s\n' "${leg#test-}"
+	done
+	local k
+	for ((k = 1; k <= INTEGRATION_SLICES; k++)); do
+		printf 'integration:%s/%s\n' "$k" "$INTEGRATION_SLICES"
+	done
+}
+
+if [[ "${1:-}" == slices ]]; then
+	slices
+	exit 0
+fi
+
+# BACKEND_CLOCK_SLICE picks one slice; unset runs every suite in one go, which
+# is what the database and fixture appliers want on a laptop.
+SLICE="${BACKEND_CLOCK_SLICE:-}"
+KNOWN_SLICES="$(slices)"
+if [[ -n "$SLICE" ]] && ! grep -Fxq -- "$SLICE" <<<"$KNOWN_SLICES"; then
+	echo "backend-clock-drift: BACKEND_CLOCK_SLICE=$SLICE is not one of: $(tr '\n' ' ' <<<"$KNOWN_SLICES")" >&2
+	exit 2
+fi
+
 SKEW="${BACKEND_CLOCK_SKEW:-}"
 if [[ -z "$SKEW" ]]; then
 	echo "backend-clock-drift: BACKEND_CLOCK_SKEW is unset, so this would be the ordinary suite" >&2
@@ -49,14 +81,20 @@ esac
 # passed at the real date would replay as `ok (cached)` under the lane's name.
 export GOFLAGS="${GOFLAGS:-} -count=1"
 
-echo "backend-clock-drift: running the backend suites at $SKEW"
+echo "backend-clock-drift: running the backend suites${SLICE:+ ($SLICE)} at $SKEW"
 
-# Both halves run and their verdicts combine, so one unit red cannot keep the
+# Every suite runs and the verdicts combine, so one unit red cannot keep the
 # integration half, where the files comparing against Postgres' now() live,
 # from running at all.
 suites=0
-make -C backend test || suites=$?
-make -C backend test-integration || suites=$?
+case "$SLICE" in
+'')
+	make -C backend test || suites=$?
+	make -C backend test-integration || suites=$?
+	;;
+unit-*) make -C backend "test-${SLICE#unit-}" || suites=$? ;;
+integration:*) INTEGRATION_SHARD="${SLICE#integration:}" make -C backend test-integration || suites=$? ;;
+esac
 
 # The shift is proven again, on the failing path too: a time service that
 # re-synced mid-run makes the rest an ordinary run, and its verdict the lane's.

@@ -125,6 +125,7 @@ public.ai_call.context_fingerprint document
 public.ai_call.context_scopes document
 public.ai_call.decision_choice document
 public.ai_call.error_sentinel document
+public.ai_call.extension line
 public.ai_call.kind document
 public.ai_call.model_id document
 public.ai_call.provider document
@@ -690,6 +691,7 @@ public.deal.description document checked: typed by a user or agent; a CSV cell i
 public.deal.lost_reason note
 public.deal.lost_reason_basis note
 public.deal.lost_reason_code note
+public.deal.manager_request_reasons exempt a closed set of at most three codes that the writer checks before it stores them
 public.deal.name label
 public.deal.partner_attribution document
 public.deal.priority document

@@ -30,6 +30,7 @@ import {
   paintCensus,
   renderPhase,
   storyOutcome,
+  unroutedHints,
   viewportFor,
 } from "./lib/uat-page.mjs";
 import {
@@ -263,8 +264,10 @@ async function captureStory(page, port, story) {
   // Set before navigating: a resize after first paint measures a reflow rather
   // than the layout the story is about.
   await page.setViewportSize(viewportFor(tags));
+  const warnings = [];
   page.on("console", (m) => {
     if (m.type() === "error" && !expectsConsoleError) errors.push(m.text());
+    if (m.type() === "warning") warnings.push(m.text());
   });
 
   await page.goto(
@@ -319,6 +322,7 @@ async function captureStory(page, port, story) {
     errors.push(`theme is ${drawnTheme}, expected ${expectedTheme}`);
   }
   const pass = rendered && errors.length === 0;
+  if (!pass) errors.push(...unroutedHints(warnings));
   console.log(pass ? `✓ ${story.id}` : `✗ ${story.id} — ${errors.join("; ")}`);
   return {
     id: story.id,

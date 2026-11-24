@@ -151,6 +151,11 @@ Each string it changes must be the old string with spans replaced by the mask ma
 statutory hold keeps its trail.
 The trigger is in [the repair's migration](../../backend/migrations/core/1794348833_the_credential_repair_may_rewrite_an_audit_image.up.sql).
 
+**Growth.** The table keeps every row for good. No retention rule deletes a row or removes its
+personal values because the row is old. No job passes the guard that stops rows from changing. A row is about 600 bytes with
+its indexes, one for each change to a record. An operator who needs the disk space copies old rows to
+storage outside the product.
+
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.
 
@@ -339,8 +344,8 @@ group with no list gets every type on its streams.
 The `Trace` on every envelope lets you build one request or run back up as a single story:
 
 - **`correlation_id`** groups every event that one request or run starts. The HTTP middleware makes it
-  **once** per HTTP request (`internal/platform/httpserver/chassis.go`) and returns it in `X-Correlation-ID`.
-  It ignores a client-supplied value. Each agent run binds one too (`compose/runnerservice.go`).
+  **once** per HTTP request (`internal/platform/httpserver/chassis.go`) and returns it in `X-Request-Id`
+  ([trace-a-request.md](../how-to/trace-a-request.md)). It ignores a client-supplied value. Each agent run binds one too (`compose/runnerservice.go`).
   A background job that emits events must bind its own, since `Emit` fails without one.
   It binds it together with the actor, through
   `principal.SystemActing(ctx, "system:<pass>")`.

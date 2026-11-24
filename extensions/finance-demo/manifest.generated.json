@@ -64,6 +64,13 @@
       ]
     }
   ],
+  "ai_tasks": [
+    {
+      "name": "describe_invoice",
+      "prompt": "Describe the invoice text in one sentence.",
+      "documents": true
+    }
+  ],
   "report_counts": [
     {
       "name": "ledger_accounts",

@@ -39,6 +39,11 @@ type Settings struct {
 	MailSyncIntervalSeconds int
 	// ConfidentialityPassCap is how many held threads one pass judges.
 	ConfidentialityPassCap int
+	// VerdictPassCap, ClassifyPassCap and OwedClassifyPassCap are how many
+	// items the three other model passes of the pipeline handle per run.
+	VerdictPassCap      int
+	ClassifyPassCap     int
+	OwedClassifyPassCap int
 }
 
 // SiteReadLimits is what one deep read may fetch (settingssiteread.go).
@@ -66,6 +71,9 @@ type SettingsPatch struct {
 	SiteReadWallSeconds     *int
 	MailSyncIntervalSeconds *int
 	ConfidentialityPassCap  *int
+	VerdictPassCap          *int
+	ClassifyPassCap         *int
+	OwedClassifyPassCap     *int
 }
 
 // SettingsStore is the store over the workspace capture posture.
@@ -108,6 +116,9 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 		{&out.AutoEnrichDailyCap, AutoEnrichDailyCap},
 		{&out.MailSyncIntervalSeconds, MailSyncIntervalSeconds},
 		{&out.ConfidentialityPassCap, ConfidentialityPassCap},
+		{&out.VerdictPassCap, VerdictPassCap},
+		{&out.ClassifyPassCap, ClassifyPassCap},
+		{&out.OwedClassifyPassCap, OwedClassifyPassCap},
 	} {
 		value, err := config.StoredVal(ctx, s.config, f.entry)
 		if err != nil {
@@ -222,6 +233,9 @@ func (s *SettingsStore) Update(ctx context.Context, patch SettingsPatch) (Settin
 			{patch.SiteReadWallSeconds, SiteReadWallSeconds},
 			{patch.MailSyncIntervalSeconds, MailSyncIntervalSeconds},
 			{patch.ConfidentialityPassCap, ConfidentialityPassCap},
+			{patch.VerdictPassCap, VerdictPassCap},
+			{patch.ClassifyPassCap, ClassifyPassCap},
+			{patch.OwedClassifyPassCap, OwedClassifyPassCap},
 		} {
 			if f.want == nil {
 				continue

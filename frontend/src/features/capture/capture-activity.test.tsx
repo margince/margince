@@ -179,6 +179,9 @@ function renderTab(
       ) {
         return jsonResponse({ data: [] });
       }
+      if (key === "GET /capture/unrouted-mail") {
+        return jsonResponse({ messages: 0, data: [] });
+      }
       if (key === "GET /capture/activity/workspace") {
         return jsonResponse(windowBody({ data: [], funnel: {} }));
       }

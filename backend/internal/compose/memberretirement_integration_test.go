@@ -236,9 +236,9 @@ func TestARetiredMembersCompletedTaskCannotBeReopenedOntoTheHiddenAccount(t *tes
 	}
 }
 
-// A retired seat cannot be given work. The refusal is not found, not a
-// permission error: seatHoldingWork answers an inactive seat as it answers a
-// guessed id. A caller therefore learns nothing about the account.
+// A retired seat cannot be given work. The refusal is the seat refusal on
+// assignee_id, which answers a retired seat as it answers a guessed id. A
+// caller therefore learns nothing about the account.
 //
 // The test above covers the other door, reopening a task the retired member
 // already held, which the member_work_reference_retired check refuses.
@@ -257,8 +257,8 @@ func TestATaskCannotBeAssignedToARetiredMember(t *testing.T) {
 
 	_, err = e.Activities.UpdateActivity(ctx, ids.From[ids.ActivityKind](task),
 		activities.UpdateActivityInput{AssigneeID: new(ids.From[ids.UserKind](e.Rep1))})
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("assigning to a retired member: %v, want not found", err)
+	if _, ok := errors.AsType[*auth.AssigneeNotAllowedError](err); !ok {
+		t.Fatalf("assigning to a retired member: %v, want the seat refusal", err)
 	}
 	// The survivor is still an assignee, so the refusal above is about the
 	// retired seat rather than the task having stopped being writable.

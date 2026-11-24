@@ -198,6 +198,7 @@ Every field of `Extension` that brings something to the core.
 | `Ingress` | Providers this unit brings records IN from, and the record kinds it lands through the core's own capture pipeline. |
 | `Inbound` | Session-less HTTP edges this unit asks the core to mount: a signed POST from a party that holds no session and no seat. |
 | `OAuthApps` | Vendors whose consent flow the core runs for this unit. |
+| `AITasks` | AI tasks the unit runs through the core's AI path, each with a stable name, a prompt, and an optional answer schema. |
 | `SystemReads` | System reads the unit's jobs and subscriptions make. |
 | `Needs` | Core capabilities the unit uses, with a reason each. |
 | `Migrations` | Unit's SQL schema layer: a read-only filesystem holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql pairs, which a unit supplies with `//go:embed migrations`. |

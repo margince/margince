@@ -203,6 +203,7 @@ describe("what the editor opens on", () => {
     const { show } = renderFields([field({})]);
 
     await user.click(await screen.findByRole("button", { name: "Edit" }));
+    expect(screen.getByRole("dialog", { name: "Title" })).toBeTruthy();
     const input = screen.getByRole("textbox", { name: "Title" });
     await user.clear(input);
     await user.type(input, "Head of Purchasing");
@@ -230,7 +231,7 @@ describe("what the editor opens on", () => {
         return new Response(null, { status: 204 });
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Save correction" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(sent).not.toBe(""));
     const body = JSON.parse(sent);
@@ -258,7 +259,7 @@ describe("an emptied correction", () => {
         return new Response(null, { status: 204 });
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Save correction" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(screen.getByText("Title is required.")).toBeTruthy();
     expect(document.activeElement).toBe(input);

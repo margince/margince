@@ -101,7 +101,7 @@ func (q Query) Explain(ctx context.Context, tx pgx.Tx, p Predicate, recordID ids
 	if err != nil {
 		return Explanation{}, err
 	}
-	base := "TRUE"
+	base := sqlTrue
 	if q.BaseWhere != "" {
 		base = q.BaseWhere
 	}

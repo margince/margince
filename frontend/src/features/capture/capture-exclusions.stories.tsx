@@ -130,7 +130,7 @@ export const Excluding: Story = {
     );
     const dialog = within(await body.findByRole("dialog"));
     await expect(
-      dialog.getByRole("textbox", { name: "Exclude address or domain" }),
+      dialog.getByRole("textbox", { name: "Address" }),
     ).toHaveAccessibleDescription(/Applies from the next message/);
   },
 };

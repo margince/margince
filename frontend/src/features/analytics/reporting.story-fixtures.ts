@@ -16,6 +16,7 @@ import {
   type RouteMap,
   storyQueryClient,
 } from "../../testing/story-utils";
+import { REPORT_SCHEMA } from "./analytics.questions.testkit";
 import type { ReportingEvaluation } from "./reporting.model";
 import { reportingCatalogKey } from "./reporting.queries";
 
@@ -64,6 +65,7 @@ export function reportingStoryRoutes(
     "GET /analytics/metrics": () =>
       jsonResponse({ ...reportingStoryCatalog, schedule_ready: true }),
     "GET /analytics/framework": () => jsonResponse(reportingStoryFramework),
+    "GET /analytics/schema": () => jsonResponse(REPORT_SCHEMA),
     "GET /analytics/runs": () =>
       jsonResponse({ data: [], page: { next_cursor: null, has_more: false } }),
     "GET /pipelines": () =>

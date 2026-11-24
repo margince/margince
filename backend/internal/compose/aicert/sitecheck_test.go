@@ -4,10 +4,11 @@
 package aicert
 
 // The check digest of every shipped site, derived from the source. It covers
-// the case's Evaluate method and everything it reaches in this module, by name.
-// A method call cannot be resolved without types, so the walk takes every
-// method of that name on a type it reached. The digest moves on more edits than
-// it must.
+// the case's Evaluate method and the functions, values and types it names in
+// this module. A method call cannot be resolved without types, so the walk takes
+// every method of that name on a type it reached. A reached type counts by its
+// own declaration. The types of its fields count only where judging code names
+// them, so a field added to a store a case holds moves no digest.
 
 import (
 	"bytes"
@@ -216,16 +217,25 @@ func (x *sourceIndex) checkDigest(t *testing.T, root reflect.Type) string {
 	if pkg == nil {
 		t.Fatalf("case type %s is outside the module", named)
 	}
-	walk := checkWalk{index: x, seen: map[ast.Node]string{}, types: map[string]bool{}, selected: map[string]bool{}}
+	return x.digestOf(t, pkg, named.Name())
+}
+
+// digestOf is the digest of what the Evaluate of typeName in pkg reaches.
+func (x *sourceIndex) digestOf(t *testing.T, pkg *sourcePackage, typeName string) string {
+	t.Helper()
+	walk := checkWalk{
+		index: x, seen: map[ast.Node]string{}, types: map[string]bool{}, selected: map[string]bool{},
+		fieldTypes: map[string][]string{}, fieldCalls: map[string]map[string]bool{},
+	}
 	for _, method := range pkg.methods["Evaluate"] {
-		if receiverName(method) == named.Name() {
+		if receiverName(method) == typeName {
 			walk.visit(t, pkg, method)
 		}
 	}
 	if len(walk.seen) == 0 {
-		t.Fatalf("case type %s declares no Evaluate method in %s", named, pkg.path)
+		t.Fatalf("case type %s declares no Evaluate method in %s", typeName, pkg.path)
 	}
-	walk.visitFuncFields(t, pkg, named.Name())
+	walk.visitFuncFields(t, pkg, typeName)
 	walk.resolveMethods(t)
 	var material []string
 	for node, id := range walk.seen {
@@ -259,10 +269,16 @@ func receiverName(method *ast.FuncDecl) string {
 // checkWalk collects the declarations a check reaches, each with its id: the
 // types it reached, by "package.Type", and every name it selected on a value.
 type checkWalk struct {
-	index    *sourceIndex
-	seen     map[ast.Node]string
-	types    map[string]bool
-	selected map[string]bool
+	index *sourceIndex
+	seen  map[ast.Node]string
+	types map[string]bool
+	// fieldTypes are the types of the fields of reached types, by field name, as
+	// "package.Type"; an embedded field is named by its type. fieldCalls are the
+	// methods judging code calls through a field, as in c.cache.accept(got). A
+	// field type counts only through the methods called on that field.
+	fieldTypes map[string][]string
+	fieldCalls map[string]map[string]bool
+	selected   map[string]bool
 }
 
 func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
@@ -273,7 +289,11 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 	w.seen[node] = pkg.path + "." + declName(node)
 	switch d := node.(type) {
 	case *ast.TypeSpec:
+		// The declaration is hashed. Its field types are kept as receivers a
+		// selected method may be called on, and are not hashed for themselves.
 		w.types[pkg.path+"."+d.Name.Name] = true
+		w.noteFieldTypes(t, pkg, d)
+		return
 	case *ast.FuncDecl:
 		if d.Recv != nil {
 			w.visitName(t, pkg, receiverName(d))
@@ -282,6 +302,8 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 	file := pkg.fileOf[node]
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch e := n.(type) {
+		case *ast.CallExpr:
+			w.noteFieldCall(e)
 		case *ast.SelectorExpr:
 			if ident, ok := e.X.(*ast.Ident); ok {
 				if imported := importPath(file, ident.Name); imported != "" {
@@ -299,10 +321,85 @@ func (w *checkWalk) visit(t *testing.T, pkg *sourcePackage, node ast.Node) {
 	})
 }
 
+// noteFieldTypes keeps the named type of each field of spec, through a pointer.
+// It loads the package that declares the type, so its methods can be resolved.
+func (w *checkWalk) noteFieldTypes(t *testing.T, pkg *sourcePackage, spec *ast.TypeSpec) {
+	t.Helper()
+	fields, ok := spec.Type.(*ast.StructType)
+	if !ok {
+		return
+	}
+	for _, field := range fields.Fields.List {
+		expr := field.Type
+		if star, isPointer := expr.(*ast.StarExpr); isPointer {
+			expr = star.X
+		}
+		var named, last string
+		switch typed := expr.(type) {
+		case *ast.Ident:
+			named, last = pkg.path+"."+typed.Name, typed.Name
+		case *ast.SelectorExpr:
+			ident, isIdent := typed.X.(*ast.Ident)
+			imported := ""
+			if isIdent {
+				imported = importPath(pkg.fileOf[spec], ident.Name)
+			}
+			if imported == "" || w.index.load(t, imported) == nil {
+				continue
+			}
+			named, last = imported+"."+typed.Sel.Name, typed.Sel.Name
+		default:
+			continue
+		}
+		names := []string{last}
+		if len(field.Names) > 0 {
+			names = names[:0]
+			for _, ident := range field.Names {
+				names = append(names, ident.Name)
+			}
+		}
+		for _, name := range names {
+			w.fieldTypes[name] = append(w.fieldTypes[name], named)
+		}
+	}
+}
+
+// noteFieldCall keeps the method a call selects on a field, as accept in
+// c.cache.accept(got), and the field it goes through.
+func (w *checkWalk) noteFieldCall(call *ast.CallExpr) {
+	method, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return
+	}
+	field, ok := method.X.(*ast.SelectorExpr)
+	if !ok {
+		return
+	}
+	if w.fieldCalls[field.Sel.Name] == nil {
+		w.fieldCalls[field.Sel.Name] = map[string]bool{}
+	}
+	w.fieldCalls[field.Sel.Name][method.Sel.Name] = true
+}
+
+// calledThroughAField answers whether judging code calls method on a field of
+// a reached type whose type is receiver.
+func (w *checkWalk) calledThroughAField(receiver, method string) bool {
+	for field, methods := range w.fieldCalls {
+		if methods[method] && slices.Contains(w.fieldTypes[field], receiver) {
+			return true
+		}
+	}
+	return false
+}
+
 // visitName takes the top-level function, variable, constant or type name
 // declares in pkg.
 func (w *checkWalk) visitName(t *testing.T, pkg *sourcePackage, name string) {
 	t.Helper()
+	// The blank name declares nothing a check can call.
+	if name == "_" {
+		return
+	}
 	if fn, ok := pkg.funcs[name]; ok {
 		w.visit(t, pkg, fn)
 	}
@@ -324,7 +421,7 @@ func (w *checkWalk) resolveMethods(t *testing.T) {
 			}
 			for name := range w.selected {
 				for _, method := range pkg.methods[name] {
-					if w.types[pkg.path+"."+receiverName(method)] {
+					if w.types[pkg.path+"."+receiverName(method)] || w.calledThroughAField(pkg.path+"."+receiverName(method), name) {
 						w.visit(t, pkg, method)
 					}
 				}
@@ -445,5 +542,75 @@ func TestAChangedSiteCheckMovesOnlyTheGraderThird(t *testing.T) {
 	after := stamp()
 	if parts := splitStampChange(before, after); !parts.Grader || parts.Case || parts.Prompt {
 		t.Errorf("a new check moved %+v, want the grader third alone", parts)
+	}
+}
+
+// fixtureDigest is the check digest of judgeCase in a package built from src.
+func fixtureDigest(t *testing.T, src string) string {
+	t.Helper()
+	x := newSourceIndex(t)
+	file, err := parser.ParseFile(x.fset, "fixture.go", "package fixture\n"+src, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing the fixture: %v", err)
+	}
+	pkg := &sourcePackage{
+		path: modulePath + "/fixture", files: []*ast.File{file}, funcs: map[string]*ast.FuncDecl{},
+		values: map[string]ast.Node{}, methods: map[string][]*ast.FuncDecl{}, fileOf: map[ast.Node]*ast.File{},
+	}
+	indexDecls(pkg, file)
+	x.pkgs[pkg.path] = pkg
+	return x.digestOf(t, pkg, "judgeCase")
+}
+
+// A case that holds a store in a field and judges through a helper. A blank
+// declaration names the store too, the way an interface check does, and
+// Evaluate discards a result with the same blank name.
+const judgeFixture = `
+type store struct{ rows int }
+var _ = store{}
+type judgeCase struct {
+	want  int
+	cache store
+}
+func (c judgeCase) Evaluate(got int) bool {
+	_, same := sameAnswer(c.want, got)
+	return same
+}
+func sameAnswer(want, got int) (int, bool) { return got, want == got }
+`
+
+func TestAnEditToTheJudgingCodeMovesTheSiteCheck(t *testing.T) {
+	before := fixtureDigest(t, judgeFixture)
+	edited := strings.Replace(judgeFixture, "return got, want == got", "return got, want <= got", 1)
+	if fixtureDigest(t, edited) == before {
+		t.Error("an edit to the helper Evaluate judges through left the digest unchanged")
+	}
+	evaluate := strings.Replace(judgeFixture, "sameAnswer(c.want, got)", "sameAnswer(got, c.want)", 1)
+	if fixtureDigest(t, evaluate) == before {
+		t.Error("an edit to Evaluate left the digest unchanged")
+	}
+}
+
+func TestAFieldOnAStoreTheCaseHoldsMovesNoSiteCheck(t *testing.T) {
+	before := fixtureDigest(t, judgeFixture)
+	edited := strings.Replace(judgeFixture, "type store struct{ rows int }", "type store struct{ rows, pages int }", 1)
+	if fixtureDigest(t, edited) != before {
+		t.Error("a field added to a store the case only holds moved the digest")
+	}
+}
+
+// A case that judges through a method of a store it holds in a field.
+const fieldMethodFixture = `
+type store struct{ rows int }
+func (s store) accept(got int) bool { return got > s.rows }
+type judgeCase struct{ cache store }
+func (c judgeCase) Evaluate(got int) bool { return c.cache.accept(got) }
+`
+
+func TestAnEditToAMethodTheCaseCallsThroughAFieldMovesTheSiteCheck(t *testing.T) {
+	before := fixtureDigest(t, fieldMethodFixture)
+	edited := strings.Replace(fieldMethodFixture, "return got > s.rows", "return got >= s.rows", 1)
+	if fixtureDigest(t, edited) == before {
+		t.Error("an edit to the field's method Evaluate judges through left the digest unchanged")
 	}
 }

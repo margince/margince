@@ -137,6 +137,9 @@ func carryMeetingDocumentLinksTx(ctx context.Context, tx pgx.Tx, duplicate, surv
 // on the survivor too, so that guest stays until it drops them. A colleague's
 // own row is left alone: their own calendar decides it.
 func carryRostersTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, survivor.UUID); err != nil {
+		return err
+	}
 	_, err := tx.Exec(ctx, `
 		UPDATE activity_participant s SET `+storekit.StoreRosterSeatsSQL("listed.seats")+`
 		  FROM (SELECT kept.id, array_agg(DISTINCT listing.seat ORDER BY listing.seat) AS seats
@@ -158,6 +161,9 @@ func carryRostersTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.Acti
 // The survivor's guest list and the seats it holds busy stay whole. A party a
 // member relinked keeps that mark, so no roster on the survivor retires it.
 func carryMissingParticipantsTx(ctx context.Context, tx pgx.Tx, duplicate, survivor ids.ActivityID) ([]ids.UUID, error) {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, survivor.UUID); err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, address_domain_folded, channel_user_id,
 		                                  role, display_name, roster_seats, response, past_party_cap, relinked_at)

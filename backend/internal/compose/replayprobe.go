@@ -20,9 +20,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -137,18 +137,17 @@ func ensureReplayVisible(ctx context.Context, pool *pgxpool.Pool, probes map[str
 	})
 }
 
-// ensureScheduledSendVisibleLive refuses a replay whose scheduled message no
-// longer belongs to the caller. Existence-hiding, like every other row scope:
+// ensureScheduledSendVisibleLive refuses a replay whose scheduled message the
+// caller may no longer read, under the scheduled send's own read rule. Existence-hiding, like every other row scope:
 // somebody else's message is not found rather than forbidden.
 func ensureScheduledSendVisibleLive(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	actor, err := storekit.Actor(ctx)
+	args := []any{id}
+	own, err := activities.ScheduledSendReadableSQL(ctx, "scheduled_send", func(v any) int { args = append(args, v); return len(args) })
 	if err != nil {
 		return err
 	}
 	var visible bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM scheduled_send WHERE id = $1 AND scheduled_by = $2)`,
-		id, actor.UserID).Scan(&visible); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM scheduled_send WHERE id = $1 AND `+own+`)`, args...).Scan(&visible); err != nil {
 		return err
 	}
 	if !visible {

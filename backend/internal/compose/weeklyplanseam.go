@@ -39,12 +39,12 @@ func (o weeklyPlanOutcome) CloseWeek(ctx context.Context, now time.Time) (int, i
 	return outcome.Due, outcome.Kept, nil
 }
 
-// weeklyPlanStore builds the plan store.
+// WeeklyPlanStore builds the plan store. It is exported so integration suites can drive it.
 //
 // ONE spelling of "which Monday": the plan and the review beside it must be
 // about the same seven days, and compose/weekly owns that answer. A module may
 // not import compose, so it takes the function.
-func weeklyPlanStore(pool *pgxpool.Pool) *weeklyplan.Store {
+func WeeklyPlanStore(pool *pgxpool.Pool) *weeklyplan.Store {
 	return weeklyplan.NewStore(InstallationDB(pool), weekly.WeekStartOf, newTeammatesSeam(pool)).
 		WithCapacity(weeklyPlanCapacity{pool: pool})
 }
@@ -81,7 +81,7 @@ func (c weeklyPlanCapacity) ForWeek(
 ) (weeklyplan.Committed, error) {
 	var out weeklyplan.Committed
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
-		zone, err := identity.TimezoneOf(ctx, tx)
+		zone, err := identity.TimezoneAppliedTx(ctx, tx)
 		if err != nil {
 			return err
 		}

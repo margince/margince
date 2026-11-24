@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/extai"
 	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -42,14 +43,10 @@ import (
 // cost them the afternoon.
 var errExtensionRuntimeUnwired = errors.New("compose: this role bound no pool for the extension runtime, so no extension capability can be served")
 
-// extensionRuntimeDeps is the boot's binding of what every per-call Runtime
-// is built over. It is process-wide for the same reason composedTools is: a
-// role has one pool and one custodian, both settled at boot, and the tool
-// adapter that needs them is reached through a registry that cannot carry
-// them (mcp.Tool.Handle takes a context and raw JSON, nothing else).
-//
-// The mutex guards the write-then-read ordering across the boot/serve
-// boundary, not concurrent bindings — a role binds once.
+// extensionRuntimeDeps is the boot's binding of what every per-call Runtime is
+// built over. It is process-wide because the tool adapter that needs it is
+// reached through a registry that carries only a context and raw JSON. The mutex
+// orders the write at boot before the reads that serve; a role binds once.
 var extensionRuntimeDeps struct {
 	mu sync.RWMutex
 	extensionRuntimeBinding
@@ -59,12 +56,8 @@ var extensionRuntimeDeps struct {
 // the pool a unit's own SQL and the governed core port both run on, and the
 // custodian its secrets need.
 //
-// The core port needs no binding of its own, and that is worth stating because
-// the design expected one. Its two dependencies — the store that owns the write
-// and the fresh read of the workspace's record mode — are each derived from the
-// pool at the call (activities.NewStore is the tree's own idiom for exactly
-// that), so no role can wire the port half-way and no role serves a different
-// set of capabilities than another.
+// The core port needs no binding of its own. Its store and its read of the
+// record mode come from the pool at the call, so no role wires it half-way.
 type extensionRuntimeBinding struct {
 	pool  *pgxpool.Pool
 	vault keyvault.Vault
@@ -110,20 +103,10 @@ func BindExtensionCapture(pool *pgxpool.Pool, cfg CaptureConfig) {
 
 // BindExtensionRuntime records what a governed extension tool's per-call
 // Runtime reaches the installation through. Every role that serves or runs
-// agent tools calls it once at boot, after the pool and the custodian exist
-// — which is later than RegisterExtensions, because a declaration is inert
-// and needs neither.
-//
-// vault may be nil on a deployment that configured no keyvault: the secret
-// namespace then refuses by name (extsecrets.ErrNoCustodian) rather than
-// writing a mapping row naming material nothing could unseal. A nil pool
-// leaves the whole capability surface refusing with
-// errExtensionRuntimeUnwired.
-// A second bind to a DIFFERENT non-nil pool is a wiring fault: two pools in
-// one process means half the extension calls run on the wrong one, silently.
-// It is logged rather than refused because this is not the layer that gets to
-// end a boot, and because a test restoring a previous binding legitimately
-// rebinds — but it must never happen unremarked.
+// agent tools calls it once at boot, after the pool and the custodian exist.
+// A nil vault makes the secret namespace refuse by name (extsecrets.ErrNoCustodian),
+// and a nil pool makes every capability refuse with errExtensionRuntimeUnwired.
+// A second bind to a different non-nil pool is a wiring fault, logged and not refused.
 func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 	extensionRuntimeDeps.mu.Lock()
 	defer extensionRuntimeDeps.mu.Unlock()
@@ -133,6 +116,11 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 	}
 	// Only its own two fields: the other dependencies are bound by their own calls.
 	extensionRuntimeDeps.pool, extensionRuntimeDeps.vault = pool, vault
+}
+
+// AI is the unit's AI port for this call, guarded by this Runtime's lifetime.
+func (r *callRuntime) AI() extension.AI { //nolint:ireturn // the published port, as Secrets.
+	return extai.Port{Scope: r.scoped, Unit: r.unit, Declared: ComposedExtensions, Pool: r.deps.pool, PDF: processPDFReader, MaxDocumentBytes: maxDocumentBytes, MaxInputChars: maxDocumentTextChars}
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than

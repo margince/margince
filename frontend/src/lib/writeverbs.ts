@@ -22,6 +22,7 @@ export const MOMENT_VERB_WRITES = {
   open_meeting_brief: false,
   open_research: false,
   ask_colleague: false,
+  call: false,
 } as const satisfies Readonly<Record<MomentVerbKind, boolean>>;
 
 /**

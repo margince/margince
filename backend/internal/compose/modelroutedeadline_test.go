@@ -163,15 +163,18 @@ func (*deadlineWriter) SetWriteDeadline(time.Time) error { return nil }
 // And a chain that cannot extend the deadline fails LOUDLY rather than serving
 // a response that dies mid-write, which is the symptom this exists to remove.
 func TestAChainThatCannotExtendSaysSo(t *testing.T) {
-	handler := boundByResponseDeadline(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handler := httpserver.TraceContract(discardLog(), boundByResponseDeadline(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("drafted"))
-	}))
+	})))
 
 	recorder := httptest.NewRecorder() // implements no ResponseController hook
 	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/v1/activities/x/draft-email", nil))
 
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500 — a chain that cannot extend must say so", recorder.Code)
+	}
+	if recorder.Header().Get("X-Request-Id") == "" {
+		t.Fatal("the refusal names no request")
 	}
 	if body := recorder.Body.String(); !strings.Contains(body, "deadline_not_extendable") {
 		t.Fatalf("body = %q, want the machine code an operator can act on", body)

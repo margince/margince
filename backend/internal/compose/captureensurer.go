@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -100,6 +101,7 @@ func (p contactsEnsurer) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in
 		Replied:         in.Replied,
 		LinkOnly:        in.LinkOnly,
 		ReaderTeam:      in.ReaderTeam,
+		ReaderAuthority: identity.ReadAuthorityTx,
 		// The SINK's ensure, which runs while the sender is still unjudged.
 		// Owner-scoped until something says otherwise; the verdict path is the
 		// only caller that asks for the workspace.

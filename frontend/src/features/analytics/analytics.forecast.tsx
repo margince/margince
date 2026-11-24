@@ -30,6 +30,7 @@ import {
 } from "../../lib/urlstate";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import { type AnalyticsSelection, writableScope } from "./analytics.context";
+import { ForecastAccuracy } from "./analytics.forecast.accuracy";
 import { ForecastAnswer, ForecastLanding } from "./analytics.forecast.answer";
 import { ForecastCallEditor } from "./analytics.forecast.calleditor";
 import { ForecastDeals, openForecastDeals } from "./analytics.forecast.deals";
@@ -193,6 +194,7 @@ export function ForecastView({
                     title={t("forecast.landingSection")}
                     onOpenDeals={openForecastDeals}
                   />
+                  <ForecastAccuracy />
                   <EvidenceReceipt
                     title={t("forecast.receipt")}
                     counts={[

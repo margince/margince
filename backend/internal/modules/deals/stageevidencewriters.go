@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -241,11 +242,15 @@ type ActivityAuthorship struct {
 // It takes the own-domain reader rather than leaving the caller to judge the
 // sides, because both judgements it makes need the same list and reading it
 // twice could answer differently mid-transaction. The seam stays an argument
-// so this module never imports the one that owns the domains.
+// so this module never imports the one that owns the domains. It takes the
+// shared attendee lock, so call it before any row lock.
 func ReadActivityAuthorship(
 	ctx context.Context, tx pgx.Tx, activityID ids.UUID, own OwnDomainReader,
 ) (ActivityAuthorship, error) {
 	var out ActivityAuthorship
+	if err := storekit.LockMeetingAttendeeChecks(ctx, tx, activityID); err != nil {
+		return out, err
+	}
 	var direction, meetingStatus *string
 	// The transcript is measured in SQL and never projected: this function needs
 	// to know THAT a recording exists and how many lines it has, not what

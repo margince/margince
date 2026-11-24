@@ -71,6 +71,9 @@ func (g LaterGuests) Changed() bool {
 // stampBirthParties writes a new activity's further parties. A calendar's
 // rows carry the seat whose roster listed them, so a later sync can settle them.
 func stampBirthParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord, fields ActivityFields) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, id.UUID); err != nil {
+		return err
+	}
 	attested := ParticipantListAttested(rec)
 	var roster *ids.UUID
 	if seat := actorUserID(ctx); fields.Kind == meetingKind && attested && seat != ids.Nil {
@@ -89,6 +92,13 @@ func stampBirthParties(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec co
 	}
 	if roster != nil && rec.CalendarAnswer != nil {
 		if _, err := settleAnswers(ctx, tx, id, MeetingRoster{Seat: *roster, Current: true, OwnerAnswer: rec.CalendarAnswer}, nil); err != nil {
+			return err
+		}
+	}
+	// The meeting's first transition was recorded before its guests. Keep the
+	// credit of the guest list it was born with.
+	if fields.Kind == meetingKind {
+		if _, err := storekit.KeepMeetingCreditTx(ctx, tx, id.UUID); err != nil {
 			return err
 		}
 	}
@@ -111,6 +121,9 @@ func SettleMeetingRosterTx(
 	listed := append(append([]connector.MessageParticipant{}, roster.Parties.Participants...), roster.Parties.Withheld...)
 	if roster.Seat == ids.Nil || (len(listed) == 0 && !roster.Left && (roster.OwnerAnswer == nil || roster.OwnerAnswer.Response == "")) {
 		return LaterGuests{}, nil
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return LaterGuests{}, err
 	}
 	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {

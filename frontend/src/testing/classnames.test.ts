@@ -141,3 +141,14 @@ describe("a call in a className reads what the function returns", () => {
     expect(variants(code, "b")).toEqual([[]]);
   });
 });
+
+describe("an object of classes reads as the keys it can switch on", () => {
+  it("lists each key whose value is not the literal false", () => {
+    const source = parsed(
+      'const x = <i className={clsx({ pane: true, "pane-alert": on, gone: false })} />;',
+    );
+    expect(classVariants(source, classAttribute(source, "i"))).toEqual([
+      ["pane", "pane-alert"],
+    ]);
+  });
+});

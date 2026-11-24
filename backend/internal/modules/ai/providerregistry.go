@@ -90,6 +90,12 @@ type providerDescriptor struct {
 	// floorSkipsTools marks an adapter that sends no floor on a request
 	// carrying tools, so an agent_loop site is never floored on it.
 	floorSkipsTools bool
+	// hostRequired marks an adapter with no default host: a lane binding it
+	// cannot be served until the provider names one.
+	hostRequired bool
+	// customModelIDs marks an adapter whose model ids are names the customer
+	// chose, so the vendor's own model list would offer ids no binding can use.
+	customModelIDs bool
 	// decisionDialect is which spelling of the decision wire the adapter
 	// speaks; the zero value is Jev's.
 	decisionDialect decisionDialect
@@ -173,7 +179,7 @@ var providerRegistry = []providerDescriptor{
 		priceSource: priceSource{kind: priceFromBroker},
 		name:        providerOpenAICompatible, caps: capChat, egress: egressOperatorEndpoint,
 		key: OpenAICompatibleKey, servedSource: servedIdentitySourceEcho, pathsUnderV1: true,
-		public: true, carriage: carriesImages,
+		public: true, carriage: carriesImages, hostRequired: true,
 		wildcardReason: "serves whichever vendor the operator pointed base_url at",
 		thinkingFloor:  openRouterTakesThinkingFloor, floorSkipsTools: true,
 	},
@@ -197,6 +203,17 @@ var providerRegistry = []providerDescriptor{
 		serviceAccountKey: true, measuredBy: providerGemini, pricedBy: providerGemini,
 		servedSource: servedIdentitySourceResponse, vendorHosted: true, public: true,
 		carriage: geminiCarries, thinkingFloor: geminiTakesThinkingFloor, wireRule: geminiWireRule,
+	},
+	{
+		// Azure OpenAI is the OpenAI-compatible adapter in its Azure mode.
+		// The host is the customer's own resource and the model is a
+		// deployment name. The binding's location is the Azure region where the
+		// data is processed. A vendor cloud, so never local and always https.
+		priceSource: priceSource{kind: priceNotPublished},
+		name:        providerAzureOpenAI, caps: capChat, egress: egressPublicOnly, key: AzureOpenAIKey,
+		servedSource: servedIdentitySourceEcho, public: true, pricedBy: providerOpenAI,
+		carriage: carriesImages, hostRequired: true, customModelIDs: true,
+		wildcardReason: "serves whichever model the deployment holds",
 	},
 	{
 		// TypeSafe's own API: a vendor cloud, so never local and never pinned

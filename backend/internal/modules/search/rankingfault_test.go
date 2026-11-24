@@ -84,3 +84,34 @@ func TestAnUnrelatedDatabaseFaultIsNotRewritten(t *testing.T) {
 		t.Fatal("an unrelated fault was swallowed entirely")
 	}
 }
+
+func TestALaneTheCallerCancelledIsNotATimedOutType(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if laneTimedOut(rankingFault(ctx, queryCanceled())) {
+		t.Error("a lane the caller cancelled was reported as a type that ran out of time")
+	}
+	if !laneTimedOut(rankingFault(context.Background(), queryCanceled())) {
+		t.Error("a lane a spent ceiling stopped was not reported as timed out")
+	}
+}
+
+func TestALaneWhoseRollbackFailedFailsThePage(t *testing.T) {
+	t.Parallel()
+	stopped := rankingFault(context.Background(), queryCanceled())
+	if laneTimedOut(errors.Join(stopped, errors.New("pg: rolling back a degradable read"))) {
+		t.Error("a lane whose rollback failed was reported as timed out, which would go on with an unusable transaction")
+	}
+	if !laneTimedOut(errors.Join(stopped)) {
+		t.Error("a lane stopped by the ceiling and rolled back cleanly was not reported as timed out")
+	}
+}
+
+func TestAnOperatorCancelIsNotATimedOutType(t *testing.T) {
+	t.Parallel()
+	cancelled := &pgconn.PgError{Code: "57014", Message: "canceling statement due to user request"}
+	if laneTimedOut(rankingFault(context.Background(), cancelled)) {
+		t.Error("a statement an operator cancelled was reported as a type that ran out of time")
+	}
+}

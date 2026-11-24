@@ -53,6 +53,9 @@ type RangeFilters struct {
 	// valuation is the base currency, rate day and zone, read by the store
 	// itself when readsValuation says a dial needs them.
 	valuation dealValuation
+	// winChance is the win chance expression the probability dials bound; the
+	// store fills it so the filter reads the number a deal shows.
+	winChance string
 }
 
 // widenMinor turns a seam operand into the field's own width.
@@ -86,7 +89,11 @@ func appendRangeFilters(ctx context.Context, where []string, f RangeFilters, arg
 		where = appendBounds(where, valueInBaseSQL(f.valuation, arg), "bigint", f.ValueMin, f.ValueMax, arg)
 	}
 	if f.WinProbabilityMin != nil || f.WinProbabilityMax != nil {
-		where = appendBounds(where, WinProbabilitySQL(""), "int", f.WinProbabilityMin, f.WinProbabilityMax, arg)
+		expr := f.winChance
+		if expr == "" {
+			expr = WinProbabilitySQL("")
+		}
+		where = appendBounds(where, expr, "int", f.WinProbabilityMin, f.WinProbabilityMax, arg)
 	}
 	if f.Currency != nil {
 		currency, err := storekit.CodeOperand(*f.Currency, filterCurrency, values.ValidCurrency, "a three-letter ISO-4217 code, such as EUR")

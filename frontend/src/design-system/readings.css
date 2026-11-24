@@ -82,7 +82,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--bgField);
   color: var(--textPrimary);
   white-space: nowrap;
   min-inline-size: 0;
@@ -198,7 +198,7 @@
    of the fill steps down to a tint of the same hue, so the bar reads as one
    figure inside another rather than as two bars laid over each other. */
 .meterbar.meterbar-has-part > span {
-  background: color-mix(in srgb, var(--accentText) 40%, var(--bgElevated));
+  background: color-mix(in srgb, var(--accentText) 40%, var(--bgField));
 }
 .meterbar .meterbar-part {
   background: var(--accentText);
@@ -224,11 +224,11 @@
 }
 .segbar-step-1,
 .btn.btn-link.segbar-step-1 {
-  background: color-mix(in srgb, var(--accentText) 55%, var(--bgElevated));
+  background: color-mix(in srgb, var(--accentText) 55%, var(--bgField));
 }
 .segbar-step-2,
 .btn.btn-link.segbar-step-2 {
-  background: color-mix(in srgb, var(--accentText) 20%, var(--bgElevated));
+  background: color-mix(in srgb, var(--accentText) 20%, var(--bgField));
 }
 /* Not yet counted: an outline in the parts' hue, so it reads as the same kind
    of value that has not happened yet. */
@@ -273,7 +273,7 @@
   box-sizing: border-box;
   width: 6px;
   margin-left: -3px;
-  border-inline: 2px solid var(--bgElevated);
+  border-inline: 2px solid var(--ground);
   background: var(--textPrimary);
   background-clip: padding-box;
 }

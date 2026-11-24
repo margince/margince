@@ -50,6 +50,7 @@ import {
   RelinkModal,
 } from "../mail/compose";
 import { ActivityFilesAction } from "./activityfiles";
+import { audienceWords } from "./audiencewords";
 import { DealRelevanceAction, DealRelevanceBadge } from "./dealdecline";
 import { MoveButton } from "./movebutton";
 import { ProjectFilingAction } from "./projectfiling";
@@ -366,6 +367,7 @@ export function AudienceAction({
   if (activity.captured_by.startsWith("connector:") && !internal) {
     return null;
   }
+  const words = audienceWords(activity.kind);
   return (
     <>
       <Button
@@ -379,7 +381,7 @@ export function AudienceAction({
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
-        title={t("compose.audienceTitle")}
+        title={t(words.title)}
         intent="form"
         confirmLabel={t("compose.audienceConfirm")}
         confirmDisabled={
@@ -399,13 +401,13 @@ export function AudienceAction({
       >
         <div className="compose-fields">
           <ChoiceList
-            legend={t("compose.audienceLegend")}
+            legend={t(words.legend)}
             value={choice}
             onChange={setChoice}
             choices={messageAudienceChoices(internal).map((value) => ({
               value,
               label: t(labelFor(AUDIENCE_LABEL, value)),
-              description: t(labelFor(AUDIENCE_HINT, value)),
+              description: t(labelFor(words.hints ?? AUDIENCE_HINT, value)),
             }))}
           />
           {/* The picker only where the choice needs one. A limited-to-nobody
@@ -420,7 +422,7 @@ export function AudienceAction({
             />
           )}
           <p className="t-caption">
-            {t(internal ? "internalMail.shareNote" : "compose.audienceNote")}
+            {t(internal ? "internalMail.shareNote" : words.scope)}
           </p>
         </div>
       </ConfirmModal>

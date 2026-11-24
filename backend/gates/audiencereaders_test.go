@@ -120,7 +120,9 @@ const credentialRepairReader = "the credential repair, which reads every mail be
 const qualifyTaskTextReader = "a system data task adds display metadata to qualify tasks; it shows no row to anyone and leaves the subject unchanged"
 
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/contacts/promisekept.go:lockKeptPromise": "System-only decision on one claim. It reads a linked task only for its assignee and returns nothing to a user. The evidence is found afterwards under the owner's own scope.",
+	"internal/compose/proposalstage/proposalstage.go:proposalNamedFile": "reads one outbound mail's attachments through dealscout.WorkspaceEvidence, which composes auth.WorkspaceAudienceSQL, so only a mail the whole workspace may read can announce a proposal. The gate sees the audience test only when it is spelled in the statement.",
+	"internal/compose/proposalstage/proposalstage.go:proposalFirstFile": "the same read for a mail the model's reading named, through dealscout.WorkspaceEvidence; only the attachment's id and file name leave it.",
+	"internal/modules/contacts/promisekept.go:lockKeptPromise":          "System-only decision on one claim. It reads a linked task only for its assignee and returns nothing to a user. The evidence is found afterwards under the owner's own scope.",
 
 	"internal/modules/activities/legacysystemtext.go:LegacySystemTasksTx": "System-only bounded repair reads native task text to recover its catalog descriptor. No row is returned to a user; archived and held rows are excluded.",
 

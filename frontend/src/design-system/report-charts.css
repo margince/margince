@@ -46,7 +46,7 @@
   background: color-mix(in srgb, var(--accent) 38%, var(--ground));
 }
 .report-chart-key-range::before {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--bgElevated));
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--bgField));
   border-top-width: 6px;
 }
 .report-chart-line {
@@ -125,7 +125,7 @@
   border-radius: var(--r-full);
   corner-shape: round;
   background: var(--accent);
-  border: 2px solid var(--bgElevated);
+  border: 2px solid var(--ground);
 }
 .report-chart-point:hover .report-chart-dot,
 .report-chart-point:focus-visible .report-chart-dot {
@@ -357,7 +357,7 @@
 }
 .report-chart-column-secondary .report-chart-column-fill {
   height: 100%;
-  background: color-mix(in srgb, var(--accent) 38%, var(--bgElevated));
+  background: color-mix(in srgb, var(--accent) 38%, var(--bgField));
   border: 1px solid var(--accent);
 }
 .report-chart-column-amount {

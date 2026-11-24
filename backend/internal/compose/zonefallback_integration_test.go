@@ -108,7 +108,7 @@ func TestSystemHealthTellsTheAdminTheStoredZoneWillNotLoad(t *testing.T) {
 	}
 }
 
-// Inside a watched pass each name reader answers UTC for the unloadable name.
+// Inside a watched pass the zone reader answers UTC for the unloadable name.
 // Outside one it answers the stored name, which an interactive read refuses.
 func TestAZoneReaderAnswersUTCOnlyInsideAWatchedPass(t *testing.T) {
 	e := integration.Setup(t)
@@ -116,13 +116,9 @@ func TestAZoneReaderAnswersUTCOnlyInsideAWatchedPass(t *testing.T) {
 	watched, _ := storekit.WatchZones(e.Admin())
 	for want, ctx := range map[string]context.Context{storekit.FallbackZone: watched, zoneOnlyPostgresReads: e.Admin()} {
 		if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
-			gated, err := identity.TimezoneOf(ctx, tx)
-			if err != nil {
-				return err
-			}
 			applied, err := identity.TimezoneAppliedTx(ctx, tx)
-			if gated != want || applied != want {
-				t.Errorf("the readers answer %q and %q, want %q from both", gated, applied, want)
+			if applied != want {
+				t.Errorf("the reader answers %q, want %q", applied, want)
 			}
 			return err
 		}); err != nil {

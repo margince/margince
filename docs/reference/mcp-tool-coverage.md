@@ -657,12 +657,12 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
+| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
+| `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
-| `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `create_record` | 1.00 | 2 | `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice` |
@@ -677,13 +677,13 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
+| `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
 | `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
-| `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
+| `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
-| `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `create_record` | 1.00 | 2 | `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice` |
@@ -701,9 +701,9 @@ Every run of every case requiring this tool passed, for the model named.
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
 | `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
+| `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
-| `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `create_record` | 1.00 | 2 | `case56_not_the_same` |
 | `change_my_settings` | 1.00 | 2 | `case102_shorter_in_my_voice` |

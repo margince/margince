@@ -247,9 +247,7 @@ export const NewDealFailed: Story = {
       "Fleet renewal",
     );
     await userEvent.click(body.getByRole("button", { name: "Create" }));
-    await body.findByText(
-      "Currency comes with amount_minor or expected_arr_minor, and neither figure comes without it.",
-    );
+    await body.findByText("Check Currency and try again.");
   },
 };
 

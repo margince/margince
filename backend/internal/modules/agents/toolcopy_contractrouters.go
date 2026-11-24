@@ -144,7 +144,7 @@ var readDetailsCopy = toolCopy{
 		"and a site read's logo.",
 	Limits: "Each action reads one panel as the app draws it, for the records the user may open. Without the " +
 		"enrich scope, a brief, dossier or growth fit not written yet answers its plain form from the records, " +
-		"marked deterministic; run_research writes one.",
+		"marked deterministic; run_research writes one. " + sendAnywayRule,
 	Instead: "Use read_context for the story so far on a record, read_attention for what needs the " +
 		"user now, and read_record for a record's own fields.",
 }

@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { translate } from "../i18n";
+import { READS_RECORDS } from "../testing/mefixture";
 import { recordNamesRoutes } from "../testing/recordnames.testkit";
 import {
   jsonResponse,
@@ -46,7 +47,7 @@ export const RemoveRefused: Story = {
       {
         "GET /relationships": () =>
           jsonResponse({
-            data: [employmentRel],
+            data: [{ ...employmentRel, can_archive: true }],
             page: { next_cursor: null, has_more: false },
           }),
         "DELETE /relationships/rel-1": () =>
@@ -60,7 +61,7 @@ export const RemoveRefused: Story = {
             409,
           ),
       },
-      { relationship: ["create", "update", "delete"] },
+      { ...READS_RECORDS, relationship: ["create", "update", "delete"] },
     );
     return (
       <StoryProviders>
@@ -104,7 +105,7 @@ export const StakeholderRoleInVietnamese: Story = {
             page: { next_cursor: null, has_more: false },
           }),
       },
-      { relationship: ["read", "update"] },
+      { ...READS_RECORDS, relationship: ["read", "update"] },
     );
     return (
       <StoryProviders locale="vi">
@@ -121,7 +122,7 @@ export const StakeholderRoleInVietnamese: Story = {
     await expect(within(table).queryByText("economic_buyer")).toBeNull();
     await userEvent.click(
       within(table).getByRole("button", {
-        name: translate("vi", "record.edit"),
+        name: translate("vi", "rel.editStakeholder"),
       }),
     );
     const form = within(await screen.findByRole("dialog"));
@@ -176,7 +177,7 @@ export const CompanyContactsWithDates: Story = {
             page: { next_cursor: null, has_more: false },
           }),
       },
-      { relationship: ["create", "update", "delete"] },
+      { ...READS_RECORDS, relationship: ["create", "update", "delete"] },
     );
     return (
       <StoryProviders>

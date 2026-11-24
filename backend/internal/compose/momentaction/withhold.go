@@ -44,6 +44,8 @@ var writesAnActivity = map[crmcontracts.ContactMomentActionKind]bool{
 	crmcontracts.ContactMomentActionKindOpenMeetingBrief: false,
 	crmcontracts.ContactMomentActionKindOpenResearch:     false,
 	crmcontracts.ContactMomentActionKindAskColleague:     false,
+	// A tel: link on the client; no request reaches the server.
+	crmcontracts.ContactMomentActionKindCall: false,
 }
 
 // Withhold turns every activity-writing verb on this card into a blocked one

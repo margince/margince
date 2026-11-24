@@ -37,6 +37,8 @@ func (r *unitReader) readDeclaredField(name string, kv *ast.KeyValueExpr, file *
 		m.Instrumentation, err = r.readInstrumentation(kv.Value, file)
 	case "Inbound":
 		m.Inbound, err = r.readInbound(kv.Value, file)
+	case "AITasks":
+		m.AITasks, err = r.readAITasks(kv.Value, file)
 	case "SystemReads":
 		m.SystemReads, err = r.readSystemReads(kv.Value, file)
 	case "Needs":
