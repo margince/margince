@@ -176,7 +176,7 @@ func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
 	if firstLiftOf(cfg.Revision()) {
 		log = slog.Default()
 	}
-	cfg = cfg.liftLaneProviderFields(log)
+	cfg = cfg.liftLaneProviderFields(log).withoutRetiredTaskLadders()
 	if err := cfg.validateProviderEntries(); err != nil {
 		return RoutingConfig{}, err
 	}
@@ -208,7 +208,7 @@ func (cfg RoutingConfig) finalize() (RoutingConfig, error) {
 // RoutingVersion is empty — and that value is a cache key, so every brief in
 // the installation would fingerprint against nothing.
 func FromStored(stored RoutingConfig, keys config.Lookup) (RoutingConfig, error) {
-	cfg, err := stored.withoutUndeclaredTaskLadders().finalize()
+	cfg, err := stored.finalize()
 	if err != nil {
 		return RoutingConfig{}, err
 	}

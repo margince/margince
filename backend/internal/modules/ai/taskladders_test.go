@@ -80,9 +80,10 @@ func TestATaskLadderOrderMustReorderARealTasksOwnRungs(t *testing.T) {
 	}
 }
 
-// A stored binding that orders a task a later release dropped still loads, and
-// keeps the orders of the tasks that remain. Saving that name is still refused.
-func TestAStoredOrderOfADroppedTaskLoadsAndASaveOfItIsRefused(t *testing.T) {
+// A binding that orders a retired task still loads from the store and passes
+// the check the environment value takes, and keeps the orders of the tasks
+// that remain. An unknown name that was never a task is still refused.
+func TestAnOrderOfARetiredTaskLoadsAndAnUnknownOneIsRefused(t *testing.T) {
 	cfg, err := ParseRouting([]byte(reorderedRouting))
 	if err != nil {
 		t.Fatal(err)
@@ -92,10 +93,10 @@ func TestAStoredOrderOfADroppedTaskLoadsAndASaveOfItIsRefused(t *testing.T) {
 
 	loaded, err := FromStored(stored, nil)
 	if err != nil {
-		t.Fatalf("FromStored refused a stored order of a dropped task: %v", err)
+		t.Fatalf("FromStored refused an order of a retired task: %v", err)
 	}
 	if _, kept := loaded.TaskLadders["extension_task"]; kept {
-		t.Error("the dropped task's order was kept")
+		t.Error("the retired task's order was kept")
 	}
 	if got, want := loaded.Ladder(TaskAgentLoop), []Tier{TierPremium, TierCheapCloud}; !slices.Equal(got, want) {
 		t.Errorf("agent_loop walks %v after the load, want %v", got, want)
@@ -103,8 +104,17 @@ func TestAStoredOrderOfADroppedTaskLoadsAndASaveOfItIsRefused(t *testing.T) {
 	if _, still := stored.TaskLadders["extension_task"]; !still {
 		t.Error("the load changed the stored document it was handed")
 	}
-	if err := validateStoredRouting(stored); err == nil || !strings.Contains(err.Error(), "task_ladders") {
-		t.Errorf("saving the dropped task's order: err = %v, want a task_ladders refusal", err)
+	if err := validateStoredRouting(stored); err != nil {
+		t.Errorf("the setting's check refused an order of a retired task: %v", err)
+	}
+
+	typo := cfg
+	typo.TaskLadders = map[Task][]Tier{"agent_lop": {TierPremium, TierCheapCloud}}
+	if _, err := FromStored(typo, nil); err == nil || !strings.Contains(err.Error(), "task_ladders") {
+		t.Errorf("loading an unknown task's order: err = %v, want a task_ladders refusal", err)
+	}
+	if err := validateStoredRouting(typo); err == nil || !strings.Contains(err.Error(), "task_ladders") {
+		t.Errorf("saving an unknown task's order: err = %v, want a task_ladders refusal", err)
 	}
 }
 

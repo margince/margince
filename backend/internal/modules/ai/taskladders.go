@@ -39,18 +39,17 @@ func (cfg RoutingConfig) validateTaskLadders() error {
 	return nil
 }
 
-// withoutUndeclaredTaskLadders drops the order of a task the contract no longer
-// declares. A stored binding outlives the release that drops its task, and
-// refusing it at boot would leave the installation with no models. A save still
-// refuses the name, through validateTaskLadders.
-func (cfg RoutingConfig) withoutUndeclaredTaskLadders() RoutingConfig {
-	declared := maps.Clone(cfg.TaskLadders)
-	maps.DeleteFunc(declared, func(task Task, _ []Tier) bool {
-		_, known := taskLadders[task]
-		return !known
-	})
-	if len(declared) < len(cfg.TaskLadders) {
-		cfg.TaskLadders = declared
+// retiredTasks are tasks a release removed. A binding written before then, in
+// the store or the environment, may still order one, and refusing it would
+// leave the installation with no models. Any other unknown name is refused.
+var retiredTasks = []Task{"extension_task"}
+
+// withoutRetiredTaskLadders drops the order of a retired task.
+func (cfg RoutingConfig) withoutRetiredTaskLadders() RoutingConfig {
+	kept := maps.Clone(cfg.TaskLadders)
+	maps.DeleteFunc(kept, func(task Task, _ []Tier) bool { return slices.Contains(retiredTasks, task) })
+	if len(kept) < len(cfg.TaskLadders) {
+		cfg.TaskLadders = kept
 	}
 	return cfg
 }
