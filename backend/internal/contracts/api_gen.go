@@ -1347,6 +1347,7 @@ const (
 	AiActivityKindDocumentExtract               AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                    AiActivityKind = "draft_reply"
 	AiActivityKindEnrich                        AiActivityKind = "enrich"
+	AiActivityKindExtensionTask                 AiActivityKind = "extension_task"
 	AiActivityKindGrowthFit                     AiActivityKind = "growth_fit"
 	AiActivityKindMorningBrief                  AiActivityKind = "morning_brief"
 	AiActivityKindNlSearch                      AiActivityKind = "nl_search"
@@ -1407,6 +1408,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindDraftReply:
 		return true
 	case AiActivityKindEnrich:
+		return true
+	case AiActivityKindExtensionTask:
 		return true
 	case AiActivityKindGrowthFit:
 		return true
@@ -34911,6 +34914,9 @@ type AiActivityItem struct {
 	// until the projection's retention window closes over them — narrowing the filter would
 	// refuse a query that still has answers.
 	//
+	// `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+	// AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
+	//
 	// Its own schema because the item that reports a kind and the query that asks for kinds
 	// must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
 	// edits one.
@@ -35000,6 +35006,9 @@ type AiActivityItemState string
 // also what a caller may FILTER on, and rows written before they were retired are served
 // until the projection's retention window closes over them — narrowing the filter would
 // refuse a query that still has answers.
+//
+// `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+// AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
 //
 // Its own schema because the item that reports a kind and the query that asks for kinds
 // must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody

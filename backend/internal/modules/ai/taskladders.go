@@ -44,6 +44,10 @@ func (cfg RoutingConfig) validateTaskLadders() error {
 // leave the installation with no models. Any other unknown name is refused.
 var retiredTasks = []Task{"extension_task"}
 
+// RetiredTasks lists them for the activity contract, whose filter keeps a
+// retired name while rows written under it are still served.
+func RetiredTasks() []Task { return slices.Clone(retiredTasks) }
+
 // withoutRetiredTaskLadders drops the order of a retired task.
 func (cfg RoutingConfig) withoutRetiredTaskLadders() RoutingConfig {
 	kept := maps.Clone(cfg.TaskLadders)
