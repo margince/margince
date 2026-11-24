@@ -52,8 +52,8 @@ export const MailAndDayMeeting: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const meeting = await canvas.findByText(/Site walk/);
-    await expect(meeting.textContent).toContain(
+    const meeting = (await canvas.findByText(/Site walk/)).closest("li");
+    await expect(meeting?.textContent).toContain(
       formatDate(DAY_MEETING_AT, "en", UTC_ZONE),
     );
   },
