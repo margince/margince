@@ -5,6 +5,7 @@ package companydossier
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,18 +15,26 @@ import (
 )
 
 func columnIndustryReply(in Input, entityType, entityID string) string {
-	return cited(in, `{"band":"strong","sub_scores":[],"positive_factors":[{"text":"They work in healthcare.",`+
+	return columnReply(in, "They work in healthcare.", entityType, entityID)
+}
+
+func columnReply(in Input, text, entityType, entityID string) string {
+	return cited(in, `{"band":"strong","sub_scores":[],"positive_factors":[{"text":"`+text+`",`+
 		`"nature":"fact","evidence":[{"entity_type":"`+entityType+`","entity_id":"`+entityID+`"}]}],`+
 		`"negative_factors":[],"whitespace":[],"objections":[],"recommended_angle":null}`)
 }
 
 func TestAnIndustryOnlyTheColumnHoldsIsCitable(t *testing.T) {
-	for name, in := range map[string]Input{
-		"industry":  {CompanyID: ids.NewV7().String(), Industry: "healthcare"},
-		"size band": {CompanyID: ids.NewV7().String(), SizeBand: "51-200"},
+	for name, tc := range map[string]struct {
+		in    Input
+		claim string
+	}{
+		"industry":  {Input{CompanyID: ids.NewV7().String(), Industry: "healthcare"}, "They work in healthcare."},
+		"size band": {Input{CompanyID: ids.NewV7().String(), SizeBand: "51-200"}, "They employ 51-200 people."},
 	} {
+		in := tc.in
 		t.Run(name, func(t *testing.T) {
-			_, kept, err := ParseGrowthFit(columnIndustryReply(in, citeCompany, in.CompanyID), in)
+			_, kept, err := ParseGrowthFit(columnReply(in, tc.claim, citeCompany, in.CompanyID), in)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -106,4 +115,17 @@ func TestWithoutTheColumnTheSiteReadValueStays(t *testing.T) {
 	if len(in.ProfileFields) != 1 || len(in.Facts) != 1 {
 		t.Errorf("a company with no column lost its site-read industry or size: %+v %+v", in.ProfileFields, in.Facts)
 	}
+}
+
+func TestTheFloorDossierStatesTheColumnIndustry(t *testing.T) {
+	in := Input{CompanyID: ids.NewV7().String(), Industry: "healthcare"}
+	sections := keepGrounded(Deterministic(in, "de"), in)
+	for _, section := range sections {
+		for _, sentence := range section.Sentences {
+			if strings.Contains(sentence.Text, "Gesundheitswesen") && sentence.Evidence[0].EntityType == citeCompany {
+				return
+			}
+		}
+	}
+	t.Errorf("the floor dossier does not state the column industry, cited to the company: %+v", sections)
 }
