@@ -24542,14 +24542,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{entity}: In Mail-Fußzeilen fehlen Firmenangaben",
   "health.footerDefaultEntity": "Die Standard-Rechtseinheit",
   "health.effect.footer":
-    "Mails, die diese Angaben zeigen müssen, werden zur Prüfung zurückgehalten. Eine Person kann sie mit Begründung trotzdem senden. Ein Versand im Hintergrund, etwa eine Terminerinnerung, entfällt.",
+    "Mails, die diese Angaben zeigen müssen, werden zur Prüfung zurückgehalten. Wer sie geschrieben hat, kann sie mit Begründung trotzdem senden. Ein Versand im Hintergrund, etwa eine Terminerinnerung, entfällt.",
   "health.footerNext":
-    "Ergänzen Sie die fehlenden Angaben. Die Warnung verschwindet, sobald sie vollständig sind.",
+    "Ergänze die fehlenden Angaben. Die Warnung verschwindet, sobald sie vollständig sind.",
   "health.recovery.footer":
     "Jede Firmenangabe, die die Rechtspakete verlangen, ist eingetragen.",
   "health.footerMissing": "Fehlende Angaben",
   "health.footerHeldByUser":
-    "Seit der letzten Änderung zurückgehaltene Sendungen von Personen",
+    "Seit der letzten Änderung zurückgehaltene Sendungen von Nutzern",
   "health.footerHeldInBackground":
     "Seit der letzten Änderung zurückgehaltene oder entfallene Sendungen im Hintergrund",
   "health.footerDetail.controller_identity": "Firmenname und Postanschrift",

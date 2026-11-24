@@ -27,7 +27,7 @@ describe("the missing company details finding panel", () => {
     ).toBeTruthy();
     expect(screen.getByText("Privacy contact, How to object")).toBeTruthy();
     expect(
-      screen.getByText("Sends by people held since the last change")
+      screen.getByText("Sends by users held since the last change")
         .nextElementSibling?.textContent,
     ).toBe("2");
     expect(

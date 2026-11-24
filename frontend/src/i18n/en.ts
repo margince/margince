@@ -24171,13 +24171,13 @@ export const en = {
   "health.footerIncompleteFor": "{entity}: mail footers lack company details",
   "health.footerDefaultEntity": "The default legal entity",
   "health.effect.footer":
-    "Mail that must show these details is held for review. A person can still send it with a reason. A background send, such as a meeting reminder, is dropped.",
+    "Mail that must show these details is held for review. Whoever wrote it can still send it with a reason. A background send, such as a meeting reminder, is dropped.",
   "health.footerNext":
     "Fill in the missing details. The warning goes once they are complete.",
   "health.recovery.footer":
     "Every company detail the jurisdiction packs require is stated.",
   "health.footerMissing": "Missing details",
-  "health.footerHeldByUser": "Sends by people held since the last change",
+  "health.footerHeldByUser": "Sends by users held since the last change",
   "health.footerHeldInBackground":
     "Background sends held or dropped since the last change",
   "health.footerDetail.controller_identity": "Legal name and postal address",
