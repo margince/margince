@@ -32,8 +32,9 @@ fi
 # BACKEND_CLOCK_SLICE picks one slice; unset runs every suite in one go, which
 # is what the database and fixture appliers want on a laptop.
 SLICE="${BACKEND_CLOCK_SLICE:-}"
-if [[ -n "$SLICE" ]] && ! slices | grep -Fxq -- "$SLICE"; then
-	echo "backend-clock-drift: BACKEND_CLOCK_SLICE=$SLICE is not one of: $(slices | tr '\n' ' ')" >&2
+KNOWN_SLICES="$(slices)"
+if [[ -n "$SLICE" ]] && ! grep -Fxq -- "$SLICE" <<<"$KNOWN_SLICES"; then
+	echo "backend-clock-drift: BACKEND_CLOCK_SLICE=$SLICE is not one of: $(tr '\n' ' ' <<<"$KNOWN_SLICES")" >&2
 	exit 2
 fi
 

@@ -78,3 +78,55 @@ func TestTheLongestRunningStatementSaysWhatItWaitsOn(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A probe asked inside a transaction still ages a statement by the moment it
+// looks, not by when its own transaction began.
+func TestTheLongestRunningStatementIsSeenFromInsideATransaction(t *testing.T) {
+	ctx := context.Background()
+	holder, waiter, probeConn := connectForProbe(t), connectForProbe(t), connectForProbe(t)
+	probe, err := probeConn.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := probe.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
+	// The probe's transaction starts first, so its now() is older than the
+	// statement it looks for.
+	if _, err := probe.Exec(ctx, `SELECT 1`); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := holder.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(424243)`); err != nil {
+		t.Fatal(err)
+	}
+	blocked := make(chan error, 1)
+	go func() {
+		_, err := waiter.Exec(ctx, `SELECT pg_advisory_lock(424243), pg_advisory_unlock(424243)`)
+		blocked <- err
+	}()
+	WaitForContention(t, nil, "", "a probe inside a transaction never saw the blocked statement run long",
+		func(ctx context.Context) (bool, error) {
+			_, err := LongestRunning(ctx, probe, 50*time.Millisecond)
+			if errors.Is(err, pgx.ErrNoRows) {
+				return false, nil
+			}
+			return err == nil, err
+		})
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-blocked; err != nil {
+		t.Fatal(err)
+	}
+}
