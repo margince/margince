@@ -220,7 +220,7 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 		return false, held, err
 	}
 	if tag.RowsAffected() == 0 {
-		return false, held, confirmDealByHand(ctx, tx, id, in)
+		return false, held, confirmDealByHand(ctx, tx, id, in, held)
 	}
 	return true, held, finalizeRelinkedActivity(ctx, tx, id, in, displaced)
 }
