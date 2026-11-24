@@ -308,7 +308,7 @@ done
 echo "  OK: $backlog committed deals with no amount, next step or economic buyer"
 
 echo "== seed-analytics: target =="
-expect "200" "GET /analytics/targets" "$(api GET "/analytics/targets?include_retired=true")"
+expect "200" "GET /analytics/targets" "$(api GET "/analytics/targets")"
 seeded="$(jq -c --arg t "$TEAM_ID" --arg q "$QUARTER_START" '[.data[]? | select(.definition.scope.id == $t
   and .definition.period_start == $q and .definition.metric == "bookings_won")][0] // empty' "$workdir/body")"
 # retire_target <true|false> <reason> — retires or restores the seeded target.
