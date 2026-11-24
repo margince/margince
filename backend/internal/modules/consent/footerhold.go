@@ -21,8 +21,10 @@ const FooterHeldAction = "send.footer_held"
 
 // RecordFooterHoldTx writes one row for each sending entity this decision set
 // holds for ReasonFooterIncomplete. background says no person pressed send.
-// A set held for another reason writes nothing.
-func RecordFooterHoldTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, background bool) error {
+// intent is the held message, zero when none is held; FooterGapsTx counts one
+// held message once however often it was pressed. A set held for another
+// reason writes nothing.
+func RecordFooterHoldTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionSet, intent ids.UUID, background bool) error {
 	kindsByEntity := map[ids.UUID][]string{}
 	var entities []ids.UUID
 	for _, d := range set.Decisions {
@@ -45,9 +47,11 @@ func RecordFooterHoldTx(ctx context.Context, tx pgx.Tx, set commsauthz.DecisionS
 				return err
 			}
 		}
-		if _, err := storekit.LogSystem(ctx, tx, FooterHeldAction, map[string]any{
-			"legal_entity_id": named.String(), "kinds": kindsByEntity[entity], "background": background,
-		}); err != nil {
+		detail := map[string]any{"legal_entity_id": named.String(), "kinds": kindsByEntity[entity], "background": background}
+		if !intent.IsZero() {
+			detail["intent_id"] = intent.String()
+		}
+		if _, err := storekit.LogSystem(ctx, tx, FooterHeldAction, detail); err != nil {
 			return err
 		}
 	}

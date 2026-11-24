@@ -13,7 +13,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
@@ -54,7 +56,12 @@ func (s Server) footerSummary(ctx context.Context) (crmcontracts.HealthSource, [
 	source.Condition, source.Code = healthClear, "footer_complete"
 	findings := make([]crmcontracts.HealthFinding, 0, len(gaps))
 	for _, gap := range gaps {
-		findings = append(findings, footerFinding(source, gap))
+		f := footerFinding(source, gap)
+		if !footerRemedyAllowed(ctx, f.Action.Destination) {
+			reason := "permission"
+			f.Action.Available, f.Action.Reason = false, &reason
+		}
+		findings = append(findings, f)
 	}
 	if len(findings) > 0 {
 		source.Condition, source.Code = healthWaitingHuman, footerIncompleteCode
@@ -127,4 +134,17 @@ func footerDestination(gap entityFooterGap) crmcontracts.HealthActionDestination
 		return crmcontracts.HealthActionDestinationLegalEntities
 	}
 	return crmcontracts.HealthActionDestinationDisclosures
+}
+
+// footerRemedyAllowed reports whether the reader may change what the
+// destination holds. A seat that may only fill the disclosure page still sees
+// a gap on the entity record, with its button off.
+func footerRemedyAllowed(ctx context.Context, destination crmcontracts.HealthActionDestination) bool {
+	switch destination {
+	case crmcontracts.HealthActionDestinationLegalEntities:
+		return auth.Allows(ctx, "legal_entity", principal.ActionUpdate)
+	case crmcontracts.HealthActionDestinationCompanyProfile:
+		return auth.RequireAdmin(ctx) == nil
+	}
+	return true
 }

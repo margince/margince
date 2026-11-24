@@ -343,7 +343,7 @@ func (g *Gate) RecordRefusal(ctx context.Context, set commsauthz.DecisionSet, in
 		if out, err = OpenReviewTx(ctx, tx, set, intentID); err != nil {
 			return err
 		}
-		return RecordFooterHoldTx(ctx, tx, set, principal.Unattended(ctx))
+		return RecordFooterHoldTx(ctx, tx, set, intentID, principal.Unattended(ctx))
 	})
 	return out, err
 }

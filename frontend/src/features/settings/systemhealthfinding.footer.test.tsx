@@ -6,6 +6,8 @@ import { composeStories } from "@storybook/react-vite";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { footerFinding } from "./systemhealth.fixtures";
+import { readHealthReport } from "./systemhealth.report";
 import * as stories from "./systemhealthfinding.stories";
 
 const { FooterIncomplete } = composeStories(stories);
@@ -40,5 +42,13 @@ describe("the missing company details finding panel", () => {
       await screen.findByRole("button", { name: "Open Jurisdiction" }),
     );
     expect(window.location.hash).toBe("#/settings/jurisdiction");
+  });
+
+  it("copies a report of the gap it shows", async () => {
+    const report = await readHealthReport(
+      footerFinding,
+      new AbortController().signal,
+    );
+    expect(JSON.parse(report)).toEqual(footerFinding.footer_gap);
   });
 });

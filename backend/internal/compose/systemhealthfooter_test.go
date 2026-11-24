@@ -95,3 +95,19 @@ func TestAFooterGapLeadsToWhereItsFirstDetailIsFilledIn(t *testing.T) {
 		}
 	}
 }
+
+// A seat that may fill the disclosure page but not the entity record sees the
+// gap with its button off, instead of a button that leads nowhere it can save.
+func TestAFooterButtonIsOffForASeatThatCannotChangeItsPage(t *testing.T) {
+	ops := healthTestContext(map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}, "legal_entity": {Read: true}})
+	if footerRemedyAllowed(ops, crmcontracts.HealthActionDestinationLegalEntities) {
+		t.Error("a seat without legal_entity update may open the entity editor")
+	}
+	if !footerRemedyAllowed(ops, crmcontracts.HealthActionDestinationDisclosures) {
+		t.Error("a seat that may change the settings cannot open the disclosure page")
+	}
+	editor := healthTestContext(map[string]principal.ObjectGrant{"legal_entity": {Update: true}})
+	if !footerRemedyAllowed(editor, crmcontracts.HealthActionDestinationLegalEntities) {
+		t.Error("a legal entity editor's button is off")
+	}
+}

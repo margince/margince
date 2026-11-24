@@ -10,7 +10,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // FooterGap is what one live legal entity's mail owes and nobody stated.
@@ -20,17 +22,25 @@ type FooterGap struct {
 	// Missing lists the owed kinds with no text, in the order the send names
 	// them. Empty when the entity's footer is complete.
 	Missing []string
-	// HeldByPerson and HeldInBackground count the sends held for
+	// HeldByPerson and HeldInBackground count the messages held for
 	// footer_incomplete since the details last changed.
 	HeldByPerson, HeldInBackground int
 }
 
+// footerHoldLookback bounds how far back a hold still names a missing kind.
+// A kind only a recipient's pack owes is known from the holds alone.
+const footerHoldLookback = "90 days"
+
 // FooterGapsTx answers each live legal entity. A missing kind is an
 // obligation DisclosuresFor reports missing for a first message from that
-// entity, or a kind a held send recorded since its details last changed. The
-// send asks DisclosuresFor too, so the two answers cannot differ.
+// entity, or a kind a recent held send recorded whose particular is still
+// empty. The send asks the same two questions, so the answers cannot differ.
 func (s *Store) FooterGapsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error) {
 	gaps, err := footerHoldsTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	installation, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
 	if err != nil {
 		return nil, err
 	}
@@ -45,8 +55,13 @@ func (s *Store) FooterGapsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error
 				missing = append(missing, line.Kind)
 			}
 		}
+		facts, err := sendingEntityFactsTx(ctx, tx, gap.Entity)
+		if err != nil {
+			return nil, err
+		}
+		particulars := controllerOf(installation, facts)
 		for _, kind := range gap.Missing {
-			if !slices.Contains(missing, kind) {
+			if particularFor(messagingrules.DisclosureKind(kind), particulars) == "" && !slices.Contains(missing, kind) {
 				missing = append(missing, kind)
 			}
 		}
@@ -55,25 +70,27 @@ func (s *Store) FooterGapsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error
 	return gaps, nil
 }
 
-// footerHoldsTx reads each live entity with the holds recorded for it since
-// its own row or the installation's particulars last changed. Missing holds
-// the kinds those holds recorded.
+// footerHoldsTx reads each live entity with the kinds its recent holds
+// recorded, and counts the held messages since its own row or the
+// installation's particulars last changed. A message pressed twice counts once.
 func footerHoldsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT le.id, le.is_default, held.person, held.background, held.kinds
 		  FROM legal_entity le
 		 CROSS JOIN LATERAL (
-		       SELECT count(DISTINCT l.id) FILTER (WHERE l.detail->>'background' = 'false') AS person,
-		              count(DISTINCT l.id) FILTER (WHERE l.detail->>'background' = 'true') AS background,
+		       SELECT count(DISTINCT coalesce(l.detail->>'intent_id', l.id::text))
+		                FILTER (WHERE l.detail->>'background' = 'false' AND l.occurred_at > changed.at) AS person,
+		              count(DISTINCT coalesce(l.detail->>'intent_id', l.id::text))
+		                FILTER (WHERE l.detail->>'background' = 'true' AND l.occurred_at > changed.at) AS background,
 		              coalesce(array_agg(DISTINCT k.kind) FILTER (WHERE k.kind IS NOT NULL), '{}') AS kinds
-		         FROM system_log l
-		         LEFT JOIN LATERAL jsonb_array_elements_text(l.detail->'kinds') AS k(kind) ON true
-		        WHERE l.action = $1 AND l.detail->>'legal_entity_id' = le.id::text
-		          AND l.occurred_at > greatest(le.updated_at,
-		              (SELECT updated_at FROM setting WHERE key = $2))) AS held
+		         FROM (SELECT greatest(le.updated_at, (SELECT updated_at FROM setting WHERE key = $2)) AS at) AS changed
+		         LEFT JOIN system_log l
+		           ON l.action = $1 AND l.detail->>'legal_entity_id' = le.id::text
+		          AND l.occurred_at > now() - $3::interval
+		         LEFT JOIN LATERAL jsonb_array_elements_text(l.detail->'kinds') AS k(kind) ON true) AS held
 		 WHERE le.archived_at IS NULL
 		 ORDER BY le.is_default DESC, lower(le.display_name), le.id`,
-		FooterHeldAction, ControllerIdentity.Key())
+		FooterHeldAction, ControllerIdentity.Key(), footerHoldLookback)
 	if err != nil {
 		return nil, fmt.Errorf("consent: reading the legal entities a footer may lack details for: %w", err)
 	}

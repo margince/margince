@@ -40,10 +40,10 @@ func defaultEntity(t *testing.T, e *channelConsentEnv) ids.UUID {
 	return id
 }
 
-func recordHold(t *testing.T, e *channelConsentEnv, store *Store, set commsauthz.DecisionSet, background bool) {
+func recordHold(t *testing.T, e *channelConsentEnv, store *Store, set commsauthz.DecisionSet, intent ids.UUID, background bool) {
 	t.Helper()
 	if err := store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		return RecordFooterHoldTx(e.ctx, tx, set, background)
+		return RecordFooterHoldTx(e.ctx, tx, set, intent, background)
 	}); err != nil {
 		t.Fatalf("recording a footer hold: %v", err)
 	}
@@ -73,12 +73,14 @@ func TestAMissingCompanyDetailIsAGapUntilItIsStated(t *testing.T) {
 }
 
 // A held send records its entity and the details it owed, split into sends a
-// person pressed and background sends. A marketing-only kind is owed per
-// recipient, so the hold is what names it. Changing the details starts the
-// count again.
+// person pressed and background sends. A message pressed twice counts once. A
+// marketing-only kind is owed per recipient, so the hold is what names it. An
+// edit to another detail starts the count again and keeps the gap; stating the
+// detail ends it.
 //
-// Mutation: skip the row in RecordFooterHoldTx, or drop the occurred_at
-// window from footerHoldsTx, and this fails.
+// Mutation: skip the row in RecordFooterHoldTx, count log rows instead of
+// intents, drop the occurred_at window, or drop the particularFor filter, and
+// this fails.
 func TestAHeldSendCountsInItsEntitysGapUntilTheDetailsChange(t *testing.T) {
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "xb", messagingrules.Disclosure{Kind: messagingrules.ObjectionRoute, MarketingOnly: true})
@@ -88,11 +90,14 @@ func TestAHeldSendCountsInItsEntitysGapUntilTheDetailsChange(t *testing.T) {
 	}
 	held := commsauthz.Decision{ReasonCode: commsauthz.ReasonFooterIncomplete, SendingEntity: home}
 	held.Evidence.FooterFindings = []commsauthz.FooterFinding{{Kind: string(messagingrules.ObjectionRoute)}, {Kind: "unsubscribe_link"}}
-	recordHold(t, e, store, commsauthz.DecisionSet{Decisions: []commsauthz.Decision{held, held}}, true)
-	recordHold(t, e, store, commsauthz.DecisionSet{Decisions: []commsauthz.Decision{held}}, false)
+	recordHold(t, e, store, commsauthz.DecisionSet{Decisions: []commsauthz.Decision{held, held}}, ids.UUID{}, true)
+	intent := ids.NewV7()
+	for range 2 {
+		recordHold(t, e, store, commsauthz.DecisionSet{Decisions: []commsauthz.Decision{held}}, intent, false)
+	}
 	other := held
 	other.ReasonCode = commsauthz.ReasonObjection
-	recordHold(t, e, store, commsauthz.DecisionSet{Decisions: []commsauthz.Decision{other}}, false)
+	recordHold(t, e, store, commsauthz.DecisionSet{Decisions: []commsauthz.Decision{other}}, ids.UUID{}, false)
 
 	gap := footerGaps(t, e, store)[home]
 	if !slices.Equal(gap.Missing, []string{string(messagingrules.ObjectionRoute)}) {
@@ -102,7 +107,13 @@ func TestAHeldSendCountsInItsEntitysGapUntilTheDetailsChange(t *testing.T) {
 		t.Errorf("held %d in the background and %d by a person, want 1 and 1", gap.HeldInBackground, gap.HeldByPerson)
 	}
 
-	stateParticulars(t, e, ControllerParticulars{ObjectionRoute: "Reply STOP."})
+	stateParticulars(t, e, ControllerParticulars{PrivacyContact: "privacy@beispiel.test"})
+	gap = footerGaps(t, e, store)[home]
+	if !slices.Equal(gap.Missing, []string{string(messagingrules.ObjectionRoute)}) || gap.HeldInBackground+gap.HeldByPerson != 0 {
+		t.Errorf("after another detail changed the gap is %+v, want the objection route with a fresh count", gap)
+	}
+
+	stateParticulars(t, e, ControllerParticulars{PrivacyContact: "privacy@beispiel.test", ObjectionRoute: "Reply STOP."})
 	if gap := footerGaps(t, e, store)[home]; len(gap.Missing) != 0 || gap.HeldInBackground+gap.HeldByPerson != 0 {
 		t.Errorf("after the details changed the gap is %+v, want none", gap)
 	}
