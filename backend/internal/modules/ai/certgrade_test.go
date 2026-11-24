@@ -122,10 +122,16 @@ func TestFeatureRoutesGradeTheLeadModel(t *testing.T) {
 	}
 }
 
-// The verdict a candidate carries for each grade a task can show. Not measured
-// carries none.
-var verdictOfGrade = map[string]string{
-	CertGradeReady: "certified", CertGradeWithCare: "supported_degraded", CertGradeNotReliable: "not_supported",
+// verdictOfGrade is the verdict a candidate carries for a grade a task shows.
+func verdictOfGrade(grade string) string {
+	switch grade {
+	case CertGradeReady:
+		return "certified"
+	case CertGradeWithCare:
+		return "supported_degraded"
+	default:
+		return "not_supported"
+	}
 }
 
 // leadDisagreement says how the task's grade and its lead candidate's verdict
@@ -147,7 +153,7 @@ func leadDisagreement(row crmcontracts.AiFeatureRoute) string {
 		return ""
 	case lead.Certification == nil:
 		return "the task is " + grade.Grade + " but the lead carries no verdict"
-	case lead.Certification.Verdict != verdictOfGrade[grade.Grade]:
+	case lead.Certification.Verdict != verdictOfGrade(grade.Grade):
 		return "the task is " + grade.Grade + " but the lead carries " + lead.Certification.Verdict
 	case lead.Certification.Current == grade.RecheckPending:
 		return "the task's re-check and the lead's current flag disagree"
@@ -156,8 +162,8 @@ func leadDisagreement(row crmcontracts.AiFeatureRoute) string {
 }
 
 // Every stock preset binds a lead model to every task. The task's grade and
-// the lead candidate's verdict are two views of that model, so they agree in
-// every budget band and in a preview that moves to another preset.
+// the lead candidate's verdict are two views of that model, so they agree. That
+// holds in every budget band, and in a preview that moves to another preset.
 func TestEveryStockPresetGradesEachTaskAsItsLeadCandidate(t *testing.T) {
 	names := slices.Sorted(maps.Keys(stockPresets))
 	for i, name := range names {
@@ -191,7 +197,7 @@ func TestEveryStockPresetGradesEachTaskAsItsLeadCandidate(t *testing.T) {
 }
 
 // Whatever a record says about a lead model, both screens print it the same
-// way: each state, an unknown verdict and a site no record measured included.
+// way. The cases cover each state, an unknown verdict and an unmeasured site.
 func TestTheTaskGradeAndTheLeadVerdictReadOneRecord(t *testing.T) {
 	lead := ProviderConfig{Provider: "gemini", Model: "gemini-3.1-flash-lite"}
 	fallback := ProviderConfig{Provider: "gemini", Model: "gemini-3.8-flash"}

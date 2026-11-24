@@ -73,9 +73,9 @@ type CertGrade struct {
 	State   string
 }
 
-// Certification is what the AI routes screen shows for one model on a task: the
-// grade beside the task, the record's verdict beside each candidate, and whether
-// both wait on a re-check. Verdict is "" when the model is not measured.
+// Certification is what the AI routes screen shows for one model on a task. The
+// task shows the grade and each candidate shows the record's verdict. Both say
+// whether they wait on a re-check. Verdict is "" when the model is not measured.
 type Certification struct {
 	Grade          string
 	Verdict        string
@@ -85,8 +85,9 @@ type Certification struct {
 // CertificationFor grades binding on task from the table the committed records
 // generate (taskgrades_gen.go): its own record, else the provider's it is
 // measured by. A binding no record measures, or one a shipped site of the task
-// has no record for, is not measured. It is the only reader of that table, so
-// a task's grade and its candidates' verdicts cannot disagree on one model.
+// has no record for, is not measured. A task's grade and each candidate's
+// verdict both read it here, so the two agree on the lead model.
+// Held by: TestTheTaskGradeAndTheLeadVerdictReadOneRecord (internal/modules/ai/certgrade_test.go)
 func CertificationFor(task Task, binding ProviderConfig, profile Profile) Certification {
 	grade, found := taskGrades[CertKeyFor(task, binding, profile)]
 	if !found {
