@@ -78,11 +78,12 @@ func LowercaseParticipantAddressesTx(ctx context.Context, tx pgx.Tx, after ids.U
 	if err != nil {
 		return nil, 0, err
 	}
-	if len(lowered) != len(before) {
-		return nil, 0, fmt.Errorf("activities: lowercasing left %d of %d activities without a participant row", len(before)-len(lowered), len(before))
+	left := make(map[ids.UUID]participantSpellings, len(lowered))
+	for _, activity := range lowered {
+		left[activity.Activity] = activity
 	}
-	for i, activity := range before {
-		if err := auditLowercasedParticipants(ctx, tx, activity, lowered[i], runID); err != nil {
+	for _, activity := range before {
+		if err := auditLowercasedParticipants(ctx, tx, activity, left[activity.Activity], runID); err != nil {
 			return nil, 0, err
 		}
 	}
@@ -108,9 +109,6 @@ func countParticipantSpellings(ctx context.Context, tx pgx.Tx, participants []id
 // auditLowercasedParticipants records what the correction did to one activity
 // and announces it, as a roster change announces the activity.
 func auditLowercasedParticipants(ctx context.Context, tx pgx.Tx, before, after participantSpellings, runID ids.UUID) error {
-	if before.Activity != after.Activity {
-		return fmt.Errorf("activities: activity %s left the batch that lowercases its participants", before.Activity)
-	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", before.Activity,
 		map[string]any{auditFieldParticipantRows: before.Rows, auditFieldAddressesAsWritten: before.NotLowered},
 		map[string]any{auditFieldParticipantRows: after.Rows, auditFieldAddressesAsWritten: after.NotLowered},

@@ -109,8 +109,6 @@ func (o older) stored(meeting ids.UUID, address string) stored {
 	return s
 }
 
-func text(s string) *string { return &s }
-
 func read(s *string) string {
 	if s == nil {
 		return "<null>"
@@ -123,9 +121,9 @@ func read(s *string) string {
 func TestTwoSpellingsOfOneGuestFoldIntoOneRowThatKeepsWhatBothKnew(t *testing.T) {
 	o := seedOlder(t)
 	meeting := o.meeting()
-	o.asTyped(meeting, guest{address: " Lena@Prospect.test", name: text("Lena Prospect"), seat: &o.e.Rep1})
-	o.lowercase(meeting, guest{address: "lena@prospect.test", response: text("accepted"), name: text(""), seat: &o.e.Rep2})
-	o.lowercase(meeting, guest{address: "omar@prospect.test", response: text("declined")})
+	o.asTyped(meeting, guest{address: " Lena@Prospect.test", name: new("Lena Prospect"), seat: &o.e.Rep1})
+	o.lowercase(meeting, guest{address: "lena@prospect.test", response: new("accepted"), name: new(""), seat: &o.e.Rep2})
+	o.lowercase(meeting, guest{address: "omar@prospect.test", response: new("declined")})
 	o.e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, address) VALUES ($1, 'organizer', 'lena@prospect.test')`, meeting)
 
 	ctx := systemCtx(o.e)
@@ -181,23 +179,23 @@ func TestTheLaterGivenAnswerWinsAndBringsItsName(t *testing.T) {
 		response, name string
 	}{
 		"the row as typed is later": {
-			typed:    guest{address: "Ada@Buyer.test", response: text("declined"), name: text("Ada, later"), written: late},
-			lowered:  guest{address: "ada@buyer.test", response: text("accepted"), name: text("Ada, earlier"), written: early},
+			typed:    guest{address: "Ada@Buyer.test", response: new("declined"), name: new("Ada, later"), written: late},
+			lowered:  guest{address: "ada@buyer.test", response: new("accepted"), name: new("Ada, earlier"), written: early},
 			response: "declined", name: "Ada, later",
 		},
 		"the lowercase row is later": {
-			typed:    guest{address: "Ben@Buyer.test", response: text("declined"), name: text("Ben, earlier"), written: early},
-			lowered:  guest{address: "ben@buyer.test", response: text("tentative"), name: text("Ben, later"), written: late},
+			typed:    guest{address: "Ben@Buyer.test", response: new("declined"), name: new("Ben, earlier"), written: early},
+			lowered:  guest{address: "ben@buyer.test", response: new("tentative"), name: new("Ben, later"), written: late},
 			response: "tentative", name: "Ben, later",
 		},
 		"an earlier answer beats a later open invitation": {
-			typed:    guest{address: "Cy@Buyer.test", response: text("accepted"), written: early},
-			lowered:  guest{address: "cy@buyer.test", response: text("needs_action"), name: text("Cy"), written: late},
+			typed:    guest{address: "Cy@Buyer.test", response: new("accepted"), written: early},
+			lowered:  guest{address: "cy@buyer.test", response: new("needs_action"), name: new("Cy"), written: late},
 			response: "accepted", name: "Cy",
 		},
 		"no answer on either row keeps the open invitation": {
 			typed:    guest{address: "Di@Buyer.test", written: late},
-			lowered:  guest{address: "di@buyer.test", response: text("needs_action"), written: early},
+			lowered:  guest{address: "di@buyer.test", response: new("needs_action"), written: early},
 			response: "needs_action", name: "<null>",
 		},
 	}
@@ -273,7 +271,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	o := seedOlder(t)
 	meeting := o.meeting()
 	o.asTyped(meeting, guest{address: "Hal@Buyer.test"})
-	o.lowercase(meeting, guest{address: "hal@buyer.test", response: text("accepted")})
+	o.lowercase(meeting, guest{address: "hal@buyer.test", response: new("accepted")})
 	ctx := systemCtx(o.e)
 	task := DataTask()
 	lowercase := task.Steps[0].Batch
@@ -317,8 +315,8 @@ func TestAnEditBeforeTheTaskLowercasesAnOlderRow(t *testing.T) {
 	o := seedOlder(t)
 	alone, twinned := o.meeting(), o.meeting()
 	single := o.asTyped(alone, guest{address: "Ivy@Buyer.test"})
-	typed := o.asTyped(twinned, guest{address: "Jon@Buyer.test", name: text("Jon"), seat: &o.e.Rep1})
-	o.lowercase(twinned, guest{address: "jon@buyer.test", response: text("declined"), seat: &o.e.Rep2})
+	typed := o.asTyped(twinned, guest{address: "Jon@Buyer.test", name: new("Jon"), seat: &o.e.Rep1})
+	o.lowercase(twinned, guest{address: "jon@buyer.test", response: new("declined"), seat: &o.e.Rep2})
 
 	if err := o.e.WsExecErr(t, `UPDATE activity_participant SET display_name = 'Ivy' WHERE id = $1`, single); err != nil {
 		t.Fatalf("editing an older row: %v", err)

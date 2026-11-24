@@ -89,8 +89,6 @@ func stampCaptureParticipants(
 			return fmt.Errorf("capture: stamping the mailbox owner as a participant: %w", err)
 		}
 	}
-	// Normalized the same way contact_email is, so the promotion below and the
-	// erasure lookup both match without a runtime case fold.
 	address := correspondence.Fold(counterparty.Email)
 	// Never the owner's OWN address as the other end. Mail the owner sent from
 	// an alias arrives with that alias as its counterparty. Stamping it would
@@ -419,8 +417,14 @@ func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, part
 // against the ACT-DDL-3 uniqueness index rather than a prior SELECT, which
 // would race with a concurrent replay of the same message.
 func insertParticipant(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role string,
-	userID *ids.UUID, contactID *ids.ContactID, address, channelUserID string,
+	ctx context.Context,
+	tx pgx.Tx,
+	activityID ids.ActivityID,
+	role string,
+	userID *ids.UUID,
+	contactID *ids.ContactID,
+	address string,
+	channelUserID string,
 ) error {
 	// The user arm rides a SELECT over app_user for the same reason the logged
 	// path does: a principal's UserID need not name a workspace member, and
