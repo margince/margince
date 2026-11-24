@@ -6,14 +6,8 @@ import { GoneNotice } from "../../components/gonenotice";
 import { Calendar, type ISODay } from "../../design-system/calendar";
 import { CompanyLogo } from "../../design-system/companylogo";
 import { Heading } from "../../design-system/heading";
-import { MeetingSlots } from "../../design-system/meetingslots";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate, type QueryLike } from "../../design-system/querystates";
-import {
-  formatDateTime,
-  formatDayLong,
-  formatTimeOfDay,
-} from "../../format/format";
 import { browserZone, dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { fromHere } from "../../lib/navigatefrom";
@@ -40,6 +34,7 @@ import {
   type GuestDetails,
   GuestDetailsForm,
   GuestHost,
+  GuestTimes,
   GuestUnavailable,
   guestTitle,
   PreviewNotice,
@@ -453,72 +448,4 @@ function useDayTimes({
   });
   if (!lateDay) return { dayRead: slots, dayTimes: days?.byDay.get(day) ?? [] };
   return { dayRead: lateSlots, dayTimes: lateSlots.data?.slots ?? [] };
-}
-
-/**
- * The right-hand column before a time is picked: the times a personal
- * proposal offers first, then the chosen day's free times.
- */
-function GuestTimes({
-  offered,
-  day,
-  days,
-  times,
-  monthKey,
-  zone,
-  needsCalendar,
-  slots,
-  onSelect,
-}: Readonly<{
-  offered: readonly GuestSlot[];
-  day: ISODay | "";
-  days: ReturnType<typeof monthDays> | undefined;
-  times: readonly GuestSlot[];
-  monthKey: string;
-  zone: string;
-  needsCalendar: boolean;
-  slots: QueryLike<unknown>;
-  onSelect: (slot: GuestSlot) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const monthHasTimes = days?.free.some((free) => free.startsWith(monthKey));
-  return (
-    <>
-      {offered.length > 0 && (
-        <div className="bookguest-suggested">
-          <Heading as="h2" size="medium">
-            {t("scheduling.suggestedTimes")}
-          </Heading>
-          <MeetingSlots
-            slots={offered.map((slot) => ({
-              ...slot,
-              label: formatDateTime(slot.start, locale, zone),
-            }))}
-            onSelect={onSelect}
-            empty={t("book.noTimes")}
-          />
-        </div>
-      )}
-      <Heading as="h2" size="medium">
-        {day ? formatDayLong(day, locale, zone) : t("scheduling.chooseTime")}
-      </Heading>
-      {needsCalendar ? (
-        <p className="t-caption">{t("scheduling.previewCalendarSetup")}</p>
-      ) : (
-        <QueryGate pendingLabel={t("common.loading")} query={slots}>
-          {() => (
-            <MeetingSlots
-              slots={times.map((slot) => ({
-                ...slot,
-                label: formatTimeOfDay(slot.start, locale, zone),
-              }))}
-              onSelect={onSelect}
-              empty={t(monthHasTimes ? "book.noTimesDay" : "book.noTimesMonth")}
-            />
-          )}
-        </QueryGate>
-      )}
-    </>
-  );
 }
