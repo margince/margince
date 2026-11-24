@@ -220,7 +220,7 @@ type Activities interface {
 	// deal actAs cannot open answers ErrNotFound. It answers the emails of the
 	// deal that the deal's team may read. An
 	// email private to its participants is left out, and so is one held back
-	// from reading. A reply that sits only in a private mailbox is therefore
+	// from reading or under a restriction of processing. A reply that sits only in a private mailbox is therefore
 	// invisible here. A unit that decides "no reply yet" from this read is
 	// reminding a user to check. It must not act on it alone, such as by
 	// sending a message.

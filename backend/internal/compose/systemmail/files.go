@@ -4,6 +4,7 @@
 package systemmail
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -11,9 +12,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -24,7 +27,13 @@ import (
 // ReadableMail is what a seat read asks of a mail beyond the content gate. It
 // is an email the whole workspace may read, live, not held and not restricted.
 func ReadableMail(alias string) string {
-	return fmt.Sprintf(`%[1]s.kind = 'email' AND %[1]s.audience = 'workspace' AND %[1]s.archived_at IS NULL AND %[2]s AND NOT %[3]s`,
+	return workspaceMail(alias) + fmt.Sprintf(` AND %s.archived_at IS NULL`, alias)
+}
+
+// workspaceMail is ReadableMail with archived mail kept, for a read that may ask
+// for it.
+func workspaceMail(alias string) string {
+	return fmt.Sprintf(`%[1]s.kind = 'email' AND %[1]s.audience = 'workspace' AND %[2]s AND NOT %[3]s`,
 		alias, auth.ActivityAvailableClause(alias), auth.ActivityRestrictedSQL(alias+".id"))
 }
 
@@ -52,8 +61,8 @@ const openQuery = `
 	  JOIN activity a ON a.id = at.entity_id
 	 WHERE at.id = $1 AND ` + mailFileClause + ` AND %s`
 
-// capLock serializes the opens of one unit, so two at once cannot both take
-// the last place under the cap.
+// capLock serializes the last pass of one unit's opens, so two at once cannot
+// both take the last place under the cap.
 const capLock = `SELECT pg_advisory_xact_lock(hashtextextended('extension_attachment_open:' || $1, 0))`
 
 const opensToday = `
@@ -62,11 +71,12 @@ const opensToday = `
 	   AND detail->>'kind' = $1 AND detail->>'extension' = $2`
 
 // Files reads a mail's attachments for one unit, as its service member. The
-// context and transaction carry that member's principal.
+// context carries that member's principal.
 type Files struct {
 	Unit  string
 	ActAs ids.UUID
 	Blob  blobstore.Store
+	Pool  *pgxpool.Pool
 }
 
 var errTooLarge = fmt.Errorf("%w: the attachment holds more than %d bytes", extension.ErrInvalid, extension.MaxInboundFileBytes)
@@ -74,31 +84,74 @@ var errTooLarge = fmt.Errorf("%w: the attachment holds more than %d bytes", exte
 var errNoStore = errors.New("systemmail: no object store is bound, so no attachment can be opened")
 
 // List answers the files of one readable mail and writes its export row.
-func (f Files) List(ctx context.Context, tx pgx.Tx, mail ids.UUID) ([]extension.MailAttachment, error) {
-	if err := ensureReadableMail(ctx, tx, mail); err != nil {
-		return nil, err
-	}
-	rows, err := tx.Query(ctx, listQuery, mail, extension.MaxReadPage)
-	if err != nil {
-		return nil, err
-	}
-	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (extension.MailAttachment, error) { return scanFile(row) })
-	if err != nil {
-		return nil, err
-	}
-	return out, f.logExport(ctx, tx, map[string]any{"kind": "extension_read", "row_count": len(out), "mail_id": mail.String()})
+func (f Files) List(ctx context.Context, mail ids.UUID) ([]extension.MailAttachment, error) {
+	var out []extension.MailAttachment
+	err := database.WithWorkspaceTx(ctx, f.Pool, func(tx pgx.Tx) error {
+		if err := ensureReadableMail(ctx, tx, mail); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, listQuery, mail, extension.MaxReadPage)
+		if err != nil {
+			return err
+		}
+		if out, err = pgx.CollectRows(rows, func(row pgx.CollectableRow) (extension.MailAttachment, error) { return scanFile(row) }); err != nil {
+			return err
+		}
+		return f.logExport(ctx, tx, map[string]any{"kind": "extension_read", "row_count": len(out), "mail_id": mail.String()})
+	})
+	return out, err
 }
 
-// Open admits one file under the cap and writes its export row. It answers the
-// key of the bytes, which Read fetches once the transaction has ended.
-func (f Files) Open(ctx context.Context, tx pgx.Tx, id ids.UUID) (extension.MailAttachment, string, error) {
+// Open reads one file with its bytes. The gate and the cap run before the
+// bytes are fetched, so a refusal costs no read. They run again after it, under
+// the unit's lock, because the file may have been withheld or its mail
+// restricted meanwhile. Only that second pass writes the export row, so a read
+// that fails uses no place under the cap.
+func (f Files) Open(ctx context.Context, id ids.UUID) (extension.MailAttachmentFile, error) {
 	if f.Blob == nil {
-		return extension.MailAttachment{}, "", errNoStore
+		return extension.MailAttachmentFile{}, errNoStore
 	}
+	var (
+		file extension.MailAttachment
+		key  string
+	)
+	err := database.WithWorkspaceTx(ctx, f.Pool, func(tx pgx.Tx) (err error) {
+		if err := f.underCap(ctx, tx); err != nil {
+			return err
+		}
+		file, key, err = f.admit(ctx, tx, id)
+		return err
+	})
+	if err != nil {
+		return extension.MailAttachmentFile{}, err
+	}
+	content, err := f.read(ctx, key)
+	if err != nil {
+		return extension.MailAttachmentFile{}, err
+	}
+	err = database.WithWorkspaceTx(ctx, f.Pool, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, capLock, f.Unit); err != nil {
+			return err
+		}
+		if _, again, err := f.admit(ctx, tx, id); err != nil || again != key {
+			return cmp.Or(err, apperrors.ErrNotFound)
+		}
+		if err := f.underCap(ctx, tx); err != nil {
+			return err
+		}
+		return f.logExport(ctx, tx, map[string]any{"kind": Opened, "row_count": 1, "attachment_id": file.ID, "mail_id": file.MailID})
+	})
+	if err != nil {
+		return extension.MailAttachmentFile{}, err
+	}
+	file.ContentType = extension.SniffContentType(content)
+	return extension.MailAttachmentFile{MailAttachment: file, Content: content}, nil
+}
+
+// admit reads one file and its key, under the seat's grants, the mail rule and
+// the size bound.
+func (f Files) admit(ctx context.Context, tx pgx.Tx, id ids.UUID) (extension.MailAttachment, string, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return extension.MailAttachment{}, "", err
-	}
-	if err := f.underCap(ctx, tx); err != nil {
 		return extension.MailAttachment{}, "", err
 	}
 	var key string
@@ -116,29 +169,27 @@ func (f Files) Open(ctx context.Context, tx pgx.Tx, id ids.UUID) (extension.Mail
 	if file.ByteSize > extension.MaxInboundFileBytes {
 		return extension.MailAttachment{}, "", errTooLarge
 	}
-	return file, key, f.logExport(ctx, tx, map[string]any{"kind": Opened, "row_count": 1, "attachment_id": file.ID, "mail_id": file.MailID})
+	return file, key, nil
 }
 
-// Read fetches an opened file's bytes and refuses more than
-// MaxInboundFileBytes, whatever its row recorded. The type is what the bytes
-// show.
-func (f Files) Read(ctx context.Context, file extension.MailAttachment, key string) (extension.MailAttachmentFile, error) {
+// read fetches a file's bytes and refuses more than MaxInboundFileBytes,
+// whatever its row recorded.
+func (f Files) read(ctx context.Context, key string) ([]byte, error) {
 	body, _, err := f.Blob.Get(ctx, key)
 	if err != nil {
-		return extension.MailAttachmentFile{}, err
+		return nil, err
 	}
 	content, err := io.ReadAll(io.LimitReader(body, extension.MaxInboundFileBytes+1))
 	if closeErr := body.Close(); err == nil {
 		err = closeErr
 	}
 	if err != nil {
-		return extension.MailAttachmentFile{}, err
+		return nil, err
 	}
 	if len(content) > extension.MaxInboundFileBytes {
-		return extension.MailAttachmentFile{}, errTooLarge
+		return nil, errTooLarge
 	}
-	file.ContentType = extension.SniffContentType(content)
-	return extension.MailAttachmentFile{MailAttachment: file, Content: content}, nil
+	return content, nil
 }
 
 // Published answers every way a file or its mail is hidden as
@@ -170,12 +221,8 @@ func ensureReadableMail(ctx context.Context, tx pgx.Tx, mail ids.UUID) error {
 	return err
 }
 
-// underCap refuses an open past the unit's daily number. The lock it takes is
-// held until the open's export row commits.
+// underCap refuses an open past the unit's daily number.
 func (f Files) underCap(ctx context.Context, tx pgx.Tx) error {
-	if _, err := tx.Exec(ctx, capLock, f.Unit); err != nil {
-		return err
-	}
 	var opened int
 	if err := tx.QueryRow(ctx, opensToday, Opened, f.Unit).Scan(&opened); err != nil {
 		return err

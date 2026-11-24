@@ -17,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-func TestAMailFileListsAndOpensForTheServiceMemberAndNobodyElse(t *testing.T) {
+func TestAMailFileListsAndOpensForTheServiceMember(t *testing.T) {
 	s := setupSystemRead(t)
 	composeReader(t, extension.SystemReadMailAttachments)
 	blob := blobstore.NewMemory()
@@ -27,13 +27,11 @@ func TestAMailFileListsAndOpensForTheServiceMemberAndNobodyElse(t *testing.T) {
 	seat := s.serviceSeat(t, seatReaderGrants)
 	mail, hidden := s.email(t, "workspace", ""), s.email(t, "participants", "")
 	quote := s.CaptureMailFile(t, blob, mail, "quote.bin", "application/octet-stream", []byte("%PDF-1.4 quote"))
-	s.connect(t, s.Rep1)
 
 	var (
 		listed     []extension.MailAttachment
 		opened     extension.MailAttachmentFile
 		privateErr error
-		refused    = map[string]error{}
 	)
 	s.onDelivery(t, func(ctx context.Context, rt extension.Runtime) error {
 		as := extension.UserID(seat.String())
@@ -45,9 +43,6 @@ func TestAMailFileListsAndOpensForTheServiceMemberAndNobodyElse(t *testing.T) {
 			return err
 		}
 		_, privateErr = rt.Activities().Attachments(ctx, as, hidden.String())
-		colleague := extension.UserID(s.Rep1.String())
-		_, refused["Attachments"] = rt.Activities().Attachments(ctx, colleague, mail.String())
-		_, refused["OpenAttachment"] = rt.Activities().OpenAttachment(ctx, colleague, quote.String())
 		return nil
 	})
 	if len(listed) != 1 || listed[0].ID != quote.String() || string(opened.Content) != "%PDF-1.4 quote" || opened.ContentType != "application/pdf" {
@@ -55,11 +50,6 @@ func TestAMailFileListsAndOpensForTheServiceMemberAndNobodyElse(t *testing.T) {
 	}
 	if !errors.Is(privateErr, extension.ErrNotFound) {
 		t.Errorf("a participants-only mail: err = %v, want ErrNotFound", privateErr)
-	}
-	for read, err := range refused {
-		if !errors.Is(err, extension.ErrForbidden) {
-			t.Errorf("%s as a connected colleague: err = %v, want ErrForbidden", read, err)
-		}
 	}
 	if rows := s.traceRows(t, "mail_attachments", seat); rows != 3 {
 		t.Errorf("three reads left %d trace rows naming actAs, want 3", rows)

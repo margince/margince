@@ -12,10 +12,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/compose/systemmail"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -68,12 +65,12 @@ func (a systemActivities) Attachments(ctx context.Context, actAs extension.UserI
 	if err != nil {
 		return nil, err
 	}
-	var out []extension.MailAttachment
-	err = seat.fileRead(seatCtx, "activity", mailID, func(tx pgx.Tx, files systemmail.Files, mail ids.UUID) (err error) {
-		out, err = files.List(seatCtx, tx, mail)
-		return err
-	})
-	return out, err
+	files, mail, err := seat.files("activity", mailID)
+	if err != nil {
+		return nil, err
+	}
+	out, err := files.List(seatCtx, mail)
+	return out, seat.fileFault(err)
 }
 
 func (a systemActivities) OpenAttachment(ctx context.Context, actAs extension.UserID, attachmentID string) (extension.MailAttachmentFile, error) {
@@ -81,46 +78,33 @@ func (a systemActivities) OpenAttachment(ctx context.Context, actAs extension.Us
 	if err != nil {
 		return extension.MailAttachmentFile{}, err
 	}
-	var (
-		files systemmail.Files
-		found extension.MailAttachment
-		key   string
-	)
-	err = seat.fileRead(seatCtx, "attachment", attachmentID, func(tx pgx.Tx, f systemmail.Files, id ids.UUID) (err error) {
-		files = f
-		found, key, err = f.Open(seatCtx, tx, id)
-		return err
-	})
+	files, id, err := seat.files("attachment", attachmentID)
 	if err != nil {
 		return extension.MailAttachmentFile{}, err
 	}
-	// Read after the transaction, so a slow object store holds no connection.
-	file, err := files.Read(seatCtx, found, key)
-	if err != nil {
-		return extension.MailAttachmentFile{}, seat.fileFault(err)
-	}
-	return file, nil
+	file, err := files.Open(seatCtx, id)
+	return file, seat.fileFault(err)
 }
 
-// fileRead traces one attachment read and runs it in a transaction of the seat.
-func (s systemSeat) fileRead(ctx context.Context, recordType, raw string, read func(pgx.Tx, systemmail.Files, ids.UUID) error) error {
+// files reads the id of one attachment read, writes its trace, and answers the
+// reader bound to the seat.
+func (s systemSeat) files(recordType, raw string) (systemmail.Files, ids.UUID, error) {
 	id, err := unitID(raw, recordType)
 	if err != nil {
-		return err
+		return systemmail.Files{}, ids.Nil, err
 	}
 	if err := s.trace(recordType, raw, nil); err != nil {
-		return err
+		return systemmail.Files{}, ids.Nil, err
 	}
-	files := systemmail.Files{Unit: s.rt.unit, ActAs: s.member, Blob: s.rt.deps.blob}
-	if err := database.WithWorkspaceTx(ctx, s.rt.deps.pool, func(tx pgx.Tx) error { return read(tx, files, id) }); err != nil {
-		return s.fileFault(err)
-	}
-	return nil
+	return systemmail.Files{Unit: s.rt.unit, ActAs: s.member, Blob: s.rt.deps.blob, Pool: s.rt.deps.pool}, id, nil
 }
 
 // fileFault passes a published refusal on, and answers any other fault as the
 // core's own failure.
 func (s systemSeat) fileFault(err error) error {
+	if err == nil {
+		return nil
+	}
 	if published := systemmail.Published(err); published != nil {
 		return published
 	}

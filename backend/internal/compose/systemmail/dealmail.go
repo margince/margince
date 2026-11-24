@@ -14,7 +14,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -91,16 +90,12 @@ func parseCursor(cursor string) (*position, error) {
 	return &position{at: when, id: parsed}, nil
 }
 
-// dealMailQuery reads one page of a deal's emails. Shared means the audience
-// every colleague may see, and a row held under a retention obligation is not
-// readable by anyone. A mail excluded from capture is never stored, so it is
-// absent without a clause of its own.
+// dealMailQuery reads one page of a deal's emails under workspaceMail. A mail
+// excluded from capture is never stored, so it is absent without a clause of its own.
 const dealMailQuery = `
 	SELECT a.id, a.direction, a.occurred_at, a.kind, a.origin, a.calendar_method, a.sender_is_machine
 	  FROM activity a
-	 WHERE a.kind = 'email'
-	   AND a.audience = 'workspace'
-	   AND %s
+	 WHERE %s
 	   AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.deal_id = $1)
 	   %s
 	 ORDER BY a.occurred_at DESC, a.id DESC
@@ -128,7 +123,7 @@ func ReadDeal(ctx context.Context, pool *pgxpool.Pool, deal ids.UUID, q Query) (
 			args = append(args, after.at, after.id)
 			extra += " AND (a.occurred_at, a.id) < ($3, $4)"
 		}
-		rows, err := tx.Query(ctx, fmt.Sprintf(dealMailQuery, auth.ActivityAvailableClause("a"), extra), args...)
+		rows, err := tx.Query(ctx, fmt.Sprintf(dealMailQuery, workspaceMail("a"), extra), args...)
 		if err != nil {
 			return err
 		}

@@ -1364,9 +1364,11 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   list was cut. A key that names no role adds nobody and is no error. The core logs which keys you asked for.
 - **`Mail` answers the emails of one deal.** It tells a unit if a mail is sent and if a reply is in. Each
   `MailSummary` holds the id, the direction, the time, what kind of sender wrote it (empty for a human) and the
-  deal id. It holds no subject, body, address or file. It leaves out mail kept private to its senders and
-  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It gives pages,
-  newest first, of at most `extension.MaxReadPage`.
+  deal id. It holds no subject, body, address or file.
+
+  It leaves out mail kept private to its senders and
+  receivers, archived mail unless you set `IncludeArchived`, and mail held back from reading. It also leaves out
+  mail under a restriction of processing (Art. 18). It gives pages, newest first, of at most `extension.MaxReadPage`.
 
   You name the member it answers for. A deal that member cannot open answers `ErrNotFound`.
 - **`SetAside` reads who put a contact aside.** A colleague can put a contact aside for up to 90 days, or for
@@ -1409,9 +1411,11 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
   `ErrNotFound` here too. So does a file that was archived or whose bytes were withheld. A list leaves such a file
   out. Only files sent with an email are read, never a file a user uploaded.
 
-  A file of more than `extension.MaxInboundFileBytes` bytes answers `ErrInvalid`. Each list and each open writes an
-  `export` row to the system log, which names your unit and `actAs`. A unit may open
-  `extension.MaxAttachmentOpensPerDay` (200) files in a workspace per UTC day. The next open answers
+  A file of more than `extension.MaxInboundFileBytes` bytes answers `ErrInvalid`. An open checks the file again
+  after it reads the bytes. A file withheld or archived in that time answers `ErrNotFound`.
+
+  Each list and each open writes an `export` row to the system log, which names your unit and `actAs`. An open that
+  fails writes no row and does not count. A unit may open `extension.MaxAttachmentOpensPerDay` (200) files in a workspace per UTC day. The next open answers
   `extension.ErrAttachmentCapReached` until the next UTC day starts. A list does not count.
 - **Name the seat: `actAs`.** `Companies`, `MailContent().Get`, the reads of mail files and `ByRole` take
   `actAs` right after `ctx`.

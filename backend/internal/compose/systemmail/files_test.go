@@ -23,10 +23,10 @@ func TestReadRefusesMoreBytesThanTheBoundWhateverTheRowSays(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if got, err := files.Read(ctx, extension.MailAttachment{}, "at the bound"); err != nil || len(got.Content) != extension.MaxInboundFileBytes {
-		t.Errorf("a file at the bound: %d bytes, %v; want all of it", len(got.Content), err)
+	if got, err := files.read(ctx, "at the bound"); err != nil || len(got) != extension.MaxInboundFileBytes {
+		t.Errorf("a file at the bound: %d bytes, %v; want all of it", len(got), err)
 	}
-	if _, err := files.Read(ctx, extension.MailAttachment{}, "past it"); !errors.Is(err, extension.ErrInvalid) {
+	if _, err := files.read(ctx, "past it"); !errors.Is(err, extension.ErrInvalid) {
 		t.Errorf("a file past the bound: err = %v, want ErrInvalid", err)
 	}
 }
