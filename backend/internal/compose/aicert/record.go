@@ -113,8 +113,11 @@ type Record struct {
 	// what is being certified and this is the useful number there. What was
 	// wrong was only that on agent_loop it sat beside a mechanical verdict with
 	// nothing saying which was which.
-	JudgeScoreP50 int   `json:"judge_score_p50"`
-	JudgeScoreMin int   `json:"judge_score_min"`
+	//
+	// Nil when no run was judged, as for a task whose scenarios are all
+	// judge-free: a zero there would read as a judge failing every run.
+	JudgeScoreP50 *int  `json:"judge_score_p50,omitempty"`
+	JudgeScoreMin *int  `json:"judge_score_min,omitempty"`
 	LatencyP50    int64 `json:"latency_p50"`
 	LatencyP95    int64 `json:"latency_p95"`
 	MeanTokens    int   `json:"mean_tokens"`
