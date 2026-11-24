@@ -12,9 +12,9 @@ import (
 )
 
 // travelWords name travel logistics in a meeting subject, in English, German
-// and Vietnamese. Each matches as a whole word or phrase, any case. A word that
-// also names business ("transfer", "train", "hotel", "Zug", "tàu", "đón") counts
-// only inside a travel phrase, so "Knowledge transfer" still asks for an outcome.
+// and Vietnamese. Each matches as a whole word or phrase, any case. Some words
+// also name business: "transfer", "train", "hotel", "Zug", "tàu", "đón". Those
+// count only inside a travel phrase, so "Knowledge transfer" still asks.
 var travelWords = []string{
 	"flight", "flights", "airport", "drop-off", "drop off", "dropoff",
 	"pickup", "pick-up", "pick up", "taxi", "train station", "train ride",
