@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { reportingMetricNames } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -153,6 +154,7 @@ function renderSdr(withTargets: boolean) {
     jsonResponse({
       metrics: sdrEvaluation.metrics.map((metric) => ({
         id: metric.id,
+        label: reportingMetricNames[metric.id],
         version: "1",
         unit: "count",
         supports_target: true,
