@@ -89,7 +89,7 @@ run_case 'every slice gets its own moved window' 0
 ran="$(sed -n 's/^slice //p' "$CLOCK_ACTIONS")"
 total="$(printf '%s\n' "$ran" | sed -n 's|^integration:[0-9]*/||p' | sort -n | tail -1)"
 for ((k = 1; k <= total; k++)); do want="$want"$'\n'"integration:$k/$total"; done
-printf '%s\n' "$want" | grep -q '^unit-'
+grep -q '^unit-' <<<"$want"
 (( total > 1 ))
 [[ "$(printf '%s\n' "$ran" | sort)" == "$(printf '%s\n' "$want" | sort)" ]] || { echo "slices that ran differ from the Makefile's test legs and every shard:" >&2; diff <(printf '%s\n' "$want" | sort) <(printf '%s\n' "$ran" | sort) >&2 || true; exit 1; }
 slices="$(printf '%s\n' "$ran" | wc -l | tr -d ' ')"

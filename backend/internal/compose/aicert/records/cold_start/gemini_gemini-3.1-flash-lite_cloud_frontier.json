@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.1-flash-lite",
   "env_class": "cloud_frontier",
-  "prompt_version": "p863a41d96beaab3dbbdd00a2a5402129",
+  "prompt_version": "p38e3dd9185a179890144afa98f522878",
   "corpus_version": "v1",
   "verdict": "supported_degraded",
   "runs": 57,
@@ -170,7 +170,7 @@
     {
       "scenario": "bare_answer_corrects_the_field_the_wizard_asked_for",
       "site": "company_message",
-      "stamp": "21a7b3150bd133afb9037d6d7dd88f84552692a072db001c5cdf94aace354bc4daeea8a4b1a962de278cedd83f24d3f5e96e9d7c79e686f77e22b197b4456556bd98691a19b9eb092a31ba621378cd2c97f5e7f5a88db5bf1432c39299178456",
+      "stamp": "21a7b3150bd133afb9037d6d7dd88f84552692a072db001c5cdf94aace354bc4daeea8a4b1a962de278cedd83f24d3f5e96e9d7c79e686f77e22b197b4456556567956dcb9eca2bfb4d046655bb252a69525f5bc4095bb7f379d8ef12d22ba02",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -216,7 +216,7 @@
     {
       "scenario": "an_administrator_agreeing_with_a_plain_question_changes_nothing",
       "site": "sitereadmessage",
-      "stamp": "2d4e23354f830a390563d3ff8266b81b5dbad74ffedb6225438cbb186c4f5dbf691d7e4f873d3e56cb92d298e5e135498be477b0a569058e473e3ed638133153526929fadf540ce257e8de2ecdcf211445ad749a239b70dc9df519c7c549b4bc",
+      "stamp": "2d4e23354f830a390563d3ff8266b81b5dbad74ffedb6225438cbb186c4f5dbf691d7e4f873d3e56cb92d298e5e135498be477b0a569058e473e3ed6381331530763a9e23e5c9ee871b2234f7702016387e20476f1628b99f9eb8aeb903aba9c",
       "verdict": "supported_degraded",
       "judge_band": "supported_degraded",
       "runs": 12,
@@ -248,7 +248,7 @@
     {
       "scenario": "dossier_correction_the_administrator_asked_for",
       "site": "sitereadmessage",
-      "stamp": "b257e329cc5af1bba62f88b3b9bd6403851c916b6174323af23209d51eefa1b7b480db2b8efd40fb454eddda3ea190fc1222989611aad6384874adc7c1ae0228272182062e2efc20dd1ae4b5c65a65807fde30bb5f9c0ebacde1e57eb879bef7",
+      "stamp": "b257e329cc5af1bba62f88b3b9bd6403851c916b6174323af23209d51eefa1b7b480db2b8efd40fb454eddda3ea190fc1222989611aad6384874adc7c1ae0228ebb8711598a58a889ba62b3c16b7b772fbf166c851a25f5337dbd9408bd423ae",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -271,7 +271,7 @@
     {
       "scenario": "an_administrator_agreeing_to_margince_s_offer_gets_exactly_that_change",
       "site": "sitereadmessage",
-      "stamp": "e4b7ea8a1ed642c5cacdcc92eb578acef0c9c43010a83009599f48549e7264203a3911b63755495a3c91dd55eb86f6c23b3c68cac3ad2bd69e0e5c21fbfda6c5ef284c11cf077e955ed6c3ff280568e86f33704ec039a2988c8e66bcfeefa3fa",
+      "stamp": "e4b7ea8a1ed642c5cacdcc92eb578acef0c9c43010a83009599f48549e7264203a3911b63755495a3c91dd55eb86f6c23b3c68cac3ad2bd69e0e5c21fbfda6c5fd7b9744e55a4500bf327d9dc019d935379cf5320ede6211bb93e09128ce8c4c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -294,7 +294,7 @@
     {
       "scenario": "an_administrator_answering_an_offer_with_another_value_corrects_it",
       "site": "sitereadmessage",
-      "stamp": "f5296b7a8eeb19eeb581a2794b5cc52d17b66d1d6e6e04fb79e3f1e1288642e0db45f7bf43c6a4c82dd0a031185e8ef09766239a0b862cb4bc367f28f336cd7cde7d596f07cc9bcaf5024404c27d72478c107165ac6290dbcb8f73af5f3d5a95",
+      "stamp": "f5296b7a8eeb19eeb581a2794b5cc52d17b66d1d6e6e04fb79e3f1e1288642e0db45f7bf43c6a4c82dd0a031185e8ef09766239a0b862cb4bc367f28f336cd7c4e9182e6c8a08003b9da6ee0996a07e7f35f6295c75b73bf653189556ec16a36",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
