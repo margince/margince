@@ -44004,7 +44004,7 @@ export interface components {
             readonly writable?: boolean;
             /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a note, task, call or meeting the caller logged by hand (under their own stamp or through an agent acting for them) that no provider import backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
             readonly archivable?: boolean;
-            /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
+            /** @description Whether this meeting still owes an answer about how it went, by the rule the Worklist's outcome lane asks: a meeting linked to a customer record the caller may see, with no `meeting_status` or `booked`, whose start has passed (a date-only meeting once its date is over in the installation's timezone) by the server's clock, and whose content the caller may read. A meeting whose subject names travel logistics (a flight, an airport, a pickup) asks only when it links a deal, lead or project the caller may see. Unlike the lane it has no look-back window, so an old booked meeting still asks. Every read that carries `writable` carries this. A client offers the outcome control when this and `writable` are both true. Absent means false. */
             readonly awaiting_outcome?: boolean;
             /** @description Whether a live calendar invitation holds this meeting. Then a write through this activity that sets `subject`, `body`, `occurred_at`, `occurred_precision` or a `meeting_status` other than `held` or `no_show` is refused with `calendar_managed`; that change goes through the invitation (`PATCH /scheduling/invitations/{id}`). Archiving or restoring the activity is refused with `calendar_managed` too, and the undo of its creation is refused. Every read that carries `writable` carries this. Absent means false. */
             readonly calendar_managed?: boolean;
@@ -53216,19 +53216,34 @@ export interface components {
             next_attempt_at?: string;
             count?: number;
             /** @enum {string} */
-            unit?: "runs" | "mailboxes" | "records" | "updates" | "items" | "threads";
+            unit?: "runs" | "mailboxes" | "records" | "updates" | "items" | "threads" | "messages";
             /** Format: date-time */
             window_start?: string;
             /** Format: date-time */
             window_end?: string;
+            footer_gap?: components["schemas"]["HealthFooterGap"];
             action: components["schemas"]["HealthAction"];
+        };
+        /** @description A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete. */
+        HealthFooterGap: {
+            /** Format: uuid */
+            legal_entity_id: string;
+            /** @description Empty for a default entity that states no name. */
+            legal_entity_name: string;
+            is_default: boolean;
+            /** @description The owed disclosure kinds with no text, then `entity_name` for a default entity with neither a display name nor a legal name. */
+            missing: ("controller_identity" | "privacy_contact" | "objection_route" | "advertiser_contact" | "entity_name")[];
+            /** @description Sends a user pressed that were held for this since the details last changed. */
+            held_by_user: number;
+            /** @description Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed. */
+            held_in_background: number;
         };
         HealthAction: {
             /**
-             * @description Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+             * @description Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.
              * @enum {string}
              */
-            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration" | "regional";
+            destination: "diagnostics" | "connections" | "models" | "search" | "updates" | "configuration" | "regional" | "legal_entities" | "company_profile" | "disclosures";
             available: boolean;
             reason?: string;
         };

@@ -23876,6 +23876,33 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.openModels": "Mở Mô hình",
   "health.openConnections": "Mở Kết nối",
   "health.openRegional": "Mở Khu vực và lịch",
+  "health.source.footer": "Thông tin công ty ở chân thư",
+  "health.code.footer_complete":
+    "Mọi chân thư đều có đủ thông tin công ty cần hiển thị",
+  "health.code.footer_incomplete": "Chân thư thiếu thông tin công ty",
+  "health.footerIncompleteFor": "{entity}: chân thư thiếu thông tin công ty",
+  "health.footerDefaultEntity": "Pháp nhân mặc định",
+  "health.effect.footer":
+    "Thư phải hiển thị các thông tin này sẽ bị giữ lại để xem xét. Tác giả thư vẫn có thể gửi kèm lý do. Thư gửi chạy nền, ví dụ lời nhắc cuộc họp, sẽ bị bỏ.",
+  "health.footerNext":
+    "Điền các thông tin còn thiếu. Cảnh báo sẽ biến mất khi đã đủ.",
+  "health.recovery.footer":
+    "Mọi thông tin công ty mà các gói quy định yêu cầu đều đã được điền.",
+  "health.footerMissing": "Thông tin còn thiếu",
+  "health.footerHeldByUser":
+    "Thư do thành viên gửi bị giữ lại từ lần thay đổi gần nhất",
+  "health.footerHeldInBackground":
+    "Thư chạy nền bị giữ lại hoặc bị bỏ từ lần thay đổi gần nhất",
+  "health.footerDetail.controller_identity": "Tên pháp lý và địa chỉ bưu chính",
+  "health.footerDetail.privacy_contact": "Liên hệ về quyền riêng tư",
+  "health.footerDetail.objection_route": "Cách từ chối",
+  "health.footerDetail.advertiser_contact": "Liên hệ của bên quảng cáo",
+  "health.footerDetail.entity_name": "Tên công ty",
+  "health.measure.messages_one": "{count} thư",
+  "health.measure.messages_other": "{count} thư",
+  "health.openLegalEntities": "Mở Pháp nhân",
+  "health.openCompanyProfile": "Mở Hồ sơ công ty",
+  "health.openDisclosures": "Mở Khu vực pháp lý",
   "health.unit.runs": "lần chạy",
   "health.history": "Lịch sử lỗi còn lưu",
   "health.historyWindow":
