@@ -21,3 +21,5 @@ github.com/margince/margince/backend/pkg/extension: Runtime.Objects: added # an 
 github.com/margince/margince/backend/pkg/extension: Runtime.Companies: added # a background job reads companies visible to the workspace; only the core implements Runtime, so no outside code breaks (#11449)
 github.com/margince/margince/backend/pkg/extension: Runtime.MailContent: added # a background job reads one mail's subject and body; only the core implements Runtime, so no outside code breaks (#11449)
 github.com/margince/margince/backend/pkg/extension: Directory.ByRole: added # a job finds members by role key; only the core implements Directory, so no outside code breaks (#11449)
+github.com/margince/margince/backend/pkg/extension: Activities.Attachments: added # a background job lists the files of one mail; only the core implements Activities, so no outside code breaks (#8294)
+github.com/margince/margince/backend/pkg/extension: Activities.OpenAttachment: added # a background job reads one mail file's bytes; only the core implements Activities, so no outside code breaks (#8294)
