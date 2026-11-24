@@ -2120,8 +2120,10 @@ public.booking_page.id uuid NOT NULL gen=- def=uuidv7()
 public.booking_page.revoked_at timestamp with time zone gen=- def=-
 public.booking_page.scheduling_policy jsonb gen=- def=-
 public.booking_page.slug text NOT NULL gen=- def=-
+public.booking_page.team_link boolean NOT NULL gen=- def=false
 public.booking_page.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.booking_page FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"slug": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"slug":20000}')
 public.booking_page.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.booking_page FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"slug": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"slug":20000}')
+public.booking_page_one_personal_per_host CREATE UNIQUE INDEX booking_page_one_personal_per_host ON public.booking_page USING btree (host_user_id) WHERE ((revoked_at IS NULL) AND (NOT team_link))
 public.booking_page_pkey CREATE UNIQUE INDEX booking_page_pkey ON public.booking_page USING btree (id)
 public.booking_page_slug_key CREATE UNIQUE INDEX booking_page_slug_key ON public.booking_page USING btree (slug)
 public.brief_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

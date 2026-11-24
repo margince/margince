@@ -22730,9 +22730,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Địa chỉ ngắn {url} của bạn cũng ngừng hoạt động. Bạn có thể chọn lại sau đó.",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
-  "scheduling.team.title": "Đồng nghiệp trên liên kết này",
-  "scheduling.team.foot":
-    "Khách chỉ thấy những khung giờ mà bạn và mọi đồng nghiệp ở đây đều rảnh, theo giờ làm việc riêng của từng đồng nghiệp. Mỗi lượt đặt lịch đều mời tất cả đồng nghiệp.",
+  "scheduling.teamLinks.title": "Liên kết nhóm",
+  "scheduling.teamLinks.foot":
+    "Liên kết nhóm chỉ hiện những khung giờ mà bạn và mọi đồng nghiệp trên đó đều rảnh, theo giờ làm việc riêng của từng đồng nghiệp, và mời tất cả đồng nghiệp vào mỗi cuộc họp. Liên kết dùng lịch và cài đặt của liên kết cá nhân, vốn luôn chỉ hiện thời gian rảnh của riêng bạn.",
+  "scheduling.teamLinks.create": "Liên kết nhóm mới với",
+  "scheduling.teamLinks.createHelp":
+    "Chọn một đồng nghiệp để tạo liên kết mới có địa chỉ riêng. Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
+  "scheduling.teamLinks.defaultTitle": "Gặp {names}",
+  "scheduling.teamLinks.ready": "Đang nhận đặt lịch",
+  "scheduling.teamLinks.waiting": "Đang chờ đồng nghiệp",
+  "scheduling.teamLinks.paused":
+    "Tạm dừng: lịch của bạn không nhận được cuộc họp",
+  "scheduling.teamLinks.delete": "Xóa liên kết",
+  "scheduling.teamLinks.deleteTitle": "Xóa “{title}”?",
+  "scheduling.teamLinks.deleteHelp":
+    "Địa chỉ của liên kết sẽ ngừng hoạt động. Các cuộc họp đã đặt qua liên kết vẫn giữ nguyên. Liên kết cá nhân của bạn không thay đổi.",
+  "scheduling.teamLinks.lastMember":
+    "Liên kết nhóm cần ít nhất một đồng nghiệp. Hãy xóa liên kết.",
   "scheduling.team.add": "Thêm đồng nghiệp",
   "scheduling.team.addHelp":
     "Chỉ hiện những đồng nghiệp đã kết nối lịch. Mỗi đồng nghiệp phải xác nhận trước khi liên kết nhận lượt đặt lịch.",
@@ -22754,7 +22768,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.team.confirm": "Xác nhận",
   "scheduling.team.leave": "Rời",
   "worklist.untitled.booking_health_team_not_ready":
-    "Trang đặt lịch của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
+    "Liên kết nhóm của bạn đang tạm dừng: một đồng nghiệp trên đó chưa xác nhận, đã rời đi hoặc không có lịch đọc được",
   "scheduling.personalLinksFoot":
     "Hẹn với một người cụ thể? Mở liên hệ của họ và chọn Đặt cuộc hẹn để gửi vài khung giờ hoặc một liên kết riêng chỉ họ dùng được.",
   "scheduling.liveNoInvitesTitle":

@@ -3,10 +3,11 @@
 
 package activities
 
-// A team booking link is a host's standing booking page that names colleagues
-// who attend every meeting booked through it. The members live in the page's
-// scheduling_policy, each with their own answer. A page takes bookings only
-// while every member has confirmed and Margince can read their calendar.
+// A team booking link is a booking page of its own beside its host's personal
+// page. It names colleagues who attend every meeting booked through it. The
+// members live in the page's scheduling_policy, each with their own answer. A
+// page takes bookings only while every member has confirmed and Margince can
+// read their calendar.
 
 import (
 	"context"
@@ -26,15 +27,17 @@ const (
 	fieldTeamAnswer  = "state"
 )
 
-// TeamRequestNotice tells a colleague that a host named them on a booking link,
-// in the same save. It takes the line back once they answer or leave the list.
+// TeamRequestNotice tells a colleague that a host named them on a team link, in
+// the same save. It takes the line back once they answer or leave the list.
+// Each link asks on its own, so a colleague on two links hears of both.
 type TeamRequestNotice interface {
 	TeamRequestTx(ctx context.Context, tx pgx.Tx, request TeamRequest) error
-	TeamRequestSettledTx(ctx context.Context, tx pgx.Tx, host, member ids.UserID) error
+	TeamRequestSettledTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member ids.UserID) error
 }
 
-// TeamRequest is a host's request that a colleague join their booking link.
+// TeamRequest is a host's request that a colleague join one of their team links.
 type TeamRequest struct {
+	Page            ids.UUID
 	Host, Member    ids.UserID
 	HostName, Title string
 }
@@ -192,15 +195,15 @@ func (s *Store) memberName(ctx context.Context, member ids.UserID) (string, erro
 	return name, err
 }
 
-// admitTeam refuses a member list the owner may not save. Only a member new to
-// the list is checked for a readable calendar: one already on it keeps its
-// place and shows its own state.
+// admitTeam refuses a member list the owner may not save on a team link. Only a
+// member new to the list is checked for a readable calendar: one already on it
+// keeps its place and shows its own state.
 func (s *Store) admitTeam(ctx context.Context, host ids.UserID, stored, next crmcontracts.SchedulingProfile) error {
-	if next.TeamMembers == nil {
-		return nil
+	if len(teamMembers(next)) == 0 {
+		return &SchedulingArgumentError{Field: fieldTeamMembers, Code: codeRequired, Message: "Name at least one colleague on a team link"}
 	}
 	if len(*next.TeamMembers) > maxTeamMembers {
-		return &SchedulingArgumentError{Field: fieldTeamMembers, Code: faultTooMany, Max: maxTeamMembers, Message: "Name at most five colleagues on one booking link"}
+		return &SchedulingArgumentError{Field: fieldTeamMembers, Code: faultTooMany, Max: maxTeamMembers, Message: "Name at most five colleagues on one team link"}
 	}
 	seen := map[ids.UUID]bool{}
 	for _, m := range *next.TeamMembers {
@@ -247,7 +250,7 @@ func mergeTeam(before *storedSchedulingProfile, next *[]crmcontracts.SchedulingT
 
 // tellTeamChanges asks each colleague new to the list to confirm, and settles
 // the request of each one taken off it. A member kept on the list hears nothing.
-func (s *Store) tellTeamChanges(ctx context.Context, tx pgx.Tx, host ids.UserID, before *storedSchedulingProfile, after crmcontracts.SchedulingProfile) error {
+func (s *Store) tellTeamChanges(ctx context.Context, tx pgx.Tx, host ids.UserID, page ids.UUID, before *storedSchedulingProfile, after crmcontracts.SchedulingProfile) error {
 	if s.teamRequests == nil {
 		return nil
 	}
@@ -258,7 +261,7 @@ func (s *Store) tellTeamChanges(ctx context.Context, tx pgx.Tx, host ids.UserID,
 	named := teamMembers(after)
 	for _, m := range was {
 		if !slices.ContainsFunc(named, sameMember(m)) {
-			if err := s.teamRequests.TeamRequestSettledTx(ctx, tx, host, memberUser(m)); err != nil {
+			if err := s.teamRequests.TeamRequestSettledTx(ctx, tx, page, memberUser(m)); err != nil {
 				return err
 			}
 		}
@@ -275,7 +278,7 @@ func (s *Store) tellTeamChanges(ctx context.Context, tx pgx.Tx, host ids.UserID,
 			}
 			hostName = name
 		}
-		request := TeamRequest{Host: host, Member: memberUser(m), HostName: hostName, Title: after.Title}
+		request := TeamRequest{Page: page, Host: host, Member: memberUser(m), HostName: hostName, Title: after.Title}
 		if err := s.teamRequests.TeamRequestTx(ctx, tx, request); err != nil {
 			return err
 		}

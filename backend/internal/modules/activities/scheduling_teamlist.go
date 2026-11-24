@@ -26,10 +26,11 @@ func (s *Store) SchedulingTeamCandidates(ctx context.Context) ([]crmcontracts.Sc
 	var colleagues []ids.UserID
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		args := schedulingArgs{}
-		// Only a colleague whose live booking page names a calendar provider can
-		// be read, so the provider check below runs for those alone.
+		// Only a colleague whose personal page names a calendar provider can be
+		// read, so the provider check below runs for those alone.
 		rows, err := tx.Query(ctx, `SELECT u.id FROM app_user u WHERE u.id<>`+args.add(me)+` AND `+workforce.LiveHumanSQL("u")+`
- AND EXISTS (SELECT 1 FROM booking_page p WHERE p.host_user_id=u.id AND p.revoked_at IS NULL AND coalesce(p.scheduling_policy->>'provider','')<>'')
+ AND EXISTS (SELECT 1 FROM booking_page p WHERE p.host_user_id=u.id AND p.revoked_at IS NULL AND NOT p.team_link
+   AND coalesce(p.scheduling_policy->>'provider','')<>'')
  ORDER BY u.display_name, u.id`, args...)
 		if err != nil {
 			return err
@@ -53,32 +54,32 @@ func (s *Store) SchedulingTeamCandidates(ctx context.Context) ([]crmcontracts.Sc
 	return out, nil
 }
 
-// SchedulingTeamRequests are the live booking links that name the acting
-// colleague and that they have not left.
+// SchedulingTeamRequests are the live team links that name the acting
+// colleague and that they have not left, one row per link.
 func (s *Store) SchedulingTeamRequests(ctx context.Context) ([]crmcontracts.SchedulingTeamRequest, error) {
 	me, err := schedulingHost(ctx)
 	if err != nil {
 		return nil, err
 	}
-	var hosts []ids.UserID
+	var pages []BookingPage
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		args := schedulingArgs{}
-		rows, err := tx.Query(ctx, `SELECT p.host_user_id FROM booking_page p JOIN app_user u ON u.id=p.host_user_id
+		rows, err := tx.Query(ctx, `SELECT p.host_user_id, p.id, p.team_link FROM booking_page p JOIN app_user u ON u.id=p.host_user_id
  WHERE p.revoked_at IS NULL AND `+workforce.LiveMemberSQL("u")+`
  AND p.scheduling_policy->'team_members' @> jsonb_build_array(jsonb_build_object('user_id', `+args.add(me.String())+`::text))
- ORDER BY u.display_name, u.id`, args...)
+ ORDER BY u.display_name, u.id, p.created_at, p.id`, args...)
 		if err != nil {
 			return err
 		}
-		hosts, err = pgx.CollectRows(rows, pgx.RowTo[ids.UserID])
+		pages, err = pgx.CollectRows(rows, pgx.RowToStructByPos[BookingPage])
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
 	out := []crmcontracts.SchedulingTeamRequest{}
-	for _, host := range hosts {
-		profile, err := s.hostSchedulingProfile(ctx, host)
+	for _, page := range pages {
+		profile, err := s.bookingPageProfile(ctx, page)
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +89,7 @@ func (s *Store) SchedulingTeamRequests(ctx context.Context) ([]crmcontracts.Sche
 				continue
 			}
 			request := crmcontracts.SchedulingTeamRequest{
-				HostUserId: openapi_types.UUID(host.UUID), Title: profile.Title,
+				PageId: openapi_types.UUID(page.ID), HostUserId: openapi_types.UUID(page.HostUserID.UUID), Title: profile.Title,
 				State: crmcontracts.SchedulingTeamRequestState(state),
 			}
 			if profile.HostName != nil {
@@ -120,14 +121,13 @@ func (h Handlers) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Requ
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// AnswerSchedulingTeamRequest implements PUT /scheduling/team-requests/{host_user_id}.
-func (h Handlers) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserID openapi_types.UUID) {
+// AnswerSchedulingTeamRequest implements PUT /scheduling/team-requests/{page_id}.
+func (h Handlers) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, pageID openapi_types.UUID) {
 	var req crmcontracts.SchedulingTeamAnswer
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	host := ids.From[ids.UserKind](ids.UUID(hostUserID))
-	if err := h.store.AnswerSchedulingTeamRequest(r.Context(), host, req.State); err != nil {
+	if err := h.store.AnswerSchedulingTeamRequest(r.Context(), ids.UUID(pageID), req.State); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}

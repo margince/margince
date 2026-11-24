@@ -23364,9 +23364,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.replaceAliasHelp":
     "Deine Kurzadresse {url} funktioniert dann auch nicht mehr. Du kannst sie danach wieder wählen.",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
-  "scheduling.team.title": "Teammitglieder auf diesem Link",
-  "scheduling.team.foot":
-    "Gäste sehen nur Zeiten, in denen du und alle Teammitglieder hier frei sind, jeweils in deren eigenen Arbeitszeiten. Jede Buchung lädt alle Teammitglieder ein.",
+  "scheduling.teamLinks.title": "Team-Links",
+  "scheduling.teamLinks.foot":
+    "Ein Team-Link bietet nur Zeiten, in denen du und alle Teammitglieder darauf frei sind, jeweils in deren eigenen Arbeitszeiten, und lädt alle zu jedem Termin ein. Er nutzt Kalender und Einstellungen deines persönlichen Links, der immer nur deine eigenen freien Zeiten anbietet.",
+  "scheduling.teamLinks.create": "Neuer Team-Link mit",
+  "scheduling.teamLinks.createHelp":
+    "Wähle ein Teammitglied, um einen neuen Link mit eigener Adresse anzulegen. Angeboten werden nur Mitglieder mit verbundenem Kalender. Jedes Teammitglied bestätigt, bevor der Link Buchungen annimmt.",
+  "scheduling.teamLinks.defaultTitle": "Treffen mit {names}",
+  "scheduling.teamLinks.ready": "Nimmt Buchungen an",
+  "scheduling.teamLinks.waiting": "Wartet auf Teammitglieder",
+  "scheduling.teamLinks.paused":
+    "Pausiert: Dein Kalender kann keine Termine aufnehmen",
+  "scheduling.teamLinks.delete": "Link löschen",
+  "scheduling.teamLinks.deleteTitle": "„{title}“ löschen?",
+  "scheduling.teamLinks.deleteHelp":
+    "Die Adresse des Links funktioniert dann nicht mehr. Bereits gebuchte Termine bleiben. Dein persönlicher Link ändert sich nicht.",
+  "scheduling.teamLinks.lastMember":
+    "Ein Team-Link braucht mindestens ein Teammitglied. Lösche stattdessen den Link.",
   "scheduling.team.add": "Teammitglied hinzufügen",
   "scheduling.team.addHelp":
     "Angeboten werden nur Mitglieder mit verbundenem Kalender. Jedes Teammitglied bestätigt, bevor der Link Buchungen annimmt.",
@@ -23390,7 +23404,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.team.confirm": "Bestätigen",
   "scheduling.team.leave": "Verlassen",
   "worklist.untitled.booking_health_team_not_ready":
-    "Deine Buchungsseite ist pausiert: Ein Teammitglied hat nicht bestätigt, hat den Link verlassen oder hat keinen lesbaren Kalender",
+    "Dein Team-Link ist pausiert: Ein Teammitglied hat nicht bestätigt, hat den Link verlassen oder hat keinen lesbaren Kalender",
   "scheduling.personalLinksFoot":
     "Termin mit einer bestimmten Person? Öffne ihren Kontakt und wähle Termin buchen, um einige Zeiten oder einen persönlichen Link zu senden, den nur sie nutzen kann.",
   "scheduling.liveNoInvitesTitle":

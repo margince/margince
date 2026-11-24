@@ -22,8 +22,8 @@ type teamAudit struct {
 }
 
 // AnswerSchedulingTeamRequest records the acting colleague's answer on the
-// host's page that names them. Confirming needs a calendar Margince can read.
-func (s *Store) AnswerSchedulingTeamRequest(ctx context.Context, host ids.UserID, answer crmcontracts.SchedulingTeamAnswerState) error {
+// team link that names them. Confirming needs a calendar Margince can read.
+func (s *Store) AnswerSchedulingTeamRequest(ctx context.Context, page ids.UUID, answer crmcontracts.SchedulingTeamAnswerState) error {
 	me, err := schedulingHost(ctx)
 	if err != nil {
 		return err
@@ -39,25 +39,42 @@ func (s *Store) AnswerSchedulingTeamRequest(ctx context.Context, host ids.UserID
 		}
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
-			return err
-		}
-		var page ids.UUID
-		var stored *storedSchedulingProfile
-		args := schedulingArgs{}
-		err := tx.QueryRow(ctx, `SELECT id, scheduling_policy FROM booking_page WHERE host_user_id=`+args.add(host)+
-			` AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, args...).Scan(&page, &stored)
-		if errors.Is(err, pgx.ErrNoRows) || (err == nil && stored == nil) {
-			return apperrors.ErrNotFound
-		}
+		stored, err := lockLivePageTx(ctx, tx, page)
 		if err != nil {
 			return err
+		}
+		if stored == nil {
+			return apperrors.ErrNotFound
 		}
 		if err := writeMemberStateTx(ctx, tx, page, stored, me, crmcontracts.SchedulingTeamMemberState(answer)); err != nil || s.teamRequests == nil {
 			return err
 		}
-		return s.teamRequests.TeamRequestSettledTx(ctx, tx, host, me)
+		return s.teamRequests.TeamRequestSettledTx(ctx, tx, page, me)
 	})
+}
+
+// lockLivePageTx takes a live page's host lock, then the page row, and answers
+// its policy. The host lock comes first on every path that takes both.
+func lockLivePageTx(ctx context.Context, tx pgx.Tx, page ids.UUID) (*storedSchedulingProfile, error) {
+	var host ids.UserID
+	args := schedulingArgs{}
+	err := tx.QueryRow(ctx, `SELECT host_user_id FROM booking_page WHERE id=`+args.add(page)+` AND revoked_at IS NULL`, args...).Scan(&host)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if err := storekit.LockWriteIdentity(ctx, tx, "booking_page", host.String()); err != nil {
+		return nil, err
+	}
+	var stored *storedSchedulingProfile
+	args = schedulingArgs{}
+	err = tx.QueryRow(ctx, `SELECT scheduling_policy FROM booking_page WHERE `+livePageSQL(&args, host, page)+` FOR UPDATE`, args...).Scan(&stored)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, apperrors.ErrNotFound
+	}
+	return stored, err
 }
 
 // RetireTeamMemberTx marks a departing colleague unavailable on every live

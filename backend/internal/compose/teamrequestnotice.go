@@ -18,12 +18,13 @@ import (
 )
 
 // teamRequestNotice is the line, and the mail an approval would send, that a
-// colleague named on a host's booking link gets. One request per host and
-// member: a member taken off and named again gets the same line back unread.
+// colleague named on a host's team link gets. There is one request per team
+// link and member. A member taken off and named again gets the same line back
+// unread. A member named on two team links gets a line for each.
 type teamRequestNotice struct{}
 
-func teamRequestKey(host, member ids.UserID) string {
-	return notices.KindMeetingTeamRequest + ":" + host.String() + ":" + member.String()
+func teamRequestKey(page ids.UUID, member ids.UserID) string {
+	return notices.KindMeetingTeamRequest + ":" + page.String() + ":" + member.String()
 }
 
 func (teamRequestNotice) TeamRequestTx(ctx context.Context, tx pgx.Tx, request activities.TeamRequest) error {
@@ -41,12 +42,12 @@ func (teamRequestNotice) TeamRequestTx(ctx context.Context, tx pgx.Tx, request a
 		Recipient: request.Member, Kind: notices.KindMeetingTeamRequest,
 		Subject: systemtext.Canonical(subject, textlang.English), Body: systemtext.Canonical(body, textlang.English),
 		SystemText: &systemtext.Message{Version: 1, Subject: subject, Body: body},
-		DedupeKey:  teamRequestKey(request.Host, request.Member),
+		DedupeKey:  teamRequestKey(request.Page, request.Member),
 	}
 	return recordApprovalNotice(ctx, tx, notices.NewStore(nil).HandOverTx, mail, wsID, line)
 }
 
-func (teamRequestNotice) TeamRequestSettledTx(ctx context.Context, tx pgx.Tx, host, member ids.UserID) error {
-	_, err := notices.NewStore(nil).Retract(ctx, tx, teamRequestKey(host, member))
+func (teamRequestNotice) TeamRequestSettledTx(ctx context.Context, tx pgx.Tx, page ids.UUID, member ids.UserID) error {
+	_, err := notices.NewStore(nil).Retract(ctx, tx, teamRequestKey(page, member))
 	return err
 }

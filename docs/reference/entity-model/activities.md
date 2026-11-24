@@ -1084,7 +1084,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## booking_page
 
-7 columns · primary key `(id)` · referenced by 1 foreign key
+8 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1094,6 +1094,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `revoked_at` | `timestamp with time zone` |  |  |
 | `scheduling_policy` | `jsonb` |  |  |
 | `slug` | `text` | yes |  |
+| `team_link` | `boolean`, default `false` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -1108,6 +1109,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
+- `booking_page_one_personal_per_host`: `unique, btree (host_user_id) WHERE ((revoked_at IS NULL) AND (NOT team_link))`
 - `booking_page_pkey`: `unique, btree (id)`
 - `booking_page_slug_key`: `unique, btree (slug)`
 - `idx_booking_page_host_user`: `btree (host_user_id)`
