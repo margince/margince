@@ -127,6 +127,10 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 	"update_web_form": func(p *recordPool) map[string]any {
 		return versioned(p, "versioned_web_form", map[string]any{"name": uniqueName()})
 	},
+	// A server form, because an agent may not give a form the websites a browser form needs.
+	"create_web_form": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"name": uniqueName(), "sender": "server"}}
+	},
 	"put_product_translation": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("product"), "language": "de", "request_body": map[string]any{"name": "Rollen-Sweep"}}
 	},

@@ -1,0 +1,15 @@
+{
+  "tool": "change_settings",
+  "action": "create_web_form",
+  "verb": "create_web_form",
+  "allowed_for": [
+    "admin",
+    "ops"
+  ],
+  "refused_for": [
+    "management",
+    "manager",
+    "read_only",
+    "rep"
+  ]
+}

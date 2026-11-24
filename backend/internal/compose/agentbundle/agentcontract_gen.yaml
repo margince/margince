@@ -12960,6 +12960,42 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: List the website forms that land leads in this installation.
+    post:
+      tags: [WebForms]
+      operationId: createWebForm
+      security: [{bearerAuth: []}]
+      summary: Create a website form; a human sees its minted signing secret once.
+      description: |-
+        Mints the form's public key, the last segment of its intake address
+        `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
+        `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. Only a
+        human gets that secret: an agent's answer leaves `signing_secret` out, so no secret
+        enters a model transcript. Its user then shows one with Make a new secret on the form in
+        Settings > Website forms (`POST /v1/web-forms/{id}/rotate-secret`). An agent that sends
+        `sender_secret`, websites, consent or a privacy notice is refused with `403`, as on an
+        update: those stay with its user. A
+        `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+        later update; until then it refuses every post. Every signed
+        sender needs a secret store on this installation; without one it answers 422 on `sender`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateWebFormRequest'}
+      responses:
+        '201':
+          description: The created form, plus the signing secret once whenever this installation minted it.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebFormCreated'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /web-forms/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -27902,6 +27938,14 @@ components:
             state: {type: string, enum: [throttled, blocked, paused_all]}
             since: {type: [string, 'null'], format: date-time}
             until: {type: [string, 'null'], format: date-time}
+    WebFormCreated:
+      allOf:
+        - $ref: '#/components/schemas/WebForm'
+        - type: object
+          properties:
+            signing_secret:
+              type: string
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent.
     WebFormListResponse:
       type: object
       required: [data, secrets_available]
@@ -27910,6 +27954,32 @@ components:
           type: array
           items: {$ref: '#/components/schemas/WebForm'}
         secrets_available: {type: boolean, description: 'Whether this installation can store a secret, which every sender but `browser` needs.'}
+    CreateWebFormRequest:
+      type: object
+      required: [name, sender]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        sender: {$ref: '#/components/schemas/WebFormSender'}
+        sender_secret: {type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.'}
+        allowed_origins:
+          type: array
+          maxItems: 20
+          items: {type: string, maxLength: 300}
+          description: Required, and only allowed, for a `browser` form.
+        lead_origin: {type: [string, 'null']}
+        owner_id: {type: [string, 'null'], format: uuid}
+        product_id: {type: [string, 'null'], format: uuid, description: 'The product every lead this form creates is interested in. Omit it or send null to capture leads with no product.'}
+        field_map:
+          type: object
+          maxProperties: 40
+          additionalProperties: {type: string}
+        consent_required: {type: boolean, default: false}
+        consent_policy_version: {type: [string, 'null'], maxLength: 200}
+        consent_wording: {type: [string, 'null'], maxLength: 2000}
+        privacy_notice: {type: [string, 'null'], maxLength: 500}
+        privacy_notice_url: {type: [string, 'null'], format: uri, pattern: '^[Hh][Tt][Tt][Pp][Ss]://[^/?#:@][^/?#@]*([/?#]|$)', maxLength: 2000}
+        redirect_url: {type: [string, 'null'], maxLength: 2000}
+        success_message: {type: [string, 'null'], maxLength: 500}
     UpdateWebFormRequest:
       type: object
       properties:

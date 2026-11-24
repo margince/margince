@@ -73166,7 +73166,7 @@ type WebFormCreated struct {
 	// and `tally` one this installation minted when none was.
 	Sender WebFormSender `json:"sender"`
 
-	// SigningSecret The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
+	// SigningSecret The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent.
 	SigningSecret  *string             `json:"signing_secret,omitempty"`
 	State          WebFormCreatedState `json:"state"`
 	SuccessMessage *string             `json:"success_message,omitempty"`
@@ -104164,7 +104164,7 @@ type ServerInterface interface {
 	// List the website forms that land leads in this installation.
 	// (GET /web-forms)
 	ListWebForms(w http.ResponseWriter, r *http.Request, params ListWebFormsParams)
-	// Create a website form (returns a minted signing secret once).
+	// Create a website form; a human sees its minted signing secret once.
 	// (POST /web-forms)
 	CreateWebForm(w http.ResponseWriter, r *http.Request)
 	// Archive a website form; its address stops taking submissions.
@@ -110845,7 +110845,7 @@ func (_ Unimplemented) ListWebForms(w http.ResponseWriter, r *http.Request, para
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create a website form (returns a minted signing secret once).
+// Create a website form; a human sees its minted signing secret once.
 // (POST /web-forms)
 func (_ Unimplemented) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -159469,6 +159469,8 @@ func (siw *ServerInterfaceWrapper) ListWebForms(w http.ResponseWriter, r *http.R
 func (siw *ServerInterfaceWrapper) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

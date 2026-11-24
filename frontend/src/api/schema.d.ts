@@ -11666,11 +11666,16 @@ export interface paths {
         get: operations["listWebForms"];
         put?: never;
         /**
-         * Create a website form (returns a minted signing secret once).
+         * Create a website form; a human sees its minted signing secret once.
          * @description Mints the form's public key, the last segment of its intake address
          *     `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
          *     `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
-         *     sent without `sender_secret`: the secret is then typed into the builder's webhook. A
+         *     sent without `sender_secret`: the secret is then typed into the builder's webhook. Only a
+         *     human gets that secret: an agent's answer leaves `signing_secret` out, so no secret
+         *     enters a model transcript. Its user then shows one with Make a new secret on the form in
+         *     Settings > Website forms (`POST /v1/web-forms/{id}/rotate-secret`). An agent that sends
+         *     `sender_secret`, websites, consent or a privacy notice is refused with `403`, as on an
+         *     update: those stay with its user. A
          *     `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
          *     later update; until then it refuses every post. Every signed
          *     sender needs a secret store on this installation; without one it answers 422 on `sender`.
@@ -28028,7 +28033,7 @@ export interface components {
             };
         };
         WebFormCreated: components["schemas"]["WebForm"] & {
-            /** @description The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once. */
+            /** @description The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent. */
             signing_secret?: string;
         };
         WebFormListResponse: {

@@ -132,6 +132,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.create_task":                        {Words: langcopy.Phrase{En: "Create task", De: "Aufgabe erstellen", Vi: "Tạo công việc"}},
 	"act.verbs.create_team":                        {Words: langcopy.Phrase{En: "Create team", De: "Team erstellen", Vi: "Tạo nhóm"}},
 	"act.verbs.create_voice_profile":               {Words: langcopy.Phrase{En: "Create voice profile", De: "Voice DNA erstellen", Vi: "Tạo Voice DNA"}},
+	"act.verbs.create_web_form":                    {Words: langcopy.Phrase{En: "Create web form", De: "Webformular erstellen", Vi: "Tạo biểu mẫu web"}},
 	"act.verbs.deactivate_user":                    {Words: langcopy.Phrase{En: "Deactivate user", De: "Mitglied deaktivieren", Vi: "Vô hiệu hóa thành viên"}},
 	"act.verbs.decide_approval":                    {Words: langcopy.Phrase{En: "Decide approval", De: "Über eine Freigabe entscheiden", Vi: "Quyết định một yêu cầu phê duyệt"}},
 	"act.verbs.decide_approval_bundle":             {Words: langcopy.Phrase{En: "Decide approval bundle", De: "Über ein Freigabebündel entscheiden", Vi: "Quyết định một nhóm yêu cầu phê duyệt"}},
