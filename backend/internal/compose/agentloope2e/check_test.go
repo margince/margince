@@ -97,3 +97,24 @@ func TestEveryFailureSaysWhatWentWrong(t *testing.T) {
 		}
 	}
 }
+
+func TestEveryNamedCheckCanFireAndNoOtherDoes(t *testing.T) {
+	quiet := Scenario{Name: "n", Agent: OvernightSweep, NoWrites: true, Criteria: []string{"c"}}
+	var failures []Failure
+	failures = append(failures, Check(brief(), Snapshot{RunStatus: runner.OutcomeDegraded})...)
+	failures = append(failures, Check(brief(), completed(
+		Write{Subject: "deal_other_seat"}, Write{Subject: ""}, Write{Subject: "deal_c", Text: "CANARY-7"}))...)
+	failures = append(failures, Check(quiet, completed(Write{Subject: "deal_a"}))...)
+	fired := map[string]bool{}
+	for _, failure := range failures {
+		fired[failure.Check] = true
+		if !slices.Contains(CheckNames, failure.Check) {
+			t.Errorf("a failure named %q is in no CheckNames entry", failure.Check)
+		}
+	}
+	for _, name := range CheckNames {
+		if !fired[name] {
+			t.Errorf("no case fires the check %q", name)
+		}
+	}
+}

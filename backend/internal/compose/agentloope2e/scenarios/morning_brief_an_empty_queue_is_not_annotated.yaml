@@ -1,0 +1,13 @@
+name: morning_brief_an_empty_queue_is_not_annotated
+agent: morning_brief
+no_writes: true
+criteria:
+  - Did the run finish without writing a brief for a queue that has no items?
+seed:
+  deals:
+    - name: chiller_maintenance_contract
+      other_seat: true
+      activities:
+        - days_ago: 6
+          subject: Renewal call
+          body: "Renewal call went well; next check-in in October."

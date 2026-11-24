@@ -21,7 +21,8 @@ func plant(t *testing.T, files map[string]string) string {
 	return dir
 }
 
-const goodScenario = "name: annotates\nagent: morning_brief\nworklist: [deal_a]\ncriteria: [Names the evidence.]\n"
+const goodScenario = "name: annotates\nagent: morning_brief\nworklist: [deal_a]\ncriteria: [Names the evidence.]\n" +
+	"seed:\n  deals:\n    - name: deal_a\n      activities:\n        - {days_ago: 1, subject: Hello, body: Body}\n"
 
 func TestScenariosLoadInNameOrder(t *testing.T) {
 	dir := plant(t, map[string]string{

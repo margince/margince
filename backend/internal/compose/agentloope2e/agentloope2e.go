@@ -53,6 +53,8 @@ type Scenario struct {
 	// Criteria are the yes/no questions the judge answers of what the agent
 	// wrote, in the form the MCP end-to-end lane's judge takes.
 	Criteria []string `yaml:"criteria"`
+	// Seed is the workspace the run starts from.
+	Seed Seed `yaml:"seed"`
 }
 
 // LoadScenarios reads every *.yaml scenario under dir, in name order. It refuses
@@ -125,7 +127,7 @@ func (s Scenario) validate() error {
 	case len(s.Criteria) == 0 || slices.Contains(s.Criteria, ""):
 		return errors.New("the judge needs at least one criterion, and none may be empty")
 	}
-	return nil
+	return s.validateSeed()
 }
 
 func repeats(subjects []string) bool {
