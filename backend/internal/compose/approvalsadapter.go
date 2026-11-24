@@ -111,12 +111,16 @@ func (a approvalsAdapter) RedeemRecords(ctx context.Context, approvalID ids.Appr
 
 // The registry asks for this by type assertion, so the compiler holds the
 // adapter to the exact signature.
-var _ agents.TargetPinner = approvalsAdapter{}
+var _ agents.RecordPinner = approvalsAdapter{}
 
-// PinTarget answers the version a staging would pin, for a call confirmed in the
+// PinRecords answers the pins a staging would take, for a call confirmed in the
 // conversation instead of staged.
-func (a approvalsAdapter) PinTarget(ctx context.Context, kind, targetType string, targetID ids.UUID) (int64, bool, error) {
-	return a.svc.PinTarget(ctx, kind, targetType, targetID)
+func (a approvalsAdapter) PinRecords(ctx context.Context, in agents.StageRequest) (auth.ReleasedRecordPins, error) {
+	return a.svc.PinRecords(ctx, approvals.StageInput{
+		Kind: in.Tool, ProposedChange: in.ProposedChange, DiffHash: in.DiffHash,
+		TargetType: in.TargetType, TargetID: in.TargetID,
+		CoTargetType: in.CoTargetType, CoTargetID: in.CoTargetID,
+	})
 }
 
 // State answers a polling MCP task whether a human has decided yet. The

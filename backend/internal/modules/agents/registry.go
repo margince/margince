@@ -364,9 +364,6 @@ func (r *Registry) handle(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, re
 	work, committed := database.WatchCommits(ctx)
 	sealed, records, err := r.runAndSeal(work, t, spec, res.Args)
 	r.settleRun(ctx, spec, res, attempt, sealed, records, err, committed)
-	if err != nil && !committed() {
-		r.releaseUnusedConfirmCode(ctx)
-	}
 	return sealed, records, err
 }
 

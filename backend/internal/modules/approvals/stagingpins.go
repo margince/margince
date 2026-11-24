@@ -17,12 +17,14 @@ package approvals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // resolveTargetVersion reads the staged target's CURRENT version inside the
@@ -117,13 +119,31 @@ func (s *Service) resolveStagingPins(ctx context.Context, tx pgx.Tx, in StageInp
 	return pins, err
 }
 
-// PinTarget answers the version a staging of this call would pin, read now with
-// the same waivers. A confirmation binds it without staging a row
-// (agents/confirmcode.go). pinned is false where staging would take no pin.
-func (s *Service) PinTarget(ctx context.Context, kind, targetType string, targetID ids.UUID) (version int64, pinned bool, err error) {
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		version, pinned, err = resolveTargetVersion(ctx, tx, StageInput{Kind: kind, TargetType: targetType, TargetID: targetID})
+// PinRecords answers the pins a staging of this call would take, read now and
+// taken by the same code. A call confirmed in the conversation carries them
+// without staging a row (agents/confirmcode.go). The caller needs the authority
+// a staging of the call needs.
+func (s *Service) PinRecords(ctx context.Context, in StageInput) (auth.ReleasedRecordPins, error) {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return auth.ReleasedRecordPins{}, errors.New("crmapprovals: no actor bound to context")
+	}
+	var pins auth.ReleasedRecordPins
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := requireCallAuthority(ctx, tx, p, stageAuthorityRow(in)); err != nil {
+			return err
+		}
+		taken, err := s.resolveStagingPins(ctx, tx, in)
+		if err != nil {
+			return err
+		}
+		var contextDigest *string
+		if taken.context != "" {
+			contextDigest = &taken.context
+		}
+		pins, err = releasedPinsOf(in.Kind, pinnedRow{&in.TargetType, &in.TargetID, taken.target},
+			pinnedRow{&in.CoTargetType, &in.CoTargetID, taken.coTarget}, contextDigest)
 		return err
 	})
-	return version, pinned, err
+	return pins, err
 }

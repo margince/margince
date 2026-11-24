@@ -11,26 +11,28 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// TargetPinner answers the version a staging would pin for a target. The
-// approvals seam implements it; a seam that does not leaves the code unpinned,
-// which the diff-hash binding still holds.
-type TargetPinner interface {
-	PinTarget(ctx context.Context, kind, targetType string, targetID ids.UUID) (int64, bool, error)
+// RecordPinner answers the pins a staging of a call would take, without staging
+// it. The approvals seam implements it. A seam that does not leaves the code
+// unpinned, and the diff-hash binding still holds.
+type RecordPinner interface {
+	PinRecords(ctx context.Context, in StageRequest) (auth.ReleasedRecordPins, error)
 }
-
-type confirmOnceKey struct{}
 
 // previewInConversation answers round 1: what the call would do, and the code its
 // user's yes sends back. Nothing is staged and nothing runs. A tool that cannot
 // describe its own target has nothing to preview, so its refusal stands.
+//
+// The code holds no more than the caller could release from the inbox itself.
+// A call it could not release, one that cannot be undone, is staged for a
+// colleague to decide there.
 func (r *Registry) previewInConversation(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, args json.RawMessage, diffHash string, refusal error) error {
 	stageable, ok := t.(stageableTool)
 	if !ok {
@@ -40,38 +42,43 @@ func (r *Registry) previewInConversation(ctx context.Context, t mcp.Tool, spec m
 	if err != nil {
 		return err
 	}
+	if !r.approvals.ReleasableByCaller(ctx, releaseRequest(spec.Name, diffHash, args, info.TargetType, info.TargetID)) {
+		return r.stageRefusedCall(ctx, t, spec.Name, args, diffHash, refusal)
+	}
 	// A preview reads, so it counts against the call ceiling like any read: a
 	// caller cannot preview without bound.
 	if err := r.chargeCall(ctx, spec, nothingHasHappenedYet); err != nil {
 		return err
 	}
-	version, err := r.previewVersion(ctx, spec.Name, info)
+	pins, err := r.previewPins(ctx, spec.Name, diffHash, args, info)
 	if err != nil {
 		return err
 	}
 	c, _ := conversationConfirmFrom(ctx)
-	code, expires, err := c.mint(ctx, spec.Name, diffHash, previewedTarget{Type: info.TargetType, ID: info.TargetID, Version: version})
+	code, expires, err := c.mint(ctx, wireConfirmCode{
+		Tool: spec.Name, Args: diffHash, TargetType: info.TargetType, TargetID: info.TargetID, Pins: pins,
+	})
 	if err != nil {
 		return err
 	}
 	return &ConfirmInConversationError{Tool: spec.Name, Summary: info.Summary, Code: code, ExpiresAt: expires}
 }
 
-// previewVersion is the version the code pins: what the tool's own read saw, or
-// else what a staging of this call would have pinned.
-func (r *Registry) previewVersion(ctx context.Context, kind string, info StageInfo) (*int64, error) {
-	if info.TargetVersion != nil {
-		return info.TargetVersion, nil
+// previewPins are the pins the code carries: what a staging of this call would
+// pin, asked of the approvals engine. Never the tool's own read, which a staging
+// discards too.
+func (r *Registry) previewPins(ctx context.Context, tool, diffHash string, args json.RawMessage, info StageInfo) (auth.ReleasedRecordPins, error) {
+	pinner, ok := r.approvals.(RecordPinner)
+	if !ok {
+		return auth.ReleasedRecordPins{}, nil
 	}
-	pinner, ok := r.approvals.(TargetPinner)
-	if !ok || info.TargetID.IsZero() {
-		return nil, nil
-	}
-	version, pinned, err := pinner.PinTarget(ctx, kind, info.TargetType, info.TargetID)
-	if err != nil || !pinned {
-		return nil, err
-	}
-	return &version, nil
+	in := releaseRequest(tool, diffHash, args, info.TargetType, info.TargetID)
+	in.CoTargetType, in.CoTargetID = info.CoTargetType, info.CoTargetID
+	return pinner.PinRecords(ctx, in)
+}
+
+func releaseRequest(tool, diffHash string, args json.RawMessage, targetType string, targetID ids.UUID) StageRequest {
+	return StageRequest{Tool: tool, ProposedChange: args, DiffHash: diffHash, TargetType: targetType, TargetID: targetID}
 }
 
 // spendConfirmCode is round 2's release: the code is checked against this very
@@ -82,26 +89,18 @@ func (r *Registry) spendConfirmCode(ctx context.Context, spec mcp.ToolSpec, res 
 	if !armed {
 		return ctx, errConfirmCodeNotHere
 	}
-	marked, once, err := c.spend(ctx, spec.Name, res.DiffHash, res.ConfirmCode)
+	marked, claim, err := c.spend(ctx, spec.Name, res.DiffHash, res.ConfirmCode)
 	if err != nil {
 		return ctx, err
 	}
-	marked = storekit.WithConfirmingCode(context.WithValue(marked, confirmOnceKey{}, once), once)
+	// Asked again at the spend: a project held since the preview makes the
+	// filing one the caller can no longer release.
+	if r.approvals == nil || !r.approvals.ReleasableByCaller(ctx, releaseRequest(spec.Name, res.DiffHash, res.Args, claim.TargetType, claim.TargetID)) {
+		return ctx, errConfirmCodeNoLonger
+	}
+	marked = storekit.WithConfirmingCode(marked, claim.Once)
 	r.ChargeRedeemedCall(marked, spec)
 	return marked, nil
-}
-
-// releaseUnusedConfirmCode gives a spent code back when the call it released
-// failed before anything committed, so the user's yes still covers the retry.
-func (r *Registry) releaseUnusedConfirmCode(ctx context.Context) {
-	once, spent := ctx.Value(confirmOnceKey{}).(string)
-	c, armed := conversationConfirmFrom(ctx)
-	if !spent || !armed {
-		return
-	}
-	if err := c.guard.Release(context.WithoutCancel(ctx), confirmCodeTyp+":"+once); err != nil {
-		slog.Default().WarnContext(ctx, "mcp: a confirm code could not be released after a run that changed nothing", "err", err)
-	}
 }
 
 // redeemPresented spends the release a retry presents, an approval or a confirm

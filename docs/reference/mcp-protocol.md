@@ -99,9 +99,12 @@ that says what would change and carries a `confirm_code`, in the text and under 
 `next_steps`. After the user says yes, the agent sends the same call again with `confirm_code`. It runs once.
 
 The code is signed with the `connector_state_key`. It holds the caller's principal, passport and connection, the
-tool, the argument digest and the version the preview read. A code for another caller or call, a used code, or one
-older than 15 minutes is refused, and the agent asks for a new preview. Redis makes each code single-use. A run that
-fails before it commits gives the code back.
+tool, the argument digest and the rows a staging would pin. A code for another caller or call, a used code, or one
+older than 15 minutes is refused, and the agent asks for a new preview. Redis makes each code single-use, and a failed
+run spends it too.
+
+Only a call the passport could release from the inbox itself is confirmed this way. That needs a connected client
+outside a scheduled run, and a change the user can undo. Any other such call still waits in the approval inbox.
 
 No form is needed, so every client can confirm this way. Without the key or Redis, and over REST, such a call stages
 into the approval inbox as before.

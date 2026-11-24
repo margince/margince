@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -43,21 +44,32 @@ func (g *memGuard) FirstUse(_ context.Context, key string, _ time.Duration) (boo
 	return true, nil
 }
 
-func (g *memGuard) Release(_ context.Context, key string) error {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	delete(g.used, key)
-	return nil
+// pinningApprovals answers the pins a staging would take from a fixed table of
+// row versions, as the approvals engine reads them.
+type pinningApprovals struct {
+	*recordingApprovals
+	versions map[ids.UUID]int64
 }
 
-// waitingTool waits for its own user, previews one record at one version, and
-// records what each run was released by.
+func (p pinningApprovals) PinRecords(_ context.Context, in StageRequest) (auth.ReleasedRecordPins, error) {
+	pin := func(entityType string, id ids.UUID) *auth.ReleasedRecordPin {
+		version, ok := p.versions[id]
+		if !ok {
+			return nil
+		}
+		return &auth.ReleasedRecordPin{EntityType: entityType, EntityID: id, Version: version}
+	}
+	return auth.ReleasedRecordPins{Target: pin(in.TargetType, in.TargetID), CoTarget: pin(in.CoTargetType, in.CoTargetID)}, nil
+}
+
+// waitingTool waits for its own user, previews a company and the partner it
+// pairs with, and records what each run was released by.
 type waitingTool struct {
-	name    string
-	target  ids.UUID
-	version int64
-	fail    bool
-	runs    []context.Context
+	name     string
+	target   ids.UUID
+	coTarget ids.UUID
+	fail     bool
+	runs     []context.Context
 }
 
 func (w *waitingTool) Spec() mcp.ToolSpec {
@@ -69,8 +81,12 @@ func (w *waitingTool) Spec() mcp.ToolSpec {
 }
 
 func (w *waitingTool) StageInfo(context.Context, json.RawMessage) (StageInfo, error) {
-	version := w.version
-	return StageInfo{TargetType: "company", TargetID: w.target, TargetVersion: &version, Summary: "set up a partner program"}, nil
+	// The tool's own read is not the pin, as it is not for a staging.
+	misread := int64(99)
+	return StageInfo{
+		TargetType: "company", TargetID: w.target, TargetVersion: &misread,
+		CoTargetType: "company", CoTargetID: w.coTarget, Summary: "set up a partner program",
+	}, nil
 }
 
 func (w *waitingTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
@@ -93,12 +109,13 @@ type confirmFixture struct {
 func newConfirmFixture(t *testing.T) *confirmFixture {
 	t.Helper()
 	f := &confirmFixture{
-		approvals: &recordingApprovals{},
-		tool:      &waitingTool{name: "set_up_partner", target: ids.NewV7(), version: 4},
+		approvals: &recordingApprovals{releasable: true},
+		tool:      &waitingTool{name: "set_up_partner", target: ids.NewV7(), coTarget: ids.NewV7()},
 		guard:     &memGuard{},
 		now:       time.Date(2026, 11, 24, 12, 0, 0, 0, time.UTC),
 	}
-	f.reg = NewRegistry(f.approvals, auth.NewGate(fullSeatAuthority{}))
+	pinning := pinningApprovals{f.approvals, map[ids.UUID]int64{f.tool.target: 4, f.tool.coTarget: 7}}
+	f.reg = NewRegistry(pinning, auth.NewGate(fullSeatAuthority{}))
 	f.reg.Register(f.tool)
 	p, _ := principal.Actor(passportCtx())
 	p.ConnectionID = ids.NewV7()
@@ -131,7 +148,7 @@ func withCode(args, code string) json.RawMessage {
 
 // Its own user is in the conversation, so the call asks there. Round 1 changes
 // nothing and stages nothing. The same call with the code runs once, released as
-// an approval would be and pinned to the previewed version.
+// an approval would be, pinned to both rows as a staging would have pinned them.
 func TestAWaitingCallIsConfirmedInTheConversationAndStagesNothing(t *testing.T) {
 	f := newConfirmFixture(t)
 	ctx := f.armed(f.user)
@@ -147,11 +164,13 @@ func TestAWaitingCallIsConfirmedInTheConversationAndStagesNothing(t *testing.T) 
 		t.Fatalf("round 2 ran the tool %d time(s), want once", len(f.tool.runs))
 	}
 	run := f.tool.runs[0]
-	if !ApprovalRedeemed(run) || !ConfirmedInConversation(run) {
-		t.Error("the run must be released, and released by the user's yes in the conversation")
+	if !ApprovalRedeemed(run) {
+		t.Error("the run must be released as a redeemed approval is")
 	}
-	if v, pinned := auth.ReleasedRecordVersion(run, "company", f.tool.target); !pinned || v != f.tool.version {
-		t.Errorf("the write is pinned to %d (pinned=%v), want the previewed version %d", v, pinned, f.tool.version)
+	for id, want := range map[ids.UUID]int64{f.tool.target: 4, f.tool.coTarget: 7} {
+		if v, pinned := auth.ReleasedRecordVersion(run, "company", id); !pinned || v != want {
+			t.Errorf("the write is pinned to %d (pinned=%v) on %v, want the previewed version %d", v, pinned, id, want)
+		}
 	}
 	if len(f.approvals.staged) != 0 {
 		t.Error("a call confirmed in the conversation must leave nothing in the approval inbox")
@@ -175,7 +194,7 @@ func TestAConfirmCodeIsGoodOnce(t *testing.T) {
 	}
 }
 
-// A code confirms one call by one person: no other arguments, tool, person,
+// A code confirms one call by one user: no other arguments, tool, user,
 // passport or connection, and not after it expires or once altered.
 func TestAConfirmCodeConfirmsOnlyItsOwnCall(t *testing.T) {
 	args := `{"to":"resellers"}`
@@ -187,17 +206,17 @@ func TestAConfirmCodeConfirmsOnlyItsOwnCall(t *testing.T) {
 			_, err := f.reg.Invoke(f.armed(f.user), f.tool.name, withCode(`{"to":"everyone"}`, code))
 			return err
 		}},
-		{"another person", func(f *confirmFixture, code string) error {
+		{"another user", func(f *confirmFixture, code string) error {
 			_, err := f.reg.Invoke(f.armed(passportCtx()), f.tool.name, withCode(args, code))
 			return err
 		}},
-		{"another connection of the same person", func(f *confirmFixture, code string) error {
+		{"another connection of the same user", func(f *confirmFixture, code string) error {
 			p, _ := principal.Actor(f.user)
 			p.ConnectionID = ids.NewV7()
 			_, err := f.reg.Invoke(f.armed(principal.WithActor(f.user, p)), f.tool.name, withCode(args, code))
 			return err
 		}},
-		{"another passport of the same person", func(f *confirmFixture, code string) error {
+		{"another passport of the same user", func(f *confirmFixture, code string) error {
 			p, _ := principal.Actor(f.user)
 			p.PassportID = ids.NewV7()
 			_, err := f.reg.Invoke(f.armed(principal.WithActor(f.user, p)), f.tool.name, withCode(args, code))
@@ -236,6 +255,11 @@ func TestWithoutAConversationTheCallStagesIntoTheInboxAsBefore(t *testing.T) {
 	}{
 		{"not armed by the MCP door", func(f *confirmFixture) context.Context { return f.user }},
 		{"a run nobody watches", func(f *confirmFixture) context.Context { return f.armed(principal.WithUnattended(f.user)) }},
+		{"a passport minted without a connection", func(f *confirmFixture) context.Context {
+			p, _ := principal.Actor(f.user)
+			p.ConnectionID = ids.UUID{}
+			return f.armed(principal.WithActor(f.user, p))
+		}},
 		{"a guard missing", func(f *confirmFixture) context.Context {
 			return withConversationConfirm(f.user, conversationConfirm{signer: newInputStateSigner([]byte(strings.Repeat("k", 32)))})
 		}},
@@ -266,9 +290,9 @@ func TestAConfirmCodeWhereNoConversationCanConfirmIsRefused(t *testing.T) {
 	}
 }
 
-// A run that failed before anything committed gives the code back, so the
-// user's one yes still covers the retry.
-func TestARunThatChangedNothingGivesTheCodeBack(t *testing.T) {
+// A yes covers one run, and a run that failed spent it. What it did outside the
+// database before failing may not be undone, so the retry needs a new yes.
+func TestAFailedRunSpendsTheCode(t *testing.T) {
 	f := newConfirmFixture(t)
 	ctx := f.armed(f.user)
 	args := `{"to":"resellers"}`
@@ -278,8 +302,35 @@ func TestARunThatChangedNothingGivesTheCodeBack(t *testing.T) {
 		t.Fatal("the failing run answered success")
 	}
 	f.tool.fail = false
-	if _, err := f.reg.Invoke(ctx, f.tool.name, withCode(args, code)); err != nil {
-		t.Fatalf("the retry after a run that changed nothing: %v, want the same yes to cover it", err)
+	if _, err := f.reg.Invoke(ctx, f.tool.name, withCode(args, code)); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
+		t.Fatalf("the retry on a spent code → %v, want it refused", err)
+	}
+}
+
+// The code releases no more than the caller could release from the inbox. A call
+// it could not release, one that cannot be undone, waits there for a colleague.
+func TestACallTheCallerCouldNotReleaseWaitsInTheInbox(t *testing.T) {
+	f := newConfirmFixture(t)
+	f.approvals.releasable = false
+	_, err := f.reg.Invoke(f.armed(f.user), f.tool.name, json.RawMessage(`{"to":"resellers"}`))
+	if _, asks := errors.AsType[*ConfirmInConversationError](err); asks || len(f.approvals.staged) != 1 {
+		t.Fatalf("answered %v with %d staged, want it staged and no code", err, len(f.approvals.staged))
+	}
+}
+
+// Whether the caller may release it is asked again at the spend. A project held
+// since the preview makes the filing one it can no longer release.
+func TestACodeForACallNoLongerReleasableIsRefused(t *testing.T) {
+	f := newConfirmFixture(t)
+	ctx := f.armed(f.user)
+	args := `{"to":"resellers"}`
+	code := f.preview(t, ctx, args)
+	f.approvals.releasable = false
+	if _, err := f.reg.Invoke(ctx, f.tool.name, withCode(args, code)); !errors.Is(err, errConfirmCodeNoLonger) {
+		t.Fatalf("answered %v, want the code refused for a call no longer releasable", err)
+	}
+	if len(f.tool.runs) != 0 {
+		t.Error("a call the caller can no longer release must not run")
 	}
 }
 
@@ -289,9 +340,13 @@ func TestAGuardThatCannotAnswerRefusesTheCode(t *testing.T) {
 	ctx := f.armed(f.user)
 	args := `{"to":"resellers"}`
 	code := f.preview(t, ctx, args)
-	f.guard.err = errors.New("redis is unreachable")
-	if _, err := f.reg.Invoke(ctx, f.tool.name, withCode(args, code)); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
+	f.guard.err = errors.New("NOAUTH the replay store wants a password")
+	_, err := f.reg.Invoke(ctx, f.tool.name, withCode(args, code))
+	if !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
 		t.Fatalf("answered %v, want the code refused", err)
+	}
+	if strings.Contains(err.Error(), "NOAUTH") {
+		t.Errorf("the refusal shows the guard's own words: %v", err)
 	}
 	if len(f.tool.runs) != 0 {
 		t.Error("an unproven first use must run nothing")
@@ -370,17 +425,52 @@ func TestTheMCPDoorAsksInTheConversationAndRunsOnTheCode(t *testing.T) {
 }
 
 // The e2e lane scores round 1 as a call that worked by its opening words. A
-// rewording here that the checker does not follow would score every preview as a
-// failure, so the checker's own pattern is read and held to the words.
+// rewording the checker does not follow would score every preview as a failure.
+// So the checker's own pattern is read and held to the words.
 func TestTheLanesCheckerReadsRoundOneAsACallThatWorked(t *testing.T) {
 	source, err := os.ReadFile("../../../../e2e/llm/check.py")
 	if err != nil {
 		t.Fatalf("reading the lane's checker: %v", err)
 	}
-	if !strings.Contains(strings.ToLower(string(source)), strings.ToLower(strings.TrimSuffix(confirmInConversationLead, "."))) {
-		t.Errorf("e2e/llm/check.py does not recognise %q, so the lane would score round 1 as a failed call", confirmInConversationLead)
+	found := regexp.MustCompile(`_STAGED = re\.compile\(\s*r"([^"]*)"`).FindSubmatch(source)
+	if found == nil {
+		t.Fatal("e2e/llm/check.py has no _STAGED pattern to read")
 	}
-	if got := confirmInConversationExplanation(&ConfirmInConversationError{Code: "c"}); !strings.HasPrefix(got, confirmInConversationLead) {
-		t.Errorf("round 1 opens %q, want %q first", got, confirmInConversationLead)
+	staged := regexp.MustCompile("(?i)" + string(found[1]))
+	if got := confirmInConversationExplanation(&ConfirmInConversationError{Code: "c"}); !staged.MatchString(got) {
+		t.Errorf("e2e/llm/check.py's _STAGED does not match round 1 (%q), so the lane would score it as a failed call", got)
+	}
+}
+
+// With no approvals engine on the surface, a waiting call has nothing to stand
+// in for. Its refusal stands and no code is handed out.
+func TestWithNoApprovalsTheWaitingCallIsRefusedPlainly(t *testing.T) {
+	f := newConfirmFixture(t)
+	f.reg = NewRegistry(nil, auth.NewGate(fullSeatAuthority{}))
+	f.reg.Register(f.tool)
+	_, err := f.reg.Invoke(f.armed(f.user), f.tool.name, json.RawMessage(`{"to":"resellers"}`))
+	if !errors.Is(err, apperrors.ErrRequiresApproval) {
+		t.Fatalf("answered %v, want the plain refusal", err)
+	}
+	if _, asks := errors.AsType[*ConfirmInConversationError](err); asks {
+		t.Error("a surface with no approvals must not hand out a code")
+	}
+}
+
+// A code names who it is for, so a context with no caller can neither mint one
+// nor spend one.
+func TestAConfirmCodeNeedsACaller(t *testing.T) {
+	f := newConfirmFixture(t)
+	c, _ := conversationConfirmFrom(f.armed(f.user))
+	call := wireConfirmCode{Tool: f.tool.name, Args: "hash"}
+	if _, _, err := c.mint(context.Background(), call); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
+		t.Errorf("minting with no caller → %v, want refused", err)
+	}
+	code, _, err := c.mint(f.user, call)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := c.spend(context.Background(), f.tool.name, "hash", code); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
+		t.Errorf("spending with no caller → %v, want refused", err)
 	}
 }

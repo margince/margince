@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -39,14 +40,17 @@ const (
 	// confirmCodeTTL is how long a user has between seeing a preview and saying
 	// yes. It matches the bulk change's window (compose/bulkconfirm.go).
 	confirmCodeTTL = 15 * time.Minute
+	// confirmGuardMargin covers a replica whose clock runs behind the minting one.
+	// The spent id is then still held while any replica accepts the code.
+	confirmGuardMargin = 5 * time.Minute
 	// confirmOnceBytes is the entropy of the id the replay guard spends.
 	confirmOnceBytes = 16
 )
 
-// errConfirmCodeRefused is every refused code's answer. It does not say which of
-// used, expired, foreign or mismatched it was: the remedy is the same.
+// errConfirmCodeRefused answers a code that is used, expired, foreign or
+// mismatched, without saying which: the remedy is the same.
 var errConfirmCodeRefused = fmt.Errorf("this confirm_code does not confirm this call: it is used, expired, "+
-	"or was answered for a different call or person. Call again without it for a new preview: %w",
+	"or was answered for a different call or user. Call again without it for a new preview: %w",
 	apperrors.ErrApprovalTokenInvalid)
 
 // errConfirmCodeNotHere answers a code presented where no conversation can
@@ -54,10 +58,15 @@ var errConfirmCodeRefused = fmt.Errorf("this confirm_code does not confirm this 
 var errConfirmCodeNotHere = fmt.Errorf("confirm_code confirms a call its user previewed in this MCP "+
 	"conversation; this call cannot be confirmed here: %w", apperrors.ErrApprovalTokenInvalid)
 
+// errConfirmCodeNoLonger answers a code for a call its caller can no longer
+// release itself, such as a filing under a project held since the preview.
+var errConfirmCodeNoLonger = fmt.Errorf("this call can no longer be confirmed in the conversation. "+
+	"Call again without confirm_code, and it waits in the approval inbox for a colleague to decide: %w",
+	apperrors.ErrApprovalTokenInvalid)
+
 // ConfirmGuard spends one-use ids. platform/replayguard is the production one.
 type ConfirmGuard interface {
 	FirstUse(ctx context.Context, key string, ttl time.Duration) (bool, error)
-	Release(ctx context.Context, key string) error
 }
 
 // conversationConfirm is what the Dispatcher arms a call with: the key that
@@ -85,17 +94,17 @@ func conversationConfirmFrom(ctx context.Context) (conversationConfirm, bool) {
 }
 
 // confirmsInConversation reports whether its own user can confirm this refused
-// call here. The MCP door armed it, the decision is that user's, and a person is
+// call here. The MCP door armed it, the decision is that user's, and someone is
 // present to ask.
 func confirmsInConversation(ctx context.Context, waitsEvenForItsUser bool, refusal error) bool {
-	if !waitsEvenForItsUser || !errors.Is(refusal, apperrors.ErrRequiresApproval) || principal.Unattended(ctx) {
+	if !waitsEvenForItsUser || !errors.Is(refusal, apperrors.ErrRequiresApproval) {
 		return false
 	}
 	if _, armed := conversationConfirmFrom(ctx); !armed {
 		return false
 	}
 	p, ok := principal.Actor(ctx)
-	return ok && p.ActsAsItsUser()
+	return ok && !principal.ConversationUser(ctx, p).IsZero()
 }
 
 // wireConfirmCode is what a code claims.
@@ -106,41 +115,42 @@ type wireConfirmCode struct {
 	Connection string `json:"conn"`
 	Tool       string `json:"tool"`
 	Args       string `json:"args"`
-	// The record the preview read, and its version when it has one.
-	TargetType string   `json:"tt,omitempty"`
-	TargetID   ids.UUID `json:"tid,omitzero"`
-	Version    *int64   `json:"v,omitempty"`
-	Once       string   `json:"n"`
-	Exp        int64    `json:"exp"`
-}
-
-// previewedTarget is the record a preview read, pinned at the version it saw.
-type previewedTarget struct {
-	Type    string
-	ID      ids.UUID
-	Version *int64
+	// The record the call acts on, and the rows the preview pinned as a staging
+	// of the call would have.
+	TargetType string                  `json:"tt,omitempty"`
+	TargetID   ids.UUID                `json:"tid,omitzero"`
+	Pins       auth.ReleasedRecordPins `json:"pins"`
+	Once       string                  `json:"n"`
+	Exp        int64                   `json:"exp"`
 }
 
 // codeIdentity is who a code is for: every part of the caller a code may not
 // travel between.
-func codeIdentity(ctx context.Context) wireConfirmCode {
-	p, _ := principal.Actor(ctx)
+func codeIdentity(ctx context.Context) (wireConfirmCode, bool) {
+	p, ok := principal.Actor(ctx)
+	if !ok || p.ID == "" {
+		return wireConfirmCode{}, false
+	}
 	return wireConfirmCode{
 		Typ: confirmCodeTyp, Sub: p.ID,
 		Passport: p.PassportID.String(), Connection: p.ConnectionID.String(),
-	}
+	}, true
 }
 
 // mint signs a code for one previewed call, and answers when it stops working.
-func (c conversationConfirm) mint(ctx context.Context, tool, diffHash string, target previewedTarget) (string, time.Time, error) {
+// call names the tool, the argument digest, the target and the pins.
+func (c conversationConfirm) mint(ctx context.Context, call wireConfirmCode) (string, time.Time, error) {
+	claim, ok := codeIdentity(ctx)
+	if !ok {
+		return "", time.Time{}, errConfirmCodeRefused
+	}
 	once := make([]byte, confirmOnceBytes)
 	if _, err := rand.Read(once); err != nil {
 		return "", time.Time{}, fmt.Errorf("draw a confirm code: %w", err)
 	}
 	expires := c.now().Add(confirmCodeTTL)
-	claim := codeIdentity(ctx)
-	claim.Tool, claim.Args = tool, diffHash
-	claim.TargetType, claim.TargetID, claim.Version = target.Type, target.ID, target.Version
+	claim.Tool, claim.Args = call.Tool, call.Args
+	claim.TargetType, claim.TargetID, claim.Pins = call.TargetType, call.TargetID, call.Pins
 	claim.Once, claim.Exp = base64.RawURLEncoding.EncodeToString(once), expires.Unix()
 	payload, err := json.Marshal(claim)
 	if err != nil {
@@ -150,59 +160,45 @@ func (c conversationConfirm) mint(ctx context.Context, tool, diffHash string, ta
 }
 
 // spend checks a presented code against this very call and spends it, answering
-// ctx marked released at the pinned version. Any mismatch is the same refusal.
-// The guard is asked last, so a code that does not match spends nothing.
-func (c conversationConfirm) spend(ctx context.Context, tool, diffHash, code string) (context.Context, string, error) {
+// ctx marked released at the pinned versions and what the code claimed. Any
+// mismatch is the same refusal. The guard is asked last, so a code that does not
+// match spends nothing.
+func (c conversationConfirm) spend(ctx context.Context, tool, diffHash, code string) (context.Context, wireConfirmCode, error) {
 	payload, ok := c.signer.open(code)
 	if !ok {
-		return ctx, "", errConfirmCodeRefused
+		return ctx, wireConfirmCode{}, errConfirmCodeRefused
 	}
 	var got wireConfirmCode
 	if err := json.Unmarshal(payload, &got); err != nil {
-		return ctx, "", errConfirmCodeRefused
+		return ctx, wireConfirmCode{}, errConfirmCodeRefused
 	}
-	want := codeIdentity(ctx)
+	want, ok := codeIdentity(ctx)
+	if !ok {
+		return ctx, wireConfirmCode{}, errConfirmCodeRefused
+	}
 	left := time.Unix(got.Exp, 0).Sub(c.now())
 	if got.Typ != want.Typ || got.Sub != want.Sub || got.Passport != want.Passport ||
 		got.Connection != want.Connection || got.Tool != tool || got.Args != diffHash || left <= 0 || got.Once == "" {
-		return ctx, "", errConfirmCodeRefused
+		return ctx, wireConfirmCode{}, errConfirmCodeRefused
 	}
-	first, err := c.guard.FirstUse(ctx, confirmCodeTyp+":"+got.Once, left)
+	first, err := c.guard.FirstUse(ctx, confirmCodeTyp+":"+got.Once, confirmCodeTTL+confirmGuardMargin)
 	if err != nil {
 		// Fail closed: a guard that cannot answer cannot prove this is the
-		// first use, and a second use is what it exists to stop.
-		return ctx, "", fmt.Errorf("%w (the one-use check could not be made: %w)", errConfirmCodeRefused, err)
+		// first use. Its own words stay in the log, never in the answer.
+		slog.Default().ErrorContext(ctx, "mcp: the confirm code's one-use check could not be made", "err", err)
+		return ctx, wireConfirmCode{}, errConfirmCodeRefused
 	}
 	if !first {
-		return ctx, "", errConfirmCodeRefused
+		return ctx, wireConfirmCode{}, errConfirmCodeRefused
 	}
-	return markConfirmed(ctx, got), got.Once, nil
+	return markConfirmed(ctx, got), got, nil
 }
 
 // markConfirmed marks ctx released as a redeemed approval would be, so every
-// writer honours it. The previewed version travels into the write, where the
-// writer re-checks it under its own row lock.
+// writer honours it and re-checks the previewed pins under its own row lock.
 func markConfirmed(ctx context.Context, claim wireConfirmCode) context.Context {
-	if claim.Version != nil && claim.TargetType != "" && !claim.TargetID.IsZero() {
-		ctx = auth.WithReleasedRecordPins(ctx, auth.ReleasedRecordPins{Target: &auth.ReleasedRecordPin{
-			EntityType: claim.TargetType, EntityID: claim.TargetID, Version: *claim.Version,
-		}})
-		return withConfirmedInConversation(withApprovalRedeemed(ctx, *claim.Version, true))
-	}
-	return withConfirmedInConversation(withApprovalRedeemed(ctx, 0, false))
-}
-
-type confirmedInConversationKey struct{}
-
-func withConfirmedInConversation(ctx context.Context) context.Context {
-	return context.WithValue(ctx, confirmedInConversationKey{}, true)
-}
-
-// ConfirmedInConversation reports whether this call's release was its user's
-// yes in the conversation rather than a decision in the inbox.
-func ConfirmedInConversation(ctx context.Context) bool {
-	confirmed, ok := ctx.Value(confirmedInConversationKey{}).(bool)
-	return ok && confirmed
+	marked, _, _ := markReleased(ctx, claim.Pins)
+	return marked
 }
 
 // ConfirmInConversationError is round 1's answer: nothing changed, and the
