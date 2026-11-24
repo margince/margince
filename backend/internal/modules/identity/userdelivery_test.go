@@ -49,8 +49,8 @@ func TestATeamAndItsClearTogetherAreRefused(t *testing.T) {
 }
 
 func TestTheClearFlagReachesTheService(t *testing.T) {
-	clear := true
-	if !deliveryFromWire(crmcontracts.BriefDelivery{ClearRoutineMailTeam: &clear}).ClearTeam {
+	cleared := true
+	if !deliveryFromWire(crmcontracts.BriefDelivery{ClearRoutineMailTeam: &cleared}).ClearTeam {
 		t.Error("clear_routine_mail_team: true did not reach the save")
 	}
 	if deliveryFromWire(crmcontracts.BriefDelivery{}).ClearTeam {

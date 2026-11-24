@@ -128,7 +128,7 @@ func (s *Service) SaveMyDelivery(ctx context.Context, in Delivery) (Delivery, er
 		patch.Set("quiet_day_notice", before.QuietDay, out.QuietDay)
 		patch.Set("delivery_hour_local", before.HourLocal, out.HourLocal)
 		patch.Set("routine_mail_scope", before.Scope, out.Scope)
-		patch.Set("routine_mail_team_id", before.TeamID, out.TeamID)
+		patch.Set(fieldRoutineMailTeam, before.TeamID, out.TeamID)
 		patch.Set("weekly_delivery_day", before.WeeklyDay, out.WeeklyDay)
 		patch.Set("combine_routine_email", before.CombineRoutine, out.CombineRoutine)
 		patch.Set("routine_delivery_time", before.RoutineTime, out.RoutineTime)
@@ -285,7 +285,7 @@ func deliveryImage(d Delivery) map[string]any {
 		"quiet_day_notice":       d.QuietDay,
 		"delivery_hour_local":    d.HourLocal,
 		"routine_mail_scope":     d.Scope,
-		"routine_mail_team_id":   d.TeamID,
+		fieldRoutineMailTeam:     d.TeamID,
 		"weekly_delivery_day":    d.WeeklyDay,
 		"combine_routine_email":  d.CombineRoutine,
 		"routine_delivery_time":  d.RoutineTime,
@@ -318,7 +318,7 @@ func deliveryChanges(before, after Delivery) []string {
 		changed = append(changed, "routine_mail_scope")
 	}
 	if !same(before.TeamID, after.TeamID) {
-		changed = append(changed, "routine_mail_team_id")
+		changed = append(changed, fieldRoutineMailTeam)
 	}
 	if !same(before.WeeklyDay, after.WeeklyDay) {
 		changed = append(changed, "weekly_delivery_day")

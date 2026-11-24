@@ -18,6 +18,7 @@ import (
 const (
 	deliveryTeamRequired = requiredFieldCode
 	deliveryTeamGone     = "delivery_team_gone"
+	fieldRoutineMailTeam = "routine_mail_team_id"
 )
 
 // checkChosenTeam is validateDeliveryTeam for a save, where a team the caller
@@ -25,7 +26,7 @@ const (
 func checkChosenTeam(ctx context.Context, tx pgx.Tx, d Delivery) error {
 	err := validateDeliveryTeam(ctx, tx, d)
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return &values.ParseError{Field: "routine_mail_team_id", Code: deliveryTeamGone, Message: "this team no longer exists; choose another"}
+		return &values.ParseError{Field: fieldRoutineMailTeam, Code: deliveryTeamGone, Message: "this team no longer exists; choose another"}
 	}
 	return err
 }
@@ -35,7 +36,7 @@ func validateDeliveryTeam(ctx context.Context, tx pgx.Tx, d Delivery) error {
 		return nil
 	}
 	if d.TeamID == nil || d.TeamID.IsZero() {
-		return &values.ParseError{Field: "routine_mail_team_id", Code: deliveryTeamRequired, Message: "choose a team for this view"}
+		return &values.ParseError{Field: fieldRoutineMailTeam, Code: deliveryTeamRequired, Message: "choose a team for this view"}
 	}
 	switch auth.TeamWeekReachOf(ctx) {
 	case auth.ReachesEveryTeam:

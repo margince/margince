@@ -179,6 +179,9 @@ func setCompanyAssessAgainst(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 	return nil
 }
 
+// parentNameParam names the chosen parent in a parent_company_below refusal.
+const parentNameParam = "name"
+
 // refuseParentBelow refuses a parent that is the company itself or already sits below it.
 // The walk stops at an ancestor hidden from the caller; the cycle trigger still holds there.
 func refuseParentBelow(ctx context.Context, tx pgx.Tx, company, parent ids.UUID) error {
@@ -208,7 +211,7 @@ func refuseParentBelow(ctx context.Context, tx pgx.Tx, company, parent ids.UUID)
 		if *above == company {
 			return httperr.Validation("parent_company_id", "parent_company_below",
 				"this company is above the chosen parent; choose a company outside its own group").
-				WithParams(map[string]string{"name": name})
+				WithParams(map[string]string{parentNameParam: name})
 		}
 		visible, err := auth.VisibleTo(ctx, tx, "company", *above)
 		if err != nil {
