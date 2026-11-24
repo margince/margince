@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
@@ -328,6 +329,10 @@ const settlementEvidenceShare = "the settlement evidence generation, not a guard
 // replySettledClear is the reason for the triggers that clear the stamp the owed check reads first.
 const replySettledClear = "clears the reply-settled stamps on the deleted rows' threads so the stamping job reads them again, and refuses no delete. Its UPDATE skips restricted rows, so the restricted-row guard never fires; the sweep deletes every stamped message too, so no stale stamp survives a reset"
 
+// strengthDatesRecompute is the reason for the triggers that refold a
+// contact's stored strength dates when a row they were read from goes.
+const strengthDatesRecompute = "recomputes the stored strength dates of the contacts the deleted rows reached, and refuses no delete; `contact` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them"
+
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	"raw_capture raw_original_object_retired":  "records retired object keys and refuses no delete; reset preserves stored_object_intent so the cleanup worker can remove their bytes",
 	"activity reopen_deleted_signature_source": "Maintains signature read requests and refuses no delete. Reset removes the contacts and their requests by cascade; TestSweepWorkspaceDataClearsDomainKeepsIdentity proves it with an actual mail source and read watermark.",
@@ -362,15 +367,23 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	// folded into the entry above, because this map is keyed on the PAIR for the
 	// reason its own comment gives — a table-keyed entry would ratify the next
 	// DELETE trigger on activity_link sight unseen, including one that blocks.
-	"activity_link activity_link_project_last_activity": "a clock-maintenance trigger, not a guard: it recomputes project.last_activity_at for the project the deleted link filed the activity against and refuses no delete; `project` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
-	"activity settlement_evidence_share":                settlementEvidenceShare,
-	"activity_participant settlement_evidence_share":    settlementEvidenceShare,
-	"activity_link settlement_evidence_share":           settlementEvidenceShare,
-	"contact_email settlement_evidence_share":           settlementEvidenceShare,
+	"activity_link activity_link_project_last_activity":    "a clock-maintenance trigger, not a guard: it recomputes project.last_activity_at for the project the deleted link filed the activity against and refuses no delete; `project` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
+	"capture_import capture_import_clocks":                 "a clock-maintenance trigger, not a guard: when a deleted import was on a thread its seat holds as personal it recomputes last_activity_at for the deals and companies the message reached and refuses no delete; `deal` and `company` are not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
+	"capture_thread_verdict capture_thread_verdict_clocks": "a clock-maintenance trigger, not a guard: when a deleted verdict was a personal hold it recomputes last_activity_at for the deals and companies its thread reached and refuses no delete; `deal` and `company` are not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
+	"activity settlement_evidence_share":                   settlementEvidenceShare,
+	"activity_participant settlement_evidence_share":       settlementEvidenceShare,
+	"activity_link settlement_evidence_share":              settlementEvidenceShare,
+	"contact_email settlement_evidence_share":              settlementEvidenceShare,
 
-	"activity deleted_mail_clears_reply_settled":            replySettledClear,
-	"activity_participant participant_clears_reply_settled": replySettledClear,
-	"contact_email contact_email_clears_reply_settled":      replySettledClear,
+	"activity deleted_mail_clears_reply_settled":                    replySettledClear,
+	"activity_participant deleted_participant_clears_reply_settled": replySettledClear,
+	"contact_email deleted_contact_email_clears_reply_settled":      replySettledClear,
+
+	"activity_link activity_link_strength_dates_removed":                   strengthDatesRecompute,
+	"activity_participant activity_participant_strength_dates_removed":     strengthDatesRecompute,
+	"contact_email contact_email_strength_dates_removed":                   strengthDatesRecompute,
+	"capture_import capture_import_strength_dates_removed":                 strengthDatesRecompute,
+	"capture_thread_verdict capture_thread_verdict_strength_dates_removed": strengthDatesRecompute,
 
 	"relationship relationship_last_activity": "a clock-maintenance trigger, not a guard: it recomputes the employer's last_activity_at and refuses no delete",
 	// Also not a guard (migration 1787226902): BEFORE DELETE ON company, it
@@ -600,11 +613,11 @@ func TestAResetKeepsAConnectedAITool(t *testing.T) {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO oauth_refresh_token (grant_id, token_hash, expires_at)
-			VALUES ($1, 'reset-refresh', now() + interval '1 day')`, grantID); err != nil {
+			VALUES ($1, encode(sha256('reset-refresh'), 'hex'), now() + interval '1 day')`, grantID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `INSERT INTO passport (token_hash, granted_by, on_behalf_of, scopes, expires_at, oauth_grant_id)
-			VALUES ('reset-passport', $1, $1, ARRAY['read'], now() + interval '1 hour', $2)`, e.AdminUser, grantID); err != nil {
+			VALUES (encode(sha256('reset-passport'), 'hex'), $1, $1, ARRAY['read'], now() + interval '1 hour', $2)`, e.AdminUser, grantID); err != nil {
 			return err
 		}
 		tables, err := resetTargetTables(ctx, tx)
@@ -619,7 +632,7 @@ func TestAResetKeepsAConnectedAITool(t *testing.T) {
 	for table, query := range map[string]string{
 		"oauth_client":        `SELECT count(*) FROM oauth_client WHERE client_id = 'reset-kept'`,
 		"oauth_grant":         `SELECT count(*) FROM oauth_grant WHERE client_id = 'reset-kept'`,
-		"oauth_refresh_token": `SELECT count(*) FROM oauth_refresh_token WHERE token_hash = 'reset-refresh'`,
+		"oauth_refresh_token": `SELECT count(*) FROM oauth_refresh_token WHERE token_hash = encode(sha256('reset-refresh'), 'hex')`,
 	} {
 		if got := e.WsCount(t, query); got != 1 {
 			t.Errorf("%s rows after a reset = %d, want the connection kept", table, got)
@@ -691,5 +704,58 @@ func TestAResetLeavesNoFactRevision(t *testing.T) {
 	}
 	if got := e.WsCount(t, "SELECT count(*) FROM company_fact_revision"); got != 0 {
 		t.Fatalf("a reset left %d fact revision rows behind", got)
+	}
+}
+
+// A reset clears a refused send and the decision to send it anyway. What it
+// keeps is the audit row: who decided, when, and under which reason.
+func TestAResetClearsADirectedSendAndKeepsItsAuditRow(t *testing.T) {
+	e := integration.Setup(t)
+	conn := integration.OwnerConn(t)
+	var review ids.UUID
+	if err := conn.QueryRow(context.Background(), `
+		INSERT INTO communication_review (state, kind, reason_code, refusals, initiated_by)
+		VALUES ('needs_repair', 'single', 'no_marketing_consent',
+		        '[{"address": "anna@example.test", "reason_code": "no_marketing_consent"}]', $1)
+		RETURNING id`, e.Rep1).Scan(&review); err != nil {
+		t.Fatalf("seeding the refused send: %v", err)
+	}
+	director := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"admin"},
+		Objects: map[string]principal.ObjectGrant{
+			"contact":                 {Read: true, Update: true},
+			"communication_exception": {Create: true, Read: true, Update: true, Delete: true},
+		},
+	})
+	instruction, err := consent.NewStore(e.DB()).DirectSend(director, review, consent.DirectInput{
+		ReasonCode:     consent.ReasonContractualNecessity,
+		Explanation:    "The framework agreement obliges us to send this notice.",
+		WarningVersion: consent.OverrideWarningVersion,
+		Acknowledged:   true,
+	})
+	if err != nil {
+		t.Fatalf("directing the send: %v", err)
+	}
+	if _, err := conn.Exec(context.Background(), `DELETE FROM communication_instruction WHERE id = $1`, instruction.ID); err == nil {
+		t.Fatal("a direct delete removed a decision whose review still stands")
+	}
+
+	ctx := e.Admin()
+	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		tables, err := resetTargetTables(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return sweepWorkspaceData(ctx, tx, tables)
+	})
+	if err != nil {
+		t.Fatalf("a reset with a directed send in the data: %v", err)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM communication_review`) + e.WsCount(t, `SELECT count(*) FROM communication_instruction`); got != 0 {
+		t.Errorf("the reset left %d review and instruction rows", got)
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'communication_instruction'
+		AND entity_id = $1 AND action = 'create' AND after ->> 'reason_code' = $2`, instruction.ID, consent.ReasonContractualNecessity); got != 1 {
+		t.Errorf("%d audit rows record the decision after the reset, want 1", got)
 	}
 }

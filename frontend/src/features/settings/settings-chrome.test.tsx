@@ -66,9 +66,10 @@ describe("SettingsScreen page layout", () => {
     // does open are named in catalog order.
     expect(navGroupNames(nav).slice(1)).toEqual([
       "You",
+      "Compliance",
       "People",
       "Sales",
-      "Compliance",
+      "System",
     ]);
     // And the name is one the accessibility tree computes, not only one this
     // file can read off an attribute: the role and the name have to find the

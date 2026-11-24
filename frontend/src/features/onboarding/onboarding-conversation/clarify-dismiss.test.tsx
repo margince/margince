@@ -271,9 +271,12 @@ function stubApi(read: CompanySiteRead, proposal: Proposal) {
       if (path.includes("/company/site-reads/") && request.method === "GET") {
         return jsonResponse(read);
       }
-      // GET /company answers only an admin, so the journey's session is one.
+      // GET /company answers only an admin, so the journey's session is one,
+      // and it may train a voice, so the voice act follows the company.
       if (path.endsWith("/me") && request.method === "GET") {
-        return jsonResponse(meFixture());
+        return jsonResponse(
+          meFixture({ allow: { voice_profile: ["read", "create"] } }),
+        );
       }
       if (path.endsWith("/company") && request.method === "GET") {
         return jsonResponse({ detail: "no company yet" }, 404);

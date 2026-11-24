@@ -101,13 +101,12 @@ func TestFrontendRegistryCarriesEveryDeclaredVerbUnderItsUnit(t *testing.T) {
 }
 
 // A unit that composes but declares no governed operation is a real state
-// (a Go-only unit with no api/ fragment — extensions/de today). It must reach
-// the registry with an empty verb list rather than disappearing from it: the
-// SPA's not-found card is a claim that the unit is not ENABLED, and it would
-// be a lie for a unit that is.
+// (a Go-only unit with no api/ fragment, such as extensions/eu). It must reach
+// the registry with an empty verb list rather than disappear from it. The SPA's
+// not-found card says the unit is not enabled, which is false for this one.
 func TestAUnitWithNoVerbsStillReachesTheRegistry(t *testing.T) {
 	got := string(frontendGen([]derivedManifest{{Unit: extensionUnit{Name: "de"}}}, nil, nil))
-	if !strings.Contains(got, "    name: \"de\",\n    secretScope: \"\",\n    title: \"\",\n    verbs: [\n    ],\n") {
+	if !strings.Contains(got, "    name: \"de\",\n    secretScope: \"\",\n    title: \"\",\n    summary: \"\",\n    verbs: [\n    ],\n") {
 		t.Fatalf("a verb-less unit is missing or malformed:\n%s", got)
 	}
 }
@@ -129,6 +128,28 @@ func TestFrontendRegistryCarriesTheUnitTitleKeyOnlyWhenEveryLocaleHasIt(t *testi
 		"    name: \"half\",\n    secretScope: \"\",\n    title: \"\",\n",
 		"    name: \"notes\",\n    secretScope: \"\",\n    title: \"extNotes.title\",\n",
 		"    name: \"vn\",\n    secretScope: \"\",\n    title: \"\",\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in:\n%s", want, got)
+		}
+	}
+}
+
+// The summary Settings shows under a unit's name follows the title's rule: a
+// key every locale carries, else "".
+func TestFrontendRegistryCarriesTheUnitSummaryKeyOnlyWhenEveryLocaleHasIt(t *testing.T) {
+	merged := map[string]map[string]string{}
+	for _, locale := range composedLocales {
+		merged[locale] = map[string]string{"extNotes.summary": "Keeps notes " + locale}
+	}
+	merged["en"]["extHalf.summary"] = "Half"
+	got := string(frontendGen([]derivedManifest{
+		{Unit: extensionUnit{Name: "half"}},
+		{Unit: extensionUnit{Name: "notes"}},
+	}, nil, merged))
+	for _, want := range []string{
+		"    name: \"half\",\n    secretScope: \"\",\n    title: \"\",\n    summary: \"\",\n",
+		"    name: \"notes\",\n    secretScope: \"\",\n    title: \"\",\n    summary: \"extNotes.summary\",\n",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in:\n%s", want, got)
@@ -178,7 +199,7 @@ func TestFrontendRegistryCarriesTheDeclaredEntries(t *testing.T) {
 	}, nil, nil))
 	for _, want := range []string{
 		"    entries: [\n      {\n        slot: \"record_header.deal\",\n        label: \"extVisits.open\",\n        icon: \"map-pin\",\n        target: \"report\",\n        object: \"ext_visits_report\",\n      },\n    ],\n",
-		"    name: \"yogi\",\n    secretScope: \"\",\n    title: \"\",\n    verbs: [\n    ],\n    entries: [\n    ],\n",
+		"    name: \"yogi\",\n    secretScope: \"\",\n    title: \"\",\n    summary: \"\",\n    verbs: [\n    ],\n    entries: [\n    ],\n",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("missing %q in:\n%s", want, got)

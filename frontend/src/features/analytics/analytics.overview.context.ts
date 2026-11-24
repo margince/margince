@@ -43,13 +43,15 @@ type ContextDial = (typeof CONTEXT_DIALS)[number];
  */
 export type OverviewDials = Readonly<Partial<Record<ContextDial, string>>>;
 
-// The periods the team review reads. A team is coached week by week. A month
-// is the longest span its handoff rounds stay comparable over.
+// The periods the team review reads. A team is coached week by week, and
+// reviewed by completed quarter and year; a running quarter is left out.
 export const TEAM_PERIODS = [
   "this_week",
   "last_week",
   "this_month",
   "last_month",
+  "last_quarter",
+  "last_year",
 ] as const;
 
 // My prospecting always reads the reader's own work, so it keeps no scope.

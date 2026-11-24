@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -18,7 +19,7 @@ import (
 //
 //nolint:ireturn // the vault seam has two providers behind one Vault; returning the interface is the design, and this only carries what ForRole handed back.
 func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvault.Vault, error) {
-	pool, err := boundPool(ctx, cfg.dsn)
+	pool, err := boundPool(ctx, dbsettings.PoolDSN(cfg.dsn, cfg.settings))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -29,6 +30,9 @@ func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvau
 	vault, err := keyvault.ForRole(ctx, "api", pool, cfg.settings)
 	if err == nil {
 		err = storekit.RefuseForeignSuppressionKey(ctx, pool)
+	}
+	if err == nil {
+		err = compose.BindExtensionObjectsFromConfig(ctx, cfg.settings)
 	}
 	if err != nil {
 		pool.Close()

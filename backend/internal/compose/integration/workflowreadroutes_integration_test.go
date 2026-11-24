@@ -26,7 +26,7 @@ func TestApprovalRoutesAnswerAsTheirTools(t *testing.T) {
 	d := newTwoDoors(t, "approval-read-doors", "read", "write", "enrich")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{
 		"source": "manual", "display_name": "Approval Door GmbH",
-		"domains": []AnyMap{{"domain": "example.com", "is_primary": true}},
+		"domains": []AnyMap{{"domain": "example.test", "is_primary": true}},
 	})
 	if status := d.e.Call(t, "POST", "/v1/companies/"+company+"/enrich", AnyMap{}, d.bearer, nil); status != http.StatusForbidden {
 		t.Fatalf("a site read should stage an approval → %d", status)
@@ -126,7 +126,7 @@ func TestListRoutesAnswerAsReadLists(t *testing.T) {
 	}, nil, &list); status != http.StatusCreated {
 		t.Fatalf("creating the list → %d", status)
 	}
-	member := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Lisbeth Listed"})
+	member := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Lisbeth Listed"})
 	if status := d.e.Call(t, "POST", "/v1/lists/"+list.ID+"/members",
 		AnyMap{"entity_type": "contact", "entity_id": member}, nil, nil); status >= http.StatusBadRequest {
 		t.Fatalf("adding a member → %d", status)

@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -104,7 +105,7 @@ func assertLateHistorySurvivesDrain(t *testing.T, fold string, parties int) {
 	if err := gen.HandleEvent(context.Background(), all[1]); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.CancelBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1)); err != nil {
+	if _, err := b.registry.CancelBackfill(b.human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep1)); err != nil {
 		t.Fatal(err)
 	}
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:graph_edge_reconcile")

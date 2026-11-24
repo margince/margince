@@ -55,14 +55,12 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## list_evaluation
 
-6 columns · primary key `(list_id)` · referenced by 0 foreign keys
+4 columns · primary key `(list_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
-| `definition_version` | `bigint` | yes |  |
 | `evaluated_at` | `timestamp with time zone` | yes |  |
 | `list_id` | `uuid` | yes | Points at `list.id`. |
-| `member_count` | `integer` | yes |  |
 | `outcome` | `text` | yes | One of `complete`, `too_large`, `invalid`. |
 | `snapshot_version` | `bigint` |  |  |
 
@@ -74,12 +72,10 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Rules**
 
-- `list_evaluation_definition_version_js_safe`: `CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint)))`
 - `list_evaluation_outcome_check`: `CHECK ((outcome = ANY (ARRAY['complete', 'too_large', 'invalid'])))`
 
 **Indexes**
 
-- `idx_list_evaluation_due`: `btree (evaluated_at)`
 - `list_evaluation_pkey`: `unique, btree (list_id)`
 
 **Triggers**

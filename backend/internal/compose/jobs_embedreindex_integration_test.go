@@ -11,9 +11,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -103,5 +105,39 @@ func TestEmbedReindexWorkerReportsAMarkerItCouldNotHandBack(t *testing.T) {
 	joined, ok := errors.Unwrap(err).(interface{ Unwrap() []error })
 	if !ok || len(joined.Unwrap()) != 2 {
 		t.Errorf("the fault carries %v, want the pass failure joined to the release failure — either alone omits the held marker or its cause", err)
+	}
+}
+
+// An admin moves the embed model while a run is working. The run cancels on the
+// drift and hands the marker back without stamping its target, which no role
+// serves any more.
+func TestARunCutShortByAModelChangeKeepsThePopulatedModel(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := context.Background()
+	store := search.NewStore(InstallationDB(e.Pool))
+	const original, target = "fake/orig@1024", "fake/target@1024"
+	if err := store.SeedBinding(ctx, original); err != nil {
+		t.Fatalf("SeedBinding: %v", err)
+	}
+	run := ids.NewV7()
+	claim := search.ReembedClaim{Run: run, TargetIdentity: target}
+	if err := store.ClaimAndEnqueueReembedding(ctx, claim, func(pgx.Tx) error { return nil }); err != nil {
+		t.Fatalf("ClaimAndEnqueueReembedding: %v", err)
+	}
+	// The embedder serves fake/held@1024, so the pass finds the target gone.
+	w := &embedReindexWorker{store: store, embedder: fakeReindexEmbedder{}}
+	err := w.Work(ctx, &river.Job[EmbedReindexArgs]{
+		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 3},
+		Args:   EmbedReindexArgs{Run: run, Identity: target},
+	})
+	if _, ok := errors.AsType[*river.JobCancelError](err); !ok {
+		t.Fatalf("the drifted pass returned %v, want a cancellation", err)
+	}
+	populated, status, _, err := store.PopulatedIdentity(ctx)
+	if err != nil {
+		t.Fatalf("PopulatedIdentity: %v", err)
+	}
+	if populated != original || status != "idle" {
+		t.Errorf("after the drift populated=%q status=%q, want %q idle", populated, status, original)
 	}
 }

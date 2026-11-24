@@ -48,7 +48,7 @@ var AutoEnrichDailyCap = config.DefineStored(config.Spec[int]{
 	Min:     config.Some(1),
 	Max:     config.Some(MaxAutoEnrichDailyCap),
 	Doc:     "Automatic company web-page reads the installation may start in one UTC day.",
-}, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
+}, config.Store{Cacheable: true, RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // SiteReadMaxPages bounds how many pages one deep read fetches. An automatic
 // read runs under its own lower ceiling; this is what a read somebody asked
@@ -61,7 +61,7 @@ var SiteReadMaxPages = config.DefineStored(config.Spec[int]{
 	Min:     config.Some(1),
 	Max:     config.Some(MaxSiteReadMaxPages),
 	Doc:     "Pages one company web-page read may fetch.",
-}, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
+}, config.Store{Cacheable: true, RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // SiteReadMaxMiB bounds the bytes one deep read holds, summed over its pages.
 // Six reads run at once, so the ceiling is also what bounds the worker's
@@ -74,7 +74,7 @@ var SiteReadMaxMiB = config.DefineStored(config.Spec[int]{
 	Min:     config.Some(1),
 	Max:     config.Some(MaxSiteReadMaxMiB),
 	Doc:     "MiB one company web-page read may hold, over all its pages.",
-}, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
+}, config.Store{Cacheable: true, RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // SiteReadWallSeconds is how long one crawl may run before it stops and
 // extracts what it has.
@@ -86,7 +86,7 @@ var SiteReadWallSeconds = config.DefineStored(config.Spec[int]{
 	Min:     config.Some(MinSiteReadWallSeconds),
 	Max:     config.Some(MaxSiteReadWallSeconds),
 	Doc:     "Seconds one company web-page read may run before it stops and extracts what it has.",
-}, config.Store{RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
+}, config.Store{Cacheable: true, RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb})
 
 // MailSyncIntervalSeconds is how long a healthy mailbox connection waits
 // between polls. Push notifications, where a mailbox has them, make this the
@@ -102,6 +102,7 @@ var MailSyncIntervalSeconds = config.DefineStored(config.Spec[int]{
 	Max:     config.Some(3600),
 	Doc:     "Seconds a working mailbox connection waits between polls.",
 }, config.Store{
+	Cacheable:  true,
 	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
 	MachineryApplied: true, // the sync applies it to the next_sync_at it writes
 })

@@ -35,7 +35,7 @@ func NewVoiceCopyRecheckGen(pool *pgxpool.Pool) *VoiceCopyRecheckGen {
 // HandleEvent rechecks the mail an event changed. The recheck reads the row as
 // it stands, so a redelivered or out-of-order event answers the same.
 func (g *VoiceCopyRecheckGen) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if !events.NarrowsActivity(env) {
+	if !events.ActivityNarrowingTypes.Has(env.Type) || !events.NarrowsActivity(env) {
 		return nil
 	}
 	ws, err := g.db.Workspace(ctx)

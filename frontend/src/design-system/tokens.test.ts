@@ -287,8 +287,12 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
           const edge = composite(pal[`--ladder${level}Edge`], ground);
           return contrastOf(edge, ground);
         });
+        // Level 2's ground already parts it from the card, so its edge is the faintest.
         for (const [at, ratio] of ratios.entries()) {
-          expect(ratio, `${theme}: level ${at + 1} edge`).toBeGreaterThan(1.15);
+          const floor = at === 1 ? 1.05 : 1.15;
+          expect(ratio, `${theme}: level ${at + 1} edge`).toBeGreaterThan(
+            floor,
+          );
         }
         const deep = ratios.slice(1);
         expect(
@@ -418,6 +422,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
       const carries: Record<string, string[]> = {
         "--bgPage": prose,
         "--bgElevated": prose,
+        "--bgField": prose,
         "--bgInset": prose,
         "--bgHover": prose,
         "--bgStrip": prose,
@@ -445,7 +450,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--segmentPressed": ["--textPrimary"],
         "--accent": ["--textOnAccentControl"],
         "--ai": ["--textOnAccent"],
-        "--textPrimary": ["--bgPage"],
+        "--textPrimary": ["--bgPage", "--textInverse"],
       };
       const failures: string[] = [];
       for (const [theme, pal] of Object.entries(themes)) {
@@ -479,6 +484,9 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         // it carries whatever the chip's rule sets, so every role that lands
         // on one is measured over it.
         ...chipInks.map((ink) => [ink, "--bgChip"]),
+        // A control face is translucent in dark, so it composites like a tint.
+        ["--textPrimary", "--bgControl"],
+        ["--accentText", "--bgControl"],
       ] as const;
       const grounds = [
         "--bgPage",
@@ -535,6 +543,18 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
     it("pins the dark grounds the ladder is measured from", () => {
       const dark = parseBlock(tokenDecls, '[data-theme="dark"]');
       expect(normalize(dark["--bgPage"])).toBe("#0c1311");
+    });
+
+    // A scrim sets a dialog apart by dimming the page it covers, in both
+    // themes. census/rules/overlayscrim.census.ts holds every layer to it.
+    it("dims the page behind an overlay in both themes", () => {
+      for (const [theme, pal] of Object.entries(themes)) {
+        const ground = pal["--bgPage"];
+        const covered = composite(pal["--overlayScrim"], ground);
+        expect(luminanceOf(covered), theme).toBeLessThan(
+          luminanceOf(ground) * 0.6,
+        );
+      }
     });
 
     // The two neutrals, pinned in dark because dark is where they diverge most

@@ -59,6 +59,7 @@ var FirstResponseTargetMinutes = config.DefineStored(config.Spec[int]{
 	Max:     config.Some(firstResponseMaxMinutes),
 	Doc:     "Minutes a lead may wait for its first real response once its clock starts.",
 }, config.Store{
+	Cacheable:  true,
 	RBACObject: leadVocabularyObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the band it produces rides lead rows the caller is separately gated for
 })
@@ -94,9 +95,13 @@ var UnassignedEscalationUserID = config.DefineStored(config.Spec[string]{
 // settingsAuditVerb is the audit action every contacts settings change records.
 const settingsAuditVerb = "update"
 
+// installationSettingsObject is the RBAC object of the settings an
+// administrator changes for the whole installation.
+const installationSettingsObject = "installation_settings"
+
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
-	return append(LeadSettingsSurface(), SignatureTemplate, SharedMergeReviews)
+	return append(LeadSettingsSurface(), SignatureTemplate, SharedMergeReviews, DormancyDays, DormancyFollowUpEnabled)
 }
 
 // LeadSettingsSurface are the settings GET /leads/settings carries.

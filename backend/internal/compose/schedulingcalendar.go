@@ -21,17 +21,18 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 type schedulingCalendar struct {
 	registry *capture.Registry
-	identity *identity.Service
-	pool     *pgxpool.Pool
+	hostauthority.Writer
+	pool *pgxpool.Pool
 }
 
 func newSchedulingCalendar(pool *pgxpool.Pool, registry *capture.Registry) schedulingCalendar {
-	return schedulingCalendar{registry: registry, identity: identity.NewService(pool), pool: pool}
+	return schedulingCalendar{registry: registry, Seats: identity.NewService(pool), pool: pool}
 }
 
 func (c schedulingCalendar) Check(ctx context.Context, host ids.UserID, provider string) error {
@@ -52,14 +53,11 @@ func (c schedulingCalendar) hostMayBook(ctx context.Context, host ids.UserID) er
 	if !ok {
 		return apperrors.ErrPermissionDenied
 	}
-	rbac, seat, err := c.identity.EffectiveAuthority(ctx, workspace, host.UUID)
+	member, err := authz.MemberPrincipal(ctx, c.Seats, workspace, host.UUID)
 	if err != nil {
 		return err
 	}
-	hostCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + host.String(), UserID: host.UUID,
-		SeatType: seat, Permissions: rbac.Permissions, TeamIDs: rbac.TeamIDs,
-	})
+	hostCtx := principal.WithActor(ctx, member)
 	return auth.Require(hostCtx, "activity", principal.ActionCreate)
 }
 
@@ -92,7 +90,7 @@ func (c schedulingCalendar) Save(ctx context.Context, host ids.UserID, provider 
 		return connector.CalendarReceipt{}, err
 	}
 	if !in.PassportID.IsZero() {
-		live, err := c.identity.AuthenticateAgentByID(ctx, ids.From[ids.PassportKind](in.PassportID))
+		live, err := c.Seats.AuthenticateAgentByID(ctx, ids.From[ids.PassportKind](in.PassportID))
 		if err != nil {
 			return connector.CalendarReceipt{}, err
 		}
@@ -202,7 +200,7 @@ func (c schedulingCalendar) checkAppointmentRecipient(ctx context.Context, host 
 }
 
 func (c schedulingCalendar) recipientContext(ctx context.Context, host ids.UserID) (context.Context, error) {
-	return hostauthority.Context(ctx, c.identity, host)
+	return hostauthority.Context(ctx, c.Seats, host)
 }
 
 func (c schedulingCalendar) List(ctx context.Context, host ids.UserID, provider string) ([]connector.CalendarOption, error) {

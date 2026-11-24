@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -72,6 +74,12 @@ func VoiceBuildWorkerForTest(pool *pgxpool.Pool, path ModelPath) (river.Worker[V
 	addModelLaneJobs(reg, pool, JobRunnerConfig{VoiceBrain: path.VoiceBuild}, slog.New(slog.DiscardHandler))
 	var worker river.Worker[VoiceBuildArgs]
 	return worker, governedInto(reg, &worker)
+}
+
+// FreezeForecastsForTest runs the daily forecast freeze once, at now, over
+// every live workspace.
+func FreezeForecastsForTest(ctx context.Context, pool *pgxpool.Pool, now func() time.Time) error {
+	return (&forecastSnapshotSweepWorker{pool: pool, now: now, log: slog.New(slog.DiscardHandler)}).Work(ctx, nil)
 }
 
 // WithImportJobWorkersForTest fills into with the import workers over the
@@ -139,3 +147,6 @@ func governedInto[T river.JobArgs](reg *jobRegistry, into *river.Worker[T]) erro
 	*into = jobs.Govern[T](work, spec)
 	return nil
 }
+
+// ForecastStoreForTest is the forecasting store as the server builds it, lens included.
+func ForecastStoreForTest(pool *pgxpool.Pool) *forecasting.Store { return newForecastStoreFor(pool) }

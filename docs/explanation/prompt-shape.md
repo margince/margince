@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/kernel/promptfence/promptfence.go backend/internal/compose/companycontextprompt.go backend/internal/compose/confidentialityverdictask.go backend/internal/compose/batchfidelity.go backend/internal/shared/kernel/promptref/promptref.go backend/internal/compose/captureclassify.go backend/internal/compose/captureverdict.go -->
+<!-- describes: backend/internal/shared/kernel/promptfence/promptfence.go backend/internal/compose/companycontextprompt.go backend/internal/compose/confidentialityverdictask.go backend/internal/compose/batchfidelity.go backend/internal/shared/kernel/promptref/promptref.go backend/internal/compose/captureclassify.go backend/internal/compose/captureverdict.go backend/internal/modules/ai/anthropiccache.go -->
 # How we write prompts: the password, the cost, and one item at a time
 
 Most prompts this product sends have the same three parts. One carries no
@@ -234,9 +234,8 @@ about 0. *The floor*, below, has the numbers.
 
 ### What we measured
 
-Over 7 days on staging (`margince-staging`, every task on its set-up binding:
-Gemini on `gemini-3.1-flash-lite` for the background lanes and `gemini-3.5-flash`
-above them):
+Over 7 days, with every task on its set-up binding (Gemini on
+`gemini-3.1-flash-lite` for the background lanes and `gemini-3.5-flash` above them):
 
 ```
   input tokens sent ............. 10,700,530
@@ -250,9 +249,15 @@ other task has recorded a single cached token yet. The number moves between 0%
 and 5%, by whether one of those four calls is inside the window. It
 does not show a change over time, and nothing we have changed moves it.
 
-"Caches we created: 0" is a separate fact with a separate reason: **the caching we
-would have to ask for, we never ask for.** Gemini has a `cachedContents` API, and
-Anthropic has a marker per block. Nothing in our code calls either one.
+"Caches we created: 0" is a separate fact with a separate reason. **The caching we
+would have to ask for, we did not ask for** in that window. Every task ran on
+Gemini. Gemini has a `cachedContents` API, and no code calls it.
+
+Anthropic has a
+marker per block, and its adapter sets one. It cuts the system prompt in front of
+the password, marks the rules before it, and marks the last tool. A prefix under
+512 tokens, the smallest any model caches, goes without a marker
+(`backend/internal/modules/ai/anthropiccache.go`).
 
 ### Where `agent_loop` puts the boundary
 
@@ -263,8 +268,7 @@ exists for. Each site of `agent_loop` is one scheduled agent that lists only the
 tools it has. The size per site is in
 [ai-prompts.json](../reference/ai-prompts.json), and what each run's list costs is
 in [agent-tool-budget.md](../reference/agent-tool-budget.md). `agent_loop` made
-only **four calls in 7 days** on staging, so there are not enough calls there for
-a share to move.
+only **four calls in 7 days**, so there are not enough calls for a share to move.
 
 ### The floor: why next to nothing is reused
 
@@ -578,8 +582,7 @@ each item alone.
 | Routes, token counts, traces | [ai-runtime.md](ai-runtime.md) |
 | What the company block carries | [company-context.md](company-context.md) |
 
-We measured the numbers on this page on staging in September 2026, over a 7-day
-window. They are the 0.38% cache number, the table per task in *The floor*, and
+We measured the numbers on this page in September 2026, over a 7-day window. They are the 0.38% cache number, the table per task in *The floor*, and
 the 86.3% share of opened emails from `capture_confidentiality_verdict`. Measure
 them again before you trust them again.
 

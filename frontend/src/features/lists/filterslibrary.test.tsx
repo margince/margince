@@ -24,6 +24,7 @@ import {
   OTHER_OWNER_ID,
   READER_ID,
   shortlist,
+  TEAM_ID,
 } from "../../testing/lists.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { FiltersScreen } from "./filters";
@@ -165,6 +166,7 @@ describe("with lists on", () => {
     const { wrapper } = mountFilters({
       listsOn: true,
       lists: [liveList, THEIRS],
+      teams: { [TEAM_ID]: "Team Germany" },
     });
     render(<FiltersScreen />, { wrapper });
     await screen.findByText(liveList.name);
@@ -692,7 +694,7 @@ describe("a group's own address", () => {
     render(<FiltersScreen id="lists" />, { wrapper });
     const plate = await screen.findByText(en["filters.library.firstRunTitle"]);
     await vi.waitFor(() =>
-      expect(plate.closest(".library-anchor")).toHaveFocus(),
+      expect(plate.closest('[data-testid="library-anchor"]')).toHaveFocus(),
     );
   });
 

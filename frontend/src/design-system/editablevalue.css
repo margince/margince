@@ -8,7 +8,6 @@
   --editableFill: color-mix(in srgb, var(--hoverShade) 70%, var(--groundHover));
   display: inline-flex;
   align-items: flex-start;
-  gap: var(--space-1);
   min-inline-size: 0;
   max-inline-size: calc(100% + var(--space-2));
   margin-block: calc(-1 * var(--space-1));
@@ -41,16 +40,6 @@
   transition: background-color var(--dur-state);
 }
 
-/* A card keeps the width of its row: the pill around it is the whole row. */
-.editable-value-block {
-  display: flex;
-  inline-size: calc(100% + var(--space-2));
-}
-.editable-value-block .editable-value-face,
-.editable-value-block .editable-value-press {
-  flex: 1;
-}
-
 .editable-value-placeholder {
   color: var(--textSecondary);
 }
@@ -63,16 +52,15 @@
   place-items: center;
   inline-size: calc(1lh + 2 * var(--space-1));
   block-size: calc(1lh + 2 * var(--space-1));
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--editableFill);
   color: var(--textSecondary);
   opacity: 0;
-  transition: opacity var(--dur-state);
+  transition:
+    opacity var(--dur-state),
+    color var(--dur-state);
 }
 .editable-value-bubble svg {
-  inline-size: var(--controlIcon);
-  block-size: var(--controlIcon);
+  inline-size: var(--space-3);
+  block-size: var(--space-3);
 }
 
 .editable-value-edit {
@@ -81,7 +69,6 @@
   padding: 0;
   border: 0;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: transparent;
   cursor: pointer;
 }
@@ -93,6 +80,7 @@
   }
   .editable-value:hover .editable-value-bubble {
     opacity: 1;
+    color: var(--textPrimary);
   }
 }
 
@@ -103,6 +91,18 @@
   }
 }
 
+/* A thumb gets a 44px target around the glyph from a layer that draws nothing. */
+@media (pointer: coarse) {
+  .editable-value-edit {
+    position: relative;
+  }
+  .editable-value-edit::before {
+    content: "";
+    position: absolute;
+    inset: calc((100% - max(44px, 100%)) / 2);
+  }
+}
+
 .editable-value-press:focus-visible .editable-value-face,
 .editable-value-link:focus-within .editable-value-face {
   background: var(--editableFill);
@@ -110,6 +110,7 @@
 .editable-value-press:focus-visible .editable-value-bubble,
 .editable-value-link:focus-within .editable-value-bubble {
   opacity: 1;
+  color: var(--textPrimary);
 }
 .editable-value-press:focus-visible,
 .editable-value-edit:focus-visible {

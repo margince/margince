@@ -47,10 +47,10 @@ func sarRetainedCopySections(ctx context.Context, pkg *SARPackage, identities []
 			records,
 		},
 		{&pkg.RoomParticipants, storekit.SQLf(`SELECT id, room_id, full_name, email, capability, created_at, revoked_at
-		 FROM deal_room_participant WHERE lower(email)=ANY($%[1]d::text[])`, addressArg), addresses},
+		 FROM deal_room_participant WHERE email=ANY($%[1]d::text[])`, addressArg), addresses},
 		{&pkg.RoomComments, storekit.SQLf(`SELECT c.id, c.room_id, c.thread_id, c.body, c.created_at
 		 FROM deal_room_comment c JOIN deal_room_participant p ON p.id=c.author_participant_id
-		 WHERE lower(p.email)=ANY($%[1]d::text[])`, addressArg), addresses},
+		 WHERE p.email=ANY($%[1]d::text[])`, addressArg), addresses},
 		{&pkg.Introductions, storekit.SQLf(`SELECT id,
    CASE WHEN contact_id=ANY($%[1]d::uuid[]) THEN contact_id END AS contact_id,
    through_contact_id,

@@ -9,7 +9,8 @@ uploads, `security.txt`, rates and sales reporting. Which settings turn on which
 
 `ai.capture_payloads` is off by default. To turn it on stores the whole request and response of the
 model in `ai_call_payload`. For a reading of a meeting transcript, that request *is* the transcript:
-the most complete copy of the words of someone that this product holds.
+the most complete copy of the words of someone that this product holds. A call whose row in
+[ai-egress.md](ai-egress.md) says its prompt is not kept stores nothing there.
 
 The `ai_call_payload` / `content` row in `retention_policy` limits that. Bootstrap sets it to 365
 days and `enabled`, so the retention engine erases what is older from the first sweep. The number is
@@ -71,8 +72,9 @@ confirmed company data.
 to hide them:
 
 - the `/v1/lists` routes answer 404;
-- the `list_id` filter of the contact, company, deal and lead lists answers 404, and the filtered
-  export refuses a `list_id` source;
+- the `list_id` filter of the contact, company, deal and lead lists answers no rows, as for a list
+  that does not exist;
+- the filtered export refuses a `list_id` source;
 - the company page names no list, and no agent list tool is registered;
 - `/me` reports `settings_availability.lists: false`, so no screen offers them;
 - the 15-minute Live List check of the worker records nothing. So no list history grows, and no

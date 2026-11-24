@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -76,7 +77,7 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 			          AND a.archived_at IS NULL
 			          AND `+visible+`
 			          AND ((`+correspondence.AuthenticatedInboundSQL("a")+` AND `+authorIsTheSubject+`)
-			               OR (`+capturedMeetingSQL("$10")+` AND `+participantIsTheSubject+`)))
+			               OR (`+capturedMeetingSQL("$10")+` AND `+participantIsTheSubject+` AND p.relinked_at IS NULL)))
 			  OR EXISTS (
 			       SELECT 1 FROM consent_qualifying_event q
 			        WHERE q.contact_id = $2::uuid
@@ -135,7 +136,21 @@ var (
 		quoteOnly:        true,
 		perDeal:          true,
 	}
+	// subscriptionRequests are what a consent-confirmation mail may answer. They
+	// are a request a user logged, a form the contact posted, and the form or
+	// event registration the contact came in through.
+	subscriptionRequests = requestScope{
+		acquisitionKinds: []string{acquisitionEventOrForm},
+		eventKinds:       []string{KindRequestedBySubject, KindInquiry},
+	}
 )
+
+// acquisitionEventOrForm mirrors contacts.AcquiredEventOrForm: a form, booking
+// or event registration the contact filled in.
+//
+// Held by: TestTheFormAcquisitionIsSpelledTheSameOnBothSides
+// (backend/gates/acquisitionvocabulary_test.go)
+const acquisitionEventOrForm = "event_or_form"
 
 // requestOnRecord reports whether the record holds this contact asking to hear
 // from us, within scope. That is a request a rep recorded, a form enquiry, or
@@ -158,14 +173,26 @@ func requestOnRecord(ctx context.Context, tx pgx.Tx, subject subjectRef, scope r
 // the ones naming none. So a newer request for one quote does not lift an
 // objection for another quote's deal.
 func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope requestScope, deal ids.UUID) (time.Time, bool, error) {
+	newest, found, err := newestRequest(ctx, tx, subject, scope, deal)
+	return newest.at, found, err
+}
+
+// subjectRequest is the newest request on record. event names its
+// consent_qualifying_event row, and is zero for acquisition evidence.
+type subjectRequest struct {
+	at    time.Time
+	event ids.UUID
+}
+
+func newestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope requestScope, deal ids.UUID) (subjectRequest, bool, error) {
 	sub, known, err := qualifyingSubjectRef(subject)
 	if err != nil || !known {
-		return time.Time{}, false, err
+		return subjectRequest{}, false, err
 	}
 	column := pgx.Identifier{sub.column}.Sanitize()
 	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
 	if err != nil {
-		return time.Time{}, false, err
+		return subjectRequest{}, false, err
 	}
 	args := []any{
 		subject.ID, time.Now().Add(clockSkewAllowance),
@@ -175,14 +202,15 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 	entityArg := storekit.SQLf("$%d", len(args))
 	qualification, err := recordedQualificationSQL(ctx, "q", &args)
 	if err != nil {
-		return time.Time{}, false, err
+		return subjectRequest{}, false, err
 	}
 	args = append(args, subject.Kind == entityContact)
 	acquisition := storekit.SQLf("$%d", len(args))
-	var newest *time.Time
+	var out subjectRequest
+	var event *ids.UUID
 	err = tx.QueryRow(ctx, `
-		SELECT max(asked_at) FROM (
-			SELECT coalesce(e.occurred_at, e.captured_at) AS asked_at
+		SELECT asked_at, event_id FROM (
+			SELECT coalesce(e.occurred_at, e.captured_at) AS asked_at, NULL::uuid AS event_id
 			  FROM contact_acquisition_evidence e
 			 WHERE `+acquisition+` AND e.contact_id = $1::uuid
 			   AND e.kind = ANY($4::text[])
@@ -193,7 +221,7 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 			   AND `+requestCoversSQL("e.recorded_for_addresses", "$8")+`
 			   AND `+recordedEntitySQL("e.legal_entity_id", entityArg)+`
 			UNION ALL
-			SELECT q.occurred_at
+			SELECT q.occurred_at, q.id
 			  FROM consent_qualifying_event q
 			 WHERE q.`+column+` = $1::uuid
 			   AND q.kind = ANY($3::text[])
@@ -203,12 +231,15 @@ func latestRequest(ctx context.Context, tx pgx.Tx, subject subjectRef, scope req
 			   AND (NOT $6 OR q.about_deal_id IS NULL OR q.about_deal_id = $7::uuid)
 			   AND `+requestCoversSQL("q.recorded_for_addresses", "$8")+`
 			   AND `+recordedEntitiesSQL("q.recorded_for_entities", entityArg)+` AND `+qualification+`
-		) requests`, args...).Scan(&newest)
+		) requests ORDER BY asked_at DESC LIMIT 1`, args...).Scan(&out.at, &event)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return subjectRequest{}, false, nil
+	}
 	if err != nil {
-		return time.Time{}, false, fmt.Errorf("consent: read what this recipient asked for: %w", err)
+		return subjectRequest{}, false, fmt.Errorf("consent: read what this recipient asked for: %w", err)
 	}
-	if newest == nil {
-		return time.Time{}, false, nil
+	if event != nil {
+		out.event = *event
 	}
-	return *newest, true, nil
+	return out, true, nil
 }

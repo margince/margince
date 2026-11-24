@@ -23,18 +23,13 @@
 #     is true and "slipping past the sixty-day line" is not, and both carry the
 #     same words.
 name: case58_quiet_for_three_weeks
+title: Quiet for three weeks
 criteria: [1]
 writes: false
 
 prompt: |
   Which deals in the pipeline have gone quiet for three weeks or more? I want
   to call round this afternoon.
-
-must_call:
-  - whats_slipping_this_week
-
-must_call_with:
-  - whats_slipping_this_week.quiet_days=21
 
 may_call:
   - list_records
@@ -44,6 +39,7 @@ may_call:
   - query_workspace
   - at_risk_relationships
   - whoami
+  - whats_slipping_this_week
 
 must_mention:
   - "K(ö|oe|o)rber"

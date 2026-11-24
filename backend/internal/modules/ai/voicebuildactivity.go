@@ -141,7 +141,7 @@ func voiceBuildSettledAt(build VoiceBuild) *time.Time {
 	if build.Status != voiceBuildStatusDeferred {
 		return nil
 	}
-	return build.UpdatedAt
+	return &build.UpdatedAt
 }
 
 // voiceBuildDegradeReason is the one sentence a settled-short build carries,

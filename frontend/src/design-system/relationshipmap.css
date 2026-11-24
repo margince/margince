@@ -96,7 +96,7 @@
 }
 
 .rmap-box {
-  fill: var(--bgElevated);
+  fill: var(--bgField);
   stroke: var(--borderSubtle);
   stroke-width: 1;
 }
@@ -211,10 +211,41 @@
   margin: 0;
 }
 
+/* The key draws each band the way an edge does: thickness first, dash second. */
+.rmap-legend {
+  margin: 0 0 var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+}
+
+.rmap-legend-key {
+  display: inline-block;
+  inline-size: var(--space-6);
+  margin-inline-end: var(--space-1);
+  vertical-align: middle;
+}
+
+.rmap-legend-strong {
+  border-block-start: 3px solid var(--success);
+  border-radius: var(--r-full);
+}
+
+.rmap-legend-developing {
+  border-block-start: 2px dashed var(--borderControl);
+}
+
+.rmap-legend-cold {
+  border-block-start: 2px dotted var(--borderControl);
+}
+
 .rmap-panel {
+  min-width: 0;
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-md);
   padding: var(--space-4);
+  /* Names and route words are data, and need not hold a space to break at. */
+  overflow-wrap: anywhere;
 }
 
 .rmap-panel-title {

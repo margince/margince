@@ -20,8 +20,18 @@ this installation goes, so an operator must choose it; it is never inherited.
 | [`qwen3_local_vllm.yaml`](qwen3_local_vllm.yaml) | every tier to Qwen3-14B (MLX 4-bit) on loopback vLLM, embeddings to `bge-m3` on a second vLLM; zero egress | two vLLM servers started with the flags in the file's header |
 
 `gemini_cloud.yaml` uses the provider a dev stack starts with, the Gemini Developer API, with
-`gemini-3.8-flash` in `premium` and `frontier`. The binding in `margince.dev.yaml` is its own and
-names other models there, because that file is the dev posture and has to stand alone.
+`gemini-3.8-flash` in `premium` and `frontier`. `margince.dev.yaml` holds a copy of the same
+binding, because that file is the dev posture and has to stand alone. A test fails when the two
+differ.
+
+**A preset may reorder one task's rungs.** `task_ladders` names a task and the order its own rungs
+are walked in, and leaves every other task in its contract order.
+
+Both Gemini presets walk `agent_loop`, `nl_search` and `voice_build` on the `premium` tier
+first. On Flash all three certify, and on Flash-Lite none does: there a line planted in a CRM
+record reached a scheduled agent's findings. Each of those calls pays for `premium` tokens.
+`draft_reply` keeps its contract order: Flash-Lite drafts read `supported_degraded`, and on Flash the
+account drafts fail two privacy cases.
 
 `gemini_vertex_eu.yaml` binds the models of `gemini_cloud.yaml` at their thinking levels, on
 Vertex AI at an EU location, under `eu_hosted`. Frontier stays on Flash, because Vertex serves no

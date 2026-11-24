@@ -1,0 +1,275 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package messaging
+
+import (
+	"errors"
+	"fmt"
+	"net/url"
+	"strings"
+	"time"
+)
+
+// Instrument is one law or decree a rule set states, and when it took effect.
+//
+// It documents the record and binds nothing. A decision records the ruleset
+// version it was judged under; this says what that number meant. Two
+// instruments with different commencement dates may both be live, as when a
+// decree amends rather than replaces. So this is a list, and the pack states
+// every instrument its obligations rest on.
+type Instrument struct {
+	// Name is the instrument as a regulator cites it, e.g.
+	// "Decree 91/2020/ND-CP". Not translated: a citation is the same string
+	// in every locale, and translating one would make it unfindable.
+	Name string
+
+	// EffectiveFrom is the instrument's own commencement date, never the date
+	// this product learned about it. Zero means the pack did not state one,
+	// which is legal and says less rather than saying "the epoch".
+	EffectiveFrom time.Time
+
+	// Provision is the part a citation names when it states none of its own.
+	// It is written as the instrument prints it. Empty names none.
+	Provision string
+
+	// SourceURL is the official published text, over https. Empty states none.
+	SourceURL string
+
+	// ExpiresFrom is the first instant the instrument no longer binds. Zero
+	// means it states no end. Once past, a citation of it is no longer shown.
+	ExpiresFrom time.Time
+
+	// TextURL is where a refresh reads the text when SourceURL serves a page a
+	// plain HTTP client cannot read. Empty reads SourceURL.
+	TextURL string
+
+	// TextDigest is the SHA-256 of the text a refresh last read, in lower-case
+	// hex. Empty records no refresh.
+	TextDigest string
+
+	// TextFetchedAt is the day TextDigest was taken.
+	TextFetchedAt time.Time
+
+	// CheckedByHandAt is the day someone read a source no plain HTTP client
+	// can read. Zero means nobody did, and a refresh fetches the source.
+	CheckedByHandAt time.Time
+}
+
+// Validate refuses an instrument that names nothing, links to an unsafe
+// source, or ends before it begins.
+func (i Instrument) Validate() error {
+	if strings.TrimSpace(i.Name) == "" {
+		return errors.New("an instrument carries no name — a commencement date with nothing to commence names no law")
+	}
+	if i.SourceURL != "" {
+		if err := validateSourceURL(i.SourceURL); err != nil {
+			return fmt.Errorf("instrument %q: %w", i.Name, err)
+		}
+	}
+	if !i.ExpiresFrom.IsZero() && !i.EffectiveFrom.IsZero() && !i.ExpiresFrom.After(i.EffectiveFrom) {
+		return fmt.Errorf("instrument %q expires on or before it takes effect", i.Name)
+	}
+	if err := i.validateRefresh(); err != nil {
+		return fmt.Errorf("instrument %q: %w", i.Name, err)
+	}
+	return nil
+}
+
+// validateRefresh refuses a refresh record that does not say how the source
+// was read. It is a digest with its day and an address, or a check by hand.
+func (i Instrument) validateRefresh() error {
+	if i.TextURL != "" {
+		if err := validateSourceURL(i.TextURL); err != nil {
+			return err
+		}
+	}
+	byHand := !i.CheckedByHandAt.IsZero()
+	switch {
+	case !validSHA256(i.TextDigest):
+		return fmt.Errorf("text digest %q is not a SHA-256 in lower-case hex", i.TextDigest)
+	case (i.TextDigest == "") != i.TextFetchedAt.IsZero():
+		return errors.New("a text digest and the day it was fetched are stated together or not at all")
+	case byHand && (i.TextDigest != "" || i.TextURL != ""):
+		return errors.New("a source checked by hand states no text address and no text digest")
+	case (byHand || i.TextDigest != "") && i.SourceURL == "" && i.TextURL == "":
+		return errors.New("a refresh is recorded and no source was stated to read")
+	}
+	return nil
+}
+
+// Provenance is who reviewed a rule set against its sources, and when.
+//
+// A pack cites its law with or without a review. ReviewDue passing on a
+// reviewed pack says nobody re-read it in time, and the pack still applies.
+// An instrument's ExpiresFrom passing says the law itself ended. The first
+// silences the pack's citations; the second silences only that instrument's.
+type Provenance struct {
+	// CreatedAt is when the rule set was first written.
+	CreatedAt time.Time
+	// SourceCheckedAt is when its instruments were last compared with their
+	// published texts.
+	SourceCheckedAt time.Time
+	// ReviewedAt is when a named reviewer last approved it. Zero is a draft,
+	// which cites like a reviewed pack.
+	ReviewedAt time.Time
+	// ReviewDue is when the next review is owed. Zero sets no due date, and a
+	// draft has none to miss.
+	ReviewDue time.Time
+	// Reviewer names who approved it, as the pack's maintainers sign.
+	Reviewer string
+}
+
+// validate refuses a review that names nobody or falls due before it happened.
+func (p Provenance) validate() error {
+	if p.ReviewedAt.IsZero() {
+		return nil
+	}
+	if strings.TrimSpace(p.Reviewer) == "" {
+		return errors.New("the rule set records a review and no reviewer")
+	}
+	if !p.ReviewDue.IsZero() && !p.ReviewDue.After(p.ReviewedAt) {
+		return errors.New("the rule set's next review falls due on or before its last one")
+	}
+	return nil
+}
+
+// Territory narrows a citation to where the sending legal entity is
+// established, relative to the jurisdiction whose pack declares it. Closed,
+// because the engine has to decide each one.
+type Territory string
+
+const (
+	// AnySender cites whatever the sender's country.
+	AnySender Territory = ""
+	// SenderHere cites only a sender established in this jurisdiction.
+	SenderHere Territory = "sender_here"
+	// SenderElsewhere cites only a sender established outside it.
+	SenderElsewhere Territory = "sender_elsewhere"
+)
+
+// Validate enforces membership in the closed set.
+func (t Territory) Validate() error {
+	switch t {
+	case AnySender, SenderHere, SenderElsewhere:
+		return nil
+	}
+	return fmt.Errorf("territory %q is not one the engine decides", string(t))
+}
+
+// Citation names the law behind one finding or refusal the engine reports.
+//
+// One code can rest on different law in two markets. So a citation belongs to
+// the pack of the recipient it explains, and Territory narrows it further.
+type Citation struct {
+	// Code is the engine's finding or refusal code this explains, e.g.
+	// "frequency_cap_reached".
+	Code string
+	// Territory is where the sender must be established for this to apply.
+	Territory Territory
+	// Instrument is the Name of one of the rule set's Instruments.
+	Instrument string
+	// Provision is the part of the instrument, e.g. "Art. 21(2)". Empty takes
+	// the instrument's.
+	Provision string
+	// SourceURL is the official text of the provision, over https. Empty
+	// takes the instrument's.
+	SourceURL string
+}
+
+// validateCitations refuses a citation that names no declared law, or has no
+// provision or source to link. A reviewed pack that cites must have checked
+// its sources before the review approved them.
+func (r Rules) validateCitations() error {
+	if err := r.Provenance.validate(); err != nil {
+		return err
+	}
+	reviewed, checked := r.Provenance.ReviewedAt, r.Provenance.SourceCheckedAt
+	if len(r.Citations) > 0 && !reviewed.IsZero() && (checked.IsZero() || checked.After(reviewed)) {
+		return errors.New("the rule set cites law and its sources were not checked before its review")
+	}
+	cited := map[string][]Territory{}
+	for _, c := range r.Citations {
+		if err := r.validateCitation(c); err != nil {
+			return err
+		}
+		for _, other := range cited[c.Code] {
+			if other == c.Territory || other == AnySender || c.Territory == AnySender {
+				return fmt.Errorf("citation %q is declared twice for one sender — two laws for one finding is two answers", c.Code)
+			}
+		}
+		cited[c.Code] = append(cited[c.Code], c.Territory)
+	}
+	return nil
+}
+
+// validateCitation checks one citation on its own: its code, its territory and
+// the provision and source it resolves to.
+func (r Rules) validateCitation(c Citation) error {
+	if strings.TrimSpace(c.Code) == "" || strings.TrimSpace(c.Code) != c.Code {
+		return fmt.Errorf("citation code %q is empty or padded", c.Code)
+	}
+	if err := c.Territory.Validate(); err != nil {
+		return fmt.Errorf("citation %q: %w", c.Code, err)
+	}
+	resolved, err := r.ResolveCitation(c)
+	if err != nil {
+		return err
+	}
+	if err := validateSourceURL(resolved.SourceURL); err != nil {
+		return fmt.Errorf("citation %q: %w", c.Code, err)
+	}
+	return nil
+}
+
+// ResolveCitation fills a citation's empty provision and source from the
+// instrument it names. It refuses a citation that names no single declared
+// instrument, or that ends up with no provision.
+func (r Rules) ResolveCitation(c Citation) (Citation, error) {
+	var named []Instrument
+	for _, in := range r.Instruments {
+		if in.Name == c.Instrument {
+			named = append(named, in)
+		}
+	}
+	if len(named) != 1 {
+		return Citation{}, fmt.Errorf("citation %q names instrument %q, which the rule set declares %d times — it must name exactly one",
+			c.Code, c.Instrument, len(named))
+	}
+	if c.Provision == "" {
+		c.Provision = named[0].Provision
+	}
+	if c.SourceURL == "" {
+		c.SourceURL = named[0].SourceURL
+	}
+	if strings.TrimSpace(c.Provision) == "" {
+		return Citation{}, fmt.Errorf("citation %q names no provision, and its instrument states none", c.Code)
+	}
+	return c, nil
+}
+
+// validateSourceURL accepts an absolute https address and nothing else. The
+// link is shown to a rep, and another scheme is one a page could abuse.
+func validateSourceURL(raw string) error {
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+		return fmt.Errorf("source %q is not an absolute https address", raw)
+	}
+	return nil
+}
+
+// digestLength is a SHA-256 written as lower-case hex.
+const digestLength = 64
+
+// validateDigest accepts no digest, or a SHA-256 in lower-case hex.
+func (r Rules) validateDigest() error {
+	if !validSHA256(r.Digest) {
+		return fmt.Errorf("digest %q is not a SHA-256 in lower-case hex", r.Digest)
+	}
+	return nil
+}
+
+// validSHA256 accepts no digest, or a SHA-256 in lower-case hex.
+func validSHA256(digest string) bool {
+	return digest == "" || (len(digest) == digestLength && strings.Trim(digest, "0123456789abcdef") == "")
+}

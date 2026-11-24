@@ -162,7 +162,6 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  corner-shape: round;
   color: var(--successText);
   background: var(--successBg);
 }
@@ -208,4 +207,8 @@
 
 .pref-check:not(:has(input:disabled)):hover {
   background: var(--bgInset);
+}
+
+.unsub-error {
+  margin-top: var(--space-4);
 }

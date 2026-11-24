@@ -10,6 +10,8 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -95,23 +97,18 @@ function view(
   };
 }
 
-function Card({ onAddTask }: Readonly<{ onAddTask?: () => void }>) {
+function Card() {
   const read = useContact360("p-1");
   if (!read.data) return null;
   return (
-    <ContactOpenTasks
-      view={read.data}
-      onAllTasks={() => {}}
-      onAddTask={onAddTask}
-    />
+    <>
+      <p>{read.data.contact.full_name}</p>
+      <ContactOpenTasks view={read.data} onAllTasks={() => {}} />
+    </>
   );
 }
 
-function mount(
-  page: () => Contact360,
-  routes: RouteMap = {},
-  onAddTask?: () => void,
-) {
+function mount(page: () => Contact360, routes: RouteMap = {}) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read", "create", "update"] }),
     "GET /contacts/p-1/360": () => jsonResponse(page()),
@@ -124,10 +121,12 @@ function mount(
       }
     >
       <LocaleProvider initial="en">
-        <ToastProvider>
-          <Card onAddTask={onAddTask} />
-          <ToastRegion />
-        </ToastProvider>
+        <ViewerZoneProvider zone={FIXTURE_TIMEZONE}>
+          <ToastProvider>
+            <Card />
+            <ToastRegion />
+          </ToastProvider>
+        </ViewerZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -160,6 +159,13 @@ it("leaves out the task the Next bar already shows", async () => {
   ]);
 });
 
+it("says a task's due day once, beside who holds it", async () => {
+  mount(() => view(TASKS, WAITING));
+
+  await screen.findByText("Confirm the delivery date");
+  expect(screen.getAllByText(/2 Sept?/)).toHaveLength(1);
+});
+
 it("completes a task on the tick, and the row leaves on the re-read", async () => {
   let done = false;
   const ifMatch: (string | null)[] = [];
@@ -181,7 +187,7 @@ it("completes a task on the tick, and the row leaves on the re-read", async () =
 
   await screen.findByText("Send the price sheet");
   await user.click(
-    screen.getAllByRole("checkbox", { name: en["tasks.complete"] })[0],
+    screen.getByRole("checkbox", { name: "Mark Send the price sheet done" }),
   );
 
   await waitFor(() =>
@@ -190,16 +196,18 @@ it("completes a task on the tick, and the row leaves on the re-read", async () =
   expect(ifMatch).toEqual(["3"]);
 });
 
-it("says there is no open task, and offers Add task", async () => {
-  const onAddTask = vi.fn();
-  mount(() => view([]), {}, onAddTask);
-  const user = userEvent.setup();
+it("draws no card when no task is open", async () => {
+  mount(() => view([]));
 
-  await screen.findByText(en["contact.card.noOpenTasks"]);
-  await user.click(
-    screen.getByRole("button", { name: en["contact.action.addTask"] }),
-  );
-  expect(onAddTask).toHaveBeenCalledOnce();
+  await screen.findByText("Dana Buyer");
+  expect(screen.queryByText(en["contact.card.openTasks"])).toBeNull();
+});
+
+it("draws no card when the Next bar holds the only open task", async () => {
+  mount(() => view(TASKS.slice(0, 1)));
+
+  await screen.findByText("Dana Buyer");
+  expect(screen.queryByText(en["contact.card.openTasks"])).toBeNull();
 });
 
 it("draws no tick on a task the reader may not complete", async () => {
@@ -215,15 +223,8 @@ it("draws no tick on a task the reader may not complete", async () => {
 });
 
 it("says the tasks are hidden when the section is withheld", async () => {
-  mount(
-    () => view([], WAITING, ["next_steps"]),
-    {},
-    () => {},
-  );
+  mount(() => view([], WAITING, ["next_steps"]));
 
   await screen.findByText(en["state.withheld"]);
-  expect(screen.queryByText(en["contact.card.noOpenTasks"])).toBeNull();
-  expect(
-    screen.queryByRole("button", { name: en["contact.action.addTask"] }),
-  ).toBeNull();
+  expect(screen.getByText(en["contact.card.openTasks"])).toBeTruthy();
 });

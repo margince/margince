@@ -11,13 +11,83 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "4953eab4d85cacb2",
+    "tools": "b5fb28241f1608b1",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "6ff7959df82ca53ba5b69354128a973b6f57c73b",
+    "ran_at": "2026-11-22T04:45:32Z",
+    "graded_commit": "43efe5d1f04ce6aea932838d625278cfa438cc2f",
+    "graded_at": "2026-11-22T15:28:34Z"
+  },
   "usage": {
-    "input_tokens": 14,
-    "output_tokens": 2135,
-    "cache_creation_input_tokens": 12016,
-    "cache_read_input_tokens": 537628,
+    "input_tokens": 16,
+    "output_tokens": 2472,
+    "cache_creation_input_tokens": 14751,
+    "cache_read_input_tokens": 625416,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1232
+    "cost_usd": 0.1463
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "search_records",
+        "whats_slipping_this_week"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "find_records",
+        "read_attention",
+        "read_context",
+        "read_record",
+        "search_records",
+        "whats_slipping_this_week"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "turns": {
+      "median": 7,
+      "min": 7,
+      "max": 7
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 320091.5,
+      "min": 320089,
+      "max": 320094
+    },
+    "output_tokens": {
+      "median": 1236,
+      "min": 1228,
+      "max": 1244
+    },
+    "duration_ms": {
+      "median": 11896.5,
+      "min": 11790,
+      "max": 12003
+    }
   }
 }

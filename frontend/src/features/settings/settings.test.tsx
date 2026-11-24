@@ -2,7 +2,6 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { isValidElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { AccountMenu } from "../../app/account";
@@ -22,7 +21,8 @@ import {
   settingsBackend,
 } from "../../testing/settings.testkit";
 import { SIGN_OFF_QUERY } from "../mail/composesignoff";
-import { SettingsScreen, tabContent } from "./settings";
+import { drawsComponent } from "./drawn-testing";
+import { SETTINGS_PAGE_VIEWS, SettingsScreen } from "./settings";
 import { AuditLogCard } from "./settings-audit";
 import { healthReport } from "./systemhealth.fixtures";
 import "./systemhealthdiagnostics";
@@ -138,7 +138,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // never notifies anybody — the menu would sit there stale, which is the exact
   // failure "one state" is supposed to rule out. So the real account menu is
   // mounted beside the settings screen, and the assertion is that it followed.
-  it("shares its saved answer with the account menu", async () => {
+  it("shares the clicked theme with the account menu, with no Save", async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -154,8 +154,7 @@ describe("SettingsScreen RBAC surfaces", () => {
         { name: "Dark" },
       ),
     );
-    await user.click(pressProfileSave());
-    await waitFor(() => expect(profileSave()).toBeNull());
+    expect(profileSave()).toBeNull();
 
     // The menu's own radio, read through the menu rather than through the store
     // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
@@ -933,40 +932,24 @@ describe("SettingsScreen restructured pages", () => {
 describe("installation-wide cards live off the personal pages", () => {
   // The card names itself; searching the returned tree for that name avoids
   // rendering twenty-nine pages and their API calls.
-  function pageRenders(id: SettingsPageId, componentName: string): boolean {
-    const seen = new Set<unknown>();
-    const walk = (node: ReactNode): boolean => {
-      if (!node || typeof node !== "object") {
-        return false;
-      }
-      if (Array.isArray(node)) {
-        return node.some(walk);
-      }
-      if (seen.has(node)) {
-        return false;
-      }
-      seen.add(node);
-      // The props generic is what lets `children` be read without asserting a
-      // shape nothing checked: isValidElement narrows both halves at once.
-      if (!isValidElement<{ children?: ReactNode }>(node)) {
-        return false;
-      }
-      // A function component's `name` is what the catalog renders it under.
-      if (typeof node.type === "function" && node.type.name === componentName) {
-        return true;
-      }
-      return walk(node.props.children);
-    };
+  async function pageRenders(
+    id: SettingsPageId,
+    componentName: string,
+  ): Promise<boolean> {
     // Every tab, since a card lives on one part of its page.
     const page = SETTINGS_PAGES.find((each) => each.id === id);
     const tabs = page && "tabs" in page ? page.tabs.map((tab) => tab.id) : [""];
-    return tabs.some((tab) => walk(tabContent(id, tab)));
+    const drawn = await Promise.all(
+      tabs.map((tab) => SETTINGS_PAGE_VIEWS[id].drawn({ tab })),
+    );
+    return drawn.some((tree) => drawsComponent(tree, componentName));
   }
 
-  it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", () => {
-    const hosts = SETTINGS_PAGES.filter((page) =>
-      pageRenders(page.id, "OAuthAppsCard"),
+  it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", async () => {
+    const renders = await Promise.all(
+      SETTINGS_PAGES.map((page) => pageRenders(page.id, "OAuthAppsCard")),
     );
+    const hosts = SETTINGS_PAGES.filter((_, index) => renders[index]);
     expect(hosts).toHaveLength(1);
     expect(hosts[0]?.scope).toBe("installation");
     // And the group with it: `scope` alone would be satisfied by any page the

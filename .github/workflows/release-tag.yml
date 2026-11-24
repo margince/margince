@@ -12,7 +12,7 @@
 # candidate deploys nothing today either way.
 #
 # WHAT A RELEASE CARRIES. The three images, pushed to ghcr.io/margince as
-# ghcr.io/margince/<role>:<tag>; one server bundle per Linux platform (the same
+# ghcr.io/margince/<role>:<release>, the tag without its v; one server bundle per Linux platform (the same
 # binaries and SPA as files, with the units and nginx files a server needs);
 # a compose folder running the images on one host, pinned to their digests;
 # the source SBOMs; images.txt, naming each image by digest; and SHA256SUMS over
@@ -20,15 +20,10 @@
 # signature vouches for every file on the page. Everything is built and signed
 # before the release page is touched, so a failed build leaves no page.
 #
-# WHY THIS IS NOT release.yml. That lane drafts a constellation release into the
-# dist service at test.margince.com, versioned YYYY.edition.bugfix, and its
-# version grammar (pkg/version in margince-constellation) rejects a v-prefixed
-# string by construction. The two release kinds therefore carry two version
-# schemes, and one lane cannot name a build both ways. The same tag starts
-# release.yml, which derives the dist version from it
-# (scripts/release-dist-version.sh), so one tag names both. This lane owns the
-# GitHub release; release.yml keeps the dist release and
-# has surrendered its github-release job, so exactly one lane here can create a
+# THE DIST RELEASE. A plain tag also cuts the test dist release, named by the
+# tag without its v, through _release-dist.yml. The SBOM job runs once, and
+# both lanes take its artifact. Neither lane needs a job of the other, so a
+# failure in one leaves the other running. This lane alone creates the GitHub
 # release.
 name: release-tag
 
@@ -62,6 +57,7 @@ jobs:
       issues: read
     outputs:
       version: ${{ steps.v.outputs.version }}
+      release: ${{ steps.v.outputs.release }}
       prerelease: ${{ steps.v.outputs.prerelease }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -81,26 +77,14 @@ jobs:
       - name: The tag is on main
         env:
           TAG: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          # A release built from a commit that never merged is a release nobody
-          # reviewed. origin/main is asserted SEPARATELY from the ancestry it
-          # feeds: the checkout above is credential-less by now, so nothing here
-          # can fetch what is missing, and `merge-base` against an absent ref
-          # fails exactly as a tag off main does. One message per cause, or a
-          # fetch-depth regression reads as "your tag is not on main" and sends
-          # somebody to re-merge work that is already merged.
-          if ! git rev-parse --verify --quiet origin/main >/dev/null; then
-            echo "release-tag: origin/main is not in this checkout." >&2
-            echo "  The ancestry check cannot run, so this refuses rather than" >&2
-            echo "  passing blind. Check the checkout step's fetch-depth." >&2
-            exit 1
-          fi
-          if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "release-tag: $TAG does not point at a commit on main." >&2
-            echo "  Merge the work first, then tag the merge commit." >&2
-            exit 1
-          fi
+        run: bash scripts/release-tag-on-main.sh "$TAG"
+
+      - name: Go recorded no other commit for the tag
+        env:
+          TAG: ${{ github.ref_name }}
+        # HEAD, not github.sha: for an annotated tag the event can name the tag
+        # object rather than the commit Go records.
+        run: bash scripts/release-tag-go-proxy.sh "$TAG" "$(git rev-parse HEAD)"
 
       - name: LICENSE carries this release's values
         env:
@@ -113,6 +97,22 @@ jobs:
           git fetch --quiet --no-tags --force origin "refs/tags/$TAG:refs/tags/$TAG"
           tag_date="$(git for-each-ref --format='%(taggerdate:short)' "refs/tags/$TAG")"
           bash scripts/release-license-stamped.sh "$TAG" "$tag_date" LICENSE
+
+      - name: The policy packs were checked against their sources
+        env:
+          TAG: ${{ github.ref_name }}
+          PRERELEASE: ${{ steps.v.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          # The LICENSE step fetched the annotated tag, so its date reads here.
+          # Dates in the tree only: a tag never waits on a publisher's host.
+          tag_date="$(git for-each-ref --format='%(taggerdate:short)' "refs/tags/$TAG")"
+          bash scripts/release-policy-sources-fresh.sh "$TAG" "$tag_date" "$PRERELEASE" extensions
+
+      - name: VERSION names this release
+        env:
+          TAG: ${{ github.ref_name }}
+        run: bash scripts/release-version-file.sh "$TAG" VERSION
 
       - name: No open issue blocks a release
         env:
@@ -202,6 +202,35 @@ jobs:
               echo "release-tag: verdict on $SHA is $verdict." ;;
           esac
 
+  # The source SBOMs, on an amd64 runner, for both releases. It needs no tag
+  # check, so neither release waits for the checks of the other.
+  sbom:
+    name: SBOMs
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_release-sbom.yml
+    with:
+      tag: ${{ github.ref_name }}
+      ref: ${{ github.sha }}
+      artifact: release-sboms
+
+  # The test dist release. It needs only the SBOMs, so an open blocker or a
+  # missing draft holds the GitHub release and not this one. The dist service
+  # has no pre-release, so a suffixed tag skips it.
+  dist:
+    name: Dist release
+    needs: [sbom]
+    if: ${{ !contains(github.ref_name, '-') }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/_release-dist.yml
+    with:
+      tag: ${{ github.ref_name }}
+      target: test
+      sbom-artifact: release-sboms
+    # The dist jobs read the publisher and tool tokens.
+    secrets: inherit
+
   # The hand-written half of the notes is a draft release, written before the
   # tag. Only a token that can write sees a draft, so this read sits in a job of
   # its own instead of in version; it still runs before the release is made.
@@ -254,8 +283,8 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
-      # qemu runs the amd64 runtime layers on this arm64 runner, and the SBOM
-      # pipeline's amd64-pinned validators; the Go and SPA builders run native.
+      # qemu runs the amd64 runtime layers on this arm64 runner; the Go and
+      # SPA builders run native.
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       # The docker-container driver: the default driver writes no pushed
       # digest to the bake metadata, and images.txt names each image by it.
@@ -265,10 +294,13 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+      # The images and the programs carry the release without the v of the
+      # tag, as VERSION and dist do: margincectl reads it from each program's
+      # --version line and takes no v.
       - name: Bake and push the images
         env:
           REPO: ghcr.io/margince
-          VERSION: ${{ needs.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.release }}
           PLATFORMS: linux/amd64,linux/arm64
           MARGINCE_BUILD_REVISION: ${{ github.sha }}
         run: |
@@ -285,13 +317,14 @@ jobs:
           cat dist/release/images.txt
       - name: Bake and pack the server bundles
         env:
-          VERSION: ${{ needs.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.release }}
+          TAG: ${{ needs.version.outputs.version }}
           PLATFORMS: linux/amd64,linux/arm64
           MARGINCE_BUILD_REVISION: ${{ github.sha }}
         run: |
           set -euo pipefail
           docker buildx bake bundle
-          bash scripts/release-bundle.sh "$VERSION" "$MARGINCE_BUILD_REVISION" dist/bundle dist/release
+          bash scripts/release-bundle.sh "$TAG" "$MARGINCE_BUILD_REVISION" dist/bundle dist/release
       # The compose folder pins the digests just pushed, and is started here so
       # one that packs but does not serve fails the release, not a host.
       - name: Pack the compose folder and start it
@@ -301,20 +334,49 @@ jobs:
           set -euo pipefail
           bash scripts/release-compose.sh "$VERSION" dist/release/images.txt dist/release
           bash scripts/release-compose-smoke.sh "dist/release/margince-$VERSION-compose.tar.gz"
-      # The source SBOMs through the full pinned pipeline, named for the
-      # release so a downloaded file says which one it describes.
-      - name: Generate the SBOMs
+      - uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: release-build
+          path: dist/release/
+          if-no-files-found: error
+          retention-days: 30
+
+  # The build and the SBOMs run side by side, and the sums wait for both.
+  # The version is the tag itself, because a re-run of only the failed jobs
+  # drops the outputs of the version job.
+  assets:
+    name: Sum the release assets
+    needs: [build, sbom]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          sparse-checkout: .github/actions
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-build
+          path: dist/release/
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-sboms
+          path: sboms/
+      # Named for the release, so a downloaded file says which one it describes.
+      - name: Name the SBOMs and sum every asset
         env:
-          VERSION: ${{ needs.version.outputs.version }}
+          VERSION: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          make sbom SBOM_VERSION="$VERSION"
           cp sboms/margince.cdx.json "dist/release/margince-$VERSION.cdx.json"
           cp sboms/margince.spdx221.json "dist/release/margince-$VERSION.spdx22.json"
           cp sboms/margince.spdx300.json "dist/release/margince-$VERSION.spdx30.json"
-      - name: Sum every asset
-        working-directory: dist/release
-        run: sha256sum -- * > SHA256SUMS && cat SHA256SUMS
+          cd dist/release
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
       - uses: ./.github/actions/upload-artifact-retried
         with:
           name: release-assets
@@ -327,7 +389,7 @@ jobs:
   # so this runs only after the build has finished and passed.
   sign:
     name: Sign the images and the sums
-    needs: [build]
+    needs: [assets]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     permissions:
@@ -364,7 +426,7 @@ jobs:
 
   release:
     name: Publish the GitHub release
-    needs: [version, draft, build, sign]
+    needs: [version, draft, assets, sign]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 10
     permissions:
@@ -410,6 +472,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.version.outputs.version }}
+          RELEASE: ${{ needs.version.outputs.release }}
           PRERELEASE: ${{ needs.version.outputs.prerelease }}
           REVISION: ${{ github.sha }}
         run: |
@@ -419,8 +482,8 @@ jobs:
           # An unquoted heredoc for the version and the revision; every other
           # backtick and dollar is escaped.
           cat > install.md <<NOTES
-          **Containers.** \`ghcr.io/margince/api:$VERSION\`, \`ghcr.io/margince/worker:$VERSION\`
-          and \`ghcr.io/margince/web:$VERSION\`, for linux/amd64 and linux/arm64. \`images.txt\`
+          **Containers.** \`ghcr.io/margince/api:$RELEASE\`, \`ghcr.io/margince/worker:$RELEASE\`
+          and \`ghcr.io/margince/web:$RELEASE\`, for linux/amd64 and linux/arm64. \`images.txt\`
           names each by digest. \`margince-$VERSION-compose.tar.gz\` runs them on one host with
           Docker Compose, pinned to those digests. Deploy them with
           [docs/how-to/deploy-margince.md](https://github.com/margince/margince/blob/main/docs/how-to/deploy-margince.md).

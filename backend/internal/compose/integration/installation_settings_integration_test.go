@@ -374,7 +374,7 @@ func TestBaseCurrencyFreezesOnceADealHasConvertedAgainstIt(t *testing.T) {
 	// price of a valid closed deal.
 	e.SeedID(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, fx_rate_to_base, status, closed_at)
-		VALUES ($1, 'Converted deal', $2, $3, 'seed', 'system:test',
+		VALUES ($1, 'Converted deal', $2, $3, 'manual', 'system:test',
 		        100000, 'EUR', 1.0850000000, 'won', now())`,
 		pipeline, stage)
 
@@ -447,12 +447,12 @@ func TestBaseCurrencyFreezesOnASentOfferWithNoClosedDeal(t *testing.T) {
 		VALUES ($1, $2, 'Qualified', 1, 'open', 40)`, pipeline)
 	deal := e.SeedID(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, status)
-		VALUES ($1, 'Open deal', $2, $3, 'seed', 'system:test', 100000, 'EUR', 'open')`,
+		VALUES ($1, 'Open deal', $2, $3, 'manual', 'system:test', 100000, 'EUR', 'open')`,
 		pipeline, stage)
 	e.SeedID(t, `
 		INSERT INTO offer (id, deal_id, offer_number, currency, status,
 		                   fx_rate_to_base, fx_rate_date, source, captured_by)
-		VALUES ($1, $2, 'A-2026001', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`,
+		VALUES ($1, $2, 'A-2026001', 'EUR', 'sent', 1.0850000000, current_date, 'manual', 'system:test')`,
 		deal)
 
 	// Prove the fixture is the one this test claims: no deal froze anything.
@@ -544,11 +544,11 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		VALUES ($1, $2, 'Won', 1, 'won', 100)`, pipeline)
 	deal := e.SeedID(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, source, captured_by, amount_minor, currency, fx_rate_to_base, status, closed_at)
-		VALUES ($1, 'Converted deal', $2, $3, 'seed', 'system:test', 100000, 'EUR', 1.0850000000, 'won', now())`,
+		VALUES ($1, 'Converted deal', $2, $3, 'manual', 'system:test', 100000, 'EUR', 1.0850000000, 'won', now())`,
 		pipeline, stage)
 	e.SeedID(t, `
 		INSERT INTO offer (id, deal_id, offer_number, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
-		VALUES ($1, $2, 'A-2026002', 'EUR', 'sent', 1.0850000000, current_date, 'seed', 'system:test')`, deal)
+		VALUES ($1, $2, 'A-2026002', 'EUR', 'sent', 1.0850000000, current_date, 'manual', 'system:test')`, deal)
 	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Census GmbH', 'seed', 'system:test')`)
 	e.SeedID(t, `
 		INSERT INTO contract (id, company_id, title, value_minor, currency, status, fx_rate_to_base, fx_rate_date, source, captured_by)
@@ -557,10 +557,17 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		INSERT INTO finance_connection (id, provider, credential_ref, source, captured_by)
 		VALUES ($1, 'lexoffice', 'ref', 'seed', 'system:test')`)
 	e.SeedID(t, `
-		INSERT INTO finance_invoice (id, connection_id, company_id, external_id, issued_at, status, currency,
+		WITH directory AS (
+		    INSERT INTO finance_external_customer (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+		    VALUES ($2::uuid, 'cust-census', 'Census GmbH', '', 'seed', 'system:test') RETURNING external_customer_id
+		), link AS (
+		    INSERT INTO finance_customer_link (connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
+		    SELECT $2::uuid, $3::uuid, external_customer_id, '', 'seed', 'system:test' FROM directory RETURNING id
+		)
+		INSERT INTO finance_invoice (id, connection_id, company_id, customer_link_id, external_id, issued_at, status, currency,
 		                             net_minor, gross_minor, fx_rate_to_base, fx_rate_date, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, 'ext-census', current_date, 'open', 'EUR', 1000, 1190, 1.0850000000, current_date,
-		        'hash', 'lexoffice', 'system:test')`, connection, company)
+		SELECT $1::uuid, $2::uuid, $3::uuid, link.id, 'ext-census', current_date, 'open', 'EUR', 1000, 1190, 1.0850000000,
+		       current_date, 'hash', 'lexoffice', 'system:test' FROM link`, connection, company)
 	e.SeedID(t, `
 		INSERT INTO commission_entry (id, deal_id, partner_company_id, attribution_at_accrual, basis_amount_minor,
 		                              rate_bps, amount_minor, currency, fx_rate_to_base, captured_by)

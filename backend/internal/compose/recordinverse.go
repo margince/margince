@@ -145,8 +145,8 @@ func undoGrantFor(row AuditRow) principal.Action {
 // boundary.
 func (e Evaluator) evaluateInverse(ctx context.Context, tx pgx.Tx, row AuditRow, kind inverse) (Undoability, error) {
 	// The object grant the module verb asks at its own door: an archive asks
-	// delete, which a seat that may edit a record often does not hold.
-	if err := auth.Require(ctx, row.EntityType, undoGrantFor(row)); err != nil {
+	// delete, or for its owner edit rights alone.
+	if err := auth.RequireUndoGrant(ctx, row.EntityType, undoGrantFor(row)); err != nil {
 		if !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return Undoability{}, err
 		}
@@ -159,6 +159,15 @@ func (e Evaluator) evaluateInverse(ctx context.Context, tx pgx.Tx, row AuditRow,
 			}
 			return refuse(ReasonNotWritableByCaller, ""), nil
 		}
+	}
+	if err := auth.EnsureUndoRow(ctx, tx, row.EntityType, undoGrantFor(row), row.EntityID, kind == inverseUnarchive); err != nil {
+		if _, restore := errors.AsType[*auth.RestoreAuthorityError](err); restore {
+			return refuse(ReasonRestoreArchiverRequired, ""), nil
+		}
+		if !isWriteScopeRefusal(err) {
+			return Undoability{}, err
+		}
+		return refuse(ReasonNotWritableByCaller, ""), nil
 	}
 	if e.AlreadyUndone != nil {
 		undone, err := e.AlreadyUndone(ctx, tx, row)

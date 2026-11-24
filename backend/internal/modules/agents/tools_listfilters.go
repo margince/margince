@@ -35,9 +35,10 @@ type DescribeListFiltersResult struct {
 func (t describeListFilters) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "describe_list_filters", Title: "Describe what each record list may be narrowed by",
-		Version:       toolVersionV1,
-		Description:   describeListFiltersCopy.render(),
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Version:           toolVersionV1,
+		Description:       describeListFiltersCopy.render(),
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp:    "describeListFilters",
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[DescribeListFiltersResult](),

@@ -95,7 +95,20 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
    `1787968162_a_brief_names_the_currency_it_normalized_against.up.sql` and
    `1787968163_the_brief_currency_check_is_validated.up.sql` are the worked pair. The second one explains
    why it is a file of its own.
+
+   A `CHECK` that older rows may break needs a `VALIDATE` that runs only when no row breaks it.
+   PostgreSQL checks a `NOT VALID` rule again on every update of a row. So a row that breaks it can
+   no longer change.
+
+   That file counts the rows that break each rule. It runs `VALIDATE` on the ones with none.
+   For the others it drops the rule and prints a notice with its name and the count. It touches no data.
+
+   On such an installation the code holds the list until the rows are fixed. The approval staging,
+   the notice insert and the edition write each refuse a value outside it.
+   `1795363398_an_approval_with_an_old_type_stays_updatable.up.sql` is the worked example.
 5. **Reach the erase and SAR paths** if the table holds personal data (`piicoverage_test.go`).
+   A column that stores the hash of a token is `token_hash bytea` with `CHECK (octet_length(token_hash) = 32)`.
+   Its writers and readers hash through `storekit.TokenHashBytes` (`backend/gates/tokenhashformat_test.go`).
 6. **Record the schema the migrations build.** Run `make db-up`, then run this from `backend/`:
 
    ```sh
@@ -116,6 +129,29 @@ Follow this checklist. Fitness tests check several of these rules, so a missed o
 Schema that only a fork needs goes in `backend/migrations/custom/`. It has its own tracking table and
 applies after core. Its files are named `YYYYMMDDHHMMSS` and its columns start with `x_`. It stays as it is
 when the fork merges from the main project.
+
+## Change a limited text column of activity
+
+`activity` carries two triggers that hold its text limits, `text_bound_insert` and `text_bound_update`.
+On this one table both name the limited columns. So Postgres refuses to drop one of those columns, or to
+change its type, while the triggers stand. The reasons are in
+[Why text has a shared limit](../explanation/text-length-limits.md).
+
+To drop such a column or change its type:
+
+1. In your migration, drop both triggers before you change the column:
+   `DROP TRIGGER text_bound_insert ON activity; DROP TRIGGER text_bound_update ON activity;`
+2. In its rollback, create both triggers again after the column is back. Copy the two
+   `CREATE TRIGGER` statements for `activity` from `backend/migrations/testdata/head_catalog.txt`.
+   Take them from the file as it was before your change.
+3. Remove or change the column's line in `backend/internal/platform/database/textbounds/columns.txt`.
+4. Record the schema, as in step 6 above.
+5. From `backend/`, write the migration that puts the triggers back for the columns that are left:
+   `go run ./tools/gen-textbounds -tables activity -version <unix second> -name <name>`.
+   Give it a version after your first migration, then record the schema again.
+
+A rename needs only steps 3 to 5, because Postgres follows the new name in the triggers by itself.
+The written migration then corrects the list of columns that the refusal reports.
 
 ## Migrations that lock a busy table
 
@@ -161,7 +197,7 @@ Two edits to applied migrations exist, and each one was safe for a stated reason
 
 1. **The tenant scope work** edited applied migrations.
    It shipped with repair migrations that only add, so it reached every database in use.
-2. **The baseline merge** put one baseline file each in place of the history of core and custom.
+2. **The first baseline merge** put one baseline file each in place of the history of core and custom.
    It has no repair half, because no installation then held data that could not be built again.
    It stops an old database instead.
    The baseline uses version `0001` again, and on such a database that row names a migration that no longer exists.
@@ -170,6 +206,72 @@ Two edits to applied migrations exist, and each one was safe for a stated reason
 Neither case sets a rule for others. The second needed every database to be one that could be built again.
 `scripts/migration-baseline.sh verify` also needed to prove that the baseline builds the same schema as the
 history, byte for byte. Without both, never edit a shipped migration.
+
+## A new installation starts from a baseline
+
+`backend/migrations/baseline/core/` holds one file that builds what core's migrations through a release
+build. Its `replaces.txt` names each version the file stands for, with the version's name and checksum. It
+also names the release a database part-way through those versions must reach first. `migrate up` reads the core ledger before it applies anything:
+
+- **The ledger is empty.** It runs the baseline. In the same transaction it records the baseline and
+  every replaced version, each under its own file's name and checksum. Data tasks that require an old
+  version, and repairs that read its `applied_at`, find the row they look for.
+- **The ledger holds every replaced version.** It records the baseline and does not run it.
+- **The ledger holds only some.** It stops before it changes anything and names the release to upgrade
+  with first. Run that release's `migrate up`, then this one. The first release ships the first
+  baseline, so its `replaces.txt` says `release none`. No release has part of that history. A
+  database built from a commit between releases is built again (`make dev-fresh`).
+
+In the first two cases, migrations after the baseline then apply one by one. The replaced files stay in
+`backend/migrations/core/`, so an installation that applied them upgrades as it always did. `migrate down`
+rolls them back one by one and never rolls back the baseline. After a full `down`, `up` replays the
+history, because the baseline's row stays.
+
+`migrations.Core()` is core with the baseline. `migrations.CoreHistory()` leaves it out, for a
+test that migrates to a version part-way through the history.
+
+Loading core fails when a file below the baseline is missing from `replaces.txt`, or when a listed file's
+name or checksum no longer matches. So a replaced migration that someone edits stops every binary,
+the same as an edit to an applied migration does.
+
+### Prove the baseline
+
+```sh
+make db-up
+scripts/migration-baseline.sh verify
+```
+
+`verify` builds one database by the full history and one by the baseline, both with the code `migrate up` runs.
+It then compares their schemas, reference rows and ledgers, and prints `OK` only when they match byte
+for byte. Run it on a change to the baseline, to `replaces.txt` or to the baseline code in
+`backend/internal/platform/dbmigrate/baseline.go`.
+
+### Write a new baseline
+
+```sh
+RELEASE=<tag or none> THROUGH=<last version in the tag> VERSION=<new version> NAME=<name> \
+  scripts/migration-baseline.sh generate
+scripts/migration-baseline.sh verify
+```
+
+`VERSION` sorts above `THROUGH` and below the first migration after it. Without arguments, `generate`
+writes the current baseline again.
+
+The script builds core's history through `THROUGH` and writes the baseline from that database's
+`pg_dump` output (`backend/tools/gen-baseline`). The tool changes what `pg_dump` output cannot carry:
+
+- It grants to `margince_app` only where that role exists.
+- It copies the migration that makes the `ext_runtime` role.
+- A reference row's generated key becomes `uuidv7()`, and its build time `now()`.
+- A check that `pg_dump` prints in a form that builds a different tree goes back to the words its
+  migration used.
+
+### When the replaced files may go
+
+Delete the replaced files only after every supported installation runs the release with the baseline,
+or a later one. Then every ledger records the baseline. That is a change of its own. Keep
+`replaces.txt`: a new installation still records the replaced versions from it. Then the
+`renumbered.txt` lines and the `equivalentContent` entries for those versions can go too.
 
 ## A migration that moved to a new version
 

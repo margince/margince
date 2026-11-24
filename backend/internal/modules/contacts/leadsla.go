@@ -40,6 +40,18 @@ func withPinnedSLANow(ctx context.Context, now time.Time) context.Context {
 	return context.WithValue(ctx, slaNowKey{}, now)
 }
 
+// WithReadInstant pins the instant for a caller with its own clock. The lead
+// reads built from ctx judge SLA state, evidence age and current work by it.
+func WithReadInstant(ctx context.Context, now time.Time) context.Context {
+	return withPinnedSLANow(ctx, now.UTC())
+}
+
+// pinSLANow fixes one instant for everything built from ctx. It keeps a pin the
+// caller set, and reads the live clock once only when none is set.
+func pinSLANow(ctx context.Context) context.Context {
+	return withPinnedSLANow(ctx, slaNow(ctx))
+}
+
 // slaNow is the pinned instant, or the live clock for a caller that pinned
 // none — a single-statement read has nothing to agree with.
 func slaNow(ctx context.Context) time.Time {
@@ -53,7 +65,7 @@ func slaNow(ctx context.Context) time.Time {
 // stored clock start, first response and closure (formulas §18.1) under the
 // installation's policy. A closed or answered lead owes nothing and reads
 // null; with the target switched off every lead does.
-func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Time, firstResponseAt, archivedAt *time.Time) (*time.Time, *crmcontracts.LeadSlaState) {
+func leadSLAFields(now time.Time, policy leadSLAPolicy, routedAt *time.Time, createdAt time.Time, firstResponseAt, archivedAt *time.Time) (*time.Time, *crmcontracts.LeadSlaState) {
 	if !policy.enabled || archivedAt != nil {
 		return nil, nil
 	}
@@ -65,7 +77,6 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 	if firstResponseAt != nil {
 		return &deadline, nil
 	}
-	now := leadSLAClock().UTC()
 	state := crmcontracts.LeadSlaStateLeadSlaStateWithinTarget
 	switch {
 	case now.After(deadline):
@@ -181,12 +192,13 @@ func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at
 			return err
 		}
 		var current *time.Time
+		var markedBy *ids.UUID
 		var takes bool
 		// A backdated activity can predate the lead it answers. The first
 		// response is the earliest one, since the bus is at-least-once and
 		// unordered; a later or equal stamp is a replay and a no-op.
-		if err := tx.QueryRow(ctx, `SELECT first_response_at, `+firstResponseAtSQL("lead", "$2")+`, `+
-			leadTakesFirstResponseSQL("lead", "$2")+` FROM lead WHERE id = $1`, leadID, at).Scan(&current, &at, &takes); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT first_response_at, first_response_marked_by, `+firstResponseAtSQL("lead", "$2")+`, `+
+			leadTakesFirstResponseSQL("lead", "$2")+` FROM lead WHERE id = $1`, leadID, at).Scan(&current, &markedBy, &at, &takes); err != nil {
 			return err
 		}
 		if !takes {
@@ -195,11 +207,14 @@ func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at
 		at = at.UTC()
 		p := storekit.NewPatch()
 		p.Set(firstResponseColumn, current, at)
+		if markedBy != nil {
+			p.Set(firstResponseMarkedByColumn, markedBy, nil)
+		}
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "lead", leadID.UUID,
-			map[string]any{firstResponseColumn: current}, map[string]any{firstResponseColumn: at})
+			p.Before(), p.After())
 		if err != nil {
 			return err
 		}

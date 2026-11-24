@@ -39,17 +39,17 @@ const (
 	// ClassBusinessCorrespondence is 1:1 mail: replies, meeting follow-ups,
 	// answers to their own question. Allowed on a qualifying event, no consent
 	// object consulted.
-	ClassBusinessCorrespondence Class = "business_correspondence"
+	ClassBusinessCorrespondence = Class(messaging.PurposeClassBusinessCorrespondence)
 	// ClassTransactional is invoices and account notices — allowed while the
 	// business relationship exists.
-	ClassTransactional Class = "transactional"
+	ClassTransactional = Class(messaging.PurposeClassTransactional)
 	// ClassMarketing is »Werbung« read broadly: newsletters, campaigns, and
 	// feedback requests. Express consent with double-opt-in proof, or the
 	// existing-customer route where the pack grants it.
-	ClassMarketing Class = "marketing"
+	ClassMarketing = Class(messaging.PurposeClassMarketing)
 	// ClassPhoneOutreach is specced and dormant — no call provider is wired.
 	// The purpose exists so the model is complete, not because a path uses it.
-	ClassPhoneOutreach Class = "phone_outreach"
+	ClassPhoneOutreach = Class(messaging.PurposeClassPhoneOutreach)
 )
 
 // Verdict is the effective answer for one contact and one purpose.
@@ -226,7 +226,7 @@ func verdictFor(ctx context.Context, tx pgx.Tx, contactID string, address *strin
 		return said(Verdict{State: VerdictBlocked, ReasonCode: ReasonNoCallPath, Code: BlockNoChannel}), nil
 
 	default:
-		return marketingVerdict(ctx, tx, contactID, purpose, marketing)
+		return marketingVerdict(ctx, tx, contactID, address, purpose, marketing)
 	}
 }
 
@@ -288,7 +288,7 @@ func correspondenceVerdict(ctx context.Context, tx pgx.Tx, contactID string, add
 // where the pack grants it (existingcustomerroute.go). There is no
 // legitimate-interest escape for marketing email, B2C or B2B, and the product
 // does not offer the toggle.
-func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
+func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, address *string, purpose PurposeRow, marketing MarketingContext) (Verdict, error) {
 	state, granted, err := recordedState(ctx, tx, contactID, purpose.ID, purpose.RequiresDOI)
 	if err != nil {
 		return Verdict{}, err
@@ -308,7 +308,7 @@ func marketingVerdict(ctx context.Context, tx pgx.Tx, contactID string, purpose 
 	// A withdrawal returned above, so a customer who once consented and then
 	// withdrew never reaches the route that needs no consent.
 	if marketing.Exception != nil {
-		ground, err := existingCustomerGround(ctx, tx, contactID, purpose.ID, marketing.SendingEntity)
+		ground, err := existingCustomerGround(ctx, tx, contactID, address, purpose.ID, marketing.SendingEntity)
 		if err != nil {
 			return Verdict{}, err
 		}

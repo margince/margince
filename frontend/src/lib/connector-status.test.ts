@@ -9,7 +9,9 @@ import {
   type ConnectorStatus,
   errorClassKey,
   healthBadge,
+  holdsSendGrant,
   isConnectedAtAll,
+  isLiveConnection,
   isUnhealthy,
   missingSendGrant,
   needsReconnect,
@@ -110,11 +112,19 @@ describe("missingSendGrant", () => {
   });
 
   // A provider that cannot send at all is not "cannot send" — it was never a
-  // sending mailbox, and its scope vocabulary is neither vendor's, so no absent
-  // scope says anything about it.
+  // sending mailbox, so no absent scope says anything about it.
   it("never badges a provider that does not send in the first place", () => {
-    expect(missingSendGrant({ provider: "imap", scopes: [] })).toBe(false);
     expect(missingSendGrant({ provider: "gcal", scopes: [] })).toBe(false);
+  });
+
+  // An IMAP mailbox sends only when its owner turned sending on. Left off, it
+  // is read-only by choice, which is not a grant to reconnect for.
+  it("never badges an IMAP mailbox left read-only, and lets one that sends send", () => {
+    expect(missingSendGrant({ provider: "imap", scopes: [] })).toBe(false);
+    expect(holdsSendGrant({ provider: "imap", scopes: [] })).toBe(false);
+    expect(
+      holdsSendGrant({ provider: "imap", scopes: ["urn:margince:imap:send"] }),
+    ).toBe(true);
   });
 
   // Outlook sends too, and its grant carries Microsoft's own permission name —
@@ -364,5 +374,14 @@ describe("a service's one badge and one reason", () => {
   it("has nothing to explain on a healthy service", () => {
     expect(serviceReason(service("gmail"))).toBeNull();
     expect(needsReconnect(service("gmail"))).toBe(false);
+  });
+});
+
+describe("isLiveConnection", () => {
+  it("counts a degraded mailbox as live, as the server does", () => {
+    expect(isLiveConnection({ status: "connected" })).toBe(true);
+    expect(isLiveConnection({ status: "error" })).toBe(true);
+    expect(isLiveConnection({ status: "disconnected" })).toBe(false);
+    expect(isLiveConnection({ status: "reauth_required" })).toBe(false);
   });
 });

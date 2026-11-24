@@ -109,14 +109,14 @@ var exempt = gatekit.Waive(map[string]string{
 	"sbom-schemas":                     "a vendored SPDX schema, not ours to rename",
 	"backend/internal/modules/capture/graphcal/data/README.md": "unicode-org is the GitHub owner of " +
 		"the copied zone files, named in their source links",
+	"backend/internal/platform/cldrzone/data/README.md": "unicode-org is the GitHub owner of " +
+		"the copied zone list, named in its source link",
 	"backend/internal/modules/webforms/fields.go": "the field names website forms send, where organization " +
 		"is a common spelling of the company field the module reads",
 	"frontend/src/features/settings/webformsnippet.ts": "autocomplete=\"organization\" is the HTML autofill " +
 		"token for a company name, spelled as the HTML standard spells it",
 	".github/workflows/cla.yml": "a GitHub organisation — its members are the staff the CLA " +
 		"does not cover, not this record type",
-	".github/workflows/release.yml": "a GitHub organisation — the account a repository belongs " +
-		"to, not this record type",
 	"sonar-project.properties": "`sonar.organization` is the scanner's own mandatory property, " +
 		"naming the SonarCloud organisation this project is filed under. Renaming it does not " +
 		"fail the scan's quality gate — it stops the scan running at all, which is a different " +
@@ -158,9 +158,8 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/internal/modules/contacts/vcardarms.go":                            "vCard's ORG property (RFC 6350)",
 	"backend/internal/modules/contacts/vcardsourceliveness_integration_test.go": "vCard's ORG property (RFC 6350)",
 	"backend/internal/compose/vcardproposal_integration_test.go":                "vCard's ORG property (RFC 6350)",
-	"extensions/vn/vn.go": "an organisation in the ordinary sense — the party holding data and " +
+	"extensions/apac/README.md": "an organisation in the ordinary sense — the party holding data and " +
 		"the party advertising need not be the same one",
-	"extensions/vn/README.md": "the same sentence as vn.go",
 
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",

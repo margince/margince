@@ -10,7 +10,7 @@ import type { components } from "../../api/schema";
 import { AiPending } from "../../design-system/aipending";
 import { PendingBody } from "../../design-system/atoms";
 import { useWaited } from "../../design-system/waited";
-import { formatDateTime } from "../../format/format";
+import { formatDateTimeAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -50,7 +50,7 @@ export function AssemblyStamp({
       {servedFrom === "generated"
         ? t("co.assembly.writtenNow")
         : t("co.brief.generatedAt", {
-            when: formatDateTime(at, locale, readerZone),
+            when: formatDateTimeAbbrev(at, locale, readerZone),
           })}
     </span>
   );

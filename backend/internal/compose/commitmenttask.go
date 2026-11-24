@@ -57,13 +57,16 @@ type CommitmentTaskProposal struct {
 	// reviewer edits a day and acceptance decides when that day ends.
 	DueDate string `json:"due_date,omitempty"`
 	// DueZone is the zone the day ends in; empty is the installation's.
-	DueZone  string                         `json:"due_zone,omitempty"`
-	Links    []activities.ActivityLinkInput `json:"links"`
-	Quote    string                         `json:"quote"`
-	Locator  string                         `json:"locator"`
-	ClaimID  *ids.UUID                      `json:"claim_id,omitempty"`
-	ClaimIDs []ids.UUID                     `json:"claim_ids,omitempty"`
-	Body     string                         `json:"body"`
+	DueZone string `json:"due_zone,omitempty"`
+	// OddDueDate is a stated day outside the due window, kept in DueDate so the
+	// rep answers by keeping it, picking another or clearing it.
+	OddDueDate string                         `json:"odd_due_date,omitempty"`
+	Links      []activities.ActivityLinkInput `json:"links"`
+	Quote      string                         `json:"quote"`
+	Locator    string                         `json:"locator"`
+	ClaimID    *ids.UUID                      `json:"claim_id,omitempty"`
+	ClaimIDs   []ids.UUID                     `json:"claim_ids,omitempty"`
+	Body       string                         `json:"body"`
 	// PrivateTo is the one member the source mail answers to. The task is read
 	// by them and its holder alone. Nil for a shared conversation.
 	PrivateTo *ids.UUID `json:"private_to,omitempty"`
@@ -89,11 +92,13 @@ type commitmentTask struct {
 	DueDate          string
 	DueZone          string
 	// DueAt is a deadline already stated as an instant; DueDate is used when nil.
-	DueAt     *time.Time
-	Assignee  ids.UUID
-	ClaimID   *ids.UUID
-	ClaimIDs  []ids.UUID
-	PrivateTo *ids.UUID
+	DueAt *time.Time
+	// DueConfirmed says a human kept DueDate when it was outside the window.
+	DueConfirmed bool
+	Assignee     ids.UUID
+	ClaimID      *ids.UUID
+	ClaimIDs     []ids.UUID
+	PrivateTo    *ids.UUID
 	// Origin is the taker's when a colleague or their agent took the promise over.
 	Origin string
 }
@@ -132,6 +137,10 @@ func writeCommitmentTask(
 	// The promiser's own task waits for them as a task made by hand would,
 	// also before they first sign in.
 	in.AdmitInvitedAssignee()
+	in.ContinueFiling(sourceActivity)
+	if t.DueConfirmed {
+		in.AdmitConfirmedDue()
+	}
 	if t.PrivateTo != nil {
 		in.VisibleOnlyTo(slices.Compact([]ids.UUID{t.Assignee, *t.PrivateTo})...)
 	}
@@ -213,11 +222,17 @@ func commitmentTaskEffect(
 			if proposal.ExistingTaskID != nil {
 				return attachCommitmentRecipients(writer, tx, tasks, claims, proposal)
 			}
+			// The same question the precheck asked, so the two cannot disagree.
+			links, err := tasks.FilingLinksTx(writer, tx, proposal.SourceActivityID, proposal.Links)
+			if err != nil {
+				return err
+			}
 			task := commitmentTask{
 				Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body, SystemText: proposal.SystemText,
-				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
-				DueDate: proposal.DueDate, DueZone: proposal.DueZone, Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
+				SourceActivityID: proposal.SourceActivityID, Links: links,
+				DueDate: proposal.DueDate, DueZone: proposal.DueZone, DueConfirmed: proposal.DueDate != "" && proposal.DueDate == proposal.OddDueDate,
+				Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
 				PrivateTo: privateTo, Origin: activities.OriginAgent,
 			}
 			if heldByAnotherThanOwner(privateTo, assignee) {
@@ -259,7 +274,7 @@ func privateWorkHeldNow(ctx context.Context, tx pgx.Tx, proposal CommitmentTaskP
 		return nil, err
 	}
 	if !may {
-		return nil, fmt.Errorf("compose: a commitment read out of private mail is for a colleague who may open that mail: %w",
+		return nil, fmt.Errorf("a commitment read out of private mail is for a colleague who may open that mail: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	return privateTo, nil
@@ -285,7 +300,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 		SELECT kind, thread_key, archived_at IS NOT NULL OR restricted_at IS NOT NULL
 		  FROM activity WHERE id = $1`, source).Scan(&kind, &key, &gone)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && gone) {
-		return nil, fmt.Errorf("compose: the conversation this commitment was read from is gone: %w",
+		return nil, fmt.Errorf("the conversation this commitment was read from is gone: %w",
 			apperrors.ErrNotFound)
 	}
 	if err != nil {
@@ -294,12 +309,13 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	if kind != string(crmcontracts.ActivityKindEmail) || key == nil {
 		return staged, nil
 	}
-	_, owner, offered, err := threadReaderNow(ctx, tx, *key)
+	reader, err := threadReaderNow(ctx, tx, *key)
 	if err != nil {
 		return nil, err
 	}
-	if !offered {
-		return nil, fmt.Errorf("compose: the conversation this commitment was read from changed since, "+
+	owner := reader.privateTo
+	if !reader.offered || !reader.everyMessageOpen {
+		return nil, fmt.Errorf("the conversation this commitment was read from changed since, "+
 			"and who may read it is no longer known — review conversation access before retrying: %w",
 			apperrors.ErrConflict)
 	}
@@ -319,7 +335,7 @@ func commitmentDecider(ctx context.Context, proposal json.RawMessage) (ids.UUID,
 	}
 	asked, named := approvalsubject.CommitmentAskedOf(proposal)
 	if !named || asked != decider.UserID {
-		return ids.Nil, fmt.Errorf("compose: only the colleague who made this promise may accept it: %w",
+		return ids.Nil, fmt.Errorf("only the colleague who made this promise may accept it: %w",
 			apperrors.ErrConflict)
 	}
 	return asked, nil
@@ -368,7 +384,7 @@ func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.
 			return err
 		}
 		if !heldByAnotherThanOwner(privateTo, holder) {
-			if err := tasks.ProbeLinkWrites(ctx, proposal.Links); err != nil {
+			if _, err := tasks.FilingLinks(ctx, proposal.SourceActivityID, proposal.Links); err != nil {
 				return err
 			}
 		}

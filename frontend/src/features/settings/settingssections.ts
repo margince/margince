@@ -11,6 +11,7 @@ export const SETTINGS_SECTIONS = {
   account: [
     "settings.profileTitle",
     "account.signInCard",
+    "account.devicesCard",
     "account.browserCard",
     "account.pictureLabel",
     "settings.displayName",
@@ -33,6 +34,8 @@ export const SETTINGS_SECTIONS = {
       "scheduling.linksTitle",
       "scheduling.setup.title",
       "scheduling.acceptBookings",
+      "scheduling.team.title",
+      "scheduling.team.add",
     ],
     availability: [
       "settings.part.meetings.availability",
@@ -173,7 +176,7 @@ export const SETTINGS_SECTIONS = {
       "lossReasons.title",
       "lossReasons.legacyTitle",
     ],
-    reviews: ["settings.part.deals.reviews"],
+    reviews: ["settings.part.deals.reviews", "reviewTemplates.title"],
     legal: [
       "settings.part.deals.legal",
       "legalReview.settingsTitle",
@@ -215,6 +218,9 @@ export const SETTINGS_SECTIONS = {
       "mailSharing.sharedPosture.label",
       "captureMailSync.interval.label",
       "captureReview.passCap.label",
+      "captureReview.verdictCap.label",
+      "captureReview.classifyCap.label",
+      "captureReview.owedCap.label",
     ],
     domains: [
       "settings.part.capture.domains",
@@ -279,7 +285,13 @@ export const SETTINGS_SECTIONS = {
   models: {
     providers: ["settings.part.models.providers", "aiProviderKeys.title"],
     tiers: ["settings.part.models.tiers", "aiRouting.title"],
-    tasks: ["settings.part.models.tasks", "aiTasks.title"],
+    tasks: [
+      "settings.part.models.tasks",
+      "aiTasks.title",
+      "privateMailRequests.title",
+      "privateMailRequests.switch",
+      "privateMailRequests.share",
+    ],
     prices: [
       "settings.part.models.prices",
       "aiPriceSync.title",
@@ -310,6 +322,9 @@ export const SETTINGS_SECTIONS = {
       "settings.part.privacy.retention",
       "retention.title",
       "retention.retainOnly",
+      "archivePurpose.title",
+      "archivePurpose.label",
+      "archiveReview.title",
     ],
     requests: ["settings.part.privacy.requests", "privacy.requestsPanel"],
     duties: ["settings.part.privacy.duties", "notice.title"],
@@ -318,6 +333,12 @@ export const SETTINGS_SECTIONS = {
     "jurisdiction.effects.title",
     "jurisdiction.selected.label",
     "jurisdiction.documents.title",
+    "particulars.title",
+    "particulars.legalName",
+    "particulars.postalAddress",
+    "particulars.privacyContact",
+    "particulars.objectionRoute",
+    "particulars.advertiserContact",
   ],
   audit: [],
   "system-health": {
@@ -337,6 +358,7 @@ export const SETTINGS_SECTIONS = {
       "settings.captureHealth",
       "settings.automaticWork",
       "settings.recoveryHealth",
+      "settings.vacuumHealth",
     ],
     configuration: [
       "health.configuration",
@@ -363,6 +385,7 @@ export const SETTINGS_SECTIONS = {
   configuration: ["configuration.title"],
   extensions: [],
   reset: ["settings.dangerZone", "settings.resetDataLabel"],
+  about: [],
 } as const satisfies Record<
   SettingsPageId,
   readonly MessageKey[] | Readonly<Record<string, readonly MessageKey[]>>

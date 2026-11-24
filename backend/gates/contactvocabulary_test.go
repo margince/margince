@@ -18,9 +18,9 @@ package gates
 // directions and had no counterpart below it; this is that counterpart.
 //
 // WHAT THIS DOES NOT COVER, said rather than left to be assumed. The word
-// `contact` itself, which this tree already used for four other things before
+// `contact` itself, which this tree already used for three other things before
 // the rename — a `graph_contact_edge`, a `company_fact` whose field is
-// `contact_email`, a partner's `last_contact_at`, a lead that has been
+// `contact_email`, a lead that has been
 // `contacted`. Telling a NEW second spelling of the record apart from those is
 // judgement per occurrence, so this test does not pretend to: it refuses the
 // retired word and says nothing about the new one.
@@ -45,11 +45,11 @@ import (
 // suffix and needs no arm of its own.
 var theRetiredWord = regexp.MustCompile(`(?i)person|people`)
 
-// notThisRecord is the words that merely spell those letters: a mask, an
-// adjective, a payroll noun, the German for persons, a forgery, a job title,
-// and the one that means physically present. Removed before the match rather
-// than waived per site, because they are a property of the language and not of
-// any one file.
+// notThisRecord is the words that merely spell those letters. Some are a mask,
+// an adjective, a payroll noun or the German for persons. Others are a forgery,
+// a job title, the law's natural and legal persons, and the word for being
+// physically present. They are removed before the match rather than waived per site,
+// because they are a property of the language and not of any one file.
 //
 // Each is a STEM and not a next-character rule, which is the case this test was
 // written without. A lowercase run has no boundary in it: `personname.go` and
@@ -59,6 +59,9 @@ var theRetiredWord = regexp.MustCompile(`(?i)person|people`)
 var notThisRecord = regexp.MustCompile(
 	`(?i)personal\w*|personnel\w*|personas?(?:[^a-z]|$)|personen\w*` +
 		`|impersonat\w*|salespe(?:rson|ople)\w*` +
+		// The law's two kinds of addressee, as the ePrivacy Directive and its
+		// national acts name them.
+		`|(?:natural|legal) persons?(?:'s)?` +
 		// Physically present. The separator decides how far this reaches:
 		// `in_person` and `InPerson` are one name, so nothing after them
 		// matters, while a prose "in person" ends where the word ends — "it
@@ -195,8 +198,8 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/internal/compose/meetingbrief/coachingcopy.go":  "German human-role wording names the sales colleague and accountable actor, not the contact record type",
 	"backend/internal/compose/meetingbrief/advancecopy.go":   "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/compose/meetingbrief/objectivecopy.go": "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/reportingdefinitioncopy.go":    "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/reportinglabelcopy.go":         "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/metriccopy/metriccopy.go":      "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/metriccopy/labels.go":          "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/modules/reporting/statuscopy.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
 	"backend/internal/shared/kernel/dealrole/words.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
 
@@ -206,6 +209,8 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/custom": "the same, one namespace over",
+	"backend/migrations/baseline": "written from the shipped migrations above, so it carries " +
+		"their names and comments",
 	"backend/migrationrewrites.txt": "each line opens with a shipped migration's file name, verbatim, " +
 		"and a shipped migration is never renamed",
 	"backend/migrations/renumbered.txt": "each line names a shipped migration, verbatim, at the " +
@@ -224,6 +229,10 @@ var retired = gatekit.Waive(map[string]string{
 		"chose, and a licence is not restyled by a vocabulary rule",
 	"backend/internal/modules/capture/graphcal/data/LICENSE-cldr.txt": "the copied Unicode " +
 		"licence grants rights to any person, a legal term that ships verbatim with the data",
+	"backend/internal/platform/cldrzone/data/LICENSE-cldr.txt": "the same Unicode licence, " +
+		"shipped beside the zone list this package reads",
+	"backend/internal/modules/deals/fonts/LICENSE": "the SIL Open Font License of the embedded " +
+		"offer PDF faces names any person who contributed, a legal term that ships verbatim with the fonts",
 	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
 		"docscodeofconduct_test.go; its people are human beings, never this record",
 	"LICENSING.md": "counsel's explanation of the CLA, kept verbatim beside it",
@@ -275,6 +284,9 @@ var retired = gatekit.Waive(map[string]string{
 	// the page above, held to it by TestTheEmbeddedHandbookMatchesTheDocs. Waiving the
 	// source without its mirror would fail the moment the two are brought into line.
 	"backend/internal/modules/knowledge/handbook/settings.md": "the embedded copy of the page above",
+	"docs/handbook/roles-and-permissions.md": "the Settings group label People, which is the heading a " +
+		"reader navigating Settings actually sees",
+	"backend/internal/modules/knowledge/handbook/roles-and-permissions.md": "the embedded copy of the page above",
 	"docs/handbook/plain-words.txt": "the handbook's plain word list must admit every word its " +
 		"pages use: the seats settings group, the trust mark for a value a human typed, and a deal won in person",
 
@@ -288,7 +300,7 @@ var retired = gatekit.Waive(map[string]string{
 	// Waived rather than renamed because the rename was tried: it produced
 	// "die beschäftigte Contact" and "Eine Einwilligung je Contact", which are
 	// not German, in four documents that get printed and signed.
-	"extensions/de/documents/de": "German legal prose about the employees whose mail is captured — " +
+	"extensions/eu/documents/de/de": "German legal prose about the employees whose mail is captured — " +
 		"die beschäftigte Person is a human being, and these documents never name this record",
 
 	"scripts/handbook-ask/questions.txt": "questions in the words users type — \"add a new " +
@@ -305,6 +317,7 @@ var retired = gatekit.Waive(map[string]string{
 		"record-noun.test.ts holds, which it cannot do without the German word for a human being",
 
 	"backend/gates/contactvocabulary_test.go": "this file names the word in order to refuse it",
+	"backend/gates/uiautonomyclaims_test.go":  "this gate quotes the retired slogan to forbid it",
 
 	// Surfe serves POST /v2/people/enrich and reads its subjects from a
 	// `people` array. That is the VENDOR's noun for its own API, and this

@@ -4,7 +4,6 @@
   background: var(--bgChip);
   color: var(--textPrimary);
   border-radius: var(--r-full);
-  corner-shape: round;
   overflow: hidden;
   margin: 10px 0 8px;
 }
@@ -13,7 +12,6 @@
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--warning));
   border-radius: var(--r-full);
-  corner-shape: round;
   transition: width 0.5s var(--ease-out);
 }
 /* dense: the bar as a label's own bar rather than a block of its own. Thinner,
@@ -81,13 +79,20 @@
   padding: 6px 12px;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--bgField);
   color: var(--textPrimary);
   white-space: nowrap;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  box-sizing: border-box;
 }
 .chip svg {
   flex: none;
+}
+/* A value longer than its column ends in an ellipsis inside the pill. */
+.chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* dense: a chip that shares a cell with badges, at their geometry. A table
  * row's name column carries the name, a fact chip and a status pill together,
@@ -115,6 +120,25 @@
   inline-size: 20px;
   block-size: 20px;
 }
+/* wrap: a name read whole breaks inside its container, at `.badge-wrap`'s box
+   radius so a second line keeps its end letters clear of the curve. */
+.chip-wrap {
+  border-radius: var(--r-sm);
+}
+/* The label alone: a monogram in the mark never breaks. */
+.chip-wrap > .chip-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* The mark stays with the first line, not centred on two. An icon's box is one
+   line tall, so its glyph sits mid-line as it does in an unwrapped chip. */
+.chip-wrap .chip-mark > *,
+.chip-wrap > svg {
+  align-self: flex-start;
+}
+.chip-wrap > svg {
+  block-size: 1lh;
+}
 .chip-link {
   text-decoration: none;
 }
@@ -140,22 +164,22 @@
     color var(--dur-state) var(--ease-out);
 }
 
-/* A ranked set of bars. The rows share one grid so the three columns line up
-   down the list — a label column that takes what it needs, a bar that takes
-   the rest, and an amount column sized to its own digits. Three independent
-   rows each sizing themselves is what makes a list stop reading as a ranking. */
+/* The list holds the three columns and each row takes them as a subgrid, so
+   every bar starts and ends at the same x and the rows read as a ranking. */
 .barlist-rows {
   display: grid;
-  gap: var(--space-2);
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 2fr) auto;
+  gap: var(--space-2) var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
+.barlist-rows > li,
 .barlist-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 2fr) auto;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--space-3);
 }
 .barlist-label {
   min-width: 0;
@@ -171,7 +195,7 @@
    of the fill steps down to a tint of the same hue, so the bar reads as one
    figure inside another rather than as two bars laid over each other. */
 .meterbar.meterbar-has-part > span {
-  background: color-mix(in srgb, var(--accentText) 40%, var(--bgElevated));
+  background: color-mix(in srgb, var(--accentText) 40%, var(--bgField));
 }
 .meterbar .meterbar-part {
   background: var(--accentText);
@@ -197,11 +221,11 @@
 }
 .segbar-step-1,
 .btn.btn-link.segbar-step-1 {
-  background: color-mix(in srgb, var(--accentText) 55%, var(--bgElevated));
+  background: color-mix(in srgb, var(--accentText) 55%, var(--bgField));
 }
 .segbar-step-2,
 .btn.btn-link.segbar-step-2 {
-  background: color-mix(in srgb, var(--accentText) 20%, var(--bgElevated));
+  background: color-mix(in srgb, var(--accentText) 20%, var(--bgField));
 }
 /* Not yet counted: an outline in the parts' hue, so it reads as the same kind
    of value that has not happened yet. */
@@ -215,7 +239,6 @@
   display: flex;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgWell);
   color: var(--textPrimary);
 }
@@ -227,7 +250,6 @@
   box-sizing: border-box;
   height: 100%;
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .segbar-part + .segbar-part {
   clip-path: inset(0 0 0 3px round var(--r-full));
@@ -246,7 +268,7 @@
   box-sizing: border-box;
   width: 6px;
   margin-left: -3px;
-  border-inline: 2px solid var(--bgElevated);
+  border-inline: 2px solid var(--ground);
   background: var(--textPrimary);
   background-clip: padding-box;
 }
@@ -278,21 +300,22 @@
   height: 14px;
   background: var(--textPrimary);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 
 .btn.btn-link.barlist-action {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 2fr) auto;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  /* Not the link's own gap: a subgrid gap unlike the list's shifts the bar. */
+  column-gap: normal;
   align-items: center;
-  gap: var(--space-3);
   width: 100%;
   text-align: start;
   color: inherit;
   text-decoration: none;
 }
-/* Too narrow for three columns, a name would break mid-word: the name and
-   amount share a line and the bar runs under them. */
+/* Too narrow for three columns: each row sets its name beside its amount on
+   its own columns, so one long amount squeezes only its own row's name. */
 .barlist-rows {
   container-type: inline-size;
 }
@@ -300,7 +323,10 @@
   .barlist-row,
   .btn.btn-link.barlist-action {
     grid-template-columns: minmax(0, 1fr) auto;
-    row-gap: var(--space-1);
+    gap: var(--space-1) var(--space-3);
+  }
+  .barlist-row > .barlist-label {
+    grid-area: 1 / 1;
   }
   .barlist-row > :nth-child(2) {
     grid-area: 2 / 1 / 3 / -1;

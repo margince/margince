@@ -30,25 +30,29 @@ import (
 // and so does every row of a deal priced from its lines.
 // It runs under the deal row lock the amount sync took, so a manual set
 // cannot land between the check and the writes. It answers the rows it
-// wrote, and nil when the manual set stood.
-func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offer crmcontracts.Offer) ([]crmcontracts.DealProduct, error) {
+// held before and the rows it wrote, both nil when the manual set stood.
+func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offer crmcontracts.Offer) (before, after []crmcontracts.DealProduct, err error) {
 	head, err := readDealCommercialHead(ctx, tx, dealID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var manual bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal_product WHERE deal_id = $1 AND source = 'manual')`, dealID).Scan(&manual); err != nil {
-		return nil, fmt.Errorf("read manual deal products: %w", err)
+		return nil, nil, fmt.Errorf("read manual deal products: %w", err)
 	}
 	if manual || head.Mode == modeLines {
-		return nil, nil
+		return nil, nil, nil
 	}
 	lines, err := readOfferLines(ctx, tx, ids.From[ids.OfferKind](ids.UUID(offer.Id)))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
+	}
+	before, err = readDealProducts(ctx, tx, dealID)
+	if err != nil {
+		return nil, nil, err
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM deal_product WHERE deal_id = $1 AND source = 'offer'`, dealID); err != nil {
-		return nil, fmt.Errorf("clear offer deal products: %w", err)
+		return nil, nil, fmt.Errorf("clear offer deal products: %w", err)
 	}
 	netByProduct := map[openapi_types.UUID]int64{}
 	lineByProduct := map[openapi_types.UUID]openapi_types.UUID{}
@@ -68,10 +72,11 @@ func syncDealProductsFromOffer(ctx context.Context, tx pgx.Tx, dealID ids.DealID
 		if _, err := tx.Exec(ctx, `INSERT INTO deal_product (deal_id, product_id, source, offer_line_item_id, amount_minor, currency, component_kind)
 			 SELECT $1, $2, 'offer', $3, $4, $5, p.component_kind FROM product p WHERE p.id = $2`,
 			dealID, productID, lineID, netByProduct[productID], offer.Currency); err != nil {
-			return nil, fmt.Errorf("write offer deal product: %w", err)
+			return nil, nil, fmt.Errorf("write offer deal product: %w", err)
 		}
 	}
-	return readDealProducts(ctx, tx, dealID)
+	after, err = readDealProducts(ctx, tx, dealID)
+	return before, after, err
 }
 
 // ReplaceDealProducts sets the deal's products by hand. The rows replace
@@ -252,7 +257,7 @@ func rederiveDealProducts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) err
 	if err != nil {
 		return err
 	}
-	_, err = syncDealProductsFromOffer(ctx, tx, dealID, offer)
+	_, _, err = syncDealProductsFromOffer(ctx, tx, dealID, offer)
 	return err
 }
 
@@ -266,7 +271,7 @@ func (s *Store) ListDealProducts(ctx context.Context, dealID ids.DealID) ([]crmc
 	}
 	var out []crmcontracts.DealProduct
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureVisible(ctx, tx, dealTable, dealID.UUID); err != nil {
+		if err := auth.EnsureVisibleExisting(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
 		var err error

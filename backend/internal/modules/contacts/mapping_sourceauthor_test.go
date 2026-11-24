@@ -25,8 +25,9 @@ func TestTheRecordImporterDoorsCarryTheAuthor(t *testing.T) {
 	name := " Anna Müller "
 
 	contactIn, err := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{
-		Source:   "manual",
-		FullName: "Imported", SourceSystem: &hubspot, SourceAuthorId: &seat, SourceAuthorName: &name,
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
+		Source:      "manual",
+		FullName:    "Imported", SourceSystem: &hubspot, SourceAuthorId: &seat, SourceAuthorName: &name,
 	})
 	assertAuthor(t, "contact", contactIn.Author, err, seat)
 	companyIn, err := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{
@@ -44,7 +45,7 @@ func TestTheRecordImporterDoorsCarryTheAuthor(t *testing.T) {
 func TestTheRecordClientDoorsRefuseAnAuthor(t *testing.T) {
 	legacy := "legacy_crm"
 	name := "Anna Müller"
-	_, contactErr := ContactCreationInput(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
+	_, contactErr := ContactCreationInput(crmcontracts.CreateContactRequest{LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"), Source: "manual", FullName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
 	_, companyErr := CompanyCreationInput(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceSystem: &legacy, SourceAuthorName: &name})
 	_, leadErr := LeadCreationInput(crmcontracts.CreateLeadRequest{Source: new("manual"), FullName: new("X"), SourceSystem: &legacy, SourceAuthorName: &name})
 	for record, err := range map[string]error{"contact": contactErr, "company": companyErr, "lead": leadErr} {
@@ -56,7 +57,7 @@ func TestTheRecordClientDoorsRefuseAnAuthor(t *testing.T) {
 // on a record naming no source is refused there too.
 func TestTheRecordImporterDoorsRefuseAnAuthorFromNowhere(t *testing.T) {
 	name := "Anna Müller"
-	_, contactErr := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{Source: "manual", FullName: "X", SourceAuthorName: &name})
+	_, contactErr := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"), Source: "manual", FullName: "X", SourceAuthorName: &name})
 	_, companyErr := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "X", SourceAuthorName: &name})
 	_, leadErr := leadCreateInputFromImporter(crmcontracts.CreateLeadRequest{Source: new("manual"), FullName: new("X"), SourceAuthorName: &name})
 	for record, err := range map[string]error{"contact": contactErr, "company": companyErr, "lead": leadErr} {

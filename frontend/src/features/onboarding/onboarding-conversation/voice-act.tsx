@@ -1,7 +1,10 @@
 import type { ChangeEvent, Dispatch, RefObject } from "react";
 import { useRef } from "react";
 import type { components } from "../../../api/schema";
-import { ErrorLine } from "../../../design-system/errorline";
+import {
+  ConnectAiFirst,
+  isAiNotConnected,
+} from "../../../design-system/connectai";
 import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
@@ -34,22 +37,31 @@ import { ConversationWorkbench } from "./workbench";
 // board's own content; the room asks one question at a time, so there is no
 // separate rail transcript to keep in step with it.
 
-type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
 
 type VoiceActProps = Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
-  /** The restore probe's server meter for a resumed session; null fresh. */
-  initialSummary?: CorpusSummary | null;
 }>;
 
-export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
+export function VoiceAct({ state, dispatch }: VoiceActProps) {
   const t = useT();
   const machine = useRef(state);
   machine.current = state;
-  const corpus = useVoiceCorpus({ state, dispatch, initialSummary });
-  const build = useVoiceBuild({ dispatch, machine });
+  const corpus = useVoiceCorpus({ state, dispatch });
+  const build = useVoiceBuild({
+    dispatch,
+    machine,
+    succeeded:
+      state.lastBuildStatus === "succeeded" &&
+      state.activeBuildId !== null &&
+      state.activeBuildProfileId !== null
+        ? {
+            profileId: state.activeBuildProfileId,
+            buildId: state.activeBuildId,
+          }
+        : null,
+  });
   const fileRef = useRef<HTMLInputElement>(null);
 
   const collecting =
@@ -82,11 +94,20 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
     dispatch({ type: "QUESTION_ANSWERED", questionId, value });
     corpus.answerSpeaker(questionId, value);
   };
+  const handleSkipFile = (questionId: string) => {
+    dispatch({
+      type: "QUESTION_ANSWERED",
+      questionId,
+      value: "",
+      dismissed: true,
+    });
+    corpus.answerSpeaker(questionId, null);
+  };
 
   const presence = presenceFor(state);
 
   // Where the journey stands, in the rail's own counting.
-  const stops = railStops(state.memberPath);
+  const stops = railStops(state.memberPath, state.voiceStep);
   const eyebrow = t("ob.conv.scene.step", {
     n: ordinalNumber(stops.findIndex((stop) => stop.key === "voice") + 1),
     m: ordinalNumber(stops.length),
@@ -103,6 +124,7 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
       fileRef={fileRef}
       onFiles={onFiles}
       onAnswer={handleAnswer}
+      onSkipFile={handleSkipFile}
     />
   );
 
@@ -125,11 +147,6 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
           useFileDrop below); the board is what shows that now, since there
           is no rail thread left to ring. */}
       <div className={dragOver ? "ob-conv-dragover" : undefined}>{scene}</div>
-      {corpus.failure && (
-        <ErrorLine>
-          {t(corpus.failure.i18nKey, corpus.failure.params)}
-        </ErrorLine>
-      )}
     </ConversationWorkbench>
   );
 }
@@ -212,10 +229,9 @@ function boardHeading(
   };
 }
 
-// The fallback branch's own Continue: `vo.skipped` has nothing left to
-// finish, a failed build offers the retry the machine still permits, a
-// deferred one has already said so honestly in its rail outcome and only
-// waits for the human to move on. Every case shares the one action.
+// The fallback branch's own Continue. A failed build offers the retry the
+// machine still permits. A deferred one has said so in its rail outcome and
+// only waits for the human to move on.
 function continueBarFor(
   state: ConversationState,
   build: ReturnType<typeof useVoiceBuild>,
@@ -227,9 +243,6 @@ function continueBarFor(
   onRetry?: () => void;
 }> | null {
   const onContinue = () => dispatch({ type: "VOICE_DONE" });
-  if (state.phase === "vo.skipped") {
-    return { reason: "skipped", onContinue };
-  }
   if (state.phase === "vo.result" && state.lastBuildStatus === "failed") {
     return {
       reason: "failed",
@@ -261,6 +274,7 @@ function VoiceSurface({
   fileRef,
   onFiles,
   onAnswer,
+  onSkipFile,
 }: Readonly<{
   state: ConversationState;
   dispatch: Dispatch<ConversationEvent>;
@@ -270,31 +284,47 @@ function VoiceSurface({
   fileRef: RefObject<HTMLInputElement | null>;
   onFiles: (event: ChangeEvent<HTMLInputElement>) => void;
   onAnswer: (questionId: string, value: string) => void;
+  onSkipFile: (questionId: string) => void;
 }>) {
   const t = useT();
   if (state.phase === "vo.collecting") {
     return (
       <VoiceCollectScene
         summary={corpus.summary}
+        meterKnown={!corpus.meterStale}
         manifest={corpus.manifest}
+        failures={corpus.failures}
         fileRef={fileRef}
         onFiles={onFiles}
         onAddPaste={(text) =>
           corpus.addPaste(text, t("ob.conv.voice.pasteSource"))
         }
+        onRemove={corpus.removeSample}
+        removing={corpus.removing}
         onBuild={() => build.start.mutate()}
         onSkip={() => dispatch({ type: "VOICE_SKIPPED" })}
         canBuild={canBuild}
         startPending={build.start.isPending}
         startError={
-          build.start.isError ? problemMessageOf(build.start.error, t) : null
+          build.start.isError &&
+          (isAiNotConnected(build.start.error) ? (
+            <ConnectAiFirst />
+          ) : (
+            problemMessageOf(build.start.error, t)
+          ))
         }
       />
     );
   }
   if (state.phase === "vo.speaker" && state.pendingQuestion !== null) {
+    const question = state.pendingQuestion;
     return (
-      <VoiceSpeakerScene question={state.pendingQuestion} onAnswer={onAnswer} />
+      <VoiceSpeakerScene
+        question={question}
+        failures={corpus.failures}
+        onAnswer={onAnswer}
+        onSkip={() => onSkipFile(question.id)}
+      />
     );
   }
   if (state.phase === "vo.building") {
@@ -316,8 +346,8 @@ function VoiceSurface({
       />
     );
   }
-  // Everything a scene does not own — a failed or deferred build, the skip
-  // — keeps the corpus dossier, now carrying its own pinned Continue. The
+  // Everything a scene does not own (a failed or deferred build) keeps
+  // the corpus dossier, now carrying its own pinned Continue. The
   // build scene above has already claimed every building phase, so no
   // tracker runs here.
   return (

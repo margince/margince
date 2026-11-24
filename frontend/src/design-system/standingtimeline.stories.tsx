@@ -190,6 +190,54 @@ export const LongProject: Story = {
   },
 };
 
+/** Six years from a target end to today: one grid line per year, named by it. */
+export const SeveralYears: Story = {
+  args: {
+    label: "Brandt rollout over time",
+    asOf: "2026-11-16T09:00:00Z",
+    events: [
+      {
+        key: "e",
+        at: "2020-11-15",
+        title: "Target end",
+        sub: "15 Nov 2020",
+        kind: "end",
+      },
+      {
+        key: "o",
+        at: "2026-11-16",
+        title: "Opened",
+        sub: "16 Nov · by Lena",
+        kind: "done",
+      },
+    ],
+  },
+};
+
+/** A month axis across New Year: the first line and January name the year. */
+export const AcrossNewYear: Story = {
+  args: {
+    label: "Brandt rollout over time",
+    asOf: "2027-02-10T09:00:00Z",
+    events: [
+      {
+        key: "k",
+        at: "2026-10-03",
+        title: "Kickoff",
+        sub: "3 Oct 2026",
+        kind: "done",
+      },
+      {
+        key: "r",
+        at: "2027-02-10",
+        title: "Review",
+        sub: "10 Feb · last update",
+        kind: "last",
+      },
+    ],
+  },
+};
+
 /** Five events in one week: the canvas opens rows under the three rather
  *  than print one label on another. */
 export const Crowded: Story = {
@@ -269,6 +317,25 @@ export const WithMarks: Story = {
     await expect(
       within(canvasElement).getAllByRole("button").length,
     ).toBeGreaterThan(2);
+  },
+};
+
+/** Only logged items, the oldest from before the last quarter: the line opens
+ *  wide enough to show it. */
+export const OnlyOldMarks: Story = {
+  args: {
+    label: "Dana Reyes over time",
+    asOf: "2026-08-13T09:00:00Z",
+    events: [],
+    marks: [
+      mark("1", "2026-01-12", "12 Jan", "email", "Intro", "theirs"),
+      mark("2", "2026-07-20", "20 Jul", "call", "Catch-up call", "ours"),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("button", { name: "Email, 12 Jan" }),
+    ).toBeTruthy();
   },
 };
 

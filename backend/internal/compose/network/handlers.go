@@ -171,11 +171,14 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 		if coverage.SeatsInbound, err = readSeatsInbound(ctx, tx, coverage.Stakeholders, now); err != nil {
 			return err
 		}
-		names, err := UserNames(ctx, tx, coverageUsers(coverage))
+		seated, err := h.seatNames(ctx, tx, coverage)
 		if err != nil {
 			return err
 		}
-		seated, err := h.seatNames(ctx, tx, coverage)
+		if coverage.Pairs, err = readSeatPairs(ctx, tx, coverage, seated); err != nil {
+			return err
+		}
+		names, err := UserNames(ctx, tx, coverageUsers(coverage))
 		if err != nil {
 			return err
 		}
@@ -226,6 +229,25 @@ func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcont
 	return out
 }
 
+// wireLines names each current colleague and readable seat who exchanged mail
+// or met. Nil when the reader may not say, so absence never reads as silence.
+func wireLines(c DealCoverage, names map[ids.UUID]string) *[]crmcontracts.DealCoverageLine {
+	if c.Pairs == nil {
+		return nil
+	}
+	lines := []crmcontracts.DealCoverageLine{}
+	for _, p := range c.Pairs.Pairs {
+		lines = append(lines, crmcontracts.DealCoverageLine{
+			UserId: openapi_types.UUID(p.UserID), ContactId: openapi_types.UUID(p.ContactID),
+			ColleagueName: names[p.UserID],
+			LastInboundAt: p.LastInboundAt, LastInboundPrecision: activitywhen.Stated(p.InboundPrecision),
+			LastOutboundAt: p.LastOutboundAt, LastOutboundPrecision: activitywhen.Stated(p.OutboundPrecision),
+			LastMetAt: p.LastMetAt, LastMetPrecision: activitywhen.Stated(p.MetPrecision),
+		})
+	}
+	return &lines
+}
+
 func wireCoverage(
 	c DealCoverage, names map[ids.UUID]string, contacts map[ids.UUID]string,
 ) crmcontracts.DealCoverage {
@@ -244,6 +266,10 @@ func wireCoverage(
 		out.SectionsOmitted = append(out.SectionsOmitted,
 			crmcontracts.DealCoverageSectionsOmitted(section))
 	}
+	if len(c.SectionsOmitted) == 0 {
+		threshold := c.MaxEngagedSeats
+		out.MaxEngagedSeats = &threshold
+	}
 	for _, s := range c.Stakeholders {
 		seat := crmcontracts.DealCoverageSeat{
 			ContactId: openapi_types.UUID(s.ContactID), Role: s.Role, Engaged: s.Engaged,
@@ -253,6 +279,11 @@ func wireCoverage(
 		// nameless row that looks like a data fault rather than a boundary.
 		if name, ok := contacts[s.ContactID]; ok {
 			seat.ContactName = &name
+		}
+		if c.Pairs != nil {
+			if reach, ok := c.Pairs.Reach[s.ContactID]; ok {
+				seat.Reach = (*crmcontracts.DealCoverageSeatReach)(&reach)
+			}
 		}
 		if inbound, ok := c.SeatsInbound[s.ContactID]; ok {
 			seat.LastInboundAt = &inbound.At
@@ -273,6 +304,7 @@ func wireCoverage(
 		}
 		out.OurSide = append(out.OurSide, colleague)
 	}
+	out.Lines = wireLines(c, names)
 	for _, r := range c.Risks {
 		risk := crmcontracts.DealCoverageRisk{
 			Kind:       crmcontracts.DealCoverageRiskKind(r.Kind),
@@ -316,6 +348,11 @@ func coverageUsers(c DealCoverage) []ids.UUID {
 	out := make([]ids.UUID, 0, len(c.OurSide))
 	for _, e := range c.OurSide {
 		out = append(out, e.UserID)
+	}
+	if c.Pairs != nil {
+		for _, p := range c.Pairs.Pairs {
+			out = append(out, p.UserID)
+		}
 	}
 	return out
 }

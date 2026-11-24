@@ -17,12 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// ListInput narrows the catalog read: Object is required (the admin
-// field table is always per-object); Status of active/retired selects
-// one lifecycle state, empty returns both — this admin view deliberately
-// does NOT default-exclude retired rows (CUSTOM-FIELDS-WIRE-1), because
-// a retired field's slug stays reserved and the admin table is the one
-// surface that still shows it.
+// ListInput narrows the catalog read: Object is required, because the admin
+// field table is always per-object. Status selects one lifecycle state and
+// empty returns both. Retired rows stay in by default, because the admin table
+// is the one surface that still shows a retired field.
 type ListInput struct {
 	Object string
 	Status *string
@@ -89,7 +87,7 @@ func (in ListInput) predicate(ctx context.Context) (string, *storekit.ListSort, 
 		// Through the sort's own keyset, which refuses a token minted under a
 		// different ordering rather than resuming on an axis this page is not
 		// ordered by.
-		keyset, err := sorted.KeysetClause(*in.Cursor, arg)
+		keyset, err := sorted.KeysetClause("custom_fields", *in.Cursor, arg)
 		if err != nil {
 			return "", nil, nil, err
 		}
@@ -141,7 +139,7 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]crmcontracts.Custom
 			// The sort's own token, so the next page can only continue THIS
 			// ordering: a cursor minted under one sort and replayed under
 			// another is refused rather than resumed on the wrong axis.
-			next, err := sorted.EncodePageCursor(cursorKeys[limit-1], last.CreatedAt, ids.UUID(last.Id))
+			next, err := sorted.EncodePageCursor("custom_fields", cursorKeys[limit-1], last.CreatedAt, ids.UUID(last.Id))
 			if err != nil {
 				return err
 			}

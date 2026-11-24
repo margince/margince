@@ -203,21 +203,21 @@ async function runDisqualify(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("LeadBulkBar — disqualify", () => {
-  it("refuses the verb until a reason is chosen, and says why", async () => {
+  it("asks for a reason when pressed without one, and closes nothing", async () => {
     const { deletions } = stubFetch();
+    const user = userEvent.setup();
     render(<LeadBulkBar leads={leads} onDone={() => undefined} />);
 
-    // The sentence is the refusal: the reader is told what to answer, not
-    // handed a dimmed button with no explanation.
-    const sentence = await screen.findByText("Choose a reason first.");
+    // Nothing is refused before the reader has tried: the bar stays one row.
     const verb = disqualifyButton();
-    expect(verb.hasAttribute("disabled")).toBe(true);
-    // And the sentence is attached to the control, not merely near it — a
-    // disabled button cannot be focused, so a reason only in `title` or in a
-    // neighbouring span reaches nobody using a screen reader.
-    expect(verb.getAttribute("aria-describedby")).toBe(sentence.id);
+    expect(screen.queryByText("Choose a reason first.")).toBeNull();
 
-    await userEvent.setup().click(verb);
+    await user.click(verb);
+    // The sentence is attached to the control, not merely near it, so a
+    // screen reader on the button hears what to answer.
+    const sentence = await screen.findByText("Choose a reason first.");
+    expect(verb.getAttribute("aria-describedby")).toContain(sentence.id);
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(deletions).toEqual([]);
   });
 
@@ -409,5 +409,140 @@ describe("LeadBulkBar — disqualify", () => {
     await waitFor(() => expect(outstandingWhenDone).toHaveLength(1));
     // Zero in flight at the moment the caller was told the run was done.
     expect(outstandingWhenDone[0]).toBe(0);
+  });
+});
+
+describe("LeadBulkBar — confirm and busy state", () => {
+  const many = (n: number): components["schemas"]["Lead"][] =>
+    Array.from({ length: n }, (_, i) => ({
+      ...leads[0],
+      id: `l-${i + 1}`,
+      full_name: `Lead ${i + 1}`,
+    }));
+
+  async function chooseReasonAndOwner(
+    user: ReturnType<typeof userEvent.setup>,
+  ) {
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Reason" }),
+      "No budget",
+    );
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "New owner" }),
+      "Lena F.",
+    );
+  }
+
+  async function openDisqualifyConfirm(leadCount: number) {
+    stubFetch();
+    const user = userEvent.setup();
+    render(<LeadBulkBar leads={many(leadCount)} onDone={() => undefined} />);
+    await chooseReasonAndOwner(user);
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
+    );
+    await user.click(disqualifyButton());
+    return screen.findByRole("dialog");
+  }
+
+  it("warns Large change on Disqualify above ten leads", async () => {
+    const dialog = await openDisqualifyConfirm(11);
+    expect(within(dialog).getByText("Large change")).toBeTruthy();
+  });
+
+  it("shows no Large change warning on Disqualify at ten leads", async () => {
+    const dialog = await openDisqualifyConfirm(10);
+    expect(within(dialog).queryByText("Large change")).toBeNull();
+  });
+
+  it("asks before assigning, warns above ten and sends nothing on Cancel", async () => {
+    const sent: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (request.method === "POST") {
+          sent.push(url.pathname);
+          return jsonResponse({ results: [] });
+        }
+        if (url.pathname.endsWith("/users")) {
+          return jsonResponse({
+            data: [{ id: "u-9", email: "l@x.test", display_name: "Lena F." }],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<LeadBulkBar leads={many(11)} onDone={() => undefined} />);
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "New owner" }),
+      "Lena F.",
+    );
+    await user.click(screen.getByRole("button", { name: "Assign" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText("Assign 11 leads to Lena F.?"),
+    ).toBeTruthy();
+    expect(within(dialog).getByText("Large change")).toBeTruthy();
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(sent).toEqual([]);
+  });
+
+  it("keeps Disqualify disabled while an Assign runs", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const url = new URL(request.url);
+        if (request.method === "POST") {
+          await gate;
+          return jsonResponse({ results: [] });
+        }
+        if (url.pathname.endsWith("/lead-disqualify-reasons")) {
+          return jsonResponse(REASONS);
+        }
+        if (url.pathname.endsWith("/users")) {
+          return jsonResponse({
+            data: [{ id: "u-9", email: "l@x.test", display_name: "Lena F." }],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    render(<LeadBulkBar leads={leads} onDone={() => undefined} />);
+    await chooseReasonAndOwner(user);
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
+    );
+    await user.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Assign",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(true),
+    );
+    release();
+    await waitFor(() =>
+      expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
+    );
   });
 });

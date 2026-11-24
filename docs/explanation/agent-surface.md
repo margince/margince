@@ -9,18 +9,19 @@ govern it (the autonomy tiers, passports, and the one admission gate) are in
 is put together. Which actions an agent may take at all is
 [An agent does what its user does](../principles/an-agent-does-what-its-user-does.md).
 
-## Two surfaces, one gate
+## Two callers, one gate
 
 An agent reaches the tool surface in one of two ways, and both go through the same registry and the
 same admission gate. No path skips the gate.
 
-- **Surface A**: an *outside* agent over MCP (`/mcp`, Streamable HTTP on the api), acting under a passport.
-- **Surface B**: *our own* runner, the reason, act, observe loop that runs on its own (for example the
-  passes that run while the team sleeps).
+- **Your AI assistant**: an AI tool a user connects over MCP (`/mcp`, Streamable HTTP on the api),
+  acting under a passport.
+- **The night helpers**: our own runner, the reason, act, observe loop that runs on its own while the
+  team sleeps. They are part of Margince AI.
 
 Both call every action through `agents.Registry.Invoke`, which admits each call through `platform/auth`
 (**scope ∧ seat ∧ tier**) before any handler runs. A 🟢 call runs and is audited; a 🟡 call stages an
-approval that a human must confirm first. Both surfaces share the gate because both call the same
+approval that a human must confirm first. Both callers share the gate because both call the same
 registry, so nothing else has to keep them in line.
 
 Most verbs that change data run on their own (🟢). `enrich` stages for approval (🟡), because the model
@@ -45,8 +46,10 @@ several hidden tools, picked by an argument: `change_state` with `action: promot
 `promote_lead`. `Registry.InvokeServed` picks the hidden tool before anything else runs.
 
 So the gate, the approval and its later use, retry keys and MCP Tasks all see the name of the hidden
-tool. That name is the approval kind and the contract verb, and a router changes neither. A hidden tool
-still runs when a client calls it by name; `tools/list` leaves it out. Two are hidden with no router:
+tool. That name is the approval kind and the contract verb, and a router changes neither. `tools/list`
+leaves a hidden tool out, and an MCP client that calls one by name is told no such tool exists
+(`agents/unoffered.go`). A scheduled run still calls one by name when its agent lists it. Two are hidden
+with no router:
 `progress_deal` does what `advance_deal` does, and `relink_activities` what `relink_thread` refuses to.
 `TestThePublishedToolCountStaysUnderItsCeiling` holds the count.
 
@@ -71,7 +74,7 @@ when that is smaller. A human's upload keeps the route's own limit. An agent rea
 scheduled agent's tool list names any tool whose input bound is over 1 MiB. The size and type bounds
 are in [configuration.md](../reference/feature-settings.md#uploads).
 
-## The reason-act-observe loop (Surface B)
+## The reason-act-observe loop (the night helpers)
 
 The runner (`internal/modules/agents/runner/`) is where the model proposes and the tool surface decides.
 Each turn of the loop:
@@ -103,19 +106,21 @@ itself does not.
 Some acts cannot be taken back from the chat, such as a send, a merge or an archive. The contract marks
 their tool `ask_user_first`. Who acts on that mark depends on the surface.
 
-- **An MCP client (Surface A).** `DescribeForClient` (`internal/modules/agents/toollist.go`) adds a
+- **Your AI assistant, over MCP.** `DescribeForClient` (`internal/modules/agents/toollist.go`) adds a
   line to the tool's description: get the user's yes before the call, unless they asked for it. The
   server cannot check that the model asked. A change to many records also asks for its go-ahead in a
   chat form, when the client can show one ([mcp-protocol.md](../reference/mcp-protocol.md)).
-- **The runner (Surface B).** No one is there to answer, so the run is never told to ask. Its tool list
+- **The runner of the night helpers.** No one is there to answer, so the run is never told to ask. Its tool list
   carries each tool's own text, with no line from `DescribeForClient`. It calls `Registry.Invoke`
   directly, and only the MCP server sets a call up for a form. So no form can reach a run, and a change
   to many records goes ahead as it does for a client that cannot show one.
 
 Three things bound a run instead. Its passport holds its scopes, the work it may touch, and its user's
-grants and seat. Its catalog entry names its tools, and the tier decides the rest. A run acts on its
-user's passport, so a 🟡 verb runs at once, as it would for that user. A tool marked
-`WaitsEvenForItsUser`, such as `enrich`, still stages and pauses the run.
+grants and seat. Its catalog entry names its tools, and the tier decides the rest. The runner marks both fresh and resumed work as having nobody there. `auth.TierFor` makes
+every tool with the `send` scope wait for approval, even on the user's passport.
+
+A human decision releases only the staged call. Routine writes still run at once.
+A tool marked `WaitsEvenForItsUser`, such as `enrich`, also stages and pauses the run.
 
 `TestTheLoopAgentIsNeverToldToAskItsUser` (`internal/compose/agentaskfirst_test.go`) runs the runner
 over the registry with every tool that asks first, and fails if that line reaches the model.
@@ -222,8 +227,8 @@ contract or index.
 
 ## Open gaps
 
-- **A passport's share of model tokens only warns.** The admission gate meters each passport's reads,
-  writes, outbound data and calls (`platform/agentvolume`). Going past one of those stops the agent
+- **A passport's share of model tokens only warns.** The admission gate meters each passport's writes,
+  calls that send something out and total calls (`platform/agentvolume`). Going past one of those stops the agent
   or asks the human who granted the passport. The cost counter, its share of the workspace AI budget,
   refuses nothing: past the share, the answer has a warning. So only the workspace budget limits what
   one passport spends on the model.

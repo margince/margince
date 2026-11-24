@@ -135,7 +135,7 @@ type archivePinCase struct {
 func archivePinCases(as context.Context, t *testing.T, e *integration.Env, p *Provider) []archivePinCase {
 	t.Helper()
 	contact := seedForArchivePin(as, t, p, datasource.EntityContact,
-		`{"full_name":"Pin Probe","owner_id":"`+e.AdminUser.String()+`"}`)
+		`{"linkedin_url":"`+integration.ContactProfile()+`","full_name":"Pin Probe","owner_id":"`+e.AdminUser.String()+`"}`)
 	company := seedForArchivePin(as, t, p, datasource.EntityCompany,
 		`{"display_name":"Pin Probe GmbH","owner_id":"`+e.AdminUser.String()+`"}`)
 
@@ -156,7 +156,7 @@ func seedForArchivePin(as context.Context, t *testing.T, p *Provider,
 ) datasource.EntityRef {
 	t.Helper()
 	ref, err := p.Create(as, datasource.CreateInput{
-		EntityType: entity, Fields: json.RawMessage(fields), Source: "test",
+		EntityType: entity, Fields: json.RawMessage(fields), Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the %s: %v", entity, err)
@@ -237,7 +237,7 @@ func TestTheRESTArchiveHonoursAStaleIfMatch(t *testing.T) {
 	admin := e.Admin()
 
 	contact := seedForArchivePin(admin, t, native, datasource.EntityContact,
-		`{"full_name":"If-Match Probe","owner_id":"`+e.AdminUser.String()+`"}`)
+		`{"linkedin_url":"`+integration.ContactProfile()+`","full_name":"If-Match Probe","owner_id":"`+e.AdminUser.String()+`"}`)
 	stale := versionOf(t, e, "contact", contact.ID)
 	bumpVersion(admin, t, e, native, "contact", contact)
 
@@ -260,7 +260,7 @@ func TestTheRESTArchiveAcceptsACurrentIfMatch(t *testing.T) {
 	admin := e.Admin()
 
 	contact := seedForArchivePin(admin, t, native, datasource.EntityContact,
-		`{"full_name":"If-Match Probe","owner_id":"`+e.AdminUser.String()+`"}`)
+		`{"linkedin_url":"`+integration.ContactProfile()+`","full_name":"If-Match Probe","owner_id":"`+e.AdminUser.String()+`"}`)
 
 	rec := archiveOverREST(admin, t, e, contact.ID, versionOf(t, e, "contact", contact.ID))
 

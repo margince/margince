@@ -36,6 +36,20 @@ describe("RoleBadge", () => {
     expect(screen.getByText("Nur Lesezugriff")).toBeTruthy();
   });
 
+  it("shows a workspace-defined role by the name its admin gave it", () => {
+    renderIn(
+      "en",
+      <RoleBadge roleKey="custom_sales_assistant" name="Sales assistant" />,
+    );
+    expect(screen.getByText("Sales assistant")).toBeTruthy();
+    expect(screen.queryByText("custom_sales_assistant")).toBeNull();
+  });
+
+  it("keeps the translation of a seeded role whatever name it is sent", () => {
+    renderIn("de", <RoleBadge roleKey="rep" name="Rep" />);
+    expect(screen.getByText("Mitglied")).toBeTruthy();
+  });
+
   it("falls back to the raw key for a workspace-defined role — never invented copy", () => {
     renderIn("en", <RoleBadge roleKey="field_marketing" />);
     expect(screen.getByText("field_marketing")).toBeTruthy();

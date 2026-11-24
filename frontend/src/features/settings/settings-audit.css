@@ -49,7 +49,6 @@
   inline-size: 28px;
   block-size: 28px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgChip);
   color: var(--textPrimary);
 }

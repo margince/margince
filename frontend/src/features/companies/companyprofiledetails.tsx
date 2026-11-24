@@ -11,7 +11,6 @@ import { useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { type Edit, useRowBuilders } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
-import { CompanyTagsSection } from "./companyrailtags";
 import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 
 type Company = components["schemas"]["Company"];
@@ -19,8 +18,8 @@ type ProfileField = components["schemas"]["CompanyProfileField"];
 
 /**
  * The account's filed fields that the record's details column does not draw:
- * legal name, relationship types, parent company, LinkedIn, registered
- * address and tags. They sit here, every one visible and editable.
+ * legal name, relationship types, parent company, LinkedIn and registered
+ * address. They sit here, every one visible and editable.
  * The details column then holds only what the design shows, and no value on
  * the record becomes unreachable.
  */
@@ -87,13 +86,6 @@ export function CompanyProfileDetails({
           canEdit={edit.canEdit}
           readOnlyReason={edit.reason}
         />
-      ),
-    },
-    {
-      key: "tags",
-      term: t("tags.panelTitle"),
-      value: (
-        <CompanyTagsSection company={company} companyId={company.id} bare />
       ),
     },
   ];

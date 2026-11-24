@@ -62,7 +62,7 @@ func leadTwinOf(contact, emails string) string {
 		     OR from_contact_id = ` + contact + `
 		     OR from_contact_id IN (SELECT id FROM contact WHERE merged_into_id = ` + contact + `)
 		     OR id IN (SELECT converted_from_lead_id FROM contact WHERE (id = ` + contact + ` OR merged_into_id = ` + contact + `) AND converted_from_lead_id IS NOT NULL)
-		     OR (email IS NOT NULL AND lower(email) = ANY(` + emails + `))`
+		     OR (email IS NOT NULL AND email = ANY(` + emails + `))`
 }
 
 // sarQuestionSection hands over each kept answer row a record about the

@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
+import { useIdempotencyKey } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { MoneyInput } from "../../design-system/moneyinput";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { useT } from "../../i18n";
@@ -32,15 +34,27 @@ export function ForecastCallEditor({
 }>) {
   const t = useT();
   const client = useQueryClient();
-  const [amountMinor, setAmountMinor] = useState<number>(
-    readings.current_call?.amount_minor ?? 0,
+  // Null until a number is typed, so an untouched editor never records 0. A
+  // typed 0 is a call like any other.
+  const [amountMinor, setAmountMinor] = useState<number | null>(
+    readings.current_call?.amount_minor ?? null,
   );
   const [note, setNote] = useState("");
+  // The box keeps a refused text in view; the save waits until it reads.
+  const [amountRefused, setAmountRefused] = useState(false);
 
+  // The server takes no negative call, so the editor refuses one first.
+  const negative = amountMinor !== null && amountMinor < 0;
+
+  const idempotency = useIdempotencyKey();
   const save = useMutation({
     // Amount and note travel as VARIABLES. A mutation closing over its inputs
     // sends what the last render saw, which is wrong when a save races a refetch.
-    mutationFn: async (call: { amountMinor: number; note: string }) => {
+    mutationFn: async (call: {
+      amountMinor: number;
+      note: string;
+      key: string;
+    }) => {
       const named = writableScope(selection.scope);
       if (!named) {
         // The editor is not rendered without a nameable population, so this is
@@ -49,6 +63,7 @@ export function ForecastCallEditor({
       }
       return unwrap(
         await api.POST("/forecast/calls", {
+          params: { header: { "Idempotency-Key": call.key } },
           body: {
             // The call is filed for the population and the window the reader is
             // looking at, so the call and the figure it came from agree. A call made
@@ -65,6 +80,7 @@ export function ForecastCallEditor({
       );
     },
     onSuccess: async () => {
+      idempotency.renew();
       // The readings carry the standing call, so they are stale the moment one
       // is recorded. The whole "forecast" prefix goes, not this population
       // alone: a workspace call changes what a team reading shows beneath it.
@@ -83,8 +99,19 @@ export function ForecastCallEditor({
           <Button onClick={onClose}>{t("forecast.cancel")}</Button>
           <Button
             variant="primary"
-            disabled={save.isPending}
-            onClick={() => save.mutate({ amountMinor, note })}
+            disabled={save.isPending || amountRefused || negative}
+            reason={
+              amountMinor === null
+                ? t("forecast.callAmountNeeded")
+                : negative
+                  ? t("forecast.callAmountNegative")
+                  : undefined
+            }
+            onClick={() => {
+              if (amountMinor !== null) {
+                save.mutate({ amountMinor, note, key: idempotency.key });
+              }
+            }}
           >
             {t("forecast.saveCall")}
           </Button>
@@ -100,9 +127,13 @@ export function ForecastCallEditor({
           {(control) => (
             <MoneyInput
               {...control}
-              valueMinor={amountMinor}
+              aria-invalid={negative || control["aria-invalid"]}
+              valueMinor={amountMinor ?? 0}
+              blankWhenZero={amountMinor === null}
               currency={readings.base_currency}
-              onChangeMinor={(next) => setAmountMinor(next ?? 0)}
+              onChangeMinor={setAmountMinor}
+              onClear={() => setAmountMinor(null)}
+              onRefusedChange={setAmountRefused}
             />
           )}
         </Field>
@@ -116,6 +147,7 @@ export function ForecastCallEditor({
             />
           )}
         </Field>
+        <ErrorLine error={save.error} />
       </PanelBody>
     </Panel>
   );

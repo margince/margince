@@ -50,7 +50,7 @@ const phone = (
 });
 
 function About({ page }: Readonly<{ page: typeof view }>) {
-  return <RecordDetails sections={useContactAboutSections(page)} />;
+  return <RecordDetails sections={useContactAboutSections(page).sections} />;
 }
 
 function show(emails: Email[], phones: Phone[] = []) {
@@ -143,5 +143,30 @@ describe("a contact's addresses and numbers in the About group", () => {
       .map((line) => line.textContent);
     expect(numbers).toEqual(["+491701234567", "+493012345678"]);
     expect(screen.getByText(en["field.phoneMobile"])).toBeInTheDocument();
+  });
+
+  it("holds every address and number in one card named for a screen reader", async () => {
+    show(
+      [email("pe-1", "dana@brandt.example", 0)],
+      [phone("pp-1", "+493012345678", 0)],
+    );
+    const address = await screen.findByRole("link", {
+      name: "dana@brandt.example",
+    });
+    const card = address.closest(".reachcard");
+    expect(card).not.toBeNull();
+    expect(card).toContainElement(
+      screen.getByRole("link", { name: "+493012345678" }),
+    );
+    expect(screen.getByText(en["record.reach.label"])).toHaveClass("sr-only");
+  });
+
+  it("folds a missing kind as its own empty row", async () => {
+    const user = userEvent.setup();
+    show([], [phone("pp-1", "+493012345678", 0)]);
+    await screen.findByRole("link", { name: "+493012345678" });
+    expect(screen.queryByText(en["create.email"])).toBeNull();
+    await user.click(screen.getByRole("button", { name: /empty field/ }));
+    expect(screen.getByText(en["create.email"])).toBeInTheDocument();
   });
 });

@@ -63,7 +63,7 @@ func TestAReplacedHistoryExecutionCannotWriteMailOrCompleteItsSuccessor(t *testi
 	if _, err := first.Connect(actor, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatal(err)
 	}
-	run, err := first.StartBackfill(actor, "gmail", ids.From[ids.UserKind](e.Rep1), 3, connector.BackfillEstimate{Messages: 1}, enqueueNothing)
+	run, err := first.StartBackfill(actor, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 3, connector.BackfillEstimate{Messages: 1}, enqueueNothing)
 	if err != nil {
 		t.Fatal(err)
 	}

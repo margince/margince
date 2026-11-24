@@ -304,7 +304,9 @@ func holdingVerdict(status string) bool {
 // establish is the last one to publish on a guess.
 func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
 	if shared, ok := sharedMailboxOf(ctx); ok {
-		return connectionPostureTx(ctx, tx, sharedConnection(shared))
+		return storekit.RememberCaptureFact(ctx, tx, mailboxPostureMemo+shared.String(), func() (string, error) {
+			return connectionPostureTx(ctx, tx, sharedConnection(shared))
+		})
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
@@ -316,8 +318,13 @@ func mailboxPostureTx(ctx context.Context, tx pgx.Tx) (string, error) {
 		// posture from.
 		return PostureHeld, nil
 	}
-	return mailboxPostureForTx(ctx, tx, actor.UserID, provider)
+	return storekit.RememberCaptureFact(ctx, tx, mailboxPostureMemo+actor.UserID.String()+":"+provider, func() (string, error) {
+		return mailboxPostureForTx(ctx, tx, actor.UserID, provider)
+	})
 }
+
+// mailboxPostureMemo prefixes one mailbox's sharing setting in a transaction's memo.
+const mailboxPostureMemo = storekit.CaptureFactsMemo + "mailbox_posture:"
 
 // mailboxPostureForTx reads one named mailbox's posture.
 //
@@ -335,7 +342,11 @@ func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider
 	if user == ids.Nil || provider == "" {
 		return PostureHeld, nil
 	}
-	return connectionPostureTx(ctx, tx, seatConnection(user, provider))
+	connection, ok, err := seatMailboxTx(ctx, tx, user, provider)
+	if err != nil || !ok {
+		return PostureHeld, err
+	}
+	return connectionPostureTx(ctx, tx, memberConnection(user, connection))
 }
 
 // connectionPostureTx reads the posture of the one live connection match

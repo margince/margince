@@ -19,12 +19,13 @@ import (
 type localOpts struct {
 	callStore       CallRecorder
 	cacheOff        bool
+	unlimited       bool
 	monthlyBudget   int64
 	fakeClient      *FakeClient
 	capturePayloads bool
+	captureWhole    bool
 	harness         harnessClient
 	fakeDecider     decision.Client
-	everyCertified  bool
 	restrictions    model.SubjectRestrictions
 }
 
@@ -56,6 +57,13 @@ func WithoutResultCache() LocalOption {
 	return func(o *localOpts) { o.cacheOff = true }
 }
 
+// WithoutInteractiveLimits sends every task at CallCeiling with no walk bound.
+// The interactive limits come from what the cert lane measures. A run cut at
+// its limit would record the limit, and a slower model could never raise it.
+func WithoutInteractiveLimits() LocalOption {
+	return func(o *localOpts) { o.unlimited = true }
+}
+
 // WithMonthlyBudget overrides the static token ceiling the in-memory
 // meter is judged against (default DefaultMonthlyTokens). The budget is
 // static for the life of the Router — it cannot degrade mid-run when set
@@ -84,14 +92,11 @@ func WithHarnessClient(provider string, c model.Client) LocalOption {
 	return func(o *localOpts) { o.harness = harnessClient{provider: provider, client: c} }
 }
 
-// WithPayloadCapture turns on the Layer-3 content capture (the same
-// post-SecretStripper request+response the production router writes to
-// ai_call_payload) on this DB-less router, so a caller that installed a
-// CallRecorder sees each terminal Call carry its Payload. Off by default:
-// the debug/dev paths only pay the marshal+strip cost when a caller (the
-// aicert lane's trace dump) actually wants the bodies.
+// WithPayloadCapture makes each recorded Call carry its post-stripper request
+// and response, for the aicert trace. It keeps the whole text: a trace audits a
+// grade, and the ai_call_payload row caps would cut a long answer.
 func WithPayloadCapture() LocalOption {
-	return func(o *localOpts) { o.capturePayloads = true }
+	return func(o *localOpts) { o.capturePayloads, o.captureWhole = true, true }
 }
 
 // WithFakeDecider stands client in for the decisions lane's own, so a test or
@@ -100,15 +105,6 @@ func WithPayloadCapture() LocalOption {
 // binds a lane: the lane's provider and model still name every trace row.
 func WithFakeDecider(client decision.Client) LocalOption {
 	return func(o *localOpts) { o.fakeDecider = client }
-}
-
-// WithEveryDecisionCertified treats every (task, site, provider, model) as
-// certified. It exists for the certification lane alone, which must run the
-// lane to produce the record the generated table is built from — a runtime
-// that served only certified rows could never measure the first one. The
-// production constructor has no such knob.
-func WithEveryDecisionCertified() LocalOption {
-	return func(o *localOpts) { o.everyCertified = true }
 }
 
 // localDecisionLane is the lane a DB-less router serves: the config's own, or
@@ -194,9 +190,8 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	// WithCallStore opts a caller into tracing.
 	router := assembleRouter(clients, embedder, cfg.Profile, &memoryMeter{}, StaticBudget(o.monthlyBudget), o.callStore, meta, o.capturePayloads, nil)
 	router.cacheOff = o.cacheOff
-	if o.everyCertified {
-		router.decisionCertified = func(DecisionCertKey) bool { return true }
-	}
+	router.unlimited = o.unlimited
+	router.captureWhole = o.captureWhole
 	decisions, err := localDecisionLane(cfg, o.fakeDecider)
 	if err != nil {
 		return nil, err

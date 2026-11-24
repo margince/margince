@@ -69,6 +69,9 @@ type MeetingNotesWriter interface {
 	// LandTx checks the meeting still carries the link and lands the text once.
 	// It answers false when nothing landed.
 	LandTx(ctx context.Context, tx pgx.Tx, in MeetingNotesLanding) (bool, error)
+	// LandMailTx lands a Gemini notes mail as the transcript of the one meeting
+	// it names, and answers false when no single meeting matches.
+	LandMailTx(ctx context.Context, tx pgx.Tx, in MeetingNotesMail) (bool, error)
 }
 
 // WithNotesLanding returns a copy that reads meeting notes through notes.
@@ -133,8 +136,9 @@ func meetingNotesReaderTx(ctx context.Context, tx pgx.Tx) (notesReader, bool, er
 	var calendarLabel *string
 	err = tx.QueryRow(ctx, `
 		SELECT account_label FROM capture_connection
-		 WHERE user_id = $1 AND provider = $2 AND status IN ('connected','error') AND archived_at IS NULL`,
-		owner, calendar).Scan(&calendarLabel)
+		 WHERE user_id = $1 AND provider = $2 AND status IN ('connected','error') AND archived_at IS NULL
+		 ORDER BY lower(account_label) = lower($3) DESC, created_at, id LIMIT 1`,
+		owner, calendar, *label).Scan(&calendarLabel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return notesReader{}, false, nil
 	}

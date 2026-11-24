@@ -133,6 +133,8 @@ var erasureCascadeFiles = []string{
 	// transaction, so it counts here; leaving it off would let a table look
 	// uncovered the moment its purge moved file.
 	"internal/modules/privacy/erasuretimeline.go",
+	// The note and comments of a legal review on a deal the subject holds a stake in.
+	"internal/modules/privacy/erasure_legalreview.go",
 	// The webhook bodies rendered from the subject, cleared through the
 	// purger seam, and the call that reaches it.
 	"internal/modules/privacy/retentioncopies.go",
@@ -235,17 +237,16 @@ var erasureCascadeFiles = []string{
 // the derivation names everything and this register accounts for what is not
 // cascade, one entry at a time.
 var reachedButNotCascade = gatekit.Waive(map[string]string{
-	"internal/modules/ai/voice_corpus_summary.go":      "the voice meter and staleness helpers the sample erasure calls after it empties a sample. They read the corpus counts and mark the profile stale; they write no subject text",
-	"internal/modules/ai/voice_source_mutations.go":    "reached for voiceCorpusChangedPayload, a payload builder living here. Its own SQL is the owner's remove, exclude and clear, never the cascade's",
-	"internal/modules/privacy/erasuretally.go":         "the counting transaction every arm of the cascade runs on. Its Exec, Query and QueryRow pass the arm's own statement through and count the rows it touched; it names no table and holds no statement of its own",
-	"internal/modules/privacy/retention.go":            "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
-	"internal/modules/privacy/retention_floor.go":      "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
-	"internal/modules/privacy/floorpolicy.go":          "the floor policy the cascade resolves before it erases. It reads the jurisdiction and the carried floor, and its only write is the carry a jurisdiction change records, never a subject's PII",
-	"internal/modules/privacy/entityfloor.go":          "the further legal entities' floors the policy above resolves. It reads entity ids and countries and writes nothing",
-	"internal/modules/privacy/retentionscope.go":       "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
-	"internal/modules/privacy/erasure_tombstone.go":    "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
-	"internal/modules/privacy/scheduledsends.go":       "the queued sends cancelled on the way through. Reached from the cascade and executing no SQL of its own — it hands its statements to a helper this scan already reads at that call site",
-	"internal/modules/privacy/retentionpolicystore.go": "the policy CRUD an operator drives — reads the table and writes rules, never a subject's PII. It is reached only through a name the walk cannot tell apart from the cascade's own, and admitting it would let a policy edit count as an erasure",
+	"internal/modules/ai/voice_corpus_summary.go":   "the voice meter and staleness helpers the sample erasure calls after it empties a sample. They read the corpus counts and mark the profile stale; they write no subject text",
+	"internal/modules/ai/voice_source_mutations.go": "reached for voiceCorpusChangedPayload, a payload builder living here. Its own SQL is the owner's remove, exclude and clear, never the cascade's",
+	"internal/modules/privacy/erasuretally.go":      "the counting transaction every arm of the cascade runs on. Its Exec, Query and QueryRow pass the arm's own statement through and count the rows it touched; it names no table and holds no statement of its own",
+	"internal/modules/privacy/retention.go":         "the nightly time-based evaluator. EraseContact reaches it through the statutory correspondence floor it shares, not to erase anything: its writes are the sweep's own, on the sweep's trigger, and admitting them here would let a retention pass answer for a subject's request",
+	"internal/modules/privacy/retention_floor.go":   "the shared floor itself — the statutory minimum both engines apply. It computes a cutoff and writes nothing",
+	"internal/modules/privacy/floorpolicy.go":       "the floor policy the cascade resolves before it erases. It reads the jurisdiction and the carried floor, and its only write is the carry a jurisdiction change records, never a subject's PII",
+	"internal/modules/privacy/entityfloor.go":       "the further legal entities' floors the policy above resolves. It reads entity ids and countries and writes nothing",
+	"internal/modules/privacy/retentionscope.go":    "the sweep's due-list scoping. Reached through the floor above, and it writes nothing",
+	"internal/modules/privacy/erasure_tombstone.go": "the suppression record written AFTER the cascade commits, so a re-capture cannot resurrect the subject. It is the same transaction and it writes no subject PII — the tombstone holds hashes, which is the point of it",
+	"internal/modules/privacy/scheduledsends.go":    "the queued sends cancelled on the way through. Reached from the cascade and executing no SQL of its own — it hands its statements to a helper this scan already reads at that call site",
 })
 
 // retentionSweepFiles are the nightly time-based evaluator — the only eraser a

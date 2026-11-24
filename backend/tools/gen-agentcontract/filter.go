@@ -4,7 +4,9 @@
 package main
 
 import (
+	"fmt"
 	"slices"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -28,6 +30,9 @@ type operation struct {
 	tag          string
 	scope, tier  string
 	waitsOnModel string
+	// pathChoices are the values each enum path parameter takes, so the
+	// index names a report key or a kind where a reader searches for it.
+	pathChoices []string
 }
 
 // keepAgentOperations drops every operation a passport cannot call, and every
@@ -40,9 +45,11 @@ func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool) 
 		return nil, tags
 	}
 	globalSecurity, _ := oasnode.Lookup(root, "security")
+	components, _ := oasnode.Lookup(root, "components")
 	keptPaths := paths.Content[:0]
 	for i := 0; i+1 < len(paths.Content); i += 2 {
 		path, item := paths.Content[i].Value, paths.Content[i+1]
+		dropHiddenParameters(item, components)
 		keptKeys := item.Content[:0]
 		before := len(kept)
 		for j := 0; j+1 < len(item.Content); j += 2 {
@@ -54,7 +61,10 @@ func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool) 
 				if security, own := oasnode.Lookup(value, "security"); own {
 					passportOnly(security)
 				}
-				kept = append(kept, readOperation(method, path, value))
+				dropHiddenParameters(value, components)
+				op := readOperation(method, path, value)
+				op.pathChoices = pathChoices(item, value)
+				kept = append(kept, op)
 				collectNames(tags, value, "tags")
 			}
 			keptKeys = append(keptKeys, key, value)
@@ -139,4 +149,51 @@ func collectNames(into map[string]bool, node *yaml.Node, key string) {
 	for _, item := range seq.Content {
 		into[item.Value] = true
 	}
+}
+
+// dropHiddenParameters removes an operation's or path item's parameters marked `x-agent-hidden: true`,
+// reading a $ref's component. Such a switch serves one human screen and would narrow an agent's answer.
+func dropHiddenParameters(node, components *yaml.Node) {
+	params, ok := oasnode.Lookup(node, "parameters")
+	if !ok {
+		return
+	}
+	params.Content = slices.DeleteFunc(params.Content, func(p *yaml.Node) bool {
+		if ref, isRef := oasnode.Lookup(p, "$ref"); isRef {
+			name, local := strings.CutPrefix(ref.Value, "#/components/parameters/")
+			if resolved, found := component(components, componentRef{"parameters", name}); local && found {
+				p = resolved
+			}
+		}
+		hidden, _ := oasnode.Lookup(p, "x-agent-hidden")
+		return hidden != nil && hidden.Value == "true"
+	})
+}
+
+// pathChoices reads each path parameter declared with an inline enum, on the
+// path item or the operation, as "`{name}` is one of a, b".
+func pathChoices(item, op *yaml.Node) []string {
+	var choices []string
+	for _, owner := range []*yaml.Node{item, op} {
+		params, ok := oasnode.Lookup(owner, "parameters")
+		if !ok {
+			continue
+		}
+		for _, param := range params.Content {
+			schema, hasSchema := oasnode.Lookup(param, "schema")
+			if oasnode.Scalar(param, "in") != "path" || !hasSchema {
+				continue
+			}
+			enum, hasEnum := oasnode.Lookup(schema, "enum")
+			if !hasEnum || len(enum.Content) == 0 {
+				continue
+			}
+			values := make([]string, 0, len(enum.Content))
+			for _, value := range enum.Content {
+				values = append(values, value.Value)
+			}
+			choices = append(choices, fmt.Sprintf("`{%s}` is one of %s.", oasnode.Scalar(param, "name"), strings.Join(values, ", ")))
+		}
+	}
+	return choices
 }

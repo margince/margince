@@ -56,8 +56,9 @@ import (
 // enforces, after every later migration widened or narrowed it.
 const vocabularyCatalog = "migrations/testdata/head_catalog.txt"
 
-// catalogCheckLine reads one CHECK constraint line of the catalog.
-var catalogCheckLine = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.[a-z0-9_]+ CHECK (.*)$`)
+// catalogCheckLine reads one CHECK constraint line of the catalog. A check not
+// yet validated binds new rows all the same, so its suffix is set aside.
+var catalogCheckLine = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.[a-z0-9_]+ CHECK (.*?)(?: NOT VALID)?$`)
 
 // catalogTextColumn reads one text column line of the catalog.
 var catalogTextColumn = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*) text\b`)
@@ -72,7 +73,7 @@ var wholeVocabularyCheck = regexp.MustCompile(
 // extensionArm is the open arm an extension-widened CHECK carries beside its
 // closed list: the `ext:` spelling an extension kind uses. The closed list is
 // the column's vocabulary, so the arm is set aside before the list is read.
-var extensionArm = regexp.MustCompile(` OR \([a-z_][a-z0-9_]* ~ '\^ext:[^']*'::text\)`)
+var extensionArm = regexp.MustCompile(` OR \([a-z_][a-z0-9_]* ~ '\^ext[:_][^']*'::text\)`)
 
 // readWholeVocabulary reads a CHECK body that is a whole vocabulary, behind
 // an extension arm or not. It returns the submatches of wholeVocabularyCheck,
@@ -304,15 +305,13 @@ var namedVocabularyDrift = gatekit.Waive(map[string]string{
 		"so the CHECK does not admit it",
 	"signal_resolution.outcome": "the CHECK also admits acknowledged, which the contract's outcome enum " +
 		"and the extension's do not name",
-	"weekly_review_movement.bar": "the CHECK also admits excluded, not_checked and reinstated, which " +
-		"the contract's bar enum does not name",
 	"weekly_review_outlook.forward_measure": "the CHECK also admits commit_evidence and " +
 		"qualified_commit_evidence, which the contract's measure enum does not name",
 })
 
 // namedVocabularyDriftCeiling is how many named pairs may disagree. It only
 // moves down: fix a pair, delete its waiver, lower this number.
-const namedVocabularyDriftCeiling = 14
+const namedVocabularyDriftCeiling = 13
 
 func TestEveryColumnNamedGoTypeHoldsItsColumnsCheck(t *testing.T) {
 	t.Parallel()
@@ -464,8 +463,6 @@ const sharedByOwnBinding = "each table has its own contract enum and each column
 // repeatedVocabularies waives a group of same-named columns with one value set
 // that no single Go type holds, keyed by repeatedVocabulary.
 var repeatedVocabularies = gatekit.Waive(map[string]string{
-	"bar: weekly_review_driver, weekly_review_movement": "the movement column's contract enum is narrower " +
-		"than its CHECK (namedVocabularyDrift), so both cannot bind to it until that drift is settled",
 	"execution_authority: comms_outbound, communication_decision": "no Go type spells this vocabulary as " +
 		"typed constants, so there is no one type to bind both columns to",
 	"forward_measure: forecast_snapshot, team_weekly_review_outlook, weekly_review_outlook": "the outlook " +
@@ -485,13 +482,13 @@ var repeatedVocabularies = gatekit.Waive(map[string]string{
 
 // repeatedVocabulariesCeiling only moves down: bind a group to one type,
 // delete its waiver, then lower it.
-const repeatedVocabulariesCeiling = 10
+const repeatedVocabulariesCeiling = 9
 
 // unreadArrayCheckCeiling is how many catalog CHECKs hold an `= ANY (ARRAY[…])`
 // list this census does not read as a column's vocabulary. Each states a
 // condition inside a wider rule, such as finance_invoice_credit_note_status.
 // The ceiling rises only for such a rule.
-const unreadArrayCheckCeiling = 29
+const unreadArrayCheckCeiling = 30
 
 // TestNoVocabularyCheckHidesFromTheCensus fails when a CHECK with a value
 // list stops being read, so a catalog format change cannot shrink the census.

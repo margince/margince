@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -37,7 +38,8 @@ func previewProjection(ctx context.Context, tx pgx.Tx, engine storekit.Query, ma
 func extensionPreviewRows(ctx context.Context, tx pgx.Tx, engine storekit.Query, matched []ids.UUID) ([]string, [][]any, error) {
 	columns := []string{"id"}
 	for name, field := range engine.Fields {
-		if !field.Withheld {
+		// `id` leads the columns already.
+		if !field.Withheld && name != "id" {
 			columns = append(columns, name)
 		}
 	}
@@ -56,8 +58,9 @@ func extensionPreviewRows(ctx context.Context, tx pgx.Tx, engine storekit.Query,
 	}
 	defer pgRows.Close()
 	var rows [][]any
+	reader := rowvalue.NewReader()
 	for pgRows.Next() {
-		values, err := pgRows.Values()
+		values, err := reader.Values(pgRows)
 		if err != nil {
 			return nil, nil, err
 		}

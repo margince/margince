@@ -13,6 +13,7 @@
 # whole assertion, and the answer's figure is not graded: the seed holds no
 # accepted handoff, so a correct answer may well say none.
 name: case62_held_meetings_to_opportunities
+title: Held meetings that became opportunities
 criteria: [1]
 writes: false
 
@@ -22,7 +23,9 @@ prompt: |
 
 # The figures come from Margince's reporting, by any of its engines: the
 # meeting-conversion report, an analytics query on that entity, or the
-# meetings-held and accepted-opportunities metrics. The answer is what is judged.
+# meetings-held and accepted-opportunities metrics. The counts move with the
+# quarter the lane runs in, so no fixed fact holds them: a read of the reporting
+# is what makes the judged counts the product's and not invented.
 must_call:
   - read_reports|run_report|read_analytics
 

@@ -1,8 +1,9 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useContext, useEffect, useState, useSyncExternalStore } from "react";
 import { entryDepth, noteHistoryEntry } from "./historydepth";
 import { publishRecordAddress, restoreRecordAddress } from "./recordaddress";
+import { ScreenAddress } from "./screenaddress";
 import { addressedAPathWeDoNotServe } from "./servedpath";
-import { hashWithParams, type UrlParams } from "./urlstate";
+import { hashWithParams, type UrlParams, useAddressWriters } from "./urlstate";
 // The screen union binds navigation and dispatch to the same route names.
 export const SCREENS = [
   "home",
@@ -49,6 +50,9 @@ export const SCREENS = [
   // reader has no nav to reach it from.
   "reset-password",
   "ext",
+  // A unit's own app in the home layout (lib/extensionapps.ts), apart from its
+  // sub-setting at `ext`.
+  "app",
   "x",
   // reach:external what `parseRoute` answers for an address this app does not
   // have; a link to it would be a link to the fact that a link was wrong.
@@ -135,6 +139,14 @@ export function routeHash(route: Route): string {
 }
 
 /**
+ * Whether two addresses name one page and differ at most in their dials. A
+ * dial is written in place, so such a move never leaves the screen.
+ */
+export function samePage(one: string, other: string): boolean {
+  return routeHash(parseHash(one)) === routeHash(parseHash(other));
+}
+
+/**
  * Go to an address.
  *
  * `dials` is the QUERY half — which view of the screen, not which screen. It is
@@ -161,6 +173,7 @@ export function navigateReplacing(route: Route, dials?: UrlParams): void {
     "",
     dials ? hashWithParams(routeHash(route), dials) : routeHash(route),
   );
+  movedFromOutside = false;
   announce();
 }
 
@@ -205,38 +218,39 @@ const held = new Map<Screen, string>();
 // Moves whatever credential the CURRENT address carries into memory and
 // rewrites the address without it. Idempotent, because the address no longer
 // carries one afterwards.
-function takeFromHash(): void {
+function takeFromHash(): boolean {
   const hash = globalThis.location.hash;
   const query = hash.indexOf("?");
   if (query < 0) {
-    return;
+    return false;
   }
   const { screen } = parseHash(hash);
   const carrier = HASH_CREDENTIALS.find((entry) => entry.screen === screen);
   if (!carrier) {
-    return;
+    return false;
   }
   const carried = new URLSearchParams(hash.slice(query + 1)).get(carrier.param);
   if (carried === null) {
-    return;
+    return false;
   }
   held.set(screen, carried);
-  // replaceState, not an assignment to location.hash: an assignment adds a
-  // history entry and leaves the credential in the one behind it, so the leak
-  // would survive a Back press. It fires no hashchange either, which is what
-  // lets the subscription below take the credential before it tells React the
-  // address moved — the snapshot React then reads is already the scrubbed one.
-  //
-  // The document's own query is kept: the credential is in the fragment, so
-  // nothing here needs `?…` gone, and rewriting it away discarded whatever else
-  // the URL was carrying (Storybook's `?id=<story>`, which left a reload of the
-  // canvas on no story at all).
+  // Not a hash assignment, which pushes and leaves the credential a Back away.
+  // Query and state stay: Storybook's `?id=`, the entry's depth and scroll.
   const { pathname, search } = globalThis.location;
   globalThis.history.replaceState(
-    null,
+    globalThis.history.state,
     "",
     `${pathname}${search}${hash.slice(0, query)}`,
   );
+  return true;
+}
+
+// The scrub outside a move: an entry already counted keeps its depth under its
+// new address. Nobody is told, since nothing but the credential left the bar.
+function takeFromEntry(): void {
+  if (takeFromHash() && watchers.size > 0) {
+    noteHistoryEntry("replaced");
+  }
 }
 
 /**
@@ -249,7 +263,7 @@ function takeFromHash(): void {
  * the router taking it and the screen that spends it asking for it.
  */
 export function takeHashCredential(screen: Screen): string | null {
-  takeFromHash();
+  takeFromEntry();
   return held.get(screen) ?? null;
 }
 
@@ -299,10 +313,20 @@ function announce(): void {
   }
 }
 
+// Whether the last move came from outside the app: a link, typing or history.
+// A move the app writes itself clears it.
+let movedFromOutside = true;
+
+/** Whether the address last moved by a link, typing or history. */
+export function addressMovedFromOutside(): boolean {
+  return movedFromOutside;
+}
+
 function addressChanged(): void {
   if (liveEntry() === lastEntry) {
     return;
   }
+  movedFromOutside = true;
   // A second link pasted into an open tab is a hash change and nothing else:
   // the screen does not remount for one, and whatever renders next is decided
   // above the route. So the credential comes out of the new address before
@@ -351,24 +375,20 @@ export function watchAddress(onChange: () => void): () => void {
 /**
  * Tell the address store the hash moved, for a move this app made itself.
  *
- * Only lib/urlstate.ts needs it: it writes the address directly, so nothing has
- * dispatched anything yet. An event that lands for the same address afterwards
- * finds it already announced and does nothing.
+ * For a caller that writes the address directly, so nothing has dispatched
+ * anything yet. An event that lands for the same address afterwards finds it
+ * already announced and does nothing.
  */
 export function announceAddressChanged(): void {
+  movedFromOutside = false;
   announce();
 }
 
 /**
- * The whole address, as a value that changes when the reader navigates.
- *
- * Exported because an address has two halves with two owners. The path names
- * what is on screen and is this module's. The query names which view of it (how
- * a list is narrowed, ordered and paged) and belongs to lib/urlstate.ts.
- * Both must re-render on the same announcement, and a second subscription to
- * the browser's events would be a second answer to where the reader is.
+ * The address in the bar, even under a routed screen that is still showing
+ * the one before it. For the code that decides what is on screen.
  */
-export function useHash(): string {
+export function useLiveHash(): string {
   // Taken during the FIRST render of whoever reads the address, ahead of the
   // snapshot below, so the address React routes on is the scrubbed one and
   // nothing can render with a credential still in the bar. An effect would be
@@ -380,7 +400,7 @@ export function useHash(): string {
   // on which of them a screen called first.
   useState(() => {
     restoreRecordAddress();
-    takeFromHash();
+    takeFromEntry();
   });
   return useSyncExternalStore(
     subscribe,
@@ -389,8 +409,21 @@ export function useHash(): string {
   );
 }
 
+/**
+ * The whole address, as a value that changes when the reader navigates. Under
+ * a routed screen it is the address that screen was drawn for.
+ *
+ * Exported because the path is this module's and the query is lib/urlstate.ts's.
+ * Both must re-render on one announcement, not on a second browser subscription.
+ */
+export function useHash(): string {
+  const live = useLiveHash();
+  return useContext(ScreenAddress) ?? live;
+}
+
 export function useRoute(): Route {
-  const hash = useHash();
+  const live = useLiveHash();
+  const hash = useContext(ScreenAddress) ?? live;
   // The address the reader arrived on, read once.
   //
   // Asked again on every route read, an unserved path keeps answering
@@ -401,14 +434,15 @@ export function useRoute(): Route {
     unserved: addressedAPathWeDoNotServe(),
     hash: globalThis.location.hash,
   }));
+  const writers = useAddressWriters();
   useEffect(() => {
     if (/^#\/?brief(?:[/?]|$)/.test(hash)) {
-      navigateReplacing(
+      writers.navigateReplacing(
         parseHash(hash),
         new Map(new URLSearchParams(hash.split("?")[1])),
       );
     }
-  }, [hash]);
+  }, [hash, writers]);
   useEffect(() => {
     if (!arrival.unserved) {
       return;

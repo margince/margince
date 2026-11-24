@@ -20,6 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -81,7 +82,7 @@ type Automation struct {
 	Params        json.RawMessage
 	Version       int64
 	CreatedAt     time.Time
-	UpdatedAt     *time.Time
+	UpdatedAt     time.Time
 	// PausedReason says why a rule paused itself; nil for a rule paused by
 	// hand or running.
 	PausedReason *string
@@ -138,7 +139,7 @@ func (s *AutomationStore) List(ctx context.Context, cursor *string, limit *int) 
 	joins := storekit.SQLf(runSummaryJoins, len(args))
 	where := "archived_at IS NULL"
 	if cursor != nil && *cursor != "" {
-		c, err := storekit.DecodeCursor(*cursor)
+		c, err := storekit.DecodeCursor("automations", *cursor)
 		if err != nil {
 			return AutomationPage{}, err
 		}
@@ -178,7 +179,7 @@ func (s *AutomationStore) List(ctx context.Context, cursor *string, limit *int) 
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID.UUID)
+		next, err := storekit.EncodeCursor("automations", last.CreatedAt, last.ID.UUID)
 		if err != nil {
 			return AutomationPage{}, err
 		}
@@ -262,11 +263,12 @@ func (s *AutomationStore) Create(ctx context.Context, in CreateAutomationInput) 
 		if err != nil {
 			return err
 		}
+		// Not read back: the API answers from RuleTier, which new rows store too.
 		a, err = scanAutomation(tx.QueryRow(ctx, storekit.SQLf(`
 			INSERT INTO automation (key, name, origin, trigger, action, params, owner_id, enabled, tier, setter_passport_id)
 			VALUES ($1, $2, 'catalog', $3, $4, $5, $6, false, $7, $8)
 			RETURNING %s`, automationColumns),
-			in.Key, in.Name, triggerJSON, actionJSON, paramsJSON, storekit.UUIDOrNil(actor.UserID), entry.Tier, storekit.UUIDOrNil(setter)))
+			in.Key, in.Name, triggerJSON, actionJSON, paramsJSON, storekit.UUIDOrNil(actor.UserID), RuleTier(entry.Action), storekit.UUIDOrNil(setter)))
 		if err != nil {
 			return err
 		}
@@ -406,14 +408,14 @@ func (s *AutomationStore) archiveRule(ctx context.Context, id ids.AutomationID) 
 }
 
 // SeedStarterAutomationsTx enables the system-owned starters at bootstrap.
-// A draft needs a contact's authority, so its template stays paused until an
-// authorized contact enables it and takes ownership.
+// A starter whose setup state is not "on" with empty params (missing required
+// settings, or a draft that needs a contact's authority) stays paused.
 func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 	for _, entry := range Catalog() {
 		if !entry.Seeded {
 			continue
 		}
-		ready := entry.Validate(nil) == nil
+		ready := seededEnabled(entry)
 		paramsJSON, err := json.Marshal(nonNilParams(nil))
 		if err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
@@ -422,18 +424,26 @@ func SeedStarterAutomationsTx(ctx context.Context, tx pgx.Tx) error {
 		if err != nil {
 			return err
 		}
+		// Not read back: the API answers from RuleTier, which new rows store too.
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO automation (key, name, origin, trigger, action, params, enabled, tier)
 			VALUES (@key, @name, 'catalog', @trigger, @action, @params, @enabled, @tier)`,
 			pgx.NamedArgs{
 				keyCatalogKey: entry.Key, keyName: entry.Name, "trigger": triggerJSON,
-				"action": actionJSON, keyParams: paramsJSON, "tier": entry.Tier,
-				auditEnabled: ready && entry.Action != string(ActionTypeDraftEmail),
+				"action": actionJSON, keyParams: paramsJSON, "tier": RuleTier(entry.Action),
+				auditEnabled: ready,
 			}); err != nil {
 			return fmt.Errorf("seed automation %s: %w", entry.Key, err)
 		}
 	}
 	return nil
+}
+
+// seededEnabled is true when a starter with empty params is already "on" by
+// the same setup check the Automations page uses.
+func seededEnabled(entry CatalogEntry) bool {
+	seeded := Automation{Key: entry.Key, Params: json.RawMessage(`{}`), Enabled: true}
+	return configurationOf(seeded, false).State == crmcontracts.AutomationSetupStateOn
 }
 
 // entrySnapshots renders the catalog entry's trigger/action jsonb

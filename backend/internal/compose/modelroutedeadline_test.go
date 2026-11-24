@@ -15,14 +15,9 @@ import (
 )
 
 // A handler that CALLS a model needs longer to answer than the server's
-// WriteTimeout allows every other endpoint, and it takes that time on its own
-// route rather than from the server.
-//
-// Measured on a real installation, a reply draft runs 13 to 45 seconds and the
-// server-wide WriteTimeout is 30s: the response was cut mid-write and reached
-// the reader as a 502 from the proxy in front. Raising the global bound would
-// have let one slow-reading client hold a connection for as long as it liked,
-// which is the trade the MCP handler already refused.
+// WriteTimeout allows every other endpoint. It takes that time on its own
+// route rather than from the server. A longer global bound would let one
+// slow-reading client hold a connection for as long as it liked.
 func TestOnlyTheModelRoutesTakeTheLongerDeadline(t *testing.T) {
 	// A ResponseController reaches the deadline through the writer; a recorder
 	// does not implement it, so the middleware's refusal path is what a test
@@ -92,14 +87,10 @@ func TestTheRouteDeadlineCoversTheWholeLadder(t *testing.T) {
 	}
 }
 
-// A route with no model behind it keeps the server's own write deadline — the
-// middleware must not hand an ordinary read the long one — and runs under a
-// context bounded by that same figure.
-//
-// The context half is what stops a handler outliving the response it was
-// writing. Until it, a read whose answer was already lost kept its goroutine
-// and every database connection it took from there on, against a pool of 16
-// that the worklist family asks 33-54 transactions of per request.
+// A route with no model behind it keeps the server's own write deadline. The
+// middleware must not hand an ordinary read the long one. Its context ends just
+// before that same figure, leaving time to answer. Without the context half a
+// handler outlives its lost response and keeps its database connections.
 func TestAnOrdinaryRouteRunsUnderTheServersOwnDeadline(t *testing.T) {
 	// Measured from INSIDE the handler: the deadline is set a hair before it
 	// runs, so what the handler has left is what the bound actually gives it.
@@ -120,9 +111,8 @@ func TestAnOrdinaryRouteRunsUnderTheServersOwnDeadline(t *testing.T) {
 	if !bounded {
 		t.Fatal("the handler ran under a context with no deadline, so a lost response costs its connections until the work ends on its own")
 	}
-	if within > httpserver.ResponseDeadline || within < httpserver.ResponseDeadline-time.Second {
-		t.Errorf("the handler had %s left, want the response's own %s",
-			within, httpserver.ResponseDeadline)
+	if want := httpserver.ResponseDeadline - httpserver.AnswerGrace; within > want || within < want-time.Second {
+		t.Errorf("the handler had %s left, want %s: the response's own figure less the time to answer", within, want)
 	}
 }
 
@@ -147,8 +137,8 @@ func TestAModelRouteRunsUnderTheDeadlineItsResponseWasGiven(t *testing.T) {
 	if !bounded {
 		t.Fatal("the model route ran under a context with no deadline")
 	}
-	if within > ai.RouteWriteDeadline || within < ai.RouteWriteDeadline-time.Second {
-		t.Errorf("the handler had %s left, want the route's own %s", within, ai.RouteWriteDeadline)
+	if want := ai.RouteWriteDeadline - httpserver.AnswerGrace; within > want || within < want-time.Second {
+		t.Errorf("the handler had %s left, want %s: the route's own figure less the time to answer", within, want)
 	}
 	// The whole point of the per-route arm: it must be the LONGER figure.
 	if within <= httpserver.ResponseDeadline {
@@ -173,15 +163,18 @@ func (*deadlineWriter) SetWriteDeadline(time.Time) error { return nil }
 // And a chain that cannot extend the deadline fails LOUDLY rather than serving
 // a response that dies mid-write, which is the symptom this exists to remove.
 func TestAChainThatCannotExtendSaysSo(t *testing.T) {
-	handler := boundByResponseDeadline(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	handler := httpserver.TraceContract(discardLog(), boundByResponseDeadline(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("drafted"))
-	}))
+	})))
 
 	recorder := httptest.NewRecorder() // implements no ResponseController hook
 	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/v1/activities/x/draft-email", nil))
 
 	if recorder.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500 — a chain that cannot extend must say so", recorder.Code)
+	}
+	if recorder.Header().Get("X-Request-Id") == "" {
+		t.Fatal("the refusal names no request")
 	}
 	if body := recorder.Body.String(); !strings.Contains(body, "deadline_not_extendable") {
 		t.Fatalf("body = %q, want the machine code an operator can act on", body)

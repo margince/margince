@@ -10,7 +10,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -22,31 +21,38 @@ import (
 // the message was just declined on. It goes through the project-filing undo.
 // A retention rule, a project the caller cannot see or an unnamed account
 // keeps the link, and the answer says so.
-func unfileDealProject(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID, out *crmcontracts.ActivityDealDecline) error {
+func unfileDealProject(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (projectUnfiling, error) {
 	derived, err := projectCameFromDeal(ctx, tx, mail, deal)
 	if err != nil || !derived {
-		return err
+		return projectUnfiling{}, err
+	}
+	// An inherited link that stamped nothing has no retention to judge.
+	if dropped, err := dropOrphanedInheritedProject(ctx, tx, mail, ids.Nil); err != nil || dropped {
+		return projectUnfiling{unfiled: dropped}, err
 	}
 	actor, err := admitDeclineUndoDecider(ctx)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		out.ProjectKept = true
-		return nil
+		return projectUnfiling{kept: true}, nil
 	}
 	if err != nil {
-		return err
+		return projectUnfiling{}, err
 	}
 	var refused *ProjectFilingRefusedError
 	var unnamed *DeciderUnnamedError
 	err = undoProjectFilingLocked(ctx, tx, mail, actor, dealDeclineUndoReason)
 	switch {
 	case errors.As(err, &refused), errors.As(err, &unnamed):
-		out.ProjectKept = true
-		return nil
+		return projectUnfiling{kept: true}, nil
 	case err != nil:
-		return err
+		return projectUnfiling{}, err
 	}
-	out.ProjectUnfiled = true
-	return nil
+	return projectUnfiling{unfiled: true}, nil
+}
+
+// projectUnfiling is what unfileDealProject did: the link came off, or a
+// rule kept it.
+type projectUnfiling struct {
+	unfiled, kept bool
 }
 
 // admitDeclineUndoDecider is admitUndoDecider widened for a deal decline: it
@@ -66,13 +72,13 @@ func admitDeclineUndoDecider(ctx context.Context) (principal.Principal, error) {
 }
 
 // projectCameFromDeal answers whether the message's project link is the
-// deal's own project, written by capture's deal rung, and never filed by a
-// colleague. A link with no rung on record is kept, since nothing proves it
+// deal's own project, inherited with a deal by any writer, and never filed by
+// a colleague. A link with no rung on record is kept, since nothing proves it
 // came from the deal.
 func projectCameFromDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (bool, error) {
 	var args []any
 	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
-	mailArg, dealArg, rungArg := arg(mail), arg(deal), arg(provenance.ProjectRungDeal)
+	mailArg, dealArg := arg(mail), arg(deal)
 	var derived bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity_link l JOIN deal d ON d.project_id = l.project_id
 		 WHERE l.activity_id = `+mailArg+` AND l.entity_type = 'project' AND d.id = `+dealArg+`
@@ -80,8 +86,7 @@ func projectCameFromDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, de
 		   AND EXISTS (SELECT 1 FROM audit_log p
 		     WHERE p.entity_type = 'activity' AND p.entity_id = l.activity_id AND p.action = 'activity_relink'
 		       AND p.after->>'entity_type' = 'project' AND p.after->>'entity_id' = l.project_id::text
-		       AND p.actor_type IN ('connector', 'system')
-		       AND p.evidence->>'`+provenance.ProjectRungKey+`' = `+rungArg+`))`, args...).Scan(&derived)
+		       AND `+provenance.InheritedProjectRowSQL("p")+`))`, args...).Scan(&derived)
 	if err != nil {
 		return false, fmt.Errorf("activities: reading whether the project came from the deal: %w", err)
 	}

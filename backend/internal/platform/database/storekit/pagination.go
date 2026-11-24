@@ -33,6 +33,9 @@ type Page struct {
 // (nil = the row sits in the NULL tail), so a token can only continue
 // the ordering it was minted under.
 type Cursor struct {
+	// Scope names the list that minted the token, so a token from another
+	// list is refused instead of continuing an unrelated keyset.
+	Scope     string    `json:"r,omitempty"`
 	CreatedAt time.Time `json:"t"`
 	ID        ids.UUID  `json:"id"`
 	SortField string    `json:"s,omitempty"`
@@ -52,8 +55,8 @@ type Cursor struct {
 // years 0000-9999, and Postgres timestamptz reaches year 294276, so a row with
 // an absurd-but-storable created_at produces exactly this. Every caller is a
 // store method that already answers an error, so there is a channel for it.
-func EncodeCursor(createdAt time.Time, id ids.UUID) (string, error) {
-	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id})
+func EncodeCursor(scope string, createdAt time.Time, id ids.UUID) (string, error) {
+	return EncodeOpaque(Cursor{Scope: scope, CreatedAt: createdAt, ID: id})
 }
 
 // SweepCursor is a position in one of several streams: which stream the page
@@ -108,19 +111,20 @@ type MalformedCursorError struct{}
 
 func (*MalformedCursorError) Error() string { return "store: malformed cursor" }
 
-// CursorSortMismatchError is the other cursor client fault: the token
-// decodes fine but was minted under a different sort (field or
-// direction), so its keyset tuple cannot continue this list. Distinct
-// from MalformedCursorError because the contract's Cursor parameter
-// promises its own code (422 cursor_param_mismatch) for exactly this
-// case — the caller drops the cursor or restores the original sort.
+// CursorSortMismatchError is the other cursor client fault. The token
+// decodes fine but was minted under a different sort or for a different list.
+// The contract promises 422 cursor_param_mismatch for it, so it stays apart
+// from MalformedCursorError. The caller drops the cursor or restores the sort.
 type CursorSortMismatchError struct{}
 
 func (*CursorSortMismatchError) Error() string {
 	return "store: cursor was minted under a different sort"
 }
 
-func DecodeCursor(token string) (Cursor, error) {
+// DecodeCursor reads a token the list named by scope minted. A token from
+// another list, or one minted before tokens carried a scope, is a
+// CursorSortMismatchError: the caller restarts the walk without a cursor.
+func DecodeCursor(scope, token string) (Cursor, error) {
 	c, err := DecodeOpaque[Cursor](token)
 	if err != nil {
 		return Cursor{}, err
@@ -133,6 +137,9 @@ func DecodeCursor(token string) (Cursor, error) {
 	// other would order before every real row.
 	if c.CreatedAt.IsZero() || c.ID == (ids.UUID{}) {
 		return Cursor{}, &MalformedCursorError{}
+	}
+	if c.Scope != scope {
+		return Cursor{}, &CursorSortMismatchError{}
 	}
 	return c, nil
 }
@@ -205,6 +212,16 @@ func ClampLimit(limit *int) int {
 	default:
 		return *limit
 	}
+}
+
+// QuickFindQuery is a list's q without its outer spaces, and false when nothing
+// is left: a box holding only spaces asks for no filter.
+func QuickFindQuery(q *string) (string, bool) {
+	if q == nil {
+		return "", false
+	}
+	trimmed := strings.TrimSpace(*q)
+	return trimmed, trimmed != ""
 }
 
 // QuickFindClause renders the list-q predicate: the full-text match

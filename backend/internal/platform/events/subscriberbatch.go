@@ -17,7 +17,9 @@ package events
 //
 // The contract with the per-entry path is unchanged where it matters:
 //
-//   - nothing is acked until the effect succeeded, so at-least-once holds;
+//   - an entry the handler must not see (undecodable, or a type the group does
+//     not declare) is acked by screen before any effect runs. A handled entry
+//     is acked only after its effect succeeded, so at-least-once holds;
 //   - a batch that fails is NOT left pending as a unit. Its entries go through
 //     the ordinary one-at-a-time handler at once, so one entry the batch cannot
 //     handle costs that entry its own retry and never holds the rest back;
@@ -56,40 +58,19 @@ func (s *Subscriber) WithBatch(h BatchHandler) *Subscriber {
 // deliverAll dispatches the entries one read (or one reclaim page) returned
 // from one stream.
 func (s *Subscriber) deliverAll(ctx context.Context, stream string, entries []redis.XMessage) {
-	if s.batchHandler == nil || len(entries) < 2 {
-		for _, entry := range entries {
-			s.deliver(ctx, stream, entry)
+	kept, envs := s.screen(ctx, stream, entries)
+	if s.batchHandler == nil || len(kept) < 2 {
+		for i, entry := range kept {
+			s.handle(ctx, stream, entry, envs[i])
 		}
-		return
-	}
-
-	envs := make([]kevents.Envelope, 0, len(entries))
-	kept := make([]redis.XMessage, 0, len(entries))
-	for _, entry := range entries {
-		env, err := decodeEnvelope(entry)
-		if err != nil {
-			// Same disposition as deliver: it can never succeed, so it is
-			// acked away loudly rather than left to poison the reclaim pass.
-			s.log.Error("bus: dropping undecodable entry", "stream", stream, "entry", entry.ID, "error", err)
-			s.ack(ctx, stream, entry.ID)
-			continue
-		}
-		if s.leavesOut(env) {
-			s.ack(ctx, stream, entry.ID)
-			continue
-		}
-		envs = append(envs, env)
-		kept = append(kept, entry)
-	}
-	if len(envs) == 0 {
 		return
 	}
 
 	if err := s.batchHandler(ctx, envs); err != nil {
 		s.log.Warn("bus: batch handler failed; delivering its entries one at a time",
 			"stream", stream, "entries", len(kept), "error", err)
-		for _, entry := range kept {
-			s.deliver(ctx, stream, entry)
+		for i, entry := range kept {
+			s.handle(ctx, stream, entry, envs[i])
 		}
 		return
 	}

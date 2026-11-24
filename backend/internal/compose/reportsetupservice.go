@@ -45,7 +45,12 @@ var initiativeObjectives = []crmcontracts.ReportingMetricID{
 
 // setupPeriods are the periods a proposal may name: every reporting period
 // but a custom window, which the words cannot bound.
-var setupPeriods = []string{"this_week", "last_week", "this_month", "last_month", "this_quarter"}
+var setupPeriods = []string{
+	string(crmcontracts.ReportSetupSelectionPeriodThisWeek), string(crmcontracts.ReportSetupSelectionPeriodLastWeek),
+	string(crmcontracts.ReportSetupSelectionPeriodThisMonth), string(crmcontracts.ReportSetupSelectionPeriodLastMonth),
+	string(crmcontracts.ReportSetupSelectionPeriodThisQuarter), string(crmcontracts.ReportSetupSelectionPeriodLastQuarter),
+	string(crmcontracts.ReportSetupSelectionPeriodLastYear),
+}
 
 // productLister is the product catalog read under the reader's own grant.
 type productLister interface {
@@ -88,7 +93,7 @@ func (s *reportSetups) ProposeSetup(ctx context.Context, req crmcontracts.Report
 	}
 	if s.lane == nil {
 		return crmcontracts.ReportSetupProposal{}, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: codeAINotConfigured,
+			Status: http.StatusConflict, Code: httperr.CodeAINotConfigured,
 			Detail: "a proposal from plain words needs an AI model — an administrator can bind one under Settings → AI; the setup can still be chosen by hand",
 		}
 	}

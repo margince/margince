@@ -25,12 +25,14 @@ import { formatDateAbbrev, formatDayMonth } from "../../format/format.dates";
 import { daysPast } from "../../format/lateness";
 import { formatMoneyOrWord } from "../../format/moneyword";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
+import { CONTRACT_STATUS_LABEL } from "../../lib/contractstatus";
 import { labelFor } from "../../lib/labelfor";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { navigate } from "../../lib/router";
+import { dueOnDay } from "../../lib/standingpeeks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { projectRoleLabel } from "../records/record360";
-import { CONTRACT_STATUS_LABEL } from "./contractlifecycle";
 import {
   AddProjectStakeholder,
   RemoveProjectStakeholder,
@@ -361,6 +363,17 @@ function ContractRow({ contract }: Readonly<{ contract: Contract }>) {
   );
 }
 
+// An Overview with nothing open draws no card: the header's Add task is the
+// way to start one.
+export function commitmentsState(view: Project360 | undefined): SectionState {
+  return stateOf(
+    view,
+    "commitments",
+    Boolean(view?.commitments),
+    view?.commitments?.data.length ?? 0,
+  );
+}
+
 /** The open tasks filed under the project, soonest due first. */
 export function CommitmentsCard({
   view,
@@ -382,12 +395,10 @@ export function CommitmentsCard({
 }>) {
   const t = useT();
   const commitments = view?.commitments?.data ?? [];
-  const state = stateOf(
-    view,
-    "commitments",
-    Boolean(view?.commitments),
-    commitments.length,
-  );
+  const state = commitmentsState(view);
+  if (state === "empty") {
+    return null;
+  }
   return (
     <OverviewSection
       title={t("project.openTasks")}
@@ -437,17 +448,23 @@ function CommitmentRow({
   // The record's clock, exactly as the tasks screen reads it. A commitment is a
   // deadline the team agreed, so the day it names cannot depend on where the
   // reader is sitting.
-  const readerZone = useViewerZone();
+  const words = { zone: useViewerZone(), companyZone: useCompanyZone() };
+  const due = commitment.due_at
+    ? dueOnDay(
+        words,
+        commitment.due_at,
+        commitment.due_has_time,
+        commitment.due_intent,
+      )
+    : undefined;
   // The server's `overdue` is the verdict; the days only word it.
-  const late = commitment.due_at
-    ? daysPast(Date.parse(commitment.due_at), Date.parse(asOf)).days
-    : 0;
+  const late = due ? daysPast(Date.parse(due.at), Date.parse(asOf)).days : 0;
   const who = mine ? t("project.standing.you") : commitment.assignee_name;
   const sub = [
     who,
-    commitment.due_at &&
+    due &&
       t("project.standing.event.due", {
-        date: formatDayMonth(commitment.due_at, locale, readerZone),
+        date: formatDayMonth(due.at, locale, due.zone),
       }),
   ].filter(Boolean);
   return (

@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { ReactNode } from "react";
+import type { FormEvent, ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Field, TextInput } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
+import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { ServiceAccountKeyField } from "../../design-system/serviceaccountkeyfield";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { problemMessageOf } from "../../lib/problem";
 
 // How one vendor's credential is typed in and how its state reads. A vendor
 // takes either a pasted API key or a service-account key file, and the row
@@ -22,7 +25,7 @@ export function credentialKindOf(status: ProviderStatus): CredentialKind {
 }
 
 // The field the secret is typed into: a password box for a pasted key, the
-// key-file control for a service account. Save and Remove ride along.
+// key-file control for a service account.
 export function KeyEntry({
   kind,
   configured,
@@ -31,7 +34,6 @@ export function KeyEntry({
   hint,
   refusal,
   onChange,
-  verbs,
 }: Readonly<{
   kind: CredentialKind;
   configured: boolean;
@@ -40,48 +42,41 @@ export function KeyEntry({
   hint: string;
   refusal: MessageKey | undefined;
   onChange: (value: string) => void;
-  verbs: ReactNode;
 }>) {
   const t = useT();
   if (kind === "service_account") {
-    // One column with one rhythm: the field, its file box and the verbs each
-    // carry their own label or hint, and stacked bare they ran into each other.
     return (
-      <div className="ai-key-stack">
-        <ServiceAccountKeyField
-          value={value}
-          disabled={disabled}
-          hint={hint}
-          error={refusal ? t(refusal) : undefined}
-          onChange={onChange}
-        />
-        <div className="ai-key-verbs">{verbs}</div>
-      </div>
+      <ServiceAccountKeyField
+        value={value}
+        disabled={disabled}
+        hint={hint}
+        error={refusal ? t(refusal) : undefined}
+        onChange={onChange}
+      />
     );
   }
   return (
-    <Field label={t("aiProviderKeys.field")} hint={hint}>
-      {/* One paste and the verbs that act on it, on one line. */}
+    <Field
+      label={t("aiProviderKeys.field")}
+      hint={hint}
+      error={refusal ? t(refusal) : undefined}
+    >
       {(control) => (
-        <div className="ai-key-entry">
-          <TextInput
-            {...control}
-            // A password field, so the browser does not offer to remember
-            // a credential this app deliberately never stores
-            // client-side, and so a screenshare does not carry it.
-            type="password"
-            autoComplete="off"
-            value={value}
-            disabled={disabled}
-            placeholder={
-              configured
-                ? t("aiProviderKeys.replacePlaceholder")
-                : t("aiProviderKeys.addPlaceholder")
-            }
-            onChange={(e) => onChange(e.target.value)}
-          />
-          {verbs}
-        </div>
+        <TextInput
+          {...control}
+          // A password field: the browser does not offer to remember the
+          // credential, and a screenshare does not show it.
+          type="password"
+          autoComplete="off"
+          value={value}
+          disabled={disabled}
+          placeholder={
+            configured
+              ? t("aiProviderKeys.replacePlaceholder")
+              : t("aiProviderKeys.addPlaceholder")
+          }
+          onChange={(e) => onChange(e.target.value)}
+        />
       )}
     </Field>
   );
@@ -114,4 +109,87 @@ export function keyStateTone(
     return "success";
   }
   return status.optional ? "info" : "warning";
+}
+
+export function credentialTitleKey(kind: CredentialKind): MessageKey {
+  return kind === "service_account"
+    ? "serviceAccountKey.label"
+    : "aiProviderKeys.field";
+}
+
+export function SaveFailure({ failure }: Readonly<{ failure: Error | null }>) {
+  const t = useT();
+  if (!failure) return null;
+  return (
+    <Callout
+      tone="danger"
+      kind="outcome"
+      title={t("aiProviderKeys.saveFailed")}
+    >
+      {problemMessageOf(failure, t)}
+    </Callout>
+  );
+}
+
+/**
+ * The key field in the app's form dialog. `failure` shows inside it, because
+ * the dialog covers the sheet that would otherwise show the refusal.
+ */
+export function KeyEntryDialog({
+  open,
+  kind,
+  formId,
+  configured,
+  value,
+  disabled,
+  busy,
+  hint,
+  refusal,
+  failure,
+  onChange,
+  onSubmit,
+  onClose,
+  actions,
+}: Readonly<{
+  open: boolean;
+  kind: CredentialKind;
+  formId: string;
+  configured: boolean;
+  value: string;
+  disabled: boolean;
+  busy: boolean;
+  hint: string;
+  refusal: MessageKey | undefined;
+  failure: Error | null;
+  onChange: (value: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onClose: () => void;
+  actions: ReactNode;
+}>) {
+  const t = useT();
+  return (
+    <RecordFormDialog
+      open={open}
+      title={t(credentialTitleKey(kind))}
+      onClose={onClose}
+      fieldCount={1}
+      unsaved={value !== ""}
+      closeDisabled={busy}
+      form={
+        <form id={formId} className="form-stack" noValidate onSubmit={onSubmit}>
+          <KeyEntry
+            kind={kind}
+            configured={configured}
+            value={value}
+            disabled={disabled}
+            hint={hint}
+            refusal={refusal}
+            onChange={onChange}
+          />
+          <SaveFailure failure={failure} />
+        </form>
+      }
+      actions={actions}
+    />
+  );
 }

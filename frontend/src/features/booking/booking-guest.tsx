@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { GoneNotice } from "../../components/gonenotice";
 import { Calendar, type ISODay } from "../../design-system/calendar";
 import { CompanyLogo } from "../../design-system/companylogo";
 import { Heading } from "../../design-system/heading";
@@ -15,8 +16,8 @@ import {
 } from "../../format/format";
 import { browserZone, dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
+import { fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useBookingIntent, useBookingTitle } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
@@ -36,6 +37,7 @@ import {
   GuestDetailsForm,
   GuestHost,
   GuestUnavailable,
+  guestTitle,
   PreviewNotice,
   videoAppOf,
 } from "./booking-guest-parts";
@@ -216,12 +218,14 @@ export function BookingGuestScreen({
           },
         }),
       );
-      if (!data.invitation) throw new Error(t("scheduling.deliveryUnknown"));
+      if (!data.invitation) throw new Error(t("book.deliveryUnknown"));
       return data.invitation;
     },
-    onSuccess: (value) => {
+    onMutate: fromHere,
+    // Replacing: Back to the booked slot would offer to book it again.
+    onSuccess: (value, _input, from) => {
       if (value.management_token)
-        navigate({
+        from.navigateReplacing({
           screen: "book",
           id: `manage-${value.management_token}`,
         });
@@ -252,11 +256,15 @@ export function BookingGuestScreen({
     if (!next.startsWith(monthKey)) setMonth(monthOf(next));
   };
   const publicUnavailable = !preview && profile.data?.paused !== false;
-  useBookingTitle(preview ? null : guestTitle(t, profile.data));
+  useBookingTitle(preview ? null : guestTitle(t, profile.data), profile.data);
   return (
     <div className="book-guest-page">
       <div className="book-guest-column">
-        <QueryGate pendingLabel={t("common.loading")} query={profile}>
+        <QueryGate
+          pendingLabel={t("common.loading")}
+          query={profile}
+          gone={<GoneNotice messageKey="book.linkGone" />}
+        >
           {(host) =>
             publicUnavailable ? (
               <GuestUnavailable host={host} zone={zone} />
@@ -296,7 +304,7 @@ export function BookingGuestScreen({
                           <>
                             <p>{host.proposal.description}</p>
                             <p className="t-caption">
-                              {t("scheduling.personalGuest")}
+                              {t("book.personalGuest")}
                             </p>
                           </>
                         )}
@@ -380,17 +388,6 @@ export function BookingGuestScreen({
   );
 }
 
-// The tab names the host only while their page takes bookings; a paused or
-// missing page keeps a generic title, as its link-preview card does.
-function guestTitle(
-  t: ReturnType<typeof useT>,
-  host: { paused: boolean; host_name: string } | undefined,
-): string {
-  return host && !host.paused && host.host_name
-    ? t("book.pageTitle", { host: host.host_name })
-    : t("book.pageTitleGeneric");
-}
-
 // A busy month's read stops after a bounded number of pages; a day past where
 // it stopped is still open, and its times are read on their own.
 function useDayTimes({
@@ -464,7 +461,7 @@ function GuestTimes({
               label: formatDateTime(slot.start, locale, zone),
             }))}
             onSelect={onSelect}
-            empty={t("scheduling.noTimes")}
+            empty={t("book.noTimes")}
           />
         </div>
       )}
@@ -482,11 +479,7 @@ function GuestTimes({
                 label: formatTimeOfDay(slot.start, locale, zone),
               }))}
               onSelect={onSelect}
-              empty={t(
-                monthHasTimes
-                  ? "scheduling.noTimesDay"
-                  : "scheduling.noTimesMonth",
-              )}
+              empty={t(monthHasTimes ? "book.noTimesDay" : "book.noTimesMonth")}
             />
           )}
         </QueryGate>

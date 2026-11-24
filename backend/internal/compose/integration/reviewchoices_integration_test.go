@@ -36,9 +36,10 @@ func TestReviewChoicesRemainFrozenAfterTemplateEdits(t *testing.T) {
 			template = candidate
 		}
 	}
+	restoreReviewTemplate(t, e, template.Id)
 	options := []string{"Fit, scope", "Trust"}
 	question := crmcontracts.ReviewQuestion{Key: "reasons", Label: "Reasons", Type: "multiselect", Required: true, Options: &options}
-	req := crmcontracts.UpdateActivityReviewTemplateRequest{Version: *template.Version, Questions: append(template.Questions, question)}
+	req := crmcontracts.UpdateActivityReviewTemplateRequest{Version: *template.Version, Questions: new(append(template.Questions, question))}
 	updated, err := e.Activities.UpdateReviewTemplate(ctx, ids.UUID(template.Id), req)
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +62,7 @@ func TestReviewChoicesRemainFrozenAfterTemplateEdits(t *testing.T) {
 	}
 	replacement := []string{"Other"}
 	updated.Questions[len(updated.Questions)-1].Options = &replacement
-	if _, err := e.Activities.UpdateReviewTemplate(ctx, ids.UUID(template.Id), crmcontracts.UpdateActivityReviewTemplateRequest{Version: *updated.Version, Questions: updated.Questions}); err != nil {
+	if _, err := e.Activities.UpdateReviewTemplate(ctx, ids.UUID(template.Id), crmcontracts.UpdateActivityReviewTemplateRequest{Version: *updated.Version, Questions: &updated.Questions}); err != nil {
 		t.Fatal(err)
 	}
 

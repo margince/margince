@@ -1,89 +1,46 @@
-import {
-  type InfiniteData,
-  type UseInfiniteQueryResult,
-  useInfiniteQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
+import {
+  isMergeReference,
+  MergedRecordName,
+} from "../../components/historymergedref";
 import { Button, Card, EmptyState } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
 import { ProvenanceTag } from "../../design-system/trust";
-import { formatDateTime, formatNumber } from "../../format/format";
+import { formatDateTimeAbbrev, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { historyLine } from "../../lib/historyline";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "../../lib/historyundo";
-import { type HistoryValueCtx, historyValue } from "../../lib/historyvalues";
-import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
+import type { HistoryValueCtx } from "../../lib/historyvalues";
+import { problemCodeOf, problemMessageOf } from "../../lib/problem";
+import { useRecordHistory } from "../../lib/recordhistory";
 import { useRecordRestore } from "../../lib/recordrestore";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   type EntryFieldChange,
   entryFieldChanges,
+  PRESS_WORDS,
+  type PressIntent,
   provenanceOfEntry,
 } from "./history.logic";
 import { HistoryEdgeDetail } from "./historyedge";
-import { HistoryFieldDiff } from "./historyfielddiff";
+import { HistoryFieldDiff, HistoryFieldValue } from "./historyfielddiff";
 import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
-import { isMergeReference, MergedRecordName } from "./historymergedref";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
 import "./history.css";
 
 // The per-record change list: one sentence per audit_log row, from its verb
-// and actor, never from its before/after diffs. A link change keeps the
-// server's English sentence (historyline.ts).
+// and actor, never from its before/after diffs. A link change is worded from the
+// role and field names on its edge (historyline.ts).
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
-type AuditHistoryListResponse =
-  components["schemas"]["AuditHistoryListResponse"];
-
-export function useRecordHistory(
-  kind: EntityKind,
-  id: string,
-  // Whether to fetch at all. A caller that reads the history to describe ONE
-  // recorded event — the lead page naming what its promotion did — has nothing
-  // to read on a record where that event never happened, and a disabled query
-  // says so rather than paying for a page nothing renders. Defaults to on, so
-  // the History tab is unchanged.
-  enabled = true,
-  // One verb, for a caller describing a single recorded event. Without it that
-  // caller pages the whole trail looking for its row — and one that read only
-  // the first page got a confident wrong answer on exactly the records somebody
-  // worked hardest, because those are the ones with enough other rows to push
-  // it off. Absent means the whole history, which is what the History tab wants.
-  action?: string,
-): UseInfiniteQueryResult<InfiniteData<AuditHistoryListResponse>> {
-  return useInfiniteQuery({
-    // The verb is part of the key: a filtered read and the whole trail are
-    // different answers, and sharing a cache entry would serve one for the
-    // other depending on which mounted first.
-    queryKey: ["record-history", kind, id, action ?? null],
-    enabled,
-    initialPageParam: FIRST_PAGE,
-    queryFn: async ({ pageParam }) => {
-      return unwrap(
-        await api.GET("/records/{entity_type}/{id}/history", {
-          params: {
-            path: { entity_type: kind, id },
-            query: {
-              limit: 20,
-              ...(pageParam ? { cursor: pageParam } : {}),
-              ...(action ? { action } : {}),
-            },
-          },
-        }),
-      );
-    },
-    getNextPageParam: (last) => last?.page?.next_cursor ?? null,
-  });
-}
 
 // What one entry CHANGED, under the sentence saying that it did.
 //
@@ -183,11 +140,7 @@ function UndoButton({
   changes,
   currency,
   restore,
-  // The verb this press means. One engine, two intents: putting a change back
-  // and putting a REVERSAL back are the same write, and the second one redoes
-  // what the first undid — so the label is the caller's to name, and the two
-  // must never read the same on adjacent rows.
-  label = "history.undo.action",
+  intent = "undo",
 }: Readonly<{
   entry: AuditHistoryEntry;
   kind: EntityKind;
@@ -195,8 +148,9 @@ function UndoButton({
   changes: readonly EntryFieldChange[];
   currency: string | null | undefined;
   restore: RecordRestore;
-  label?: MessageKey;
+  intent?: PressIntent;
 }>) {
+  const words = PRESS_WORDS[intent];
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -276,14 +230,14 @@ function UndoButton({
         busyLabel={t("history.undo.busy")}
         onClick={press}
       >
-        {t(label)}
+        {t(words.label)}
       </Button>
       {refused && <span>{refused}</span>}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
-        title={t("history.undo.confirmTitle")}
-        confirmLabel={t(label)}
+        title={t(words.title)}
+        confirmLabel={t(words.label)}
         pending={putBack.isPending}
         onConfirm={() =>
           putBack.mutate({ kind, id, auditId: entry.id, version })
@@ -297,7 +251,7 @@ function UndoButton({
                 ? t("history.undo.confirmEdgeBody", {
                     other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
                   })
-                : plural("history.undo.confirmBody", changes.length, {
+                : plural(words.body, changes.length, {
                     count: formatNumber(changes.length, locale),
                   })}
           </p>
@@ -306,12 +260,13 @@ function UndoButton({
               <li key={change.field} className="entry-field">
                 <span>{historyFieldLabel(change.field, t)}</span>
                 <span>
-                  {historyValue(
-                    change.field,
-                    change.oldValue,
-                    { currency, locale, zone: readerZone },
-                    change.oldPrecision,
-                  ) ?? t("history.cleared")}
+                  <HistoryFieldValue
+                    field={change.field}
+                    value={change.oldValue}
+                    precision={change.oldPrecision}
+                    values={{ currency, locale, zone: readerZone }}
+                    cleared={t("history.cleared")}
+                  />
                 </span>
               </li>
             ))}
@@ -330,7 +285,7 @@ function HistoryEntryRow({
   currency,
   restore,
   note,
-  undoLabel,
+  intent,
 }: Readonly<{
   entry: AuditHistoryEntry;
   kind: EntityKind;
@@ -342,7 +297,7 @@ function HistoryEntryRow({
   // cannot say it: that a reversal undid something older than this page, or
   // that the change on this row has since been undone by the row above it.
   note?: string;
-  undoLabel?: MessageKey;
+  intent?: PressIntent;
 }>) {
   const t = useT();
   const viewerId = useViewerId();
@@ -357,7 +312,9 @@ function HistoryEntryRow({
       <span className="tl-body">
         <span className="tl-title">{historyLine(entry, t)}</span>
         <span className="tl-meta">
-          <span>{formatDateTime(entry.occurred_at, locale, readerZone)}</span>
+          <span>
+            {formatDateTimeAbbrev(entry.occurred_at, locale, readerZone)}
+          </span>
           <ProvenanceTag
             provenance={provenanceOfEntry(entry, viewerId)}
             // The design system has no record lookups, so the resolved name
@@ -382,7 +339,7 @@ function HistoryEntryRow({
             changes={changes}
             currency={currency}
             restore={restore}
-            label={undoLabel}
+            intent={intent}
           />
         )}
       </span>
@@ -439,7 +396,7 @@ export function RecordHistory({
                   locale={locale}
                   currency={currency}
                   restore={panelRestore}
-                  undoLabel="history.undo.redo"
+                  intent="redo"
                 />
                 <HistoryEntryRow
                   entry={row.reversed}
@@ -467,11 +424,7 @@ export function RecordHistory({
                     ? t("history.reversal.unpaired")
                     : undefined
                 }
-                undoLabel={
-                  row.kind === "unpairedReversal"
-                    ? "history.undo.redo"
-                    : undefined
-                }
+                intent={row.kind === "unpairedReversal" ? "redo" : undefined}
               />
             ),
           )}

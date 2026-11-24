@@ -73,7 +73,7 @@ describe("stage money the report did not state", () => {
       currency: "EUR",
       baseMinor: null,
       weightedBaseMinor: null,
-      unpricedCount: null,
+      coverage: null,
     });
   });
 });
@@ -154,6 +154,33 @@ describe("the FX base line names the installation's base currency", () => {
     line("CHF", null);
     expect(screen.getByText(new RegExp(MONEY_ABSENT))).toBeTruthy();
     expect(screen.queryByText(/CHF\s*0/)).toBeNull();
+  });
+});
+
+describe("the FX base line reads like the rows around it", () => {
+  afterEach(cleanup);
+
+  const line = (fxRateToBase: string, locale: "en" | "de") =>
+    render(
+      <LocaleProvider initial={locale}>
+        <FxLine
+          amountMinor={3_000_000}
+          baseCurrency="EUR"
+          fxRateToBase={fxRateToBase}
+          fxRateDate="2026-11-18"
+          locale={locale}
+        />
+      </LocaleProvider>,
+    ).container;
+
+  it("drops the stored rate's padding and names the day in words", () => {
+    expect(line("0.9200000000", "en").textContent).toBe(
+      "€27,600.00 · rate 0.92 on 18 Nov 2026",
+    );
+  });
+
+  it("rounds a long rate to four decimals in the reader's own digits", () => {
+    expect(line("1.1734567890", "de").textContent).toContain("Kurs 1,1735 vom");
   });
 });
 

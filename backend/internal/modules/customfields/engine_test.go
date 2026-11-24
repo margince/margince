@@ -4,12 +4,14 @@
 package customfields
 
 import (
+	"os"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
-	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -44,6 +46,10 @@ func TestValidate_CurrencyRequiresISOCode(t *testing.T) {
 	errsBad := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Currency: &usd, Source: "manual"})
 	if !hasFieldError(errsBad, "currency", "required_for_type_currency") {
 		t.Fatalf("lowercase currency must fail the ^[A-Z]{3}$ pattern, got %+v", errsBad)
+	}
+	unassigned := "ZZZ"
+	if errs := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Currency: &unassigned, Source: "manual"}); !hasFieldError(errs, "currency", "required_for_type_currency") {
+		t.Fatalf("a code ISO does not assign must fail as a deal's would, got %+v", errs)
 	}
 	USD := "USD"
 	if errs := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Currency: &USD, Source: "manual"}); len(errs) != 0 {
@@ -352,38 +358,32 @@ func TestBuildOptionsDDL_LabelInjectionNeverReachesRawSQL(t *testing.T) {
 	}
 }
 
-// The literals, pinned against the migration's CHECK spelling — this module's
-// constants are what the DDL admits, and a typo here is a column the catalog
-// cannot write.
-func TestFieldTypes_MatchesMigrationCheckSpelling(t *testing.T) {
-	want := []string{"text", "number", "date", "currency", "picklist", "multiselect", "boolean", "record"}
-	if len(FieldTypes) != len(want) {
-		t.Fatalf("FieldTypes = %v, want %v", FieldTypes, want)
+// The type list is what the custom_field.type CHECK admits, read from the
+// schema the migrations build. A type the engine offers and the CHECK refuses
+// fails every create. One the CHECK admits and the engine refuses is a column
+// no write can reach.
+func TestFieldTypes_IsTheCatalogCheckSet(t *testing.T) {
+	catalog, err := os.ReadFile("../../../migrations/testdata/head_catalog.txt")
+	if err != nil {
+		t.Fatalf("reading the head schema catalog: %v", err)
 	}
-	for i, w := range want {
-		if FieldTypes[i] != w {
-			t.Errorf("FieldTypes[%d] = %q, want %q", i, FieldTypes[i], w)
+	var admitted []string
+	for line := range strings.Lines(string(catalog)) {
+		if strings.HasPrefix(line, "public.custom_field.custom_field_type_check ") {
+			for _, m := range checkLiteral.FindAllStringSubmatch(line, -1) {
+				admitted = append(admitted, m[1])
+			}
 		}
+	}
+	if len(admitted) == 0 {
+		t.Fatal("no custom_field_type_check literals in the head catalog; this test reads nothing")
+	}
+	if !slices.Equal(admitted, FieldTypes) {
+		t.Fatalf("custom_field_type_check admits %v, the engine offers %v; change both in one commit", admitted, FieldTypes)
 	}
 }
 
-// This module's set and the port's are the same closed set spelled in two
-// packages — shared may not import modules, so the duplication is structural
-// and cannot be removed. What CAN be held is that they agree: every consumer
-// outside this module derives its own obligation from the port's set, so a type
-// added here and not there is a type the filter and query vocabularies will
-// never be asked about.
-func TestFieldTypes_AgreesWithThePortsClosedSet(t *testing.T) {
-	port := fieldcatalog.Types()
-	if len(port) != len(FieldTypes) {
-		t.Fatalf("fieldcatalog.Types() = %v, this module's FieldTypes = %v", port, FieldTypes)
-	}
-	for i, declared := range FieldTypes {
-		if port[i] != declared {
-			t.Errorf("index %d: port says %q, this module says %q", i, port[i], declared)
-		}
-	}
-}
+var checkLiteral = regexp.MustCompile(`'([a-z]+)'::text`)
 
 // The ordered set, pinned so a member cannot be added or dropped without the
 // change being stated. What each member has to be TRUE of — a store that reads
@@ -456,5 +456,26 @@ func TestANewTextColumnNamesItsBoundForTheRefusal(t *testing.T) {
 	name := storekit.TextMaxConstraint(column, values.TextDocumentCharacters)
 	if !validIdentifier(name) || !strings.Contains(ddl, `CONSTRAINT "`+name+`" CHECK`) {
 		t.Fatalf("ddl %q does not name its bound %q", ddl, name)
+	}
+}
+
+func TestBuildDDL_AURLColumnIsBoundedText(t *testing.T) {
+	ddl, err := BuildDDL("deal", "cf_offer", FieldSpec{Object: "deal", Label: "Offer", Type: TypeURL, Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `ALTER TABLE "deal" ADD COLUMN "cf_offer" text NULL CONSTRAINT "cf_offer_text_max_2000" CHECK ("cf_offer" IS NULL OR char_length("cf_offer") <= 2000)`
+	if ddl != want {
+		t.Fatalf("ddl = %s\nwant  %s", ddl, want)
+	}
+}
+
+func TestRemovedChoices_AreTheOnesTheNewSetDropped(t *testing.T) {
+	got := removedChoices([]string{"North", "West", "South"}, []string{"South", "East", "North"})
+	if !slices.Equal(got, []string{"West"}) {
+		t.Fatalf("removed = %v, want [West]", got)
+	}
+	if got := removedChoices([]string{"North"}, []string{"North", "East"}); len(got) != 0 {
+		t.Fatalf("an added choice removes nothing, got %v", got)
 	}
 }

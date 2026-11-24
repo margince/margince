@@ -55,12 +55,26 @@ describe("modelText — which model the agent panel names", () => {
     expect(modelText({ allowed: true, calls }, t)).toBe("gemini/newer");
   });
 
-  it("names no model when every call in the window failed", () => {
-    const failed = {
-      ...call("completion", "anthropic", "failed"),
+  it("says the last calls failed, and where they went, when none answered", () => {
+    const rejected = {
+      ...call("completion", "gemini", "gemini-pro"),
+      error_sentinel: "output_rejected",
+    };
+    const unreached = {
+      ...call("completion", "anthropic", ""),
       error_sentinel: "provider_unavailable",
     };
-    expect(modelText({ allowed: true, calls: [failed] }, t)).toBe(
+    const index = call("embedding", "openai", "text-embedding");
+    expect(modelText({ allowed: true, calls: [rejected, index] }, t)).toBe(
+      "No answers from gemini/gemini-pro",
+    );
+    expect(modelText({ allowed: true, calls: [unreached] }, t)).toBe(
+      "No answers from anthropic/configured",
+    );
+  });
+
+  it("says no calls were made only when the window is empty", () => {
+    expect(modelText({ allowed: true, calls: [] }, t)).toBe(
       translate("en", "agent.fact.noCalls"),
     );
   });

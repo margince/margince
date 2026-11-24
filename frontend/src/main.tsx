@@ -13,14 +13,12 @@ import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
 import { localeReady } from "./i18n/catalogs";
 import { preferredLocale } from "./i18n/locale";
-import { bootsOnEssentialCopy } from "./lib/essentialscreens";
 import {
   type BrowserInstrument,
   reportError,
   startInstruments,
 } from "./lib/instruments";
 import { startPointerTarget } from "./lib/pointertarget";
-import { listenForInstall, registerServiceWorker } from "./lib/pwa";
 import { SPA_RELEASE } from "./lib/release";
 import { restoreReturnRoute } from "./lib/returnroute";
 import { startTheme } from "./lib/theme";
@@ -45,9 +43,6 @@ startPointerTarget();
 // Before the first render reads the address: a provider sign-in lands bare.
 restoreReturnRoute();
 
-listenForInstall();
-registerServiceWorker();
-
 // Extension instruments start before the first render, so an error in it is
 // theirs to see. The generated registry is untyped; it is annotated here.
 const composedInstruments: Readonly<Record<string, BrowserInstrument>> =
@@ -61,10 +56,7 @@ if (!root) {
 async function mountApp(root: HTMLElement) {
   try {
     await Promise.all([
-      localeReady(
-        preferredLocale(),
-        bootsOnEssentialCopy(location.hash) ? "essential" : "complete",
-      ),
+      localeReady(preferredLocale(), "essential"),
       startupSessionReady(),
     ]);
   } catch (error: unknown) {
@@ -95,9 +87,7 @@ async function mountApp(root: HTMLElement) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <AppErrorBoundary>
-          <LocaleProvider
-            initialEssential={bootsOnEssentialCopy(location.hash)}
-          >
+          <LocaleProvider>
             <AppErrorBoundary>
               <AttentionProvider>
                 <ToastProvider>

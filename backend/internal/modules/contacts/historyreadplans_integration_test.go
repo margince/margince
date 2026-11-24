@@ -190,10 +190,15 @@ func TestHistoryReadersSeekPastACompleteUnrelatedMailbox(t *testing.T) {
 	}
 }
 
+// historyBackground is how many unrelated messages and contacts the history
+// seed writes. At a fifth of it the planner reads a suffix domain's every row.
+// historyBatch keeps each seed statement well inside the statement timeout.
+const historyBackground, historyBatch = 100000, 1000
+
 func (e *dedupeEnv) seedHistoryReadBackground(ctx context.Context, t *testing.T, connected time.Time) {
 	t.Helper()
 	// Participant evidence locks make one unbounded fixture transaction unlike a real import.
-	for after := 0; after < 100000; after += 1000 {
+	for after := 0; after < historyBackground; after += historyBatch {
 		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `WITH background AS (
    INSERT INTO activity(kind,direction,source,captured_by,counterparty_email,counterparty_outbound_attested,occurred_at)
@@ -206,20 +211,18 @@ func (e *dedupeEnv) seedHistoryReadBackground(ctx context.Context, t *testing.T,
      CASE WHEN direction='inbound' THEN counterparty_email ELSE 'owner@mail.unrelated.test' END,'mail.unrelated.test' FROM background
    UNION ALL SELECT id,'to',CASE WHEN direction='inbound' THEN @user::uuid END,
      CASE WHEN direction='outbound' THEN counterparty_email ELSE 'owner@mail.unrelated.test' END,'mail.unrelated.test' FROM background
-   UNION ALL SELECT id,'cc',NULL::uuid,'copy-'||id||'@mail.unrelated.test','mail.unrelated.test' FROM background`, pgx.NamedArgs{"at": connected.Add(-24 * time.Hour), "user": e.rep, "after": after, "through": after + 1000})
+   UNION ALL SELECT id,'cc',NULL::uuid,'copy-'||id||'@mail.unrelated.test','mail.unrelated.test' FROM background`, pgx.NamedArgs{"at": connected.Add(-24 * time.Hour), "user": e.rep, "after": after, "through": after + historyBatch})
 			return err
 		}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	// One statement per batch, so no single write outlasts the statement timeout
-	// of a busy shard.
-	for after := 0; after < 100000; after += 10000 {
+	for after := 0; after < historyBackground; after += historyBatch {
 		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `WITH background AS(
    INSERT INTO contact(full_name,source,captured_by) SELECT 'Unrelated '||n,'manual','test:bounded-history' FROM generate_series(@after::int+1,@through::int) n RETURNING id)
    INSERT INTO contact_email(contact_id,email,source,captured_by) SELECT id,id::text||'@unrelated.test','manual','test:bounded-history' FROM background`,
-				pgx.NamedArgs{"after": after, "through": after + 10000})
+				pgx.NamedArgs{"after": after, "through": after + historyBatch})
 			return err
 		}); err != nil {
 			t.Fatal(err)

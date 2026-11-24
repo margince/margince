@@ -110,6 +110,22 @@ describe("the projected landing", () => {
     ).toBeTruthy();
   });
 
+  it("names a withheld call without saying nobody called", () => {
+    draw(
+      <LandingCard
+        landing={landing({ caveat: "call_withheld" })}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    expect(
+      screen.getByText(en["forecast.landing.caveat.call_withheld"]),
+    ).toBeTruthy();
+    expect(screen.getByText(en["forecast.callWithheldLine"])).toBeTruthy();
+    expect(screen.queryByText(en["forecast.callAbsentLine"])).toBeNull();
+  });
+
   it("reports a call below the money already won rather than correcting it", () => {
     draw(
       <LandingCard
@@ -152,6 +168,21 @@ describe("whether the open deals support the reference", () => {
     ).toBeTruthy();
   });
 
+  it("says how many won deals the median's periods leave out", async () => {
+    const user = userEvent.setup();
+    draw(
+      <SufficiencyCard
+        sufficiency={sufficiency({ comparable_unpriced: [0, 2, 0, 1] })}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+    await user.click(await screen.findByRole("button", { name: "Evidence" }));
+    expect(
+      await screen.findByText(/3 won deals in those periods have no amount/),
+    ).toBeTruthy();
+  });
+
   // The need is the VALUE, so a detail that repeated it said one number twice.
   it("says what is open and what it is reaching for, never the need again", () => {
     draw(
@@ -179,6 +210,23 @@ describe("whether the open deals support the reference", () => {
     );
 
     expect(screen.getByText(/50% of required deal value/i)).toBeTruthy();
+  });
+
+  // A reader who may not see the call is told it is not shown here. The card
+  // never says that no call is recorded.
+  it("says a withheld call is not shown when there is no basis", () => {
+    draw(
+      <SufficiencyCard
+        sufficiency={{ absent: "call_withheld" }}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    expect(
+      screen.getByText(en["forecast.pipelineAbsent.call_withheld"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No call is recorded/)).toBeNull();
   });
 
   // The case a zeroed figure would get exactly backwards: no basis must not
@@ -266,9 +314,30 @@ describe("the modelled finish beside the landing", () => {
     ).toBeTruthy();
   });
 
-  it("says which deals it leaves out", () => {
-    draw(model({ unpriced: 2, fxMissing: 1 }));
-    expect(screen.getByText("2 unpriced deals left out")).toBeTruthy();
+  it("says every kind of deal it leaves out, one line each, and leaves what the range is to the receipt", () => {
+    const { container } = draw(model({ unpriced: 2, fxMissing: 1 }));
+    const detail = container.querySelector(".stat-card-detail");
+    expect(
+      Array.from(detail?.children ?? [], (line) => line.textContent),
+    ).toEqual([
+      "2 unpriced deals left out",
+      "1 deal without an exchange rate left out",
+    ]);
+    expect(
+      screen.queryByText(`Includes ${money(400_00)} already won`),
+    ).toBeNull();
+    expect(
+      screen.queryByText(
+        "Central 80% of modelled outcomes under current chances",
+      ),
+    ).toBeNull();
+  });
+
+  it("names the deals without an exchange rate when every deal is priced", () => {
+    draw(model({ fxMissing: 3 }));
+    expect(
+      screen.getByText("3 deals without an exchange rate left out"),
+    ).toBeTruthy();
   });
 
   it("says it assumes the chances are right, in the receipt", async () => {
@@ -281,7 +350,9 @@ describe("the modelled finish beside the landing", () => {
       await screen.findByText(/it is not a measured forecast accuracy\.$/),
     ).toBeTruthy();
     expect(
-      screen.getByText("1 deal without an exchange rate left out"),
+      screen.getByText("1 deal without an exchange rate left out", {
+        selector: "p",
+      }),
     ).toBeTruthy();
   });
 

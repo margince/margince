@@ -9,11 +9,13 @@ import {
 } from "../../../design-system/standingtimeline";
 import { StatCard } from "../../../design-system/statcard";
 import { StatStrip } from "../../../design-system/statstrip";
+import { ACTIVITY_KIND_LABEL } from "../../../design-system/timelineentry";
 import {
   activityDay,
   activityHasHappened,
   activityIsAhead,
 } from "../../../format/activitywhen";
+import { taskDueOnDay, taskDueZone } from "../../../format/calendarday";
 import {
   calendarDaysBetween,
   formatDayMonth,
@@ -23,6 +25,7 @@ import {
   formatPercent,
   identifierNumber,
 } from "../../../format/format";
+import { offerStatusLabel } from "../../../format/offerstatus";
 import {
   type Locale,
   type PluralTranslator,
@@ -33,6 +36,7 @@ import {
 } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { closeDayOf } from "../../../lib/closeday";
+import { useCompanyZone } from "../../../lib/companyzone";
 import { labelFor } from "../../../lib/labelfor";
 import { recordsAnotherMeeting } from "../../../lib/meetingrecord";
 import { useViewerId } from "../../../lib/session";
@@ -41,35 +45,35 @@ import { useViewerZone } from "../../../lib/viewerzone";
 import { probabilityWords } from "../dealprobability";
 import { useStageTimes } from "./dealstagehistory";
 import type { DealStandingInputs } from "./dealstanding";
-import { lastInbound, nextStepOf, standingOffer } from "./dealstanding";
+import { nextStepOf, standingOffer } from "./dealstanding";
 import { daysWaiting, waitingSince } from "./dealwaiting";
 
 type Activity = components["schemas"]["Activity"];
+type Deal = components["schemas"]["Deal"];
+type Offer = components["schemas"]["Offer"];
 
 type Words = Readonly<{
   t: Translator;
   plural: PluralTranslator;
   locale: Locale;
   zone: string;
+  companyZone: string;
 }>;
 
 function useWords(): Words {
   const { locale } = useLocale();
-  return { t: useT(), plural: usePlural(), locale, zone: useViewerZone() };
+  return {
+    t: useT(),
+    plural: usePlural(),
+    locale,
+    zone: useViewerZone(),
+    companyZone: useCompanyZone(),
+  };
 }
 
 // The calls and meetings that already happened, newest kept: the axis has room
 // for a handful of labels, and the history tab holds every one.
 const DONE_EVENTS = 5;
-const KIND_LABEL: Record<Activity["kind"], MessageKey> = {
-  email: "timeline.kind.email",
-  call: "timeline.kind.call",
-  meeting: "timeline.kind.meeting",
-  note: "timeline.kind.note",
-  task: "timeline.kind.task",
-  message: "timeline.kind.message",
-};
-
 export function DealFigures({
   inputs,
 }: Readonly<{ inputs: DealStandingInputs }>) {
@@ -104,16 +108,41 @@ function ValueFigure({ inputs, words }: FigureProps) {
     <StatCard
       label={t("deals.amount")}
       value={value}
-      detail={
-        offer
-          ? t("deal.standing.figure.offer", {
-              number: offer.offer_number,
-              revision: identifierNumber(offer.revision),
-            })
-          : undefined
-      }
+      detail={offer ? offerLine(offer, t) : modelWrittenAmount(deal, t)}
     />
   );
+}
+
+// An amount Margince read from the customer's mail says so until a rep edits
+// it. A currency the mail did not name is a guess, and says that instead.
+function modelWrittenAmount(
+  deal: Pick<Deal, "ai_written_fields" | "amount_minor">,
+  t: Words["t"],
+): string | undefined {
+  if (deal.amount_minor == null) {
+    return undefined;
+  }
+  if (deal.ai_written_fields?.includes("currency")) {
+    return t("deal.standing.figure.currencyGuessed");
+  }
+  if (deal.ai_written_fields?.includes("amount_minor")) {
+    return t("deal.standing.figure.amountByModel");
+  }
+  return undefined;
+}
+
+// An offer still in progress says so, so it does not read as the source of the value.
+function offerLine(offer: Offer, t: Translator): string {
+  const named = {
+    number: offer.offer_number,
+    revision: identifierNumber(offer.revision),
+  };
+  return offer.status === "accepted"
+    ? t("deal.standing.figure.offer", named)
+    : t("deal.standing.figure.offerInProgress", {
+        ...named,
+        status: offerStatusLabel(offer.status, t),
+      });
 }
 
 // The deal's own probability where somebody set one, else its stage's. A closed
@@ -216,7 +245,7 @@ function NextStepFigure({ inputs, words }: FigureProps) {
     <StatCard
       label={label}
       value={activityDay(step.at, step.precision, locale, zone, formatDayMonth)}
-      detail={step.subject ?? t(labelFor(KIND_LABEL, step.kind))}
+      detail={step.subject ?? t(labelFor(ACTIVITY_KIND_LABEL, step.kind))}
       tone={tone}
     />
   );
@@ -276,8 +305,8 @@ function timelineGap(
  * out.
  */
 export function timelineEvents(
-  { deal, activities, asOf }: DealStandingInputs,
-  { t, locale, zone }: Words,
+  { deal, activities, asOf, lastInbound }: DealStandingInputs,
+  { t, locale, zone, companyZone }: Words,
 ): TimelineEvent[] {
   const now = Date.parse(asOf);
   const day = (iso: string) => formatDayMonth(iso, locale, zone);
@@ -290,7 +319,7 @@ export function timelineEvents(
       formatDayMonth,
     );
   const titleOf = (row: Activity) =>
-    row.subject || t(labelFor(KIND_LABEL, row.kind));
+    row.subject || t(labelFor(ACTIVITY_KIND_LABEL, row.kind));
   const held = activities
     .filter((row) => isConversation(row) && activityHasHappened(row, now, zone))
     .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))
@@ -300,7 +329,7 @@ export function timelineEvents(
         key: row.id,
         at: row.occurred_at,
         title: titleOf(row),
-        sub: `${dayOf(row)} · ${t(labelFor(KIND_LABEL, row.kind))}`,
+        sub: `${dayOf(row)} · ${t(labelFor(ACTIVITY_KIND_LABEL, row.kind))}`,
         kind: "done",
         activityIds: [row.id],
       }),
@@ -335,14 +364,24 @@ export function timelineEvents(
               zone,
               row.due_intent,
             ),
-            kind: Date.parse(row.due_at) < now ? "late" : "ahead",
+            kind:
+              Date.parse(
+                taskDueOnDay(
+                  row.due_at,
+                  row.due_has_time,
+                  row.due_intent,
+                  taskDueZone(row.due_has_time, zone, companyZone),
+                ),
+              ) < now
+                ? "late"
+                : "ahead",
           },
         ]
       : [],
   );
   return [
     ...held,
-    ...lastWord(activities, dayOf, t),
+    ...lastWord(lastInbound, dayOf, t),
     ...ahead,
     ...tasks,
     ...closeEvent(deal, day, t),
@@ -363,11 +402,10 @@ function isConversation(row: Activity): boolean {
 }
 
 function lastWord(
-  activities: readonly Activity[],
+  row: Activity | undefined,
   dayOf: (row: Activity) => string,
   t: Translator,
 ): TimelineEvent[] {
-  const row = lastInbound(activities);
   if (!row) {
     return [];
   }

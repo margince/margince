@@ -92,6 +92,9 @@ comes from is in [ai-runtime.md](ai-runtime.md); who may see a row is in
   `storekit.ContactEmails` and `storekit.CompanyDomains`. They compare the whole query, in lower
   case, with a live row. The contact and company lists match the same two tables. Whole identifiers
   and prefixes rank before text-only hits, with the same row scope as a name hit.
+- **The vector is stored as `halfvec`**, in `embedding_half`: each number takes two bytes and not
+  four. An older row keeps its `vector` in `embedding` until the data task `vectors_at_half_precision`
+  has moved it. A read takes whichever of the two the row holds.
 - **The vector arm** is one row per `(entity, chunk_ix)` in `embedding`. It is ranked by the cosine
   operator (`<=>`), and always kept to the current embed identity (next section). There is no HNSW
   index. The query per branch, kept to one identity, reads the table in order. An index over a
@@ -120,11 +123,39 @@ subject and again in its body. It ranks above the account, whose name is one wor
 So a short list ranked across types can hold nothing but mail. `per_type=N` asks `GET /v1/search`
 for a **grouped** page instead (`groupedShape`).
 
-Each branch that passes the gate is capped at `N + 1` rows before the `UNION`. The last row is
-dropped and reported in `types_with_more`, and the page takes no cursor or limit. To page through
-the rest, narrow to one type with `types`. The `⌘K` menu (`per_type=3`) and the full results screen
-with no type set (`per_type=5`) both ask for it. They show an activity that carries an
+Each type that passes the gate runs as its own statement, under its own savepoint in one read
+transaction (`groupedHits`). The statement caps the type at `N + 1` rows. The last row is
+dropped and reported in `types_with_more`, and the page takes no cursor or limit.
+
+To page through the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
+`per_type=8` once one type is picked in its bar. The full results screen with no type set asks with
+`per_type=5`. They show an activity that carries an
 `email_summary` under `Emails`, separate from the calls and notes beside it.
+
+The page has one deadline, the handle's statement budget counted from its start, and each type
+gets what is left of it. The types that rank a bounded sample of their rows (mail today) run last,
+so they keep most of the budget. A type whose statement the budget stops is left out of `data` and
+named in `types_timed_out`, and the other types answer. A ranked page keeps its single statement
+and answers `422 query_too_broad`.
+
+A grouped page of one plain word reads a type's own matches first (`withOwnMatches`). For
+contacts, companies and leads, these are the rows the name index finds. A whole address or domain
+counts too, and so does a prefix that gets a tier. A row found only by part of an address then scores
+0, or at most 0.1 for a company. The employer arm scores below 0.
+
+When the own matches fill the `N + 1` rows above that score, the statement skips the scans for
+part of an address and the employer arm. Postgres reads that check as a constant and never runs
+their plans. So a two-letter prefix no longer reads every address that holds it.
+
+A plain word holds letters and digits only (`plainWord`). With more words, an apostrophe or an
+operator, a row found by part of an address can score above 0. Such a page reads every branch
+whole, and so does the ranked page.
+
+**`typeahead=true` leaves mail out of a short prefix.** A short prefix matches a large share of
+all activities, and ranking them is slow. The `⌘K` menu sends `typeahead=true`. `Store.Search` then
+drops the `activity` type for a word under four letters (`fragmentTooShortForMail`, counted in runes). Other types are searched from the first letter. A
+query that ends in a finished word, or a request for mail alone, keeps its mail, and only a
+human's flag counts.
 
 **`with_employees=true` finds contacts through their company.** The `search_tsv` of
 a contact holds its name and title, never the company. So "Acme" alone would find Acme, and none
@@ -166,10 +197,16 @@ A company hit also carries `logo_url`. The own reader of the contacts module rea
 companies on the page (`contacts.CompanyLogoURLsBatch`, passed in by compose). So the URL comes from
 the place that owns the company record.
 
+A contact, company, deal, lead or project hit also carries `standing`. It holds what that type has
+of status, stage, money value, close or due date, job title and last activity. `attachStandings`
+reads them for the page in one statement, each type's part under the caller's read grant and row
+scope. A deal's money value goes through the caller's field mask, and `masked_fields` names what it
+held back.
+
 The **merged** path (`Store.HybridSearch`) is reached through the `shared/ports/retrieval` seam
 (`search.Retriever`), which is what the AI layers build their answers on. `cmd/api` connects it to the
 embedder of the resolved model path for the offer draft surface. `cmd/worker` connects it as the
-source for the Surface-B runner. The agent intent tools in `compose/registry.go` are built with a
+source for the runner of the night helpers. The agent intent tools in `compose/registry.go` are built with a
 **nil** embedder. They use the context graph walk, which needs no embed lane.
 
 ## Row scope is not a filter on the results
@@ -205,8 +242,8 @@ and the readiness check can check against it.
 
 **Retrieval keeps to the current identity.** There are two reasons. First, to stay right: rows
 embedded by an older model must not rank against a query embedded in the new one.
-Second, so it does not crash: the `embedding.embedding` column is a `vector` with no fixed length. So
-`e.embedding <=> $query` by itself, against a row of another length, fails with
+Second, so it does not crash: the stored vector has no fixed length. So
+`<=>` by itself, against a row of another length, fails with
 `different vector dimensions`. The identity filter leaves those rows out before the query
 works out `<=>`.
 
@@ -250,15 +287,18 @@ which does not mean it delivers to a process that keeps running. A worker that s
 and write leaves an entity with no embedding row. The vector arm cannot see it until something
 embeds it again. Without a sweep, it would wait until a user confirmed a reindex they never asked for.
 
-- **`embed_drift_sweep`** is the dispatcher. It runs every **15 minutes**, starts one job per
-  workspace, and does no tenant work itself. The contract states the budget. An empty pass is a
-  small number of `NOT EXISTS` checks per workspace, each on an index. And 15 minutes is how long a
-  lost embed event may keep a record out of vector search.
-- **`embed_drift_workspace`** is the pass for one workspace. It has no time limit: the pending set
-  limits the pass, and the time limit per call of the model lane limits each embed. It has three
-  attempts, because the next dispatcher run *is* the real retry.
+- **`embed_drift_sweep`** runs every **15 minutes** and walks the live workspaces itself. It has no
+  time limit. The pending set limits the pass, and the time limit per call of the model lane limits
+  each embed.
+- **Most passes** read only the `activity`, `contact` and `company` rows written in the last hour,
+  through an index on `created_at` or `updated_at`. They read the small `deal`, `lead` and `project`
+  tables in full. So a lost embed event for a new row keeps it out of vector search for up to 15
+  minutes.
+- **The first pass of each UTC day** in a worker process reads every live row of these tables. It
+  finds an edit to a mail whose event was lost. It also finds a row that may now be embedded with no
+  write of its own, such as a mail whose audience was settled. Those wait up to a day.
 
-Both are declared in `backend/api/jobs.yaml`. `compose/embeddriftsweep.go` registers them under a
+It is declared in `backend/api/jobs.yaml`. `compose/embeddriftsweep.go` registers it under a
 rule the contract's `when: [Embedder]` cannot state. The lane must also have a *binding* (an
 `EmbedIdentity()` that is not empty). A lane that is set but has no binding writes no marker, so there
 is nothing to check a row against.
@@ -309,7 +349,7 @@ jobs in the same transaction.
 
 Each workspace job leaves the set when it ends for good, and the job that empties the set hands the
 marker back. Every marker write **fences on the run ID**. So a slow job from a finished run cannot
-move the marker of the run that replaced it. Three things follow:
+move the marker of the run that replaced it. Four things follow:
 
 - **Margince stops a run when its binding changes.** The job carries
   the identity that held when it claimed the marker. A worker whose live embedder no
@@ -320,6 +360,8 @@ move the marker of the run that replaced it. Three things follow:
   has a result left to reach, and *used up its attempts* is one of those results. The `active` of
   `/readyz` takes on that smaller claim. The pending counts on the status endpoint are what tell an
   operator what is missing.
+- **A stopped run writes no model.** A run that a binding change stopped lets go of the marker, and the marker
+  keeps the model it named before. That run's target is a model no role serves any more.
 - **A marker left held has a way back.** A workspace job that is dropped or canceled can leave the
   marker held with nothing running. (River starts again a job that runs too long only if the job
   declares a time limit, and a workspace job declares none.) A confirm with `force` set takes a
@@ -443,9 +485,10 @@ no hop each way, or when two hops on one record share a name.
 |---|---|
 | Lexical query | `internal/modules/search/store.go` (`Search`) |
 | Ranked page + keyset cursor | `internal/modules/search/ranked.go` (`rankedShape`) |
-| Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`) |
+| Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`), `internal/modules/search/groupedlanes.go` |
 | Contacts through the company that employs them (`with_employees`) | `internal/modules/search/employerarm.go` (`employerArmSQL`) |
 | Company hit logo | `internal/modules/search/companylogo.go` ← `internal/modules/contacts/companylogobatch.go` |
+| Where a hit stands (`standing`) | `internal/modules/search/standing.go` (`attachStandings`) |
 | Which entities search can find, and who may see one | `internal/modules/search/branches.go` (`searchBranches`, `branchScope`, `SearchedTables`) |
 | Vector write + read by meaning | `internal/modules/search/embedding.go` (`UpsertEmbedding`, `SimilarEntities`) |
 | RRF merge | `internal/modules/search/fuse.go` (`HybridSearch`, `fuseRankedResults`, `rrfK`) |

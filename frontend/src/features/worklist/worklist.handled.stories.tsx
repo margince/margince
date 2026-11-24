@@ -5,7 +5,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { meFixture } from "../../testing/mefixture";
-import { jsonResponse, StoryProviders } from "../../testing/story-utils";
+import {
+  emptyListAnswer,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { HandledForYouPanel } from "./worklist.handled";
 
 // WHAT THE PRODUCT DID on this reader's behalf.
@@ -88,7 +92,7 @@ function stubHandled(answer: () => Promise<Response>) {
       return jsonResponse(meFixture({ allow: { deal: ["read", "update"] } }));
     return url.includes("/worklist/handled")
       ? answer()
-      : jsonResponse({ data: [] });
+      : emptyListAnswer(input);
   }) as typeof fetch;
 }
 

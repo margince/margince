@@ -174,7 +174,6 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 - `deal_room_engagement_pkey`: `unique, btree (id)`
 - `idx_deal_room_engagement_participant_room`: `btree (participant_id, room_id)`
-- `ix_deal_room_engagement_participant`: `btree (participant_id, occurred_at DESC)`
 - `ix_deal_room_engagement_room`: `btree (room_id, occurred_at DESC)`
 
 **Triggers**
@@ -212,6 +211,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 **Rules**
 
 - `deal_room_invitation_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `deal_room_invitation_token_hash_check`: `CHECK ((octet_length(token_hash) = 32))`
 - `uq_deal_room_invitation_attempt`: `UNIQUE (participant_id, attempt_no)`
 - `uq_deal_room_invitation_token`: `UNIQUE (token_hash)`
 
@@ -303,6 +303,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 **Rules**
 
 - `deal_room_session_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `deal_room_session_token_hash_check`: `CHECK ((octet_length(token_hash) = 32))`
 - `uq_deal_room_session_token`: `UNIQUE (token_hash)`
 
 **Indexes**

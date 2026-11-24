@@ -297,10 +297,15 @@ func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent, kinds string) stri
 // the reader's addresses. A seat row the legacy backfill guessed for bare
 // mail does not stand (auth.ParticipantStandsSQL), so its seat owes no reply.
 func sentByReaderSQL(reader, addresses string) string {
+	return sentByReaderOn("a", reader, addresses)
+}
+
+// sentByReaderOn is sentByReaderSQL for the mail under alias.
+func sentByReaderOn(alias, reader, addresses string) string {
 	return `EXISTS (SELECT 1 FROM activity_participant me
-	   WHERE me.activity_id = a.id AND me.role = 'from'
+	   WHERE me.activity_id = ` + alias + `.id AND me.role = 'from'
 	     AND (me.user_id = ` + reader + ` OR lower(me.address) = ANY(` + addresses + `::text[]))
-	     AND ` + auth.ParticipantStandsSQL("me", "a") + `)`
+	     AND ` + auth.ParticipantStandsSQL("me", alias) + `)`
 }
 
 // awaitingCandidatesSQL is the mail the follow-up lane may report: what the
@@ -378,9 +383,26 @@ var awaitingRepliesSQL = `
 	   -- record with an open deal or a lead being worked.
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[11]s)
 	   AND NOT ` + readerSetAsideSQL("$%[9]d", "%[10]s") + `
+	   AND NOT ` + promiseKeptSQL("$%[9]d") + `
 	 GROUP BY a.id, a.subject, a.occurred_at
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[12]d`
+
+// promiseKeptSQL is true when the reader completed a task derived from the
+// mail on alias a and has none of them open. The task stood for the follow-up
+// on the worklist, so completing it completes the reminder too.
+func promiseKeptSQL(reader string) string {
+	derived := `SELECT 1 FROM activity promise
+	    WHERE promise.source_activity_id = a.id AND promise.kind = 'task' AND ` + readersPromiseSQL("promise", reader)
+	return `(EXISTS (` + derived + ` AND promise.is_done) AND NOT EXISTS (` + derived + ` AND NOT promise.is_done))`
+}
+
+// readersPromiseSQL is a live row the reader holds. A task matched to a mail
+// by its source_activity_id is then that mail's promise. The Worklist fold
+// (attention.ownPromise) takes a task by the same terms.
+func readersPromiseSQL(alias, reader string) string {
+	return alias + `.archived_at IS NULL AND ` + alias + `.assignee_id = ` + reader
+}
 
 // threadNeedSQL names each of candidates and the live rows on its thread. A
 // statement gates that set once when its later-message and snooze-lift tests

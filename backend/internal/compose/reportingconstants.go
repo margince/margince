@@ -3,6 +3,8 @@
 
 package compose
 
+import "github.com/margince/margince/backend/internal/modules/reporting"
+
 const (
 	reportingStatusField                   = "status"
 	reportingEventPeriod                   = "event_period"
@@ -27,7 +29,7 @@ const (
 	reportingInsufficientSample            = "insufficient_sample"
 	reportingInterval                      = "interval"
 	reportingMonthContext                  = "month"
-	reportingForecastProjection            = "forecast_projection"
+	reportingForecastProjection            = string(reporting.SourceForecastProjection)
 	reportingPartial                       = "partial"
 	reportingForecastLanding               = "forecast_landing"
 	reportingPipelineMovement              = "pipeline_movement"
@@ -36,7 +38,6 @@ const (
 	reportingSubject                       = "subject"
 	reportingStateAt                       = "state_at"
 	reportingMoney                         = "money"
-	reportingMinorUnits                    = "minor_units"
 	reportingMetricReading                 = "metric_reading"
 	reportingTargetProgress                = "target_progress"
 	reportingSdrOutcomes                   = "sdr_outcomes"
@@ -58,6 +59,10 @@ const (
 	reportingPartnerCommission             = "partner_commission"
 	reportingPartnerActivity               = "partner_activity"
 	reportingBreakdown                     = "breakdown"
+	reportingAccountProgression            = "account_progression"
+	reportingSourceQuality                 = "source_quality"
 	reportingAmountField                   = "amount_minor"
 	reportingPartnerField                  = "partner_company_id"
+	reportingIntroductionsMade             = "introductions_made"
+	reportingMeetingsBookedForColleagues   = "meetings_booked_for_colleagues"
 )

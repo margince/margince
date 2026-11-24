@@ -1,0 +1,122 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import {
+  type RequiredGrant,
+  useCanMutate,
+  useRecordWriteRefusal,
+  useWriteRefusal,
+  type WritableRecord,
+} from "./capability";
+import type { EntityKind } from "./entity";
+import { useMe } from "./session";
+
+// The sentences a refused write verb says, in one place. A read seat is told
+// to ask for a full seat; a missing grant, to ask for the right. A record's
+// own verbs say why that record takes no change, in its kind's words.
+
+/**
+ * Why this seat may not take a write verb, or undefined when it may. Nothing
+ * is claimed while `/me` is on its way. Once it settles without a snapshot,
+ * the access is unknown, and the verb is refused with a way to recover.
+ */
+export function useActionRefusal({
+  object,
+  action,
+}: RequiredGrant): string | undefined {
+  const t = useT();
+  const refusal = useWriteRefusal(object, action, {
+    seat: t("settings.seatRefused"),
+    grant: t("record.actionRefused"),
+  });
+  return refusalWhen(useAccessState(), refusal, t);
+}
+
+/**
+ * Why this seat may not write at all, or undefined when it may: a read seat
+ * is clamped before any role is asked. Read like `useActionRefusal`.
+ */
+export function useSeatRefusal(): string | undefined {
+  const t = useT();
+  const refusal = useCanMutate() ? undefined : t("settings.seatRefused");
+  return refusalWhen(useAccessState(), refusal, t);
+}
+
+// Whether this seat's access is known: `/me` on its way, settled without a
+// snapshot, or carrying one. A later snapshot moves it back to known.
+type AccessState = "pending" | "unknown" | "known";
+
+function useAccessState(): AccessState {
+  const answered = useMe().data?.authorization !== undefined;
+  const settled = useMeSettled();
+  if (answered) {
+    return "known";
+  }
+  return settled ? "unknown" : "pending";
+}
+
+function refusalWhen(
+  state: AccessState,
+  refusal: string | undefined,
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  if (state === "pending") {
+    return undefined;
+  }
+  return state === "unknown" ? t("record.accessUnknown") : refusal;
+}
+
+/**
+ * Whether `/me` has given its answer, a failure included. A write verb waits
+ * for it. A failed read goes back to pending as each new reader mounts, so
+ * having failed once counts as settled.
+ */
+export function useMeSettled(): boolean {
+  const me = useMe();
+  return !me.isPending || me.errorUpdateCount > 0;
+}
+
+// What each record kind's page says when the record takes no change.
+const RECORD_REFUSALS = {
+  contact: {
+    archived: "contact.rail.archivedReadOnly",
+    notYours: "contact.notYoursToChange",
+  },
+  company: {
+    archived: "record.archivedReadOnly",
+    notYours: "record.notYoursToChange",
+  },
+  deal: {
+    archived: "deal.archivedReadOnly",
+    notYours: "deal.notYoursToChange",
+  },
+  lead: {
+    archived: "lead.terminalReadOnly",
+    notYours: "lead.notYoursToChange",
+  },
+  project: {
+    archived: "project.archivedReadOnly",
+    notYours: "project.notYoursToChange",
+  },
+} as const satisfies Record<
+  EntityKind,
+  Record<"archived" | "notYours", MessageKey>
+>;
+
+/**
+ * Why this reader may not change this record, in its kind's words, or
+ * undefined when they may. See `useRecordWriteRefusal`.
+ */
+export function useKindWriteRefusal(
+  kind: EntityKind,
+  record: WritableRecord | undefined,
+): string | undefined {
+  const t = useT();
+  const words = RECORD_REFUSALS[kind];
+  return useRecordWriteRefusal(kind, record, {
+    archived: t(words.archived),
+    notYours: t(words.notYours),
+  });
+}

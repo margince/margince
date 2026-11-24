@@ -9,8 +9,8 @@ tree, with no add-ons of its own, ships three units:
 
 | Unit | What it is |
 |---|---|
-| `extensions/de` | The German jurisdiction pack: the legal floors on retention and the outbound messaging rules |
-| `extensions/vn` | The Vietnamese jurisdiction pack: the advertising-mail rules, and no retention floor |
+| `extensions/eu` | The packs of the 27 EU member states: each one's outbound messaging rules on a shared EU layer, and the German legal floors on retention |
+| `extensions/apac` | The packs of `au`, `cn`, `hk`, `id`, `in`, `jp`, `kr`, `my`, `nz`, `ph`, `sg`, `th`, `tw` and `vn`: each one's outbound messaging rules, the request deadlines of `vn`, and no retention floor |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
 Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
@@ -120,6 +120,7 @@ already exists:
 | `Jobs` | Scheduled work: a job that runs on a fixed schedule and starts one worker run per tenant |
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
 | `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
+| `AITasks` | The AI tasks the unit may run. Each call goes through `Runtime.AI` and the core's own AI path, with its region limit, secret stripping, budget and call log; the unit never holds a provider client or key |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
 | `Reach` | The unit's own tables whose columns hold a core company, contact or lead id. The core's merge moves those columns onto the record that stays, and its erasure clears the columns a table lists. Core never names the unit's tables in its own SQL |
 | `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
@@ -212,6 +213,7 @@ the harm could go before turning the unit on:
 | `finance_sources` | `FinanceSources` | Which accounting systems it reads |
 | `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
 | `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
+| `ai_tasks` | `AITasks` | Which AI tasks the unit may run, the prompt each one sends, and whether it takes documents or has an answer schema |
 | `instrumentation` | `Instrumentation` | Which of its three parts the unit has: `start` (a backend part), `browser` (the named export the SPA calls) and `edge` (a session-less path under `/v1/public/instrument/<unit>/`) |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
@@ -322,7 +324,7 @@ name to show, and would otherwise refuse it by stopping the boot that composed t
 
 The core stays free of any one jurisdiction. A fitness gate (`check-no-jurisdiction.sh`) scans the core
 source written by hand for names that belong to one jurisdiction, and fails the build on a match. Germany
-lives in `extensions/de`, which declares the legal **retention floors** of GoBD and AO:
+lives in `extensions/eu`, which declares the legal **retention floors** of GoBD and AO:
 
 - business mail, calls, meetings and messages with outside parties, 6 years;
 - accounting records (*Buchungsbelege*), the 8-year class of §147 AO, as changed in 2025.
@@ -592,7 +594,7 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 | The composition generate step | `backend/tools/gen-composition/` |
 | The committed plain stub (and its `replace` in `backend/go.mod`) | `composition/extensions_gen.go` |
 | The `GOWORK` switch every build lane carries | `backend/Makefile` (`GOWORK_COMPOSED`) |
-| The first-party German pack | `extensions/de/de.go` |
+| The first-party German pack | `extensions/eu/de.go` |
 | The reference unit (every capability but a finance source), and its served tools | `extensions/openchannel/openchannel.go`, `endpoint.go` |
 | Its connector half: ingress, merge key, transport | `extensions/openchannel/drain.go`, `record.go`, `send.go` |
 | Its inbound edge with no sign-in | `extensions/openchannel/inbound.go` |
@@ -608,12 +610,10 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 - [how-to/add-an-extension.md](../how-to/add-an-extension.md): build and ship a unit, step by step.
 - [privacy-and-consent.md](privacy-and-consent.md): the retention engine that reads a pack.
 - [composition-layer.md](composition-layer.md): how `compose` boots and wires the composed set.
-- [agent-surface.md](agent-surface.md): the registry and admission gate a served extension tool goes
-  through.
+- [agent-surface.md](agent-surface.md): the registry and admission gate a served tool goes through.
 - [ingress-gate-and-auto-capture.md](ingress-gate-and-auto-capture.md): what the core does with a record
   a unit lands, with the merge-key declaration and the channel path.
-- [outbound-messaging.md](outbound-messaging.md): the reply path that ends at the `Channel.Send` of a
-  unit.
+- [outbound-messaging.md](outbound-messaging.md): the reply path that ends at a unit's `Channel.Send`.
 - [frontend-architecture.md](frontend-architecture.md): the SPA that the frontend part of an extension
   adds to.
 - [reference/make-targets.md](../reference/make-targets.md): `composition`, `check-composition`,

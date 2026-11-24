@@ -142,25 +142,92 @@ DROP FUNCTION public.text_value_exceeds_bound(text, text, integer);
 `
 
 func writeTableGuards(up, down *strings.Builder, table string, columns []Column, policies map[string]Policy) {
-	fields := make([]string, 0, len(columns))
+	bounds := make([]Bound, 0, len(columns))
 	for _, column := range columns {
-		fields = append(fields, fmt.Sprintf("%q:%d", column.Name, policies[column.Key].Limit))
+		bounds = append(bounds, Bound{Column: column.Name, Limit: policies[column.Key].Limit, Array: column.Array})
 	}
-	writeGuardPair(up, down, table, "{"+strings.Join(fields, ",")+"}")
+	sortBounds(bounds)
+	writeGuardPair(up, down, table, bounds)
 }
 
-// writeGuardPair writes the insert and update guards of one table, whose
-// bounds are a JSON object of column name to character limit.
-func writeGuardPair(up, down *strings.Builder, table, bounds string) {
-	limits := strings.ReplaceAll(bounds, "'", "''")
+// Bound is one column a guard checks.
+type Bound struct {
+	Column string
+	Limit  int
+	Array  bool
+}
+
+// sortBounds puts a guard's columns in name order, the one order every writer
+// and reader of a guard uses.
+func sortBounds(bounds []Bound) {
+	slices.SortFunc(bounds, func(a, b Bound) int { return strings.Compare(a.Column, b.Column) })
+}
+
+// Guard operations, as the trigger names end.
+const (
+	OnInsert = "insert"
+	OnUpdate = "update"
+)
+
+// namedGuardTables get a condition that names each bounded column. The whole-row
+// condition copies every column to jsonb. On these tables that copy carries
+// source text no limit applies to: a mail body on activity.
+var namedGuardTables = map[string]bool{"activity": true}
+
+// NamesColumns reports whether a table's guards name their columns. Postgres
+// then refuses to drop or retype a bounded column of that table until a
+// migration has taken the guards off.
+func NamesColumns(table string) bool { return namedGuardTables[table] }
+
+// Condition is the `WHEN` clause of a table's guard for one operation. Either
+// form refuses a new or changed value past its limit and leaves an unchanged
+// earlier one alone.
+func Condition(table string, bounds []Bound, operation string) string {
+	if !NamesColumns(table) {
+		previous := "to_jsonb(OLD)"
+		if operation == OnInsert {
+			previous = "NULL"
+		}
+		return fmt.Sprintf("public.text_row_exceeds_bounds(to_jsonb(NEW), %s, '%s')", previous, boundsJSON(bounds))
+	}
+	checks := make([]string, 0, len(bounds))
+	for _, bound := range bounds {
+		column := pgx.Identifier{bound.Column}.Sanitize()
+		switch {
+		case bound.Array && operation == OnInsert:
+			checks = append(checks, fmt.Sprintf("public.text_values_exceed_bound(NEW.%s, NULL, %d)", column, bound.Limit))
+		case bound.Array:
+			checks = append(checks, fmt.Sprintf("(NEW.%[1]s IS DISTINCT FROM OLD.%[1]s AND public.text_values_exceed_bound(NEW.%[1]s, OLD.%[1]s, %[2]d))", column, bound.Limit))
+		case operation == OnInsert:
+			checks = append(checks, fmt.Sprintf("char_length(NEW.%s) > %d", column, bound.Limit))
+		default:
+			checks = append(checks, fmt.Sprintf(`(char_length(NEW.%[1]s) > %[2]d AND NEW.%[1]s COLLATE "C" IS DISTINCT FROM OLD.%[1]s COLLATE "C")`, column, bound.Limit))
+		}
+	}
+	return strings.Join(checks, "\n OR ")
+}
+
+// boundsJSON is the bounds as a JSON object of column name to character limit,
+// quoted for a SQL string.
+func boundsJSON(bounds []Bound) string {
+	fields := make([]string, 0, len(bounds))
+	for _, bound := range bounds {
+		fields = append(fields, fmt.Sprintf("%q:%d", bound.Column, bound.Limit))
+	}
+	return strings.ReplaceAll("{"+strings.Join(fields, ",")+"}", "'", "''")
+}
+
+// writeGuardPair writes the insert and update guards of one table. The refusal
+// takes the same bounds, to name the column at fault.
+func writeGuardPair(up, down *strings.Builder, table string, bounds []Bound) {
 	relation := pgx.Identifier{"public", table}.Sanitize()
-	for _, guard := range []struct{ name, timing, previous string }{
-		{"text_bound_insert", "AFTER INSERT", "NULL"},
-		{"text_bound_update", "AFTER UPDATE", "to_jsonb(OLD)"},
+	for _, guard := range []struct{ operation, timing string }{
+		{OnInsert, "AFTER INSERT"},
+		{OnUpdate, "AFTER UPDATE"},
 	} {
-		trigger := pgx.Identifier{guard.name}.Sanitize()
-		fmt.Fprintf(up, "CREATE OR REPLACE TRIGGER %s %s ON %s FOR EACH ROW\nWHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), %s, '%s')) EXECUTE FUNCTION public.refuse_oversized_text('%s');\n",
-			trigger, guard.timing, relation, guard.previous, limits, limits)
+		trigger := pgx.Identifier{"text_bound_" + guard.operation}.Sanitize()
+		fmt.Fprintf(up, "CREATE OR REPLACE TRIGGER %s %s ON %s FOR EACH ROW\nWHEN (%s) EXECUTE FUNCTION public.refuse_oversized_text('%s');\n",
+			trigger, guard.timing, relation, Condition(table, bounds, guard.operation), boundsJSON(bounds))
 		fmt.Fprintf(down, "DROP TRIGGER IF EXISTS %s ON %s;\n", trigger, relation)
 	}
 }

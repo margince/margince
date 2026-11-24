@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "6e0c882bde4744e362430fdcfeb28ab999edf42e21e017f22b3accd551d439d1"
+const jobContractHash = "401df0b031076f276af35df743ece8f223f2b6826efd9ce4c200fe5ab94b5a49"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -42,7 +42,6 @@ func (CaptureBackfillReconcileArgs) declaredJobType(CaptureBackfillReconcileArgs
 func (CaptureClassifyArgs) declaredJobType(CaptureClassifyArgs)                       {}
 func (ConfidentialityVerdictArgs) declaredJobType(ConfidentialityVerdictArgs)         {}
 func (CounterpartyVerdictArgs) declaredJobType(CounterpartyVerdictArgs)               {}
-func (CaptureDigestArgs) declaredJobType(CaptureDigestArgs)                           {}
 func (CaptureEnrichArgs) declaredJobType(CaptureEnrichArgs)                           {}
 func (CapturePartSlimArgs) declaredJobType(CapturePartSlimArgs)                       {}
 func (CaptureSyncArgs) declaredJobType(CaptureSyncArgs)                               {}
@@ -98,12 +97,14 @@ func (MeetingDeliveryArgs) declaredJobType(MeetingDeliveryArgs)                 
 func (MeetingProfileRetractSweepArgs) declaredJobType(MeetingProfileRetractSweepArgs) {}
 func (NotificationDigestArgs) declaredJobType(NotificationDigestArgs)                 {}
 func (SendNotificationEmailArgs) declaredJobType(SendNotificationEmailArgs)           {}
+func (OAuthClientUnusedSweepArgs) declaredJobType(OAuthClientUnusedSweepArgs)         {}
 func (OwedVerdictArgs) declaredJobType(OwedVerdictArgs)                               {}
 func (ParticipantBackfillArgs) declaredJobType(ParticipantBackfillArgs)               {}
 func (PastActivityClockRefoldArgs) declaredJobType(PastActivityClockRefoldArgs)       {}
 func (RequestProofExpiryArgs) declaredJobType(RequestProofExpiryArgs)                 {}
 func (PrivacyRetentionArgs) declaredJobType(PrivacyRetentionArgs)                     {}
 func (ProjectHealthScanArgs) declaredJobType(ProjectHealthScanArgs)                   {}
+func (PromiseKeptSweepArgs) declaredJobType(PromiseKeptSweepArgs)                     {}
 func (ProviderLookupSweepArgs) declaredJobType(ProviderLookupSweepArgs)               {}
 func (ProviderRunPollSweepArgs) declaredJobType(ProviderRunPollSweepArgs)             {}
 func (ProviderRunSubmitArgs) declaredJobType(ProviderRunSubmitArgs)                   {}
@@ -113,6 +114,7 @@ func (RiskVerdictSweepArgs) declaredJobType(RiskVerdictSweepArgs)               
 func (SignalScanArgs) declaredJobType(SignalScanArgs)                                 {}
 func (SiteDeepReadArgs) declaredJobType(SiteDeepReadArgs)                             {}
 func (StageEvidenceReadArgs) declaredJobType(StageEvidenceReadArgs)                   {}
+func (StageEvidenceRereadArgs) declaredJobType(StageEvidenceRereadArgs)               {}
 func (StoredObjectReapArgs) declaredJobType(StoredObjectReapArgs)                     {}
 func (SuppressionJournalArgs) declaredJobType(SuppressionJournalArgs)                 {}
 func (TagScoutArgs) declaredJobType(TagScoutArgs)                                     {}
@@ -156,7 +158,6 @@ var (
 	_ jobs.FleetWide = CaptureClassifyArgs{}
 	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
-	_ jobs.FleetWide = CaptureDigestArgs{}
 	_ jobs.FleetWide = CaptureEnrichArgs{}
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CapturedDealRefileSweepArgs{}
@@ -187,6 +188,7 @@ var (
 	_ jobs.FleetWide = OwedVerdictArgs{}
 	_ jobs.FleetWide = ParticipantBackfillArgs{}
 	_ jobs.FleetWide = ProjectHealthScanArgs{}
+	_ jobs.FleetWide = PromiseKeptSweepArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
 	_ jobs.FleetWide = ReplySettledStampArgs{}
@@ -232,6 +234,7 @@ var (
 	_ jobs.WorkspaceScoped = ProviderRunSubmitArgs{}
 	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
 	_ jobs.WorkspaceScoped = StageEvidenceReadArgs{}
+	_ jobs.WorkspaceScoped = StageEvidenceRereadArgs{}
 	_ jobs.WorkspaceScoped = TechnicalEnrichCompanyArgs{}
 	_ jobs.WorkspaceScoped = TelegramIngestArgs{}
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}

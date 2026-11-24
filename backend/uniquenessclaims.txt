@@ -36,7 +36,6 @@ cmd/worker/boot.go#func workerModelPathSpec
 gates/aiactivitycatalogparity_test.go#func producedKinds
 gates/aitaskrailcensus_test.go#func everyRoutableTask
 gates/aitaskrailcensus_test.go#var carrierSources
-gates/arch_test.go#var modelClientConstructors
 gates/consumermailonelist_test.go#var baselineDomains
 gates/edgereaders_test.go#const edgeTable
 gates/edgereaders_test.go#var edgeReaderScope
@@ -68,7 +67,6 @@ internal/compose/approval_kinds_test.go#var exportedApprovalKinds
 internal/compose/attentionreceiptseam.go#const approvalStatusApproved
 internal/compose/backfilltransport.go#func backfillStatusPayload
 internal/compose/bodyceilingcensus_test.go#var httpMethods
-internal/compose/brain.go#type agentBrain
 internal/compose/captureautoenrich.go#func startAutoEnrichRead
 internal/compose/capturedomaintriage.go#func startDomainTriageRead
 internal/compose/captureofflinedemo.go#method offlineDemoDirectory.accounts
@@ -114,6 +112,7 @@ internal/compose/contact360/sectionstimeline.go#func projectScope
 internal/compose/contactbrief/doc.go#package contactbrief
 internal/compose/contactdraft/deterministic.go#type Draft
 internal/compose/contactdraft/fold.go#func ConversationState
+internal/compose/contractshape/routeshadow_test.go#func pathParameters
 internal/compose/costestimate/estimator.go#func expectedUnits
 internal/compose/costestimate/rules.go#type unitRule
 internal/compose/csvfields.go#const fieldFullName
@@ -197,7 +196,6 @@ internal/compose/reportcatalog.go#func catalogFilterNames
 internal/compose/reporterrors.go#const block at const slotGroupBy
 internal/compose/reporterrors.go#const reportFieldNotAllowedCode
 internal/compose/routes.go#func WithUploadLimits
-internal/compose/routeshadow_test.go#func pathParameters
 internal/compose/sendpath.go#func consentGateFor
 internal/compose/sendpreflight_test.go#func sendCapableCases
 internal/compose/sendvoiceoutcome_integration_test.go#type witnessDraftOutcome
@@ -222,7 +220,6 @@ internal/modules/activities/activitylinks.go#func insertActivityLinks
 internal/modules/activities/activityread.go#func scanActivity
 internal/modules/activities/channelsend.go#method outboundChannelMessage.activity
 internal/modules/activities/companyscope.go#func ActivityWithinProject
-internal/modules/activities/companyscope.go#func CompanyLinkedActivityExists
 internal/modules/activities/email.go#const sourceManual
 internal/modules/activities/handlers_email.go#func DeterministicEmailDraft
 internal/modules/activities/handlers_email.go#func IsMailThread
@@ -248,7 +245,6 @@ internal/modules/activities/scheduling.go#var block at var errAvailabilityToNotA
 internal/modules/activities/transcript_integration_test.go#func TestUpdateActivityNormalizesATranscriptBody
 internal/modules/activities/transcriptnorm.go#func transcriptLines
 internal/modules/activities/unsubscribe.go#func listUnsubscribeHeader
-internal/modules/activities/unsubscribe.go#method Store.deliverability
 internal/modules/agents/approvals.go#func pinForWrite
 internal/modules/agents/apps/apps.go#func DeclaredViews
 internal/modules/agents/apps/fetch.go#method Fetcher.documentURL
@@ -291,7 +287,6 @@ internal/modules/ai/railemit_test.go#func TestADegradedCallSaysWhyEvenWithNoSent
 internal/modules/ai/sovereignendpoint_test.go#func TestABracketedIPv6EndpointIsAccepted
 internal/modules/ai/voice_sendoutcome_integration_test.go#func TestRecordSendOutcomeCannotReachAnotherWorkspacesSignal
 internal/modules/ai/voicecorpus.go#const CorpusMeterVersion
-internal/modules/aiactivity/handler.go#var eventType
 internal/modules/aiactivity/store.go#method Change.args
 internal/modules/approvals/authority.go#const objectActivity
 internal/modules/approvals/decisioneffect.go#method Service.runDecisionEffect
@@ -316,7 +311,6 @@ internal/modules/capture/channelconnfixture_test.go#method fakeTelegram.clearedW
 internal/modules/capture/channelsend.go#method Registry.liveChannelBindings
 internal/modules/capture/freemaildomain.go#const block at const auditKeyDomain
 internal/modules/capture/gmail/send.go#method Connector.stampedIdentity
-internal/modules/capture/htmltext/htmltext.go#func linkText
 internal/modules/capture/lifecycleaudit.go#func connectionAuditImage
 internal/modules/capture/mailmap/mailmap.go#method Message.Addresses
 internal/modules/capture/mailmap/mailmap.go#type Message.addresses
@@ -424,7 +418,6 @@ internal/modules/identity/passport.go#var passportScopeVocabulary
 internal/modules/identity/passwordlink.go#func passwordLink
 internal/modules/identity/rbacobjects.go#func RegisterRbacObjects
 internal/modules/identity/seatusage.go#const fullSeatsInUseQuery
-internal/modules/identity/service.go#func passwordLengthError
 internal/modules/identity/settingsentry.go#func BaseCurrencyOf
 internal/modules/identity/tokenlockorder_test.go#func locksRow
 internal/modules/integrations/poll.go#func pollFrom
@@ -499,6 +492,7 @@ internal/platform/events/dedupe.go#const DedupeKeyPrefix
 internal/platform/events/relay.go#func ClientOptions
 internal/platform/extsecrets/store.go#package extsecrets
 internal/platform/extsecrets/store_integration_test.go#func TestSecretsUserScopeRefusesAnUnknownUser
+internal/platform/htmltext/htmltext.go#func linkText
 internal/platform/httperr/decoderefusal.go#func fieldDecodeRefusal
 internal/platform/httperr/decoderefusal_test.go#var block at var intoAdvanceDeal
 internal/platform/httperr/decoderefusal_test.go#var decodeRefusalCases

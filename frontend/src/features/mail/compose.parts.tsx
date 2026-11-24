@@ -1,23 +1,16 @@
-import { Ellipsis, ShieldAlert, Trash2 } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { Ellipsis, Trash2 } from "lucide-react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { EntityRef } from "../../components/entityref";
-import { SendMark } from "../../components/sendpermission";
-import { Button, Field } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
+import { Button } from "../../design-system/atoms";
 import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
 import { EmailText } from "../../design-system/emailtext";
 import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
 import { RichText } from "../../design-system/richtext";
-import { Select } from "../../design-system/select";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import {
-  asksWhy,
-  type CommunicationContext,
-  contextOptions,
-} from "../../lib/compose-context";
+import { useNoMailboxConnected } from "../../lib/connectors";
 import {
   authorName,
   correspondenceSide,
@@ -31,65 +24,15 @@ import type { Activity, VoiceProfile } from "./compose";
 import { AiDraftBand } from "./composeaiband";
 import { CarriageNotice } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
-import { FieldNeed } from "./composehead";
+import { FieldNeed, toBox } from "./composehead";
+import type { Refusal } from "./composerefusal";
 import type { useSavedDraft } from "./composesaveddraft";
 import { SavedDraftFailure } from "./composesaveddraftnotices";
 import { ScheduleMenu, scheduledSendLabel } from "./composeschedule";
-import type { ComposeSend, MissingField } from "./composesend";
+import type { ComposeSend } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
 import type { VoiceDraft } from "./composevoicedraft";
-import { SendRefusal } from "./sendrefusal";
-
-// sharedUnsubscribeAhead predicts the sharedUnsubscribe refusal (refusalOf).
-// A marketing send's unsubscribe link is one addressee's consent record, so a
-// second addressee is refused. The server rule stays the authority, keyed on
-// the marketing category, which a reply never carries.
-export function sharedUnsubscribeAhead(
-  to: string[],
-  cc: string[],
-  context: CommunicationContext | undefined,
-): boolean {
-  if (context !== "marketing") {
-    return false;
-  }
-  const addressees = new Set(
-    [...to, ...cc].map((address) => address.trim().toLowerCase()),
-  );
-  return addressees.size > 1;
-}
-
-// The mail-only send-time notice: a shared-unsubscribe-token risk. A channel
-// reply has no addressee list to warn about, so this renders nothing there.
-// The empty-recipient line belongs to the To field, not the foot of the drawer,
-// because that is closer to the thing to fix.
-export function MailSendNotices({
-  to,
-  cc,
-  context,
-  newContacts = [],
-}: Readonly<{
-  to: string[];
-  cc: string[];
-  context: CommunicationContext | undefined;
-  /** Addresses on no record, which the send adds as the sender's contacts. */
-  newContacts?: readonly string[];
-}>) {
-  const t = useT();
-  return (
-    <>
-      {sharedUnsubscribeAhead(to, cc, context) && (
-        <ErrorLine standing>{t("compose.multiRecipientWarning")}</ErrorLine>
-      )}
-      {newContacts.map((address) => (
-        <Callout
-          key={address}
-          kind="standing"
-          title={t("compose.newContact", { address })}
-        />
-      ))}
-    </>
-  );
-}
+import { NoMailboxLine, SendRefusal } from "./sendrefusal";
 
 // The composer's window: docked beside the page, at its own size, grown or
 // folded. Each opening starts at its own size.
@@ -141,6 +84,7 @@ export function ComposeFrame({
   onClose,
   closeDisabled,
   bodyId,
+  recipientFirst,
   openedFrom,
   children,
 }: Readonly<{
@@ -152,9 +96,12 @@ export function ComposeFrame({
   openedFrom?: HTMLElement;
   /** The words' field, where focus lands as the window opens. */
   bodyId: string;
+  /** To opens empty and no address is coming, so focus lands in To instead. */
+  recipientFirst: boolean;
   children: ReactNode;
 }>) {
   const [state, setState] = useState<DockState>("open");
+  useToWhenNothingCame(recipientFirst, bodyId);
   return (
     <DockedWindow
       title={title}
@@ -163,7 +110,13 @@ export function ComposeFrame({
       onStateChange={setState}
       onClose={onClose}
       closeDisabled={closeDisabled}
-      initialFocusTo={() => document.getElementById(bodyId)}
+      initialFocusTo={() => {
+        const body = document.getElementById(bodyId);
+        return (
+          (recipientFirst ? toBox(body?.closest(".compose-window")) : null) ??
+          body
+        );
+      }}
       openedFrom={openedFrom}
     >
       {children}
@@ -171,8 +124,22 @@ export function ComposeFrame({
   );
 }
 
-// The footer: files and the draft's state on the left. The send and its other
-// moments sit at the end, where the hand ends up.
+// The window opens with focus in the body while an address may still come. When
+// none came, focus moves to To, once, unless the reader has moved or typed.
+function useToWhenNothingCame(recipientFirst: boolean, bodyId: string) {
+  const [openedInTo] = useState(recipientFirst);
+  const moved = useRef(openedInTo);
+  useEffect(() => {
+    if (!recipientFirst || moved.current) return;
+    moved.current = true;
+    const body = document.getElementById(bodyId);
+    if (!body?.contains(document.activeElement)) return;
+    if (body.textContent?.trim()) return;
+    toBox(body.closest(".compose-window"))?.focus();
+  }, [recipientFirst, bodyId]);
+}
+
+// The footer: files and draft state on the left, the send at the end where the hand is.
 export function ComposeFoot({
   scheduling,
   send,
@@ -213,7 +180,8 @@ export function ComposeFoot({
   // The address sentence has its own place under the button; the hold line
   // speaks only when no address is in the way.
   const { hold } = send;
-  const holdLine = !addressRefused && hold.line ? hold.line : undefined;
+  const holdLine =
+    !addressRefused && hold.blocks && hold.line ? hold.line : undefined;
   const heldBy = holdLine && hold.blocks ? holdId : undefined;
   return (
     <div className="compose-foot">
@@ -238,9 +206,6 @@ export function ComposeFoot({
             <ScheduleMenu onOpen={onPickMoment} reasonId={heldBy} />
           )}
         </span>
-        {!isChannelReply && (
-          <SendMark {...send.permission} blocked={send.blocked} />
-        )}
         <div className="compose-foot-marks" ref={marksRef} />
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
@@ -291,19 +256,23 @@ export function ComposeOutcome({
   isChannelReply,
   bodyKey,
   sendUnavailable,
-  send,
+  refusal,
 }: Readonly<{
   isChannelReply: boolean;
   bodyKey: MessageKey;
   sendUnavailable: boolean;
-  send: ComposeSend;
+  refusal: Refusal;
 }>) {
   const t = useT();
+  const noMailbox = useNoMailboxConnected();
   return (
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
-      <SendRefusal refusal={send.refusal} />
+      {!isChannelReply && noMailbox && refusal !== "noMailbox" && (
+        <NoMailboxLine standing />
+      )}
+      <SendRefusal refusal={refusal} />
     </>
   );
 }
@@ -324,6 +293,7 @@ export function ComposeBody({
   voice,
   marksIn,
   attach,
+  locked = false,
 }: Readonly<{
   bodyId: string;
   fields: ComposeFields;
@@ -344,10 +314,12 @@ export function ComposeBody({
   marksIn: Element | null;
   /** The paperclip, among the editor's own marks. */
   attach: ReactNode;
+  /** A write about these words is in flight, so they cannot change. */
+  locked?: boolean;
 }>) {
   const t = useT();
   const richTextLabels = useRichTextLabels();
-  const frozen = voice.rejectionInFlight;
+  const frozen = voice.rejectionInFlight || locked;
   return (
     <>
       {mail && (
@@ -388,65 +360,6 @@ export function ComposeBody({
       {earlier}
       <CarriageNotice channel={channelLabel} blocks={carriageBlocks} />
     </>
-  );
-}
-
-// Why the reader is writing, asked where the record does not answer it. A
-// reply derives its category from the thread it answers, which the checks say.
-export function ComposeWhy({
-  anchorActivity,
-  flagged,
-  context,
-  onContextChange,
-}: Readonly<{
-  anchorActivity: Activity | undefined;
-  flagged: ReadonlySet<MissingField>;
-  context: CommunicationContext | "";
-  onContextChange: (next: CommunicationContext | "") => void;
-}>) {
-  const t = useT();
-  if (!asksWhy(anchorActivity)) {
-    return null;
-  }
-  const missing = context === "";
-  // One strip in the warning band: what is missing and why it matters, with
-  // the pick that fixes it at the end. Once picked it stays, without the warning.
-  return (
-    <div
-      className={
-        missing ? "compose-strip compose-strip-warning" : "compose-strip"
-      }
-    >
-      {missing && <ShieldAlert aria-hidden="true" />}
-      <p className="compose-strip-text">
-        {missing ? (
-          <>
-            <strong>{t("compose.whyMissing")}</strong>{" "}
-            {t("compose.whyMissingText")}
-          </>
-        ) : (
-          t("compose.why")
-        )}
-      </p>
-      <Field
-        className="compose-strip-field"
-        label={t("compose.why")}
-        labelHidden
-        error={flagged.has("context") ? t("compose.missingWhy") : undefined}
-      >
-        {(control) => (
-          <Select
-            {...control}
-            options={contextOptions(t).filter((o) => o.value !== "")}
-            value={context}
-            placeholder={t("compose.whyPick")}
-            onChange={(value) =>
-              onContextChange(value as CommunicationContext | "")
-            }
-          />
-        )}
-      </Field>
-    </div>
   );
 }
 

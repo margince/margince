@@ -10,14 +10,82 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "0cfb69b78546b245",
+    "tools": "88f5bc2960c9e9f2",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:09:47Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:28:53Z"
+  },
   "usage": {
-    "input_tokens": 20,
-    "output_tokens": 3185,
-    "cache_creation_input_tokens": 89103,
-    "cache_read_input_tokens": 735894,
+    "input_tokens": 12,
+    "output_tokens": 2902,
+    "cache_creation_input_tokens": 9897,
+    "cache_read_input_tokens": 491352,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.4619
+    "cost_usd": 0.1178
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "list_records",
+        "read_deal_lines",
+        "read_details",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "list_records",
+        "read_deal_lines",
+        "read_details",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6.5,
+      "min": 6,
+      "max": 7
+    },
+    "turns": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 250630.5,
+      "min": 250446,
+      "max": 250815
+    },
+    "output_tokens": {
+      "median": 1451,
+      "min": 1405,
+      "max": 1497
+    },
+    "duration_ms": {
+      "median": 13085,
+      "min": 12386,
+      "max": 13784
+    }
   }
 }

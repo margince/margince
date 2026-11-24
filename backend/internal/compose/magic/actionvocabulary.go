@@ -44,8 +44,12 @@ type admittedAction struct {
 	perType map[string]string
 }
 
-// actionUpdate is the audit verb for a change to a record's fields.
-const actionUpdate = "update"
+// actionUpdate is the audit verb for a change to a record's fields, and
+// actionSchedule the verb for booking a meeting or deferring a message.
+const (
+	actionUpdate   = "update"
+	actionSchedule = "schedule"
+)
 
 // The verbs a machine runs over records in bulk: a mailbox import creates
 // thousands of contacts, and the mail reader archives messages it judges noise.
@@ -98,7 +102,7 @@ var admitted = map[string]admittedAction{
 		// not allow.
 		reversible: false,
 	},
-	"schedule": {
+	actionSchedule: {
 		sentence:    "magic.action.schedule",
 		consequence: "magic.consequence.meeting_booked",
 		reversible:  false,

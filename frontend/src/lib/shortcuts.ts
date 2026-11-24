@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from "react";
 import { isChordOf, isLetterKey, pressedLetter } from "./chord";
-import { screenEnabled, useDisabledCoreFeatures } from "./corefeatures";
+import { screenEnabled, useHiddenCoreFeatures } from "./corefeatures";
 import { deviceSwitch, useDeviceSwitch } from "./devicepreference";
 import { isImeCommit } from "./imecommit";
 import { characterKeyRefused, isTextEntry } from "./keyguard";
@@ -56,6 +56,11 @@ function shortcutHandler(id: ShortcutId): (() => void) | undefined {
   return slots.get(id)?.at(-1)?.run;
 }
 
+/** Run what a press of `id` runs, for a control that offers the binding by name. */
+export function pressShortcut(id: ShortcutId): void {
+  shortcutHandler(id)?.();
+}
+
 /** Answer a binding while this component is mounted and `enabled`. */
 export function useShortcutHandler(
   id: ShortcutId,
@@ -87,7 +92,7 @@ export function useShortcut(
 
 /** Answer each go-to binding whose screen this installation has turned on. */
 export function useGoToShortcuts(): void {
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   useEffect(() => {
     const unmount = KEYMAP.flatMap((entry) => {
       const target = entry.goesTo;

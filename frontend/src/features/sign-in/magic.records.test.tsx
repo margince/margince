@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../../format/format";
 import {
   jsonResponse,
   line,
@@ -113,6 +114,22 @@ function stubOpenedLine(
 }
 
 describe("a done line standing for many records", () => {
+  it("dates each record on the reader's own clock", async () => {
+    stubOpenedLine();
+    renderMagic("en", undefined, {}, "Asia/Tokyo");
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "View 2 changes" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    await within(dialog).findByText("GEM");
+    const stamp = dialog.querySelector('time[datetime="2026-09-13T07:30:00Z"]');
+    expect(stamp?.textContent).toBe(
+      formatDateTime("2026-09-13T07:30:00Z", "en", "Asia/Tokyo"),
+    );
+  });
+
   it("opens to each record, what changed on it, and its own undo", async () => {
     stubOpenedLine();
     renderMagic();

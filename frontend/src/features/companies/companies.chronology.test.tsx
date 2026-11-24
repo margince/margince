@@ -30,7 +30,6 @@ function History({ view }: Readonly<{ view: Company360 }>) {
     company,
     view,
     loading: false,
-    failed: false,
     active: true,
   });
   return (
@@ -108,5 +107,22 @@ describe("the Threads cut of a company history", () => {
         ACTIVITY_KINDS.filter((kind) => isConversationKind(kind)),
       ),
     );
+  });
+});
+
+describe("a company history narrowed to nothing", () => {
+  it("says the filters match nothing, not that the company has no activity", async () => {
+    const user = userEvent.setup();
+    draw(company360);
+
+    await user.type(
+      await screen.findByRole("searchbox", { name: "Search this timeline" }),
+      "no such words{Enter}",
+    );
+
+    expect(
+      await screen.findByText("No activity matches these filters."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No activity logged/)).toBeNull();
   });
 });

@@ -230,6 +230,7 @@ func teamReviewColumns(review TeamReview) (insertColumns, []any) {
 		created, won, lost = &review.Money.CreatedMinor, &review.Money.WonMinor, &review.Money.LostMinor
 		currency = &review.Money.Currency
 	}
+	add("pipeline_gaps", gapsOf(review.Money))
 	add("pipeline_created_minor", created)
 	add("pipeline_won_minor", won)
 	add("pipeline_lost_minor", lost)

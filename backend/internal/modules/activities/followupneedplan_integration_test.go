@@ -37,9 +37,10 @@ func TestTheMeetingFollowUpReadsABusyContactsHistoryOnce(t *testing.T) {
 	// Forty held meetings in the follow-up window, each with the rep and one
 	// customer whose thousand mails predate every meeting. No later send can
 	// settle a meeting before its content gate is evaluated. The engaged lead
-	// makes this contact a customer under the production follow-up rule.
+	// makes this contact a customer under the production follow-up rule. The
+	// rep owns it, so a follow-up may be filed to it.
 	if _, err := tx.Exec(ctx, `
-	INSERT INTO contact (full_name, source, captured_by) VALUES ('Busy Customer', 'manual', 'human:seed');
+	INSERT INTO contact (full_name, source, captured_by, owner_id) SELECT 'Busy Customer', 'manual', 'human:seed', id FROM busy_rep;
 	INSERT INTO lead (full_name, status, from_contact_id, source, captured_by)
 	  SELECT 'Busy Customer Lead', 'engaged', id, 'manual', 'human:seed' FROM contact WHERE full_name = 'Busy Customer';
 	CREATE TEMP TABLE busy_mail AS

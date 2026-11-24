@@ -13,8 +13,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // complianceFixtures fill the consent, privacy and retention calls. Each acts
@@ -102,12 +102,7 @@ var complianceFixtures = map[string]func(p *recordPool) map[string]any{
 			"subject_id": p.fact(review, "contact"), "kind": "in_person", "note": "They asked for it at the fair.", "occurred_at": pastInstant(p),
 		}}
 	},
-	"direct_communication_send": func(p *recordPool) map[string]any {
-		return map[string]any{"id": p.take("communication_review"), "request_body": map[string]any{
-			"reason_code": "contractual_necessity", "explanation": "The service agreement obliges us to send this notice.",
-			"warning_version": consent.OverrideWarningVersion, "acknowledged": true,
-		}}
-	},
+
 	"preview_controller_mail": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("mail_contact"), "kind": "privacy_notice"}
 	},
@@ -224,7 +219,7 @@ func complianceSeeders(s sweepSeed) map[string]func() string {
 		"confirm_submission": func() string {
 			contact := mailContact()
 			token := s.ownerScalar(`INSERT INTO confirm_token (contact_id, token_hash, delivered_to, expires_at)
-				VALUES ($1, $2, 'subject@role-sweep.test', $3) RETURNING id::text`, contact, "role-sweep-"+contact, clocktest.Now(s.t).Add(14*24*time.Hour))
+				VALUES ($1, $2, 'subject@role-sweep.test', $3) RETURNING id::text`, contact, storekit.TokenHash(contact), clocktest.Now(s.t).Add(14*24*time.Hour))
 			return s.ownerScalar(`INSERT INTO contact_confirm_submission (contact_id, token_id, kind, field, proposed_value)
 				VALUES ($1, $2, 'correction', 'full_name', 'Role Sweep Corrected') RETURNING id::text`, contact, token)
 		},

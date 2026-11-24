@@ -9,7 +9,6 @@ import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { problemCodeOf } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import {
   customInterval,
@@ -97,6 +96,16 @@ export function ReportingOverview({
       }
     </QueryGate>
   );
+}
+
+function NothingToShow({
+  noViews,
+  noDates,
+}: Readonly<{ noViews: boolean; noDates: boolean }>) {
+  const t = useT();
+  if (noViews) return <EmptyState>{t("reporting.noViews")}</EmptyState>;
+  if (noDates) return <EmptyState>{t("reporting.chooseDates")}</EmptyState>;
+  return null;
 }
 
 function OverviewBody({
@@ -209,11 +218,7 @@ function OverviewBody({
             )}
           </>
         }
-        caption={
-          validDates
-            ? periodCaption(query.data, locale, t)
-            : t("reporting.chooseDates")
-        }
+        caption={validDates ? periodCaption(query.data, locale, t) : undefined}
       >
         {scopeControl}
         <ReportingFilters
@@ -249,9 +254,7 @@ function OverviewBody({
           }}
         />
       </FilterBar>
-      {metrics.length === 0 && (
-        <EmptyState>{t("reporting.noViews")}</EmptyState>
-      )}
+      <NothingToShow noViews={metrics.length === 0} noDates={!validDates} />
       {invalidSelection && <ErrorLine error={query.error} />}
       {/* Its sources are its own, so a failed or unasked evaluation does not
           take the list down with it. */}
@@ -300,9 +303,9 @@ function OverviewBody({
                 <SaveReportingDialog
                   selection={evaluation.selection}
                   onClose={() => setSaving(false)}
-                  onSaved={(report) => {
+                  onSaved={(report, from) => {
                     setSaving(false);
-                    navigate({
+                    from.navigate({
                       screen: "analytics",
                       id: "reports",
                       id2: report.id,

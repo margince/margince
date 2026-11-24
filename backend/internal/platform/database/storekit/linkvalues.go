@@ -39,7 +39,7 @@ type LinkedValue struct {
 // record carries behind field.Link, at most linkedValueScanCap+1 of them. The
 // extra one tells capLinked that more exist.
 func LinkValuesSQL(field Field, arg func(any) int) (string, error) {
-	inner, err := scopedLinkInner(field, "TRUE", arg)
+	inner, err := scopedLinkInner(field, sqlTrue, arg)
 	if err != nil {
 		return "", err
 	}

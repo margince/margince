@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/continuity"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
@@ -38,7 +39,29 @@ func (s Server) jobsSummary(ctx context.Context) (crmcontracts.HealthSource, []c
 	source.ObservedAt = &now
 	source.Condition, source.Code = healthUnknown, "queue_checked"
 	source.Availability = healthUnobserved
-	return summarizeJobKinds(source, rows)
+	source, findings, err := summarizeJobKinds(source, rows)
+	if err != nil {
+		return source, nil, err
+	}
+	fellBack, err := healthTx(ctx, s.jobHealthHandlers.pool, identity.ZoneFallsBackTx)
+	if err != nil || !fellBack {
+		return source, findings, err
+	}
+	return source, append(findings, zoneFinding(source)), nil
+}
+
+// zoneFinding tells an admin the stored installation zone will not load, so
+// background runs count their days in UTC until a zone is chosen again.
+func zoneFinding(source crmcontracts.HealthSource) crmcontracts.HealthFinding {
+	f := healthFinding(source, "zone_unresolved", healthWaitingHuman, 1, "items")
+	f.Count, f.Unit = nil, nil
+	f.Scope = crmcontracts.HealthFindingScopeInstallation
+	f.Responsible = crmcontracts.HealthFindingResponsibleAdministrator
+	f.Impact = crmcontracts.HealthFindingImpactMeasured
+	f.Urgency = 1
+	f.Recovery = "zone"
+	f.Action.Destination = crmcontracts.HealthActionDestinationRegional
+	return f
 }
 
 func summarizeJobKinds(source crmcontracts.HealthSource, rows []jobs.KindHealth) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {

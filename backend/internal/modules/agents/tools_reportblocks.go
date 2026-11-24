@@ -36,10 +36,11 @@ type DescribeReportBlocksResult struct {
 func (t describeReportBlocks) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "describe_report_blocks", Title: "Describe the report block grammar",
-		Version:       toolVersionV1,
-		Description:   describeReportBlocksCopy.render(),
-		Instead:       describeReportBlocksCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Version:           toolVersionV1,
+		Description:       describeReportBlocksCopy.render(),
+		Instead:           describeReportBlocksCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeReportBlocks",
 		// No arguments. The grammar is the same for every caller — it is the
 		// engine's, not a workspace's — so a filter would only let one narrow

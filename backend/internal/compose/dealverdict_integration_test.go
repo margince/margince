@@ -97,7 +97,8 @@ func setupDealVerdict(t *testing.T) *dealVerdictEnv {
 	pipeline, open, _ := integration.DealFixture(t, e)
 	owner, amount, currency := ids.From[ids.UserKind](e.Rep1), int64(4_000_000), "EUR"
 	created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Support rollout", PipelineID: pipeline, StageID: open, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Support rollout", PipelineID: pipeline, StageID: open, OwnerID: &owner,
 		AmountMinor: &amount, Currency: &currency,
 	})
 	if err != nil {
@@ -205,6 +206,10 @@ func TestMarginceSetsWhatTheCustomerSaidAndAnUndoHoldsItBack(t *testing.T) {
 		WHERE l.deal_id = $1 AND a.subject = 'Margince updated this deal'`, v.deal); n != 1 {
 		t.Errorf("timeline notes = %d, want one for the night", n)
 	}
+	if n := v.WsCount(t, `SELECT count(*) FROM deal_correction c JOIN activity a ON a.id = c.note_activity_id
+		WHERE c.deal_id = $1 AND a.subject = 'Margince updated this deal'`, v.deal); n != 3 {
+		t.Errorf("corrections naming the night's note = %d, want all 3", n)
+	}
 	receipts := attentionReceipts{svc: approvals.NewService(InstallationDB(v.Pool)), deals: v.Deals}
 	recent, err := receipts.Recent(v.owner(t), v.now.Add(72*time.Hour), 10)
 	if err != nil {
@@ -238,9 +243,7 @@ func TestMarginceSetsWhatTheCustomerSaidAndAnUndoHoldsItBack(t *testing.T) {
 
 func TestASwitchedOffKindIsLeftAlone(t *testing.T) {
 	v := setupDealVerdict(t)
-	if _, err := approvals.NewService(InstallationDB(v.Pool)).SetAutoApply(v.owner(t), deals.VerdictAmountCorrection, false); err != nil {
-		t.Fatal(err)
-	}
+	integration.TurnKindOff(v.owner(t), t, approvals.NewService(InstallationDB(v.Pool)), deals.VerdictAmountCorrection)
 	v.run(t)
 	if got := v.field(t, "amount_minor"); got != "4000000" {
 		t.Fatalf("amount = %s, want it untouched with the switch off", got)
@@ -332,7 +335,8 @@ func TestACitedNoteMovedAwayWhileTheModelReadsStopsTheWrite(t *testing.T) {
 	v := setupDealVerdict(t)
 	owner := ids.From[ids.UserKind](v.Rep1)
 	other, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
-		Name: "Another deal", PipelineID: v.pipeline, StageID: v.stage, OwnerID: &owner,
+		Source: "manual",
+		Name:   "Another deal", PipelineID: v.pipeline, StageID: v.stage, OwnerID: &owner,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -510,4 +514,13 @@ func TestAnInboundCopyFromASeatIsMarkedAsOurWords(t *testing.T) {
 		}
 	}
 	t.Fatal("the inbound copy was not read")
+}
+
+func TestTheInstallationSwitchStopsTheVerdictWrites(t *testing.T) {
+	v := setupDealVerdict(t)
+	integration.SetAutoApplyEnabled(t, v.Env, false)
+	v.run(t)
+	if v.field(t, "amount_minor") != "4000000" || v.field(t, "win_probability_override") != "" {
+		t.Fatal("the verdict wrote with the installation switch off")
+	}
 }

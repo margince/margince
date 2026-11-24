@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -28,10 +29,11 @@ type RecordDealsHandOver struct {
 
 // heldOnRecordSQL selects the open deals owner holds on one contact or company,
 // with whether each goes with the record. A company takes all its deals. A
-// contact takes a deal only as its sole live stakeholder on a deal with no
-// company. Any other deal is somebody else's business too and stays. Only the
-// contact's own stakeholder rows are read under the edge grant; the check for
-// others decides and returns nothing.
+// contact takes a deal only as its sole current stakeholder on a deal with no
+// company. A colleague whose seat has ended does not hold it back. Any other
+// deal is somebody else's business too and stays. Only the contact's own
+// stakeholder rows are read under the edge grant; the check for others decides
+// and returns nothing.
 func heldOnRecordSQL(ctx context.Context, recordType string, recordID ids.UUID, owner ids.UserID, args *[]any) (where, moves string, err error) {
 	arg := func(v any) int { *args = append(*args, v); return len(*args) }
 	held := fmt.Sprintf(`%s AND d.owner_id = $%d`, openDealSQL, arg(owner))
@@ -54,8 +56,8 @@ func heldOnRecordSQL(ctx context.Context, recordType string, recordID ids.UUID, 
 			 WHERE r.deal_id = d.id AND r.kind = 'deal_stakeholder' AND r.contact_id = $%d
 			   AND r.archived_at IS NULL AND (%s)) AND %s`, contact, edgeScope, held)
 		moves = fmt.Sprintf(`d.company_id IS NULL AND NOT EXISTS (SELECT 1 FROM relationship o
-			 WHERE o.deal_id = d.id AND o.kind = 'deal_stakeholder' AND o.archived_at IS NULL
-			   AND o.contact_id IS DISTINCT FROM $%d)`, contact)
+			 WHERE o.deal_id = d.id AND %s
+			   AND o.contact_id IS DISTINCT FROM $%d)`, dealseat.CurrentSQL("o"), contact)
 		return where, moves, nil
 	}
 	return "", "", fmt.Errorf("deals: no deals hang off a %q", recordType)

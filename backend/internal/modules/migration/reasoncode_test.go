@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -44,6 +45,29 @@ func TestEveryReasonCodeHasAnEnglishRendering(t *testing.T) {
 				t.Errorf("%s in %s names %v, want exactly the declared %v", code, lang, got, want)
 			}
 		}
+	}
+}
+
+// quotedPlaceholder is one value between two quotation marks, written into the
+// sentence rather than left to {name:q}.
+var quotedPlaceholder = regexp.MustCompile(`(["“„”'])\{[a-z_]+\}(["“”'])`)
+
+// A value is quoted in its language's own marks, either through {name:q} or
+// written around {name}; never in Go's quotes or another language's marks.
+func TestEveryReasonQuotesAValueInItsLanguagesOwnMarks(t *testing.T) {
+	for _, code := range ReasonCodes() {
+		for _, lang := range textlang.Shipped {
+			opening, closing := langcopy.For(string(lang)).Marks()
+			for _, m := range quotedPlaceholder.FindAllStringSubmatch(ReasonTemplate(code, lang), -1) {
+				if m[1] != opening || m[2] != closing {
+					t.Errorf("%s in %s quotes a value with %s…%s, want %s…%s", code, lang, m[1], m[2], opening, closing)
+				}
+			}
+		}
+	}
+	quoted := Why(ReasonPipelineUnknown, "value", `Q4 "Neu"`, "names", "Sales")
+	if got := quoted.In(textlang.German); !strings.HasPrefix(got, `„Q4 "Neu"“`) {
+		t.Errorf("german = %s, want the value in German marks with nothing escaped", got)
 	}
 }
 

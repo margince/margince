@@ -37,7 +37,7 @@ var publicRequests = map[string]map[string]bool{
 	"/v1/auth/mfa": {http.MethodPost: true},
 	// The reachability probe external uptime monitors call: a fixed body,
 	// no dependency work, nothing disclosed (see compose.Server.GetStatus).
-	"/v1/status": {http.MethodGet: true},
+	"/v1/status": {http.MethodGet: true, http.MethodHead: true},
 	// Dispact's push receiver: the signature with the sealed events secret is
 	// the credential, and the handler checks it before reading anything.
 	"/v1/channel-events/dispact": {http.MethodPost: true},
@@ -177,10 +177,12 @@ func (h Handlers) Middleware(next http.Handler) http.Handler {
 		ctx = principal.WithWorkspaceID(ctx, wsID.UUID)
 
 		if AdmittedWithoutSession(r) {
-			// Sign-in stays open after the trial, so a seat can reach the screen
-			// that says so. The anonymous booking surface is work, and stops.
+			// Sign-in stays open while locked, so a seat can reach the screen that
+			// says so. A chat notice only records a channel that is gone, and its
+			// pull waits for the paused worker. The anonymous booking surface is
+			// work, and stops.
 			if strings.HasPrefix(r.URL.Path, publicBookingPrefix) {
-				if err := h.refuseAfterTrial(ctx, r); err != nil {
+				if err := h.refuseWhenLocked(ctx, r); err != nil {
 					httperr.Write(w, r, err)
 					return
 				}

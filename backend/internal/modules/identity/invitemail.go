@@ -123,30 +123,33 @@ func (s *Service) InviteMailRecipient(ctx context.Context, actor Identity, rawTo
 }
 
 // ResendInvite mints a new set-password link for an invited member, the way
-// IssuePasswordLink does, and returns it for the caller to mail.
-func (s *Service) ResendInvite(ctx context.Context, actor Identity, userID ids.UserID) (string, error) {
-	raw, _, err := s.issueSetPasswordToken(ctx, actor, userID, resendTarget, true)
-	return raw, err
+// IssuePasswordLink does. It returns the link for the caller to mail, and the
+// member read in the same transaction.
+func (s *Service) ResendInvite(ctx context.Context, actor Identity, userID ids.UserID) (userRow, string, error) {
+	var member userRow
+	raw, _, err := s.issueSetPasswordToken(ctx, actor, userID, resendTarget, true, func(tx pgx.Tx) error {
+		var err error
+		member, err = readMemberTx(ctx, tx, actor, userID)
+		return err
+	})
+	if err != nil {
+		return userRow{}, "", err
+	}
+	return member, raw, nil
 }
 
-// writeInvitedUser reads the member back and answers it with whether the
-// invitation mail was handed to the sender.
-func (h Handlers) writeInvitedUser(
-	w http.ResponseWriter, r *http.Request, actor Identity, userID ids.UserID, status int, queued bool,
-) {
-	row, err := h.svc.GetUser(r.Context(), actor, userID)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	wire := wireUserWithRoles(row)
+// writeInvitedMember answers the member the invitation write read back, with
+// whether the invitation mail was handed to the sender. It reads nothing, so
+// nothing after the commit can turn a created member into an error.
+func (h Handlers) writeInvitedMember(w http.ResponseWriter, member userRow, status int, queued bool) {
+	wire := wireUserWithRoles(member)
 	wire.InviteEmail = &crmcontracts.InviteEmailHandoff{Sendable: h.canSendPasswordLink(), Queued: queued}
 	httperr.WriteJSON(w, status, wire)
 }
 
 // ResendUserInvite (POST /users/{id}/resend-invite) mails an invited member a
 // new set-password link, replacing any older one.
-func (h Handlers) ResendUserInvite(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) ResendUserInvite(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ResendUserInviteParams) {
 	actor, ok := h.actingFor(w, r)
 	if !ok {
 		return
@@ -178,18 +181,13 @@ func (h Handlers) ResendUserInvite(w http.ResponseWriter, r *http.Request, id cr
 			"this user in the last hour; wait before sending another"))
 		return
 	}
-	rawToken, err := h.svc.ResendInvite(ctx, actor, target)
+	member, rawToken, err := h.svc.ResendInvite(ctx, actor, target)
 	if err != nil {
 		err = conflictIf(err, errMemberNotInvited, "member_not_invited",
 			"this member has already set a password, or is no longer active, so there is no invitation to send")
 		httperr.Write(w, r, archivedRoleRefusal(err))
 		return
 	}
-	row, err := h.svc.GetUser(ctx, actor, target)
-	if err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	queued := h.sendInvite(r, row.Email, rawToken, actor)
-	h.writeInvitedUser(w, r, actor, target, http.StatusOK, queued)
+	queued := h.sendInvite(r, rawToken, actor)
+	h.writeInvitedMember(w, member, http.StatusOK, queued)
 }

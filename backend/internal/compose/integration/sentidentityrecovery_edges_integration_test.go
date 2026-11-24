@@ -40,8 +40,8 @@ func setupRecoveryRecipients(t *testing.T, recipients recoveryRecipients) (recov
 	if recipients.copyColleague {
 		p.DescribeCompany(t)
 		colleague = createdID(t, p.AppEnv, "/v1/users", AnyMap{"email": "copy@recovery.test", "display_name": "Copy recipient", "role": "rep"})
-		p.inWorkspace(t, `INSERT INTO capture_connection (provider,user_id,scopes,status,auth,provider_scopes,account_label)
- VALUES ('gmail',@user,'{}','connected','{"refresh_token":"r","granted":[]}',@scopes,'copy@recovery.test')`, pgx.StrictNamedArgs{"user": colleague, "scopes": []string{apptest.GmailReadonlyScope}})
+		p.inWorkspace(t, `INSERT INTO capture_connection (provider,user_id,status,auth,provider_scopes,account_label)
+ VALUES ('gmail',@user,'connected','{"refresh_token":"r","granted":[]}',@scopes,'copy@recovery.test')`, pgx.StrictNamedArgs{"user": colleague, "scopes": []string{apptest.GmailReadonlyScope}})
 		establishRecoveryRecipient(t, p, "copy@recovery.test")
 		cc = append(cc, "copy@recovery.test")
 	}

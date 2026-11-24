@@ -494,10 +494,8 @@ jobs:
         with:
           go-version-file: ${{ needs.ci-image.outputs.pinned-image == '' && 'backend/go.mod' || '' }}
           cache-dependency-path: backend/go.sum
-      # The shared Go build cache (see .github/actions/go-build-cache): this job
-      # compiles the untagged tree twice over — `go build ./...` plus the unit
-      # test binaries — and is the natural writer of the `plain` flavour every
-      # other untagged Go job reads.
+      # The shared Go build cache (see .github/actions/go-build-cache). Restored,
+      # never saved: cache-warm.yml writes the `plain` entries on main and develop.
       - name: Restore the Go build cache
         id: go-cache
         uses: ./.github/actions/go-build-cache
@@ -553,7 +551,8 @@ jobs:
         # Outside a PR into develop, the unit leg's pass is also the test-input
         # census: testlog-exec.sh logs what each package read, and the next step
         # judges it. It runs uncached (-count=1), since a replayed result reads
-        # nothing; develop keeps the test cache.
+        # nothing. No leg replays a test result here: TEST_SHUFFLE_SEED adds
+        # -shuffle, and Go caches no result run with it.
         run: |
           set -o pipefail
           census=()
@@ -584,7 +583,7 @@ jobs:
         run: |
           printf 'require example.margince.dev/ext/crm-hello v0.0.0\nreplace example.margince.dev/ext/crm-hello => ../fixtures/extensions/crm-hello\n' >> instance/go.mod
           make -C backend build check-composition
-          (cd backend && GOWORK="$PWD/../build/composition/go.work" go test ./cmd/...)
+          (cd backend && GOWORK="$PWD/../build/composition/go.work" go test -shuffle="$TEST_SHUFFLE_SEED" ./cmd/...)
           make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"
       # Extension units are their own Go modules, so the shards' profile never
       # reaches them.
@@ -1230,7 +1229,7 @@ jobs:
         run: |
           # Composed boot (ADR-0120): a plain `go run` would resolve the
           # vanilla composition stub and this lane would never boot with
-          # the enabled extensions (extensions/de ships by default). The
+          # the enabled extensions (extensions/eu ships by default). The
           # generator itself pins the ROOT workspace (the tool is its own
           # module — a stray GOWORK would break its resolution).
           GOWORK="$PWD/../go.work" go run ./tools/gen-composition -include-development
@@ -1270,7 +1269,10 @@ jobs:
     name: home-budget (advisory)
     timeout-minutes: 60
     needs: [changes]
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # Switched off until someone owns its budgets: its noise taught reviewers to
+    # ignore it. Restore the commented condition to turn it back on.
+    # if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: false
     runs-on: ubuntu-latest
     permissions:
       contents: read

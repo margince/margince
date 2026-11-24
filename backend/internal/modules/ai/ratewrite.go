@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -63,8 +64,14 @@ type SetModelRateInput struct {
 	ClearLongContext bool
 }
 
-func (s *RateStore) todayUTC() time.Time {
-	return s.clock().UTC().Truncate(24 * time.Hour)
+// todayIn is the store clock's day in the installation's zone, cut by the
+// database the way every other reader of the sheet cuts it.
+func (s *RateStore) todayIn(ctx context.Context, tx pgx.Tx) (time.Time, error) {
+	var day time.Time
+	if err := tx.QueryRow(ctx, `SELECT `+occurredday.TodaySQL("$1::timestamptz"), s.clock()).Scan(&day); err != nil {
+		return time.Time{}, fmt.Errorf("ai: reading the installation's day: %w", err)
+	}
+	return day, nil
 }
 
 // modelRateLockKey encodes (provider, model_id) into ONE injective advisory-
@@ -92,7 +99,7 @@ func modelRateMicroUSD(in SetModelRateInput) (input, output, cacheRead, cacheWri
 	return
 }
 
-// SetModelRate appends (or corrects, same UTC day) one effective-dated
+// SetModelRate appends (or corrects, same installation day) one effective-dated
 // model price. Admin/ops-gated; append-forward (rejects a past effective
 // date). Audit-only by ratification: the closed event catalog has no
 // ai/pricing stream to ride (see auditOnlyWrites in writeshape_test.go).
@@ -259,11 +266,12 @@ func modelRateImage(r preparedModelRate, effDate time.Time) map[string]any {
 	}, r.band)
 }
 
-// writeModelRate does the transactional body: resolve and guard the effective
-// day against a clock sampled INSIDE the tx (so a write that waited for the pool
-// across UTC midnight is stored against the day it commits — append-forward
-// stays true at write time), require the grant the upsert turns out to need,
-// then upsert the append-forward row and audit — all in the caller-owned tx.
+// writeModelRate does the transactional body in the caller-owned tx. It first
+// resolves and guards the effective day against a clock sampled inside the tx.
+// A write that waited for the pool across midnight is then stored against the
+// day it commits, so append-forward stays true at write time. It then requires
+// the grant the upsert turns out to need. Last it upserts the append-forward
+// row and audits it.
 func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedModelRate, effectiveDate time.Time) (ModelRateRow, error) {
 	// Serialize writers of this model's sheet identity BEFORE sampling the
 	// clock: a write that waited here for a precondition-holding transaction
@@ -271,11 +279,14 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	if err := storekit.LockWriteIdentity(ctx, tx, "ai_model_rate", modelRateLockKey(p.provider, p.modelID)); err != nil {
 		return ModelRateRow{}, err
 	}
-	today := s.todayUTC()
+	today, err := s.todayIn(ctx, tx)
+	if err != nil {
+		return ModelRateRow{}, err
+	}
 	if effectiveDate.IsZero() {
 		effectiveDate = today
 	}
-	effDate := effectiveDate.UTC().Truncate(24 * time.Hour)
+	effDate := storekit.AsDate(effectiveDate)
 	if effDate.Before(today) {
 		return ModelRateRow{}, rateInvalid("effective_date", "rate_past", "effective_date cannot be in the past")
 	}
@@ -362,14 +373,18 @@ func (s *RateStore) ListEffectiveModelRates(ctx context.Context) ([]ModelRateRow
 	var rows []ModelRateRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Sample "today" inside the transaction: a wait for a pooled
-		// connection across UTC midnight must not list yesterday's cutoff.
+		// connection across midnight must not list yesterday's cutoff.
+		today, err := s.todayIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		r, err := tx.Query(ctx, `
 			SELECT DISTINCT ON (provider, model_id)
 			       provider, model_id, input_per_mtok_microusd, output_per_mtok_microusd,
 			       cache_read_per_mtok_microusd, cache_write_per_mtok_microusd, effective_date, lane, source,
 			       `+longContextColumns("ai_model_rate")+`
 			FROM ai_model_rate WHERE effective_date <= $1
-			ORDER BY provider, model_id, effective_date DESC`, s.todayUTC())
+			ORDER BY provider, model_id, effective_date DESC`, today)
 		if err != nil {
 			return fmt.Errorf("list effective ai_model_rate: %w", err)
 		}

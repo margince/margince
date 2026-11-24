@@ -159,7 +159,7 @@ func (analyticsSchemaResource) Resources(context.Context) []mcp.Resource {
 // masked field never appears in it.
 func (a analyticsSchemaResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != AnalyticsSchemaURI {
-		return mcp.ResourceContents{}, fmt.Errorf("compose: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	text, err := analyticsVocabularyText(ctx, a.db)
 	if err != nil {

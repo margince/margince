@@ -52,6 +52,8 @@ type noFlush struct{}
 
 func (noFlush) EnqueueFlushTx(context.Context, pgx.Tx, ids.UUID) error { return nil }
 
+func (noFlush) EnqueuePullTx(context.Context, pgx.Tx, ids.UUID) error { return nil }
+
 type flushEnv struct {
 	owner           *pgx.Conn
 	pool            *pgxpool.Pool
@@ -93,7 +95,7 @@ func setupFlush(t *testing.T) *flushEnv {
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, 'Chat')`, pipeline)
 	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Acme renewal', 'open', $2, $3, $4, 'seed', 'system')`, e.deal, e.rep, pipeline, stage)
+		VALUES ($1, 'Acme renewal', 'open', $2, $3, $4, 'manual', 'system')`, e.deal, e.rep, pipeline, stage)
 	for id, row := range map[ids.UUID][2]string{e.shared: {"Shared plan", "workspace"}, e.private: {"Private aside", "participants"}} {
 		e.exec(t, `INSERT INTO activity (id, kind, subject, audience, source, captured_by) VALUES ($1, 'note', $2, $3, 'manual', 'human:x')`, id, row[0], row[1])
 		e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, id, e.deal)

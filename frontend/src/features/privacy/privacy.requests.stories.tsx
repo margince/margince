@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
@@ -173,4 +174,26 @@ export const WorkingPhone: Story = {
 export const WorkingDark: Story = {
   globals: { theme: "dark" },
   render: drawer(ASSIGNED),
+};
+
+/** A close with a requester address that is not one, refused on its field. */
+export const RequesterEmailRefused: Story = {
+  render: drawer({ ...EXTERNAL, identity_verified: true }),
+  play: async () => {
+    const page = within(document.body);
+    await userEvent.type(
+      await page.findByRole("textbox", { name: "Resolution" }),
+      "Sent the export.",
+    );
+    await userEvent.type(
+      page.getByRole("textbox", { name: "Requester’s email address" }),
+      "not-an-email",
+    );
+    await userEvent.click(page.getByRole("button", { name: "Fulfill" }));
+    await expect(
+      await page.findByText(
+        "Enter an email address for Requester’s email address.",
+      ),
+    ).toBeVisible();
+  },
 };

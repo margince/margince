@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -61,27 +62,28 @@ func stageMoveFirst(changes []VerdictChange) []int {
 	return order
 }
 
-// applyVerdictStageMove moves the locked deal and answers the deal's values
-// after the move, for the changes that follow it.
+// applyVerdictStageMove moves the locked deal. It answers the deal's values
+// after the move, for the changes that follow it, and the id of its correction
+// row.
 func (s *Store) applyVerdictStageMove(
 	ctx context.Context, tx pgx.Tx, in VerdictInput, current VerdictValues, change VerdictChange,
 	active []fieldcatalog.Column,
-) (string, VerdictValues, error) {
+) (string, VerdictValues, ids.UUID, error) {
 	allowed, err := in.Allowed(ctx, tx, change.Correction)
 	if err != nil || !allowed {
-		return VerdictDroppedSwitch, current, err
+		return VerdictDroppedSwitch, current, ids.Nil, err
 	}
 	installationOn, err := config.StoredApplyTx(ctx, tx, config.Bound(), StageAutopilotEnabled)
 	if err != nil || !installationOn {
-		return VerdictDroppedSwitch, current, err
+		return VerdictDroppedSwitch, current, ids.Nil, err
 	}
 	edited, err := humanEditedAfter(ctx, tx, in.DealID, []string{stageIDColumn}, change.NewestCitedAt)
 	if err != nil || edited {
-		return VerdictDroppedHuman, current, err
+		return VerdictDroppedHuman, current, ids.Nil, err
 	}
 	admitted, err := s.stageMoveAdmitted(ctx, tx, in.DealID, current.StageID, change)
 	if err != nil || admitted != VerdictApplied {
-		return admitted, current, err
+		return admitted, current, ids.Nil, err
 	}
 	evidence := verdictEvidence(in, change)
 	moved, refused, err := s.advanceInSavepoint(ctx, tx, in.DealID, AdvanceDealInput{
@@ -90,13 +92,14 @@ func (s *Store) applyVerdictStageMove(
 		WonWithoutContractReason: nil,
 	}, active)
 	if err != nil || refused {
-		return VerdictDroppedStageRefused, current, err
+		return VerdictDroppedStageRefused, current, ids.Nil, err
 	}
-	if _, err := recordStageCorrection(ctx, tx, in.DealID, moved, VerdictStageMoveCorrection); err != nil {
-		return "", current, err
+	correction, err := recordStageCorrection(ctx, tx, in.DealID, moved, VerdictStageMoveCorrection)
+	if err != nil {
+		return "", current, ids.Nil, err
 	}
 	after, err := readVerdictValues(ctx, tx, in.DealID)
-	return VerdictApplied, after, err
+	return VerdictApplied, after, correction, err
 }
 
 // stageMoveAdmitted asks under the row lock whether the target is still a
@@ -297,7 +300,8 @@ func (s *Store) ledgerSettles(ctx context.Context, tx pgx.Tx, deal ids.DealID, c
 // the deal, and holds both rows until the move commits.
 func holdActivityOnDeal(ctx context.Context, tx pgx.Tx, deal ids.DealID, activity ids.UUID) (bool, error) {
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity_link l JOIN activity a ON a.id = l.activity_id
-		WHERE l.deal_id = $1 AND a.id = $2 AND a.archived_at IS NULL FOR SHARE OF l, a`, deal, activity)
+		WHERE l.deal_id = $1 AND a.id = $2 AND a.archived_at IS NULL AND `+relstrength.DealEvidenceSQL("a", "l.deal_id")+`
+		FOR SHARE OF l, a`, deal, activity)
 	if err != nil {
 		return false, fmt.Errorf("deals: holding a cited activity: %w", err)
 	}
@@ -337,7 +341,7 @@ func (s *Store) buyerWrote(ctx context.Context, tx pgx.Tx, deal ids.DealID, acti
 		  JOIN deal d ON d.id = $1
 		  JOIN relationship r ON r.archived_at IS NULL
 		   AND ((r.kind = 'employment' AND r.company_id = d.company_id AND `+employment.IsCurrentSQL("r.ended_at")+`)
-		        OR (r.kind = 'deal_stakeholder' AND r.deal_id = d.id))
+		        OR (`+dealseat.CurrentSQL("r")+` AND r.deal_id = d.id))
 		 WHERE a.id = $2 AND a.kind = 'email'
 		   AND `+relstrength.ParticipantNamesSQL("r.contact_id", "p")+`
 		   FOR SHARE OF r`, deal, activity)

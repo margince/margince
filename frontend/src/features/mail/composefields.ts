@@ -5,9 +5,14 @@ import { useCallback, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import { paragraphsFrom } from "../../design-system/richtext";
-import { isLocale, type Locale } from "../../i18n/locale";
+import type { Locale } from "../../i18n/locale";
 import type { CommunicationContext } from "../../lib/compose-context";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useFromMailbox } from "./compose.from";
+import {
+  type RecipientCountry,
+  useRecipientCountries,
+} from "./composecountries";
 import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
 import {
   type DraftMarks,
@@ -16,6 +21,7 @@ import {
   oneKeystroke,
   plainText,
 } from "./composedraftmarks";
+import { chosenLanguage, editorStateOf } from "./composeeditorstate";
 import type { AddressLine } from "./composehead";
 import type { SavedDraftFields } from "./composesaveddraftcalls";
 import { type ScheduleFields, scheduleFields } from "./composeschedule";
@@ -65,6 +71,7 @@ export type FieldsSnapshot = Readonly<{
   reasoning: DraftReason[];
   scope: ProjectScope | undefined;
   language: Locale | null;
+  recipientCountries?: readonly RecipientCountry[];
 }>;
 
 export function emptyFields(): FieldsSnapshot {
@@ -134,6 +141,7 @@ export function useComposeFields({
   edit?: EditSeed;
 }>) {
   const [to, setTo] = useState<string[]>(edit?.to ?? []);
+  const countries = useRecipientCountries(edit?.recipientCountries);
   const [cc, setCc] = useState<string[]>(edit?.cc ?? []);
   // Copy rows holding a value may not be hidden, so they stay open once opened.
   const [bcc, setBcc] = useState<string[]>(edit?.bcc ?? []);
@@ -166,6 +174,10 @@ export function useComposeFields({
   const [context, setContext] = useState<CommunicationContext | "">(
     edit?.context ?? initialReason ?? "",
   );
+  // The meeting a drafted reason rests on, when the draft was written from it.
+  const [meetingEvidence, setMeetingEvidence] = useState<string | undefined>();
+  // The reason came from a drafting instruction, so a later one may replace it.
+  const [reasonFromDraft, setReasonFromDraft] = useState(false);
   // The send-later moment as datetime-local text in the rep's zone. It
   // becomes an instant at submit (see scheduleFields).
   const [sendAt, setSendAtValue] = useState(edit?.sendAt ?? "");
@@ -328,6 +340,7 @@ export function useComposeFields({
     forgetMarks();
     forgetRefusals();
     setTo([...saved.to]);
+    countries.restore(saved.recipientCountries);
     setCc([...saved.cc]);
     setBcc([...saved.bcc]);
     if (saved.cc.length + saved.bcc.length > 0) setCopiesOpen(true);
@@ -335,6 +348,8 @@ export function useComposeFields({
     setBody(saved.body);
     setHtml(saved.html);
     setContext(saved.context);
+    setMeetingEvidence(undefined);
+    setReasonFromDraft(false);
     setSendAtValue(saved.sendAt);
     setSendSchedule(saved.sendSchedule);
     const state = saved.editorState;
@@ -378,6 +393,7 @@ export function useComposeFields({
     reasoning: account.reasoning,
     scope: account.scope,
     language,
+    recipientCountries: countries.stated,
   });
 
   const load = (next: FieldsSnapshot) => {
@@ -386,6 +402,7 @@ export function useComposeFields({
     forgetMarks();
     forgetRefusals();
     setTo(next.to);
+    countries.restore(next.recipientCountries);
     setCc(next.cc);
     setBcc(next.bcc);
     setCopiesOpen(next.copiesOpen);
@@ -395,6 +412,8 @@ export function useComposeFields({
     setIntent(next.intent);
     setDraftedIntent(next.draftedIntent);
     setContext(next.context);
+    setMeetingEvidence(undefined);
+    setReasonFromDraft(false);
     setSendAtValue(next.sendAt);
     setSendSchedule(next.sendSchedule);
     setProvenance(next.provenance);
@@ -410,6 +429,7 @@ export function useComposeFields({
     editorState: editorStateOf({ intent, provenance, servedBody, language }),
     to,
     setTo,
+    countries,
     cc,
     setCc,
     bcc,
@@ -418,6 +438,7 @@ export function useComposeFields({
     openCopies: () => setCopiesOpen(true),
     subject,
     setSubject,
+    from: useFromMailbox(),
     body,
     html,
     intent,
@@ -426,6 +447,10 @@ export function useComposeFields({
     setDraftedIntent,
     context,
     setContext,
+    meetingEvidence,
+    setMeetingEvidence,
+    reasonFromDraft,
+    setReasonFromDraft,
     sendAt,
     sendSchedule,
     scheduleControl: { sendAt, timezone: scheduleZone },
@@ -462,26 +487,3 @@ export function useComposeFields({
 }
 
 export type ComposeFields = ReturnType<typeof useComposeFields>;
-
-// A saved code this build does not ship is no choice it can name again.
-function chosenLanguage(saved: string | undefined): Locale | null {
-  return saved !== undefined && isLocale(saved) ? saved : null;
-}
-
-function editorStateOf(
-  fields: Pick<
-    FieldsSnapshot,
-    "intent" | "provenance" | "servedBody" | "language"
-  >,
-): components["schemas"]["MailDraftEditorState"] {
-  return {
-    intent: fields.intent,
-    ai_generated: fields.provenance?.ai_generated ?? false,
-    ai_disclosure: fields.provenance?.ai_disclosure ?? undefined,
-    voice_profile_version:
-      fields.provenance?.voice_profile_version ?? undefined,
-    voice_degraded: fields.provenance?.voice_degraded ?? false,
-    served_body: fields.servedBody,
-    ...(fields.language ? { language: fields.language } : {}),
-  };
-}

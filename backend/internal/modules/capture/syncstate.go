@@ -61,6 +61,19 @@ const (
 	classForbidden errorClass = "forbidden"
 )
 
+// weatherClasses are the provider-side failures that a finished import's pages
+// make worth retrying at once: the provider answered those pages.
+var weatherClasses = []string{string(classRateLimited), string(classUnreachable)}
+
+// retryWeatheredSyncTx makes the run's own connection due now when its last
+// sync failed on weather. The sync's next result keeps or clears the class.
+func retryWeatheredSyncTx(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
+	_, err := makeDueNowTx(ctx, tx,
+		`c.id = (SELECT connection_id FROM capture_backfill WHERE id = @run) AND s.last_error_class = ANY(@weather)`,
+		pgx.NamedArgs{"run": backfillID, "weather": weatherClasses})
+	return err
+}
+
 // classifySyncError maps a connector failure onto the shared vocabulary. Any
 // error outside it is internal: our bug, not the provider's weather.
 func classifySyncError(err error) errorClass {
@@ -112,9 +125,13 @@ func (r *Registry) recordSyncSuccessTx(ctx context.Context, tx pgx.Tx, connectio
 		pgx.NamedArgs{"id": connectionID, "interval": interval, "observed": now, "received": receivedAt}); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `
+	revived, err := tx.Exec(ctx, `
 		UPDATE capture_connection SET status = 'connected'
-		WHERE id = @id AND status = 'error' AND archived_at IS NULL`, pgx.NamedArgs{"id": connectionID}); err != nil {
+		WHERE id = @id AND status = 'error' AND archived_at IS NULL`, pgx.NamedArgs{"id": connectionID})
+	if err != nil {
+		return err
+	}
+	if err := storekit.CaptureFactsChangedBy(ctx, tx, revived); err != nil {
 		return err
 	}
 	return reviveTruncatedBackfillTx(ctx, tx, connectionID)
@@ -261,9 +278,7 @@ func (r *Registry) recordSyncFailure(ctx context.Context, snapshot syncSnapshot,
 			// The connection needs its human, not a retry: park it. The
 			// due-scan only selects connected/error, so no next_sync_at
 			// gymnastics are needed.
-			if _, err := tx.Exec(ctx, `
-				UPDATE capture_connection SET status = 'reauth_required'
-				WHERE id = $1 AND status IN ('connected','error') AND archived_at IS NULL`, connectionID); err != nil {
+			if err := parkForReauthTx(ctx, tx, connectionID); err != nil {
 				return err
 			}
 		case classRateLimited:
@@ -286,9 +301,7 @@ func (r *Registry) recordSyncFailure(ctx context.Context, snapshot syncSnapshot,
 			// Degraded, probed daily — never a tombstone. One success in the
 			// daily probe flips the status back (recordSyncSuccess).
 			delay = errProbeInterval
-			if _, err := tx.Exec(ctx, `
-				UPDATE capture_connection SET status = 'error'
-				WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`, connectionID); err != nil {
+			if err := degradeConnectionTx(ctx, tx, connectionID); err != nil {
 				return err
 			}
 		}
@@ -335,12 +348,39 @@ func logSyncFailureTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, cla
 	return err
 }
 
+// parkForReauthTx parks a connection whose credential the provider refused
+// until its human connects it again.
+func parkForReauthTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+	parked, err := tx.Exec(ctx, `
+		UPDATE capture_connection SET status = 'reauth_required'
+		WHERE id = $1 AND status IN ('connected','error') AND archived_at IS NULL`, connectionID)
+	if err != nil {
+		return err
+	}
+	return storekit.CaptureFactsChangedBy(ctx, tx, parked)
+}
+
+// degradeConnectionTx marks a connection that keeps failing as errored.
+func degradeConnectionTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+	degraded, err := tx.Exec(ctx, `
+		UPDATE capture_connection SET status = 'error'
+		WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`, connectionID)
+	if err != nil {
+		return err
+	}
+	return storekit.CaptureFactsChangedBy(ctx, tx, degraded)
+}
+
 // parkForbiddenTx marks a connection whose member may no longer capture as
 // failed and answers the delay until the next check: the mail interval.
 func parkForbiddenTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) (time.Duration, error) {
-	if _, err := tx.Exec(ctx, `
+	parked, err := tx.Exec(ctx, `
 		UPDATE capture_connection SET status = 'error'
-		WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`, connectionID); err != nil {
+		WHERE id = $1 AND status = 'connected' AND archived_at IS NULL`, connectionID)
+	if err != nil {
+		return 0, err
+	}
+	if err := storekit.CaptureFactsChangedBy(ctx, tx, parked); err != nil {
 		return 0, err
 	}
 	interval, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSyncIntervalSeconds)

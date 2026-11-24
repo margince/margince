@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
 
 // Query is the one-engine executor (B-E15.10b): one resource's closed
@@ -44,6 +45,27 @@ type Query struct {
 	// Such rows carry no owner, so the read right on the kind is the whole row
 	// scope. The gate then names the kind, not the schema-qualified Table.
 	Object string
+	// WinChance renders the win chance of every deal over a deal alias. A
+	// predicate on the stored win probability reads it instead, so a list reads
+	// the number a deal shows. Nil keeps the stored probability.
+	WinChance func(ctx context.Context, tx pgx.Tx, deal string, arg func(any) int) (string, error)
+}
+
+// compile is CompilePredicate with the win chance bound.
+func (q Query) compile(ctx context.Context, tx pgx.Tx, p Predicate, arg func(any) int) (string, error) {
+	compiled, err := CompilePredicate(p, q.Fields, arg)
+	if err != nil {
+		return "", err
+	}
+	return q.bindChance(ctx, tx, compiled, arg)
+}
+
+// bindChance rebinds the stored win probability in a clause to the win chance.
+func (q Query) bindChance(ctx context.Context, tx pgx.Tx, clause string, arg func(any) int) (string, error) {
+	if q.WinChance == nil {
+		return clause, nil
+	}
+	return winprobability.Rebind(clause, "t", func() (string, error) { return q.WinChance(ctx, tx, "t", arg) })
 }
 
 // object is the name the read gate and the field masks know the rows by.
@@ -77,9 +99,9 @@ func (q Query) rowScope(ctx context.Context, arg func(any) int) (string, error) 
 // and an executor that forgot it would still return plausible rows, just other
 // contacts's. One point of composition means "is this scoped?" has one answer for
 // every caller.
-func (q Query) predicateWhere(ctx context.Context, p Predicate) (string, []any, error) {
+func (q Query) predicateWhere(ctx context.Context, tx pgx.Tx, p Predicate) (string, []any, error) {
 	return q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
-		return CompilePredicate(p, q.Fields, arg)
+		return q.compile(ctx, tx, p, arg)
 	})
 }
 
@@ -127,7 +149,7 @@ func (q Query) scopedWhere(ctx context.Context, narrow func(arg func(any) int) (
 // question about the snapshot, not the clause, and the caller decides that by
 // choosing which transaction to run both in.
 func (q Query) CountMatching(ctx context.Context, tx pgx.Tx, p Predicate) (int, error) {
-	where, args, err := q.predicateWhere(ctx, p)
+	where, args, err := q.predicateWhere(ctx, tx, p)
 	if err != nil {
 		return 0, err
 	}
@@ -139,6 +161,41 @@ func (q Query) CountMatching(ctx context.Context, tx pgx.Tx, p Predicate) (int, 
 	return n, nil
 }
 
+// CountEach is CountMatching for many filters in one statement: one count per
+// filter over the same base clause and row scope. The filters joined by `OR`
+// in the `WHERE` let the planner skip the rows none of them selects.
+func (q Query) CountEach(ctx context.Context, tx pgx.Tx, filters []Predicate) ([]int, error) {
+	out := make([]int, len(filters))
+	if len(filters) == 0 {
+		return out, nil
+	}
+	columns := make([]string, 0, len(filters))
+	where, args, err := q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
+		compiled := make([]string, 0, len(filters))
+		for _, filter := range filters {
+			clause, err := q.compile(ctx, tx, filter, arg)
+			if err != nil {
+				return "", err
+			}
+			compiled = append(compiled, "("+clause+")")
+			columns = append(columns, "count(*) FILTER (WHERE "+clause+")")
+		}
+		return "(" + strings.Join(compiled, " OR ") + ")", nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	targets := make([]any, len(out))
+	for i := range out {
+		targets[i] = &out[i]
+	}
+	sql := fmt.Sprintf("SELECT %s FROM %s t WHERE %s", strings.Join(columns, ", "), q.Table, where)
+	if err := tx.QueryRow(ctx, sql, args...).Scan(targets...); err != nil {
+		return nil, fmt.Errorf("predicate counts on %s: %w", q.Table, err)
+	}
+	return out, nil
+}
+
 // SelectIDs runs the predicate inside the caller's workspace-bound
 // transaction and returns matching row ids, deterministically ordered
 // by id (the keyset tie-breaker) and hard-capped at PredicateRowLimit.
@@ -148,7 +205,7 @@ func (q Query) CountMatching(ctx context.Context, tx pgx.Tx, p Predicate) (int, 
 // the caller is already allowed to see. The cap stays with the select rather than in
 // predicateWhere: it bounds a PAGE, and a count must not inherit it.
 func (q Query) SelectIDs(ctx context.Context, tx pgx.Tx, p Predicate, limit int) ([]ids.UUID, error) {
-	where, args, err := q.predicateWhere(ctx, p)
+	where, args, err := q.predicateWhere(ctx, tx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +216,11 @@ func (q Query) SelectIDs(ctx context.Context, tx pgx.Tx, p Predicate, limit int)
 // the same gate, base clause, row scope and cap, narrowed by members.
 func (q Query) SelectMemberIDs(ctx context.Context, tx pgx.Tx, members ListMemberFilter, limit int) ([]ids.UUID, error) {
 	where, args, err := q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
-		return members("t.id", arg)
+		clause, err := members("t.id", arg)
+		if err != nil {
+			return "", err
+		}
+		return q.bindChance(ctx, tx, clause, arg)
 	})
 	if err != nil {
 		return nil, err
@@ -184,7 +245,7 @@ const ExportRowLimit = 50000
 // when the slice is larger, so the caller can refuse it instead of handing out
 // a file that is silently short.
 func (q Query) SelectExportIDs(ctx context.Context, tx pgx.Tx, p Predicate) ([]ids.UUID, error) {
-	where, args, err := q.predicateWhere(ctx, p)
+	where, args, err := q.predicateWhere(ctx, tx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +255,11 @@ func (q Query) SelectExportIDs(ctx context.Context, tx pgx.Tx, p Predicate) ([]i
 // SelectExportMemberIDs is SelectExportIDs over a list's members.
 func (q Query) SelectExportMemberIDs(ctx context.Context, tx pgx.Tx, members ListMemberFilter) ([]ids.UUID, error) {
 	where, args, err := q.scopedWhere(ctx, func(arg func(any) int) (string, error) {
-		return members("t.id", arg)
+		clause, err := members("t.id", arg)
+		if err != nil {
+			return "", err
+		}
+		return q.bindChance(ctx, tx, clause, arg)
 	})
 	if err != nil {
 		return nil, err
@@ -231,7 +296,7 @@ func (q Query) selectOrdered(ctx context.Context, tx pgx.Tx, where string, args 
 // every match a page at a time and a set past PredicateRowLimit is complete.
 func (q Query) SelectPage(ctx context.Context, tx pgx.Tx, p Predicate, after *ids.UUID, limit int) ([]ids.UUID, bool, error) {
 	limit = ClampLimit(&limit)
-	where, args, err := q.predicateWhere(ctx, p)
+	where, args, err := q.predicateWhere(ctx, tx, p)
 	if err != nil {
 		return nil, false, err
 	}

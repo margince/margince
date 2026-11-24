@@ -2,12 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
+import { writtenAsMarkdown } from "../design-system/activitytimeline";
 import type { StandingLatest } from "../design-system/howitstands";
+import { markdownLines } from "../design-system/markdown-text";
+import { ACTIVITY_KIND_LABEL } from "../design-system/timelineentry";
+import { isTranscriptActivity } from "../design-system/transcriptread";
 import { activityDay, activityHasHappened } from "../format/activitywhen";
 import { formatDayMonth } from "../format/format.dates";
 import type { Locale, Translator } from "../i18n";
 import { labelFor } from "./labelfor";
-import { KIND_WORD, messageDetail, NOT_HELD } from "./standingmarks";
+import { messageDetail, NOT_HELD } from "./standingmarks";
 import { displayedBody, displayedSubject } from "./systemdisplay";
 
 type Activity = components["schemas"]["Activity"];
@@ -55,7 +59,7 @@ export function latestWord(
   const { t, locale, zone } = words;
   return {
     byMargince: row.automatic_kind === "product",
-    kind: t(labelFor(KIND_WORD, row.kind)),
+    kind: t(labelFor(ACTIVITY_KIND_LABEL, row.kind)),
     detail: messageDetail(row, t) ?? colleagueName(row),
     when: activityDay(
       row.occurred_at,
@@ -83,11 +87,19 @@ function saidIn(row: Activity): string | undefined {
   if (NOT_HELD.has(row.meeting_status ?? "")) {
     return undefined;
   }
-  const own =
-    row.kind === "email" || row.kind === "message"
-      ? (row.email_summary?.preview ?? displayedBody(row))
-      : (displayedBody(row) ?? displayedSubject(row));
-  return own?.trim() || undefined;
+  if (row.kind === "email" || row.kind === "message") {
+    return (
+      (row.email_summary?.preview ?? displayedBody(row))?.trim() || undefined
+    );
+  }
+  const own = displayedBody(row) ?? displayedSubject(row);
+  // What a rep writes is markdown, so the preview is the text History renders.
+  const written =
+    own &&
+    writtenAsMarkdown({ kind: row.kind, transcript: isTranscriptActivity(row) })
+      ? markdownLines(own).join("\n")
+      : own;
+  return written?.trim() || undefined;
 }
 
 // A note names the colleague who wrote it; a machine's note names nobody.

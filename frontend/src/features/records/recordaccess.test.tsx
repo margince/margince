@@ -197,9 +197,9 @@ describe("RecordAccess — the chip", () => {
     stub();
     drawContact({ ...base, visibility: "workspace", writable: true });
     const control = await chip();
-    // "Shared" and not "Team": the column has no team value, and the answer
-    // behind this chip says everyone in the company can see the record.
-    expect(control.textContent).toContain("Shared");
+    // The chip says what the panel's choice says, so the two cannot be read
+    // as different settings.
+    expect(control.textContent).toContain(en["recordAccess.option.workspace"]);
     expect(control.getAttribute("aria-expanded")).toBe("false");
     expect(screen.queryByRole("radio")).toBeNull();
     expect(screen.queryByText(en["recordAccess.manage"])).toBeNull();
@@ -214,7 +214,7 @@ describe("RecordAccess — the chip", () => {
       owner_id: "u-owner",
     });
     const control = await chip();
-    expect(control.textContent).toContain(en["visibility.private"]);
+    expect(control.textContent).toContain(en["recordAccess.option.owner"]);
     expect(control.textContent).not.toMatch(/only you/i);
   });
 
@@ -281,6 +281,29 @@ describe("RecordAccess — handing the record over", () => {
         .getByRole("button", { name: en["handover.offerSend"] })
         .hasAttribute("disabled"),
     ).toBe(false);
+  });
+});
+
+describe("RecordAccess — asking a colleague's owner", () => {
+  it("offers edit access as the one primary ask, and the handover as a link", async () => {
+    const user = userEvent.setup();
+    stub();
+    drawContact({
+      ...base,
+      visibility: "workspace",
+      writable: false,
+      owner_id: "u-owner",
+    });
+    const panel = await open(user);
+    const editAccess = await within(panel).findByRole("button", {
+      name: en["editAccess.ask"].replace("{owner}", "Mira Voss"),
+    });
+    const handover = await within(panel).findByRole("button", {
+      name: en["handover.ask"].replace("{owner}", "Mira Voss"),
+    });
+    expect(editAccess.className).toContain("btn-primary");
+    expect(handover.className).toContain("btn-link");
+    expect(panel.querySelectorAll(".btn-primary")).toHaveLength(1);
   });
 });
 
@@ -461,7 +484,9 @@ describe("RecordAccess — the switch", () => {
     const panel = await open(user);
     await choose(user, panel, "workspace");
     expect(await within(panel).findByRole("alert")).toBeTruthy();
-    expect((await chip()).textContent).toContain(en["visibility.private"]);
+    expect((await chip()).textContent).toContain(
+      en["recordAccess.option.owner"],
+    );
     // The unsaved answer stays, so Save can try it again.
     expect(radio(panel, "workspace")).toHaveProperty("checked", true);
     expect(saveButton(panel).hasAttribute("disabled")).toBe(false);
@@ -676,6 +701,37 @@ describe("RecordAccess — what the owner's answer costs", () => {
     expect(client.getQueryData(["contact360", "p-1"])).toBeUndefined();
   });
 
+  it("leaves a reader who moved on during the write where they are", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/contacts/p-1";
+    let release: () => void = () => undefined;
+    stub({
+      gone: true,
+      hold: new Promise((resolve) => {
+        release = resolve;
+      }),
+    });
+    const client = new QueryClient();
+    client.setQueryData(["contact360", "p-1"], { contact: base });
+    drawContact(
+      {
+        ...base,
+        visibility: "workspace",
+        writable: true,
+        owner_id: "u-owner",
+      },
+      client,
+    );
+    const panel = await open(user);
+    await choose(user, panel, "owner");
+    history.replaceState(null, "", "#/deals/d-1");
+    release();
+    expect(
+      await screen.findByText(en["recordAccess.contact.leftYourAccess"]),
+    ).toBeTruthy();
+    expect(window.location.hash).toBe("#/deals/d-1");
+  });
+
   it("calls a write that landed a success when the check after it fails", async () => {
     const user = userEvent.setup();
     window.location.hash = "#/contacts/p-1";
@@ -886,12 +942,14 @@ describe("RecordAccess — a company", () => {
     const panel = await open(user, "company");
     await choose(user, panel, "workspace");
     await waitFor(async () =>
-      expect((await chip("company")).textContent).toContain("Shared"),
+      expect((await chip("company")).textContent).toContain(
+        en["recordAccess.option.workspace"],
+      ),
     );
     await choose(user, panel, "owner");
     await waitFor(async () =>
       expect((await chip("company")).textContent).toContain(
-        en["visibility.private"],
+        en["recordAccess.option.owner"],
       ),
     );
     expect(writes).toEqual([

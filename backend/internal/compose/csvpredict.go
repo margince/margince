@@ -37,6 +37,9 @@ const (
 	// from the three outcomes above because a dry run that folds it into
 	// `created` promises work that cannot happen.
 	predictUnwritable
+	// predictHeldKey is an update refused over a key another record holds. The
+	// row is skipped, and its record still answers to the row's ref.
+	predictHeldKey
 	// predictCollides is a row naming a company the CRM ALREADY holds, found
 	// by the same PO-F-2 ladder the create path runs. The commit still lands
 	// it — and files a review pair — so this is a disclosure, not a refusal:
@@ -66,6 +69,7 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // Checks run in Ensure's order: create grant, then cells, then a contact's
 // company link under the run's policy. A dropped link rides on the outcome.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
+	w.predictedWarnings, w.predictedChange = nil, nil
 	if refused := w.createRefusal(ctx, row); refused != nil {
 		return predictUnwritable, refused, nil
 	}
@@ -122,18 +126,25 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
-	if !found {
-		return w.predictCreatePath(ctx, row, typed)
+	if found {
+		return w.reconcilePrediction(ctx, id, row, typed)
 	}
-	return w.reconcilePrediction(ctx, id, row, typed)
+	holder, matched, err := w.domainHolderOf(ctx, row)
+	if err != nil {
+		return predictCreate, migration.Reason{}, err
+	}
+	if matched {
+		return w.predictDomainHolder(ctx, row, holder, typed)
+	}
+	return w.predictCreatePath(ctx, row, typed)
 }
 
 // predictCreatePath is what the commit will do with a row no previous run of
 // this importer landed.
 //
-// Two kinds of question, in this order and the order matters. First, whether a
-// key the store refuses is already spoken for: a contact's or lead's address, a
-// company's domain, a lead's or company's LinkedIn URL. Each key is estate-wide,
+// Two kinds of question, in this order and the order matters. First comes
+// newRecordRefusal, which the commit asks too. It refuses a row with no name,
+// and a key this run or the estate already holds. Each key is estate-wide,
 // so the store refuses that row whoever holds it, and a preview promising a
 // create would simply be wrong. It runs BEFORE the collision check and is not a
 // disclosure decision — the outcome is identical for an incumbent the caller can
@@ -153,42 +164,13 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 	case migration.ObjectActivity:
 		return w.predictActivityCreate(ctx, row, typed)
 	}
-	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if claimed {
-		return predictUnwritable, contactEmailClaimedWhy, nil
-	}
-	takenLead, err := w.leadEmailAlreadyHeld(ctx, row)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if takenLead {
-		return predictUnwritable, naturalKeyTakenWhy, nil
-	}
-	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if takenDomain {
-		return predictUnwritable, domainClaimedWhy, nil
-	}
-	takenLinkedIn, err := w.linkedInAlreadyHeld(ctx, typed)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if takenLinkedIn {
-		return predictUnwritable, linkedInClaimedWhy, nil
-	}
-	contactHeld, err := w.leadRowContactHeld(ctx, row, typed)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if contactHeld {
-		return predictUnwritable, contactHoldsLeadWhy, nil
+	if why, err := w.newRecordRefusal(ctx, row, typed); err != nil || why.Code != "" {
+		return predictUnwritable, why, err
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
+	if err == nil && !collides {
+		collides, err = w.collidesInFile(ctx, row)
+	}
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
@@ -219,17 +201,22 @@ func (w *csvWriters) reconcilePrediction(
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
-	changed, err := changedFields(current, textFields(row.Fields), typed)
+	changed, kept, err := w.landingChanges(ctx, row, current, typed)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
 	if len(changed) == 0 {
-		return predictUnchanged, migration.Reason{}, nil
+		return predictUnchanged, kept, nil
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
-	return predictUpdate, migration.Reason{}, nil
+	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
+	if err != nil || why.Code != "" {
+		return predictHeldKey, why, err
+	}
+	w.predictedChange, err = w.changeOf(ctx, id, changed, current)
+	return predictUpdate, kept, err
 }
 
 // collidesWithExisting asks whether the CRM already holds the company this row

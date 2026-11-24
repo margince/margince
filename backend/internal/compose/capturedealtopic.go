@@ -111,8 +111,9 @@ func dealTopicDigest(in dealTopicInput) (string, error) {
 
 // Check asks which of deals the mail is about. It abstains with
 // capture.ErrTopicAbstained when the input it reads no longer digests to
-// digest. It abstains too when no model is configured, the budget is spent or
-// every model declines.
+// digest. It abstains too when no model is configured or the budget is spent.
+// A decline by every model is a doubtful answer, remembered like a low-confidence
+// one, because the same prompt would decline the same mail again.
 func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals []ids.UUID, digest string) (capture.DealTopic, error) {
 	var in dealTopicInput
 	var readable bool
@@ -129,8 +130,15 @@ func (c dealTopicChecker) Check(ctx context.Context, mail ids.ActivityID, deals 
 	}
 	about := ai.WithSubject(ctx, mail.Ref(), in.Subject)
 	resp, err := ai.Ask(about, c.brain, dealTopicRequest(in, model.AboutActivities(mail.UUID)), dealTopicShapeValid(in))
-	if sweepPaused(err) || declinedByTheModels(err) || errors.Is(err, ai.ErrSubjectRestricted) {
-		return capture.DealTopic{}, fmt.Errorf("%w: %w", capture.ErrTopicAbstained, err)
+	if declinedByTheModels(err) {
+		return capture.DealTopic{}, nil
+	}
+	if sweepPaused(err) || errors.Is(err, ai.ErrSubjectRestricted) {
+		abstained := fmt.Errorf("%w: %w", capture.ErrTopicAbstained, err)
+		if ai.IsDeferral(err) {
+			abstained = errors.Join(abstained, capture.ErrTopicDeferred)
+		}
+		return capture.DealTopic{}, abstained
 	}
 	if err != nil {
 		return capture.DealTopic{}, err
@@ -205,6 +213,10 @@ func dealTopicShapeValid(in dealTopicInput) ai.Validator {
 // validateDealTopicPayload names the first violation. A deal may be
 // unanswered or answered twice, or named by a ref the prompt never showed. A
 // verdict may fall outside the closed set, or a confidence outside [0,1].
+//
+// A bad confidence fails the reply here. The other batched sites drop the one
+// answer. This reply is one joint judgement of a mail against every deal, and a
+// dropped deal would read as ruled out.
 func validateDealTopicPayload(payload dealTopicPayload, in dealTopicInput) string {
 	refs := dealtopicprompt.Refs(in)
 	if msg := checkBatchFidelity(payload.Results, refs.All()); msg != "" {

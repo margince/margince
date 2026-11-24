@@ -27,6 +27,11 @@ import (
 // backfillPageSize bounds one provider listing; checkpoints retain its remaining ids.
 const backfillPageSize = 100
 
+// MaxBackfillPageSize is Gmail's ceiling for one listing, and so the largest
+// page a setting may ask for. A saved cursor is checked against it, not the
+// current page size, so lowering the size never strands a run in flight.
+const MaxBackfillPageSize = 500
+
 var _ connector.Backfiller = (*Connector)(nil)
 
 // afterQuery renders Gmail's after: operator. Gmail treats the date in the
@@ -44,15 +49,13 @@ func (c *Connector) EstimateBackfill(ctx context.Context, auth connector.Auth, a
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.BackfillEstimate{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return connector.BackfillEstimate{}, err
-	}
-	count, floor, err := c.api.EstimateAfter(ctx, access, afterQuery(after))
-	if err != nil {
-		return connector.BackfillEstimate{}, err
-	}
-	return connector.BackfillEstimate{Messages: count, Floor: floor}, nil
+	return authorized(ctx, c, st, func(ctx context.Context, access string) (connector.BackfillEstimate, error) {
+		count, floor, err := c.api.EstimateAfter(ctx, access, afterQuery(after))
+		if err != nil {
+			return connector.BackfillEstimate{}, err
+		}
+		return connector.BackfillEstimate{Messages: count, Floor: floor}, nil
+	})
 }
 
 // BackfillPage pulls one page of the window, oldest-boundary inclusive,
@@ -68,17 +71,22 @@ func (c *Connector) BackfillPage(ctx context.Context, auth connector.Auth, after
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return connector.BackfillPageResult{}, fmt.Errorf("gmail: malformed auth state: %w", err)
 	}
-	ctx, access, err := c.authorize(ctx, st)
-	if err != nil {
-		return connector.BackfillPageResult{}, err
-	}
+	return authorized(ctx, c, st, func(ctx context.Context, access string) (connector.BackfillPageResult, error) {
+		return c.backfillPageWith(ctx, access, st.Owner, after, pageToken, sink)
+	})
+}
+
+// backfillPageWith is one BackfillPage under one access token.
+func (c *Connector) backfillPageWith(
+	ctx context.Context, access, owner string, after time.Time, pageToken string, sink connector.Sink,
+) (connector.BackfillPageResult, error) {
 	gate := &rateGate{}
 	page, err := c.listHistoryPage(ctx, access, afterQuery(after), pageToken, gate)
 	if err != nil {
 		return connector.BackfillPageResult{}, err
 	}
 	w := &pageWalk{
-		c: c, ctx: ctx, access: access, owner: st.Owner, sink: sink, gate: gate,
+		c: c, ctx: ctx, access: access, owner: owner, sink: sink, gate: gate,
 		ids: page.IDs, settled: make(map[string]bool), progress: connector.BackfillProgressFrom(ctx),
 		res: connector.BackfillPageResult{NextToken: *page.Next, Scanned: len(page.IDs)},
 	}
@@ -126,7 +134,7 @@ func (w *pageWalk) walk() error {
 			}
 		}
 	}
-	return inOrder(w.ctx, len(keep),
+	return inOrder(w.ctx, w.c.tuning, len(keep),
 		func(ctx context.Context, i int) (Message, error) {
 			return w.getRaw(ctx, keep[i])
 		},
@@ -152,7 +160,7 @@ func (w *pageWalk) walk() error {
 // downloaded in full and judged there, as before.
 func (w *pageWalk) judgeHeaders(headers HeaderFetcher, judge connector.PreStoreJudge, ids []string) ([]string, error) {
 	keep := make([]string, 0, len(ids))
-	err := inOrder(w.ctx, len(ids),
+	err := inOrder(w.ctx, w.c.tuning, len(ids),
 		func(ctx context.Context, i int) (Message, error) {
 			return w.getHeaders(ctx, headers, ids[i])
 		},

@@ -70,6 +70,15 @@ type Spec struct {
 	// answers no. A caller re-driving reads this; a false answer means the run
 	// needs a human rather than a button.
 	RedrivableWithoutDuplicating bool
+	// ReplaysAfterFailedApply lets the bus redelivery of an event run Apply again
+	// when its first Apply failed on a fault that is not a refusal.
+	//
+	// Set it only when Apply is idempotent end to end through its own natural
+	// keys, such as a notice's dedupe key. Never set it for an Apply that creates
+	// records through the effect claim (applyCreate). A replay finds the earlier
+	// firing's unconfirmed claim and reports the create as deduplicated.
+	// The record is then lost.
+	ReplaysAfterFailedApply bool
 	// IgnoreUnmatchedEvents leaves a source occurrence available for a later qualifying event.
 	IgnoreUnmatchedEvents bool
 }
@@ -209,6 +218,10 @@ type Action struct {
 	// it). Typed here rather than smuggled into Args so a trace reader can
 	// render the fold instead of reporting a write that never happened.
 	Deduplicated bool `json:"deduplicated,omitempty"`
+
+	// Created is the record an applied create made, so a reader of the trace can
+	// open it under its own grants.
+	Created *datasource.EntityRef `json:"created,omitempty"`
 }
 
 // ApprovalToken references the typed, signed, single-use, effect-bound

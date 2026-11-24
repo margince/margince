@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stable } from "../../format/collate";
@@ -199,10 +199,12 @@ describe("the Overview scenario map", () => {
 });
 
 type Signature = () => Promise<unknown>;
+// Waits for the first match to be visible. A lazy card further down, such as
+// the closed history, can render its copy before the one on show.
 const shows =
   (text: string | RegExp): Signature =>
   async () =>
-    expect((await screen.findAllByText(text))[0]).toBeVisible();
+    waitFor(() => expect(screen.getAllByText(text)[0]).toBeVisible());
 const lacks =
   (text: string): Signature =>
   async () =>
@@ -239,7 +241,10 @@ const SIGNATURES: Readonly<
   },
   limitedImportHistory: { sales: lacks("4 Oct"), team: shows("Members") },
   partialValuation: {
-    sales: shows(/1 open deal in NOK has no exchange rate to EUR\./),
+    sales: async () => {
+      await shows(/1 open deal in NOK has no exchange rate to EUR\./)();
+      expect(await screen.findByText("of €800,000 goal")).toBeVisible();
+    },
   },
   sourceUnavailable: {
     sales: async () => {

@@ -67,13 +67,13 @@ func TestReplacingAnAddressWithAnUnrelatedOneFilesNothing(t *testing.T) {
 func TestAddingASubdomainOfAHeldDomainToACompanyFilesOnePair(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	holder := e.createNamedCompany(ctx, t, "Example Group", "example.com")
+	holder := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
 	edited := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test")
 	if field := e.filedPairField(ctx, t, edited, holder); field != "" {
 		t.Fatalf("a pair with field %q before the edit, want none", field)
 	}
 
-	desired := []CompanyDomainInput{{Domain: "cloudy.test", IsPrimary: true}, {Domain: "cloud.example.com"}}
+	desired := []CompanyDomainInput{{Domain: "cloudy.test", IsPrimary: true}, {Domain: "cloud.example-group.test"}}
 	if _, err := e.store.UpdateCompany(ctx, edited, UpdateCompanyInput{Domains: &desired}); err != nil {
 		t.Fatalf("add the domain: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestAddingASubdomainOfAHeldDomainToACompanyFilesOnePair(t *testing.T) {
 func TestAddingAnUnrelatedDomainToACompanyFilesNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	e.createNamedCompany(ctx, t, "Example Group", "example.com")
+	e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
 	edited := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test")
 
 	desired := []CompanyDomainInput{{Domain: "cloudy.test", IsPrimary: true}, {Domain: "cloud.other.test"}}
@@ -100,5 +100,34 @@ func TestAddingAnUnrelatedDomainToACompanyFilesNothing(t *testing.T) {
 	if n := e.countInWorkspace(ctx, t, `
 		SELECT count(*) FROM dedupe_candidate WHERE entity_type = 'company'`); n != 0 {
 		t.Fatalf("%d company pairs, want none", n)
+	}
+}
+
+// A rename that ends the name match withdraws the pair it made; a rename that
+// keeps the brand keeps it.
+func TestRenamingACompanyAwayFromItsTwinClosesTheirPair(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	twin := e.plainCompany(ctx, t, "Kranbau Nord")
+	renamed := e.plainCompany(ctx, t, "Molkerei Sued")
+	rename := func(name string) {
+		t.Helper()
+		if _, err := e.store.UpdateCompany(ctx, ids.From[ids.CompanyKind](renamed), UpdateCompanyInput{DisplayName: &name}); err != nil {
+			t.Fatalf("rename to %q: %v", name, err)
+		}
+	}
+	rename("Kranbau Nord")
+	pair := e.openPairID(ctx, t, entityCompany, twin, renamed)
+	if pair.IsZero() {
+		t.Fatal("the rename onto the twin's name filed no pair")
+	}
+
+	rename("Kranbau Nord GmbH")
+	if archived, _ := e.candidateState(ctx, t, pair); archived {
+		t.Error("a rename that keeps the brand closed the pair")
+	}
+	rename("Ziegelei West")
+	if archived, _ := e.candidateState(ctx, t, pair); !archived {
+		t.Error("a rename away from the twin's name left the pair open")
 	}
 }

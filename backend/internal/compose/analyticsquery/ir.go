@@ -260,6 +260,9 @@ func validateMeasures(entity Entity, measures []Measure) error {
 	return nil
 }
 
+// CoverageColumnName is the row key an answer states its partial sums' coverage under.
+const CoverageColumnName = "_coverage"
+
 // ReservedColumns are the names the engine itself writes into an answer.
 //
 // A caller aliasing a measure to one of these was, before this check, aliasing
@@ -267,7 +270,7 @@ func validateMeasures(entity Entity, measures []Measure) error {
 // measure's value and served a two-record group whole. The executor no longer
 // reads by name, so this is the second lock; both, because a reader of either
 // half should not have to check the other to know the collision is handled.
-var ReservedColumns = []string{"_rows", "_withheld"}
+var ReservedColumns = []string{"_rows", "_withheld", CoverageColumnName}
 
 // validateAliases refuses a result column that would shadow another.
 //
@@ -351,6 +354,9 @@ func validateFilters(entity Entity, filters []Filter) error {
 			}
 		}
 		if !valuelessOps[f.Op] {
+			if err := idValueRefusal(f.Field, field.Shape, f.Value); err != nil {
+				return err
+			}
 			if err := field.Domain.Admits(f.Field, f.Value); err != nil {
 				return err
 			}
@@ -450,4 +456,23 @@ func FilterOpNames() []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// LeavesOut says whether the row's sum in column adds only some of its deals.
+// A row read back from stored JSON names its aggregates as []any, a fresh one
+// as []string, and both are read here.
+//
+//craft:ignore naked-any a row is a decoded document whose values have no fixed type
+func LeavesOut(row map[string]any, column string) bool {
+	stated, _ := row[CoverageColumnName].(map[string]any)
+	if partial, _ := stated["partial"].(bool); !partial {
+		return false
+	}
+	switch named := stated["aggregates"].(type) {
+	case []string:
+		return slices.Contains(named, column)
+	case []any:
+		return slices.Contains(named, any(column))
+	}
+	return false
 }

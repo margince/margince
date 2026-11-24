@@ -8,6 +8,7 @@ import { Badge } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { providerName } from "../../lib/ai-provider-names";
+import { certificationNote } from "./ai-certification-note";
 import { decisionSkipLabel } from "./ai-decision-labels";
 import {
   type LaneKeyGap,
@@ -118,9 +119,6 @@ export function TaskDetails({
   );
   return (
     <div className="ai-task-details">
-      <p className="t-caption">
-        {row.task} · {row.execution_mode}
-      </p>
       {row.decision_first && row.decision_candidate ? (
         <span className="ai-task-details-badges">
           <Badge>{t("aiTasks.decisionFirst")}</Badge>
@@ -144,6 +142,13 @@ export function TaskDetails({
           {decisionSkipLabel(row.decision_skip_reason, t)}
         </p>
       ) : null}
+      {row.execution_mode === "embedding"
+        ? null
+        : row.effective_candidates.map((candidate) => (
+            <p className="t-caption" key={candidate.tier}>
+              {certificationNote(candidate, t)}
+            </p>
+          ))}
       {keyGap ? (
         <p className="t-caption">
           {t("aiHealth.laneNeedsKey", {

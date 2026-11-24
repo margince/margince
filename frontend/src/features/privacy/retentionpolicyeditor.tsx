@@ -7,15 +7,17 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { Switch } from "../../design-system/switch";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import {
   actionLabelKey,
+  lawfulBasisText,
   parseRetainDays,
   RETENTION_ACTIONS,
   RETENTION_POLICIES_KEY,
   type RetentionAction,
   type RetentionPolicy,
+  retainDaysFault,
   scopeLabelKey,
 } from "./retention.logic";
 
@@ -47,10 +49,14 @@ function PolicyEditorBody({
   onDelete: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [retainDays, setRetainDays] = useState(String(policy.retain_days));
   const [action, setAction] = useState<RetentionAction>(policy.action);
-  const [lawfulBasis, setLawfulBasis] = useState(policy.lawful_basis ?? "");
+  // A seeded basis shows in words; sent only once the admin changes it, so the
+  // stored code stays when they do not.
+  const openedBasis = lawfulBasisText(policy.lawful_basis, t);
+  const [lawfulBasis, setLawfulBasis] = useState(openedBasis);
   const days = parseRetainDays(retainDays);
 
   const patch = useMutation({
@@ -81,11 +87,7 @@ function PolicyEditorBody({
       <div className="form-stack">
         <Field
           label={t("retention.window")}
-          hint={
-            days === null && retainDays.trim() !== ""
-              ? t("retention.windowInvalid")
-              : undefined
-          }
+          error={retainDaysFault(retainDays, locale, t("retention.window"))}
         >
           {(control) => (
             <TextInput
@@ -158,7 +160,9 @@ function PolicyEditorBody({
                 body: {
                   retain_days: days,
                   action,
-                  lawful_basis: lawfulBasis.trim() || null,
+                  ...(lawfulBasis === openedBasis
+                    ? {}
+                    : { lawful_basis: lawfulBasis.trim() || null }),
                 },
               })
             }

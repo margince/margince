@@ -8,11 +8,13 @@ import {
   FALLBACK_COMPANY_ZONE,
   sameWallClockOnDay,
   startOfDayInZone,
-  timezoneOptions,
   wallClockIntent,
+  zoneLabelAt,
+  zoneNameAllYear,
   zoneNameAndOffset,
   zoneOffsetMs,
 } from "./timezone";
+import { timezoneOptions } from "./timezoneoptions";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -283,38 +285,105 @@ describe("timezone choices", () => {
     );
     expect(zones.filter((zone) => zone.value === "UTC")).toHaveLength(1);
   });
+
+  it("lists a renamed zone under its current name and finds it by the old one", () => {
+    const zones = timezoneOptions("en", "", new Date("2026-01-15T12:00:00Z"));
+    const values = zones.map((zone) => zone.value);
+    expect(values).toContain("Asia/Ho_Chi_Minh");
+    expect(values).toContain("Asia/Kolkata");
+    expect(values).toContain("Europe/Kyiv");
+    expect(values).not.toContain("Asia/Saigon");
+    expect(values).not.toContain("Europe/Kiev");
+    const vietnam = zones.find((zone) => zone.value === "Asia/Ho_Chi_Minh");
+    expect(vietnam?.label).toBe("Ho Chi Minh (Asia) · UTC+7");
+    expect(vietnam?.keywords).toEqual(
+      expect.arrayContaining(["Asia/Ho_Chi_Minh", "Saigon"]),
+    );
+  });
+
+  it("can be found by the IANA id", () => {
+    const zones = timezoneOptions("en", "", new Date("2026-01-15T12:00:00Z"));
+    expect(
+      zones.find((zone) => zone.value === "America/New_York")?.keywords,
+    ).toContain("America/New_York");
+  });
+});
+
+describe("zoneLabelAt", () => {
+  it("names the zone at a wire instant in the reader's language", () => {
+    expect(zoneLabelAt("2026-11-16T16:45:00Z", "Europe/Berlin", "en")).toBe(
+      "Central European Standard Time · UTC+1",
+    );
+    expect(zoneLabelAt("2026-07-16T16:45:00Z", "Europe/Berlin", "de")).toBe(
+      "Mitteleuropäische Sommerzeit · UTC+2",
+    );
+  });
+
+  it("shows a zone the formatters refuse as it was stored", () => {
+    expect(zoneLabelAt("2026-07-16T16:45:00Z", "Mars/Olympus", "en")).toBe(
+      "Mars/Olympus",
+    );
+  });
+});
+
+describe("zoneNameAllYear", () => {
+  it("names a zone the same in summer and winter, with no offset", () => {
+    const july = "2026-07-10T09:00:00Z";
+    const november = "2026-11-10T09:00:00Z";
+    expect(zoneNameAllYear(july, "Europe/Berlin", "en")).toBe(
+      "Central European Time",
+    );
+    expect(zoneNameAllYear(november, "Europe/Berlin", "en")).toBe(
+      "Central European Time",
+    );
+    expect(zoneNameAllYear(july, "Europe/Berlin", "de")).toBe(
+      "Mitteleuropäische Zeit",
+    );
+    expect(zoneNameAllYear(july, "Asia/Ho_Chi_Minh", "vi")).toBe(
+      "Giờ Đông Dương",
+    );
+  });
+
+  it("spells a zone with no name of its own in UTC, not GMT", () => {
+    expect(zoneNameAllYear("2026-07-10T09:00:00Z", "UTC", "en")).toBe(
+      "UTC+00:00",
+    );
+  });
+
+  it("shows a zone the formatters refuse as it was stored", () => {
+    expect(zoneNameAllYear("2026-07-10T09:00:00Z", "Mars/Olympus", "en")).toBe(
+      "Mars/Olympus",
+    );
+  });
 });
 
 describe("zoneNameAndOffset", () => {
   const at = new Date("2026-09-05T10:30:00Z");
 
   it("names a given zone in the reader's language, not the IANA id", () => {
-    expect(zoneNameAndOffset("en-GB", at, "Asia/Bangkok")).toBe(
+    expect(zoneNameAndOffset("en", at, "Asia/Bangkok")).toBe(
       "Indochina Time · UTC+7",
     );
-    expect(zoneNameAndOffset("vi-VN", at, "Asia/Bangkok")).toBe(
+    expect(zoneNameAndOffset("vi", at, "Asia/Bangkok")).toBe(
       "Giờ Đông Dương · UTC+7",
     );
   });
 
   it("reads the offset the zone has at that instant", () => {
-    expect(zoneNameAndOffset("en-GB", at, "Europe/Berlin")).toBe(
+    expect(zoneNameAndOffset("en", at, "Europe/Berlin")).toBe(
       "Central European Summer Time · UTC+2",
     );
   });
 
   it("shows a zone the formatters refuse as it was stored", () => {
-    expect(zoneNameAndOffset("en-GB", at, "Mars/Olympus")).toBe("Mars/Olympus");
+    expect(zoneNameAndOffset("en", at, "Mars/Olympus")).toBe("Mars/Olympus");
     // Intl names this one, as "GMT+01:00"; the formatters refuse it.
-    expect(zoneNameAndOffset("en-GB", at, "Etc/GMT-1")).toBe("Etc/GMT-1");
+    expect(zoneNameAndOffset("en", at, "Etc/GMT-1")).toBe("Etc/GMT-1");
   });
 
-  it("throws on a bad locale tag or instant instead of hiding it", () => {
-    expect(() => zoneNameAndOffset("en_GB!", at, "Asia/Bangkok")).toThrow(
-      RangeError,
-    );
+  it("throws on a bad instant instead of hiding it", () => {
     expect(() =>
-      zoneNameAndOffset("en-GB", new Date(Number.NaN), "Asia/Bangkok"),
+      zoneNameAndOffset("en", new Date(Number.NaN), "Asia/Bangkok"),
     ).toThrow(RangeError);
   });
 });

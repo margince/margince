@@ -260,7 +260,7 @@ func TestAnAnchorsSourceIDDoesNotBecomeTheThreadKey(t *testing.T) {
 	var chain threading
 	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
-		chain, err = anchorThreading(ctx, tx, anchor, minted)
+		chain, err = anchorThreading(ctx, tx, anchor, minted, "")
 		return err
 	}); err != nil {
 		t.Fatalf("deriving the chain: %v", err)
@@ -304,7 +304,7 @@ func TestAnArchivedAnchorYieldsNoThreadingChain(t *testing.T) {
 	// Live, it threads: the control, without which the refusal below could be
 	// any other reason this read answers nothing.
 	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		_, err := anchorThreading(ctx, tx, anchor, "019fad38-ours@margince.test")
+		_, err := anchorThreading(ctx, tx, anchor, "019fad38-ours@margince.test", "")
 		return err
 	}); err != nil {
 		t.Fatalf("a live anchor was refused: %v", err)
@@ -319,7 +319,7 @@ func TestAnArchivedAnchorYieldsNoThreadingChain(t *testing.T) {
 	}
 
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		_, err := anchorThreading(ctx, tx, anchor, "019fad38-ours@margince.test")
+		_, err := anchorThreading(ctx, tx, anchor, "019fad38-ours@margince.test", "")
 		return err
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {

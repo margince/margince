@@ -5,6 +5,7 @@ import { useId } from "react";
 import type { MessageKey } from "../i18n/en";
 import { useCanWrite } from "../lib/capability";
 import { useMe } from "../lib/session";
+import type { WritingMomentVerb } from "../lib/writeverbs";
 
 /**
  * Whether this reader may write activities (log, task, book), asked once for
@@ -20,8 +21,28 @@ export type ActivityGate = Readonly<{
   refusalKey?: MessageKey;
 }>;
 
+/**
+ * The record the activity files onto. Filing onto a record changes it, so the
+ * server answers per row. A contact carries `attachable`; any other record
+ * goes through `writableTarget`. An absent answer refuses. Null is a record
+ * still loading.
+ */
+type AttachTarget = {
+  readonly attachable?: boolean;
+  readonly refusal?: MessageKey;
+};
+
+/** A deal, company, lead or project as an attach target: its own write answer. */
+export function writableTarget(
+  record: { readonly writable?: boolean } | null | undefined,
+): AttachTarget | null | undefined {
+  return record
+    ? { attachable: record.writable, refusal: "record.attachRefused" }
+    : record;
+}
+
 export function useActivityGate(
-  contact?: { readonly attachable?: boolean } | null,
+  record?: AttachTarget | null,
   permissionRefusal: MessageKey = "record.logActivityRefused",
 ): ActivityGate {
   // useCanWrite, not useCan: Log and Add task issue the same POST, and a read
@@ -31,25 +52,32 @@ export function useActivityGate(
   const sentenceId = useId();
   const known = me.data?.authorization !== undefined;
   const refusalKey =
-    known && !canLog
-      ? permissionRefusal
-      : contact && contact.attachable !== true
-        ? "contact.attachRefused"
-        : undefined;
+    known && !canLog ? permissionRefusal : attachRefusal(record);
   return {
     refusedId: refusalKey ? sentenceId : undefined,
     refusalKey,
-    pending: !known || contact === null,
+    pending: !known || record === null,
     sentenceId,
   };
+}
+
+function attachRefusal(
+  record: AttachTarget | null | undefined,
+): MessageKey | undefined {
+  if (!record || record.attachable === true) return undefined;
+  return record.refusal ?? "contact.attachRefused";
 }
 
 /**
  * Whether a lone verb that writes an activity is offered; one refused is not
  * drawn. `contact` is the contact the write files under, where it names one.
+ *
+ * `_verb` is read only by the compiler: it must be a kind the server counts as
+ * writing. The type import keeps the mirror table out of the Home chunk.
  */
-export function useActivityWritable(contact?: {
-  readonly attachable?: boolean;
-}): boolean {
+export function useWritingVerbOffered(
+  _verb: WritingMomentVerb,
+  contact?: AttachTarget,
+): boolean {
   return useActivityGate(contact).refusalKey === undefined;
 }

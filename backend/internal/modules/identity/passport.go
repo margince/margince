@@ -106,6 +106,9 @@ type InvalidPassportFieldError struct{ Field, Code, Message string }
 
 func (e *InvalidPassportFieldError) Error() string { return e.Field + ": " + e.Message }
 
+// requiredFieldCode is the field code of a value that must be present.
+const requiredFieldCode = "required"
+
 // maxPassportLabelRunes is the label bound crm.yaml declares as maxLength,
 // which counts characters rather than bytes.
 const maxPassportLabelRunes = 120
@@ -193,6 +196,15 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	}
 	if err := admitAreas(in.Areas); err != nil {
 		return IssuedPassport{}, err
+	}
+	// A name that is given must say something, or two rows cannot be told
+	// apart. An absent name stays accepted for older API clients.
+	if in.Label != nil {
+		label := strings.TrimSpace(*in.Label)
+		if label == "" {
+			return IssuedPassport{}, &InvalidPassportFieldError{Field: "label", Code: requiredFieldCode, Message: "label must not be blank"}
+		}
+		in.Label = &label
 	}
 	if grantID == nil {
 		if err := admitCallerChosenFields(in); err != nil {
@@ -359,6 +371,10 @@ type AgentIdentity struct {
 	Roles        []string
 	Teams        []ids.TeamID
 	Permissions  principal.Permissions
+	// Locale is the language the granting human reads: their saved choice,
+	// else the installation's base language. No screen sits behind an agent
+	// to answer for a human who never chose.
+	Locale string
 }
 
 // Principal renders the principal shape every store entry point enforces. The
@@ -376,6 +392,7 @@ func (a AgentIdentity) Principal() principal.Principal {
 		SeatType:     principal.SeatType(a.SeatType),
 		Scopes:       a.Scopes,
 		Areas:        a.Areas,
+		Locale:       a.Locale,
 		Permissions:  a.Permissions,
 	}
 }
@@ -398,8 +415,9 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	// oauth_grant_id is NULL for a locally minted passport, which the principal
 	// spells as a zero connection rather than a pointer nobody else carries.
 	var connection *ids.UUID
+	var locale *string
 	err = tx.QueryRow(ctx, agentAuthQuery(predicate), args...).
-		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection, &areas)
+		Scan(&a.PassportID, &a.OnBehalfOf, &scopes, &a.SeatType, &connection, &areas, &locale)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return AgentIdentity{}, apperrors.ErrNotFound
 	}
@@ -419,6 +437,7 @@ func (s *Service) authenticateAgentWhere(ctx context.Context, tx pgx.Tx, predica
 	if loadErr != nil {
 		return AgentIdentity{}, loadErr
 	}
+	a.Locale = string(readingLanguage(ctx, tx, a.Principal(), locale))
 	return a, nil
 }
 
@@ -443,14 +462,14 @@ func (s *Service) AuthenticateAgentByID(ctx context.Context, passportID ids.Pass
 	return a, nil
 }
 
-// touchPassport stamps the passport as used, at most once a minute. /mcp
+// touchPassport stamps the passport as used, at most once per stampInterval. /mcp
 // authenticates on every exchange, so an unconditional write would add a row
 // update to every tool call. It is a read model, so like a deal-room session's
 // last-seen stamp it writes no audit row or event.
 func touchPassport(ctx context.Context, tx pgx.Tx, passport ids.PassportID) error {
 	if _, err := tx.Exec(ctx, `
 		UPDATE passport SET last_used_at = now()
-		 WHERE id = $1 AND (last_used_at IS NULL OR last_used_at < now() - interval '1 minute')`, passport); err != nil {
+		 WHERE id = $1 AND (last_used_at IS NULL OR last_used_at < now() - $2::interval)`, passport, stampInterval.String()); err != nil {
 		return fmt.Errorf("identity: stamping passport %s as used: %w", passport, err)
 	}
 	return nil

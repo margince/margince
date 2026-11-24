@@ -35,7 +35,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -59,12 +58,16 @@ type entry struct {
 	// retention action, the page a fact was read from.
 	Evidence []byte
 	// BatchID is the bulk change the row belongs to. A data task stamps its
-	// step's run id here (datatask.Execute), so two runs of one correction are
-	// told apart. Nil on rows no batch wrote.
+	// step's run id here (datatask.Execute). A retry of a finished step keeps
+	// that id, so its rerun reads as the same correction. Nil on rows no batch wrote.
 	BatchID *ids.UUID
 	// ActivityKind is what a placed activity is (email, meeting, ...), so a
 	// create says "saved an email" rather than "an email or a meeting".
 	ActivityKind *string
+	// ParentType and ParentID name the record a placed child belongs to
+	// (placement.go). Nil on a row about a record with its own page.
+	ParentType *string
+	ParentID   *ids.UUID
 }
 
 // recordLabels is the name column of each placed record, the expression the
@@ -151,6 +154,14 @@ func doneSince(
 			capped[armOf(typeActivity, bulk)] = true
 		}
 		found = append(found, activities...)
+		children, err := doneForPlacements(ctx, tx, since, actions, width)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(children) == width {
+			capped[armOf(armPlaced, bulk)] = true
+		}
+		found = append(found, children...)
 	}
 	return found, capped, nil
 }
@@ -160,22 +171,17 @@ func doneSince(
 // some forty entity types and this build places seven; without the count, a
 // receipt showing four lines implies those were the only four machine actions
 // in the window, which is the completeness claim the field exists to refuse.
-//
-// The count is installation-wide, not the reader's own, so it is a diagnostic: a
-// seat without ai_diagnostics read gets no entry and the query never runs.
+// The breakdown by type is System health's; both need ai_diagnostics read.
 func notShownSince(ctx context.Context, tx pgx.Tx, since time.Time) (map[string]int, bool, error) {
 	notShown := map[string]int{}
-	if err := auth.Require(ctx, "ai_diagnostics", principal.ActionRead); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return notShown, true, nil
-		}
-		return nil, false, err
+	changes, err := unplacedChangesSince(ctx, tx, since)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return notShown, true, nil
 	}
-	unplaceable, err := unplaceableSince(ctx, tx, since)
 	if err != nil {
 		return nil, false, err
 	}
-	if unplaceable > 0 {
+	if unplaceable := UnplacedTotal(changes); unplaceable > 0 {
 		notShown[string(crmcontracts.MagicNotShownReasonMagicNotShownUnknownEntityType)] = unplaceable
 	}
 	return notShown, false, nil
@@ -192,6 +198,9 @@ func armOf(entityType string, bulk bool) string {
 
 // armOfEntry names the read one entry came from.
 func armOfEntry(e entry) string {
+	if e.ParentType != nil {
+		return armOf(armPlaced, bulkActions[e.Action])
+	}
 	return armOf(e.EntityType, bulkActions[e.Action])
 }
 
@@ -266,7 +275,7 @@ func doneForType(
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
 		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
-		       NULLIF(%s, ''), a.evidence, a.batch_id, NULL::text
+		       NULLIF(%s, ''), a.evidence, a.batch_id, NULL::text, NULL::text, NULL::uuid
 		  FROM audit_log a
 		  JOIN %s e ON e.id = a.entity_id
 		 WHERE %s
@@ -327,7 +336,7 @@ func doneForActivities(
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
 		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
-		       NULLIF(%s, ''), a.evidence, a.batch_id, e.kind
+		       NULLIF(%s, ''), a.evidence, a.batch_id, e.kind, NULL::text, NULL::uuid
 		  FROM audit_log a
 		  JOIN activity e ON e.id = a.entity_id
 		 WHERE %s
@@ -344,9 +353,9 @@ var groupingImages = fmt.Sprintf(
 	`CASE WHEN a.action = '%[1]s' THEN a.before END, CASE WHEN a.action = '%[1]s' THEN a.after END`, actionUpdate)
 
 // imagesDeferred reports a row whose images groupingImages left unread and a
-// line still shows. A bulk verb's images are never shown.
-func imagesDeferred(action string) bool {
-	return action != actionUpdate && !bulkActions[action]
+// line still shows. A bulk verb's images are never shown, nor a placed child's.
+func imagesDeferred(e entry) bool {
+	return e.Action != actionUpdate && !bulkActions[e.Action] && e.ParentType == nil
 }
 
 // loadDeferredImages reads the images the arms left unread, for the entries a
@@ -356,7 +365,7 @@ func imagesDeferred(action string) bool {
 func loadDeferredImages(ctx context.Context, tx pgx.Tx, entries []entry) error {
 	at := map[ids.UUID]int{}
 	for i, e := range entries {
-		if imagesDeferred(e.Action) {
+		if imagesDeferred(e) {
 			at[e.ID] = i
 		}
 	}
@@ -407,7 +416,7 @@ func scanEntries(ctx context.Context, tx pgx.Tx, query string, args []any) ([]en
 		if err := rows.Scan(
 			&e.ID, &e.OccurredAt, &e.Action, &e.EntityType, &e.EntityID,
 			&e.ActorType, &e.ActorID, &e.OnBehalfOf, &e.Before, &e.After,
-			&e.Label, &e.Evidence, &e.BatchID, &e.ActivityKind,
+			&e.Label, &e.Evidence, &e.BatchID, &e.ActivityKind, &e.ParentType, &e.ParentID,
 		); err != nil {
 			return nil, fmt.Errorf("read a machine action: %w", err)
 		}
@@ -430,43 +439,4 @@ func admittedActions(bulk bool) []string {
 		}
 	}
 	return actions
-}
-
-// unplaceableSince counts admitted CRM changes this build cannot place.
-// Infrastructure and configuration audits are not unfinished business work;
-// their writers share the maintenance classification with this read.
-//
-// An entity type absent from every arm above has no table this read knows to
-// join, and therefore no gate it can apply. Such a row is never served — serving
-// it would serve a row this read cannot prove the reader may see — but it is
-// COUNTED, so the receipt can say how much it is not showing.
-//
-// Creation and archive of unplaced types include bookkeeping, so only the
-// ordinary change actions contribute to this diagnostic.
-//
-// The count is deliberately coarse: it does not name the types, because naming
-// them would say which kinds of record exist and were touched, which is a fact
-// about the installation rather than about this reader's work. Even coarse, it
-// is installation-wide, so notShownSince asks for ai_diagnostics read first.
-func unplaceableSince(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
-	placed := make([]string, 0, len(scopedTypes)+1)
-	for entityType := range scopedTypes {
-		placed = append(placed, entityType)
-	}
-	placed = append(placed, typeActivity)
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	query := fmt.Sprintf(`
-		SELECT count(*) FROM audit_log a
-		 WHERE a.occurred_at >= $%d
-		   AND a.actor_type = ANY($%d)
-		   AND a.action = ANY($%d)
-		   AND NOT (a.entity_type = ANY($%d))
-		   AND NOT (a.entity_type = ANY($%d))`,
-		arg(since), arg(MachineActors()), arg(admittedActions(false)), arg(auditentity.MaintenanceTypes()), arg(placed))
-	var count int
-	if err := tx.QueryRow(ctx, query, args...).Scan(&count); err != nil {
-		return 0, fmt.Errorf("count the machine actions this build cannot place: %w", err)
-	}
-	return count, nil
 }

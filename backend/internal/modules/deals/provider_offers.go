@@ -79,7 +79,7 @@ func (p *Provider) searchOffers(ctx context.Context, text *string, limit int, cu
 // createOffer makes an offer on the deal its fields name, as POST
 // /deals/{id}/offers makes one on the deal its path names.
 func (p *Provider) createOffer(ctx context.Context, raw json.RawMessage, source string) (datasource.EntityRef, error) {
-	dealID, in, err := OfferCreationFromFields(raw, source)
+	dealID, in, err := OfferCreationFromFields(ctx, raw, source)
 	if err != nil {
 		return datasource.EntityRef{}, err
 	}
@@ -145,10 +145,10 @@ func (p *Provider) RemoveOfferLine(ctx context.Context, offerID, lineID ids.UUID
 }
 
 // OfferCreationFromFields requires the parent deal before applying the shared offer request mapper.
-func OfferCreationFromFields(raw json.RawMessage, source string) (ids.DealID, CreateOfferInput, error) {
+func OfferCreationFromFields(ctx context.Context, raw json.RawMessage, source string) (ids.DealID, CreateOfferInput, error) {
 	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &fields); err != nil {
-		return ids.DealID{}, CreateOfferInput{}, httperr.Validation("fields", "malformed_json", err.Error())
+	if err := httperr.UnmarshalOrRefusal(ctx, "fields", raw, &fields); err != nil {
+		return ids.DealID{}, CreateOfferInput{}, err
 	}
 	var dealID ids.UUID
 	if err := json.Unmarshal(fields[filterOfferDealID], &dealID); err != nil || dealID.IsZero() {
@@ -163,7 +163,7 @@ func OfferCreationFromFields(raw json.RawMessage, source string) (ids.DealID, Cr
 	if err != nil {
 		return ids.DealID{}, CreateOfferInput{}, err
 	}
-	in, err := OfferCreationInput(body)
+	in, err := OfferCreationInput(ctx, body)
 	if err != nil {
 		return ids.DealID{}, CreateOfferInput{}, err
 	}

@@ -123,8 +123,8 @@ func TestAdvanceWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 // over either door.
 func TestRelinkWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "relink-write-doors", "read", "write")
-	from := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Relink From", "source": "manual"})
-	to := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Relink To", "source": "manual"})
+	from := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Relink From", "source": "manual"})
+	to := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Relink To", "source": "manual"})
 	note := func(subject string) string {
 		return createdID(t, d.e, "/v1/activities", AnyMap{
 			"kind": "note", "subject": subject, "source": "manual",
@@ -163,8 +163,8 @@ func TestRelinkWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 
 	// A batch runs at once on either door, as the passport's colleague could
 	// relink it, and the two doors leave the same rows.
-	toRest := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Batch To Rest", "source": "manual"})
-	toTool := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Batch To Tool", "source": "manual"})
+	toRest := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Batch To Rest", "source": "manual"})
+	toTool := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Batch To Tool", "source": "manual"})
 	restA, toolA := note("Rest batch"), note("Tool batch")
 	d.restStatus(t, "POST", "/v1/activities/relink-bulk", AnyMap{
 		"activity_ids": []string{restA}, "entity_type": "contact", "entity_id": toRest, "replace_existing_of_type": true,

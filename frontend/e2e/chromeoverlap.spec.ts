@@ -4,8 +4,8 @@ import { mockApi } from "./seed";
 /**
  * Two pieces of chrome that share a corner do not hide each other.
  *
- * The notification count is pinned near the bell and the rail's chevron ends
- * the spend line. Each placement must hold for the widest realistic figure.
+ * The notification count is pinned near the bell, and the month's spend stands
+ * beside the agent's orb. Each must hold for the widest realistic figure.
  * Whether one box covers another is a fact about layout that jsdom cannot see.
  */
 
@@ -61,16 +61,20 @@ for (const [width, height] of [
 }
 
 test.describe("the rail footer at 1280 by 720", () => {
-  test("the chevron does not print over the balance", async ({ page }) => {
+  test("the spend figure stays inside the rail, clear of the orb", async ({
+    page,
+  }) => {
     await open(page, 1280, 720);
     const figure = page.locator(".arspend b");
     await expect(figure).toBeVisible();
-    const chevron = page.locator(".archev");
-    expect(overlapArea(await rect(figure), await rect(chevron))).toBe(0);
-    // The suite runs in de-DE, whose scope word is the longer one. The chevron
+    const orb = await rect(page.locator(".arorb"));
+    const rail = await rect(page.locator(".rail"));
+    // The suite runs in de-DE, whose scope word is the longer one. The scope
     // still ends inside the rail.
-    expect((await rect(chevron)).right).toBeLessThanOrEqual(
-      (await rect(page.locator(".rail"))).right,
-    );
+    for (const part of [figure, page.locator(".arspend .arscope")]) {
+      const box = await rect(part);
+      expect(overlapArea(orb, box)).toBe(0);
+      expect(box.right).toBeLessThanOrEqual(rail.right);
+    }
   });
 });

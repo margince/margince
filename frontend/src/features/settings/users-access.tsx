@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components, operations } from "../../api/schema";
@@ -8,23 +8,33 @@ import {
   useRosterPartial,
 } from "../../components/entityref";
 import { PageHeadAction } from "../../components/pageheadaction";
-import { Button, EmptyState, OverflowMenu } from "../../design-system/atoms";
+import { useEveryMember, useEveryTeam } from "../../components/roster";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  OverflowMenu,
+} from "../../design-system/atoms";
 import { AvatarStack } from "../../design-system/avatarstack";
 import { Callout } from "../../design-system/callout";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate, QueryStates } from "../../design-system/querystates";
-import { useToast } from "../../design-system/toast";
+import { Switch } from "../../design-system/switch";
 import { stable } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { useCan, useCanWrite, useHoldsAdminRole } from "../../lib/capability";
+import { ENTITY_KINDS } from "../../lib/entity";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { changeReach, readableKinds } from "./accessreach";
+import { useKindList } from "./accesswords";
+import { ArchiveTeamConfirm, useArchiveFlow } from "./team-archive";
 import {
+  isTeamSeat,
   membersOf,
   NewTeamAction,
   RenameTeamAction,
@@ -44,15 +54,6 @@ type Team = components["schemas"]["Team"];
 // endpoint is a GET, so its parameters are the query and there is no body shape
 // to name.
 type Role = operations["previewAccess"]["parameters"]["query"]["role"];
-
-// The objects worth a line in the preview: the record kinds a rep works.
-const PREVIEW_OBJECTS = [
-  "contact",
-  "company",
-  "lead",
-  "deal",
-  "project",
-] as const;
 
 function useAccessPreview(role: Role, teamIds: string[]) {
   return useQuery({
@@ -97,20 +98,29 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
     if (grant.delete) parts.push(t("users.access.delete"));
     return parts.join(" · ");
   };
+  const kindList = useKindList();
+  const readable = readableKinds(access.objects);
   const teams = (access.teams ?? []).map((team) => team.name).join(", ");
+  const reach = changeReach(access.objects, access.row_scope);
   return (
     <ul className="users-access-list">
-      <li>{t("users.access.identity")}</li>
       <li>
-        {access.row_scope === "all"
-          ? t("users.access.writesAll")
-          : access.row_scope === "team"
-            ? teams
-              ? t("users.access.writesTeam", { teams })
-              : t("users.access.writesTeamNone")
-            : t("users.access.writesOwn")}
+        {readable.length === 0
+          ? t("users.access.readsNone")
+          : t("users.access.reads", { kinds: kindList(readable) })}
       </li>
-      {PREVIEW_OBJECTS.map((object) => (
+      <li>
+        {reach === "none"
+          ? t("users.access.writesNone")
+          : reach === "all"
+            ? t("users.access.writesAll")
+            : reach === "team"
+              ? teams
+                ? t("users.access.writesTeam", { teams })
+                : t("users.access.writesTeamNone")
+              : t("users.access.writesOwn")}
+      </li>
+      {ENTITY_KINDS.map((object) => (
         <li key={object}>
           {t(`users.access.object.${object}` satisfies MessageKey)}:{" "}
           {verbs(object)}
@@ -131,24 +141,10 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
   );
 }
 
-// The name a team confirmation says, off the roster this card already holds.
-// A team whose row has gone falls back to its id rather than an empty quote.
-type RosterEntry = NonNullable<ReturnType<typeof useRoster>["data"]>[number];
-
-function teamName(
-  entries: readonly RosterEntry[] | undefined,
-  id: string,
-): string {
-  const found = entries?.find((entry) => entry.id === id);
-  return found && "name" in found ? found.name : id;
-}
-
 // The teams card: the workspace's teams, who is on each, and the verbs that
 // change them. Membership decides who may edit whose records.
 export function TeamsCard() {
   const t = useT();
-  const toast = useToast();
-  const qc = useQueryClient();
   const me = useMe();
   // teams.go: membership and archiving are the admin's alone. `useCanWrite`,
   // because the seat ceiling sits above RBAC and refuses a read seat these.
@@ -159,74 +155,31 @@ export function TeamsCard() {
   // `team_ids` rides the roster only for `user_admin:read`; without it every
   // user reads as on no team, a false statement rather than a withholding.
   const canSeeMembership = useCan("user_admin", "read");
-  const teams = useRoster("team", true);
-  const teamsPartial = useRosterPartial("team", true);
-  const users = useRoster("user", canSeeMembership);
-  const usersPartial = useRosterPartial("user", canSeeMembership);
+  const list = useTeamRows(isAdmin);
+  // The wide walk, because the Members page lists invited seats and a team
+  // count that includes them must have the same seats behind it.
+  const users = useEveryMember(canSeeMembership);
+  const usersPartial = users.data?.partial === true;
   const [openTeamId, setOpenTeamId] = useState<string | null>(null);
-  // The archive invalidated ["teams"], so by the time Undo is pressed the row
-  // may be gone and a lookup of its name would miss.
-  const restore = useMutation({
-    mutationFn: async ({ id }: { id: string; name: string }) => {
-      unwrap(
-        await api.PATCH("/teams/{id}", {
-          params: { path: { id } },
-          body: { archived: false },
-        }),
-      );
-    },
-    // Sticky: the Undo it came from is consumed by the press, so a quiet
-    // refusal would read as the team having come back.
-    onError: (error) => {
-      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
-    },
-    onSuccess: (_restored, { name }) => {
-      qc.invalidateQueries({ queryKey: ["teams"] });
-      qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
-      toast.show(t("users.teamRestored", { name }));
-    },
-  });
-  const archive = useMutation({
-    mutationFn: async (id: string) => {
-      unwrap(
-        await api.PATCH("/teams/{id}", {
-          params: { path: { id } },
-          body: { archived: true },
-        }),
-      );
-    },
-    onSuccess: (_archived, id) => {
-      // Read before the refetch lands, which takes the named row away.
-      const name = teamName(teams.data, id);
-      qc.invalidateQueries({ queryKey: ["teams"] });
-      qc.invalidateQueries({ queryKey: ANALYTICS_CONTEXT_KEY });
-      toast.show(t("users.teamArchived", { name }), {
-        action: {
-          kind: "undo",
-          label: t("common.undo"),
-          onAct: () => restore.mutate({ id, name }),
-        },
-      });
-    },
-  });
-  const colleagues = (users.data ?? []).flatMap((entry) =>
-    "email" in entry ? [entry] : [],
+  const { archive, restore, ...archiveFlow } = useArchiveFlow();
+  const { listed, rows, partial: listedPartial } = list;
+  const colleagues = (users.data?.entries ?? []).flatMap((entry) =>
+    "email" in entry && isTeamSeat(entry) ? [entry] : [],
   );
   const verbs = { canRename, canArchive: canEditTeam };
-  const rows = (teams.data ?? []).flatMap((entry) =>
-    "name" in entry ? [entry] : [],
-  );
-  const empty = teams.isSuccess && rows.length === 0 && !teamsPartial;
+  const empty = listed.isSuccess && rows.length === 0 && !listedPartial;
   const open = rows.find((team) => team.id === openTeamId);
   return (
     <>
-      {teams.data !== undefined && canCreateTeam && (
+      {list.loaded && canCreateTeam && (
         <PageHeadAction>
           <NewTeamAction />
         </PageHeadAction>
       )}
       {/* Untitled: on a one-panel page the page heading names the teams. */}
-      <Panel>
+      <Panel
+        actions={list.mayShowArchived && <ShowArchivedTeams list={list} />}
+      >
         <PanelBody>
           <PanelIntro>
             {t("users.teamsSub")}
@@ -234,7 +187,7 @@ export function TeamsCard() {
               !canSeeMembership &&
               ` ${t("users.teamMembersAdminOnly")}`}
           </PanelIntro>
-          {archive.isError && (
+          {archive.isError && !archiveFlow.confirming && (
             <Callout
               tone="danger"
               kind="outcome"
@@ -243,20 +196,21 @@ export function TeamsCard() {
               {problemMessageOf(archive.error, t)}
             </Callout>
           )}
-          {!teams.isSuccess && (
-            <QueryStates query={teams} pendingLabel={t("users.teamsTitle")}>
+          {!listed.isSuccess && (
+            <QueryStates query={listed} pendingLabel={t("users.teamsTitle")}>
               {null}
             </QueryStates>
           )}
           {empty && <EmptyState>{t("users.noTeamsYet")}</EmptyState>}
         </PanelBody>
-        {teams.isSuccess && !empty && (
+        {listed.isSuccess && !empty && (
           <TeamTable
             rows={rows}
             colleagues={canSeeMembership && users.isSuccess ? colleagues : null}
             verbs={verbs}
-            archiving={archive.isPending}
-            onArchive={(id) => archive.mutate(id)}
+            writing={archive.isPending || restore.isPending}
+            onArchive={archiveFlow.ask}
+            onRestore={(team) => restore.mutate(team)}
             onOpen={setOpenTeamId}
           />
         )}
@@ -270,13 +224,55 @@ export function TeamsCard() {
             onClose={() => setOpenTeamId(null)}
           />
         )}
-        {teamsPartial && (
+        {listedPartial && (
           <PanelBody>
-            <RosterPartialNote partial={teamsPartial} />
+            <RosterPartialNote partial={listedPartial} />
           </PanelBody>
         )}
       </Panel>
+      <ArchiveTeamConfirm {...archiveFlow.confirm} />
     </>
+  );
+}
+
+// The rows the Teams page lists: the live roster, or every team with the
+// archived ones once an admin asks for them.
+function useTeamRows(isAdmin: boolean) {
+  // Listing archived teams needs only the read: a read seat sees them.
+  const mayShowArchived = useCan("team_admin", "read") && isAdmin;
+  const [showArchived, setShowArchived] = useState(false);
+  const teams = useRoster("team", true);
+  const teamsPartial = useRosterPartial("team", true);
+  const every = useEveryTeam(mayShowArchived && showArchived);
+  const wide = mayShowArchived && showArchived;
+  const entries = wide ? every.data?.entries : teams.data;
+  return {
+    mayShowArchived,
+    showArchived,
+    setShowArchived,
+    loaded: teams.data !== undefined,
+    listed: wide ? every : teams,
+    partial: wide ? every.data?.partial === true : teamsPartial,
+    rows: (entries ?? []).flatMap((entry) => ("name" in entry ? [entry] : [])),
+  };
+}
+
+// Kept while archived teams are asked for, so a failed read of them can still
+// be turned back off.
+function ShowArchivedTeams({
+  list,
+}: Readonly<{ list: ReturnType<typeof useTeamRows> }>) {
+  const t = useT();
+  if (!list.loaded && !list.showArchived) {
+    return null;
+  }
+  return (
+    <Switch
+      label={t("users.showArchivedTeams")}
+      hint={t("users.showArchivedTeamsSub")}
+      checked={list.showArchived}
+      onChange={list.setShowArchived}
+    />
   );
 }
 
@@ -288,16 +284,18 @@ function TeamTable({
   rows,
   colleagues,
   verbs,
-  archiving,
+  writing,
   onArchive,
+  onRestore,
   onOpen,
 }: Readonly<{
   rows: readonly Team[];
   /** The users the roster carries membership for; null while withheld. */
   colleagues: readonly TeamUser[] | null;
   verbs: TeamVerbs;
-  archiving: boolean;
-  onArchive: (id: string) => void;
+  writing: boolean;
+  onArchive: (team: Team) => void;
+  onRestore: (team: Team) => void;
   onOpen: (id: string) => void;
 }>) {
   const t = useT();
@@ -314,7 +312,8 @@ function TeamTable({
           : undefined;
         return (
           <CellStack>
-            {colleagues ? (
+            {/* An archived team takes no members, so its editor stays shut. */}
+            {colleagues && !team.archived_at ? (
               <button
                 type="button"
                 className="cell-link"
@@ -330,6 +329,9 @@ function TeamTable({
               <span className="t-caption">
                 {t("users.teamParent", { name: parent })}
               </span>
+            ) : null}
+            {team.archived_at ? (
+              <Badge tone="warning">{t("users.teamArchivedBadge")}</Badge>
             ) : null}
           </CellStack>
         );
@@ -373,8 +375,9 @@ function TeamTable({
         <TeamMenu
           team={team}
           verbs={verbs}
-          archiving={archiving}
-          onArchive={() => onArchive(team.id)}
+          writing={writing}
+          onArchive={() => onArchive(team)}
+          onRestore={() => onRestore(team)}
         />
       ),
     });
@@ -394,21 +397,32 @@ function TeamTable({
 function TeamMenu({
   team,
   verbs,
-  archiving,
+  writing,
   onArchive,
+  onRestore,
 }: Readonly<{
   team: Team;
   verbs: TeamVerbs;
-  archiving: boolean;
+  writing: boolean;
   onArchive: () => void;
+  onRestore: () => void;
 }>) {
   const t = useT();
+  if (team.archived_at) {
+    return verbs.canArchive ? (
+      <span className="cell-actions">
+        <Button disabled={writing} onClick={onRestore}>
+          {t("users.teamRestore")}
+        </Button>
+      </span>
+    ) : null;
+  }
   return (
     <span className="cell-actions">
       <OverflowMenu label={t("table.rowActions", { name: team.name })}>
         {verbs.canRename && <RenameTeamAction team={team} />}
         {verbs.canArchive && (
-          <Button variant="danger" disabled={archiving} onClick={onArchive}>
+          <Button variant="danger" disabled={writing} onClick={onArchive}>
             {t("users.teamArchive")}
           </Button>
         )}

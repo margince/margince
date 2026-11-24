@@ -15,6 +15,7 @@ import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../lib/problem";
 import { meFixture } from "../testing/mefixture";
 import { Field } from "./atoms";
+import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
 // RecordPicker is the debounced search→candidate-list→pick pattern that
@@ -56,6 +57,31 @@ describe("RecordPicker", () => {
       await screen.findByRole("button", { name: "New company" }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Anna Weber" })).toBeNull();
+  });
+
+  it("says nothing about an empty default answer until a term is typed", async () => {
+    const searchTargets = vi.fn().mockResolvedValue([]);
+    rtlRender(
+      <RecordPicker
+        label="Search…"
+        searchOnFocus
+        searchTargets={searchTargets}
+        onPick={vi.fn()}
+      />,
+    );
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await user.click(screen.getByRole("searchbox"));
+      await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
+      expect(searchTargets).toHaveBeenCalledWith("");
+      expect(screen.queryByText("No match")).toBeNull();
+      await user.type(screen.getByRole("searchbox"), "acme");
+      await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
+      expect(screen.getByText("No match")).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("ignores a late default answer after the reader types a search", async () => {
@@ -254,7 +280,7 @@ describe("RecordPicker", () => {
     const user = userEvent.setup();
     const refused = new ProblemError({
       code: "permission_denied",
-      detail: "contact.update: permission denied",
+      detail: "your role does not grant update on contact",
     });
     rtlRender(
       <LocaleProvider initial="en">

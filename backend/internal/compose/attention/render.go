@@ -72,6 +72,7 @@ const actionDismiss crmcontracts.AttentionItemActions = "dismiss"
 // contacts.MayMergePair, the rule the merge itself asks of a filed pair.
 func (s *Service) duplicateItem(
 	pair DuplicatePair, known pairFaces, decidable pairAuthority, settleable map[ids.UUID]bool,
+	recipient *ids.UUID,
 ) crmcontracts.AttentionItem {
 	kind := pair.EntityType
 	confidence := float32(pair.Confidence)
@@ -81,6 +82,9 @@ func (s *Service) duplicateItem(
 		Kind:       &kind,
 		Confidence: &confidence,
 		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+	if recipient != nil {
+		item.RequestedDeciderId = idPtr(*recipient)
 	}
 	left, leftKnown := known.side(pair.EntityType, pair.LeftID)
 	right, rightKnown := known.side(pair.EntityType, pair.RightID)
@@ -360,12 +364,18 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		item.DueHasTime = new(task.DueHasTime)
 		item.DueIntent = task.DueIntent
 		past := taskLateAt(task.DueAt, asOf, task.MayBeDone)
+		name := dueGroup(due, asOf, until, loc)
+		if days, ok := pickedDay(task.DueAt, task.DueHasTime, task.DueIntent, asOf, loc); ok {
+			name = pickedDayGroup(days)
+			past = name == dueGroupOverdue && task.MayBeDone == nil
+		}
 		item.Overdue = &past
-		// Which run of the page it heads. Only dated rows carry one, which is
-		// what the contract says and what lets a client group without having to
+		// Which run of the page it heads, so a client groups without having to
 		// decide the day's end for itself.
-		group := crmcontracts.AttentionItemDueGroup(dueGroup(due, asOf, until, loc))
+		group := crmcontracts.AttentionItemDueGroup(name)
 		item.DueGroup = &group
+	} else if task.later {
+		item.DueGroup = new(crmcontracts.AttentionItemDueGroupNone)
 	}
 	// Who holds it. Absent means nobody has taken it, which the unassigned
 	// scope exists to surface and which the row could not say before.

@@ -203,6 +203,7 @@ describe("what the editor opens on", () => {
     const { show } = renderFields([field({})]);
 
     await user.click(await screen.findByRole("button", { name: "Edit" }));
+    expect(screen.getByRole("dialog", { name: "Title" })).toBeTruthy();
     const input = screen.getByRole("textbox", { name: "Title" });
     await user.clear(input);
     await user.type(input, "Head of Purchasing");
@@ -230,12 +231,40 @@ describe("what the editor opens on", () => {
         return new Response(null, { status: 204 });
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Save correction" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(sent).not.toBe(""));
     const body = JSON.parse(sent);
     expect(body.value_shown).toBe("Head of Procurement");
     expect(body.value_captured_at).toBe("2026-08-01T08:00:00Z");
+  });
+});
+
+describe("an emptied correction", () => {
+  it("says the value is required on Save, and sends nothing", async () => {
+    const user = userEvent.setup();
+    stubMe(MAY_CORRECT);
+    renderFields([field({})]);
+
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    const input = screen.getByRole("textbox", { name: "Title" });
+    await user.clear(input);
+    const posts = vi.fn();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: RequestInfo | URL, init?: RequestInit) => {
+        const method =
+          request instanceof Request ? request.method : init?.method;
+        if (method === "POST") posts();
+        return new Response(null, { status: 204 });
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(screen.getByText("Title is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(input);
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(posts).not.toHaveBeenCalled();
   });
 });
 

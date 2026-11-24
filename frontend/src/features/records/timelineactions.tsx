@@ -50,7 +50,8 @@ import {
   RelinkModal,
 } from "../mail/compose";
 import { ActivityFilesAction } from "./activityfiles";
-import { DealDeclineAction } from "./dealdecline";
+import { audienceWords } from "./audiencewords";
+import { DealRelevanceAction, DealRelevanceBadge } from "./dealdecline";
 import { MoveButton } from "./movebutton";
 import { ProjectFilingAction } from "./projectfiling";
 
@@ -136,6 +137,9 @@ export function TimelineActions(props: RowVerbProps) {
   return (
     <>
       <RowAnswerActions {...props} />
+      {entityType === "deal" && (
+        <DealRelevanceBadge activity={activity} dealId={entityId} />
+      )}
       {entityType === "contact" && (
         <HeldMailLink activity={activity} contactId={entityId} />
       )}
@@ -152,10 +156,10 @@ export function TimelineActions(props: RowVerbProps) {
           entityType={entityType}
           entityId={entityId}
         />
-        {/* An email on a deal's timeline may have been filed there by
-            capture alone, so this is where a reader says it is not. */}
-        {entityType === "deal" && activity.kind === "email" && (
-          <DealDeclineAction activity={activity} dealId={entityId} />
+        {/* A row on a deal's timeline may have been filed there by capture
+            or an import alone, so this is where a reader says it is not. */}
+        {entityType === "deal" && activity.kind !== "task" && (
+          <DealRelevanceAction activity={activity} dealId={entityId} />
         )}
         {/* Every row on a project's timeline is filed under that project, so
             this is the one surface where taking the filing back is always
@@ -363,6 +367,7 @@ export function AudienceAction({
   if (activity.captured_by.startsWith("connector:") && !internal) {
     return null;
   }
+  const words = audienceWords(activity.kind);
   return (
     <>
       <Button
@@ -376,7 +381,7 @@ export function AudienceAction({
       <ConfirmModal
         open={open}
         onClose={() => setOpen(false)}
-        title={t("compose.audienceTitle")}
+        title={t(words.title)}
         intent="form"
         confirmLabel={t("compose.audienceConfirm")}
         confirmDisabled={
@@ -396,13 +401,13 @@ export function AudienceAction({
       >
         <div className="compose-fields">
           <ChoiceList
-            legend={t("compose.audienceLegend")}
+            legend={t(words.legend)}
             value={choice}
             onChange={setChoice}
             choices={messageAudienceChoices(internal).map((value) => ({
               value,
               label: t(labelFor(AUDIENCE_LABEL, value)),
-              description: t(labelFor(AUDIENCE_HINT, value)),
+              description: t(labelFor(words.hints ?? AUDIENCE_HINT, value)),
             }))}
           />
           {/* The picker only where the choice needs one. A limited-to-nobody
@@ -417,7 +422,7 @@ export function AudienceAction({
             />
           )}
           <p className="t-caption">
-            {t(internal ? "internalMail.shareNote" : "compose.audienceNote")}
+            {t(internal ? "internalMail.shareNote" : words.scope)}
           </p>
         </div>
       </ConfirmModal>

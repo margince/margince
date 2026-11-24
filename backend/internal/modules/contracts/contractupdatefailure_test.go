@@ -33,6 +33,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/storekit/outboxtest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -72,7 +73,7 @@ var (
 func TestTheContractUpdateShapeSendsAllThreeWrites(t *testing.T) {
 	tx := &recordingTx{}
 	if err := applyContractUpdate(updatingContext(), tx, ids.New[ids.ContractKind](),
-		aContractPatch(), nil, "contract update"); err != nil {
+		aContractPatch(), nil, storekit.LiveOnly, "contract update"); err != nil {
 		t.Fatalf("the update shape refused a transaction that accepted everything: %v", err)
 	}
 	for what, statement := range map[string]*regexp.Regexp{
@@ -95,23 +96,19 @@ func TestTheContractUpdateEventCarriesWhatChanged(t *testing.T) {
 	tx := &recordingTx{}
 	patch := aContractPatch()
 	if err := applyContractUpdate(updatingContext(), tx, ids.New[ids.ContractKind](),
-		patch, nil, "contract update"); err != nil {
+		patch, nil, storekit.LiveOnly, "contract update"); err != nil {
 		t.Fatalf("applying the update: %v", err)
 	}
 	sent := tx.find(eventWrite)
 	if sent == nil {
 		t.Fatal("no event was written, so there is nothing to check what it carries")
 	}
-	body, isBytes := sent.args[len(sent.args)-1].([]byte)
-	if !isBytes {
-		t.Fatalf("the outbox row's last bind is %T, not the marshalled envelope", sent.args[len(sent.args)-1])
-	}
 	var envelope struct {
 		Payload struct {
 			ChangedFields map[string]any `json:"changed_fields"`
 		} `json:"payload"`
 	}
-	if err := json.Unmarshal(body, &envelope); err != nil {
+	if err := json.Unmarshal(outboxtest.Envelope(t, sent.args).Payload, &envelope.Payload); err != nil {
 		t.Fatalf("reading the envelope the shape emitted: %v", err)
 	}
 	after := patch.After()
@@ -148,7 +145,7 @@ func TestARefusedContractPatchReachesTheCaller(t *testing.T) {
 	refused := errors.New("deadlock detected")
 	tx := &recordingTx{refuse: domainWrite, err: refused}
 	err := applyContractUpdate(updatingContext(), tx, ids.New[ids.ContractKind](),
-		aContractPatch(), nil, "contract update")
+		aContractPatch(), nil, storekit.LiveOnly, "contract update")
 	if !errors.Is(err, refused) {
 		t.Fatalf("the database's refusal did not reach the caller: %v", err)
 	}
@@ -164,7 +161,7 @@ func TestARefusedAuditRowStopsTheContractUpdate(t *testing.T) {
 	refused := errors.New("audit_log is full")
 	tx := &recordingTx{refuse: auditWrite, err: refused}
 	err := applyContractUpdate(updatingContext(), tx, ids.New[ids.ContractKind](),
-		aContractPatch(), nil, "contract update")
+		aContractPatch(), nil, storekit.LiveOnly, "contract update")
 	if !errors.Is(err, refused) {
 		t.Fatalf("a refused audit row did not reach the caller: %v", err)
 	}
@@ -179,7 +176,7 @@ func TestARefusedEventStopsTheContractUpdate(t *testing.T) {
 	refused := errors.New("outbox unavailable")
 	tx := &recordingTx{refuse: eventWrite, err: refused}
 	err := applyContractUpdate(updatingContext(), tx, ids.New[ids.ContractKind](),
-		aContractPatch(), nil, "contract update")
+		aContractPatch(), nil, storekit.LiveOnly, "contract update")
 	if !errors.Is(err, refused) {
 		t.Fatalf("a refused event did not reach the caller: %v", err)
 	}
@@ -199,7 +196,7 @@ func TestARefusedCheckBecomesAFieldLevelRefusal(t *testing.T) {
 		Code: "23514", ConstraintName: "contract_term_order",
 	}}
 	err := applyContractUpdate(updatingContext(), tx, ids.New[ids.ContractKind](),
-		aContractPatch(), nil, "contract update")
+		aContractPatch(), nil, storekit.LiveOnly, "contract update")
 	var refusal *ContractCheckError
 	if !errors.As(err, &refusal) {
 		t.Fatalf("a refused CHECK did not become a field-level refusal: %v", err)
@@ -218,7 +215,7 @@ func TestAStaleIfMatchSurvivesTheUpdateShapesWrap(t *testing.T) {
 	stale := int64(3)
 	tx := &recordingTx{missed: true, exists: true}
 	err := applyContractUpdate(updatingContext(), tx, ids.New[ids.ContractKind](),
-		aContractPatch(), &stale, "contract update")
+		aContractPatch(), &stale, storekit.LiveOnly, "contract update")
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("a stale If-Match did not reach the caller as version skew: %v", err)
 	}

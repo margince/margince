@@ -18,6 +18,9 @@ import {
 import { useT } from "../../i18n";
 import { useCurrentMove } from "../../lib/currentmove";
 import { opensElsewhere } from "../../lib/linkclick";
+import { type Departure, fromHere } from "../../lib/navigatefrom";
+import { parseHash } from "../../lib/router";
+import { parseParams } from "../../lib/urlstate";
 import { useFoldedViewport } from "../../lib/viewport";
 import {
   moveHref,
@@ -49,6 +52,7 @@ export function RowActs({
   onReview,
   onOpenEmail,
   context,
+  verbs,
   menu,
   framed,
   titled,
@@ -70,6 +74,8 @@ export function RowActs({
   onOpenEmail?: (id: string) => void;
   /** The way into what the row is about, where the surface has one; first. */
   context?: ReactNode;
+  /** The surface's own verbs, after the answer on a card. */
+  verbs?: ReactNode;
   /** Lines the surface puts first in the menu, such as other ways to call. */
   menu?: ReactNode;
   /** A card around this row already names and links its record. */
@@ -120,7 +126,7 @@ export function RowActs({
   );
   const others = (
     <>
-      {context}
+      {verbs}
       {reviews && onReview && <BatchVerb onReview={onReview} />}
       {!folds && equalVerbs}
       <DoneVerb write={write} />
@@ -130,6 +136,7 @@ export function RowActs({
   // leads there. Down the queue it stands last, at one x on every row.
   return (
     <div className="worklist-row-acts">
+      {context}
       {framed ? (
         <>
           {answer}
@@ -301,15 +308,15 @@ function PreparedMove({
 }: Readonly<{ item: WorklistItem; onOpenEmail?: (id: string) => void }>) {
   const t = useT();
   const quiet = useQuietVerbs();
-  const check = useCurrentMove<{ activityId: string } | { href: string }>(
-    (target) => {
-      if ("activityId" in target) {
-        onOpenEmail?.(target.activityId);
-      } else {
-        globalThis.location.assign(target.href);
-      }
-    },
-  );
+  const check = useCurrentMove<
+    { activityId: string } | { href: string; from: Departure }
+  >((target) => {
+    if ("activityId" in target) {
+      onOpenEmail?.(target.activityId);
+    } else {
+      target.from.navigate(parseHash(target.href), parseParams(target.href));
+    }
+  });
   if (replyIsTheMove(item)) {
     return null;
   }
@@ -362,7 +369,7 @@ function PreparedMove({
           if (!receipt || opensElsewhere(event)) return;
           event.preventDefault();
           if (check.isPending) return;
-          check.mutate({ receipt, operand: { href: move } });
+          check.mutate({ receipt, operand: { href: move, from: fromHere() } });
         }}
       >
         {modelWrites && <Sparkles aria-hidden="true" />}

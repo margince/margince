@@ -17,8 +17,9 @@ package compose
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/sendlater"
+	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -56,7 +57,7 @@ func (h directedSendHandlers) CorrectCommunicationWording(w http.ResponseWriter,
 // DirectCommunicationSend records the decision and sends the message it was
 // about.
 func (h directedSendHandlers) DirectCommunicationSend(
-	w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.DirectCommunicationSendParams,
 ) {
 	if h.directed == nil {
 		httperr.NotImplemented(w, r, "DirectCommunicationSend")
@@ -66,12 +67,12 @@ func (h directedSendHandlers) DirectCommunicationSend(
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	sent, err := h.directed.DirectAndSend(r.Context(), ids.UUID(id), consent.DirectInput{
-		ReasonCode:     string(body.ReasonCode),
-		Explanation:    body.Explanation,
-		WarningVersion: body.WarningVersion,
-		Acknowledged:   body.Acknowledged,
-	})
+	in := sendlater.DecisionOf(body)
+	if h.directed.later.Serve(w, r, ids.UUID(id), in, body) {
+		return
+	}
+	sent, err := h.directed.DirectAndSend(r.Context(), ids.UUID(id), in)
+	sendmetrics.ObserveSendAnyway(err)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

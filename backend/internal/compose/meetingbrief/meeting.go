@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/dealseat"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -136,10 +137,10 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(activityID)
 	requestedPos := arg(nullableProject(requested))
-	// A last touch is contact we had: a past meeting nobody called off, not a
-	// call that reached nobody (relstrength.HadContactSQL).
+	// A last touch is an exchange as the contact page counts it, so the arc and
+	// the attendee line read one rule (relstrength.InteractionCountsAtSQL).
 	nowAt := fmt.Sprintf("$%d", arg(now))
-	happened := occurredday.HappenedSQL("pa", nowAt) + " AND " + relstrength.HadContactSQL("pa", nowAt)
+	happened := relstrength.InteractionCountsAtSQL("pa", nowAt)
 	clauses, err := roomClauses(ctx, arg)
 	if err != nil {
 		return meeting{}, err
@@ -257,7 +258,7 @@ var meetingQuery = `
 	                WHERE ap.activity_id = a.id AND ap.contact_id IS NOT NULL) parts
 	         JOIN contact p ON p.id = parts.contact_id AND p.archived_at IS NULL
 	         LEFT JOIN relationship r ON r.contact_id = p.id AND r.deal_id = d.id
-	              AND r.kind = 'deal_stakeholder' AND r.archived_at IS NULL
+	              AND ` + dealseat.CurrentSQL("r") + `
 	              AND %[5]s
 	         WHERE %[2]s
 	       ), '[]'::json)

@@ -92,3 +92,31 @@ export function useCreateOutcomeReview(dealId: string) {
     },
   });
 }
+
+/**
+ * Turns a template on or off. Turning one on retires the template its outcome
+ * asked before, so the whole list is read again rather than patched in place.
+ */
+export function useSetReviewTemplateActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      id: string;
+      version: number;
+      active: boolean;
+    }) => {
+      const { data, error, response } = await api.PATCH(
+        "/activity-review-templates/{id}",
+        {
+          params: { path: { id: args.id } },
+          body: { version: args.version, active: args.active },
+        },
+      );
+      if (error || !response.ok) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: REVIEW_TEMPLATES_KEY }),
+  });
+}

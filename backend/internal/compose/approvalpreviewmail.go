@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 const (
@@ -108,7 +110,12 @@ func (r approvalPreviewReader) appendMailFooter(ctx context.Context, origin acti
 		return err
 	}
 	for _, line := range footer.Disclosures {
-		*out.Details = append(*out.Details, previewDetail("disclosure_text", line.Text))
+		if !line.Missing() {
+			*out.Details = append(*out.Details, previewDetail("disclosure_text", line.Text))
+		}
+	}
+	for _, finding := range footer.Findings {
+		*out.Details = append(*out.Details, previewDetail("footer_warning", mailFooterFinding(finding)))
 	}
 	if footer.OffersUnsubscribe {
 		*out.Effects = append(*out.Effects, "append_recipient_unsubscribe")
@@ -126,4 +133,28 @@ func appendMailSchedule(message crmcontracts.SendCompanyEmailRequest, out *crmco
 	}
 	*out.Details = append(*out.Details, previewDetail("scheduled_at", schedule.At.Format(time.RFC3339)), previewDetail("scheduled_tz", schedule.TZ))
 	return nil
+}
+
+func mailFooterFinding(finding commsauthz.FooterFinding) string {
+	label := "some company footer text"
+	switch finding.Kind {
+	case "objection_route":
+		label = "opt-out instructions"
+	case "privacy_contact":
+		label = "privacy contact information"
+	case "controller_identity":
+		label = "the company name and address"
+	case "advertiser_contact":
+		label = "advertiser contact information"
+	case "recipient_private_link":
+		label = "a private opt-out link, to protect each recipient's private information"
+	case "public_opt_out_link":
+		label = "an opt-out link because the company has not configured a working public address"
+	case "unsubscribe_link":
+		label = "an opt-out link because the send could be given no stop link"
+	}
+	if finding.Language != "" {
+		label += " in " + finding.Language
+	}
+	return fmt.Sprintf("The email will omit %s. Sending requires a recorded reason.", label)
 }

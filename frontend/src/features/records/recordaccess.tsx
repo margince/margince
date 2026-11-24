@@ -18,6 +18,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { Button } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
@@ -26,13 +27,14 @@ import { useToast } from "../../design-system/toast";
 import { VisibilityBadge } from "../../design-system/visibility";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
+import { fromHere } from "../../lib/navigatefrom";
 import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { HandoverOffer } from "./handoveroffer";
 import { HandoverRequest } from "./handoverrequest";
 import "./recordaccess.css";
@@ -50,6 +52,12 @@ type AccessibleRecord = Readonly<{
 }>;
 
 type Audience = "workspace" | "owner";
+
+// The chip names the audience in the words of the choice that sets it.
+const AUDIENCE_WORD = {
+  owner: "recordAccess.option.owner",
+  workspace: "recordAccess.option.workspace",
+} as const satisfies Record<Audience, MessageKey>;
 
 // Which record this is, which decides the endpoint, the cache key and the
 // sentences. A closed union rather than a string: a typo would otherwise
@@ -70,8 +78,6 @@ const COPY = {
     published: "recordAccess.contact.published",
     madePrivate: "recordAccess.contact.madePrivate",
     leftYourAccess: "recordAccess.contact.leftYourAccess",
-    archived: "contact.rail.archivedReadOnly",
-    notYours: "contact.notYoursToChange",
   },
   company: {
     title: "recordAccess.company.title",
@@ -82,8 +88,6 @@ const COPY = {
     published: "recordAccess.company.published",
     madePrivate: "recordAccess.company.madePrivate",
     leftYourAccess: "recordAccess.company.leftYourAccess",
-    archived: "record.archivedReadOnly",
-    notYours: "record.notYoursToChange",
   },
 } as const satisfies Record<RecordKind, Record<string, MessageKey>>;
 
@@ -106,10 +110,7 @@ export function RecordAccess({
   const copy = COPY[kind];
   // The page's own write rule (grant, seat, row, archive) rather than the
   // row's `writable` alone, which offered a read seat a switch it cannot use.
-  const refusal = useRecordWriteRefusal(kind, record, {
-    archived: t(copy.archived),
-    notYours: t(copy.notYours),
-  });
+  const refusal = useKindWriteRefusal(kind, record);
   const sentence = useAudienceSentence(kind, record);
   const viewerId = useViewerId();
   const failure = (error: unknown) => problemMessageOf(error, t);
@@ -143,10 +144,11 @@ export function RecordAccess({
       toast.show(failure(error), { tone: "danger" });
       await invalidateRecord(queryClient, kind, id);
     },
-    onSuccess: async (_, { id, visibility, mayLoseAccess }) => {
+    onMutate: fromHere,
+    onSuccess: async (_, { id, visibility, mayLoseAccess }, from) => {
       if (
         mayLoseAccess &&
-        (await leaveIfOutOfReach(id, t(copy.leftYourAccess)))
+        (await leaveIfOutOfReach(id, t(copy.leftYourAccess), from))
       ) {
         return;
       }
@@ -173,6 +175,7 @@ export function RecordAccess({
           <span className="sr-only">{t(copy.title)}: </span>
           <VisibilityBadge
             state={current === "owner" ? "private" : "workspace"}
+            label={t(AUDIENCE_WORD[current])}
             opens
           />
         </>
@@ -183,6 +186,7 @@ export function RecordAccess({
         {refusal ? (
           <>
             <p className="t-caption">{refusal}</p>
+            <EditAccessRequest kind={kind} record={record} />
             <HandoverRequest kind={kind} record={record} />
           </>
         ) : (
@@ -268,7 +272,7 @@ function AudienceSwitch({
         choices={[
           {
             value: "owner",
-            label: t("recordAccess.option.owner"),
+            label: t(AUDIENCE_WORD.owner),
             description: t(OWNER_HINT[owner]),
             // The server refuses owner-only on a record nobody owns: no seat
             // could read it.
@@ -276,7 +280,7 @@ function AudienceSwitch({
           },
           {
             value: "workspace",
-            label: t("recordAccess.option.workspace"),
+            label: t(AUDIENCE_WORD.workspace),
           },
         ]}
         onChange={setPicked}

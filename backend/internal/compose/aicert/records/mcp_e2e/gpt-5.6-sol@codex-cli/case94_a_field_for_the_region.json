@@ -11,13 +11,77 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "852458cc421f0ca4",
+    "tools": "267307c89737599d",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:40:43Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:57Z"
+  },
   "usage": {
-    "input_tokens": 93819,
-    "output_tokens": 5032,
+    "input_tokens": 84771,
+    "output_tokens": 4894,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 1056000,
+    "cache_read_input_tokens": 1009024,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_query_vocabulary",
+        "describe_record_fields",
+        "describe_views",
+        "find_records",
+        "list_records",
+        "list_tags",
+        "read_tags",
+        "read_view",
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_analytics_vocabulary",
+        "describe_query_vocabulary",
+        "describe_record_fields",
+        "describe_router_actions",
+        "describe_views",
+        "find_records",
+        "list_records",
+        "read_view",
+        "read_workspace"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 11,
+      "min": 10,
+      "max": 12
+    },
+    "refused": {
+      "median": 2,
+      "min": 1,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 546897.5,
+      "min": 499231,
+      "max": 594564
+    },
+    "output_tokens": {
+      "median": 2447,
+      "min": 2130,
+      "max": 2764
+    }
   }
 }

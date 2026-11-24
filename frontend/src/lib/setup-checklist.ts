@@ -20,7 +20,9 @@ import {
   usePassports,
 } from "./passports.queries";
 import { useSchedulingProfile } from "./scheduling-profile-query";
+import { useMe } from "./session";
 import type { SettingsPageId, SettingsReach } from "./settingscatalog";
+import { usePermissionsSeen } from "./setup-permissions";
 import { readStored, STORAGE_KEYS, watchStored, writeStored } from "./storage";
 import { useVoiceProfile } from "./voice-profile";
 import {
@@ -39,14 +41,33 @@ type Readiness = ConnectorsResult["providers"][number]["reason"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 type SchedulingProfile = components["schemas"]["SchedulingProfile"];
 type PassportSummary = components["schemas"]["PassportSummary"];
+type Me = components["schemas"]["MeResponse"];
 
 export type SetupStepId =
   | "model"
   | "mail"
   | "calendar"
+  | "timezone"
+  | "language"
+  | "permissions"
   | "ai"
   | "voice"
   | "booking";
+
+/** The address dial that sends the Account page to its language and time
+ *  zone card, and the card's anchor. */
+export const ACCOUNT_FOCUS_PARAM = "focus";
+export const ACCOUNT_LANGUAGE_SECTION = "account-language";
+
+/** The dials a step's action adds to its page: the language and time zone
+ *  steps scroll the Account page to their card. */
+export function stepDials(
+  id: SetupStepId,
+): ReadonlyMap<string, string> | undefined {
+  return id === "timezone" || id === "language"
+    ? new Map([[ACCOUNT_FOCUS_PARAM, ACCOUNT_LANGUAGE_SECTION]])
+    : undefined;
+}
 
 /** Why an unfinished step reads differently from its plain reason. */
 export type SetupStepReason =
@@ -58,6 +79,8 @@ export type SetupStepReason =
   | "needsVendor"
   /** No usable company Google or Microsoft app yet. */
   | "waitsAdmin"
+  /** No usable company app yet, and the reader is the one who sets it up. */
+  | "registerApp"
   /** The booking link offers times from a calendar. */
   | "needsCalendar";
 
@@ -79,6 +102,9 @@ export type SetupStep = Readonly<{
     /** The server's count of words still missing for a first build. */
     wordsRemaining: number | null;
   }> | null;
+  /** The zone the time zone step is saved on, or null while none is stored.
+   *  Absent on every other step. */
+  zone?: string | null;
   /** The AI tool step's connection, named as the reader approved it, or null
    *  while none is connected. Absent on every other step. */
   agent?: Readonly<{ name: string | null }> | null;
@@ -99,6 +125,21 @@ export type SetupReads = Readonly<{
   /** Whether the installation can call a model, or null where this reader
    *  cannot bind one or the read has not answered. */
   modelReady: boolean | null;
+  /** What the reader's own seat says about the three personal steps, or null
+   *  while it has not answered. */
+  personal: PersonalFacts | null;
+  /** Whether the reader may register or repair the company's apps. */
+  registersApps: boolean;
+}>;
+
+/** The personal steps' facts: three answers every seat can give. */
+export type PersonalFacts = Readonly<{
+  /** The reader picked the zone themselves, not the browser or an agent. */
+  timezoneChosen: boolean;
+  zone: string | null;
+  /** The reader chose a language for their account. */
+  languageChosen: boolean;
+  permissionsSeen: boolean;
 }>;
 
 type Draft = Omit<SetupStep, "state"> & Readonly<{ done: boolean }>;
@@ -127,6 +168,13 @@ export function waitsOnAdmin(
   reason: Readiness | undefined,
 ): reason is AdminWait {
   return reason === "app_missing" || reason === "app_unusable";
+}
+
+// The reader who sets the company app up is sent to do it, not told to wait.
+function appWait(id: "mail" | "calendar", registersApps: boolean): Draft {
+  return registersApps
+    ? draft(id, "authentication", { reason: "registerApp" })
+    : draft(id, "connections", { blocked: true, reason: "waitsAdmin" });
 }
 
 function draft(
@@ -162,7 +210,10 @@ function expired(
   );
 }
 
-function mailStep(connectors: ConnectorsResult): Draft | null {
+function mailStep(
+  connectors: ConnectorsResult,
+  registersApps: boolean,
+): Draft | null {
   const mailbox = connected(connectors, isMailbox);
   if (mailbox) {
     return draft("mail", "connections", { connection: mailbox });
@@ -174,12 +225,13 @@ function mailStep(connectors: ConnectorsResult): Draft | null {
     });
   }
   // Nothing connects here and no administrator can change that: no step.
-  return reasons.some(waitsOnAdmin)
-    ? draft("mail", "connections", { blocked: true, reason: "waitsAdmin" })
-    : null;
+  return reasons.some(waitsOnAdmin) ? appWait("mail", registersApps) : null;
 }
 
-function calendarStep(connectors: ConnectorsResult): Draft | null {
+function calendarStep(
+  connectors: ConnectorsResult,
+  registersApps: boolean,
+): Draft | null {
   const isCalendar = (provider: Provider) => CALENDARS.has(provider);
   const calendar = connected(connectors, isCalendar);
   // A read-only grant blocks no time for bookings it cannot write: not done.
@@ -194,10 +246,7 @@ function calendarStep(connectors: ConnectorsResult): Draft | null {
   );
   if (!readiness.includes("ready")) {
     return readiness.some(waitsOnAdmin)
-      ? draft("calendar", "connections", {
-          blocked: true,
-          reason: "waitsAdmin",
-        })
+      ? appWait("calendar", registersApps)
       : null;
   }
   if (calendar || expired(connectors, isCalendar)) {
@@ -258,10 +307,31 @@ function bookingStep(
     : draft("booking", "meetings", { blocked: true, reason: "needsCalendar" });
 }
 
+// The three steps the Account page answers, open to every seat.
+function personalSteps(personal: PersonalFacts): Draft[] {
+  return [
+    {
+      ...draft("timezone", "account", { done: personal.timezoneChosen }),
+      zone: personal.zone,
+    },
+    draft("language", "account", { done: personal.languageChosen }),
+    draft("permissions", "account", { done: personal.permissionsSeen }),
+  ];
+}
+
 /** The steps this reader is asked to finish, in the order they are shown. */
 export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
-  const { acts, connectors, voice, scheduling, passports, now, modelReady } =
-    reads;
+  const {
+    acts,
+    connectors,
+    voice,
+    scheduling,
+    passports,
+    now,
+    modelReady,
+    personal,
+    registersApps,
+  } = reads;
   // A role or seat that cannot capture is never asked to connect anything.
   const connections =
     acts.has("connections") &&
@@ -270,14 +340,15 @@ export function deriveSetupSteps(reads: SetupReads): readonly SetupStep[] {
     connectors.captureAllowed
       ? connectors
       : null;
-  const calendar = connections && calendarStep(connections);
+  const calendar = connections && calendarStep(connections, registersApps);
   const drafts = [
     // First, because reading, drafting and research all wait on it.
     acts.has("models") && modelReady !== null
       ? draft("model", "models", { done: modelReady })
       : null,
-    connections && mailStep(connections),
+    connections && mailStep(connections, registersApps),
     calendar,
+    ...(personal ? personalSteps(personal) : []),
     acts.has("agents") && passports ? aiStep(passports, now) : null,
     acts.has("voice") && voice ? voiceStep(voice) : null,
     acts.has("meetings") && scheduling
@@ -332,7 +403,23 @@ function useModelRead(acts: ReadonlySet<SettingsPageId>) {
   };
 }
 
-export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
+function personalFacts(
+  user: Me["user"] | undefined,
+  permissionsSeen: boolean,
+): PersonalFacts | null {
+  if (!user) return null;
+  return {
+    timezoneChosen: user.timezone_chosen === true,
+    zone: user.timezone ?? null,
+    languageChosen: user.locale !== undefined,
+    permissionsSeen,
+  };
+}
+
+export function useSetupChecklist(
+  reach: SettingsReach,
+  withPersonal = true,
+): SetupChecklist {
   const acts = new Set(reach.acts.map((page) => page.id));
   // Each read waits for a page that could show its step.
   const connectors = useConnectors({ enabled: acts.has("connections") });
@@ -340,6 +427,11 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
   const scheduling = useSchedulingProfile({ enabled: acts.has("meetings") });
   const connector = useConnectorState({ enabled: acts.has("agents") });
   const model = useModelRead(acts);
+  const me = useMe();
+  const permissions = usePermissionsSeen();
+  // The grant the company-app endpoints enforce, on the page that holds them.
+  const registersApps =
+    useCanWrite("capture_settings", "update") && acts.has("authentication");
   const aiConnects = acts.has("agents") && connector.data?.enabled === true;
   const passports = usePassports({
     enabled: aiConnects,
@@ -357,6 +449,7 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     acts.has("agents") && connector,
     aiConnects && passports,
     model.asked,
+    withPersonal && me,
   ];
   // A refused or failed read drops the steps it feeds rather than claiming
   // them open. The voice step stays as unknown instead: dropping it could
@@ -370,6 +463,10 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     passports: aiConnects ? (passports.data?.data ?? null) : null,
     now: passports.dataUpdatedAt,
     modelReady: model.ready,
+    personal: withPersonal
+      ? personalFacts(me.data?.user, permissions.seen)
+      : null,
+    registersApps,
   });
   const done = steps.filter((step) => step.state === "done").length;
   return {

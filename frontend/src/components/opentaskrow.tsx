@@ -5,9 +5,13 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Badge } from "../design-system/atoms";
 import { OverviewRow } from "../design-system/overviewcard";
+import { taskDueOnDay, taskDueZone } from "../format/calendarday";
 import { formatNumber } from "../format/format";
-import { formatDayMonth, formatDueCompact } from "../format/format.dates";
+import { formatDueCompact } from "../format/format.dates";
+import { daysPast } from "../format/lateness";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useCompanyZone } from "../lib/companyzone";
+import { displayedSubject } from "../lib/systemdisplay";
 import { type DatedTask, taskStanding } from "../lib/taskstanding";
 import { useViewerZone } from "../lib/viewerzone";
 import { TaskCompleteCheck, type useTaskUpdate } from "./taskactions";
@@ -33,6 +37,39 @@ export type OpenTask = DatedTask &
     // worse than none, so a task they may not change draws no tick.
     writable: boolean;
   }>;
+
+// A task from an activity list as a row reads it. Late by the same measure as
+// the "+N tasks" peek beside a record's Next bar.
+export function openTaskOf(
+  task: components["schemas"]["Activity"],
+  asOf: string,
+  untitled: string,
+  companyZone: string,
+): OpenTask {
+  return {
+    id: task.id,
+    subject: displayedSubject(task) ?? untitled,
+    due_at: task.due_at,
+    due_has_time: task.due_has_time,
+    due_intent: task.due_intent,
+    overdue: task.due_at
+      ? daysPast(
+          Date.parse(
+            taskDueOnDay(
+              task.due_at,
+              task.due_has_time,
+              task.due_intent,
+              companyZone,
+            ),
+          ),
+          Date.parse(asOf),
+        ).late
+      : false,
+    assignee_id: task.assignee_id,
+    version: task.version,
+    writable: task.writable === true,
+  };
+}
 
 export function OpenTaskRow({
   task,
@@ -76,6 +113,7 @@ export function OpenTaskRow({
         task.writable && (
           <TaskCompleteCheck
             activityId={task.id}
+            subject={task.subject}
             version={task.version}
             update={taskUpdate}
           />
@@ -89,7 +127,8 @@ export function OpenTaskRow({
 }
 
 /** Where a task stands, as the right end of its row: a pill while it is late
- *  or close, the day itself further out, "No date" when it has none. */
+ *  or close, "No date" when it has none. Further out it adds nothing, because
+ *  the row's own line already says the day it is due. */
 export function TaskStandingMark({
   task,
   asOf,
@@ -97,7 +136,11 @@ export function TaskStandingMark({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const zone = useViewerZone();
+  const zone = taskDueZone(
+    task.due_has_time,
+    useViewerZone(),
+    useCompanyZone(),
+  );
   const standing = taskStanding(task, asOf, zone);
   switch (standing.kind) {
     case "late":
@@ -121,7 +164,7 @@ export function TaskStandingMark({
         </Badge>
       );
     case "later":
-      return formatDayMonth(standing.due, locale, zone);
+      return null;
     case "undated":
       return t("co.overview.noDate");
   }

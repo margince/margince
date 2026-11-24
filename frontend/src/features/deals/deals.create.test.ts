@@ -9,6 +9,7 @@ describe("mapDealCreate currency", () => {
       { name: "x", stage_id: "s-1", currency: "EUR" },
       "p-1",
       "EUR",
+      "en",
     );
     expect(body.currency).toBeNull();
     expect(body.amount_minor).toBeNull();
@@ -19,6 +20,7 @@ describe("mapDealCreate currency", () => {
       { name: "x", stage_id: "s-1", expected_arr: "12", currency: "USD" },
       "p-1",
       "EUR",
+      "en",
     );
     expect(body.currency).toBe("USD");
     expect(body.expected_arr_minor).toBe(1_200);
@@ -31,6 +33,7 @@ describe("mapDealCreate currency", () => {
       { name: "x", stage_id: "s-1", amount: "5" },
       "p-1",
       "NOK",
+      "en",
     );
     expect(body.currency).toBe("NOK");
     expect(body.amount_minor).toBe(500);

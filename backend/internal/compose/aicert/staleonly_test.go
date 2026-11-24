@@ -110,6 +110,7 @@ func TestTheAnsweringRungIsCurrentOnlyWithItsDecisionRecords(t *testing.T) {
 	}
 	llm := run.llm
 	llm.ServedModel = "candidate" // the fake serves as "fake"; the binding under test is "candidate"
+	llm.JudgeServedModel = DefaultJudgeModel
 	census := decidingCensus(t, ai.TaskSiteTriage, defaultWidgetForm())
 	byTask := map[ai.Task][]Scenario{ai.TaskSiteTriage: {scenario}}
 	key := candidateKey(ai.TaskSiteTriage, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"})

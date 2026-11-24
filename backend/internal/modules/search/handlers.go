@@ -4,6 +4,7 @@
 package search
 
 import (
+	"context"
 	"net/http"
 	"slices"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Handlers is the module's transport slice; compose embeds it so the
@@ -77,6 +79,7 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	}
 	in.PerType = params.PerType
 	in.WithEmployees = params.WithEmployees != nil && *params.WithEmployees
+	in.Typeahead = typeaheadFor(r.Context(), params.Typeahead)
 	in.NearMatches = true
 
 	page, err := h.store.Search(r.Context(), in)
@@ -88,9 +91,9 @@ func (h Handlers) Search(w http.ResponseWriter, r *http.Request, params crmcontr
 	httperr.WriteJSON(w, http.StatusOK, wirePage(page))
 }
 
-// wirePage renders a page as the contract's response. `types_with_more` is
-// present on a grouped page alone, empty when every type fit, so a client can
-// tell "nothing more of any type" from "this was a ranked page".
+// wirePage renders a page as the contract's response. `types_with_more` and
+// `types_timed_out` are present on a grouped page alone. They are empty when
+// every type fit, so a client can tell "nothing more of any type" from "this was a ranked page".
 func wirePage(page Page) crmcontracts.SearchResponse {
 	pageInfo := crmcontracts.PageInfo{HasMore: page.HasMore}
 	if page.NextCursor != "" {
@@ -100,6 +103,10 @@ func wirePage(page Page) crmcontracts.SearchResponse {
 	if page.TypesWithMore != nil {
 		more := slices.Clone(page.TypesWithMore)
 		response.TypesWithMore = &more
+	}
+	if page.TypesTimedOut != nil {
+		timedOut := slices.Clone(page.TypesTimedOut)
+		response.TypesTimedOut = &timedOut
 	}
 	if len(page.NearMatches) > 0 {
 		response.NearMatches = wireNearMatches(page.NearMatches)
@@ -153,6 +160,9 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 		if hit.LogoURL != nil {
 			result.LogoUrl = new(*hit.LogoURL)
 		}
+		if hit.Standing != nil {
+			result.Standing = new(*hit.Standing)
+		}
 		data = append(data, result)
 	}
 	return data
@@ -172,4 +182,11 @@ func wireNearMatches(matches []NearMatch) *[]crmcontracts.SearchNearMatch {
 		out = append(out, near)
 	}
 	return &out
+}
+
+// typeaheadFor honours the typeahead flag for a human's search box alone. An
+// agent or connector that sends it still gets every message it matches.
+func typeaheadFor(ctx context.Context, asked *bool) bool {
+	actor, ok := principal.Actor(ctx)
+	return asked != nil && *asked && ok && actor.Type == principal.PrincipalHuman
 }

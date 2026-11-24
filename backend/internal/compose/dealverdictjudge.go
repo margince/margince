@@ -76,7 +76,7 @@ func (p dealVerdictPass) judge(ctx context.Context, c verdictCandidate, night ve
 	if err != nil {
 		return fmt.Errorf("compose: the deal verdict answer: %w", err)
 	}
-	decisions, err := p.decide(ctx, read, payload, night.today)
+	decisions, err := p.decide(ctx, read, payload, night.at)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (r txRates) For(currency string) (deals.FXRate, bool, error) {
 }
 
 func (p dealVerdictPass) decide(
-	ctx context.Context, read dealVerdictRead, payload dealverdict.Payload, today time.Time,
+	ctx context.Context, read dealVerdictRead, payload dealverdict.Payload, at time.Time,
 ) ([]dealverdict.Decision, error) {
 	var decisions []dealverdict.Decision
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
@@ -117,7 +117,7 @@ func (p dealVerdictPass) decide(
 			return err
 		}
 		decisions, err = dealverdict.Decide(read.in, read.state, payload,
-			txRates{ctx: ctx, tx: tx, rates: deals.NewFXRates(base, today)})
+			txRates{ctx: ctx, tx: tx, rates: deals.NewFXRates(base, at)})
 		return err
 	})
 	return decisions, err
@@ -171,11 +171,12 @@ func (p dealVerdictPass) applyAsOwner(
 		EvidenceHolds: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			return verdictEvidenceHolds(ctx, tx, c, read, changes)
 		},
-		Record: func(ctx context.Context, tx pgx.Tx, applied []deals.VerdictChange) error {
-			if err := p.recordOnTimeline(ctx, tx, c, read, applied); err != nil {
-				return err
+		Record: func(ctx context.Context, tx pgx.Tx, applied []deals.VerdictChange) (ids.UUID, error) {
+			note, err := p.recordOnTimeline(ctx, tx, c, read, applied)
+			if err != nil {
+				return ids.Nil, err
 			}
-			return tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL()+` FROM deal d WHERE d.id = $1`, c.deal).
+			return note, tx.QueryRow(ctx, `SELECT `+dealVerdictChecksumSQL()+` FROM deal d WHERE d.id = $1`, c.deal).
 				Scan(&written)
 		},
 		AsOwner: func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
@@ -196,7 +197,7 @@ func (p dealVerdictPass) applyAsOwner(
 // origin keeps it out of every recency clock and out of the next verdict.
 func (p dealVerdictPass) recordOnTimeline(
 	ctx context.Context, tx pgx.Tx, c verdictCandidate, read dealVerdictRead, applied []deals.VerdictChange,
-) error {
+) (ids.UUID, error) {
 	subject := systemtext.Literal("deal.updated")
 	lines := make([]string, 0, len(applied))
 	var components []*systemtext.Component
@@ -215,15 +216,15 @@ func (p dealVerdictPass) recordOnTimeline(
 		metadata = systemtext.Sequence(components[0], components[1:]...)
 		metadata.Layout = "lines"
 	}
-	_, _, err := p.notes.LogActivityTx(ctx, tx, activities.LogActivityInput{
+	note, _, err := p.notes.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.updated"), Body: metadata},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: c.deal}},
 	})
 	if err != nil {
-		return fmt.Errorf("compose: writing the verdict on the deal's timeline: %w", err)
+		return ids.Nil, fmt.Errorf("compose: writing the verdict on the deal's timeline: %w", err)
 	}
-	return nil
+	return ids.UUID(note.Id), nil
 }
 
 // verdictChangeLine names one change in plain words.
@@ -269,7 +270,7 @@ func (p dealVerdictPass) record(
 	}
 	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		verdict := assurance.DealVerdict{
-			DealID: c.deal, BasisDigest: c.digest, PromptVersion: dealverdict.PromptVersion,
+			DealID: c.deal, BasisDigest: c.digest,
 			AssessedAt: p.now(), Actions: encoded,
 		}
 		verdict.InputChecksum = assessed

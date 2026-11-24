@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -39,9 +40,14 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// init binds the event types the deal check reads to the outbox writer, from
+// the list the retention read keeps.
+func init() {
+	storekit.UseAssuranceInputTypes(assurance.MarkingEventTypes())
+}
 
 // NewRetentionServiceFor assembles the retention service for one database
 // binding, with every seam its actions depend on.
@@ -55,6 +61,9 @@ func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Log
 		WithOutboxReaders(storekit.OutboxReaders{
 			UnreadTypes: assurance.MarkingEventTypes(), NeededBy: []func(string) string{automation.RetryableTriggerSQL},
 		}).
+		WithCallPrunes(ai.PruneEmbedCallsTx, ai.PruneAnswerCallsTx).WithOperationalPrunes(privacy.OperationalPrune{
+		Name: "automation runs that changed nothing", Days: automation.NoEffectRunDays, Remove: automation.PruneNoEffectRunsTx,
+	}).
 		WithExtensions(ExtensionData()).
 		WithEdgeInvalidator(search.RecomputeEdgesForActivities)
 }
@@ -82,6 +91,15 @@ func RawCapturePurgerFor(db *database.DB) privacy.RawCapturePurger {
 type capturedTextPurger struct {
 	*capture.PendingStore
 	db *database.DB
+}
+
+// PurgeRawCaptureTx marks unchecked legacy mail as unreadable for the
+// calendar-method re-read, then destroys the originals.
+func (p capturedTextPurger) PurgeRawCaptureTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
+	if err := activities.MarkCalendarMethodsUnreadableTx(ctx, tx, activityIDs); err != nil {
+		return err
+	}
+	return p.PendingStore.PurgeRawCaptureTx(ctx, tx, activityIDs)
 }
 
 // PurgeTextCopiesTx empties the voice samples read from the activities.
@@ -117,36 +135,15 @@ func (capturedTextPurger) ScrubDeliveryCopiesTx(ctx context.Context, tx pgx.Tx, 
 	return webhooks.ScrubSubjectDeliveriesTx(ctx, tx, entityType, records)
 }
 
-//nolint:ireturn // privacy owns the purge seam; compose supplies the vault adapter.
-func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
-	if vault == nil {
-		return nil
-	}
-	return controllerPayloads{v: vault}
-}
-
 func eraserWithGraph(db *database.DB) *privacy.Eraser {
 	return privacy.NewEraser(db).WithEdgeInvalidator(search.RecomputeEdgesForActivities).WithExtensions(ExtensionData())
 }
 
 // ComposedEraser is the eraser an Art. 17 erasure runs through, with every
-// seam it needs to destroy the bytes behind the rows: the object store, the
-// payload vault and capture's raw-capture purge. blob and vault may be nil in a
-// deployment that configured neither.
-func ComposedEraser(pool *pgxpool.Pool, blob blobstore.Store, vault keyvault.Vault) *privacy.Eraser {
+// seam it needs to destroy the bytes behind the rows: the object store and
+// capture's raw-capture purge. blob may be nil in a deployment that configured
+// none.
+func ComposedEraser(pool *pgxpool.Pool, blob blobstore.Store) *privacy.Eraser {
 	db := InstallationDB(pool)
-	return eraserWithGraph(db).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
-		WithPayloadVault(privacyPayloads(vault))
-}
-
-func (s *Server) rewirePrivacyVault(pool *pgxpool.Pool) {
-	if pool == nil {
-		return
-	}
-	payloads := privacyPayloads(s.vault)
-	s.consentHandlers = s.WithEraser(ComposedEraser(pool, s.blob, s.vault))
-	s.privacyHandlers = s.WithPayloadVault(payloads)
-	if s.blob != nil {
-		s.purger = NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), s.blob, s.log).WithPayloadVault(payloads))
-	}
+	return eraserWithGraph(db).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db))
 }

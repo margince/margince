@@ -233,6 +233,21 @@ export const Inviting: Story = {
   },
 };
 
+/** An address that is not one, refused on its field before anything is sent. */
+export const InviteRefused: Story = {
+  render: access([]),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Invite" }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.type(dialog.getByLabelText(/^Name/), "Dana Buyer");
+    await userEvent.type(dialog.getByLabelText(/^Email/), "not-an-email");
+    await userEvent.click(dialog.getByRole("button", { name: "Invite" }));
+    await dialog.findByText("Enter an email address for Email.");
+  },
+};
+
 /** A seat's permissions, changed from its row's menu. */
 export const ChangingPermissions: Story = {
   render: access([participant()]),

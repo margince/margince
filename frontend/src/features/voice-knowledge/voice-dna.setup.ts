@@ -4,10 +4,14 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { useJumpTo } from "../../design-system/jumpbar";
-import { navigate, navigateReplacing, useRoute } from "../../lib/router";
+import { navigate, useRoute } from "../../lib/router";
 import { SETTINGS_PAGES, type SettingsPage } from "../../lib/settingscatalog";
 import { settingsHref } from "../../lib/settingsrouting";
-import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
+import {
+  currentParams,
+  useAddressWriters,
+  useUrlParams,
+} from "../../lib/urlstate";
 import {
   parseVoiceFocus,
   VOICE_FOCUS_PARAM,
@@ -74,6 +78,7 @@ export function useSetupFocus(ready: boolean) {
   const asked = params.get(VOICE_FOCUS_PARAM);
   const tab = useOpenVoiceTab();
   const jump = useJumpTo();
+  const { navigateReplacing, replaceDial } = useAddressWriters();
   useEffect(() => {
     if (!asked || !ready) {
       return;
@@ -86,7 +91,7 @@ export function useSetupFocus(ready: boolean) {
     }
     jump(drawn ? target.section : pageHead());
     replaceDial(VOICE_FOCUS_PARAM, undefined);
-  }, [asked, ready, tab, jump]);
+  }, [asked, ready, tab, jump, navigateReplacing, replaceDial]);
 }
 
 /** Move to one part of the page: a jump where it is drawn, else its tab. */

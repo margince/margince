@@ -50,12 +50,12 @@ func pinnedSubjectTx(ctx context.Context, tx pgx.Tx, lead ids.UUID, recipient co
 		switch subject.Kind {
 		case entityLead:
 			err = tx.QueryRow(ctx, `SELECT l.merged_into_id, l.promoted_contact_id, l.archived_at IS NOT NULL,
- coalesce(lower(l.email) = lower(@address), false) OR EXISTS (SELECT 1 FROM communication_suppression s
+ coalesce(`+sameAddressSQL("l.email", "@address")+`, false) OR EXISTS (SELECT 1 FROM communication_suppression s
  WHERE s.lead_id = l.id AND lower(s.address) = lower(@address))
  FROM lead l WHERE l.id = @pinned_id`, pgx.StrictNamedArgs{"pinned_id": subject.ID, "address": recipient.Email}).Scan(&merged, &promoted, &archived, &holds)
 		case entityContact:
 			err = tx.QueryRow(ctx, `SELECT c.merged_into_id, c.archived_at IS NOT NULL,
- EXISTS (SELECT 1 FROM contact_email e WHERE e.contact_id = c.id AND lower(e.email) = lower(@address))
+ EXISTS (SELECT 1 FROM contact_email e WHERE e.contact_id = c.id AND `+sameAddressSQL("e.email", "@address")+`)
  OR EXISTS (SELECT 1 FROM communication_suppression s WHERE s.contact_id = c.id AND lower(s.address) = lower(@address))
  FROM contact c WHERE c.id = @pinned_id`, pgx.StrictNamedArgs{"pinned_id": subject.ID, "address": recipient.Email}).Scan(&merged, &archived, &holds)
 		}
@@ -78,9 +78,20 @@ func pinnedSubjectTx(ctx context.Context, tx pgx.Tx, lead ids.UUID, recipient co
 	return subjectRef{}, false, nil
 }
 
-func recipientRequestCountry(ctx context.Context, tx pgx.Tx, recipient connector.Recipient, req commsauthz.Request) (RecipientCountry, error) {
+// recipientRequestCountry is the one resolver of a recipient's countries on
+// the send path: theirs, and the sending entity's beside it.
+func (s *Store) recipientRequestCountry(ctx context.Context, tx pgx.Tx, recipient connector.Recipient, req commsauthz.Request) (RecipientCountry, error) {
+	country, err := recipientRecordCountry(ctx, tx, recipient, req)
+	if err != nil {
+		return RecipientCountry{}, err
+	}
+	country.Sender, err = s.senderCountryOf(ctx, tx, req.SendingEntity)
+	return country, err
+}
+
+func recipientRecordCountry(ctx context.Context, tx pgx.Tx, recipient connector.Recipient, req commsauthz.Request) (RecipientCountry, error) {
 	if req.Evidence.LeadID.IsZero() {
-		return recipientCountryOf(ctx, tx, recipient)
+		return recipientCountryStated(ctx, tx, recipient, req.Evidence.RecipientCountries)
 	}
 	subject, found, err := pinnedSubjectTx(ctx, tx, req.Evidence.LeadID, recipient)
 	if err != nil || !found {

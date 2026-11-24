@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -93,7 +94,8 @@ func (e *Env) SeedEmployedAccount(t *testing.T, contact, owner ids.UUID, pipelin
 		t.Fatalf("employing the contact at the account: %v", err)
 	}
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Account rollout", PipelineID: pipeline, StageID: stage, CompanyID: &companyID, OwnerID: new(ids.From[ids.UserKind](owner)),
+		Source: provenance.RecordSourceManual,
+		Name:   "Account rollout", PipelineID: pipeline, StageID: stage, CompanyID: &companyID, OwnerID: new(ids.From[ids.UserKind](owner)),
 	}); err != nil {
 		t.Fatalf("opening the account's deal: %v", err)
 	}
@@ -149,7 +151,8 @@ func (e *Env) SeedCompanyAs(ctx context.Context, t *testing.T, ws ids.UUID, name
 func (e *Env) SeedDeal(t *testing.T, name string, pipeline ids.PipelineID, stage ids.StageID, owner *ids.UUID) ids.UUID {
 	t.Helper()
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: pipeline, StageID: stage, OwnerID: userIDPtr(owner),
+		Source: provenance.RecordSourceManual,
+		Name:   name, PipelineID: pipeline, StageID: stage, OwnerID: userIDPtr(owner),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -164,12 +167,25 @@ func (e *Env) SeedOpenDealOn(t *testing.T, name string, company ids.UUID) ids.UU
 	pipeline, open, _ := DealFixture(t, e)
 	companyID := ids.From[ids.CompanyKind](company)
 	d, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+		Source: provenance.RecordSourceManual,
+		Name:   name, PipelineID: pipeline, StageID: open, CompanyID: &companyID,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return ids.UUID(d.Id)
+}
+
+// SeedOpenForeignDeal creates an open deal in the given currency in the default
+// pipeline, acting as admin.
+func (e *Env) SeedOpenForeignDeal(t *testing.T, currency string, amountMinor int64) {
+	t.Helper()
+	pipeline, open, _ := DealFixture(t, e)
+	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Abroad", PipelineID: pipeline, StageID: open, AmountMinor: &amountMinor, Currency: &currency, Source: "manual",
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // MakeCapturePrivate turns a seeded contact or company into a
@@ -256,7 +272,54 @@ func seedSystemRoleRows(ctx context.Context, t *testing.T, owner *pgx.Conn) {
 // have.
 func (e *Env) GrantRole(t *testing.T, user ids.UUID, roleKey string) {
 	t.Helper()
-	if !e.tryGrantRole(t, user, roleKey) {
+	grantSystemRole(e.Admin(), t, e.Pool, user, roleKey)
+}
+
+// GrantRoleToEach is GrantRole for several seats.
+func (e *Env) GrantRoleToEach(t *testing.T, roleKey string, users ...ids.UUID) {
+	t.Helper()
+	for _, user := range users {
+		e.GrantRole(t, user, roleKey)
+	}
+}
+
+// MoveToRole replaces every role a seat holds with one shipped role.
+func (e *Env) MoveToRole(t *testing.T, user ids.UUID, roleKey string) {
+	t.Helper()
+	e.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, user)
+	e.GrantRole(t, user, roleKey)
+}
+
+// CutShareAudits counts the record_share audit rows of a user's contact grant
+// asked as write and saved as read. The cause is the evidence key,
+// limited_by_seat or limited_by_role.
+func (e *Env) CutShareAudits(t *testing.T, record, user ids.UUID, cause string) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM record_grant share JOIN audit_log logged
+		ON logged.action = 'record_share' AND logged.entity_type = 'contact' AND logged.entity_id = share.record_id
+		AND logged.after->>'subject_id' = share.subject_id::text
+		WHERE share.record_id = $1 AND share.subject_id = $2 AND share.access = 'read'
+		  AND logged.evidence->>'requested_access' = 'write' AND logged.evidence->>$3 = 'true'`, record, user, cause)
+}
+
+// GrantRole is Env.GrantRole for a search fixture, which seeds no roles until
+// a case asks for one.
+func (e *SearchEnv) GrantRole(t *testing.T, user ids.UUID, roleKey string) {
+	t.Helper()
+	var seeded bool
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT EXISTS (SELECT 1 FROM role WHERE is_system)`).Scan(&seeded); err != nil {
+		t.Fatalf("reading whether the shipped roles exist: %v", err)
+	}
+	if !seeded {
+		seedSystemRoleRows(context.Background(), t, e.Owner)
+	}
+	grantSystemRole(e.Admin(), t, e.Pool, user, roleKey)
+}
+
+func grantSystemRole(admin context.Context, t *testing.T, pool *pgxpool.Pool, user ids.UUID, roleKey string) {
+	t.Helper()
+	if !tryGrantSystemRole(admin, t, pool, user, roleKey) {
 		t.Fatalf("no shipped role is called %q, so %s was granted nothing and every authority "+
 			"check below would refuse them — which is what this call exists to prevent", roleKey, user)
 	}
@@ -272,9 +335,14 @@ func (e *Env) GrantRole(t *testing.T, user ids.UUID, roleKey string) {
 // A review pass caught that; planting it confirmed it.
 func (e *Env) tryGrantRole(t *testing.T, user ids.UUID, roleKey string) bool {
 	t.Helper()
+	return tryGrantSystemRole(e.Admin(), t, e.Pool, user, roleKey)
+}
+
+func tryGrantSystemRole(admin context.Context, t *testing.T, pool *pgxpool.Pool, user ids.UUID, roleKey string) bool {
+	t.Helper()
 	var assigned int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `
+	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(admin, `
 			WITH granted AS (
 			  INSERT INTO role_assignment (role_id, user_id)
 			  SELECT id, $2 FROM role WHERE key = $1 AND is_system
@@ -287,16 +355,21 @@ func (e *Env) tryGrantRole(t *testing.T, user ids.UUID, roleKey string) bool {
 	}
 	// An insert that touched no row is either "already held" or "no such
 	// shipped role", and only the second is a refusal.
-	return assigned > 0 || e.holdsRole(t, user, roleKey)
+	return assigned > 0 || holdsSystemRole(admin, t, pool, user, roleKey)
 }
 
 // holdsRole answers whether the seat already carries the role, which is the
 // only honest reading of an insert that touched no row.
 func (e *Env) holdsRole(t *testing.T, user ids.UUID, roleKey string) bool {
 	t.Helper()
+	return holdsSystemRole(e.Admin(), t, e.Pool, user, roleKey)
+}
+
+func holdsSystemRole(admin context.Context, t *testing.T, pool *pgxpool.Pool, user ids.UUID, roleKey string) bool {
+	t.Helper()
 	var held bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `
+	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(admin, `
 			SELECT EXISTS (
 			  SELECT 1 FROM role_assignment ra JOIN role r ON r.id = ra.role_id
 			   WHERE ra.user_id = $1 AND r.key = $2 AND r.is_system)`, user, roleKey).Scan(&held)

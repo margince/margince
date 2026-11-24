@@ -6,6 +6,7 @@ import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { scopeName } from "./analytics.context";
 import { cohortOutcomeLabel } from "./reporting.cohort";
 import { EvidenceFrame } from "./reporting.evidenceframe";
 import { EvidenceRecords } from "./reporting.evidencerecords";
@@ -34,11 +35,15 @@ export function ReportingEvidenceDrawer({
   evaluation,
   reference,
   editionId,
+  title,
   onClose,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   reference: ReportingEvidenceRef;
   editionId?: string;
+  // The name of the tile that opened it, where one metric feeds several tiles.
+  // Not MetricLabels: two tiles read one metric under different names.
+  title?: string;
   onClose: () => void;
 }>) {
   const t = useT();
@@ -61,10 +66,10 @@ export function ReportingEvidenceDrawer({
   const heading = evidenceHeading(evaluation, reference, metricName, t);
   return (
     <EvidenceFrame
-      title={heading.title}
+      title={title ?? heading.title}
       onClose={onClose}
       lines={[
-        evaluation.context.scope.label +
+        (scopeName(evaluation.context.scope, t) ?? "") +
           (point?.label
             ? ` · ${reference.context_id === "movement_delta" ? movementLabel(point.key, point.label, t) : breakdownLabel(point.key, point.label, t)}`
             : "") +

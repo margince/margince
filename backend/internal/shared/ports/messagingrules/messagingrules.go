@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,10 +38,20 @@ type (
 	FrequencyCap = pub.FrequencyCap
 	// Instrument is one law a rule set states, and when it took effect.
 	Instrument = pub.Instrument
+	// Provenance is who reviewed a rule set, and when.
+	Provenance = pub.Provenance
+	// Citation names the law behind one engine finding or refusal.
+	Citation = pub.Citation
+	// Territory narrows a citation to where the sender is established.
+	Territory = pub.Territory
 	// ExceptionKind names a route to lawful advertising without consent.
 	ExceptionKind = pub.ExceptionKind
 	// DisclosureKind names something a first message must carry.
 	DisclosureKind = pub.DisclosureKind
+	// ContactMeans names one way of reaching someone a disclosure must name.
+	ContactMeans = pub.ContactMeans
+	// PurposeClass names a class of consent purpose.
+	PurposeClass = pub.PurposeClass
 )
 
 // The published constants, re-exported.
@@ -55,6 +66,18 @@ const (
 	ObjectionRoute = pub.ObjectionRoute
 	// AdvertiserContact is the advertiser's own reachability.
 	AdvertiserContact = pub.AdvertiserContact
+	// MeansWeb is a web page or a social-network link.
+	MeansWeb = pub.MeansWeb
+	// MeansEmail is an email address.
+	MeansEmail = pub.MeansEmail
+	// MeansPhone is a phone number.
+	MeansPhone = pub.MeansPhone
+	// AnySender cites whatever the sender's country.
+	AnySender = pub.AnySender
+	// SenderHere cites only a sender established in the pack's jurisdiction.
+	SenderHere = pub.SenderHere
+	// SenderElsewhere cites only a sender established outside it.
+	SenderElsewhere = pub.SenderElsewhere
 )
 
 var (
@@ -92,7 +115,13 @@ func clone(r Rules) Rules {
 	out := r
 	out.MarketingExceptions = slices.Clone(r.MarketingExceptions)
 	out.Disclosures = slices.Clone(r.Disclosures)
+	for i := range out.Disclosures {
+		out.Disclosures[i].Means = slices.Clone(r.Disclosures[i].Means)
+	}
 	out.Instruments = slices.Clone(r.Instruments)
+	out.Citations = slices.Clone(r.Citations)
+	out.ClaimsNeedProof = slices.Clone(r.ClaimsNeedProof)
+	out.ConsentRequestFirstFor = slices.Clone(r.ConsentRequestFirstFor)
 
 	if r.FrequencyCap != nil {
 		copied := *r.FrequencyCap
@@ -144,6 +173,7 @@ func Strictest(codes ...jurisdiction.Code) (Rules, Applied, bool) {
 			continue
 		}
 		applied.Codes = append(applied.Codes, code)
+		applied.SubjectPrefixes = AddSubjectPrefixes(applied.SubjectPrefixes, r.SubjectPrefix)
 		if !found {
 			out, found = r, true
 			continue
@@ -169,6 +199,24 @@ type Applied struct {
 	// Unknown are the codes named that no pack declares. They bound nothing;
 	// the baseline applies to them.
 	Unknown []jurisdiction.Code
+
+	// SubjectPrefixes are the distinct advertising labels the contributing
+	// packs owe, first declared first. Rules.SubjectPrefix holds the first one
+	// only, because one subject begins with one label. The subject check reads
+	// this list, so a second, different label is still owed.
+	SubjectPrefixes []string
+}
+
+// AddSubjectPrefixes appends each declared label that labels does not already
+// hold. Two packs owing the same label, in any case, owe it once.
+func AddSubjectPrefixes(labels []string, declared ...string) []string {
+	for _, d := range declared {
+		label := strings.TrimSpace(d)
+		if label != "" && !slices.ContainsFunc(labels, func(l string) bool { return strings.EqualFold(l, label) }) {
+			labels = append(labels, label)
+		}
+	}
+	return labels
 }
 
 // Folded reports whether more than one jurisdiction contributed, which is
@@ -185,15 +233,17 @@ func stricter(a, b Rules) Rules {
 	// one carries none, and the decision records Applied.Codes instead — which
 	// Strictest returns for exactly this reason.
 	out.Version = 0
+	// Provenance, citations and digest describe one pack's source. A fold has
+	// none, and the citation lookup asks each recipient's own pack.
+	out.Provenance, out.Citations, out.Digest = Provenance{}, nil, ""
 	out.ReplyWindow = shorterWindow(a.ReplyWindow, b.ReplyWindow)
 	out.DealFollowUpWindow = shorterWindow(a.DealFollowUpWindow, b.DealFollowUpWindow)
 	// Every disclosure either side requires. An obligation one country imposes
 	// is not lifted by another that does not.
 	out.Disclosures = append(append([]Disclosure{}, a.Disclosures...), b.Disclosures...)
-	// A prefix either side requires. Two different prefixes cannot both be
-	// satisfied by one subject line, so the first declared wins and the caller
-	// is expected not to compose two prefixing jurisdictions — a case no
-	// shipped pack creates today.
+	// The first prefix either side requires. A second, different one cannot
+	// stand on the same subject; Strictest keeps it in Applied.SubjectPrefixes,
+	// and the subject check holds such a message.
 	if out.SubjectPrefix == "" {
 		out.SubjectPrefix = b.SubjectPrefix
 	}
@@ -207,10 +257,58 @@ func stricter(a, b Rules) Rules {
 	if out.OptOutAcknowledgementUTCOffset == 0 {
 		out.OptOutAcknowledgementUTCOffset = b.OptOutAcknowledgementUTCOffset
 	}
+	out.DataProtectionFollowsRecipient = a.DataProtectionFollowsRecipient || b.DataProtectionFollowsRecipient
+	out.NoLegitimateInterests = a.NoLegitimateInterests || b.NoLegitimateInterests
+	if out.DisclosureLanguage == "" {
+		out.DisclosureLanguage = b.DisclosureLanguage
+	}
+	out.RecordConfirmationWithoutNews = a.RecordConfirmationWithoutNews || b.RecordConfirmationWithoutNews
+	out.ConsentConfirmationNeedsRequest = a.ConsentConfirmationNeedsRequest || b.ConsentConfirmationNeedsRequest
+	out.ConsentRequestFirstFor = requestFirstFor(a, b)
 	// An exception only where BOTH grant it: a route to advertising without
 	// consent that one jurisdiction does not recognise is not available in a
 	// send both govern.
 	out.MarketingExceptions = commonExceptions(a.MarketingExceptions, b.MarketingExceptions)
+	foldAdvertisingContent(&out, b)
+	return out
+}
+
+// foldAdvertisingContent adds b's advertising content rules to out. A claim
+// either side restricts stays restricted.
+func foldAdvertisingContent(out *Rules, b Rules) {
+	out.RefusalSectionLast = out.RefusalSectionLast || b.RefusalSectionLast
+	out.ForeignAdvertiserNeedsLocalAgency = out.ForeignAdvertiserNeedsLocalAgency || b.ForeignAdvertiserNeedsLocalAgency
+	out.ClaimsNeedProof = unionOf(out.ClaimsNeedProof, b.ClaimsNeedProof)
+}
+
+// requestFirstFor is the classes either side's request rule covers. A side
+// whose rule covers every class makes the fold cover every class.
+func requestFirstFor(a, b Rules) []PurposeClass {
+	var out []PurposeClass
+	for _, side := range []Rules{a, b} {
+		if !side.ConsentConfirmationNeedsRequest {
+			continue
+		}
+		if len(side.ConsentRequestFirstFor) == 0 {
+			return nil
+		}
+		for _, class := range side.ConsentRequestFirstFor {
+			if !slices.Contains(out, class) {
+				out = append(out, class)
+			}
+		}
+	}
+	return out
+}
+
+// unionOf returns the words of a, then the words of b that a lacks, in a new slice.
+func unionOf(a, b []string) []string {
+	out := slices.Clone(a)
+	for _, word := range b {
+		if !slices.Contains(out, word) {
+			out = append(out, word)
+		}
+	}
 	return out
 }
 
@@ -223,49 +321,6 @@ func shorterWindow(a, b time.Duration) time.Duration {
 	case b == 0:
 		return a
 	case b < a:
-		return b
-	}
-	return a
-}
-
-// tighterCap picks the cap that permits fewer messages per unit of time. Nil
-// means uncapped, so a nil on either side yields the other's cap.
-func tighterCap(a, b *FrequencyCap) *FrequencyCap {
-	switch {
-	case a == nil:
-		return b
-	case b == nil:
-		return a
-	}
-	// A degenerate cap is the strictest thing there is, and it is handled
-	// FIRST rather than left to the comparison. Validate refuses one on the
-	// extension path, but Register is exported and a core-built value never
-	// sees Validate — and a zero window divided by a zero count is NaN, which
-	// loses every comparison and would hand back whichever cap happened to sit
-	// on the left. That made the fold's answer depend on the order the caller
-	// listed the countries in.
-	if degenerate(a) {
-		return a
-	}
-	if degenerate(b) {
-		return b
-	}
-	// Cross-multiplied rather than divided: exact, and it cannot produce NaN.
-	// Three per 24h is tighter than ten per 24h, and also tighter than four per
-	// hour. int64 nanoseconds against a message count stays far from overflow
-	// for any cap a statute could state.
-	left := int64(b.Messages) * int64(a.Window)
-	right := int64(a.Messages) * int64(b.Window)
-	if left != right {
-		if left < right {
-			return b
-		}
-		return a
-	}
-	// Equal rates are not equal burst: {1, 1h} and {24, 24h} permit the same
-	// average and a 24-message burst is not the same restriction as one an
-	// hour. The smaller allowance wins.
-	if b.Messages < a.Messages {
 		return b
 	}
 	return a

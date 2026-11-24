@@ -15,6 +15,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -27,7 +29,7 @@ import (
 func (e *scoutEnv) openScouted(t *testing.T) int {
 	t.Helper()
 	e.pass(t)
-	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler)).OpenWorkspace(e.system())
+	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler), func() time.Time { return e.now }).OpenWorkspace(e.system())
 	if err != nil {
 		t.Fatalf("opening the suggested deals: %v", err)
 	}
@@ -78,6 +80,10 @@ func TestMarginceOpensADealForTheCompanyOwnerAndUndoArchivesIt(t *testing.T) {
 		 WHERE l.deal_id = $1 AND a.subject = 'Margince opened a deal for Acme GmbH'`, deal); n != 1 {
 		t.Error("the opening is not on the deal's timeline")
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM deal_correction c JOIN activity a ON a.id = c.note_activity_id
+		 WHERE c.id = $1 AND a.subject = 'Margince opened a deal for Acme GmbH'`, correction.ID); n != 1 {
+		t.Error("the opening's correction does not name its note")
+	}
 	if n := e.stored(t, acme, deals.SuggestionAccepted); n != 1 {
 		t.Errorf("%d accepted suggestions, want the one the deal came from", n)
 	}
@@ -118,9 +124,7 @@ func TestNoOwnerOrASwitchOffKeepsTheSuggestion(t *testing.T) {
 	e.GrantRole(t, e.AdminUser, "admin")
 	owned := e.SeedCompany(t, "Globex", &e.AdminUser)
 	e.buyerPair(t, owned, e.daysAgo(10))
-	if _, err := approvals.NewService(e.DB()).SetAutoApply(e.Admin(), deals.DealOpenKind, false); err != nil {
-		t.Fatalf("switching deal_open off: %v", err)
-	}
+	integration.TurnKindOff(e.Admin(), t, approvals.NewService(e.DB()), deals.DealOpenKind)
 
 	if opened := e.openScouted(t); opened != 0 {
 		t.Fatalf("opened %d deals, want none", opened)
@@ -224,7 +228,7 @@ func TestEvidenceNoLongerWorkspaceReadableOpensNoDeal(t *testing.T) {
 		var held bool
 		if err := database.WithWorkspaceTx(e.system(), e.Pool, func(tx pgx.Tx) error {
 			var err error
-			held, err = scoutEvidenceHolds(e.system(), tx, evidence)
+			held, err = dealscout.EvidenceHolds(e.system(), tx, evidence)
 			return err
 		}); err != nil {
 			t.Fatal(err)
@@ -238,7 +242,7 @@ func TestEvidenceNoLongerWorkspaceReadableOpensNoDeal(t *testing.T) {
 	if holds() {
 		t.Error("evidence citing mail only its participants may read still holds")
 	}
-	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler)).OpenWorkspace(e.system())
+	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler), func() time.Time { return e.now }).OpenWorkspace(e.system())
 	if err != nil || opened != 0 {
 		t.Fatalf("opened %d deals (%v) on mail only its participants may read, want none", opened, err)
 	}
@@ -369,7 +373,7 @@ func TestASuggestionRaisedBeforeAnArchiveOpensNothing(t *testing.T) {
 	}
 	e.archive(e.Admin(), t, lost, e.daysAgo(3))
 
-	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler)).OpenWorkspace(e.system())
+	opened, err := newScoutDealOpener(e.Pool, slog.New(slog.DiscardHandler), func() time.Time { return e.now }).OpenWorkspace(e.system())
 	if err != nil || opened != 0 {
 		t.Fatalf("opened %d deals (%v) from a suggestion older than the archive, want none", opened, err)
 	}

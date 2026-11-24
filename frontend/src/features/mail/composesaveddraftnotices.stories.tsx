@@ -12,7 +12,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // What the composer says about its saved draft: put back whole or short of files, or a
 // refused save with the way to retry. The real composer over stubbed routes.
@@ -62,7 +62,7 @@ function composerStory(routes: RouteMap) {
     return (
       <StoryProviders>
         <ToastProvider>
-          <ComposeModal
+          <ComposeWindow
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
@@ -110,7 +110,7 @@ export const RestoredWhole: Story = {
     await expect(dialog.getByText("seat-pricing.pdf")).toBeInTheDocument();
     await expect(
       dialog.getByRole("combobox", { name: "Reason for contact" }),
-    ).toHaveTextContent("Follow-up they requested");
+    ).toHaveTextContent("They asked for it");
   },
 };
 

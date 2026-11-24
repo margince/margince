@@ -38,6 +38,7 @@ import {
 } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCan } from "../../lib/capability";
 import {
   shownUndoable,
   usePendingMarginceChanges,
@@ -45,7 +46,7 @@ import {
 import { receiptBasis, receiptSummary } from "../../lib/receiptcopy";
 import { isOpenReceipt, receiptAuditId } from "../../lib/receiptstate";
 import { useRememberedUndoRun } from "../../lib/undorun";
-import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { subjectHref } from "../../lib/worklistcopy";
@@ -65,7 +66,7 @@ export function HandledForYouPanel() {
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const handled = useHandledForYou();
-  const pendingChanges = usePendingMarginceChanges().data;
+  const pendingChanges = usePendingMarginceChanges(useCan("deal", "read")).data;
   const lastRun = useRememberedUndoRun() !== null;
   const receipts = handled.data?.receipts;
   // Off the LIST, not off the query's flags alone. `receipts` is empty on most
@@ -184,7 +185,12 @@ export function HandledForYouPanel() {
                     // is nothing here to take back.
                     key: "undo",
                     header: t("worklist.handled.wayBack"),
-                    render: (row: Receipt) => <ReceiptVerbs receipt={row} />,
+                    render: (row: Receipt) => (
+                      <ReceiptVerbs
+                        receipt={row}
+                        undoable={row.review?.writable}
+                      />
+                    ),
                   },
                 ]}
               />
@@ -212,11 +218,12 @@ function useArrivalJump(ready: boolean): boolean {
   const asked = params.get(WORKLIST_SECTION_PARAM) === CHANGE_HISTORY_SECTION;
   const [arrived] = useState(asked);
   const jump = useJumpTo();
+  const { replaceDial } = useAddressWriters();
   useEffect(() => {
     if (!asked || !ready) return;
     jump(CHANGE_HISTORY_ID);
     replaceDial(WORKLIST_SECTION_PARAM, undefined);
-  }, [asked, ready, jump]);
+  }, [asked, ready, jump, replaceDial]);
   return arrived;
 }
 

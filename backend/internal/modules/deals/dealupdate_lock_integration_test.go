@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -49,7 +50,8 @@ func seedOwnedDeal(t *testing.T, e *configEnv) (deal ids.DealID, from, to ids.St
 	}
 	owner := ids.From[ids.UserKind](e.admin)
 	created, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Contested", PipelineID: pipeline, StageID: from, OwnerID: &owner, OwnerExact: true,
+		Source: "manual",
+		Name:   "Contested", PipelineID: pipeline, StageID: from, OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)
@@ -207,10 +209,11 @@ func TestARestoreRacingAReassignmentIsRefusedForTheFormerOwner(t *testing.T) {
 func seedCorrection(t *testing.T, e *configEnv, deal ids.DealID) ids.UUID {
 	t.Helper()
 	var correction ids.UUID
+	closes := clocktest.Now(t).AddDate(1, 0, 0).Format(time.DateOnly)
 	err := e.store.Tx(e.asDealWriter(), func(tx pgx.Tx) error {
 		ctx := e.asDealWriter()
 		patch := storekit.NewPatch()
-		patch.Set("expected_close_date", nil, "2031-01-02")
+		patch.Set("expected_close_date", nil, closes)
 		if err := applyDealPatchGuarded(ctx, tx, deal, patch, nil); err != nil {
 			return err
 		}

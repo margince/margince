@@ -2,15 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useIdempotencyKey } from "../api/idempotencykey";
-import { ifMatch, requireVersion } from "../api/version";
 import { Button, Checkbox, Field, TextInput } from "../design-system/atoms";
-import {
-  DateInput,
-  type ISODate,
-  isISODate,
-  isoOrBlank,
-} from "../design-system/dateinput";
-import { ErrorLine } from "../design-system/errorline";
+import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
@@ -36,29 +29,36 @@ import { useMe } from "../lib/session";
 import { ActivityBodyField } from "./activitybodyfield";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
+import { dueBoundsOf, latestDayOf } from "./logactivity.days";
 import { ActivityKindField } from "./logactivity.kindfield";
-import { TaskCompletionChoice } from "./logactivity.taskcompletion";
+import {
+  completeLoggedTask,
+  LogErrorLine,
+  TaskCompletionChoice,
+  TaskLeftOpenError,
+} from "./logactivity.taskcompletion";
 import { assignedRecord } from "./recordassignments.queries";
 import { TaskTypeField } from "./tasktype";
 import "./logactivity.css";
 import { useViewerZone } from "../lib/viewerzone";
-import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
+import {
+  dueDayChange,
+  FollowUpTaskFields,
+  TaskTimeField,
+} from "./followuptaskfields";
 import { CallOutcomeField } from "./logactivity.calloutcome";
 import { MessageChannelField, useMessageChannel } from "./logactivity.channel";
 import { useActivityCustomFields } from "./logactivity.custom";
-import {
-  activityDealFilingKey,
-  useLogDealFiling,
-} from "./logactivity.dealfiling";
-import { activityLogKeys } from "./logactivity.keys";
+import { useLogDealFiling } from "./logactivity.dealfiling";
+import { activityLogKeys, failedLogKeys } from "./logactivity.keys";
 import {
   type MeetingRecord,
-  openMeetingKey,
   recordOnMeeting,
   transcriptRecords,
   useRecordOfMeeting,
 } from "./logactivity.openmeeting";
 import { PolishWording } from "./logactivity.polish";
+import { useCreateOncePerKey } from "./logactivity.retry";
 import {
   attachLoggedFiles,
   LogActivityFilesField,
@@ -67,17 +67,10 @@ import {
   useReportUnattached,
 } from "./logactivityfiles";
 import { MeetingAttendeeFields } from "./meetingattendees";
+import { useTaskUpdate } from "./taskwrite";
 import { useUnsavedGuard } from "./unsaved";
 
-export type OpeningKind = "note" | "task" | "call";
-
-function latestDayOf(
-  kind: ActivityDraft["kind"],
-  recordZone: string,
-): ISODate | undefined {
-  const day = todayDay(kind, recordZone);
-  return kind !== "task" && isISODate(day) ? day : undefined;
-}
+export type OpeningKind = "note" | "task" | "call" | "meeting";
 
 export function LogActivityForm({
   entityType,
@@ -89,6 +82,7 @@ export function LogActivityForm({
   sourceActivityId,
   taskToComplete,
   inheritSourceLinks = false,
+  onLoggedOnly,
 }: Readonly<{
   entityType?: EntityKind;
   entityId?: string;
@@ -101,11 +95,15 @@ export function LogActivityForm({
   sourceActivityId?: string;
   taskToComplete?: Readonly<{ id: string; version?: number }>;
   inheritSourceLinks?: boolean;
+  // Told when the activity is created but a step after it is left; a retry must
+  // keep this form, and its idempotency key, mounted.
+  onLoggedOnly?: () => void;
 }>) {
   const t = useT();
   const toast = useToast();
   const formId = useId();
   const [markDone, setMarkDone] = useState(true);
+  const [logged, setLogged] = useState(false);
   const uploadedFiles = useRef(new Set<File>());
   const queryClient = useQueryClient();
   const recordZone = useViewerZone();
@@ -145,6 +143,8 @@ export function LogActivityForm({
   const bodyRows = transcript ? 10 : banded ? 8 : 3;
 
   const { key: idempotencyKey, renew: renewKey } = useIdempotencyKey();
+  const createOnce = useCreateOncePerKey();
+  const taskUpdate = useTaskUpdate([]);
   const log = useMutation({
     mutationKey: ["activity-log", entityId],
     // Pass the zone with the mutation so a stale render cannot store the wrong day.
@@ -170,22 +170,27 @@ export function LogActivityForm({
           linkedDealIds: input.record.linkedDealIds ?? [],
         };
       }
-      const created = unwrap(
-        await api.POST("/activities", {
-          params: { header: { "Idempotency-Key": input.idempotencyKey } },
-          body: {
-            ...activityRequestBody(
-              input.draft,
-              entityType,
-              entityId,
-              input.zone,
-              input.attendees,
-            ),
-            ...(input.inheritSourceLinks ? { links: undefined } : {}),
-            ...(recordsMeeting ? { records_meeting_id: recordsMeeting } : {}),
-          },
-        }),
-        t,
+      const created = await createOnce(
+        input.idempotencyKey,
+        {
+          ...activityRequestBody(
+            input.draft,
+            entityType,
+            entityId,
+            input.zone,
+            input.attendees,
+          ),
+          ...(input.inheritSourceLinks ? { links: undefined } : {}),
+          ...(recordsMeeting ? { records_meeting_id: recordsMeeting } : {}),
+        },
+        async (body) =>
+          unwrap(
+            await api.POST("/activities", {
+              params: { header: { "Idempotency-Key": input.idempotencyKey } },
+              body,
+            }),
+            t,
+          ),
       );
       // After the create: a file needs the activity's id as its parent.
       const unattached = await attachLoggedFiles(
@@ -194,49 +199,22 @@ export function LogActivityForm({
         uploadedFiles.current,
       );
       if (input.completion && unattached.length === 0) {
-        const current = unwrap(
-          await api.GET("/activities/{id}", {
-            params: { path: { id: input.completion.id } },
-          }),
-          t,
-        );
-        if (!current.is_done) {
-          unwrap(
-            await api.PATCH("/activities/{id}", {
-              params: {
-                path: { id: input.completion.id },
-                ...ifMatch(requireVersion(current.version)),
-              },
-              body: { is_done: true, version: current.version },
-            }),
-            t,
-          );
-        }
+        await completeLoggedTask(taskUpdate, input.completion.id, t);
       }
       return {
         id: created.id,
         unattached,
-        linkedDealIds: (created.links ?? [])
-          .filter((link) => link.entity_type === "deal")
-          .map((link) => link.entity_id),
+        linkedDealIds: created.linkedDealIds,
       };
     },
-    onError: (_error, input) => {
-      if (input.completion)
-        queryClient.invalidateQueries({
-          queryKey: ["activity", input.completion.id],
-        });
-      recordOf.keep(input.record);
-      const filing = input.draft.dealFiling?.context;
-      if (filing)
-        queryClient.invalidateQueries({
-          queryKey: activityDealFilingKey(filing.record_type, filing.record_id),
-        });
-      if (entityType && entityId) {
-        queryClient.invalidateQueries({
-          queryKey: openMeetingKey(entityType, entityId),
-        });
+    onError: (error, input) => {
+      if (error instanceof TaskLeftOpenError) {
+        setLogged(true);
+        onLoggedOnly?.();
       }
+      recordOf.keep(input.record);
+      for (const queryKey of failedLogKeys(input, entityType, entityId))
+        queryClient.invalidateQueries({ queryKey });
     },
     onSuccess: (logged, input) => {
       reportUnattached(logged.unattached);
@@ -256,6 +234,8 @@ export function LogActivityForm({
         queryClient.invalidateQueries({ queryKey });
       if (input.completion && logged.unattached.length > 0) {
         toast.show(t("tasks.log.leftOpen"), { tone: "danger", sticky: true });
+        setLogged(true);
+        onLoggedOnly?.();
         return;
       }
       setDraft(freshDraft(input.zone, onlyTasks ? "task" : undefined));
@@ -264,6 +244,7 @@ export function LogActivityForm({
       uploadedFiles.current.clear();
       custom.reset();
       renewKey();
+      setLogged(false);
       onLogged?.();
     },
   });
@@ -282,6 +263,7 @@ export function LogActivityForm({
       form={formId}
       disabled={
         !log.isPending &&
+        !logged &&
         (dealFiling.blocked ||
           !draftSaysSomething(draft) ||
           (draft.kind !== "task" &&
@@ -305,33 +287,9 @@ export function LogActivityForm({
       pending={log.isPending}
     />
   );
-  const form = (actions: ReactNode) => (
-    <form
-      id={formId}
-      className="form-stack"
-      onSubmit={singlePress((event) => {
-        event.preventDefault();
-        if (dealFiling.blocked || refuseUnreadableField(event.currentTarget)) {
-          return;
-        }
-        log.mutate({
-          draft: {
-            ...draft,
-            dealFiling: dealFiling.request,
-            channelProvider: messageChannel.channel,
-            sourceActivityId,
-            custom: custom.body(),
-          },
-          zone: recordZone,
-          attendees,
-          idempotencyKey,
-          files: files.map((held) => held.file),
-          record: taskToComplete ? undefined : recordOf.start(),
-          completion: markDone ? taskToComplete : undefined,
-          inheritSourceLinks,
-        });
-      })}
-    >
+  // Once the activity exists, only its files and the task are left to finish.
+  const draftFields = () => (
+    <>
       <div className="form-row">
         {!onlyTasks && (
           <ActivityKindField
@@ -347,7 +305,7 @@ export function LogActivityForm({
           onChange={(taskType) => setField({ taskType })}
         />
         {/* One date box, prefilled with today: a task's due date, otherwise the
-            day it happened (occurredFields), whose hint explains the cap. */}
+          day it happened (occurredFields), whose hint explains the cap. */}
         <Field
           label={draft.kind === "task" ? t("log.dueAt") : t("log.date")}
           hint={draft.kind === "task" ? undefined : t("log.dateHint")}
@@ -358,8 +316,9 @@ export function LogActivityForm({
               value={isoOrBlank(draft.day)}
               // Match occurredFields so the picker and submission accept the same days.
               max={latestDayOf(draft.kind, recordZone)}
+              {...dueBoundsOf(draft.kind, recordZone)}
               today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}
-              onChange={(event) => setField({ day: event.target.value })}
+              onChange={(event) => setField(dueDayChange(event.target.value))}
             />
           )}
         </Field>
@@ -417,7 +376,7 @@ export function LogActivityForm({
         />
       )}
       {/* In the drawer the body is the form's subject, so it takes the room
-          left under the fields; the standing card keeps it compact. */}
+        left under the fields; the standing card keeps it compact. */}
       <ActivityBodyField
         label={transcript ? t("log.transcriptLabel") : t("log.body")}
         hint={transcript ? t("log.transcriptHint") : undefined}
@@ -451,13 +410,50 @@ export function LogActivityForm({
         entityType={entityType}
         entityId={entityId}
       />
+    </>
+  );
+  const form = (actions: ReactNode) => (
+    <form
+      id={formId}
+      className="form-stack"
+      onSubmit={singlePress((event) => {
+        event.preventDefault();
+        // Once the activity exists, a retry finishes what was sent, not the
+        // draft as edited since.
+        if (logged && log.variables) {
+          log.mutate(log.variables);
+          return;
+        }
+        if (dealFiling.blocked || refuseUnreadableField(event.currentTarget)) {
+          return;
+        }
+        log.mutate({
+          draft: {
+            ...draft,
+            dealFiling: dealFiling.request,
+            channelProvider: messageChannel.channel,
+            sourceActivityId,
+            custom: custom.body(),
+          },
+          zone: recordZone,
+          attendees,
+          idempotencyKey,
+          files: files.map((held) => held.file),
+          record: taskToComplete ? undefined : recordOf.start(),
+          completion: markDone ? taskToComplete : undefined,
+          inheritSourceLinks,
+        });
+      })}
+    >
+      {logged ? <p>{t("tasks.log.loggedOnly")}</p> : draftFields()}
       <LogActivityFilesField
+        key={idempotencyKey}
         files={files}
         onChange={setFiles}
         disabled={log.isPending}
       />
       {completionControl}
-      <ErrorLine error={log.error} />
+      <LogErrorLine error={log.error} />
       {actions}
     </form>
   );

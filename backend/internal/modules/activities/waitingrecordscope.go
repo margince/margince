@@ -121,7 +121,7 @@ func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.
 			fmt.Sprintf("$%d", arg(readerAddresses)),
 			neverRelaxed,
 			noKeyset, bookedDiscover,
-			neverRelaxed, unjudgedResponses, requestTaskDiscover) +
+			neverRelaxed, unjudgedResponses, requestTaskDiscover, noWithheldColumns) +
 		") waiting_thread)", nil
 }
 

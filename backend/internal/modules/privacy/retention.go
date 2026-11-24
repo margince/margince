@@ -137,20 +137,16 @@ const maxRecordDuration = 10 * time.Second
 var MaxPassDuration = time.Duration(len(retentionSelectors)+extensionRetentionStages+aiRetentionStages+restrictionExpiryStages+heldCommitmentStages) *
 	(retentionBatch * maxRecordDuration)
 
-// embedCallRetention bounds how long an embedding-kind ai_call trace row
-// survives (spec §4), in days. Unlike the retention_policy rows above,
-// this is a fixed operational cap, not an admin-editable per-workspace
-// setting: ai_call carries no subject content (it is telemetry — routing,
-// spend, and identity facts, never a customer's data), so its age-out is
-// engine-owned hygiene, the same footing as correspondenceFloorPredicate
-// below rather than a §3.4 storage-limitation policy. Only the embedding
-// kind is aged because its volume is different in kind, not in risk:
-// every indexed record emits embed rows on every re-index, and past the
-// spend ledger's monthly close they answer no question a completion row
-// doesn't. Completion rows ARE the certification substrate (attempt
-// ladders, served identity, config lineage) and stay until a spec
-// retention rule says otherwise.
-const embedCallRetention = 90
+// embedCallRetention and answerCallRetention bound how long an ai_call trace
+// row survives, in days. They are fixed operational caps, not retention
+// policies an administrator edits: a trace holds routing, spend and identity
+// facts and no subject. Embedding traces answer nothing past the monthly spend
+// close. Completion and decision traces stay a full year for spend reports
+// and for a certification to read back.
+const (
+	embedCallRetention  = 90
+	answerCallRetention = 400
+)
 
 // RetentionService drives the evaluator over one bound workspace at a time;
 // the worker role schedules a pass per tenant.
@@ -170,6 +166,10 @@ type RetentionService struct {
 	purgeRawCaptures RawCapturePurger
 	// outboxReaders are the modules that still read published events.
 	outboxReaders *storekit.OutboxReaders
+	// operationalPrunes remove other modules' bookkeeping rows past their window.
+	operationalPrunes []OperationalPrune
+	// The ai module's deletes of old call traces, by kind.
+	pruneEmbedCalls, pruneAnswerCalls CallPrune
 }
 
 // NewRetentionService wires the nightly evaluator.
@@ -290,12 +290,9 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 		}
 	}
 
-	// The two engine-owned sweeps, and they part company under the posture.
-	// The embed sweep still runs — ai_call's columns are routing, spend and
-	// served identity, so ageing them out is hygiene rather than storage
-	// limitation — but narrowed to rows whose deletion cannot reach content
-	// through the ai_call_payload cascade (embedCallWithoutPayload). The voice
-	// corpus stops outright: it holds draft plaintext about real correspondence.
+	// Two engine-owned sweeps part under the posture. The call trace sweep
+	// still runs, narrowed to rows with no stored payload, so it cannot reach
+	// content. The voice corpus stops, because it holds draft text of real mail.
 	// Before the posture is even read: a held record whose window closed is
 	// an Art. 17 request the engine suspended, and completing it is not a
 	// storage-limitation policy the operator may decline (retentionrestricted.go).
@@ -312,15 +309,18 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if err := s.evaluateEmbedCallRetention(ctx, retainOnly); err != nil {
+	if err := s.evaluateCallRetention(ctx); err != nil {
 		return err
 	}
 	if err := s.pruneRecordCopies(ctx, retainOnly); err != nil {
 		return err
 	}
 	if retainOnly {
-		s.log.Info("retention: retain-only posture suppresses the voice-signal content sweep")
+		s.log.Info("retention: retain-only posture suppresses the operational prunes and the voice-signal content sweep")
 		return nil
+	}
+	if err := s.pruneOperationalRows(ctx); err != nil {
+		return err
 	}
 	return s.evaluateVoiceSignalRetention(ctx)
 }
@@ -469,10 +469,4 @@ func (s *RetentionService) retainOnly(ctx context.Context) (bool, error) {
 // retain-only posture leaves alone.
 func isDestructive(action string) bool {
 	return action == actionAnonymize || action == actionErase
-}
-
-// WithPayloadVault lets destructive actions retire sealed booking capabilities.
-func (s *RetentionService) WithPayloadVault(payloads PayloadPurger) *RetentionService {
-	s.eraser = s.eraser.WithPayloadVault(payloads)
-	return s
 }

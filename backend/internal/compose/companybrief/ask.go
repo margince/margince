@@ -145,7 +145,7 @@ func Answer(
 		// unavailable, over budget, or answering unparseable JSON must not take
 		// the answer down with it, and generated_by reports which the reader
 		// got.
-		//nolint:nilerr // on_budget_exhausted: degrade — the fallback IS the answer, and generated_by reports it
+		//nolint:nilerr // an interactive task degrades — the fallback IS the answer, and generated_by reports it
 		return deterministic, crmcontracts.WrittenByDeterministic, nil
 	}
 	return written, crmcontracts.WrittenByModel, nil
@@ -481,11 +481,8 @@ func openDealLine(deal DealIn, say spoken) string {
 	if deal.Stage != "" {
 		line += ", " + deal.Stage
 	}
-	if amount := renderedAmount(deal.AmountMinor, deal.Currency); amount != "" {
-		// The same rendering the prompt gets, not a fresh /100 of the minor
-		// integer: dividing understates every zero-decimal currency a
-		// hundredfold, and two renderings of one number are two chances to
-		// disagree. The card formats money properly; this text is the fallback.
+	if amount := renderedAmount(deal.AmountMinor, deal.Currency, say.Lang()); amount != "" {
+		// The rendering the prompt gets, so the answer and the brief agree.
 		line += ", " + amount + " " + deal.Currency
 	}
 	if deal.Stalled {

@@ -143,8 +143,8 @@ func sarRecordSections(pkg *SARPackage, contactID ids.ContactID, leads []ids.UUI
 		{&pkg.Relationships, `SELECT kind, company_id, deal_id, role, started_at, ended_at
 		   FROM relationship WHERE contact_id = $1 AND archived_at IS NULL`, nil},
 		{&pkg.Deals, `SELECT d.id, d.name, d.status, d.amount_minor, d.currency
-		   FROM deal d JOIN relationship r ON r.deal_id = d.id
-		   WHERE r.kind = 'deal_stakeholder' AND r.contact_id = $1 AND r.archived_at IS NULL`, nil},
+		   FROM deal d WHERE d.id IN (` + subjectLiveDealIDsSQL + `)`, nil},
+		sarLegalReviewSection(pkg),
 		{
 			&pkg.Leads, `SELECT l.id, l.full_name, l.email, l.title, l.company_name, l.status, l.created_at
 		   FROM lead l
@@ -423,10 +423,11 @@ func sarProvenanceSections(pkg *SARPackage, contactID ids.ContactID, external []
 		// value alone would tell the subject their title is X while the row
 		// also holds that it used to say Y until a message dated Z replaced it,
 		// which is precisely the sort of held-but-unstated fact Art. 15 owes.
+		// signature_support travels too: it holds the lines each mail quoted.
 		{&pkg.EnrichedFields, `SELECT ppf.field, ppf.value, ppf.value_key, ppf.evidence_snippet, ppf.source_ref,
 		          ppf.confidence, ppf.source, ppf.captured_by, ppf.updated_at,
 		          ppf.observed_at, ppf.superseded_value, ppf.superseded_captured_by,
-		          ppf.superseded_observed_at
+		          ppf.superseded_observed_at, ppf.signature_support
 		   FROM contact_profile_field ppf
 		   WHERE ppf.contact_id = $1`, nil},
 		// claim_key is exported as it stands: it is a hash of the claim's

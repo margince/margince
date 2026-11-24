@@ -157,12 +157,20 @@ services:
     # when something needs a segment, and the symptom of it binding is an
     # unrelated-looking migration failure.
     shm_size: 1g
+    # synchronous_commit=off can lose the last few commits of a dev database
+    # after a container crash, and never corrupts it. fsync stays on here; only
+    # the CI integration lane sets PG_FSYNC=off, where the runner is thrown away
+    # and no other database shares the container.
     command:
       - postgres
       - -c
       - max_locks_per_transaction=512
       - -c
       - max_connections=408
+      - -c
+      - synchronous_commit=off
+      - -c
+      - fsync=${PG_FSYNC:-on}
     environment:
       POSTGRES_USER: margince_owner
       POSTGRES_PASSWORD: dev
@@ -226,7 +234,7 @@ services:
     # build is the same server under the same `server /data` command. It runs
     # as uid 65532 by default; root keeps an existing volume, written by the
     # old root-run image, readable.
-    image: cgr.dev/chainguard/minio@sha256:18c8fa28697b25e0f34c6faae171079e88a03efb8e76a21d3b5d07b4e3cbef3e
+    image: cgr.dev/chainguard/minio@sha256:e9cf6b99c226e9539ed0f14b6f00e37b07da153c7ba1f4f8709c807574b471ec
     user: "0:0"
     environment:
       MINIO_ROOT_USER: minioadmin

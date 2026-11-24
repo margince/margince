@@ -32,6 +32,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/owedverdict"
+	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -59,17 +60,12 @@ const (
 	// to carry the gist.
 	owedPriorBodyLimit = 600
 	// owedRestaleCap bounds the re-judge sweep per workspace per pass,
-	// separately from owedCatchUpCap. Two budgets because they are two
+	// separately from the new-mail cap. Two budgets because they are two
 	// populations: new mail must never wait behind a sweep of history.
 	owedRestaleCap = 200
 	// owedConfidenceFloor: below it the message is re-asked SOLO, and below it
 	// again it stays unjudged and reviewable, without claiming Focus priority.
 	owedConfidenceFloor = 0.7
-	// owedCatchUpCap bounds one pass PER WORKSPACE. Per workspace rather than
-	// shared, for the reason capture_counterparty_verdict states: a shared
-	// counter lets one large backlog spend the budget and starve every
-	// workspace behind it.
-	owedCatchUpCap = 500
 )
 
 // owedVerdicts is the closed set the validator admits, derived from the store's
@@ -88,6 +84,9 @@ var owedVerdicts = map[string]bool{
 type OwedClassifier struct {
 	pool  *pgxpool.Pool
 	store *activities.Store
+	// caps answers how many new messages one run may judge per workspace: the
+	// admin's setting. A shared counter would let one backlog starve the rest.
+	caps  *capture.PassCaps
 	brain completer
 	log   *slog.Logger
 	// now bounds the backlog read at an instant, and is a field so a test can
@@ -111,6 +110,7 @@ func NewOwedClassifier(pool *pgxpool.Pool, brain completer, now func() time.Time
 		pool: pool,
 		store: activities.NewStore(db).WithOwnDomains(
 			ownDomainReader{store: capture.NewOwnDomainStore(db)}).WithRecordZone(installationZoneTx),
+		caps:  capture.NewPassCaps(db),
 		brain: brain,
 		log:   log,
 		now:   now,
@@ -175,15 +175,18 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 		return nil
 	}
 	if maxVerdicts <= 0 {
-		maxVerdicts = owedCatchUpCap
+		var err error
+		if maxVerdicts, err = c.caps.OwedClassify(ctx); err != nil {
+			return err
+		}
 	}
-	if err := c.drain(ctx, maxVerdicts, "backlog", func() ([]owedCandidate, time.Time, error) {
-		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
+	if err := c.drain(ctx, maxVerdicts, "backlog", func(limit int) ([]owedCandidate, time.Time, error) {
+		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), limit, owedBodyLimit, owedPriorBodyLimit)
 	}); err != nil {
 		return err
 	}
-	return c.drain(ctx, owedRestaleCap, "re-judge", func() ([]owedCandidate, time.Time, error) {
-		return c.store.OwedRestale(ctx, owedverdict.Ruleset, owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
+	return c.drain(ctx, owedRestaleCap, "re-judge", func(limit int) ([]owedCandidate, time.Time, error) {
+		return c.store.OwedRestale(ctx, owedverdict.Ruleset, limit, owedBodyLimit, owedPriorBodyLimit)
 	})
 }
 
@@ -191,20 +194,17 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 // stops making progress. `what` names it in the log, so a pass that ends early
 // says which half ended.
 //
-// Bounded by the model calls it makes as well as by verdicts written, and the
-// second bound is the one that has to exist: a message the model will not
-// commit to stays unjudged and is read again, so a batch mixing one confident
-// row with nine abstentions makes progress by the verdict count and re-asks the
-// same nine every iteration. sweepCalls counts every call, a split batch's
-// included, so the bound holds whatever the batches do.
-func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, next func() ([]owedCandidate, time.Time, error)) error {
+// A message the models decline or stay unsure about is stamped and counts as
+// progress, so it is not read again under this prompt. sweepCalls still bounds
+// the calls, because a declined batch splits into one call per message.
+func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, next func(limit int) ([]owedCandidate, time.Time, error)) error {
 	judged := 0
 	calls := newSweepCalls(maxVerdicts, owedBatchSize)
 	for judged < maxVerdicts && calls.remain() {
 		// The instant this batch was READ, on the DATABASE's clock, which the
 		// write compares against so a slow call cannot overwrite a verdict
 		// reached while it was thinking.
-		batch, readAt, err := next()
+		batch, readAt, err := next(min(owedBatchSize, maxVerdicts-judged))
 		if err != nil {
 			return fmt.Errorf("owed classify: reading %s: %w", what, err)
 		}
@@ -222,8 +222,8 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 			return fmt.Errorf("owed classify: draining %s: %w", what, err)
 		}
 		if n == 0 {
-			// Every verdict stayed below the floor, so the same rows would come
-			// back forever. They wait for the next cycle.
+			// Nothing was judged or stamped, so the same rows would be read
+			// again. They wait for the next cycle.
 			c.log.InfoContext(ctx, "owed classify: batch made no progress, moving on",
 				"population", what)
 			return nil
@@ -236,13 +236,15 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 //
 // The per-call commit IS the checkpoint. A message below the floor is re-asked
 // on its own, as a different request from its batch, so the model answers it
-// afresh. One still below the floor afterwards is left unjudged rather than guessed.
-// A batch the models decline is asked message by message, so the one message
-// they will not judge is recorded declined and the rest of the batch proceeds.
+// afresh. One still below the floor afterwards is left unjudged rather than
+// guessed, and goes to unsure. A batch the models decline is asked message by
+// message. The one message they will not judge goes to decline, and the rest
+// proceed. Either callback reports whether it recorded the message.
 type owedPredictionSink struct {
 	assessed func(owedCandidate)
 	accept   func(context.Context, owedCandidate, owedResult) (bool, error)
-	decline  func(context.Context, owedCandidate, error) error
+	decline  func(context.Context, owedCandidate, error) (bool, error)
+	unsure   func(context.Context, owedCandidate) (bool, error)
 }
 
 // judgeBatch sends the model only messages with words of their own. One that is
@@ -254,7 +256,7 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			worded = append(worded, msg)
 			continue
 		}
-		if _, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset); err != nil {
+		if _, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset, msg.Version); err != nil {
 			return 0, err
 		}
 	}
@@ -266,13 +268,18 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 			ask := owedverdict.VerbatimAsk(result.Verdict, result.Ask, msg.Body)
 			return c.store.SetOwedVerdictAsked(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt, ask)
 		},
-		decline: func(ctx context.Context, msg owedCandidate, cause error) error {
-			recorded, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
+		decline: func(ctx context.Context, msg owedCandidate, cause error) (bool, error) {
+			recorded, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset, msg.Version)
 			if err != nil {
-				return err
+				return false, err
 			}
 			c.log.WarnContext(ctx, "owed classify: the models declined one message, which stays unjudged", "activity_id", msg.ID, "recorded", recorded, "err", cause)
-			return nil
+			return recorded, nil
+		},
+		// An answer below the floor takes the decline stamp: the row stays
+		// unjudged, and this prompt would only be unsure about it again.
+		unsure: func(ctx context.Context, msg owedCandidate) (bool, error) {
+			return c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset, msg.Version)
 		},
 	})
 	return judged + len(batch) - len(worded), err
@@ -300,11 +307,15 @@ func (c *OwedClassifier) predictBatch(ctx context.Context, batch []owedCandidate
 	for _, m := range batch {
 		byID[m.ID.String()] = m
 	}
+	// A message with no usable answer is retried alone like a below-floor one.
+	// Otherwise bad answers at the front of the backlog would starve the rest.
+	answered := make(map[string]bool, len(verdicts))
 	for _, v := range verdicts {
 		msg, ok := byID[v.ID]
 		if !ok {
 			continue // the validator guarantees this; belt and braces
 		}
+		answered[v.ID] = true
 		if v.Confidence < owedConfidenceFloor {
 			retry = append(retry, msg)
 			continue
@@ -317,37 +328,26 @@ func (c *OwedClassifier) predictBatch(ctx context.Context, batch []owedCandidate
 			judged++
 		}
 	}
+	for _, m := range batch {
+		if !answered[m.ID.String()] {
+			retry = append(retry, m)
+		}
+	}
 	solo, err := c.predictEach(ctx, retry, calls, sink)
 	return judged + solo, err
 }
 
 // predictEach asks about each message in its own call and commits a verdict
-// above the floor. A message every rung declines is that message's outcome: it
-// is recorded declined, which takes it out of both populations for this pass
-// and every later one, and the next message is asked.
+// above the floor. A message every rung declines goes to the sink, and so does
+// one whose solo answer is still below the floor. The sink stamps it out of
+// both populations until the prompt changes.
 func (c *OwedClassifier) predictEach(ctx context.Context, msgs []owedCandidate, calls *sweepCalls, sink owedPredictionSink) (int, error) {
 	judged := 0
 	for _, msg := range msgs {
 		if !calls.take() {
 			return judged, nil
 		}
-		solo, err := c.ask(ctx, []owedCandidate{msg})
-		if declinedByTheModels(err) {
-			if err := sink.decline(ctx, msg, err); err != nil {
-				return judged, err
-			}
-			continue
-		}
-		if err != nil {
-			return judged, err
-		}
-		if sink.assessed != nil {
-			sink.assessed(msg)
-		}
-		if len(solo) != 1 || solo[0].Confidence < owedConfidenceFloor {
-			continue
-		}
-		applied, err := sink.accept(ctx, msg, solo[0])
+		applied, err := c.predictOne(ctx, msg, sink)
 		if err != nil {
 			return judged, err
 		}
@@ -356,6 +356,24 @@ func (c *OwedClassifier) predictEach(ctx context.Context, msgs []owedCandidate, 
 		}
 	}
 	return judged, nil
+}
+
+// predictOne is one solo call and the one sink callback its outcome takes.
+func (c *OwedClassifier) predictOne(ctx context.Context, msg owedCandidate, sink owedPredictionSink) (bool, error) {
+	solo, err := c.ask(ctx, []owedCandidate{msg})
+	if declinedByTheModels(err) {
+		return sink.decline(ctx, msg, err)
+	}
+	if err != nil {
+		return false, err
+	}
+	if sink.assessed != nil {
+		sink.assessed(msg)
+	}
+	if len(solo) != 1 || solo[0].Confidence < owedConfidenceFloor {
+		return sink.unsure(ctx, msg)
+	}
+	return sink.accept(ctx, msg, solo[0])
 }
 
 // owedRequest builds the ONE model call that judges one batch.
@@ -395,7 +413,7 @@ func (c *OwedClassifier) ask(ctx context.Context, batch []owedCandidate) ([]owed
 	if msg := validateOwedPayload(payload, batch); msg != "" {
 		return nil, fmt.Errorf("owed classify: %s", msg)
 	}
-	return resolveBatchRefs(payload.Results, owedverdict.Refs(batch)), nil
+	return resolveOwedResults(payload, batch), nil
 }
 
 // owedShapeValid is the deterministic hard floor beneath the response schema:
@@ -423,15 +441,28 @@ func validateOwedPayload(payload owedPayload, batch []owedCandidate) string {
 	// the shared contract: "is this a verdict" and "is this a label" are
 	// different questions, and an error naming the wrong closed set sends a
 	// reader to the wrong prompt.
-	for _, r := range payload.Results {
-		if !owedVerdicts[r.Verdict] {
-			return fmt.Sprintf("verdict %q is not asks_us|informs_us", clampToken(r.Verdict))
-		}
-		if r.Confidence < 0 || r.Confidence > 1 {
-			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
-		}
+	return ""
+}
+
+// usable is whether the answer names a verdict of this site and a confidence in
+// [0,1]. An answer that does not is dropped and its message asked again alone.
+func (r owedResult) usable() bool { return r.fault() == "" }
+
+// fault says what makes the answer unusable, or "" when it is usable.
+func (r owedResult) fault() string {
+	switch {
+	case !owedVerdicts[r.Verdict]:
+		return fmt.Sprintf("verdict %q is not asks_us|informs_us", clampToken(r.Verdict))
+	case !usableanswer.ConfidenceInRange(r.Confidence):
+		return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
 	}
 	return ""
+}
+
+// resolveOwedResults reads the payload back to activity ids and drops the
+// results that are not usable.
+func resolveOwedResults(payload owedPayload, batch []owedCandidate) []owedResult {
+	return resolveBatchRefs(usableanswer.Keep(payload.Results, owedResult.usable), owedverdict.Refs(batch))
 }
 
 func (r owedResult) answeredID() string { return r.ID }

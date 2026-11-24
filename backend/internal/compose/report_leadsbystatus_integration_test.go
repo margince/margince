@@ -5,13 +5,9 @@
 
 package compose
 
-// The leads-by-status report, whose whole reason to exist is the population
-// every other lead read hides.
-//
-// A lead is ARCHIVED the moment it is promoted or disqualified, and every list
-// this product serves excludes archived rows by default. That is right for a
-// work queue and it leaves the board's two terminal columns with no count to
-// show — which is the gap this key fills.
+// The leads-by-status report counts what every other lead read hides. A
+// promoted or disqualified lead is archived, and lists leave archived rows out.
+// So the board's two terminal columns need this count.
 
 import (
 	"context"
@@ -27,12 +23,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// Terminal leads are counted, and counted under their own status.
-//
-// The mutation this guards against is the obvious one: giving the spec the
-// `whereArchivedNull` base its neighbours all carry. The report would still
-// answer, still name three statuses, and quietly report 0 for the two the
-// board added these columns for.
+// Terminal leads are counted, under their own status. With the
+// `whereArchivedNull` base its neighbours carry, the report would answer 0 for
+// the two statuses the board needs.
 func TestLeadsByStatusCountsTheTerminalLeadsEveryOtherReadHides(t *testing.T) {
 	e := integration.Setup(t)
 
@@ -57,12 +50,9 @@ func TestLeadsByStatusCountsTheTerminalLeadsEveryOtherReadHides(t *testing.T) {
 	}
 }
 
-// The column's count and the column's list answer over one population.
-//
-// A lead is readable by every seat holding the lead grant, whatever its row
-// scope, so the terminal column lists a colleague's disqualified lead and an
-// unowned one beside the reader's own. A count narrowed to the reader's own
-// work printed 2 at the head of a column showing three rows.
+// The column's count and list answer over one population. Every seat with
+// the lead grant reads every lead. A count narrowed to the reader's own work
+// would print 2 above a column showing three rows.
 func TestLeadsByStatusCountsEveryLeadTheTerminalColumnLists(t *testing.T) {
 	e := integration.Setup(t)
 	seedLeadAt(t, e, "new", false, nil)
@@ -92,8 +82,8 @@ func TestLeadsByStatusRefusesARepsOwnerDialOnAColleague(t *testing.T) {
 		strings.NewReader(`{"filters":{"owner_id":"`+e.Rep3.String()+`"}}`)).WithContext(repReadingLeads(e))
 	rec := httptest.NewRecorder()
 	reportHandlers{engine: newReportEngine(e.Pool)}.RunReport(rec, req, "leads-by-status")
-	if rec.Code != http.StatusForbidden {
-		t.Fatalf("a rep's owner dial on a colleague got %d %s, want 403", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusForbidden || !strings.Contains(rec.Body.String(), `"code":"owner_not_measurable"`) {
+		t.Fatalf("a rep's owner dial on a colleague got %d %s, want 403 owner_not_measurable", rec.Code, rec.Body.String())
 	}
 }
 
@@ -146,13 +136,9 @@ func leadStatusCounts(as context.Context, t *testing.T, e *integration.Env) map[
 	return counts
 }
 
-// seedLeadAt plants one lead at a status, archived or not, owned by the seat
-// named or by nobody.
-//
-// archived_at is set from the status rather than passed independently: a
-// promoted or disqualified lead IS an archived one, and a fixture that could
-// spell a live disqualified lead would be proving the report against a row the
-// product cannot produce.
+// seedLeadAt plants one lead at a status, owned by the seat named or by
+// nobody. archived_at follows the status, because a promoted or disqualified
+// lead is always archived and a fixture must not spell a row the product cannot.
 func seedLeadAt(t *testing.T, e *integration.Env, status string, terminal bool, owner *ids.UUID) {
 	t.Helper()
 	id := ids.NewV7()

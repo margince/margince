@@ -40,7 +40,7 @@
   height: var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-md);
-  background: var(--bgElevated);
+  background: var(--bgField);
 }
 .rdeck-peek-far {
   inset-inline: var(--space-6);
@@ -109,7 +109,7 @@
   padding: var(--space-3);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
+  background: var(--bgField);
   color: var(--textPrimary);
   font-family: var(--fontFamilyBody);
 }
@@ -138,8 +138,7 @@
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--bgField);
 }
 
 /* The way onward is a foot, not a button loose under the prose: it is the one

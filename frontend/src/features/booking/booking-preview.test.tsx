@@ -379,6 +379,8 @@ it("returns from settings to a preview with the newly saved values in a fresh ca
         { id: "primary", name: "Work", primary: true, writable: true },
       ]),
     "GET /scheduling/profile": () => jsonResponse(latest),
+    "GET /scheduling/team-candidates": () => jsonResponse([]),
+    "GET /scheduling/team-requests": () => jsonResponse([]),
     "GET /availability": () =>
       jsonResponse({ slots: bookingSlots, truncated: false }),
     "PUT /scheduling/profile": (body) => {
@@ -399,7 +401,7 @@ it("returns from settings to a preview with the newly saved values in a fresh ca
   await user.click(screen.getByRole("button", { name: "Switch view" }));
   await user.click(
     await screen.findByRole("button", {
-      name: `More actions for ${bookingProfile.title}`,
+      name: `More actions for ${bookingProfile.title}, 30 min`,
     }),
   );
   await user.click(screen.getByRole("button", { name: "Edit link" }));

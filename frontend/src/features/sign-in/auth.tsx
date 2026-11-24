@@ -14,10 +14,18 @@ import { usePageTitle, Wordmark } from "../../components/auth-identity";
 import { Button } from "../../design-system/atoms";
 import { providerBrandName } from "../../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useAuthCapabilities } from "../../lib/capabilities";
 import { useOutageRecovery } from "../../lib/connectivity";
-import { isOidcFailureLanding, takeReturnRoute } from "../../lib/returnroute";
+import { CONSENT_PATH, isConsentAddress } from "../../lib/recordaddress";
 import {
+  isOidcFailureLanding,
+  keepReturnRoute,
+  OIDC_FAILURE_HASH,
+  takeReturnRoute,
+} from "../../lib/returnroute";
+import {
+  announceAddressChanged,
   forgetHashCredential,
   takeHashCredential,
   watchAddress,
@@ -40,18 +48,24 @@ import { ResetForm } from "./auth-reset";
 
 export { usePageTitle, Wordmark } from "../../components/auth-identity";
 
-// AuthNotice is the boundary's transient context for the login screen: a
-// deliberate sign-out, an expired session, or a federated sign-in that did
-// not complete — informational, never danger styling (§9.5: the user has
-// nothing to correct). The first two arrive as a prop from App's own state;
-// "oidc-failed" is read from the address instead (see oidcFailureNotice
-// below) because it is the callback redirect's own doing, not something
-// App decided.
+// AuthNotice is the login screen's transient context: a sign-out, an expired
+// session, or a federated sign-in that did not complete. It is never danger
+// styling, because the user has nothing to correct. The first two come from
+// App's own state. "oidc-failed" and "reset-incomplete" are read from the
+// address, because the callback redirect or a tokenless reset route set them.
 export type AuthNotice =
   | "signed-out"
   | "session-expired"
   | "oidc-failed"
+  | "reset-incomplete"
   | null;
+
+const NOTICE_KEYS: Record<NonNullable<AuthNotice>, MessageKey> = {
+  "signed-out": "auth.noticeSignedOut",
+  "session-expired": "auth.noticeSessionExpired",
+  "oidc-failed": "auth.noticeOidcFailed",
+  "reset-incomplete": "auth.noticeResetIncomplete",
+};
 
 // The OIDC callback's neutral-failure redirect lands where isOidcFailureLanding
 // says. App.tsx renders AuthScreen there ahead of any route match, whatever the
@@ -86,7 +100,21 @@ function clearOidcFailureMarker(): void {
   const { pathname, search } = globalThis.location;
   // The link the reader followed comes back, so a second attempt keeps it.
   const route = takeReturnRoute() ?? "";
-  globalThis.history?.replaceState?.(null, "", `${pathname}${search}${route}`);
+  if (pathname !== CONSENT_PATH || isConsentAddress(pathname, route)) {
+    rewriteAddress(`${pathname}${search}${route}`);
+    return;
+  }
+  // Any other screen on the consent path is reloaded at the root
+  // (lib/recordaddress.ts). The marker and the route wait for this screen there.
+  keepReturnRoute(route);
+  rewriteAddress(`${pathname}${search}${OIDC_FAILURE_HASH}`);
+}
+
+// The entry's state is kept, because its history depth rides in it, and the
+// router is told, because a replace fires no event.
+function rewriteAddress(address: string): void {
+  globalThis.history.replaceState(globalThis.history.state, "", address);
+  announceAddressChanged();
 }
 
 type View =
@@ -122,15 +150,17 @@ export { RESET_ROUTE } from "./auth.route";
 // the Brief, stranding a completed reset on a screen this app never routes to.
 // Guarded on the route so it is safe to call from every "back to login" exit,
 // including the ones that never touched the reset flow.
-function clearResetHash(): void {
+function onResetAddress(): boolean {
   if (typeof globalThis.location === "undefined") {
-    return;
+    return false;
   }
   const hash = globalThis.location.hash.replace(/^#\/?/, "").split("?")[0];
-  if (hash === RESET_ROUTE) {
-    globalThis.history?.replaceState?.(
-      null,
-      "",
+  return hash === RESET_ROUTE;
+}
+
+function clearResetHash(): void {
+  if (onResetAddress()) {
+    rewriteAddress(
       `${globalThis.location.pathname}${globalThis.location.search}`,
     );
   }
@@ -159,13 +189,22 @@ export function AuthScreen({
   // anything else reads it. The read itself is pure — see isOidcFailureMarker's
   // comment for why — the clear happens in the effect below.
   const [oidcFailed] = useState(isOidcFailureMarker);
+  // A reset address with no token to take: cut short, or opened once already.
+  const [resetIncomplete] = useState(
+    () => view.kind === "login" && onResetAddress(),
+  );
   useEffect(() => {
     if (oidcFailed) {
       clearOidcFailureMarker();
     }
   }, [oidcFailed]);
-  const effectiveNotice: AuthNotice =
-    notice ?? (oidcFailed ? "oidc-failed" : null);
+  let addressNotice: AuthNotice = null;
+  if (oidcFailed) {
+    addressNotice = "oidc-failed";
+  } else if (resetIncomplete) {
+    addressNotice = "reset-incomplete";
+  }
+  const effectiveNotice: AuthNotice = notice ?? addressNotice;
   // A link pasted into a tab already on this screen changes the hash and
   // nothing else — no remount, so the initializer above never runs again. The
   // one view that sends a reader off to ask for a fresh link leaves them on
@@ -260,13 +299,7 @@ export function AuthScreen({
         <>
           {effectiveNotice && (
             <p className="auth-notice t-sub" role="status">
-              {t(
-                effectiveNotice === "signed-out"
-                  ? "auth.noticeSignedOut"
-                  : effectiveNotice === "session-expired"
-                    ? "auth.noticeSessionExpired"
-                    : "auth.noticeOidcFailed",
-              )}
+              {t(NOTICE_KEYS[effectiveNotice])}
             </p>
           )}
           {!passwordOffered ? (
@@ -319,6 +352,7 @@ export function AuthScreen({
           token={view.token}
           onDone={() => setView({ kind: "reset-done" })}
           onRestart={() => setView({ kind: "forgot" })}
+          onBack={setLoginView}
           selfServiceAvailable={resetAvailable}
         />
       )}
@@ -388,14 +422,14 @@ function LocaleFooter() {
       {LOCALES.map((option, index) => (
         <Fragment key={option}>
           {index > 0 && <span aria-hidden>·</span>}
-          <button
+          <Button
             type="button"
-            className="auth-link"
+            variant="link"
             aria-pressed={option === locale}
             onClick={() => setLocale(option)}
           >
             <span lang={option}>{t(localeNameKey(option))}</span>
-          </button>
+          </Button>
         </Fragment>
       ))}
     </div>

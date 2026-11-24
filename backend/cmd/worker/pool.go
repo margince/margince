@@ -12,10 +12,11 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 func openWorkerPool(ctx context.Context, cfg workerConfig, log *slog.Logger) (*pgxpool.Pool, error) {
-	pool, err := database.NewWorkerPool(ctx, cfg.dsn, compose.WorkerQueueConcurrency(), cfg.databaseConnections, cfg.databaseCache)
+	pool, err := database.NewWorkerPool(ctx, dbsettings.PoolDSN(cfg.dsn, cfg.settings), compose.WorkerQueueConcurrency(), cfg.databaseConnections, cfg.databaseCache)
 	if err != nil {
 		return nil, err
 	}
@@ -31,5 +32,6 @@ func openWorkerPool(ctx context.Context, cfg workerConfig, log *slog.Logger) (*p
 		pool.Close()
 		return nil, err
 	}
+	settings.EnableCache(pool)
 	return pool, nil
 }

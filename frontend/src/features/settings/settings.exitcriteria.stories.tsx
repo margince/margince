@@ -142,8 +142,8 @@ export const RequiredAndOptionalDark: Story = {
   render: RequiredAndOptional.render,
 };
 
-/** The edit form names the key it keeps, in the code face, and offers no field for it. */
-export const EditShowsKey: Story = {
+/** The edit form shows neither the key evidence cites nor a field to change it. */
+export const EditHidesKey: Story = {
   render: RequiredAndOptional.render,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -155,16 +155,14 @@ export const EditShowsKey: Story = {
     const dialog = within(
       await within(canvasElement.ownerDocument.body).findByRole("dialog"),
     );
-    const key = await dialog.findByText("buyer_confirmed_budget");
-    await expect(key.tagName).toBe("CODE");
-    await expect(key.parentElement).toHaveTextContent(
-      "Key: buyer_confirmed_budget",
-    );
+    await dialog.findByRole("textbox", { name: /^Label/ });
+    await expect(dialog.queryByText("buyer_confirmed_budget")).toBeNull();
+    await expect(dialog.queryByText(/^Key:/)).toBeNull();
   },
 };
 
-export const EditShowsKeyPhone: Story = {
-  ...EditShowsKey,
+export const EditHidesKeyPhone: Story = {
+  ...EditHidesKey,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

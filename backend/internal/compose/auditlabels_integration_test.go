@@ -113,6 +113,12 @@ func seedCatalog(t *testing.T, e *integration.Env) map[string]ids.UUID {
 	if err != nil {
 		t.Fatalf("creating a team: %v", err)
 	}
+	// A role write reads its caller's grants again under the lock, so the
+	// harness admin must hold the admin role in the database as well.
+	signals := identity.Identity{UserID: ids.From[ids.UserKind](e.AdminUser), Roles: []string{"admin"}, SeatType: "full", Permissions: integration.AdminWithSignals}
+	if err := identity.NewServiceFor(db).ChangeUserRole(e.As(e.AdminUser, nil, integration.AdminWithSignals), signals, signals.UserID, "admin"); err != nil {
+		t.Fatalf("assigning the admin role: %v", err)
+	}
 	if _, err := identity.NewServiceFor(db).CreateRole(admin, adminActor(e), "rep", "Regional lead"); err != nil {
 		t.Fatalf("creating a role: %v", err)
 	}
@@ -137,7 +143,8 @@ func TestEveryAuditEntryNamesTheRecordItIsAbout(t *testing.T) {
 	want["Fleet retrofit"] = e.SeedDeal(t, "Fleet retrofit",
 		ids.From[ids.PipelineKind](want["Retrofit pipeline"]), ids.From[ids.StageKind](want["Site survey"]), nil)
 	project, err := ProjectsStore(e.Pool).CreateProject(admin, projects.CreateProjectInput{
-		Name: "Depot rollout", CompanyID: ids.From[ids.CompanyKind](company),
+		Source: "manual",
+		Name:   "Depot rollout", CompanyID: ids.From[ids.CompanyKind](company),
 	})
 	if err != nil {
 		t.Fatalf("creating a project: %v", err)

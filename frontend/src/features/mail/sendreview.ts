@@ -1,3 +1,4 @@
+import type { components } from "../../api/schema";
 // What a rep can do about a send the engine refused.
 //
 // A refusal used to be a dead end wearing an explanation: "a recipient has not
@@ -15,7 +16,7 @@
 // is worse than one that is absent.
 
 import { ProblemError } from "../../lib/problem";
-import { problemDetails } from "../../lib/problembody";
+import { isRecord, problemDetails } from "../../lib/problembody";
 import type { RefusedRecipient } from "../../lib/sendstatus";
 
 // SendReview is the work a refusal left behind, as a surface needs it.
@@ -67,6 +68,43 @@ export function sendReviewOf(error: unknown): SendReview | null {
   };
 }
 
+// heldSendReview reads the review a held scheduled message names, or null
+// when none stands over it. The row carries no refusals; the modal reads them
+// from the review itself.
+export function heldSendReview(
+  reviewId: string | null | undefined,
+  actions: unknown,
+): SendReview | null {
+  if (!reviewId) {
+    return null;
+  }
+  return { reviewId, actions: actionsIn(actions), refusals: [] };
+}
+
+type CommunicationReview = components["schemas"]["CommunicationReview"];
+
+// embeddedReviewOf reads the review a refusal carries in `details.review`, as
+// GET /communication-reviews/{id} serves it. Null from an older server, or
+// when the caller may not read the review.
+export function embeddedReviewOf(error: unknown): CommunicationReview | null {
+  if (!(error instanceof ProblemError)) return null;
+  const review = problemDetails(error.problem)?.review;
+  return isCommunicationReview(review) ? review : null;
+}
+
+// The fields every reader of a review leans on. A body without them is not
+// a review this build can draw, whatever else it holds.
+export function isCommunicationReview(
+  value: unknown,
+): value is CommunicationReview {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.state === "string" &&
+    Array.isArray(value.refusals)
+  );
+}
+
 // refusalsIn keeps each entry with an address and a reason. Dropping one
 // malformed entry is safe: the status never reads fewer refusals as ready.
 function refusalsIn(raw: unknown): readonly RefusedRecipient[] {
@@ -85,7 +123,12 @@ function refusalsIn(raw: unknown): readonly RefusedRecipient[] {
     if (typeof address !== "string" || typeof reasonCode !== "string") {
       continue;
     }
+    const footerFindings = parseFooterFindings(
+      Reflect.get(entry, "footer_findings"),
+    );
     out.push({
+      ...(footerFindings.length ? { footerFindings } : {}),
+      ...citedIn(entry),
       address,
       reasonCode,
       category: typeof category === "string" ? category : undefined,
@@ -117,4 +160,60 @@ function actionsIn(raw: unknown): readonly SendReviewAction[] {
     }
   }
   return known;
+}
+
+function parseFooterFindings(
+  raw: unknown,
+): components["schemas"]["FooterFinding"][] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((value: unknown) => {
+    if (typeof value !== "object" || value === null) return [];
+    const kind: unknown = Reflect.get(value, "kind");
+    const language: unknown = Reflect.get(value, "language");
+    const means: unknown = Reflect.get(value, "missing_means");
+    if (typeof kind !== "string") return [];
+    return [
+      {
+        ...citedIn(value),
+        kind,
+        language: typeof language === "string" ? language : "",
+        missing_means: Array.isArray(means)
+          ? means.filter((item): item is string => typeof item === "string")
+          : [],
+      },
+    ];
+  });
+}
+
+// citedIn reads an entry's `provision` and `provisions`, keeping each law only
+// when it is whole. A law with no link or no part to name is dropped, and the
+// row keeps its factual text.
+function citedIn(entry: object): {
+  provision?: components["schemas"]["CitedProvision"];
+  provisions?: components["schemas"]["CitedProvision"][];
+} {
+  const first = wholeProvision(Reflect.get(entry, "provision"));
+  const listed: unknown = Reflect.get(entry, "provisions");
+  const all = Array.isArray(listed)
+    ? listed.flatMap((raw: unknown) => wholeProvision(raw) ?? [])
+    : [];
+  return {
+    ...(first ? { provision: first } : {}),
+    ...(all.length ? { provisions: all } : {}),
+  };
+}
+
+function wholeProvision(
+  raw: unknown,
+): components["schemas"]["CitedProvision"] | undefined {
+  if (!isRecord(raw)) return undefined;
+  const { instrument, provision, source_url: sourceUrl } = raw;
+  if (
+    typeof instrument !== "string" ||
+    typeof provision !== "string" ||
+    typeof sourceUrl !== "string"
+  ) {
+    return undefined;
+  }
+  return { instrument, provision, source_url: sourceUrl };
 }

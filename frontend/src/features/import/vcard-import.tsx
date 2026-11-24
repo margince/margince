@@ -4,24 +4,34 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { IMPORT_ID } from "../../app/nav";
+import { EntityRef } from "../../components/entityref";
 import { useUnsavedGuard } from "../../components/unsaved";
-import { AppLink } from "../../design-system/applink";
+import {
+  useVCardImportRefusal,
+  VCARD_COMPANY_DIAL,
+} from "../../components/vcardimportlink";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
-import { Badge, Button } from "../../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  PendingBody,
+} from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { RecordBack } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
+import { companyContactsListKey } from "../../lib/companycontacts.keys";
 import { valueFor } from "../../lib/labelfor";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf } from "../../lib/problem";
-import { navigate, routeHash } from "../../lib/router";
+import { navigate } from "../../lib/router";
+import { useUrlParams } from "../../lib/urlstate";
+import { useMeSettled } from "../../lib/writerefusal";
 import "./vcard-import.css";
 
 type VCardReport = components["schemas"]["VCardImportReport"];
@@ -115,8 +125,15 @@ function isReport(body: unknown): body is VCardReport {
   return Array.isArray(body.results);
 }
 
+/** The vCard import route; a company's Contacts tab names the company in the query. */
+function vcardImportPath(companyId: string | undefined): string {
+  return companyId === undefined
+    ? "/v1/contacts/vcard-import"
+    : `/v1/contacts/vcard-import?company_id=${encodeURIComponent(companyId)}`;
+}
+
 /** useImportVCards posts the file and refreshes the contact list behind it. */
-function useImportVCards() {
+function useImportVCards(companyId: string | undefined) {
   const client = useQueryClient();
   return useMutation({
     // The File arrives as a variable rather than through a closure: the click
@@ -126,7 +143,7 @@ function useImportVCards() {
       const payload = await postMultipart(
         isCardPhoto(file)
           ? "/v1/contacts/card-photos"
-          : "/v1/contacts/vcard-import",
+          : vcardImportPath(companyId),
         { file },
       );
       // A 200 whose body is not a report is a transport fault, not an import
@@ -141,35 +158,32 @@ function useImportVCards() {
     },
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ["contacts"] });
+      if (companyId !== undefined) {
+        // The company's own Contacts tab and its contact counts read the new
+        // employment edges; their keys sit under the company's.
+        await client.invalidateQueries({
+          queryKey: [companyContactsListKey(companyId)],
+        });
+        await client.invalidateQueries({ queryKey: ["companies"] });
+      }
     },
   });
-}
-
-/**
- * The link a contact follows to import address cards. A handed-over card is
- * first-party data — the contact gave it — which is what justifies storing their
- * details, and a human pressing this is what makes the import WRITE rather than
- * stage. So the verb lives on the contact list beside the other ways a contact
- * comes to exist, not in a settings page.
- */
-export function VCardImportAction() {
-  const t = useT();
-  return (
-    <AppLink
-      className="btn btn-ghost"
-      data-testid="vcard-import"
-      href={routeHash({ screen: "contacts", id: IMPORT_ID })}
-    >
-      {t("vcardImport.action")}
-    </AppLink>
-  );
 }
 
 /** The import page at `#/contacts/import`, and the report of what became of
  * each card. Leaving discards the file and the report. */
 export function VCardImportPage() {
   const t = useT();
-  const importer = useImportVCards();
+  const [dials] = useUrlParams();
+  // Set when the import came from one company's Contacts tab: its new
+  // contacts work for that company.
+  const companyId = dials.get(VCARD_COMPANY_DIAL);
+  const refusal = useVCardImportRefusal();
+  // No file field before the seat's access is read: a file picked then would
+  // be sent at once.
+  const settled = useMeSettled();
+  const importer = useImportVCards(companyId);
+  const [photoRefused, setPhotoRefused] = useState(false);
   const [picked, setPicked] = useState<File | undefined>(undefined);
   const title = useArrivalFocus<HTMLHeadingElement>();
   const fileField = useRef<HTMLDivElement>(null);
@@ -177,6 +191,7 @@ export function VCardImportPage() {
   // Focus returns to the file field, so the reader can pick at once.
   const startNext = () => {
     setPicked(undefined);
+    setPhotoRefused(false);
     importer.reset();
     fileField.current?.querySelector("input")?.focus();
   };
@@ -185,63 +200,93 @@ export function VCardImportPage() {
   useUnsavedGuard(importer.isPending);
 
   return (
-    <div className="wrap narrow">
-      <RecordBack
-        href={routeHash({ screen: "contacts" })}
-        label={t("vcardImport.back")}
-      />
+    <div className="wrap narrow page-pane">
       <Heading
         size="xlarge"
-        className="t-display vcard-import-title"
+        className="t-display vcard-import-title arrival-focus"
         ref={title}
         tabIndex={-1}
       >
         {t("vcardImport.title")}
       </Heading>
-      <Panel>
-        <PanelBody className="form-stack">
-          <div data-testid="vcard-import-file" ref={fileField}>
-            {/* Withdrawn while an import is running. A second file chosen mid-
+      {companyId !== undefined && (
+        <p className="t-sub" data-testid="vcard-import-company">
+          {t("vcardImport.forCompany")}{" "}
+          <EntityRef kind="company" id={companyId} />
+        </p>
+      )}
+      {!settled ? (
+        <PendingBody label={t("vcardImport.title")} />
+      ) : (
+        <Panel>
+          <PanelBody className="form-stack">
+            <div data-testid="vcard-import-file" ref={fileField}>
+              {/* Withdrawn while an import is running. A second file chosen mid-
                 flight would start a second write, and this page holds ONE
                 report — so one set of contact changes would land with nothing
                 on screen saying what happened to it. */}
-            {importer.isPending ? (
-              <p className="t-sub">{t("vcardImport.working")}</p>
-            ) : (
-              <FileDropzone
-                label={t("vcardImport.fileLabel")}
-                hint={t("vcardImport.whichFile")}
-                emptyLabel={t("vcardImport.choose")}
-                accept={ACCEPT_ATTR}
-                file={picked}
-                onPick={(file) => {
-                  setPicked(file);
-                  importer.mutate(file);
-                }}
-              />
+              {/* A refusal takes the file field's place only: an import already
+                  sent keeps its report, whatever /me says since. */}
+              {importer.isPending ? (
+                <p className="t-sub">{t("vcardImport.working")}</p>
+              ) : refusal !== undefined ? (
+                <EmptyState>{refusal}</EmptyState>
+              ) : (
+                <FileDropzone
+                  label={t("vcardImport.fileLabel")}
+                  hint={t("vcardImport.whichFile")}
+                  emptyLabel={t("vcardImport.choose")}
+                  accept={ACCEPT_ATTR}
+                  file={picked}
+                  onPick={(file) => {
+                    setPicked(file);
+                    // A photo goes to the approval queue, which files its
+                    // contacts under no company. Saying so beats a company
+                    // tab import that silently ignores the company.
+                    const refused =
+                      companyId !== undefined && isCardPhoto(file);
+                    setPhotoRefused(refused);
+                    if (!refused) {
+                      importer.mutate(file);
+                    }
+                  }}
+                />
+              )}
+            </div>
+            {photoRefused && (
+              <div data-testid="vcard-import-photo-refused">
+                <Callout
+                  tone="warning"
+                  kind="outcome"
+                  title={t("vcardImport.companyPhotoTitle")}
+                >
+                  {t("vcardImport.companyPhoto")}
+                </Callout>
+              </div>
             )}
-          </div>
-          {importer.isError && (
-            <div data-testid="vcard-import-error">
-              <Callout
-                tone="danger"
-                kind="outcome"
-                title={t("vcardImport.failed")}
-              >
-                {problemMessageOf(importer.error, t)}
-              </Callout>
-            </div>
-          )}
-          {importer.isSuccess && <ImportReport report={importer.data} />}
-          {(importer.isSuccess || importer.isError) && (
-            <div>
-              <Button data-testid="vcard-import-next" onClick={startNext}>
-                {t("vcardImport.next")}
-              </Button>
-            </div>
-          )}
-        </PanelBody>
-      </Panel>
+            {importer.isError && (
+              <div data-testid="vcard-import-error">
+                <Callout
+                  tone="danger"
+                  kind="outcome"
+                  title={t("vcardImport.failed")}
+                >
+                  {problemMessageOf(importer.error, t)}
+                </Callout>
+              </div>
+            )}
+            {importer.isSuccess && <ImportReport report={importer.data} />}
+            {(importer.isSuccess || importer.isError || photoRefused) &&
+              refusal === undefined && (
+                <div>
+                  <Button data-testid="vcard-import-next" onClick={startNext}>
+                    {t("vcardImport.next")}
+                  </Button>
+                </div>
+              )}
+          </PanelBody>
+        </Panel>
+      )}
     </div>
   );
 }
@@ -361,3 +406,8 @@ function CardFields({ fields }: Readonly<{ fields: readonly VCardField[] }>) {
     </div>
   );
 }
+
+export {
+  useVCardImportRefusal,
+  VCardImportAction,
+} from "../../components/vcardimportlink";

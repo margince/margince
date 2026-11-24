@@ -13,6 +13,8 @@ import { useCanWrite } from "../../../lib/capability";
 import { useMemberName } from "../../../lib/membernames";
 import { useViewerZone } from "../../../lib/viewerzone";
 import { type AddSeat, CommitteeReading, committeeFoot } from "./dealcommittee";
+import { CommitteeLines } from "./dealcommitteelinelist";
+import { committeeLines } from "./dealcommitteelines";
 import { committeeTeam } from "./dealcommitteeteam";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
@@ -53,11 +55,8 @@ export function DealCommitteeCard({
   roleLabel: (role: string) => string;
 }>) {
   const t = useT();
-  // Both asked on every render: hooks run in one order, so no short circuit.
   const canCreate = useCanWrite("relationship", "create") && canWrite;
-  const canUpdate = useCanWrite("relationship", "update");
-  const canDelete = useCanWrite("relationship", "delete");
-  const canChange = (canUpdate || canDelete) && canWrite;
+  const canChange = canWrite;
   const { locale } = useLocale();
   const zone = useViewerZone();
   const assignments = useRecordAssignments("deal", dealId);
@@ -71,6 +70,9 @@ export function DealCommitteeCard({
     t,
     locale,
   });
+  const drawn = committeeLines(coverage, t, (at, precision) =>
+    activityDay(at, precision, locale, zone),
+  );
   const foot = committeeFoot(coverage, withheld, t, locale);
   const addSeat: AddSeat | undefined = canCreate
     ? (gap, describedBy) => (
@@ -109,6 +111,9 @@ export function DealCommitteeCard({
         wroteOn={(at, precision) => activityDay(at, precision, locale, zone)}
         addSeat={addSeat}
       />
+      {drawn && (
+        <CommitteeLines lines={drawn.lines} unreached={drawn.unreached} />
+      )}
       {canChange && !withheld && (
         <Disclosure summary={t("deal.committee.change")}>
           <RelationshipRows

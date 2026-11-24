@@ -1,13 +1,12 @@
 import { type ReactNode, useId, useState } from "react";
 import { Button } from "../../design-system/atoms";
-import { formatDateTime } from "../../format/format";
+import { formatDateTimeAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
-import { historyValue } from "../../lib/historyvalues";
 import { useViewerZone } from "../../lib/viewerzone";
 import { entryFieldChanges } from "./history.logic";
-import { HistoryFieldDiff } from "./historyfielddiff";
+import { HistoryFieldDiff, HistoryFieldValue } from "./historyfielddiff";
 import { netChanges, type PairRow } from "./historyreversal";
 import "./history.css";
 
@@ -70,12 +69,13 @@ function SettledFace({
           <li key={change.field} className="entry-field">
             <span>{historyFieldLabel(change.field, t)}</span>
             <span>
-              {historyValue(
-                change.field,
-                change.newValue,
-                values,
-                change.newPrecision,
-              ) ?? t("history.cleared")}
+              <HistoryFieldValue
+                field={change.field}
+                value={change.newValue}
+                precision={change.newPrecision}
+                values={values}
+                cleared={t("history.cleared")}
+              />
             </span>
           </li>
         ))}
@@ -149,7 +149,7 @@ export function ReversalPairRow({
         <span className="tl-meta">
           {/* The REVERSAL's time: the pair sits where its newest member sits,
               so nothing appears to have happened earlier than it did. */}
-          <span>{formatDateTime(row.atIso, locale, readerZone)}</span>
+          <span>{formatDateTimeAbbrev(row.atIso, locale, readerZone)}</span>
         </span>
         {row.whollyUndone ? (
           <SettledFace row={row} currency={currency} />

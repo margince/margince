@@ -196,7 +196,7 @@ func closeDateConfirmEffect(svc *approvals.Service, store *deals.Store) approval
 			return err
 		}
 		if blocked {
-			return fmt.Errorf("compose: this correction was taken back: %w", apperrors.ErrConflict)
+			return fmt.Errorf("this correction was taken back: %w", apperrors.ErrConflict)
 		}
 		// The catalog read BEFORE the transaction opens, which is what
 		// UpdateDealTx documents: it runs a transaction of its own, and taking
@@ -221,8 +221,7 @@ func closeDateConfirmEffect(svc *approvals.Service, store *deals.Store) approval
 				if pinned {
 					update.IfVersion = &version
 				}
-				_, err := store.UpdateDealTx(ctx, tx, correction.DealID, update, active)
-				return err
+				return store.ApplyDealUpdateTx(ctx, tx, correction.DealID, update, active)
 			})
 	}
 }

@@ -9,7 +9,6 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { useCanWrite } from "../../lib/capability";
-import { navigate } from "../../lib/router";
 import { scopeDials } from "./analytics.overview.context";
 import {
   type ReportingEvaluation,
@@ -150,9 +149,13 @@ export function OverviewSaveActions({
             selection={selection}
             note={t("analytics.overview.saveViewNote")}
             onClose={() => setSaving(false)}
-            onSaved={(report) => {
+            onSaved={(report, from) => {
               setSaving(false);
-              navigate({ screen: "analytics", id: "reports", id2: report.id });
+              from.navigate({
+                screen: "analytics",
+                id: "reports",
+                id2: report.id,
+              });
             }}
           />
         </Suspense>

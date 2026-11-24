@@ -2,10 +2,16 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resetTheme } from "../../app/theme-reset";
 import { LOCALES, localeNameKey, translate } from "../../i18n";
-import { keepReturnRoute, restoreReturnRoute } from "../../lib/returnroute";
+import { depthBackOutOf, entryDepth } from "../../lib/historydepth";
+import {
+  keepReturnRoute,
+  restoreReturnRoute,
+  takeReturnRoute,
+} from "../../lib/returnroute";
+import { watchAddress } from "../../lib/router";
 import { STORAGE_KEYS } from "../../lib/storage";
+import { resetTheme } from "../../testing/theme-reset";
 import { AuthScreen, AvailabilityScreen } from "./auth";
 import { ok, render, stubApi, t } from "./auth.testkit";
 
@@ -116,6 +122,33 @@ describe("AuthScreen login", () => {
     expect(request?.headers.has("X-Workspace-Slug")).toBe(false);
   });
 
+  // The page's own words, in the page's language: a browser's bubble speaks the
+  // browser's language, whatever the reader chose at the foot of the form.
+  it("names an empty or malformed field in the page's language, not the browser's", async () => {
+    const user = userEvent.setup();
+    const calls = stubApi({ password: true, password_reset: false }, () =>
+      ok(200, { user: {}, roles: [], teams: [] }),
+    );
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    await user.click(await screen.findByRole("button", { name: "Deutsch" }));
+
+    await user.click(screen.getByRole("button", { name: "Anmelden" }));
+    expect(screen.getByText(translate("de", "auth.emailMissing"))).toBeTruthy();
+    expect(
+      screen.getByText(translate("de", "auth.passwordMissing")),
+    ).toBeTruthy();
+
+    await user.type(screen.getByLabelText("E-Mail"), "not-an-email");
+    await user.type(screen.getByLabelText("Passwort"), "a-password{enter}");
+    expect(
+      screen.getByText(translate("de", "auth.emailMalformed")),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(translate("de", "auth.passwordMissing")),
+    ).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
   it("does not show success until the authenticated session probe succeeds", async () => {
     stubApi({ password: true, password_reset: false }, () =>
       ok(200, { user: {}, roles: [], teams: [] }),
@@ -172,8 +205,9 @@ describe("AuthScreen login", () => {
     await userEvent.type(screen.getByLabelText("Password"), "whatever{enter}");
 
     const alert = await screen.findByRole("alert");
+    // The budget refills within a minute, so the sentence names that wait.
     expect(alert.textContent).toContain(
-      "Too many sign-in attempts. Retry later.",
+      "Too many sign-in attempts. Wait a minute, then retry.",
     );
   });
 
@@ -244,11 +278,13 @@ describe("AuthScreen login", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
     await screen.findByLabelText("Email");
     expect(screen.queryByText("Forgot password?")).toBeNull();
+    expect(screen.getByText(t("auth.forgotAskAdmin"))).toBeTruthy();
     cleanup();
 
     stubApi({ password: true, password_reset: true }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
     expect(await screen.findByText("Forgot password?")).toBeTruthy();
+    expect(screen.queryByText(t("auth.forgotAskAdmin"))).toBeNull();
   });
 
   // The reset UI-preview switch (app/ui-preview.ts), on the screen. The capability
@@ -297,16 +333,12 @@ describe("AuthScreen login", () => {
     expect(
       screen.queryByText(/encrypted|compliant|sovereign|your data is safe/i),
     ).toBeNull();
-    // Server paths, not app routes: both documents have to be readable BEFORE
-    // anyone authenticates, so they cannot sit behind the SPA router.
-    expect(screen.getByRole("link", { name: "Terms" })).toHaveProperty(
-      "pathname",
-      "/legal/terms",
-    );
-    expect(screen.getByRole("link", { name: "Privacy" })).toHaveProperty(
-      "pathname",
-      "/legal/privacy",
-    );
+    // Off-site and in a new tab, so the typed email survives the click.
+    const privacy = screen.getByRole("link", { name: "Privacy" });
+    expect(privacy.getAttribute("href")).toBe("https://margince.com/privacy/");
+    expect(privacy.getAttribute("target")).toBe("_blank");
+    expect(privacy.getAttribute("rel")).toContain("noopener");
+    expect(screen.queryByRole("link", { name: "Terms" })).toBeNull();
   });
 
   // The theme is readable before anyone signs in, so it has to be changeable
@@ -381,6 +413,48 @@ describe("OIDC failure notice", () => {
     expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
     expect(window.location.pathname).toBe("/consent");
     expect(window.location.hash).toBe(request);
+    globalThis.history.replaceState(null, "", "/");
+  });
+
+  // The consent path holds no other screen, so the sign-in screen is reloaded
+  // at the root. The notice must reach the reader there.
+  it("carries the notice to the root when no consent request was kept", async () => {
+    const reload = vi
+      .spyOn(globalThis.location, "replace")
+      .mockImplementation(() => undefined);
+    globalThis.history.replaceState(
+      null,
+      "",
+      "/consent#/oauth-consent?oidc=failed",
+    );
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    await waitFor(() =>
+      expect(reload).toHaveBeenCalledWith("/#/login?oidc=failed"),
+    );
+    globalThis.history.replaceState(null, "", "/");
+  });
+
+  it("keeps a route that is not a consent request for the screen at the root", async () => {
+    const reload = vi
+      .spyOn(globalThis.location, "replace")
+      .mockImplementation(() => undefined);
+    globalThis.history.replaceState(null, "", "/consent#/deals?stage=won");
+    keepReturnRoute();
+    globalThis.history.replaceState(
+      null,
+      "",
+      "/consent#/oauth-consent?oidc=failed",
+    );
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    await waitFor(() =>
+      expect(reload).toHaveBeenCalledWith("/#/login?oidc=failed"),
+    );
+    expect(takeReturnRoute()).toBe("#/deals?stage=won");
     globalThis.history.replaceState(null, "", "/");
   });
 
@@ -619,208 +693,59 @@ describe("password reveal", () => {
   });
 });
 
-describe("AuthScreen reset deep link", () => {
-  it("redeems the emailed token and lands back at sign-in", async () => {
-    const calls = stubApi({ password: true, password_reset: true }, () =>
-      ok(204),
+// The sign-in screen rewrites the address of the entry it is on. The entry keeps
+// its place in the app's history, so a later Back still knows what is behind it.
+describe("AuthScreen rewriting its own entry", () => {
+  let unwatch: () => void = () => undefined;
+
+  afterEach(() => unwatch());
+
+  // Each move delivered and counted before the next one starts.
+  async function arrive(hash: string) {
+    const moved = new Promise((resolve) =>
+      globalThis.addEventListener("hashchange", resolve, { once: true }),
     );
-    vi.stubGlobal("location", {
-      ...window.location,
-      pathname: "/",
-      hash: "#/reset-password?token=raw-reset-token",
-      origin: "http://localhost",
-    });
+    globalThis.location.hash = hash;
+    await moved;
+  }
+
+  async function startCounting() {
+    globalThis.history.replaceState(null, "", "#/home");
+    unwatch = watchAddress(() => undefined);
+    await arrive("#/deals");
+  }
+
+  it("keeps the depth of the entry it clears the failure marker from", async () => {
+    await startCounting();
+    await arrive("#/login?oidc=failed");
+    stubApi({ password: true, password_reset: true }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    await waitFor(() => expect(window.location.hash).toBe(""));
 
-    await userEvent.type(
-      await screen.findByLabelText("New password"),
-      "an entirely new password{enter}",
-    );
-
-    expect(await screen.findByText("Password updated")).toBeTruthy();
-    const request = calls[0];
-    expect(String(request?.url)).toContain("/v1/auth/reset-password");
-    expect(await request?.text()).toContain("raw-reset-token");
+    await arrive("#/deals");
+    expect(entryDepth()).toBe(3);
+    globalThis.history.back();
+    expect(entryDepth()).toBe(2);
+    expect(depthBackOutOf(() => false)).toBe(1);
   });
 
-  it("offers a fresh link on a spent token — one neutral refusal", async () => {
-    stubApi({ password: true, password_reset: true }, () =>
-      ok(401, { title: "unauthorized", detail: "invalid, used, or expired" }),
-    );
-    vi.stubGlobal("location", {
-      ...window.location,
-      pathname: "/",
-      hash: "#/reset-password?token=spent-token",
-      origin: "http://localhost",
-    });
-    render(<AuthScreen onAuthed={vi.fn()} />);
-
-    await userEvent.type(
-      await screen.findByLabelText("New password"),
-      "an entirely new password{enter}",
-    );
-
-    expect(
-      await screen.findByText(
-        "This reset link is invalid, already used or expired.",
-      ),
-    ).toBeTruthy();
-    expect(screen.getByText("Request a new link")).toBeTruthy();
-  });
-
-  // These three cases exist because one string used to serve every failure, and
-  // the remedy it offered — "Request a new link" — SUPERSEDES the token the user
-  // is still holding. So for anything that is not a token verdict, the old copy
-  // was both wrong and destructive. What each failure must not do is as important
-  // as what it says, hence the absence assertions.
-  it("names the action the user was actually taking when refused for rate", async () => {
-    // The 429 used to render auth.errRateLimited, which says "sign-in attempts"
-    // — on a form whose only job is setting a password. Copy that names the wrong
-    // action reads as the wrong error, so this branch has its own key and this
-    // test is what keeps the two from being collapsed back together.
-    stubApi({ password: true, password_reset: true }, () =>
-      ok(429, { title: "rate_limited", detail: "budget exceeded" }),
-    );
-    vi.stubGlobal("location", {
-      ...window.location,
-      pathname: "/",
-      hash: "#/reset-password?token=good-token",
-      origin: "http://localhost",
-    });
-    render(<AuthScreen onAuthed={vi.fn()} />);
-
-    await userEvent.type(
-      await screen.findByLabelText("New password"),
-      "an entirely new password{enter}",
-    );
-
-    expect(
-      await screen.findByText(
-        "Too many attempts. Set the password again later.",
-      ),
-    ).toBeTruthy();
-    // The link is untouched by a rate limit, so replacing it is still wrong.
-    expect(screen.queryByText("Request a new link")).toBeNull();
-  });
-
-  it("blames the password, not the link, when the server refuses the password", async () => {
-    stubApi({ password: true, password_reset: true }, () =>
-      ok(422, { title: "validation_error", detail: "password too weak" }),
-    );
-    vi.stubGlobal("location", {
-      ...window.location,
-      pathname: "/",
-      hash: "#/reset-password?token=good-token",
-      origin: "http://localhost",
-    });
-    render(<AuthScreen onAuthed={vi.fn()} />);
-
-    await userEvent.type(
-      await screen.findByLabelText("New password"),
-      "an entirely new password{enter}",
-    );
-
-    expect(
-      await screen.findByText(
-        "The password was refused. Choose a different password.",
-      ),
-    ).toBeTruthy();
-    // The link is still good, so replacing it must not be offered.
-    expect(screen.queryByText("Request a new link")).toBeNull();
-  });
-
-  it("keeps a good link alive when the request never reaches the server", async () => {
-    stubApi({ password: true, password_reset: true }, () => {
-      throw new TypeError("Failed to fetch");
-    });
-    vi.stubGlobal("location", {
-      ...window.location,
-      pathname: "/",
-      hash: "#/reset-password?token=good-token",
-      origin: "http://localhost",
-    });
-    render(<AuthScreen onAuthed={vi.fn()} />);
-
-    await userEvent.type(
-      await screen.findByLabelText("New password"),
-      "an entirely new password{enter}",
-    );
-
-    expect(
-      await screen.findByText(
-        "The password was not set. The link is still valid; retry shortly.",
-      ),
-    ).toBeTruthy();
-    expect(screen.queryByText("Request a new link")).toBeNull();
-  });
-
-  it("announces a reset failure to assistive tech", async () => {
-    // The reset error was the one error region on this surface with no role, so a
-    // screen-reader user submitted an expired token and was told nothing.
-    stubApi({ password: true, password_reset: true }, () =>
-      ok(401, { title: "unauthorized", detail: "invalid, used, or expired" }),
-    );
-    vi.stubGlobal("location", {
-      ...window.location,
-      pathname: "/",
-      hash: "#/reset-password?token=spent-token",
-      origin: "http://localhost",
-    });
-    render(<AuthScreen onAuthed={vi.fn()} />);
-
-    await userEvent.type(
-      await screen.findByLabelText("New password"),
-      "an entirely new password{enter}",
-    );
-
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain(
-      "This reset link is invalid, already used or expired.",
-    );
-  });
-
-  // The token does not wait in the address bar for this screen to read it.
-  // lib/router.tsx takes it as it reads the hash. That keeps it out of the
-  // history entry while a gate above this screen renders instead. Memory
-  // outlives a mount and the address does not, so the screen empties it as it
-  // takes the token. A remount that found it there would put the reset form
-  // back over a reader who had gone back to sign-in.
-  //
-  // The REAL address, not the stubbed one the cases around this use: the scrub
-  // rewrites the URL, and a plain object cannot be rewritten.
-  it("does not reopen the reset form on a remount", async () => {
+  it("keeps the depth of the entry it clears the reset route from", async () => {
+    await startCounting();
+    await arrive("#/reset-password?token=good-token");
     stubApi({ password: true, password_reset: true }, () => ok(204));
-    globalThis.location.hash = "#/reset-password?token=good-token";
-    const first = render(<AuthScreen onAuthed={vi.fn()} />);
-    await screen.findByLabelText("New password");
-    expect(globalThis.location.hash).toBe("#/reset-password");
-    first.unmount();
-
     render(<AuthScreen onAuthed={vi.fn()} />);
+    await userEvent.type(
+      await screen.findByLabelText("New password"),
+      "an entirely new password{enter}",
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("auth.backToLogin") }),
+    );
+    expect(window.location.hash).toBe("");
 
-    expect(await screen.findByLabelText("Email")).toBeTruthy();
-    expect(screen.queryByLabelText("New password")).toBeNull();
-  });
-
-  it("ignores a token in the server-visible query string", async () => {
-    // The security property, asserted directly rather than implied by the happy
-    // path: a query string is sent to servers, lands in access logs, is attached
-    // as a Referer on same-origin api calls, and becomes a Cache Storage key. So
-    // the reset view must open ONLY for a fragment token. If someone reverts the
-    // parser to location.search to "be more forgiving", this fails.
-    stubApi({ password: true, password_reset: true }, () => ok(204));
-    vi.stubGlobal("location", {
-      ...window.location,
-      pathname: "/reset-password",
-      search: "?token=raw-reset-token",
-      hash: "",
-      origin: "http://localhost",
-    });
-    render(<AuthScreen onAuthed={vi.fn()} />);
-
-    // The sign-in form, not the reset form.
-    expect(await screen.findByLabelText("Email")).toBeTruthy();
-    expect(screen.queryByLabelText("New password")).toBeNull();
+    expect(entryDepth()).toBe(2);
+    expect(depthBackOutOf(() => false)).toBe(1);
   });
 });
 
@@ -861,6 +786,16 @@ describe("AvailabilityScreen", () => {
       expect(notice).not.toMatch(/\{[^}]+\}/);
       // And it still tells the one contact who is genuinely stuck what to do.
       expect(notice.length).toBeGreaterThan(40);
+    }
+  });
+
+  // Every provider's callback fails to the same address, so the notice cannot
+  // know which provider was used and names none.
+  it("names no provider, since every provider fails to the same address", () => {
+    for (const locale of LOCALES) {
+      expect(translate(locale, "auth.noticeOidcFailed")).not.toMatch(
+        /google|microsoft/i,
+      );
     }
   });
 });

@@ -252,20 +252,23 @@ describe("DealsScreen", () => {
     });
   });
 
-  // The server treats every advance as a transition. It writes a stage-history
-  // row and emits deal.stage_changed without asking whether anything moved. So
-  // a row already in the target stage is never sent, or velocity reports read
-  // a move that never happened.
-  it("moving to a stage skips the rows already in it", async () => {
+  // A stage move is one preview and one change on the server, which leaves a
+  // deal already on the stage alone. The browser names every selected deal with
+  // its own version and sends no advance of its own.
+  it("a bulk stage move previews and runs once, with each row's own version", async () => {
+    const bulk: { path: string; body: unknown }[] = [];
     const advances: string[] = [];
     vi.stubGlobal(
       "fetch",
       stubBackend(
         [
-          deal({ id: "d1", name: "Already there", stage_id: "s2" }),
-          deal({ id: "d2", name: "Needs moving", stage_id: "s1" }),
+          deal({ id: "d1", name: "Already there", stage_id: "s2", version: 3 }),
+          deal({ id: "d2", name: "Needs moving", stage_id: "s1", version: 9 }),
         ],
-        { onAdvance: (_body, _ifMatch) => advances.push("advance") },
+        {
+          onAdvance: () => advances.push("advance"),
+          onBulk: (path, body) => bulk.push({ path, body }),
+        },
       ),
     );
     const user = userEvent.setup();
@@ -284,9 +287,25 @@ describe("DealsScreen", () => {
       "Proposal",
     );
     await user.click(screen.getByRole("button", { name: "Move" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      await within(dialog).findByRole("button", { name: "Move" }),
+    );
 
-    // One write, for the row that moves.
-    await waitFor(() => expect(advances.length).toBe(1));
+    await waitFor(() => expect(bulk).toHaveLength(2));
+    expect(bulk.map((call) => call.path)).toEqual([
+      "/v1/bulk/preview",
+      "/v1/bulk/execute",
+    ]);
+    expect(bulk[1].body).toMatchObject({
+      verb: "move_stage",
+      stage_id: "s2",
+      items: [
+        { id: "d1", version: 3 },
+        { id: "d2", version: 9 },
+      ],
+    });
+    expect(advances).toEqual([]);
   });
 
   // A closed deal takes no bulk write: archiving it is done or meaningless.
@@ -434,7 +453,13 @@ describe("DealsScreen", () => {
             deals: 1,
             base_minor: 10000,
             weighted_base_minor: 4000,
-            priced_deals: 1,
+            coverage: {
+              aggregates: ["raw_minor"],
+              partial: false,
+              no_value_deals: 0,
+              no_rate_deals: 0,
+              missing_currencies: [],
+            },
           },
         ],
       }),
@@ -442,7 +467,7 @@ describe("DealsScreen", () => {
     render(<DealsScreen />);
     fireEvent.focus(await screen.findByText("€100"));
     expect(screen.getByRole("tooltip").textContent).toContain(
-      `Converted at rates as of ${day}.`,
+      `Converted at exchange rates as of ${day}.`,
     );
   });
 
@@ -471,6 +496,7 @@ describe("DealsScreen", () => {
       "fetch",
       stubBackend([deal({ id: "a", stage_id: "s1" })], {
         stageTotalsStatus: 403,
+        stageTotalsCode: "owner_not_measurable",
       }),
     );
     render(<DealsScreen />);
@@ -484,6 +510,31 @@ describe("DealsScreen", () => {
         ).length,
       ).toBe(1),
     );
+  });
+
+  // A reader refused the report itself is not refused an owner, even with an
+  // owner dial set, so the column must not blame the owner.
+  it("does not blame the owner when the totals report itself is refused", async () => {
+    window.location.hash = "#/deals?owner_id=u-colleague";
+    let totalsAsked = false;
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ id: "a", stage_id: "s1" })], {
+        stageTotalsStatus: 403,
+        stageTotalsCode: "permission_denied",
+        onStageTotalsBody: () => {
+          totalsAsked = true;
+        },
+      }),
+    );
+    render(<DealsScreen />);
+    await waitFor(() => expect(totalsAsked).toBe(true));
+    expect(await screen.findAllByText("Fleet retrofit")).not.toHaveLength(0);
+    expect(
+      screen.queryByText(
+        "Loaded deals only. Only an administrator can let you measure this owner’s totals.",
+      ),
+    ).toBeNull();
   });
 
   // A tag filter withholds totals too, since the report has no tag field and
@@ -566,7 +617,6 @@ describe("DealsScreen", () => {
         { fn: "count", as: "deals" },
         { fn: "sum", field: "amount_base_minor", as: "base_minor" },
         { fn: "sum", field: "weighted_base_minor", as: "weighted_base_minor" },
-        { fn: "count", field: "amount_base_minor", as: "priced_deals" },
       ],
     });
   });
@@ -583,16 +633,7 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
-    // simulate the drop on the Won column via the drop handler path
-    const wonColumn = document.querySelector(
-      '[data-stage="s3"]',
-    ) as HTMLElement;
-    const dataTransfer = { getData: () => "d1", setData: () => {} };
-    const dropEvent = new Event("drop", { bubbles: true }) as unknown as {
-      dataTransfer: typeof dataTransfer;
-    };
-    Object.assign(dropEvent, { dataTransfer });
-    wonColumn.dispatchEvent(dropEvent as unknown as Event);
+    dropOnStage("s3");
 
     await askedToClose("Won");
     expect(advances).toHaveLength(0); // nothing posted yet: confirm-first
@@ -927,15 +968,7 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
-    const wonColumn = document.querySelector(
-      '[data-stage="s3"]',
-    ) as HTMLElement;
-    const dataTransfer = { getData: () => "d1", setData: () => {} };
-    const dropEvent = new Event("drop", { bubbles: true }) as unknown as {
-      dataTransfer: typeof dataTransfer;
-    };
-    Object.assign(dropEvent, { dataTransfer });
-    wonColumn.dispatchEvent(dropEvent as unknown as Event);
+    dropOnStage("s3");
 
     await askedToClose("Won");
     // progress_deal is catalogued "auto_execute". A hardcoded "confirm" dot
@@ -956,14 +989,7 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
-    const proposalColumn = document.querySelector(
-      '[data-stage="s2"]',
-    ) as HTMLElement;
-    const dropEvent = new Event("drop", { bubbles: true });
-    Object.assign(dropEvent, {
-      dataTransfer: { getData: () => "d1", setData: () => {} },
-    });
-    proposalColumn.dispatchEvent(dropEvent);
+    dropOnStage("s2");
 
     await waitFor(() => expect(advances).toHaveLength(1));
     expect(advances[0]).toEqual([{ to_stage_id: "s2" }, "4"]);

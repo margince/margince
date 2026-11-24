@@ -14,7 +14,6 @@ import { FieldGuard } from "../../../design-system/rbac";
 import { ProvenanceTag } from "../../../design-system/trust";
 import { calendarDaysUntil } from "../../../format/daysuntil";
 import {
-  formatDate,
   formatDateAbbrev,
   formatDayMonth,
   formatMoneyOrAbsent,
@@ -57,6 +56,7 @@ export type DealIdentity = Partial<
     | "closed_at"
     | "close_date_provisional"
     | "wait_until"
+    | "wait_ends_at"
     | "fx_rate_to_base"
     | "fx_rate_date"
     | "owner_id"
@@ -253,7 +253,7 @@ export function closeWords(
   if (deal.close_date_provisional) {
     parts.push(t("deal.strip.close.provisional"));
   }
-  if (waitHolds(deal.wait_until, zone, new Date())) {
+  if (waitHolds(deal.wait_until, deal.wait_ends_at, new Date())) {
     parts.push(
       t("deal.strip.close.waiting", {
         date: formatDayMonth(deal.wait_until, locale, zone),
@@ -296,13 +296,10 @@ export function FxLine({
   // A deal carrying a rate but no amount converts to nothing, not to zero.
   const baseMinor =
     amountMinor == null ? null : Math.round(amountMinor * Number(fxRateToBase));
-  return (
-    <p className="t-caption">
-      {t("deal.fxBase", {
-        value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
-        rate: fxRateToBase,
-        date: fxRateDate ? formatDate(fxRateDate, locale, readerZone) : "—",
-      })}
-    </p>
-  );
+  // The stored rate carries ten decimals; four are as many as a reader checks.
+  return t("deal.fxBase", {
+    value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
+    rate: formatNumber(Number(fxRateToBase), locale, 4),
+    date: fxRateDate ? formatDateAbbrev(fxRateDate, locale, readerZone) : "—",
+  });
 }

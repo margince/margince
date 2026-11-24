@@ -1,4 +1,6 @@
+import { profileFieldLabelKey } from "../format/companyprofilelabels";
 import type { MessageKey } from "../i18n/en";
+import { ADDRESS_COLUMN_LABELS } from "./addresscolumns";
 
 // What a changed field is CALLED, for a reader who never sees a column name
 // anywhere else on the record.
@@ -48,6 +50,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["full_name", "history.field.full_name"],
   ["fx_rate_date", "history.field.fx_rate_date"],
   ["fx_rate_to_base", "history.field.fx_rate_to_base"],
+  ["greeting_register", "history.field.greeting_register"],
   ["industry", "history.field.industry"],
   ["assess_against_entity_id", "history.field.assess_against_entity_id"],
   ["is_done", "history.field.is_done"],
@@ -102,8 +105,18 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
 // `win_probability` is recorded as the figure set on the deal and who set it.
 // Apart from both maps above, because no `Update<Type>Request` names these and
 // no hand-built image writes them, so each census would call them orphans.
+// The address parts are the record's columns; the request nests them under
+// `address`, and they read the words the Address dialog reads.
 const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
+  ...ADDRESS_COLUMN_LABELS,
   ["stage_id", "history.field.stage_id"],
+  ["disqualify_reason_id", "history.field.disqualify_reason_id"],
+  ["trigger", "history.field.trigger"],
+  ["role", "history.field.role"],
+  ["is_current_primary", "history.field.is_current_primary"],
+  ["employment_status", "history.field.employment_status"],
+  ["started_precision", "history.field.started_precision"],
+  ["ended_precision", "history.field.ended_precision"],
   ["win_probability_override", "history.field.win_probability_override"],
   ["win_probability_set_by", "history.field.win_probability_set_by"],
 ]);
@@ -186,6 +199,14 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
     "acquisition_request_retracted",
     "history.field.acquisition_request_retracted",
   ],
+  [
+    "impersonation_warning_carried",
+    "history.field.impersonation_warning_carried",
+  ],
+  [
+    "impersonation_warning_cleared",
+    "history.field.impersonation_warning_cleared",
+  ],
   ["reachability", "history.field.reachability"],
   ["readiness", "history.field.readiness"],
   ["reason", "history.field.reason"],
@@ -216,6 +237,9 @@ const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
 
 // The label a history row shows for one field.
 //
+// A company's profile fields (VAT ID, registered address and the rest) are
+// shown in its history under the names the profile tab gives them.
+//
 // A field with no key falls back to its own name with the underscores spaced
 // out — the same contract `coldFieldLabel` keeps, and the only honest answer
 // for a workspace's own `cf_` column, whose label lives in the custom-field
@@ -224,11 +248,22 @@ export function historyFieldLabel(
   field: string,
   t: (key: MessageKey) => string,
 ): string {
-  const key =
+  const key = fieldWordKey(field);
+  return key ? t(key) : field.replaceAll("_", " ");
+}
+
+function fieldWordKey(field: string): MessageKey | undefined {
+  return (
     HISTORY_FIELD_LABELS.get(field) ??
     STORED_COLUMN_LABELS.get(field) ??
-    SYNTHETIC_AUDIT_FIELD_LABELS.get(field);
-  return key ? t(key) : field.replaceAll("_", " ");
+    SYNTHETIC_AUDIT_FIELD_LABELS.get(field) ??
+    profileFieldLabelKey(field)
+  );
+}
+
+/** Whether a column has a word of its own, rather than its stored name with spaces. */
+export function hasFieldWord(field: string): boolean {
+  return fieldWordKey(field) !== undefined;
 }
 
 // The same map as a lookup, for the census that holds it against the contract.

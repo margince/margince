@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // WithEmailDrafter returns handlers whose draft endpoint uses the injected
@@ -47,6 +48,10 @@ type DraftResult struct {
 	// reading the text.
 	VoiceDegraded bool
 	Language      textlang.Lang
+	// Context and Evidence are what the instruction says the message is
+	// (draftedReason); empty when it says nothing the send check can use.
+	Context  commsauthz.Category
+	Evidence commsauthz.Evidence
 }
 
 // ProvenanceEmailDrafter is the richer drafting seam: same draft, plus the
@@ -80,17 +85,37 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 
 	replyTo := openapi_types.UUID(ids.UUID(id))
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.EmailDraft{
-		Subject:             result.Subject,
-		Body:                result.Body,
-		To:                  h.replyAddresses(ctx, ids.From[ids.ActivityKind](ids.UUID(id))),
-		InReplyToActivityId: &replyTo,
-		AiGenerated:         &result.AIGenerated,
-		AiDisclosure:        result.AIProvenanceNotice,
-		VoiceProfileVersion: result.VoiceProfileVersion,
-		DraftRef:            result.DraftRef,
-		VoiceDegraded:       &result.VoiceDegraded,
-		Language:            draftfloor.Reported[crmcontracts.EmailDraftLanguage](result.Language),
+		Subject:              result.Subject,
+		Body:                 result.Body,
+		To:                   h.replyAddresses(ctx, ids.From[ids.ActivityKind](ids.UUID(id))),
+		InReplyToActivityId:  &replyTo,
+		AiGenerated:          &result.AIGenerated,
+		AiDisclosure:         result.AIProvenanceNotice,
+		VoiceProfileVersion:  result.VoiceProfileVersion,
+		DraftRef:             result.DraftRef,
+		VoiceDegraded:        &result.VoiceDegraded,
+		Language:             draftfloor.Reported[crmcontracts.EmailDraftLanguage](result.Language),
+		CommunicationContext: draftedContext(result.Context),
+		Evidence:             draftedEvidence(result.Evidence),
 	})
+}
+
+// draftedContext and draftedEvidence put the drafted reason on the wire, absent
+// when the instruction named none.
+func draftedContext(category commsauthz.Category) *crmcontracts.CommunicationContext {
+	if category == "" {
+		return nil
+	}
+	wire := crmcontracts.CommunicationContext(category)
+	return &wire
+}
+
+func draftedEvidence(evidence commsauthz.Evidence) *crmcontracts.CommunicationEvidence {
+	if evidence.ActivityID.IsZero() {
+		return nil
+	}
+	meeting := openapi_types.UUID(evidence.ActivityID)
+	return &crmcontracts.CommunicationEvidence{ActivityId: &meeting}
 }
 
 func (h Handlers) prepareEmailDraft(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (DraftResult, error) {
@@ -107,6 +132,7 @@ func (h Handlers) prepareEmailDraft(ctx context.Context, anchor ids.UUID, steeri
 		topic = *activity.Subject
 	}
 	result.Subject = ReplySubject(activity.Kind, topic, result.Subject)
+	result.Context, result.Evidence = draftedReason(steering.Intent, anchor, activity.Kind)
 	return result, nil
 }
 
@@ -118,6 +144,10 @@ func (h Handlers) draftForActivity(ctx context.Context, anchor ids.UUID, activit
 		subject, body, err := h.emailDrafter.DraftEmail(ctx, anchor, steering.Intent)
 		return DraftResult{Subject: subject, Body: body}, err
 	}
-	subject, body, lang := h.store.FloorDraft(ctx, anchor, activity, steering.Language)
+	covers, err := h.ownAddress(ctx)
+	if err != nil {
+		return DraftResult{}, err
+	}
+	subject, body, lang := h.store.FloorDraft(ctx, anchor, activity, steering.Language, covers)
 	return DraftResult{Subject: subject, Body: body, Language: lang}, nil
 }

@@ -125,6 +125,35 @@ describe("changing a list from its page", () => {
     expect(patched[0]).not.toHaveProperty("sharing");
   });
 
+  it("keeps a team on offer to an owner in no team whose list opened shared with one", async () => {
+    installFetchStub({ "GET /me": listsMe(true) });
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <ListSettingsAction list={liveList} />
+      </StoryProviders>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.settings"] }),
+    );
+    const sharing = screen.getByRole("combobox", {
+      name: en["lists.sharingLabel"],
+    });
+    await user.click(sharing);
+    await user.click(
+      await screen.findByRole("option", { name: en["lists.sharing.private"] }),
+    );
+    await user.click(sharing);
+    expect(
+      await screen.findByRole("option", { name: en["lists.sharing.team"] }),
+    ).toHaveAttribute("aria-disabled", "false");
+    expect(sharing).toHaveAccessibleDescription(en["lists.sharingHint"]);
+    await user.click(
+      screen.getByRole("option", { name: en["lists.sharing.team"] }),
+    );
+    expect(sharing).toHaveTextContent(en["lists.sharing.team"]);
+  });
+
   it("leaves the audience alone when a refetch moves it while the form is open", async () => {
     const patched: unknown[] = [];
     installFetchStub({

@@ -13,8 +13,11 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // dealFields mirrors the deals slice of the data-model §13.5 allow-list,
@@ -97,8 +100,8 @@ func TestCompileGoldenSQLPerOperator(t *testing.T) {
 		{"eq boolean", leaf("is_hot", OpEq, true), "t.is_hot = $1", []any{true}},
 		{"eq date", leaf("expected_close_date", OpEq, "2026-12-31"), "t.expected_close_date = $1", []any{"2026-12-31"}},
 		// A relative date is read when the filter runs, so the day is SQL's.
-		{"within the last 45 days", leaf("expected_close_date", OpGte, relativeDays(45.0)), "t.expected_close_date >= (CURRENT_DATE - $1::integer)", []any{45}},
-		{"more than 45 days ago", leaf("expected_close_date", OpLt, relativeDays(45)), "t.expected_close_date < (CURRENT_DATE - $1::integer)", []any{45}},
+		{"within the last 45 days", leaf("expected_close_date", OpGte, relativeDays(45.0)), "t.expected_close_date >= (" + occurredday.TodaySQL("now()") + " - $1::integer)", []any{45}},
+		{"more than 45 days ago", leaf("expected_close_date", OpLt, relativeDays(45)), "t.expected_close_date < (" + occurredday.TodaySQL("now()") + " - $1::integer)", []any{45}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -453,6 +456,7 @@ func operandFor(t FieldType, op string) any { //craft:ignore naked-any mirrors P
 		FieldDate:        "2026-08-19",
 		FieldBoolean:     true,
 		FieldDomain:      "acme.example",
+		FieldCompanyKey:  "acme.example",
 	}[t]
 	if op == OpIn {
 		return []any{scalar}
@@ -588,3 +592,25 @@ func TestADomainOperandBindsTheHostTheColumnHolds(t *testing.T) {
 //
 //craft:ignore naked-any the operand is a decoded JSON number, float64 off the wire or int in a hand-built tree
 func relativeDays(n any) map[string]any { return map[string]any{"days_ago": n} }
+
+func TestACompanyKeyOperandBindsEverySpellingOfADomainAndASlugAsTyped(t *testing.T) {
+	t.Parallel()
+	fields := map[string]Field{"key": {Expr: "t.key", Type: FieldCompanyKey, FoldCase: true}}
+	for sent, want := range map[string][]string{
+		"Bücher.example":        {"xn--bcher-kva.example", "bücher.example"},
+		"xn--bcher-kva.example": {"xn--bcher-kva.example", "bücher.example"},
+		"Acme Inc":              {"acme inc"},
+	} {
+		for _, op := range []string{OpEq, OpNeq} {
+			var args []any
+			arg := func(v any) int { args = append(args, v); return len(args) }
+			if _, err := CompilePredicate(leaf("key", op, sent), fields, arg); err != nil {
+				t.Fatalf("%s %q: %v", op, sent, err)
+			}
+			got, _ := args[0].([]string)
+			if !slices.Equal(got, want) {
+				t.Errorf("%s %q bound %#v, want %v", op, sent, args[0], want)
+			}
+		}
+	}
+}

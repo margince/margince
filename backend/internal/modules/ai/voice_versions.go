@@ -48,7 +48,7 @@ type VoiceProfileVersion struct {
 	CapturedBy              string
 	Version                 int64
 	CreatedAt               time.Time
-	UpdatedAt               *time.Time
+	UpdatedAt               time.Time
 	ArchivedAt              *time.Time
 	ActivatedAt             *time.Time
 }
@@ -97,7 +97,7 @@ func (s *VoiceStore) ListVersions(ctx context.Context, profileID ids.UUID, curso
 	args := []any{profileID}
 	where := "voice_profile_id = $1 AND archived_at IS NULL"
 	if cursor != nil && *cursor != "" {
-		decoded, err := storekit.DecodeCursor(*cursor)
+		decoded, err := storekit.DecodeCursor("voice_versions", *cursor)
 		if err != nil {
 			return VoiceProfileVersionPage{}, err
 		}
@@ -131,7 +131,7 @@ func (s *VoiceStore) ListVersions(ctx context.Context, profileID ids.UUID, curso
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor("voice_versions", last.CreatedAt, last.ID)
 		if err != nil {
 			return VoiceProfileVersionPage{}, err
 		}
@@ -244,9 +244,6 @@ func recordVoiceVersionTransition(ctx context.Context, tx pgx.Tx, result VoicePr
 		auditAction = "update"
 	}
 	var classification string
-	// updated_at is stamped with the outcome. The column is null while a delta
-	// row has never been touched, which is what a reader takes it to mean, so
-	// an update that left it null would say the decision never happened.
 	if err := tx.QueryRow(ctx, `
 			UPDATE voice_profile_delta SET activation_outcome = $3, updated_at = now()
 			WHERE voice_profile_id = $1 AND to_version = $2

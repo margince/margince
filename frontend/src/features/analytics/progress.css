@@ -291,6 +291,7 @@
   grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
   align-items: start;
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
 }
 .goals-board-plan {
   display: flex;
@@ -400,4 +401,9 @@
   .goal-bars {
     gap: var(--space-1);
   }
+}
+
+/* A goal's reason is typed text and may be one unbroken run. */
+.goal-reason-text {
+  overflow-wrap: anywhere;
 }

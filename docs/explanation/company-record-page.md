@@ -142,6 +142,12 @@ over the same inputs (`companybrief/deterministic.go`).
 - `generated_by` names which one it was, because a reader who decides how much to trust a sentence needs
   to know.
 
+A floor written because the lane failed is served but not cached, so the next read that reaches the
+model asks it again. A read kept from the lane also serves its floor without caching it. A
+deployment with no model lane caches its floor until the fingerprint changes. A forced rewrite that
+fails keeps the model's brief only when the cached fingerprint matches: the facts, the routing
+version and the language.
+
 The prompt treats every activity subject and body as **untrusted quoted data**, behind a
 nonce fence. That data is quoted between delimiter strings that are made new each time. So text inside it cannot pass as
 part of the prompt. The site read prompts use the same rule. This text is from outside the workspace, and
@@ -242,7 +248,7 @@ The moment fires on **owed promises only**, and leads the page in the Next bar a
 so the list never repeats it. The list has two sources: the suggestions (or the scan's findings) first,
 then the moves made by hand. One rule stops the page disagreeing with itself:
 
-- **The quiet card claims only what it read.** It says *"Nothing is owed to this account"*, never
+- **The quiet card claims only what it read.** It says *"Nothing is owed to this company"*, never
   "nothing needs you today". The second would be a claim about work it did not look at, in the payload
   that holds the rows that say the opposite. Every client reads it, the tool surface too, so the bound sits
   on the server.
@@ -466,7 +472,7 @@ slot.
 ### The installation's second mark
 
 The record above shows one picture. The installation's own company stores two. The sidebar head draws
-only a **square icon**, open or closed. A wordmark scaled into its `40px` square is a row of lines nobody
+only a **square icon**, open or closed. A wordmark scaled into its `32px` square is a row of lines nobody
 can read. The wide lockup is kept for the places that draw a company as a full lockup.
 
 The icon is a second pair of columns on the same row (`logo_icon_object_key`, `logo_icon_origin`). It is

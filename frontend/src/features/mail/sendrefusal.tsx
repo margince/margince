@@ -1,81 +1,55 @@
-// What a rep is told when a send is refused, and what they may do about it.
+// What a rep is told when a send is refused outside its review.
 
 import { AppLink } from "../../design-system/applink";
+import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import type { Refusal } from "./composesend";
-import { DirectSendAction } from "./directsendaction";
-import type { SendReview } from "./sendreview";
+import type { MessageKey } from "../../i18n/en";
+import type { Refusal } from "./composerefusal";
 
-// The move the server offers after a refused Send, drawn inside the one send
-// status: this one message, sent with the rep's reason. The words come from
-// the status.
-export function SendRefusalRemedies({
-  review,
-  onDirectSent,
-  directOpen,
-  onDirectOpenChange,
-}: Readonly<{
-  review: SendReview | null;
-  /** What the composer does once the exception has sent the message. */
-  onDirectSent?: () => void;
-  /** Whether the reason form is open; the composer's Send press opens it. */
-  directOpen?: boolean;
-  onDirectOpenChange?: (open: boolean) => void;
-}>) {
-  if (!review) return null;
-  return (
-    <>
-      {/* Keyed by the review, so a second refusal about a different message
-          gets a fresh control. */}
-      <DirectSendAction
-        key={`direct-${review.reviewId}`}
-        review={review}
-        onSent={onDirectSent}
-        open={directOpen}
-        onOpenChange={onDirectOpenChange}
-      />
-      {/* Without the send to offer, the reference is what lets a human pick
-          the review up. */}
-      {!review.actions.includes("direct_send") && (
-        <ReviewReference review={review} />
-      )}
-    </>
-  );
-}
-
-// The work the refusal left behind, named so a colleague can open it.
-function ReviewReference({ review }: Readonly<{ review: SendReview }>) {
-  const t = useT();
-  return (
-    <span className="t-caption">
-      {t("compose.reviewReference")}: {review.reviewId}
-    </span>
-  );
-}
-
-// The refusals that are not about the recipients. A mailbox connected before
-// this product could send holds a read-only grant. The provider will not widen
-// one in place, so reconnecting is the whole fix. And a message carrying
-// an unsubscribe link carries one recipient's consent credential, so it may
-// only ever have one addressee.
+// Older servers may still refuse footer omissions before creating a review.
+// That response cannot support a one-message decision from this client.
 export function SendRefusal({ refusal }: Readonly<{ refusal: Refusal }>) {
   const t = useT();
   if (refusal === "mailbox") {
     return (
-      <div className="compose-refusal" role="alert">
-        <p className="t-body">{t("compose.mailboxNotSendCapable")}</p>
-        <AppLink href="#/settings/connections" className="link-button">
-          {t("compose.mailboxNotSendCapableGoto")}
-        </AppLink>
-      </div>
+      <ErrorLine
+        actions={<ConnectionsLink label="compose.mailboxNotSendCapableGoto" />}
+      >
+        {t("compose.mailboxNotSendCapable")}
+      </ErrorLine>
     );
+  }
+  if (refusal === "noMailbox") {
+    return <NoMailboxLine />;
+  }
+  if (refusal === "legacyFooter") {
+    return <ErrorLine>{t("compose.legacyFooter")}</ErrorLine>;
   }
   if (refusal === "sharedUnsubscribe") {
-    return (
-      <div className="compose-refusal" role="alert">
-        <p className="t-body">{t("compose.sharedUnsubscribeToken")}</p>
-      </div>
-    );
+    return <ErrorLine>{t("compose.sharedUnsubscribeToken")}</ErrorLine>;
   }
   return null;
+}
+
+function ConnectionsLink({ label }: Readonly<{ label: MessageKey }>) {
+  const t = useT();
+  return (
+    <AppLink href="#/settings/connections" className="link-button">
+      {t(label)}
+    </AppLink>
+  );
+}
+
+/** The line for a send refused because the sender holds no mailbox. The
+ *  composer draws it before a send when the roster already says so. */
+export function NoMailboxLine({ standing }: Readonly<{ standing?: true }>) {
+  const t = useT();
+  return (
+    <ErrorLine
+      standing={standing}
+      actions={<ConnectionsLink label="compose.mailboxNotConnectedGoto" />}
+    >
+      {t("compose.mailboxNotConnected")}
+    </ErrorLine>
+  );
 }

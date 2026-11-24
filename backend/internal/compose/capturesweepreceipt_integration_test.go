@@ -307,7 +307,7 @@ func TestAReceiptThatCannotBeWrittenIsReportedAndTheNextWorkspaceRuns(t *testing
 
 	// Two turns through the fleet walk the job uses. An installation holds one
 	// workspace, so the same one stands in for the second.
-	err := runEach(context.Background(), []ids.UUID{e.WS, e.WS}, w.judgeWorkspace)
+	err := runEach(context.Background(), e.Pool, []ids.UUID{e.WS, e.WS}, w.judgeWorkspace)
 	if !errors.Is(err, errReceiptRefused) {
 		t.Fatalf("the walk returned %v, want the refused receipt reported", err)
 	}

@@ -1,8 +1,9 @@
-import { extensionCopy } from "@composition/copy";
+import { extensionCopy, extensionOverrides } from "@composition/copy";
 import {
   createContext,
   type ReactNode,
   Suspense,
+  startTransition,
   use,
   useCallback,
   useContext,
@@ -20,6 +21,9 @@ import { STORAGE_KEYS, writeStored } from "../lib/storage";
 import {
   type CatalogLevel,
   catalogs,
+  completeRequested,
+  loadEssentialLocale,
+  loadLocale,
   localeLoaded,
   localeReady,
 } from "./catalogs";
@@ -27,6 +31,7 @@ import type { MessageKey } from "./en";
 
 import {
   DEFAULT_LOCALE,
+  effectiveDisplayLocale,
   isLocale,
   type Locale,
   preferredLocale,
@@ -59,12 +64,30 @@ export {
 
 export { catalogs, loadLocale } from "./catalogs";
 
+// The gate wraps the children, so React never prerenders them before the copy.
+// A boundary first drawn gated keeps its gate, so an arrival remounts nothing.
 function LocaleReady({
   locale,
   children,
   level = "complete",
 }: Readonly<{ locale: Locale; children: ReactNode; level?: CatalogLevel }>) {
-  if (!localeLoaded(locale, level)) use(localeReady(locale, level));
+  const [gated] = useState(() => !localeLoaded(locale, level));
+  // Not always gated: under `act` even a settled thenable stops a synchronous flush.
+  return gated || !localeLoaded(locale, level) ? (
+    <AwaitCatalog locale={locale} level={level}>
+      {children}
+    </AwaitCatalog>
+  ) : (
+    children
+  );
+}
+
+function AwaitCatalog({
+  locale,
+  level,
+  children,
+}: Readonly<{ locale: Locale; level: CatalogLevel; children: ReactNode }>) {
+  use(localeReady(locale, level));
   return children;
 }
 
@@ -86,6 +109,14 @@ export type ExtensionMessageKey = `ext${string}`;
  */
 const unitCopy: Partial<Record<Locale, Record<string, string>>> = extensionCopy;
 
+/**
+ * Wording an enabled unit replaces for core keys, per locale, merged at build
+ * time by gen-composition. Empty on a vanilla tree. The installation owns the
+ * wording of every key listed here.
+ */
+const unitOverrides: Partial<Record<Locale, Record<string, string>>> =
+  extensionOverrides;
+
 // The endonym key for a locale. The template literal is checked against
 // MessageKey, so adding a locale without adding its `locale.name.<code>` key
 // fails the build rather than rendering a raw key at runtime.
@@ -93,10 +124,33 @@ export function localeNameKey(locale: Locale): MessageKey {
   return `locale.name.${locale}`;
 }
 
-// Until /v1/me carries a locale, storage is the only place a pick made on the
-// sign-in screen can survive a reload.
+// Storage is where a pick made on the sign-in screen survives a reload, and the
+// only language a signed-out page can read.
 function rememberLocale(locale: Locale): void {
   writeStored(STORAGE_KEYS.locale, locale);
+}
+
+let requestedLocale: Locale | null = null;
+
+// Shown once its catalogs are in place: a boundary drawn without its gate would
+// otherwise gain one and remount its page. Until then the old language stays up.
+function switchLocale(next: Locale, show: (locale: Locale) => void): void {
+  // A page that read the complete catalog will want the new one beside the essential.
+  const complete = completeRequested(effectiveDisplayLocale());
+  requestedLocale = next;
+  setEffectiveLocale(next);
+  const shown = () => {
+    if (requestedLocale === next) startTransition(() => show(next));
+  };
+  if (localeLoaded(next, complete ? "complete" : "essential")) {
+    shown();
+    return;
+  }
+  const loading = complete ? loadLocale(next) : loadEssentialLocale(next);
+  loading.then(shown, (error: unknown) => {
+    console.error("The selected language could not be loaded", error);
+    shown();
+  });
 }
 
 export function translate(
@@ -104,15 +158,14 @@ export function translate(
   key: MessageKey | ExtensionMessageKey,
   params?: Record<string, string>,
 ): string {
-  // CORE FIRST, and a unit second. The generator already refuses a key outside
-  // the unit's own namespace, so the two sets cannot overlap today — this
-  // ordering is what keeps that true if the namespace rule were ever loosened:
-  // a unit must not be able to change what a core string says.
+  // Overrides first, then core, then a unit's own copy. The generator keeps a
+  // unit's own keys inside its namespace. Only a declared override changes core
+  // wording.
   //
-  // A key neither side carries falls back to the key itself, which is what an
-  // untranslated string has always done here and reads as an obvious defect on
-  // the page rather than as an empty element.
+  // A key none of them carries falls back to the key itself. That reads as a
+  // defect on the page, not as an empty element.
   const message =
+    unitOverrides[locale]?.[key] ??
     (catalogs[locale] as Record<string, string>)[key] ??
     unitCopy[locale]?.[key] ??
     key;
@@ -221,9 +274,9 @@ type LocaleContextValue = {
    * Separate from `setLocale` because it is not a choice being MADE: it is one
    * already on record arriving late, so it must not be written back as a fresh
    * pick. The caller is whoever holds `/me` — the provider sits above it and
-   * cannot ask.
+   * cannot ask. Returns whether it changed the adopted language.
    */
-  adoptLocale: (locale: Locale) => void;
+  adoptLocale: (locale: Locale) => boolean;
 };
 
 const LocaleContext = createContext<
@@ -232,16 +285,14 @@ const LocaleContext = createContext<
   locale: DEFAULT_LOCALE,
   formats: dateTimePreferences(),
   setLocale: () => {},
-  adoptLocale: () => {},
+  adoptLocale: () => false,
 });
 
 export function LocaleProvider({
   initial,
-  initialEssential = false,
   children,
 }: Readonly<{
   initial?: Locale;
-  initialEssential?: boolean;
   children: ReactNode;
 }>) {
   // Three sources, in falling order of authority: the server's answer for this
@@ -270,9 +321,6 @@ export function LocaleProvider({
   // Adopted only when it DIFFERS from the last adopted value, so a reader who
   // switches language mid-session is not dragged back to their saved one while
   // the write is still in flight.
-  const [level, setLevel] = useState<CatalogLevel>(
-    initialEssential ? "essential" : "complete",
-  );
   const [adopted, setAdopted] = useState<Locale | undefined>(initial);
   const adoptLocale = useCallback(
     (next: Locale) => {
@@ -295,24 +343,21 @@ export function LocaleProvider({
       // chose.
       const usable = isLocale(next) ? next : preferredLocale();
       if (usable === adopted) {
-        return;
+        return false;
       }
-      if (usable !== locale) setLevel("complete");
       setAdopted(usable);
-      setEffectiveLocale(usable);
-      setLocaleState(usable);
+      switchLocale(usable, setLocaleState);
+      return true;
     },
-    [adopted, locale],
+    [adopted],
   );
   // A pick is remembered where a detected default is not, so the two cannot be
   // confused later. Wrapped rather than persisted in an effect: an effect would
   // also fire for the detected value on first render and store a choice nobody
   // made.
   const setLocale = useCallback((next: Locale) => {
-    setLevel("complete");
     rememberLocale(next);
-    setEffectiveLocale(next);
-    setLocaleState(next);
+    switchLocale(next, setLocaleState);
   }, []);
   /*
    * The document's own language follows the catalog. index.html can only ship a
@@ -336,7 +381,7 @@ export function LocaleProvider({
   return (
     <LocaleContext.Provider value={value}>
       <Suspense fallback={null}>
-        <LocaleReady locale={locale} level={level}>
+        <LocaleReady locale={locale} level="essential">
           {children}
         </LocaleReady>
       </Suspense>
@@ -346,6 +391,23 @@ export function LocaleProvider({
 
 export function useLocale(): LocaleContextValue {
   return useContext(LocaleContext);
+}
+
+/**
+ * The signed-in account's language, from `/me`, adopted for this page. It is
+ * stored as this browser's choice, so the sign-in screen after a sign-out or a
+ * reload speaks it too. A language this release does not ship is adopted as a
+ * fallback and never stored.
+ */
+export function useAccountLocale(chosen: Locale | undefined): void {
+  const { adoptLocale } = useLocale();
+  // Stored only when the provider adopts it anew. The provider outlives the
+  // signed-in screens, so a later pick stays stored through a remount.
+  useEffect(() => {
+    if (chosen && adoptLocale(chosen) && isLocale(chosen)) {
+      rememberLocale(chosen);
+    }
+  }, [chosen, adoptLocale]);
 }
 
 export function useT() {

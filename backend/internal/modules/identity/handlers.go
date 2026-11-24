@@ -134,12 +134,14 @@ type Handlers struct {
 	// embedReindexAvailable reports whether an embeddings model is bound now,
 	// so the reindex routes serve rather than 501. Injected for the same reason.
 	embedReindexAvailable func() bool
-	// trialEnded answers whether the installation's trial is over (triallock.go).
+	// installationLock answers why the installation is locked (triallock.go).
 	// Nil on a role that wired none, which locks nothing.
-	trialEnded TrialEnded
+	installationLock InstallationLock
 	// listsAvailable is the installation's lists.enabled.
 	listsAvailable bool
-	coreFeatures   corefeatures.Availability
+	// vatRegisterAvailable is whether a VAT check request can be queued here.
+	vatRegisterAvailable bool
+	coreFeatures         corefeatures.Availability
 
 	// installationBrand reads the anchor company's name and marks for /me.
 	// Nil omits them (meparts.go).
@@ -196,6 +198,9 @@ type Handlers struct {
 	// client registration methods are on (oauth_registrationsettings.go).
 	registrationDeployment *RegistrationMethods
 	registrationSwitches   AdminRegistrationSwitches
+	// unusedDynamicClientCap bounds the self-registered clients no consent used
+	// (oauth_dcrbounds.go); zero holds the default.
+	unusedDynamicClientCap int
 	// capabilitiesPerIP bounds the ANONYMOUS capabilities probe, which reaches
 	// the database once the provider policy is wired: a pool connection, a
 	// transaction and a row per request, for a caller with no cookie and no

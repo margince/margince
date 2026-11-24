@@ -60,8 +60,27 @@ func outOfBounds(field reflect.StructField, value reflect.Value, name string, se
 	if !underLow && !overHigh {
 		return nil
 	}
-	return &FieldShapeError{Field: name, Want: boundsWanted(field.Tag), Got: numberText(value)}
+	return &FieldShapeError{Field: name, Want: boundsWanted(field.Tag), Got: numberText(value), Params: boundParams(field.Tag)}
 }
+
+// boundParams states the bounds a screen words the refusal with, as the
+// contract spells them.
+func boundParams(tag reflect.StructTag) map[string]string {
+	params := map[string]string{}
+	if low, ok := tag.Lookup(MinimumTag); ok {
+		params[paramMin] = low
+	}
+	if high, ok := tag.Lookup(MaximumTag); ok {
+		params[paramMax] = high
+	}
+	return params
+}
+
+// The param names of a range refusal, for a number and a date-time alike.
+const (
+	paramMin = "min"
+	paramMax = "max"
+)
 
 // compareToBound orders a decoded number against a bound. A whole bound is
 // compared to an integer as an integer, so a value past 2^53 cannot round onto it.

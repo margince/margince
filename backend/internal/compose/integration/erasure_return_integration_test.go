@@ -112,7 +112,7 @@ func (d *returnDoor) confirm(token string) int {
 // replay runs the restore replay the operator runs after a restore.
 func (d *returnDoor) replay() {
 	d.t.Helper()
-	if _, err := compose.ReplayErasureSuppressions(context.Background(), d.e.Pool, blobstore.NewMemory(), d.e.Vault, true); err != nil {
+	if _, err := compose.ReplayErasureSuppressions(context.Background(), d.e.Pool, blobstore.NewMemory(), true); err != nil {
 		d.t.Fatalf("replaying erasures: %v", err)
 	}
 }
@@ -270,7 +270,7 @@ func restoreContactFromBefore(t *testing.T, e *apptest.AppEnv, address string) s
 	var created struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Vor der Loeschung"}, nil, &created); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Vor der Loeschung"}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("creating the contact to restore → %d", status)
 	}
 	ctx := context.Background()

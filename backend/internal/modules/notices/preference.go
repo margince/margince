@@ -114,6 +114,11 @@ var classByKind = map[string]string{
 	"ownership_request_declined":  classSystem,
 	"ownership_request_expired":   classSystem,
 	"ownership_request_withdrawn": classSystem,
+	// The answer to a colleague's own request for edit access to a record.
+	"edit_access_accepted":  classSystem,
+	"edit_access_declined":  classSystem,
+	"edit_access_expired":   classSystem,
+	"edit_access_withdrawn": classSystem,
 }
 
 // ClassFor answers which class a notice kind is decided about under.
@@ -319,7 +324,7 @@ func preferenceIdentity(human ids.UUID) string {
 func actingSeat(ctx context.Context, act string) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
-		return ids.Nil, fmt.Errorf("notices: %s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
+		return ids.Nil, fmt.Errorf("%s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
 	}
 	return actor.UserID, nil
 }
@@ -330,7 +335,7 @@ func actingSeat(ctx context.Context, act string) (ids.UUID, error) {
 func deliverySeat(ctx context.Context, act string) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		return ids.Nil, fmt.Errorf("notices: %s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
+		return ids.Nil, fmt.Errorf("%s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
 	}
 	return actor.UserID, nil
 }
@@ -466,13 +471,6 @@ func effective(chosen map[string]string) []Preference {
 func preferenceImage(class string, delivery *string) map[string]any {
 	return map[string]any{class: delivery}
 }
-
-// TargetApproval is the target type of a notice that opens a pending decision.
-const TargetApproval = "approval"
-
-// TargetDataTask is the target type of a notice about one background
-// correction run; a client opens System health on it.
-const TargetDataTask = "data_task"
 
 // ApprovalNoticeKey names one announcement of a pending decision across every
 // seat told about it. The writer, the retraction and the centre's routing all

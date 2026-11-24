@@ -309,6 +309,7 @@ export function CompanyRecordBody({
           )}
           <CompanyDocumentsCard
             companyId={company.id}
+            writable={company.writable}
             refusedReasonId={refusedReasonId}
             refusedReason={verbRefusal}
             onOpenEmail={receipt.openEmail}
@@ -318,6 +319,8 @@ export function CompanyRecordBody({
       {receipt.cited && (
         <EvidenceModal
           companyId={company.id}
+          anchor={company.is_anchor === true}
+          canEdit={company.writable === true}
           cited={receipt.cited}
           onClose={receipt.close}
           onStep={receipt.step}

@@ -12,6 +12,7 @@ import {
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { RecordFormDialog } from "../../design-system/recordformdialog";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { countryOptions } from "../../format/assignedcountries";
 import { formatNumber } from "../../format/format";
@@ -25,62 +26,26 @@ import {
 } from "../../lib/legalentities.queries";
 import { problemMessageOf } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+import {
+  DefaultEntityJurisdiction,
+  jurisdictionOptions,
+  useInstallationJurisdiction,
+} from "./jurisdictionentities";
+import {
+  ADDRESS_KEYS,
+  DEFAULT_ENTITY_KEYS,
+  type Draft,
+  type DraftKey,
+  ENTITY_KEYS,
+  entityLabels,
+  entityRefusal,
+  FLAT_KEYS,
+  LABEL_KEYS,
+  missingEntityFields,
+  OFFERING_KEYS,
+  wireOf,
+} from "./legalentityfields";
 import { EntityLogo } from "./legalentitylogo";
-
-// The editor's fields, flat. The contract nests the address and the offering;
-// draftOf and changesOf are the one place that maps between the two shapes.
-type Draft = Readonly<{
-  display_name: string;
-  legal_name: string;
-  line1: string;
-  line2: string;
-  postal_code: string;
-  city: string;
-  region: string;
-  country: string;
-  vat_id: string;
-  register_court: string;
-  register_number: string;
-  default_language: string;
-  bank_account_holder: string;
-  iban: string;
-  bic: string;
-  imprint: string;
-  signature_template: string;
-  offer_summary: string;
-  icp: string;
-  value_proposition: string;
-  usp: string;
-}>;
-type DraftKey = keyof Draft;
-
-const ADDRESS_KEYS = [
-  "line1",
-  "line2",
-  "postal_code",
-  "city",
-  "region",
-] as const satisfies readonly DraftKey[];
-const OFFERING_KEYS = [
-  "offer_summary",
-  "icp",
-  "value_proposition",
-  "usp",
-] as const satisfies readonly DraftKey[];
-const FLAT_KEYS = [
-  "display_name",
-  "legal_name",
-  "country",
-  "vat_id",
-  "register_court",
-  "register_number",
-  "default_language",
-  "bank_account_holder",
-  "iban",
-  "bic",
-  "imprint",
-  "signature_template",
-] as const satisfies readonly DraftKey[];
 
 const orEmpty = (value: string | null | undefined) => value ?? "";
 
@@ -96,6 +61,7 @@ function draftOf(entity: LegalEntity): Draft {
     city: orEmpty(address.city),
     region: orEmpty(address.region),
     country: orEmpty(entity.country),
+    jurisdiction: orEmpty(entity.jurisdiction),
     vat_id: orEmpty(entity.vat_id),
     register_court: orEmpty(entity.register_court),
     register_number: orEmpty(entity.register_number),
@@ -150,10 +116,17 @@ export function EditEntityDialog({
   const own = !entity.is_default;
   const body = changesOf(initial, draft);
   const dirty = Object.keys(body).length > 0;
+  const labels = entityLabels(t, own ? ENTITY_KEYS : DEFAULT_ENTITY_KEYS);
+  const [faults, faultsRoot] = useFieldFaults();
+  const refused = entityRefusal(update.error, t, labels);
   const text = (key: DraftKey) => ({
+    label: t(LABEL_KEYS[key]),
     value: draft[key],
-    onChange: (value: string) =>
-      setDraft((current) => ({ ...current, [key]: value })),
+    error: faults.of(wireOf(key)),
+    onChange: (value: string) => {
+      setDraft((current) => ({ ...current, [key]: value }));
+      faults.edited(wireOf(key));
+    },
   });
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -162,7 +135,22 @@ export function EditEntityDialog({
       onClose();
       return;
     }
-    update.mutate({ id: entity.id, version, body }, { onSuccess: onClose });
+    // Only a field the save sends can be refused; the server keeps the rest.
+    const blanked = [...missingEntityFields(draft, labels, locale)].filter(
+      ([key]) => Object.hasOwn(body, key),
+    );
+    if (own && faults.show(new Map(blanked))) {
+      update.reset();
+      return;
+    }
+    update.mutate(
+      { id: entity.id, version, body },
+      {
+        onSuccess: onClose,
+        onError: (error) =>
+          faults.show(entityRefusal(error, t, labels).byField),
+      },
+    );
   };
   return (
     <RecordFormDialog
@@ -171,21 +159,25 @@ export function EditEntityDialog({
         name: entity.display_name || t("legalEntities.defaultUnnamed"),
       })}
       onClose={onClose}
-      fieldCount={own ? 21 : 7}
+      fieldCount={own ? 22 : 6}
       unsaved={dirty}
       closeDisabled={busy}
       form={
-        <form id={formId} onSubmit={submit} className="form-stack">
+        <form
+          id={formId}
+          ref={faultsRoot}
+          onSubmit={submit}
+          className="form-stack"
+          noValidate
+        >
           {own ? (
             <>
               <TextField
-                label={t("legalEntities.displayName")}
                 maxLength={TEXT_LIMITS.label}
                 required
                 {...text("display_name")}
               />
               <TextField
-                label={t("legalEntities.legalName")}
                 maxLength={TEXT_LIMITS.line}
                 required
                 {...text("legal_name")}
@@ -194,62 +186,48 @@ export function EditEntityDialog({
           ) : (
             <p className="t-caption">{t("legalEntities.defaultFromCompany")}</p>
           )}
-          <CountryField
-            required={own}
-            value={draft.country}
-            onChange={text("country").onChange}
-          />
+          {own ? (
+            <>
+              <CountryField {...text("country")} />
+              <JurisdictionField {...text("jurisdiction")} />
+            </>
+          ) : (
+            <DefaultEntityJurisdiction />
+          )}
           {own && (
             <>
               <SectionHeader
                 level={3}
                 title={t("legalEntities.sectionAddress")}
               />
-              <TextField label={t("legalEntities.line1")} {...text("line1")} />
-              <TextField label={t("legalEntities.line2")} {...text("line2")} />
-              <TextField
-                label={t("legalEntities.postalCode")}
-                {...text("postal_code")}
-              />
-              <TextField label={t("legalEntities.city")} {...text("city")} />
-              <TextField
-                label={t("legalEntities.region")}
-                {...text("region")}
-              />
+              <TextField {...text("line1")} />
+              <TextField {...text("line2")} />
+              <TextField {...text("postal_code")} />
+              <TextField {...text("city")} />
+              <TextField {...text("region")} />
               <SectionHeader
                 level={3}
                 title={t("legalEntities.sectionRegister")}
               />
-              <TextField label={t("legalEntities.vatId")} {...text("vat_id")} />
-              <TextField
-                label={t("legalEntities.registerCourt")}
-                {...text("register_court")}
-              />
-              <TextField
-                label={t("legalEntities.registerNumber")}
-                {...text("register_number")}
-              />
+              <TextField {...text("vat_id")} />
+              <TextField {...text("register_court")} />
+              <TextField {...text("register_number")} />
             </>
           )}
           <SectionHeader level={3} title={t("legalEntities.sectionBank")} />
-          <TextField
-            label={t("legalEntities.bankHolder")}
-            {...text("bank_account_holder")}
-          />
-          <TextField label={t("legalEntities.iban")} {...text("iban")} />
-          <TextField label={t("legalEntities.bic")} {...text("bic")} />
+          <TextField {...text("bank_account_holder")} />
+          <TextField {...text("iban")} />
+          <TextField {...text("bic")} />
           <SectionHeader
             level={3}
             title={t("legalEntities.sectionDocuments")}
           />
           <TextField
-            label={t("legalEntities.defaultLanguage")}
             hint={t("legalEntities.defaultLanguageHint")}
             maxLength={2}
             {...text("default_language")}
           />
           <AreaField
-            label={t("legalEntities.imprint")}
             hint={t("legalEntities.imprintHint", {
               max: formatNumber(TEXT_LIMITS.document, locale),
             })}
@@ -259,7 +237,6 @@ export function EditEntityDialog({
               its own card under Mail. */}
           {own && (
             <AreaField
-              label={t("legalEntities.signatureTemplate")}
               hint={t("legalEntities.signatureTemplateHint")}
               {...text("signature_template")}
             />
@@ -270,16 +247,10 @@ export function EditEntityDialog({
                 level={3}
                 title={t("legalEntities.sectionOffering")}
               />
-              <AreaField
-                label={t("legalEntities.offerSummary")}
-                {...text("offer_summary")}
-              />
-              <AreaField label={t("legalEntities.icp")} {...text("icp")} />
-              <AreaField
-                label={t("legalEntities.valueProposition")}
-                {...text("value_proposition")}
-              />
-              <AreaField label={t("legalEntities.usp")} {...text("usp")} />
+              <AreaField {...text("offer_summary")} />
+              <AreaField {...text("icp")} />
+              <AreaField {...text("value_proposition")} />
+              <AreaField {...text("usp")} />
               <EntityLogo
                 entity={entity}
                 write={logo}
@@ -289,7 +260,7 @@ export function EditEntityDialog({
               />
             </>
           )}
-          <ErrorLine error={update.error} />
+          {refused.rest !== null && <ErrorLine>{refused.rest}</ErrorLine>}
         </form>
       }
       actions={
@@ -313,12 +284,12 @@ export function EditEntityDialog({
 }
 
 export function CountryField({
-  required,
   value,
+  error,
   onChange,
 }: Readonly<{
-  required: boolean;
   value: string;
+  error?: string;
   onChange: (value: string) => void;
 }>) {
   const t = useT();
@@ -331,22 +302,49 @@ export function CountryField({
   return (
     <Field
       label={t("legalEntities.country")}
-      hint={required ? undefined : t("legalEntities.countryInstallationHint")}
-      required={required}
+      hint={t("legalEntities.countryHint")}
+      required
+      error={error}
     >
       {(control) => (
         <Select
           {...control}
           value={value}
           placeholder={t("legalEntities.countryPlaceholder")}
-          options={
-            required
-              ? options
-              : [
-                  { value: "", label: t("legalEntities.countryInstallation") },
-                  ...options,
-                ]
-          }
+          options={options}
+          onChange={onChange}
+        />
+      )}
+    </Field>
+  );
+}
+
+/** The law a further entity follows: one of the packs this build offers. */
+export function JurisdictionField({
+  value,
+  error,
+  onChange,
+}: Readonly<{
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const query = useInstallationJurisdiction();
+  return (
+    <Field
+      label={t("legalEntities.jurisdiction")}
+      hint={t("legalEntities.jurisdictionHint")}
+      required
+      error={query.isError ? t("common.error") : error}
+    >
+      {(control) => (
+        <Select
+          {...control}
+          value={value}
+          placeholder={t("jurisdiction.change.placeholder")}
+          options={jurisdictionOptions(query.data?.available ?? [], locale)}
           onChange={onChange}
         />
       )}
@@ -357,6 +355,7 @@ export function CountryField({
 type TextProps = Readonly<{
   label: string;
   hint?: string;
+  error?: string;
   required?: boolean;
   maxLength?: number;
   value: string;
@@ -366,13 +365,14 @@ type TextProps = Readonly<{
 export function TextField({
   label,
   hint,
+  error,
   required,
   maxLength,
   value,
   onChange,
 }: TextProps) {
   return (
-    <Field label={label} hint={hint} required={required}>
+    <Field label={label} hint={hint} error={error} required={required}>
       {(control) => (
         <TextInput
           {...control}
@@ -386,9 +386,9 @@ export function TextField({
   );
 }
 
-function AreaField({ label, hint, value, onChange }: TextProps) {
+function AreaField({ label, hint, error, value, onChange }: TextProps) {
   return (
-    <Field label={label} hint={hint}>
+    <Field label={label} hint={hint} error={error}>
       {(control) => (
         <Textarea
           {...control}

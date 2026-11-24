@@ -9,21 +9,22 @@ package projects
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/projectkey"
 )
 
-// subjectWords are words senders put in square brackets for reasons of their
-// own. They are reply and forward markers, gateway tags and everyday labels.
-// A key spelled as one of them would file every such mail under the project.
+// subjectWords are words senders put in square brackets: gateway tags,
+// everyday labels and two foreign reply markers. The other reply and forward
+// markers come from mailsubject. A key spelled as one would misfile mail.
 var subjectWords = map[string]bool{
-	"re": true, "fw": true, "fwd": true, "aw": true, "wg": true, "sv": true, "tr": true,
-	"tl": true, "ext": true, "extern": true, "external": true, "internal": true,
+	"sv": true, "tl": true, "ext": true, "extern": true, "external": true, "internal": true,
 	"intern": true, "spam": true, "junk": true, "suspicious": true, "phishing": true,
 	"warning": true, "caution": true, "secure": true, "encrypt": true, "encrypted": true,
 	"confidential": true, "vertraulich": true, "private": true, "privat": true,
@@ -96,7 +97,7 @@ func refuseChosenKey(ctx context.Context, tx pgx.Tx, key string) error {
 // mail: a word senders bracket in subjects, or a word of a colleague's name.
 // Agent seats are left out because nobody writes an agent's name in a subject.
 func keyWordRefusal(ctx context.Context, tx pgx.Tx, key string) error {
-	if subjectWords[strings.ToLower(key)] {
+	if lower := strings.ToLower(key); subjectWords[lower] || slices.Contains(mailsubject.PrefixWords(), lower) {
 		return &ProjectKeyRefusedError{
 			Code:    "key_is_common_word",
 			Message: fmt.Sprintf("%s is a word often put in brackets in subject lines, so mail that is not about this project would be filed under it; choose another key", key),

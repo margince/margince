@@ -64,8 +64,15 @@ Three things new readers do not expect:
   records as well as their own, worked out through live team membership. The seat above it,
   `management`, has the same object grants at `all`: the sales leader over every row.
 - **Config objects are read-only below admin and ops.** That covers pipeline, `custom_field` and
-  `automation`. So a `rep` sees an error such as `pipeline.read: permission denied` only when they
-  have **no role at all**. With the `rep` role they *can* read pipelines; they only cannot edit them.
+  `automation`. The seeded `rep` role *can* read pipelines and cannot edit them. A user is refused
+  a pipeline read when no role they hold grants it. That is a user with no role, or one whose custom
+  role has that read switched off.
+
+A refusal on a grant answers 403 with a sentence such as "your role does not grant read on
+pipeline". `details.missing_grant` names what the caller's roles lack, as the tool table writes it:
+`pipeline.read`. It can also be `admin` or `scope:team`, a role or row scope rather than a grant.
+MCP has no structured error, so an agent reads the same grant at the end of the refusal text.
+The sentence is built in `platform/auth/grantrefusal.go`.
 
 Custom roles add to the same shape. An admin makes one in **Settings → Roles and permissions** by
 copying a role that exists. Then they rename it, move its row scope and switch its object grants
@@ -258,9 +265,9 @@ many: a user can be in several). Teams do several jobs:
    every record and leads nobody.
 
    `auth.TeamWeekReachOf` answers it once, for `GET /weekly-reviews/team` and for the
-   `team_week` field of `GET /me` and the Worklist. The delivery settings screen reads it from
-   `GET /me` to list the teams a lead may pick for the weekly mail. So it never offers a team the
-   server refuses. The `team` scope of the Worklist is the team's live work, and
+   `team_week` field of `GET /me` and the Worklist. The delivery settings screen and the
+   **Whose week** choice on Home, Weekly read it from `GET /me` to list the teams a lead may pick.
+   So neither offers a team the server refuses. The `team` scope of the Worklist is the team's live work, and
    stays on row scope.
 
    Every arm needs `deal.read`, because the week carries the money on deals. A seat that holds

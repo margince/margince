@@ -22,9 +22,11 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -217,7 +219,7 @@ func TestTheBacklogLeavesOutThreadsThePassWillNotClaim(t *testing.T) {
 	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory())
 	registry.Register(plainSyncConnector{name: "gmail"})
 	seat := e.As(e.Rep1, nil, integration.AdminPerms)
-	if _, err := registry.SetMailPosture(seat, "gmail", capture.PostureHeld, false); err != nil {
+	if _, err := registry.SetMailPosture(seat, capture.ProviderMailbox("gmail"), capture.PostureHeld, false); err != nil {
 		t.Fatalf("switching the seat's posture: %v", err)
 	}
 
@@ -298,5 +300,64 @@ func assertPassCapRead(t *testing.T, e *integration.Env, want int) {
 	t.Helper()
 	if got := passCapNow(t, e); got != want {
 		t.Fatalf("saved a pass cap of %d, and the pass reads %d", want, got)
+	}
+}
+
+// savePassCaps saves caps the way an admin does, through the settings store.
+func savePassCaps(t *testing.T, e *integration.Env, patch capture.SettingsPatch) {
+	t.Helper()
+	if _, err := capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool)).Update(e.Admin(), patch); err != nil {
+		t.Fatalf("saving the pass cap: %v", err)
+	}
+}
+
+func TestTheVerdictRunJudgesNoMoreSendersThanTheSavedCap(t *testing.T) {
+	e := integration.Setup(t)
+	const passCap = 3
+	for range 12 {
+		address := "capped-" + ids.NewV7().String() + "@failing.example"
+		seedPendingDisposition(t, e, address, "failing.example", seedCapturedMail(t, e, address, "hello"))
+	}
+	verdictCap := passCap
+	savePassCaps(t, e, capture.SettingsPatch{VerdictPassCap: &verdictCap})
+	brain := &unreadableVerdictBrain{}
+
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("verdict run: %v", err)
+	}
+
+	if got := brain.calls.Load(); got != passCap {
+		t.Fatalf("a run under a saved cap of %d asked the model about %d senders, want %d", passCap, got, passCap)
+	}
+}
+
+func TestTheLabelRunSettlesNoMoreMessagesThanTheSavedCap(t *testing.T) {
+	e := integration.Setup(t)
+	for i := range 3 * classifyBatchSize {
+		seedUnlabeledEmail(t, e, fmt.Sprintf("Anfrage %d", i))
+	}
+	classifyCap := 3
+	savePassCaps(t, e, capture.SettingsPatch{ClassifyPassCap: &classifyCap})
+	if err := NewCaptureClassifier(e.Pool, &scriptedClassifyBrain{}, slog.New(slog.DiscardHandler)).RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("label run: %v", err)
+	}
+
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE capture_label IS NOT NULL`); n != classifyCap {
+		t.Fatalf("a run under a saved cap of %d labelled %d messages, want exactly %d", classifyCap, n, classifyCap)
+	}
+}
+
+func TestTheOwedReplyRunJudgesNoMoreNewMailThanTheSavedCap(t *testing.T) {
+	e := integration.Setup(t)
+	for i := range 3 * owedBatchSize {
+		seedWaitingMail(t, e, fmt.Sprintf("Thread %d", i))
+	}
+	owedCap := 3
+	savePassCaps(t, e, capture.SettingsPatch{OwedClassifyPassCap: &owedCap})
+	runOwedWorker(t, e, &owedBrainStub{verdict: activities.OwedVerdictInformsUs, confidence: 0.95})
+
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE owed_verdict IS NOT NULL`); n != owedCap {
+		t.Fatalf("a run under a saved cap of %d judged %d messages, want exactly %d", owedCap, n, owedCap)
 	}
 }

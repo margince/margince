@@ -403,28 +403,56 @@ func metInPersonTx(
 		     AND `+relstrength.MeetingInTouchSQL("a", "now()")+`
 		     AND (
 		          -- The BARE invitation address, bounded by the address's own
-		          -- tenure. An activity_participant row records what the
-		          -- invitation said, and archiving a contact_email never
-		          -- rewrites it — so once an address changes hands, a meeting
-		          -- its FORMER holder attended would go on standing as evidence
-		          -- about the new one, and mint a contact for a stranger.
-		          -- Archiving the old holder's address is the only mark the
-		          -- hand-over leaves, so it is the boundary: meetings after it
-		          -- are the new holder's, meetings before it are not anybody's
-		          -- to inherit. An address that never changed hands has no such
-		          -- row and is unaffected.
-		          (lower(p.address) = $1 AND a.occurred_at > COALESCE( -- occurred_at raw: after the address changed hands
-		             (SELECT max(pe.archived_at) FROM contact_email pe
-		               WHERE lower(pe.email) = $1 AND pe.archived_at IS NOT NULL),
-		             '-infinity'::timestamptz))
+		          -- tenure (addressReleasedSQL). An activity_participant row
+		          -- records what the invitation said, and archiving a
+		          -- contact_email never rewrites it.
+		          (lower(p.address) = $1 AND a.occurred_at > -- occurred_at raw: after the address left its last contact
+		             `+addressReleasedSQL("$1")+`)
 		          OR EXISTS (
 		            SELECT 1 FROM contact_email pe
 		             WHERE pe.contact_id = p.contact_id
-		               AND lower(pe.email) = $1
+		               AND pe.email = $1
 		               AND pe.archived_at IS NULL))
 		     AND `+auth.ActivityExternalEvidenceClause("a"),
 		normalized, capturing).Scan(&met, &elsewhere); err != nil {
 		return false, false, fmt.Errorf("capture: reading whether this workspace is meeting the sender: %w", err)
 	}
 	return met, elsewhere, nil
+}
+
+// addressReleasedSQL is when the address last left a contact: the newest
+// archive of a contact_email holding it, or -infinity if none ever did.
+//
+// Evidence dated before it is about the earlier holder, or about a contact its
+// owner removed. Counting it would mint that contact again on the next message,
+// so only what happened after the release may create a record.
+func addressReleasedSQL(address string) string {
+	return `COALESCE((SELECT max(released.archived_at) FROM contact_email released
+	          WHERE released.email = ` + address + ` AND released.archived_at IS NOT NULL),
+	        '-infinity'::timestamptz)`
+}
+
+// ReasonRemovedBeforeAnswer is the ledger reason for a question whose record
+// was removed before the machine answered it.
+const ReasonRemovedBeforeAnswer = "contact removed before the sender check answered"
+
+// RemovedSinceAskedTx reports whether a machine answer settling the sender as
+// real is about a message dated before the address last left a contact. That
+// is the bound the send proof and the meeting read keep, applied to the
+// verdict. The owner's own answer is newer than the removal, so it is never
+// refused.
+func RemovedSinceAskedTx(ctx context.Context, tx pgx.Tx, row PendingCounterparty, status string, byOwner bool) (bool, error) {
+	if byOwner || status != PendingStatusReal {
+		return false, nil
+	}
+	var removed bool
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(a.occurred_at, q.created_at) <= -- occurred_at raw: the judged message against the address's release
+		       `+addressReleasedSQL("q.email")+`
+		  FROM capture_pending_counterparty q
+		  LEFT JOIN activity a ON a.id = q.activity_id AND a.restricted_at IS NULL AND a.archived_at IS NULL
+		 WHERE q.id = $1`, row.ID).Scan(&removed); err != nil {
+		return false, fmt.Errorf("capture: reading whether the asked-about contact was removed: %w", err)
+	}
+	return removed, nil
 }

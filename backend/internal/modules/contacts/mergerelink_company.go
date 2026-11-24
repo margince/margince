@@ -113,16 +113,14 @@ func repointCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID
 // Each conflict target NAMES the uniqueness it relies on, so a future
 // constraint cannot silently start swallowing a different collision here.
 func carryCompanyEnrichment(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
+	// Moved by UPDATE rather than copied, so each row keeps the id its audit
+	// trail is filed under and the survivor's History carries it on.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO company_fact
-		  (company_id, category, field, value_key, value, evidence_snippet, source_url,
-		   confidence, source, captured_by, site_read_id, captured_at, retrieved_at,
-		   verified_at, verified_by)
-		SELECT $2, category, field, value_key, value, evidence_snippet, source_url,
-		       confidence, source, captured_by, site_read_id, captured_at, retrieved_at,
-		       verified_at, verified_by
-		  FROM company_fact WHERE company_id = $1
-		ON CONFLICT (company_id, category, field, value_key) DO NOTHING`,
+		UPDATE company_fact a SET company_id = $2
+		 WHERE a.company_id = $1
+		   AND NOT EXISTS (SELECT 1 FROM company_fact b
+		                    WHERE b.company_id = $2 AND b.category = a.category
+		                      AND b.field = a.field AND b.value_key = a.value_key)`,
 		sourceID, targetID); err != nil {
 		return fmt.Errorf("carry company facts: %w", err)
 	}
@@ -134,13 +132,10 @@ func carryCompanyEnrichment(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		return err
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO company_profile_field
-		  (company_id, field, value, evidence_snippet, source_url, confidence, source,
-		   captured_by, captured_at, retrieved_at, verified_at, verified_by, source_activity_id)
-		SELECT $2, field, value, evidence_snippet, source_url, confidence, source,
-		       captured_by, captured_at, retrieved_at, verified_at, verified_by, source_activity_id
-		  FROM company_profile_field WHERE company_id = $1
-		ON CONFLICT (company_id, field) DO NOTHING`,
+		UPDATE company_profile_field a SET company_id = $2
+		 WHERE a.company_id = $1
+		   AND NOT EXISTS (SELECT 1 FROM company_profile_field b
+		                    WHERE b.company_id = $2 AND b.field = a.field)`,
 		sourceID, targetID); err != nil {
 		return fmt.Errorf("carry company profile fields: %w", err)
 	}

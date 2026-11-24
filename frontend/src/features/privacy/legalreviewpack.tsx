@@ -5,35 +5,44 @@
 // so nobody briefs legal by hand. A document is listed only when this reader
 // can open it, and opens through the file's own gate.
 
+import { EntityRef } from "../../components/entityref";
 import { LegalReviewStatusBadge } from "../../components/legalreviewstatus";
 import { EmptyState } from "../../design-system/atoms";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { FileChip } from "../../design-system/filechip";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { formatActivityWhen } from "../../format/activitywhen";
+import { lineBillingPhrase } from "../../format/billingphrase";
 import { middayInstant } from "../../format/calendarday";
 import {
   formatBytes,
   formatDate,
   formatDateTime,
+  formatDue,
   formatMoneyOrAbsent,
   formatNumber,
   ordinalNumber,
 } from "../../format/format";
-import {
-  type Locale,
-  type PluralTranslator,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentTitle } from "../../lib/attachmentlink";
+import { CONTRACT_STATUS_LABEL } from "../../lib/contractstatus";
 import { labelFor } from "../../lib/labelfor";
 import type { LegalReview } from "../../lib/legalreviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
 
 type Packet = LegalReview["packet"];
 type PacketDocument = Packet["documents"][number];
+type PacketContract = NonNullable<Packet["contracts"]>[number];
+type PacketTouch = NonNullable<Packet["touches"]>[number];
+
+const TOUCH_LABEL: Readonly<Record<PacketTouch["kind"], MessageKey>> = {
+  call: "timeline.kind.call",
+  email: "timeline.kind.email",
+  meeting: "timeline.kind.meeting",
+  message: "timeline.kind.message",
+  note: "timeline.kind.note",
+};
 
 /** A calendar day (`2026-11-01`) in the reader's words. */
 export function calendarDayLabel(
@@ -65,7 +74,13 @@ export function LegalReviewPack({ review }: Readonly<{ review: LegalReview }>) {
       <PackFacts packet={packet} />
       <PackOffer packet={packet} />
       <PackDocuments packet={packet} />
+      {packet.contracts === undefined && packet.deal.stage_name != null && (
+        <EmptyState>{t("legalReview.packOlder")}</EmptyState>
+      )}
+      {(packet.contracts ?? []).length > 0 && <PackContracts packet={packet} />}
       {packet.history.length > 0 && <PackHistory packet={packet} />}
+      {(packet.touches ?? []).length > 0 && <PackTouches packet={packet} />}
+      {(packet.tasks ?? []).length > 0 && <PackTasks packet={packet} />}
       {review.earlier.length > 0 && (
         <Panel title={t("legalReview.earlier")}>
           {review.earlier.map((earlier) => (
@@ -104,6 +119,9 @@ function PackFacts({ packet }: Readonly<{ packet: Packet }>) {
     <Panel title={t("legalReview.packTitle")}>
       <PanelBody>
         <FieldGrid>
+          <FieldRow label={t("legalReview.packDeal")}>
+            <EntityRef kind="deal" id={deal.id} name={deal.name} />
+          </FieldRow>
           <FieldRow label={t("legalReview.packCompany")}>
             {deal.company_name ?? "—"}
           </FieldRow>
@@ -129,13 +147,6 @@ function PackFacts({ packet }: Readonly<{ packet: Packet }>) {
 
 type PacketOffer = NonNullable<Packet["offer"]>;
 type PacketOfferLine = PacketOffer["lines"][number];
-
-const CADENCE: Readonly<Record<number, MessageKey>> = {
-  1: "product.billingMonthly",
-  3: "product.billingQuarterly",
-  6: "product.billingHalfYearly",
-  12: "product.billingYearly",
-};
 
 // The approval binds to every offer the buyer holds, so each one is shown.
 function PackOffer({ packet }: Readonly<{ packet: Packet }>) {
@@ -198,7 +209,7 @@ function OfferFields({ offer }: Readonly<{ offer: PacketOffer }>) {
           })}
         >
           {t("legalReview.offerLineText", {
-            quantity: line.quantity,
+            quantity: formatNumber(Number(line.quantity), locale),
             description: line.description,
             price: formatMoneyOrAbsent(
               line.unit_price_minor,
@@ -209,6 +220,17 @@ function OfferFields({ offer }: Readonly<{ offer: PacketOffer }>) {
           <LineTerms line={line} />
         </FieldRow>
       ))}
+      {offer.has_pdf && (
+        <FieldRow label={t("legalReview.offerPdf")}>
+          <a
+            href={`/v1/offers/${offer.id}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("offer.viewPdf")}
+          </a>
+        </FieldRow>
+      )}
       {offer.terms_text && (
         <FieldRow label={t("legalReview.offerTerms")}>
           <span className="t-body">{offer.terms_text}</span>
@@ -223,34 +245,30 @@ function LineTerms({ line }: Readonly<{ line: PacketOfferLine }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const billing = lineBilling(line, t, plural, locale);
+  const billing = lineBillingPhrase(line, t, plural, locale);
+  const discount = Number(line.discount_pct ?? 0);
   return (
     <>
+      {discount !== 0 && (
+        <div className="t-caption">
+          {t("legalReview.offerLineDiscount", {
+            rate: formatNumber(discount, locale),
+          })}
+        </div>
+      )}
+      {line.tax_rate != null && (
+        <div className="t-caption">
+          {t("legalReview.offerLineTax", {
+            rate: formatNumber(Number(line.tax_rate), locale),
+          })}
+        </div>
+      )}
       {billing && <div className="t-caption">{billing}</div>}
       {line.staged && (
         <div className="t-caption">{t("legalReview.offerLineStaged")}</div>
       )}
     </>
   );
-}
-
-function lineBilling(
-  line: PacketOfferLine,
-  t: Translator,
-  plural: PluralTranslator,
-  locale: Locale,
-): string | null {
-  if (line.billing_model === "one_time") return t("product.billingOneTime");
-  if (line.billing_model !== "recurring") return null;
-  const months = line.billing_interval_months;
-  const cadence = t(
-    (months != null && CADENCE[months]) || "product.billingRecurring",
-  );
-  if (line.interval_count == null) return cadence;
-  return plural("legalReview.offerLineRecurring", line.interval_count, {
-    cadence,
-    count: formatNumber(line.interval_count, locale),
-  });
 }
 
 function PackDocuments({ packet }: Readonly<{ packet: Packet }>) {
@@ -273,7 +291,7 @@ function PackDocuments({ packet }: Readonly<{ packet: Packet }>) {
               {doc.available ? (
                 <FileChip
                   href={`/v1/attachments/${doc.attachment_id}`}
-                  filename={doc.title ?? doc.filename ?? ""}
+                  filename={attachmentTitle(doc)}
                   size={
                     doc.byte_size == null
                       ? undefined
@@ -308,6 +326,140 @@ function PackHistory({ packet }: Readonly<{ packet: Packet }>) {
               date: formatDateTime(stage.entered_at, locale, zone),
             })}
           </span>
+        </PanelRow>
+      ))}
+    </Panel>
+  );
+}
+
+function PackContracts({ packet }: Readonly<{ packet: Packet }>) {
+  const t = useT();
+  return (
+    <Panel title={t("legalReview.packContracts")}>
+      {(packet.contracts ?? []).map((contract) => (
+        <PanelRow key={contract.id}>
+          <ContractFields contract={contract} />
+        </PanelRow>
+      ))}
+    </Panel>
+  );
+}
+
+function ContractFields({ contract }: Readonly<{ contract: PacketContract }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const day = (value: string) => calendarDayLabel(value, locale, zone);
+  const days = contract.notice_period_days;
+  // A contract may state auto-renewal without a renewal date.
+  const autoRenew =
+    contract.auto_renew == null
+      ? null
+      : t(
+          contract.auto_renew
+            ? "legalReview.contractAutoRenews"
+            : "legalReview.contractNoAutoRenew",
+        );
+  return (
+    <FieldGrid>
+      <FieldRow label={contract.title}>
+        {t(labelFor(CONTRACT_STATUS_LABEL, contract.status))}
+      </FieldRow>
+      {contract.contract_number && (
+        <FieldRow label={t("contracts.form.number")}>
+          {contract.contract_number}
+        </FieldRow>
+      )}
+      {contract.starts_on && (
+        <FieldRow label={t("contracts.form.startsOn")}>
+          {day(contract.starts_on)}
+        </FieldRow>
+      )}
+      {contract.ends_on && (
+        <FieldRow label={t("contracts.form.endsOn")}>
+          {day(contract.ends_on)}
+        </FieldRow>
+      )}
+      {contract.renewal_on && (
+        <FieldRow label={t("contracts.form.renewalOn")}>
+          {day(contract.renewal_on)}
+          {autoRenew && <div className="t-caption">{autoRenew}</div>}
+        </FieldRow>
+      )}
+      {!contract.renewal_on && autoRenew && (
+        <FieldRow label={t("legalReview.contractRenewal")}>
+          {autoRenew}
+        </FieldRow>
+      )}
+      {days != null && (
+        <FieldRow label={t("legalReview.contractNotice")}>
+          {plural("legalReview.contractNoticeDays", days, {
+            count: formatNumber(days, locale),
+          })}
+        </FieldRow>
+      )}
+      {contract.cancellation_notice_on && (
+        <FieldRow label={t("legalReview.contractCancelBy")}>
+          {day(contract.cancellation_notice_on)}
+        </FieldRow>
+      )}
+    </FieldGrid>
+  );
+}
+
+function PackTouches({ packet }: Readonly<{ packet: Packet }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  return (
+    <Panel title={t("legalReview.packTouches")}>
+      {(packet.touches ?? []).map((touch) => (
+        <PanelRow key={touch.activity_id} className="meta-row">
+          <span className="meta-row-line t-caption">
+            {t("legalReview.touchLine", {
+              kind: t(labelFor(TOUCH_LABEL, touch.kind)),
+              date: formatActivityWhen(
+                touch.occurred_at,
+                touch.occurred_precision,
+                locale,
+                zone,
+              ),
+            })}
+          </span>
+          {touch.subject && (
+            <span className="meta-row-entry t-body">{touch.subject}</span>
+          )}
+        </PanelRow>
+      ))}
+    </Panel>
+  );
+}
+
+function PackTasks({ packet }: Readonly<{ packet: Packet }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  return (
+    <Panel title={t("legalReview.packTasks")}>
+      {(packet.tasks ?? []).map((task) => (
+        <PanelRow key={task.activity_id} className="meta-row">
+          {task.due_at && (
+            <span className="meta-row-line t-caption">
+              {t("legalReview.taskDue", {
+                date: formatDue(
+                  task.due_at,
+                  task.due_has_time,
+                  locale,
+                  zone,
+                  task.due_intent,
+                ),
+              })}
+            </span>
+          )}
+          {task.subject && (
+            <span className="meta-row-entry t-body">{task.subject}</span>
+          )}
         </PanelRow>
       ))}
     </Panel>

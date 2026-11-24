@@ -358,9 +358,25 @@ export const CurrentAndFormerEmployment: Story = {
       <StoryProviders>
         <dl>
           <dt>Current role</dt>
-          <dd>{dateRange(current, (key) => translate("en", key))}</dd>
+          <dd>
+            {dateRange(
+              current,
+              (key) => translate("en", key),
+              "en",
+              "UTC",
+              "UTC",
+            )}
+          </dd>
           <dt>Former role</dt>
-          <dd>{dateRange(former, (key) => translate("en", key))}</dd>
+          <dd>
+            {dateRange(
+              former,
+              (key) => translate("en", key),
+              "en",
+              "UTC",
+              "UTC",
+            )}
+          </dd>
         </dl>
       </StoryProviders>
     );

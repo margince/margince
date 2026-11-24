@@ -12,13 +12,15 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func pinLeadAuditClock(t *testing.T) time.Time {
 	t.Helper()
-	at := time.Date(2026, 12, 1, 12, 0, 0, 123456789, time.UTC)
+	// The nanoseconds are below what Postgres stores, which the audit check reads.
+	at := clocktest.Now(t).Truncate(time.Second).Add(123456789 * time.Nanosecond)
 	previous := leadSLAClock
 	leadSLAClock = func() time.Time { return at }
 	t.Cleanup(func() { leadSLAClock = previous })

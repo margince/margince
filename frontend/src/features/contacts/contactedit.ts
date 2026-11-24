@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { ADDRESS_FIELDS, addressFrom } from "../../components/companyform";
+import { addressFields, addressFrom } from "../../components/companyform";
 import {
   contactEditFields,
   mapContactUpdate,
@@ -11,8 +11,9 @@ import type { RailEdit } from "../../components/railfield";
 import { saveRecordEdit } from "../../components/recordedit";
 import { rawRecord } from "../../components/recordfieldtypes";
 import { useRecordOwners } from "../../components/recordowners";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { fromHere } from "../../lib/navigatefrom";
 import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { useViewerId } from "../../lib/session";
 
@@ -24,6 +25,7 @@ type Contact = components["schemas"]["Contact"];
  */
 export function useContactEdit(contact: Contact): RailEdit {
   const t = useT();
+  const { locale } = useLocale();
   const canEdit = useCanWriteRecord("contact", contact) && !contact.archived_at;
   const owners = useRecordOwners(contact.owner_id);
   const viewerId = useViewerId();
@@ -35,7 +37,7 @@ export function useContactEdit(contact: Contact): RailEdit {
     canEdit,
     fields: [
       ...contactEditFields(t),
-      ...ADDRESS_FIELDS,
+      ...addressFields(locale, contact.address?.country),
       {
         // Still reads visibility, and does not offer it. An owner-private
         // contact must name an owner, and this field states the rule the
@@ -57,6 +59,7 @@ export function useContactEdit(contact: Contact): RailEdit {
     resolveExisting: (_code, id) => ({ screen: "contacts", id }),
     save: async (values, rows, opened, extra) => {
       const patch = { ...mapContactUpdate(values, rows), ...extra };
+      const from = fromHere();
       const saved = await saveRecordEdit("contact", rawRecord(opened), patch);
       // Handing a private contact to a colleague can take it out of the
       // giver's reach; the page would then fail on its own refetch.
@@ -73,6 +76,7 @@ export function useContactEdit(contact: Contact): RailEdit {
               owners.options.find((option) => option.value === owner)?.label ??
               "",
           }),
+          from,
         );
       }
       return saved;

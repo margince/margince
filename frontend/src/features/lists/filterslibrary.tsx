@@ -65,7 +65,6 @@ import {
   type LibraryTableGroup,
   NewShortlistAction,
 } from "./listlibrary";
-import { DEFAULT_AUDIENCE } from "./listsharing";
 
 export function FiltersLibrary({
   anchor,
@@ -129,7 +128,8 @@ export function FiltersLibrary({
         <div
           key={group}
           ref={group === "mine" ? anchors.mine : anchors.shared}
-          className="library-anchor"
+          className="arrival-focus"
+          data-testid="library-anchor"
           tabIndex={-1}
         >
           {firstRun ? (
@@ -202,9 +202,7 @@ function LibraryToolbar({
 }>) {
   const t = useT();
   const newFilter = <NewFilterAction type={cut.type} />;
-  const shortlist = listsOn ? (
-    <NewShortlistAction defaultAudience={DEFAULT_AUDIENCE} />
-  ) : null;
+  const shortlist = listsOn ? <NewShortlistAction /> : null;
   const finders = searchable ? (
     <>
       <SearchField

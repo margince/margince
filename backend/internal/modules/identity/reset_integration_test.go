@@ -21,10 +21,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // capturedMail is the fake A74 transport: it records what would have
@@ -120,11 +122,29 @@ func TestPasswordResetFlowEndToEnd(t *testing.T) {
 // TestPasswordResetRevokesPassportsToo pins the invariant: a completed
 // reset must end every credential that could act as the account, not just
 // the session cookie that prompted the recovery.
+func TestPasswordResetRefusesTheAccountAddressAndKeepsTheToken(t *testing.T) {
+	e := setupRevocationEnv(t, "reset-email-password")
+	ctx := e.wsOnlyCtx()
+
+	rawToken, err := e.svc.CreatePasswordReset(ctx, e.member.Email)
+	if err != nil || rawToken == "" {
+		t.Fatalf("CreatePasswordReset: token=%q err=%v", rawToken, err)
+	}
+	var parseErr *values.ParseError
+	err = e.svc.RedeemPasswordReset(ctx, rawToken, e.member.Email)
+	if !errors.As(err, &parseErr) || parseErr.Field != "new_password" || parseErr.Code != "email" {
+		t.Fatalf("redeeming with the account address gave %v, want a new_password/email refusal", err)
+	}
+	if err := e.svc.RedeemPasswordReset(ctx, rawToken, "a password that is no address"); err != nil {
+		t.Fatalf("the token must still redeem after a refused password: %v", err)
+	}
+}
+
 func TestPasswordResetRevokesPassportsToo(t *testing.T) {
 	e := setupRevocationEnv(t, "reset-passport-cascade")
 	ctx := e.wsOnlyCtx()
 
-	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("issue passport: %v", err)
 	}
@@ -161,7 +181,7 @@ func TestOperatorResetPasswordRevokesPassportsToo(t *testing.T) {
 	e := setupRevocationEnv(t, "operator-reset-passport-cascade")
 	ctx := e.wsOnlyCtx()
 
-	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("issue passport: %v", err)
 	}
@@ -214,7 +234,7 @@ func TestOperatorResetPasswordRevokesALiveOAuthGrantToo(t *testing.T) {
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id)
 		VALUES ($1, $1, 'operator-reset-cascade', ARRAY['read']::text[], $2, now() + interval '30 days', $3)`,
-		e.member.UserID, "operator-reset-cascade-hash-"+grantID.String(), grantID); err != nil {
+		e.member.UserID, storekit.TokenHash(grantID.String()), grantID); err != nil {
 		t.Fatalf("minting the connection's credential: %v", err)
 	}
 

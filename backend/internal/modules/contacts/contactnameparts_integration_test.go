@@ -8,11 +8,13 @@ package contacts
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -69,6 +71,31 @@ func TestChangingANamePartUpdatesOnlyAPlainJoinedDisplayName(t *testing.T) {
 				t.Fatalf("full_name %q, want %q", got.FullName, tc.wantFullName)
 			}
 		})
+	}
+}
+
+// An imported part that joins to the stored part past the import bound is
+// refused on full_name, and the stored name stays.
+func TestAnImportedPartJoiningPastTheBoundIsRefused(t *testing.T) {
+	e := setupDedupe(t)
+	part := ContactNameLimit * 2 / 3
+	last := strings.Repeat("b", part)
+	created, err := e.store.CreateContact(e.as(), CreateContactInput{
+		FullName: "Ada " + last, FirstName: new("Ada"), LastName: &last, Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := ids.From[ids.ContactKind](ids.UUID(created.Id))
+	imported := storekit.WithImportRun(e.as(), ids.NewV7())
+	_, err = e.store.UpdateContact(imported, id, UpdateContactInput{FirstName: new(strings.Repeat("a", part))})
+	refusal, ok := errors.AsType[*ContactNameTooLongError](err)
+	if !ok || refusal.Field != contactNameColumn || refusal.Runes != 2*part+1 {
+		t.Fatalf("err = %v, want full_name refused at %d characters", err, 2*part+1)
+	}
+	got, err := e.store.GetContact(e.as(), id, storekit.LiveOnly)
+	if err != nil || got.FullName != created.FullName {
+		t.Fatalf("full_name %q, %v; want %q kept", got.FullName, err, created.FullName)
 	}
 }
 
@@ -157,5 +184,40 @@ func TestAPartsEditDecidesOnTheDisplayNameCommittedBeforeIt(t *testing.T) {
 		}
 	case <-time.After(30 * time.Second):
 		t.Fatal("the parts edit never finished after the colleague committed")
+	}
+}
+
+// A rename to another contact's name leaves no old name part behind, and a reload of
+// the record reads the parts as cleared. A part the rename states is kept as stated.
+func TestRenamingToAnotherNameClearsTheOldNameParts(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	for name, tc := range map[string]struct {
+		rename    UpdateContactInput
+		wantFirst *string
+	}{
+		"the name alone":                {UpdateContactInput{FullName: new("Maria Neumann")}, nil},
+		"the name and its parts":        {UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Stefan"), LastName: new("Altmann")}, nil},
+		"the name and a new first name": {UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Maria")}, new("Maria")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			created, err := e.store.CreateContact(ctx, CreateContactInput{
+				FullName: "Stefan Altmann", FirstName: new("Stefan"), LastName: new("Altmann"), Source: "manual",
+			})
+			if err != nil {
+				t.Fatalf("create: %v", err)
+			}
+			id := ids.From[ids.ContactKind](ids.UUID(created.Id))
+			if _, err := e.store.UpdateContact(ctx, id, tc.rename); err != nil {
+				t.Fatalf("rename: %v", err)
+			}
+			got, err := e.store.GetContact(ctx, id, storekit.LiveOnly)
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			if got.FullName != "Maria Neumann" || derefString(got.FirstName) != derefString(tc.wantFirst) || got.LastName != nil {
+				t.Fatalf("got %q / %v / %v, want Maria Neumann / %v / no last name", got.FullName, got.FirstName, got.LastName, tc.wantFirst)
+			}
+		})
 	}
 }

@@ -25,14 +25,14 @@ A new contract starts as **Draft**; without the Create permission there is no bu
 Also called: add an agreement, upload a signed contract.
 
 ### How do I make a contract active or change its status?
-To change a contract's status in Margince, open the company's **Documents** tab and use the contract row's **Contract actions** menu → **Change status**.
-1. Open **Contract actions** (the menu on the contract's row).
+To change a contract's status in Margince, open the company's **Documents** tab and use the contract row's actions menu → **Change status**.
+1. Open the actions menu on the contract's row. A screen reader names it **Actions for** and the contract's title, then its number or, without one, its start day. Two menus that would still read the same end in (1) and (2).
 2. Choose **Change status**, pick the **New status** (Draft, Active, Expired or Canceled), and click **Change status**.
 A contract that is already Expired, Canceled or Superseded offers no status change, because those are final. Superseded cannot be chosen at all; renewing sets it.
 Also called: activate a contract, mark a contract expired.
 
 ### How do I renew a contract?
-To renew a contract in Margince, open the company's **Documents** tab and choose **Contract actions** → **Renew** on the contract's row.
+To renew a contract in Margince, open the company's **Documents** tab and choose **Renew** from the actions menu on the contract's row.
 1. The **Renew contract** form opens: "Creates a new contract with its own terms and marks this one superseded. Only the counterparty is kept."
 2. Pick the **Deal** that won this term, or **No deal**.
 3. Fill the new term (**Title**, value, dates) as for a new contract.
@@ -41,7 +41,7 @@ A contract that is already superseded cannot be renewed again.
 Also called: extend a contract, contract renewal.
 
 ### How do I cancel a contract?
-To cancel a contract in Margince, open the company's **Documents** tab and choose **Contract actions** → **Cancel contract** on the contract's row.
+To cancel a contract in Margince, open the company's **Documents** tab and choose **Cancel contract** from the actions menu on the contract's row.
 1. The **Record cancellation** form opens: "The customer stays under contract until the effective date. This records notice and does not change the status."
 2. Fill **Notice given** and **Takes effect** (both required).
 3. Click **Record cancellation**.
@@ -49,7 +49,7 @@ The status does not change. When the term is over, set it to **Canceled** with *
 Also called: terminate a contract, give notice.
 
 ### How do I edit or archive a contract?
-To edit a contract in Margince, open the company's **Documents** tab and choose **Contract actions** → **Edit**. Change the fields in **Edit contract** and click **Save changes**. To archive it, choose **Contract actions** → **Archive** and confirm "Archive this contract?".
+To edit a contract in Margince, open the company's **Documents** tab and choose **Edit** from the actions menu on the contract's row. Change the fields in **Edit contract** and click **Save changes**. To archive it, choose **Archive** from the same menu and confirm "Archive this contract?".
 "“{title}” leaves the lists and the company totals. The record and its history are kept; nothing is deleted."
 Also called: correct a contract, remove a contract, delete a contract.
 
@@ -151,6 +151,12 @@ never becomes a company record either; Margince only reads from it. The tab is
 missing while the company is a target, prospect or opportunity: an account
 nobody has ever invoiced has no money to report.
 
+You need finance read access to see the tab. It shows only on a company that
+you own or that someone shared with you, not on one a teammate owns. An admin
+who reads every record sees it on every company. An invoice can carry
+what someone is paid, so reading the company is not enough. The same rule decides who sees an
+invoice or payment on Home, in the Worklist and in a merge review.
+
 ### How do I create an invoice?
 You cannot create an invoice in Margince: it has no invoice form, no "New invoice" button and no invoicing API. Invoices exist only in your accounting system, and the company's **Finance** tab shows a read-only mirror of them.
 To bill a customer, raise the invoice in your accounting system. It shows under **Recent invoices** on the **Finance** tab once it syncs, if an admin has linked its customer to the company.
@@ -189,7 +195,7 @@ past customer the card is titled "Finance · historical".
 ### The overdue warning
 
 When a company has overdue invoices, a warning stands at the top of its page,
-over every tab. It reads, for example, "€12,400.00 overdue on 3 invoices" and
+over every tab. It reads, for example, "€12,400 overdue on 3 invoices" and
 "The oldest is 41 days past due."
 
 If your accounting system tells Margince how many payment reminders it has
@@ -200,7 +206,7 @@ A disputed invoice still counts as **Open** on the **Finance** tab. It is left
 out of the warning and of every overdue figure, its reminders too.
 
 If the last sync is old or failed, the warning still shows the last figures.
-It then reads "€12,400.00 was overdue on 3 invoices" and "As of the last
+It then reads "€12,400 was overdue on 3 invoices" and "As of the last
 accounting sync on {date}." An invoice paid since then leaves the warning at
 the next good sync. The payment line under **How it
 stands** follows the same rule.

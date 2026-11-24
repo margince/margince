@@ -81,6 +81,7 @@ export function TeamAct({ state, dispatch, persist }: TeamActProps) {
         <div className="ob-team-form">
           <InviteUserForm
             askName={false}
+            unconfirmedKey="ob.conv.team.inviteUnconfirmed"
             onInvited={(member) => {
               setInvited((current) => [...current, member]);
               if (canIssueLink) {

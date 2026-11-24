@@ -142,6 +142,11 @@ var (
 	// over, so it changes nothing until a license is entered (403
 	// trial_ended). Like ErrSeatLimitReached it never clears with time.
 	ErrTrialEnded = errors.New("the trial of this installation has ended: an admin enters a license key, or contacts the Margince team for one")
+
+	// ErrLicenseLapsed: this INSTALLATION's license expired or was refused, so
+	// it changes nothing until a valid license is entered (403 license_lapsed).
+	// There is no grace period after the expiry, and it never clears with time.
+	ErrLicenseLapsed = errors.New("the license of this installation has expired or was refused: an admin enters a valid license key, or contacts the Margince team for one")
 )
 
 // VersionSkewError is a lost version race whose Message a REST client or an MCP agent reads, so it

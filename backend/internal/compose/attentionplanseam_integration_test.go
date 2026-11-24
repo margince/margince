@@ -22,7 +22,7 @@ import (
 func TestPlanAgendaUsesStoredDatesAndCompletion(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	store := weeklyPlanStore(e.Pool)
+	store := WeeklyPlanStore(e.Pool)
 	now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
 	if _, err := store.StartWeek(ctx, now); err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func TestPlanAgendaUsesTheInstallationCalendarAcrossDST(t *testing.T) {
 	if _, err := identity.NewInstallationSettings(e.DB(), NewSettingsStore(e.Pool), StoredConfig(e.Pool)).UpdateInstallation(ctx, identity.InstallationPatch{Timezone: &zone}); err != nil {
 		t.Fatal(err)
 	}
-	store := weeklyPlanStore(e.Pool)
+	store := WeeklyPlanStore(e.Pool)
 	now := time.Date(2026, 3, 8, 6, 30, 0, 0, time.UTC)
 	if _, err := store.StartWeek(ctx, now); err != nil {
 		t.Fatal(err)
@@ -138,7 +138,7 @@ func TestATeamWorklistCarriesATeammatesDueCommitmentUnderTheirName(t *testing.T)
 	e := integration.Setup(t)
 	now := time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC)
 	teammate := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
-	store := weeklyPlanStore(e.Pool)
+	store := WeeklyPlanStore(e.Pool)
 	if _, err := store.StartWeek(teammate, now); err != nil {
 		t.Fatal(err)
 	}

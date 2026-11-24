@@ -92,35 +92,31 @@ func scanContactPairs(rows pgx.Rows) ([]contactPair, error) {
 	return out, rows.Err()
 }
 
-// Sorted folds share the capture transaction, so concurrent batches lock pairs in one order.
-// Limited-audience evidence is excluded because this projection can be read without its source activity.
-func foldContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) ([]contactPair, error) {
-	if len(pairs) == 0 {
-		return nil, nil
-	}
-	first, second := contactPairKeys(pairs)
-	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
+// contactEdgeFacts are the folded columns of graph_contact_edge.
+var contactEdgeFacts = []string{"last_at", "count_90d", "count_total"}
 
-	rows, err := tx.Query(ctx, `
-		WITH target AS (
+// foldContactPairsSQL is the upsert that refolds named contact pairs.
+func foldContactPairsSQL(advanceSnapshot bool) string {
+	window := fmt.Sprintf("now() - interval '%d days'", relstrength.WindowDays)
+	return `WITH target AS (
 		    SELECT DISTINCT contact_a, contact_b
 		      FROM unnest($1::uuid[], $2::uuid[]) AS t(contact_a, contact_b)
 		),
 		folded AS (
 		    SELECT t.contact_a, t.contact_b,
 		           max(a.occurred_at) AS last_at,
-		           count(DISTINCT `+graphInteractionUnit+`) FILTER (WHERE `+occurredday.FromSQL("a", window)+`) AS count_90d,
-		           count(DISTINCT `+graphInteractionUnit+`) AS count_total
+		           count(DISTINCT ` + graphInteractionUnit + `) FILTER (WHERE ` + occurredday.FromSQL("a", window) + `) AS count_90d,
+		           count(DISTINCT ` + graphInteractionUnit + `) AS count_total
 		      FROM target t
 		      JOIN activity_participant pa
-		        ON pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
+		        ON pa.contact_id = t.contact_a AND pa.role IN ` + interactionRoles + `
 		      JOIN activity_participant pb
 		        ON pb.activity_id = pa.activity_id
-		       AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`
+		       AND pb.contact_id = t.contact_b AND pb.role IN ` + interactionRoles + `
 		      JOIN activity a
-		        ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+`
-		     WHERE `+liveContactSQL("t.contact_a")+` AND `+liveContactSQL("t.contact_b")+`
+		        ON a.id = pa.activity_id AND a.archived_at IS NULL` + audienceWorkspaceOnly + `
+		   AND ` + graphCountedActivity + `
+		     WHERE ` + liveContactSQL("t.contact_a") + ` AND ` + liveContactSQL("t.contact_b") + `
 		     GROUP BY t.contact_a, t.contact_b
 		)
 		INSERT INTO graph_contact_edge AS e
@@ -129,12 +125,34 @@ func foldContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) ([]co
 		  FROM folded f
 		 ORDER BY f.contact_a, f.contact_b
 		ON CONFLICT (contact_a, contact_b) DO UPDATE SET
-		    last_at     = EXCLUDED.last_at,
-		    count_90d   = EXCLUDED.count_90d,
-		    count_total = EXCLUDED.count_total,
-		    computed_at = EXCLUDED.computed_at,
-            read_snapshot = EXCLUDED.read_snapshot
-        RETURNING e.contact_a, e.contact_b`,
+		    ` + edgeUpsertSet(contactEdgeFacts) + unchangedEdgeGuard(advanceSnapshot, contactEdgeFacts) + `
+        RETURNING e.contact_a, e.contact_b`
+}
+
+// pruneContactEdgesSQL deletes the named pairs that share no qualifying activity.
+func pruneContactEdgesSQL() string {
+	return `DELETE FROM graph_contact_edge e
+		 USING unnest($1::uuid[], $2::uuid[]) AS t(contact_a, contact_b)
+		 WHERE e.contact_a = t.contact_a AND e.contact_b = t.contact_b
+		   AND NOT (` + liveContactSQL("t.contact_a") + ` AND ` + liveContactSQL("t.contact_b") + ` AND EXISTS (
+		       SELECT 1
+		         FROM activity_participant pa
+		         JOIN activity_participant pb ON pb.activity_id = pa.activity_id
+		         JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL` + audienceWorkspaceOnly + `
+		   AND ` + graphCountedActivity + `
+		        WHERE pa.contact_id = t.contact_a AND pa.role IN ` + interactionRoles + `
+		          AND pb.contact_id = t.contact_b AND pb.role IN ` + interactionRoles + `))`
+}
+
+// Sorted folds share the capture transaction, so concurrent batches lock pairs in one order.
+// Limited-audience evidence is excluded because this projection can be read without its source activity.
+func foldContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair, advanceSnapshot bool) ([]contactPair, error) {
+	if len(pairs) == 0 {
+		return nil, nil
+	}
+	first, second := contactPairKeys(pairs)
+
+	rows, err := tx.Query(ctx, foldContactPairsSQL(advanceSnapshot),
 		first, second)
 	if err != nil {
 		return nil, fmt.Errorf("search: recomputing contact edges: %w", err)
@@ -148,18 +166,7 @@ func foldContactPairs(ctx context.Context, tx pgx.Tx, pairs []contactPair) ([]co
 	// A pair whose last shared activity was archived or limited loses its row.
 	// An edge outliving its evidence would keep asserting an acquaintance the
 	// record no longer supports.
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM graph_contact_edge e
-		 USING unnest($1::uuid[], $2::uuid[]) AS t(contact_a, contact_b)
-		 WHERE e.contact_a = t.contact_a AND e.contact_b = t.contact_b
-		   AND NOT (`+liveContactSQL("t.contact_a")+` AND `+liveContactSQL("t.contact_b")+` AND EXISTS (
-		       SELECT 1
-		         FROM activity_participant pa
-		         JOIN activity_participant pb ON pb.activity_id = pa.activity_id
-		         JOIN activity a ON a.id = pa.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+`
-		        WHERE pa.contact_id = t.contact_a AND pa.role IN `+interactionRoles+`
-		          AND pb.contact_id = t.contact_b AND pb.role IN `+interactionRoles+`))`,
+	if _, err := tx.Exec(ctx, pruneContactEdgesSQL(),
 		first, second); err != nil {
 		return nil, fmt.Errorf("search: pruning contact edges that lost their evidence: %w", err)
 	}

@@ -88,7 +88,10 @@ const maxExplanationRunes = 1000
 // fieldReasonCode is the wire and audit name for which kind of reason a
 // decision carries. One spelling, because a client tells one refusal from
 // another on the exact string and an audit reader groups on it.
-const fieldReasonCode = "reason_code"
+const (
+	fieldReasonCode     = "reason_code"
+	fieldWarningVersion = "warning_version"
+)
 
 // InstructionValidity dates the original facts snapshot. Every execution checks
 // current support, including when this snapshot is older than the window.
@@ -96,8 +99,9 @@ const InstructionValidity = 24 * time.Hour
 
 // DirectInput is what the contact directing the send says.
 type DirectInput struct {
-	ReasonCode  string
-	Explanation string
+	AssessmentRevision string
+	ReasonCode         string
+	Explanation        string
 	// WarningVersion is the compliance text they were shown. Recorded because a
 	// record naming no version cannot say what they were told, and the text
 	// changes.
@@ -106,6 +110,8 @@ type DirectInput struct {
 	// act, and an instruction written without one would record a decision
 	// nobody made.
 	Acknowledged bool
+	// ShownReasons are the refusal reasons the director read (refusalsAsShown).
+	ShownReasons []string
 }
 
 // Instruction is one recorded decision.
@@ -120,28 +126,37 @@ type Instruction struct {
 
 // DirectSend records that a named human decided this refused message goes.
 //
-// GATED ON THREE THINGS, and each answers a different question.
+// GATED ON FOUR THINGS, and each answers a different question.
 //
-// A user or their agent, because the row says a named user took this on. A
-// connector has that user's grants and was not asked, so it is refused. An agent
-// acts for the user who asked it, and the row names both.
+// A human at the keyboard, because the row says a named user took this on. An
+// agent or a connector holds that user's grants and was not the one deciding,
+// so both are refused.
 //
 // auth.Require on communication_exception:create, because directing a send is
 // its own authority. A seat that may edit a contact has not thereby been given
 // the right to act against the engine's answer about them.
 //
+// The message's author, because the release sends from the caller's mailbox
+// with their name and signature. A colleague or admin holding the grant may not
+// direct another seat's message.
+//
 // And the review's own state, because an instruction against a review that is
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := requireAUserOrTheirAgent(ctx); err != nil {
-		return Instruction{}, err
-	}
-	if err := auth.Require(ctx, entityCommunicationException, principal.ActionCreate); err != nil {
-		return Instruction{}, err
-	}
-	var err error
-	in, err = in.Validated()
+	var out Instruction
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = DirectSendTx(ctx, tx, reviewID, in)
+		return err
+	})
+	return out, err
+}
+
+// DirectSendTx is DirectSend in the caller's transaction, so a caller can
+// record the decision and act on the held message as one fact.
+func DirectSendTx(ctx context.Context, tx pgx.Tx, reviewID ids.UUID, in DirectInput) (Instruction, error) {
+	in, err := admitDirector(ctx, in)
 	if err != nil {
 		return Instruction{}, err
 	}
@@ -151,13 +166,13 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		return Instruction{}, apperrors.ErrPermissionDenied
 	}
 	var out Instruction
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+	record := func(tx pgx.Tx) error {
 		review, err := claimReviewForDirectionTx(ctx, tx, reviewID)
 		if err != nil {
 			return err
 		}
-		if !directableBy(ctx, review.Refusals) {
-			return refuseDirection(ctx, review.Refusals)
+		if err := review.admits(ctx, in); err != nil {
+			return err
 		}
 		// Recorded so the re-check at staging and dispatch knows which
 		// refusals this exception may answer (DecisionSet.ExceptionMayAnswer).
@@ -202,13 +217,13 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		arguments := []any{
 			reviewID, director, in.ReasonCode, in.Explanation,
 			in.WarningVersion, message.RecordedAt, review.OpenedAt, out.ValidUntil,
-			acknowledged, givenByAdmin, actingAgent(ctx), nullableText(message.Scope),
+			acknowledged, givenByAdmin, nullableText(message.Scope),
 		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO communication_instruction
 			  (review_id, directed_by, reason_code, explanation, warning_version,
 			   acknowledged_at, facts_as_of, valid_until, acknowledged_wording, given_by_admin,
-			   directed_by_agent, acknowledged_scope)
+			   acknowledged_scope)
 			VALUES (`+database.Placeholders(arguments)+`)
 			RETURNING id`, arguments...).Scan(&out.ID); err != nil {
 			// A DECISION ALREADY STANDS ON THIS REVIEW, which is what the
@@ -232,9 +247,9 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		// audit trail would outlive it.
 		if _, err := storekit.AuditEvent(ctx, tx, "create", "communication_instruction", out.ID,
 			map[string]any{
-				"review_id":       reviewID,
-				fieldReasonCode:   in.ReasonCode,
-				"warning_version": in.WarningVersion,
+				"review_id":         reviewID,
+				fieldReasonCode:     in.ReasonCode,
+				fieldWarningVersion: in.WarningVersion,
 				// WHICH GRANT ADMITTED THIS, named on the payload because the
 				// audit's own rule string is derived from the ENTITY and would
 				// read `communication_instruction.create` — a permission
@@ -246,8 +261,8 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 			return err
 		}
 		return nil
-	})
-	return out, err
+	}
+	return out, record(tx)
 }
 
 // RevokeInstruction takes a decision back before anything acts on it.
@@ -353,7 +368,7 @@ func validateDirect(in DirectInput) error {
 	// acknowledgement of a version nothing publishes.
 	if !servedWarningVersion(in.WarningVersion) {
 		return &ValidationError{
-			Field: "warning_version",
+			Field: fieldWarningVersion,
 			Reason: "a decision records which warning the director was shown, and it must be one " +
 				"this installation serves",
 		}
@@ -368,6 +383,9 @@ type directableReview struct {
 	// IntentID is the held message this review is about, so the decision can
 	// fingerprint what the human is looking at.
 	IntentID ids.UUID
+	// InitiatedBy is the sender, who alone may direct the message and alone is
+	// served the composer's warning.
+	InitiatedBy ids.UUID
 	// Refusals are the reasons the message was held, which decide whether this
 	// caller may direct past them (directableBy).
 	Refusals []RefusedRecipient
@@ -375,21 +393,19 @@ type directableReview struct {
 
 // claimReviewForDirectionTx takes the review this decision is about.
 //
-// NOT SCOPED TO THE INITIATOR, unlike every other read of this row, and the
-// difference is the point: directing a send is precisely the act of somebody
-// OTHER than the sender deciding. The authority is the grant checked above, and
-// scoping to the seat that opened the review would make the reviewer path
-// impossible.
+// Not scoped to the initiator in SQL. A colleague holding the grant may read
+// the review, so directableReview.admits refuses them by name instead of 404.
 func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (directableReview, error) {
 	var out directableReview
 	var refusals []byte
 	err := tx.QueryRow(ctx, `
 		SELECT state, opened_at,
 		       coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
-		       coalesce(refusals, '[]'::jsonb)
+		       coalesce(refusals, '[]'::jsonb),
+		       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid)
 		  FROM communication_review
 		 WHERE id = $1 AND resolved_at IS NULL
-		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID, &refusals)
+		 FOR UPDATE`, id).Scan(&out.State, &out.OpenedAt, &out.IntentID, &refusals, &out.InitiatedBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return directableReview{}, apperrors.ErrNotFound
 	}
@@ -440,16 +456,6 @@ func requireAUserOrTheirAgent(ctx context.Context) error {
 	return nil
 }
 
-// actingAgent names the agent carrying out a user's decision, and nil when the
-// user acted in their own session.
-func actingAgent(ctx context.Context) *string {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalAgent {
-		return nil
-	}
-	return &actor.ID
-}
-
 // ErrDecisionAlreadyRecorded reports that this review already carries a
 // decision. It is not a failure of the act — somebody decided, and the record
 // of it stands — so a caller whose send failed after the decision committed
@@ -464,8 +470,10 @@ func isDuplicateInstruction(err error) bool {
 }
 
 // servedWarningVersion reports whether a new instruction may name this
-// version: only the one this build serves now. A retired version still reads
-// back through OverrideWarningFor, for the records that name it.
+// version: one this build serves now. Whether the review was served with it is
+// DirectSend's question. A retired version still reads back through
+// OverrideWarningFor, for the records that name it.
 func servedWarningVersion(version string) bool {
-	return strings.TrimSpace(version) == OverrideWarningVersion
+	version = strings.TrimSpace(version)
+	return version == OverrideWarningVersion || version == InlineWarningVersion
 }

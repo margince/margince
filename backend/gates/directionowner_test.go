@@ -35,9 +35,13 @@ var literalDirection = regexp.MustCompile(`direction\s*(=|<>|IS DISTINCT FROM|IS
 // messageStateReaders read a direction to answer a question about one message
 // or thread, not which sides of a relationship have written.
 var messageStateReaders = gatekit.Waive(map[string]string{
+	"internal/modules/activities/dealactions.go":             "lists the outgoing mails sent on a deal inside a window, as work done; it never counts which side of a relationship wrote",
+	"internal/modules/contacts/signaturedetails.go":          "asks whether one message is inbound mail its sender's domain vouched for, before a signature's further address or employer street lands; it never counts which side of a relationship wrote",
+	"internal/modules/contacts/employerchange.go":            "asks whether one message is mail the contact sent, from an address of theirs on one domain, to raise an employer question; it never counts which side of a relationship wrote",
 	"internal/platform/database/storekit/sharedmailowner.go": "picks the other party of one message, its sender or its recipient, to route that message's work; it never counts which side of a relationship wrote",
 	"internal/modules/activities/calendarinvitation.go":      "asks whether one inbound message is an invitation the reader may answer; it never counts which side of a relationship wrote",
 	"internal/modules/activities/replysettled.go":            "stamps when one inbound message was settled on its own thread; it never counts which side of a relationship wrote",
+	"internal/modules/activities/calendarmethodbackfill.go":  "re-reads the calendar method of one stored message of either direction; it never counts which side of a relationship wrote",
 	"internal/modules/activities/calendarchange.go":          "asks what one inbound calendar mail changed about its meeting; it never counts which side of a relationship wrote",
 	"internal/modules/activities/taskanswered.go":            "Checks one attested outgoing message and its actual sending seat to complete that seat's tasks; it does not count relationship sides.",
 	"internal/modules/capture/senderstanding.go":             "asks whether the one message a sender ledger row names was sent by the mailbox owner, as the verdict's claim does, never which side of a relationship wrote",
@@ -55,6 +59,8 @@ var messageStateReaders = gatekit.Waive(map[string]string{
 		"to name the contact its stated address proves; it never counts which side of a relationship wrote",
 	"internal/modules/activities/ownmessagedone.go": "asks whether one message the reader sent is still the newest " +
 		"to its contact in either direction; it never counts which side of a relationship wrote",
+	"internal/compose/invitationsenders/invitationsenders.go": "selects stored invitations that arrived inbound, " +
+		"to name the sender of each one message; it never counts which side of a relationship wrote",
 })
 
 func TestEveryExchangeReaderAsksTheDirectionRule(t *testing.T) {
@@ -160,7 +166,7 @@ func TestTheDirectionCensusSeesAPlantedReader(t *testing.T) {
 // per-entry reasons.
 const (
 	directionRegisterPath = "directionspellers.txt"
-	directionDebtCeiling  = 54
+	directionDebtCeiling  = 52
 )
 
 func readDirectionRegister(t *testing.T) map[string]bool {

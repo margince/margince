@@ -13,6 +13,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // LegalEntityInput is one submission. A nil field was not sent; on a patch it
@@ -21,7 +22,8 @@ type LegalEntityInput struct {
 	DisplayName, LegalName               *string
 	Address                              LegalEntityAddress
 	VatID, RegisterCourt, RegisterNumber *string
-	Country, DefaultLanguage             *string
+	Country, Jurisdiction                *string
+	DefaultLanguage                      *string
 	BankAccountHolder, IBAN, BIC         *string
 	Imprint, SignatureTemplate           *string
 	Offering                             LegalEntityOffering
@@ -53,6 +55,7 @@ const (
 	legalEntityLegalLimit   = values.TextLineCharacters
 	legalEntityImprintLimit = values.TextDocumentCharacters
 	wireCountry             = "country"
+	wireJurisdiction        = "jurisdiction"
 	wireDefaultLanguage     = "default_language"
 	wireIBAN                = "iban"
 	wireBIC                 = "bic"
@@ -73,7 +76,8 @@ func (in LegalEntityInput) fields() []entityField {
 		{column: "vat_id", value: in.VatID, limit: legalEntityNameLimit, anchored: true},
 		{column: fieldRegisterCourt, value: in.RegisterCourt, limit: legalEntityNameLimit, anchored: true},
 		{column: fieldRegisterNumber, value: in.RegisterNumber, limit: legalEntityNameLimit, anchored: true},
-		{column: wireCountry, value: in.Country, limit: 2, required: true, clean: cleanEntityCountry},
+		{column: wireCountry, value: in.Country, limit: 2, required: true, clean: cleanEntityCountry, installationOwned: true},
+		{column: wireJurisdiction, value: in.Jurisdiction, limit: 2, required: true, clean: cleanEntityJurisdiction, installationOwned: true},
 		{column: wireDefaultLanguage, value: in.DefaultLanguage, limit: 2, clean: cleanEntityLanguage},
 		{column: "bank_account_holder", value: in.BankAccountHolder, limit: legalEntityNameLimit},
 		{column: wireIBAN, value: in.IBAN, limit: 34, clean: cleanIBAN},
@@ -100,7 +104,7 @@ func (e LegalEntity) asInput() LegalEntityInput {
 	return LegalEntityInput{
 		DisplayName: &name, LegalName: e.LegalName, Address: e.Address,
 		VatID: e.VatID, RegisterCourt: e.RegisterCourt, RegisterNumber: e.RegisterNumber,
-		Country: e.Country, DefaultLanguage: e.DefaultLanguage,
+		Country: e.Country, Jurisdiction: e.Jurisdiction, DefaultLanguage: e.DefaultLanguage,
 		BankAccountHolder: e.BankAccountHolder, IBAN: e.IBAN, BIC: e.BIC, Imprint: e.Imprint,
 		SignatureTemplate: e.SignatureTemplate, Offering: e.Offering,
 	}
@@ -153,6 +157,29 @@ func cleanEntityCountry(raw string) (string, error) {
 		}
 	}
 	return strings.ToLower(raw), nil
+}
+
+// cleanEntityJurisdiction admits only a pack compiled into this build, so an
+// entity never names a law no pack can apply.
+func cleanEntityJurisdiction(raw string) (string, error) {
+	code := strings.ToLower(raw)
+	if _, ok := jurisdiction.For(jurisdiction.Code(code)); !ok {
+		return "", &values.ParseError{
+			Field: wireJurisdiction, Code: "invalid_jurisdiction",
+			Message: "jurisdiction must be one of the jurisdictions this installation offers, for example de",
+		}
+	}
+	return code, nil
+}
+
+// withDefaultJurisdiction takes the country as the jurisdiction when a create
+// names none, so a client that sends only the country keeps the law it had.
+func (in LegalEntityInput) withDefaultJurisdiction() LegalEntityInput {
+	if in.Jurisdiction == nil && in.Country != nil {
+		code := strings.ToLower(strings.TrimSpace(*in.Country))
+		in.Jurisdiction = &code
+	}
+	return in
 }
 
 func cleanEntityLanguage(raw string) (string, error) {

@@ -7,6 +7,10 @@ package consent
 // which recipients stopped the send and why.
 
 import (
+	"context"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/commsauthzwire"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -27,6 +31,9 @@ type SendRefusedError struct {
 	// reason. The sender learns which address stopped and why. The caller
 	// named every one of these addresses.
 	Refusals []RefusedRecipient
+	// Review is the review as this caller would GET it, nil when they may not
+	// read it. A client then needs no second request to show the refusal.
+	Review *crmcontracts.CommunicationReview
 }
 
 func (e *SendRefusedError) Error() string {
@@ -48,6 +55,17 @@ func (e *SendRefusedError) Unwrap() error { return e.Cause }
 // The reference travels in the message instead, where a human and the MCP
 // surface read it.
 
+// Refused is the refusal a sender reads. It carries the review's reference,
+// the actions, the blocking refusals and the review as the sender would GET
+// it. A review they may not read is left out; the refusal stands.
+func (g *Gate) Refused(ctx context.Context, review Review, set commsauthz.DecisionSet, cause error, actions []string) *SendRefusedError {
+	refused := &SendRefusedError{ReviewID: review.ID, Cause: cause, Actions: actions, Refusals: BlockingRefusals(set)}
+	if served, err := g.ServedReview(ctx, review.ID); err == nil {
+		refused.Review = &served
+	}
+	return refused
+}
+
 // BlockingRefusals is the refused recipients whose answer actually stopped the
 // send. A deny the rollout mode only records did not stop it, so a sender told
 // about it would hunt for a cause that changed nothing.
@@ -58,7 +76,7 @@ func BlockingRefusals(set commsauthz.DecisionSet) []RefusedRecipient {
 			out = append(out, refusedRecipientOf(d))
 		}
 	}
-	return out
+	return rankRefusals(out)
 }
 
 // FaultReference implements apperrors.ReferencedFault: the review this refusal
@@ -78,13 +96,17 @@ func (e *SendRefusedError) FaultReference() map[string]any {
 	if len(e.Refusals) > 0 {
 		reference["refusals"] = refusalReference(e.Refusals)
 	}
+	if e.Review != nil {
+		reference["review"] = e.Review
+	}
 	return reference
 }
 
 // refusalReference is what a sender may read of each refused recipient. That
-// is the address, the reason, the category the engine resolved, the category
-// the sender asked for, and whether a reason may lift it. The subject id stays
-// off the wire, because the sender may not be able to read that record.
+// is the address and the reason, the category resolved and the one asked for,
+// whether a reason may lift it, and the law cited.
+// The subject id stays off the wire, because the sender may not be able to read
+// that record.
 func refusalReference(refusals []RefusedRecipient) []map[string]any {
 	out := make([]map[string]any, 0, len(refusals))
 	for _, r := range refusals {
@@ -97,6 +119,12 @@ func refusalReference(refusals []RefusedRecipient) []map[string]any {
 		}
 		if r.RequestedCategory != "" {
 			entry["requested_category"] = r.RequestedCategory
+		}
+		if cited := commsauthzwire.Provision(r.Provision); cited != nil {
+			entry["provision"] = cited
+		}
+		if cited := commsauthzwire.Provisions(r.Provisions); cited != nil {
+			entry["provisions"] = cited
 		}
 		out = append(out, entry)
 	}

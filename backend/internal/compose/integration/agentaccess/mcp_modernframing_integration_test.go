@@ -93,7 +93,7 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 		called := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{`+modernMeta+
 				`,"name":"create_record","arguments":{"record_type":"contact",`+
-				`"fields":{"full_name":"Modern Framing Contact"}}}}`,
+				`"fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-f0685055ab28433a","full_name":"Modern Framing Contact"}}}}`,
 			modernHeaders(bearer, "tools/call", "create_record"))
 		if called.StatusCode != http.StatusOK {
 			t.Fatalf("tools/call → %d %s", called.StatusCode, called.Body)
@@ -124,7 +124,7 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 
 		called := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_record",`+
-				`"arguments":{"record_type":"contact","fields":{"full_name":"Handshake Era Contact"}}}}`,
+				`"arguments":{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-404a296e42fd1b2c","full_name":"Handshake Era Contact"}}}}`,
 			legacyHeaders(bearer, negotiated))
 		if called.StatusCode != http.StatusOK {
 			t.Fatalf("tools/call → %d %s", called.StatusCode, called.Body)
@@ -203,7 +203,7 @@ func TestAModernRequestWhoseHeaderContradictsItsBodyRunsNothing(t *testing.T) {
 	refused := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{`+modernMeta+
 			`,"name":"create_record","arguments":{"record_type":"contact",`+
-			`"fields":{"full_name":"Never Created"}}}}`,
+			`"fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-d568f164bc66b449","full_name":"Never Created"}}}}`,
 		// The header names a read, the body calls a write.
 		modernHeaders(bearer, "tools/call", "read_record"))
 

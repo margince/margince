@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "../i18n";
+import { ClosesWithPage } from "../lib/pageleave";
 import { useShortcutHandler } from "../lib/shortcuts";
 import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { useBackdropDismiss } from "./backdrop";
@@ -83,6 +84,7 @@ export function Modal({
   closeReason,
   closeDisabled,
   unsaved = false,
+  unsavedBody,
   commitSubmits = intent === "form",
   children,
 }: Readonly<{
@@ -115,6 +117,8 @@ export function Modal({
    * dialog claims one with `useUnsavedGuard` instead.
    */
   unsaved?: boolean;
+  /** What closing loses, when it is not what the reader typed. */
+  unsavedBody?: string;
   /** ⌘/Ctrl+Enter presses the submit of the form it holds. */
   commitSubmits?: boolean;
   children: ReactNode;
@@ -128,7 +132,8 @@ export function Modal({
   // the stylesheet selects the exit with; `mounted` outlives `open` by exactly
   // as long as that exit takes, and by nothing at all where nothing animates.
   const { mounted, state } = usePresence({ open, element: overlay });
-  const drafts = useUnsavedRegistry(useContext(UnsavedContext));
+  const enclosing = useContext(UnsavedContext);
+  const drafts = useUnsavedRegistry(enclosing);
   const [asking, setAsking] = useState(false);
   // A caller that closes the dialog itself leaves no question behind for the next open.
   if (!open && asking) {
@@ -209,6 +214,12 @@ export function Modal({
         <UnsavedContext.Provider value={drafts}>
           {children}
         </UnsavedContext.Provider>
+        {/* A draft the page's guard holds is the guard's question to ask. */}
+        <ClosesWithPage
+          open={open}
+          close={requestClose}
+          held={enclosing?.dirty ?? false}
+        />
         {/* LAST in the DOM, and the position is the whole point: the first Tab
             into a dialog lands on its content, and the way out is the final
             stop rather than the one a reader has to pass to reach the form.
@@ -246,7 +257,7 @@ export function Modal({
       {/* Portalled to the body on its own; it sits here only for React. */}
       <DiscardDraftQuestion
         open={open && asking}
-        body={t("unsaved.dialogBody")}
+        body={unsavedBody ?? t("unsaved.dialogBody")}
         onKeep={() => setAsking(false)}
         onDiscard={() => {
           setAsking(false);

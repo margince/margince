@@ -84,13 +84,13 @@ function serve(body: unknown, status = 200) {
   return calls;
 }
 
-function show(canAccept = true) {
+function show(canAccept = true, locale?: "de") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
-      <LocaleProvider>
+      <LocaleProvider initial={locale}>
         <DocumentExtractionPanel attachmentId="att-1" canAccept={canAccept} />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -308,6 +308,32 @@ describe("what a grounded reading offers", () => {
       }
       const body = accept.body as { edits: Record<string, string> };
       expect(body.edits).toEqual({ amount_minor: "20000000" });
+    });
+  });
+
+  // German writes "1500,50" for fifteen hundred and a half. A reader that only
+  // stripped commas sent it as 150050 euros.
+  it("takes a German edit the German way", async () => {
+    const calls = serve(GROUNDED);
+    show(true, "de");
+    const [editAmount] = await screen.findAllByRole("button", {
+      name: "Bearbeiten",
+    });
+    await userEvent.click(editAmount);
+    const input = screen.getByRole("textbox", { name: "Betrag bearbeiten" });
+    expect((input as HTMLInputElement).value).toBe("148500,00");
+    await userEvent.clear(input);
+    await userEvent.type(input, "1500,50");
+    await userEvent.click(
+      screen.getByRole("button", { name: "2 Felder annehmen" }),
+    );
+    await waitFor(() => {
+      const accept = calls.find((c) => c.method === "POST");
+      if (!accept) {
+        throw new Error("the accept never reached the wire");
+      }
+      const body = accept.body as { edits: Record<string, string> };
+      expect(body.edits).toEqual({ amount_minor: "150050" });
     });
   });
 

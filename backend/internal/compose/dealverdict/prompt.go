@@ -57,6 +57,9 @@ func Prompt(fence promptfence.Fence, in Input) string {
 	fmt.Fprintf(&b, "Amount: %s\n", amountText(in.AmountMinor, in.Currency))
 	fmt.Fprintf(&b, "Expected close date: %s%s\n", dateText(in.CloseDate), provisionalText(in.Provisional))
 	fmt.Fprintf(&b, "Win probability: %d%% (%s)\n", in.Probability, in.ProbabilitySource)
+	if in.WinChanceLine != "" {
+		fmt.Fprintf(&b, "Win chance the deal shows: %d%% (%s)\n", in.WinChance, in.WinChanceLine)
+	}
 	fmt.Fprintf(&b, "Highest probability a raise may set: %d%%\n", raiseCeiling(in))
 	for _, stage := range in.Later {
 		fmt.Fprintf(&b, "Later stage: %s (stage_id %s, probability %d%%)\n",
@@ -80,6 +83,10 @@ func Prompt(fence promptfence.Fence, in Input) string {
 		text := fmt.Sprintf("%s %s on %s | %s\n%s", activity.Kind, activity.Direction,
 			activity.OccurredAt.Format(time.DateOnly), activity.Subject, activity.Body)
 		b.WriteString(fence.WrapAttr("activity_id", r.activities.For(activity.ID), text) + "\n")
+	}
+	for _, mail := range in.PrivateMail {
+		fmt.Fprintf(&b, "A private message was exchanged on this deal on %s. Its content is not shared.\n",
+			mail.OccurredAt.Format(time.DateOnly))
 	}
 	b.WriteString(`Return JSON: { "actions": [ { "kind", "date", "amount", "currency", "quoted_words", "probability", ` +
 		`"stage_id", "criteria", "cited_activity_ids", "reason", "confidence" } ] }. ` +

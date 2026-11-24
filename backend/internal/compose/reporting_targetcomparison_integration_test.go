@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
@@ -141,7 +142,7 @@ func TestTheQuarterReviewSampleIsFortyThousandShortAtThreePointSixCoverage(t *te
 	if err != nil || len(evidence.Rows) != 1 || *evidence.Rows[0].Value != 136_000_000 {
 		t.Fatalf("open pipeline evidence %+v %v, want the one 1.36m total the coverage divides", evidence, err)
 	}
-	if rows := comparisonCSV(t, evaluation); rows["gap"] != "4000000" || rows["coverage"] == "" || rows["status"] != "compared" {
+	if rows := comparisonCSV(t, evaluation); rows["gap"] != "40000.00" || rows["coverage"] == "" || rows["status"] != "compared" {
 		t.Fatalf("export rows %v, want the same gap, coverage and status", rows)
 	}
 }
@@ -190,8 +191,8 @@ func comparisonCSV(t *testing.T, evaluation crmcontracts.ReportingEvaluation) ma
 		if record[1] != reportingTargetComparisonBlock {
 			continue
 		}
-		out[record[2]] = record[3]
-		if record[2] == "status" {
+		out[reportingcsv.IDOf(record[2])] = record[3]
+		if record[2] == reportingcsv.Labels["status"].En {
 			out["status"] = record[10]
 		}
 	}

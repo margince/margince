@@ -130,13 +130,17 @@ func (w *RoutingWatcher) Recheck(ctx context.Context) {
 // Reports whether it rebound, which is what the tick's decision amounts to and
 // what a test can judge without reaching inside the Router.
 func (w *RoutingWatcher) applyIfChanged(ctx context.Context, next ai.RoutingConfig) bool {
-	// Unconfigured means the binding was deleted out from under a running
-	// role. Keep serving rather than tearing the lanes down mid-flight: an
-	// operator removing a binding is choosing what the NEXT boot does, and an
-	// installation whose AI stopped answering with nothing written anywhere is
-	// the worst way to learn that.
+	// Unconfigured means the stored binding was removed. The role stops
+	// calling the provider it named and refuses calls like one that booted with
+	// none, so every surface reads the same state. A fake served for dev has no
+	// stored binding behind it and stays.
 	if next.Unconfigured() {
-		return false
+		if !w.target.Bound() || w.target.ServesOnlyFake() {
+			return false
+		}
+		w.target.Unbind() //nolint:contextcheck // clearing provider health is queued to a drain goroutine with its own deadline
+		w.log.InfoContext(ctx, "the stored model binding was removed; AI calls are refused until one is saved")
+		return true
 	}
 	// TWO comparands, because a binding and a credential change independently
 	// and only one of them moves the routing digest.

@@ -24,3 +24,15 @@ export async function patchAutomation({ id, version, body }: AutomationPatch) {
     }),
   );
 }
+
+// Whether an edit keeps the population a scheduled rule acts on.
+export function samePopulationParams(
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): boolean {
+  const keys = Object.keys(before);
+  return (
+    keys.length === Object.keys(after).length &&
+    keys.every((key) => before[key] === after[key])
+  );
+}

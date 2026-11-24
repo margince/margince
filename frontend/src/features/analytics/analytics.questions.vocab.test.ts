@@ -3,7 +3,13 @@
 
 import { describe, expect, it } from "vitest";
 import { translate, translatePlural } from "../../i18n";
-import { CUSTOM_DEALS, ENTITIES, QUERY } from "./analytics.questions.testkit";
+import { measureReading } from "./analytics.questions.money";
+import {
+  CUSTOM_DEALS,
+  DEAL_MONEY,
+  ENTITIES,
+  QUERY,
+} from "./analytics.questions.testkit";
 import {
   analyticsFieldLabel,
   columnLabel,
@@ -12,7 +18,6 @@ import {
   explainGroup,
   fieldsForFn,
   fnsFor,
-  measureReading,
   refusalOf,
   valueControlOp,
   valueShape,
@@ -141,7 +146,9 @@ describe("how a money cell reads", () => {
   const sum = { fn: "sum" as const, field: "amount_minor" };
 
   it("uses the row's own currency when the question groups by it", () => {
-    expect(measureReading(sum, { currency: "USD" }, QUERY, "EUR")).toEqual({
+    expect(
+      measureReading(sum, { currency: "USD" }, QUERY, "EUR", DEAL_MONEY),
+    ).toEqual({
       kind: "money",
       currency: "USD",
     });
@@ -153,7 +160,7 @@ describe("how a money cell reads", () => {
       group_by: ["stage_id"],
       filters: [{ field: "currency", op: "eq" as const, value: "VND" }],
     };
-    expect(measureReading(sum, {}, pinned, "EUR")).toEqual({
+    expect(measureReading(sum, {}, pinned, "EUR", DEAL_MONEY)).toEqual({
       kind: "money",
       currency: "VND",
     });
@@ -161,7 +168,13 @@ describe("how a money cell reads", () => {
 
   it("refuses a figure for native amounts summed across currencies", () => {
     expect(
-      measureReading(sum, {}, { ...QUERY, group_by: ["stage_id"] }, "EUR"),
+      measureReading(
+        sum,
+        {},
+        { ...QUERY, group_by: ["stage_id"] },
+        "EUR",
+        DEAL_MONEY,
+      ),
     ).toEqual({ kind: "mixed" });
   });
 
@@ -172,6 +185,7 @@ describe("how a money cell reads", () => {
         {},
         QUERY,
         "EUR",
+        DEAL_MONEY,
       ),
     ).toEqual({ kind: "money", currency: "EUR" });
   });
@@ -183,6 +197,7 @@ describe("how a money cell reads", () => {
         {},
         QUERY,
         "EUR",
+        DEAL_MONEY,
       ),
     ).toEqual({ kind: "number" });
   });
@@ -239,6 +254,7 @@ describe("a converted amount with no base currency", () => {
         {},
         QUERY,
         null,
+        DEAL_MONEY,
       ),
     ).toEqual({ kind: "noBase" });
   });

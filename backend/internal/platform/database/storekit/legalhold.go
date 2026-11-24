@@ -8,8 +8,9 @@ package storekit
 // The flag lives on five tables owned by three modules — contact, company and
 // lead in contacts, deal in deals, project in projects — and a module may only
 // write its own. So the WRITE is issued by each owner and the SHAPE of it is
-// here: read the current value inside the transaction, refuse a no-op, patch
-// through the guarded path, and audit with the stated reason.
+// here. It reads the current value inside the transaction, refuses a no-op,
+// patches through the guarded path and audits the stated reason. It announces
+// the change as the record's own <record>.updated event.
 //
 // Shared rather than copied three times because the refusal and the audit
 // payload are the whole of the contract's 409 and of the provenance a hold
@@ -25,13 +26,19 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // legalHoldColumn is the boolean every one of the five tables carries.
 const legalHoldColumn = "legal_hold"
 
-// SetLegalHold places or lifts the hold on one record, auditing the reason.
+// LegalHoldUpdated builds the owner's <record>.updated payload from the
+// changed fields. SetLegalHold refuses a payload for another record type.
+type LegalHoldUpdated func(changedFields map[string]any) events.Payload
+
+// SetLegalHold places or lifts the hold on one record. It audits the reason
+// and emits the payload updated builds, which carries the flag alone.
 //
 // The caller names its own table as a compile-time literal — nothing here
 // takes a name off a request body. Refuses with ErrConflict when the record is
@@ -40,7 +47,13 @@ const legalHoldColumn = "legal_hold"
 // read afterwards as though a hold had been in force.
 func SetLegalHold(
 	ctx context.Context, tx pgx.Tx, table string, id ids.UUID, held bool, reason string,
+	updated LegalHoldUpdated,
 ) error {
+	payload := updated(map[string]any{legalHoldColumn: held})
+	if payload.EntityType() != table {
+		return fmt.Errorf("legal hold on %s announced as %s: %w", table, payload.EventType(), apperrors.ErrInvalidArgument)
+	}
+
 	var current bool
 	// The table is a compile-time literal from the owning module and is passed
 	// through pgx's own identifier quoting; nothing off a request body reaches it.
@@ -67,8 +80,12 @@ func SetLegalHold(
 	// already carries the actor, the moment and the correlation id.
 	after := p.After()
 	after["reason"] = reason
-	if _, err := Audit(ctx, tx, legalHoldAction(held), table, id, p.Before(), after); err != nil {
+	auditID, err := Audit(ctx, tx, legalHoldAction(held), table, id, p.Before(), after)
+	if err != nil {
 		return fmt.Errorf("audit legal hold: %w", err)
+	}
+	if err := EmitEvent(ctx, tx, auditID, id, payload); err != nil {
+		return fmt.Errorf("emit legal hold: %w", err)
 	}
 	return nil
 }

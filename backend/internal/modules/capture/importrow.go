@@ -67,14 +67,15 @@ func recordImportTx(
         INSERT INTO capture_import (activity_id, ` + who.column + `, posture_at_import, verdict_status, verdict_reason, verdict_reasons,
                                     provider_received_at, source_occurred_at, delivered_by, bcc_only, provider_message_ids, legal_entity_id)
         VALUES (@activity, @importer, NULLIF(@import_posture, ''), NULLIF(@verdict_status, ''), NULLIF(@verdict_reason, ''), @verdict_reasons, @received, @occurred,
-                ARRAY(SELECT c.provider || ':' || c.generation FROM capture_connection c WHERE ` + who.connection + `),
+                ARRAY(SELECT ` + storekit.MailboxMarkSQL("c") + ` FROM capture_connection c WHERE ` + who.connection + `),
                 @bcc, ` + storekit.ConnectionMessageKeysSQL(who.connection, "@message") + `,
                 (SELECT c.legal_entity_id FROM capture_connection c WHERE ` + who.connection + `))
         ON CONFLICT ` + who.conflict + ` DO UPDATE SET
          provider_received_at = coalesce(capture_import.provider_received_at, EXCLUDED.provider_received_at),
          source_occurred_at = coalesce(capture_import.source_occurred_at, EXCLUDED.source_occurred_at),
-         delivered_by = ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1),
+         delivered_by = ` + mergedDeliveredBySQL + `,
          bcc_only = coalesce(capture_import.bcc_only, EXCLUDED.bcc_only),
+         legal_entity_id = ` + deliveringEntitySQL("capture_import", mergedDeliveredBySQL) + `,
          provider_message_ids = ARRAY(SELECT DISTINCT unnest(capture_import.provider_message_ids || EXCLUDED.provider_message_ids) ORDER BY 1)
         WHERE (capture_import.provider_received_at IS NULL AND EXCLUDED.provider_received_at IS NOT NULL)
            OR (capture_import.source_occurred_at IS NULL AND EXCLUDED.source_occurred_at IS NOT NULL)
@@ -84,7 +85,7 @@ func recordImportTx(
 	args := pgx.NamedArgs{
 		"activity": activityID, "importer": who.id, "import_posture": birth.posture,
 		"verdict_status": birth.verdictStatus, "verdict_reason": birth.reason, "verdict_reasons": birth.reasons,
-		"received": received, "occurred": occurred, "delivering_provider": provider,
+		"received": received, "occurred": occurred, "delivering_provider": provider, "delivering_connection": runConnection(ctx),
 		"bcc": bccOnly, "message": providerMessageID,
 	}
 	if _, err := tx.Exec(ctx, query, args); err != nil {
@@ -92,6 +93,10 @@ func recordImportTx(
 	}
 	return nil
 }
+
+// mergedDeliveredBySQL is the mailboxes that delivered an import once the
+// arriving one is added.
+const mergedDeliveredBySQL = `ARRAY(SELECT DISTINCT unnest(capture_import.delivered_by || EXCLUDED.delivered_by) ORDER BY 1)`
 
 // AudienceRecomputer derives a captured activity's audience from every
 // mailbox that imported it. The activities module owns the activity table and

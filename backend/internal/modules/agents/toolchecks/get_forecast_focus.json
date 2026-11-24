@@ -1,0 +1,8 @@
+{
+  "verb": "get_forecast_focus",
+  "checks": [
+    "deal.read",
+    "forecast.read",
+    "installation_settings.read"
+  ]
+}

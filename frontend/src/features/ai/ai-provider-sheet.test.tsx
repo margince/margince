@@ -11,6 +11,7 @@ import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { providerState } from "./ai-provider-sheet";
+import { hostMissing } from "./ai-routing-fields";
 
 afterEach(() => {
   cleanup();
@@ -267,9 +268,12 @@ describe("a provider's sheet", () => {
     );
     expect(within(sheet).queryByRole("table")).toBeNull();
 
-    await user.type(within(sheet).getByLabelText("Model"), "gemini-4-pro");
-    await user.type(within(sheet).getByLabelText("Input $/M"), "2");
-    await user.type(within(sheet).getByLabelText("Output $/M"), "12");
+    await user.type(
+      within(sheet).getByLabelText(/^Model( \*)?$/),
+      "gemini-4-pro",
+    );
+    await user.type(within(sheet).getByLabelText(/^Input \$\/M( \*)?$/), "2");
+    await user.type(within(sheet).getByLabelText(/^Output \$\/M( \*)?$/), "12");
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
 
     await vi.waitFor(() => expect(posts).toHaveLength(1));
@@ -292,13 +296,13 @@ describe("a provider's sheet", () => {
         name: "Edit gemini-3.5-flash",
       }),
     );
-    expect(within(sheet).queryByLabelText("Model")).toBeNull();
-    expect(within(sheet).getByLabelText("Input $/M")).toHaveProperty(
+    expect(within(sheet).queryByLabelText(/^Model( \*)?$/)).toBeNull();
+    expect(within(sheet).getByLabelText(/^Input \$\/M( \*)?$/)).toHaveProperty(
       "value",
       "0.3",
     );
-    await user.clear(within(sheet).getByLabelText("Input $/M"));
-    await user.type(within(sheet).getByLabelText("Input $/M"), "0.4");
+    await user.clear(within(sheet).getByLabelText(/^Input \$\/M( \*)?$/));
+    await user.type(within(sheet).getByLabelText(/^Input \$\/M( \*)?$/), "0.4");
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
     await vi.waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]?.body).toMatchObject({
@@ -318,12 +322,15 @@ describe("a provider's sheet", () => {
       ),
     ).toBeTruthy();
     await user.click(within(sheet).getByRole("button", { name: "Set price" }));
-    expect(within(sheet).getByLabelText("Model")).toHaveProperty(
+    expect(within(sheet).getByLabelText(/^Model( \*)?$/)).toHaveProperty(
       "value",
       "gemini-embedding-001",
     );
-    await user.type(within(sheet).getByLabelText("Input $/M"), "0.15");
-    await user.type(within(sheet).getByLabelText("Output $/M"), "0");
+    await user.type(
+      within(sheet).getByLabelText(/^Input \$\/M( \*)?$/),
+      "0.15",
+    );
+    await user.type(within(sheet).getByLabelText(/^Output \$\/M( \*)?$/), "0");
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
     await vi.waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]?.body).toMatchObject({
@@ -349,8 +356,11 @@ describe("a provider's sheet", () => {
       /^gemini-embedding-001/,
     );
     expect(laneBox()).toBe("Embeddings");
-    await user.type(within(sheet).getByLabelText("Input $/M"), "0.15");
-    await user.type(within(sheet).getByLabelText("Output $/M"), "0");
+    await user.type(
+      within(sheet).getByLabelText(/^Input \$\/M( \*)?$/),
+      "0.15",
+    );
+    await user.type(within(sheet).getByLabelText(/^Output \$\/M( \*)?$/), "0");
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
     await vi.waitFor(() => expect(posts).toHaveLength(1));
     expect(posts[0]?.body).toMatchObject({
@@ -359,21 +369,25 @@ describe("a provider's sheet", () => {
     });
   });
 
-  it("withholds Save while the date box is cleared", async () => {
+  it("says the date is required when Save is pressed with it cleared", async () => {
     const user = userEvent.setup();
     const { posts } = mount();
     const sheet = await open(user, "gemini");
     await user.click(
       await within(sheet).findByRole("button", { name: "Add price" }),
     );
-    await user.type(within(sheet).getByLabelText("Model"), "gemini-4-pro");
-    await user.type(within(sheet).getByLabelText("Input $/M"), "2");
-    await user.type(within(sheet).getByLabelText("Output $/M"), "12");
-    const save = within(sheet).getByRole("button", { name: "Save" });
-    expect(save).toHaveProperty("disabled", false);
-    await user.clear(within(sheet).getByLabelText("Effective"));
+    await user.type(
+      within(sheet).getByLabelText(/^Model( \*)?$/),
+      "gemini-4-pro",
+    );
+    await user.type(within(sheet).getByLabelText(/^Input \$\/M( \*)?$/), "2");
+    await user.type(within(sheet).getByLabelText(/^Output \$\/M( \*)?$/), "12");
+    const effective = within(sheet).getByLabelText(/^Effective( \*)?$/);
+    await user.clear(effective);
     await user.tab();
-    expect(save).toHaveProperty("disabled", true);
+    await user.click(within(sheet).getByRole("button", { name: "Save" }));
+    expect(within(sheet).getByText("Effective is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(effective);
     expect(posts).toHaveLength(0);
   });
 
@@ -384,10 +398,13 @@ describe("a provider's sheet", () => {
     await user.click(
       await within(sheet).findByRole("button", { name: "Add price" }),
     );
-    await user.type(within(sheet).getByLabelText("Model"), "gemini-4-pro");
-    await user.type(within(sheet).getByLabelText("Input $/M"), "2");
-    await user.type(within(sheet).getByLabelText("Output $/M"), "12");
-    const effective = within(sheet).getByLabelText("Effective");
+    await user.type(
+      within(sheet).getByLabelText(/^Model( \*)?$/),
+      "gemini-4-pro",
+    );
+    await user.type(within(sheet).getByLabelText(/^Input \$\/M( \*)?$/), "2");
+    await user.type(within(sheet).getByLabelText(/^Output \$\/M( \*)?$/), "12");
+    const effective = within(sheet).getByLabelText(/^Effective( \*)?$/);
     await user.clear(effective);
     await user.type(effective, "99/99/9999");
     await user.click(within(sheet).getByRole("button", { name: "Save" }));
@@ -504,9 +521,33 @@ describe("providerState", () => {
       credential_kind: "api_key" as const,
       usable: true,
     };
-    expect(providerState(status, undefined)).toBe("ready");
-    expect(providerState({ ...status, usable: false }, undefined)).toBe(
+    expect(providerState(status, undefined, false)).toBe("ready");
+    expect(providerState({ ...status, usable: false }, undefined, false)).toBe(
       "inactive",
     );
+  });
+
+  it("asks for a service before a keyed vendor with no host reads as ready", () => {
+    const jev = {
+      provider: "jev_compatible",
+      configured: false,
+      optional: true,
+      env_var: "JEV_COMPATIBLE_API_KEY",
+      credential_kind: "api_key" as const,
+      usable: true,
+    };
+    const unhosted = hostMissing(jev.provider, {});
+    expect(unhosted).toBe(true);
+    expect(providerState(jev, undefined, unhosted)).toBe("needs_service");
+    expect(
+      providerState(jev, undefined, hostMissing(jev.provider, undefined)),
+    ).toBe("ready");
+    expect(
+      providerState(
+        jev,
+        undefined,
+        hostMissing(jev.provider, { base_url: "https://jev.example/v1" }),
+      ),
+    ).toBe("ready");
   });
 });

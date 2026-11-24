@@ -20,8 +20,6 @@ package compose
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
@@ -144,20 +141,13 @@ const (
 	CommitmentPromiserUnassignable CommitmentOutcome = "promiser_not_assignable"
 )
 
-// commitmentLocator names one promise across readings of one source: the same
-// source, the same side, the same party and the same evidence span. It is
-// built by the server from what it holds, never from the model's wording, so a
-// re-read that paraphrases the summary still finds the promise it read before.
-func commitmentLocator(sourceActivity ids.UUID, kind, party, span string) string {
-	sum := sha256.Sum256([]byte(sourceActivity.String() + "\x00" + kind + "\x00" + party + "\x00" + span))
-	return hex.EncodeToString(sum[:])
-}
-
 // CommitmentDispatcher applies the rule. Every extractor calls the same one.
 type CommitmentDispatcher struct {
 	claims   *contacts.Store
 	tasks    *activities.Store
 	approval *approvals.Service
+	// now dates the due window.
+	now func() time.Time
 }
 
 // NewCommitmentDispatcher builds the rule over the stores it writes and the
@@ -165,7 +155,7 @@ type CommitmentDispatcher struct {
 func NewCommitmentDispatcher(pool *pgxpool.Pool, approval *approvals.Service) *CommitmentDispatcher {
 	db := InstallationDB(pool)
 	return &CommitmentDispatcher{
-		claims: contacts.NewStore(db), tasks: activities.NewStore(db), approval: approval,
+		claims: contacts.NewStore(db), tasks: activities.NewStore(db), approval: approval, now: time.Now,
 	}
 }
 
@@ -221,6 +211,9 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 			return CommitmentRemembered, ids.Nil, err
 		}
 		if offered != nil {
+			if err := d.settleEarlierUnnamedClaims(ctx, tx, c); err != nil {
+				return CommitmentRemembered, ids.Nil, err
+			}
 			return d.reconcilePendingRecipients(ctx, tx, c, *offered, bundleID, late)
 		}
 	}
@@ -240,6 +233,9 @@ func (d *CommitmentDispatcher) routeCommitment(ctx context.Context, tx pgx.Tx, c
 			return CommitmentRemembered, ids.UUID{}, err
 		}
 		if written {
+			if err := d.settleEarlierUnnamedClaims(ctx, tx, c); err != nil {
+				return CommitmentRemembered, ids.UUID{}, err
+			}
 			outcome, id, err := d.reconcileTaskRecipients(filing, tx, c, reason, bundleID)
 			if err != nil || outcome == CommitmentProposed {
 				return outcome, id, err
@@ -304,32 +300,32 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 	if asked.IsZero() {
 		return CommitmentPromiserUnassignable, ids.UUID{}, nil
 	}
-	if !c.NeedsConfirmation && c.Confidence >= CommitmentTaskConfidence {
+	oddDue, err := dueday.Odd(ctx, tx, c.DueDate, c.DueZone, d.now())
+	if err != nil {
+		return CommitmentRemembered, ids.UUID{}, err
+	}
+	if !c.NeedsConfirmation && c.Confidence >= CommitmentTaskConfidence && oddDue == "" {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body, SystemText: c.SystemText,
 			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate, DueZone: c.DueZone,
 			Assignee: asked, ClaimID: claimID, ClaimIDs: claimIDs, PrivateTo: c.PrivateTo,
 			Origin: activities.OriginAgent,
 		})
-		return CommitmentTaskWritten, task, err
+		if err != nil {
+			return CommitmentTaskWritten, task, err
+		}
+		return CommitmentTaskWritten, task, d.settleEarlierUnnamedClaims(ctx, tx, c)
 	}
 	proposal := CommitmentTaskProposal{
 		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, SystemText: c.SystemText,
 		SeatID: &asked, PromiserSeatID: &asked, DueDate: c.DueDate, DueZone: c.DueZone, Links: c.Links, Quote: c.Quote,
-		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo, Tentative: c.Tentative,
+		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo, Tentative: c.Tentative, OddDueDate: oddDue,
 	}
-	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
-}
-
-// commitmentWindow is how long a proposal waits for its promiser. An invited
-// colleague finds the card when they first sign in, which may be weeks away,
-// and the default 72 hours would expire it unseen. A promise from a late
-// report is as old as the horizon already, so it gets the same wait.
-func commitmentWindow(state activities.SeatWorkState, late bool) *time.Duration {
-	if state != activities.SeatInvited && !late {
-		return nil
+	outcome, id, err := d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
+	if err != nil || outcome != CommitmentProposed {
+		return outcome, id, err
 	}
-	return new(time.Duration(provenance.CommitmentHorizonDays) * 24 * time.Hour)
+	return outcome, id, d.settleEarlierUnnamedClaims(ctx, tx, c)
 }
 
 // watchCommitment files a customer's promise on them. A new one also asks the

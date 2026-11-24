@@ -23,10 +23,9 @@ package integration
 // The write-path regression it once caught by TIMING OUT rather than by
 // measuring is now held deterministically, by the seq_scan count in
 // lastactivity_integration_test.go. Run this one with `make bench-perf`
-// (mid-market, writes a record) or `make bench-perf-check` (SMB, writes
+// (mid-market, writes a record) or `make bench-perf-check` (one tier, writes
 // nothing); the scheduled workflow records SMB weekly through `make bench-perf
-// BENCH_PERF_TIER=smb`. Mid-market is by hand only, so no schedule measures
-// the tier the SLO actually binds at.
+// BENCH_PERF_TIER=smb` and checks mid-market through `make bench-perf-check`.
 
 import (
 	"context"
@@ -176,6 +175,12 @@ func TestPerfBudgetsHoldOnSeededVolumeTier(t *testing.T) {
 		writeTierBenchRecord(t, owner, report)
 	}
 	if err := report.Gate(); err != nil {
+		// MARGINCE_BENCH_GATE=0 measures only: the p95 lines above are the result,
+		// and the breach is named so a reader sees what an enforced run would fail.
+		if os.Getenv("MARGINCE_BENCH_GATE") == "0" {
+			t.Logf("PERF budget gate not enforced (MARGINCE_BENCH_GATE=0): %v", err)
+			return
+		}
 		t.Fatalf("PERF budget gate is red: %v", err)
 	}
 }
@@ -275,6 +280,14 @@ func envOr(key, fallback string) string {
 	return fallback
 }
 
+// timed is the one place this file reads the wall clock: the measured runs and
+// the seed-step log both take their duration from it.
+func timed(run func()) time.Duration {
+	start := time.Now()
+	run()
+	return time.Since(start)
+}
+
 func benchRuns(name string, budget time.Duration, spec benchTierSpec, run func() error) (search.QueryStats, error) {
 	for i := 0; i < spec.warmups; i++ {
 		if err := run(); err != nil {
@@ -283,11 +296,12 @@ func benchRuns(name string, budget time.Duration, spec benchTierSpec, run func()
 	}
 	durations := make([]time.Duration, 0, spec.sample)
 	for i := 0; i < spec.sample; i++ {
-		start := time.Now()
-		if err := run(); err != nil {
+		var err error
+		took := timed(func() { err = run() })
+		if err != nil {
 			return search.QueryStats{}, fmt.Errorf("%s run %d: %w", name, i, err)
 		}
-		durations = append(durations, time.Since(start))
+		durations = append(durations, took)
 	}
 	return search.MeasureQuery(name, budget, durations)
 }
@@ -327,18 +341,49 @@ func benchExec(t *testing.T, owner *pgx.Conn, tier search.BenchTier, sql string,
 	}
 }
 
+// seedSlice is a window of row ordinals, from exclusive to inclusive.
+type seedSlice struct{ from, to int }
+
+// seedSlices cuts a load into a small first slice and about twenty more.
+// A table then has statistics before most of it is written.
+func seedSlices(total int) []seedSlice {
+	const first, rest = 1_000, 20
+	step := max(total/rest, first)
+	var slices []seedSlice
+	for from := 0; from < total; {
+		to := min(from+step, total)
+		if from == 0 {
+			to = min(first, total)
+		}
+		slices = append(slices, seedSlice{from, to})
+		from = to
+	}
+	return slices
+}
+
 func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpec) ids.UUID {
 	t.Helper()
+	// One line per step, so a seed that hangs names the statement it hangs in.
+	step := 0
 	exec := func(sql string, args ...any) {
 		t.Helper()
-		benchExec(t, owner, spec.tier, sql, args...)
+		step++
+		took := timed(func() { benchExec(t, owner, spec.tier, sql, args...) })
+		t.Logf("perfbench seed [%s] step %d: %s", spec.tier, step, took.Round(time.Millisecond))
 	}
 	// pgx.Identifier.Sanitize rather than interpolation: ANALYZE takes no
 	// parameter, so the table name is the one thing that has to be formatted in.
 	analyze := func(table string) {
 		t.Helper()
-		benchExec(t, owner, spec.tier, `ANALYZE `+pgx.Identifier{table}.Sanitize())
+		exec(`ANALYZE ` + pgx.Identifier{table}.Sanitize())
 	}
+
+	// JIT off for the seeding connection. The company clock a relationship insert
+	// refreshes is priced above jit_above_cost, because the empty `deal` table
+	// is never analysed. Every call then compiled the query, about 65ms a row.
+	// Analysing the empty table prices it higher still. The measured queries
+	// run on the pool, not here.
+	exec(`SET jit = off`)
 
 	exec(`INSERT INTO workspace (id) VALUES ($1)`, ws)
 
@@ -366,48 +411,51 @@ func seedBenchTier(t *testing.T, owner *pgx.Conn, ws ids.UUID, spec benchTierSpe
 	      FROM generate_series(1, $1) AS i`, spec.bulkActivities)
 	analyze(`activity`)
 
-	// The link fan-out and the employment edges below each fire a
-	// denormalisation trigger per row, and the trigger's read is planned
-	// against whatever statistics its tables carry. That is why the inserts
-	// are separate statements with an ANALYZE between them rather than the
-	// one chained CTE they used to be: a CTE cannot analyse what it is still
-	// writing, so every trigger call planned against an empty `activity` and
-	// drove the lookup from there: one scan of the whole activity table per
-	// link, quadratic in the tier. No installation plans that way; none of
-	// them is unanalysed.
+	// The link fan-out and the employment edges below fire a trigger per row,
+	// planned against the statistics its tables carry. So each load is its own
+	// statement with an ANALYZE after it. A CTE cannot analyse what it is still
+	// writing, and the trigger then scanned the whole `activity` table per link.
 	//
-	// The cyclic assignment precomputes each row's target ordinal so the
-	// join is a plain hashable equijoin; an expression joining both
-	// sides' row_numbers forces the planner into a nested loop that is
-	// pathological at the mid-market tier.
-	exec(`WITH total AS (
-	        SELECT count(*) AS n FROM contact
-	      ), numbered AS (
-	        SELECT id, (row_number() OVER (ORDER BY id) - 1) % (SELECT n FROM total) + 1 AS target_rn
-	        FROM activity
-	      ), contacts AS (
-	        SELECT id, row_number() OVER () AS rn FROM contact
-	      )
-	      INSERT INTO activity_link (activity_id, entity_type, contact_id)
-	      SELECT n.id, 'contact', p.id
-	      FROM numbered n JOIN contacts p ON p.rn = n.target_rn`)
-	analyze(`activity_link`)
+	// The table being filled is read by its own triggers too, so each load runs
+	// in slices with an ANALYZE after every one. Only the first, small slice
+	// plans on an empty table. Without that the planner read all of
+	// idx_relationship_dedupe_scan per inserted row.
+	//
+	// The cyclic assignment precomputes each row's target ordinal so the join is
+	// a plain hashable equijoin. Joining both sides' row_numbers forces a nested
+	// loop that is pathological at the mid-market tier.
+	for _, w := range seedSlices(spec.bulkActivities) {
+		exec(`WITH total AS (
+		        SELECT count(*) AS n FROM contact
+		      ), numbered AS (
+		        SELECT id, rn, (rn - 1) % (SELECT n FROM total) + 1 AS target_rn
+		        FROM (SELECT id, row_number() OVER (ORDER BY id) AS rn FROM activity) ranked
+		        WHERE rn > $1 AND rn <= $2
+		      ), contacts AS (
+		        SELECT id, row_number() OVER (ORDER BY id) AS rn FROM contact
+		      )
+		      INSERT INTO activity_link (activity_id, entity_type, contact_id)
+		      SELECT n.id, 'contact', p.id
+		      FROM numbered n JOIN contacts p ON p.rn = n.target_rn`, w.from, w.to)
+		analyze(`activity_link`)
+	}
 
 	// Employment edges for the ADR-0021 edge-count evidence.
-	exec(`WITH total AS (
-	        SELECT count(*) AS n FROM company
-	      ), contacts AS (
-	        SELECT id, (row_number() OVER () - 1) % (SELECT n FROM total) + 1 AS target_rn
-	        FROM contact LIMIT $1
-	      ), companies AS (
-	        SELECT id, row_number() OVER () AS rn FROM company
-	      )
-	      INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
-	      SELECT 'employment', p.id, o.id, 'manual', 'human:bench'
-	      FROM contacts p JOIN companies o ON o.rn = p.target_rn`, spec.relationships)
-	// The anchor's touches reach the employer through this table, so it is
-	// the last one the seeding triggers read unanalysed.
-	analyze(`relationship`)
+	for _, w := range seedSlices(spec.relationships) {
+		exec(`WITH total AS (
+		        SELECT count(*) AS n FROM company
+		      ), contacts AS (
+		        SELECT id, rn, (rn - 1) % (SELECT n FROM total) + 1 AS target_rn
+		        FROM (SELECT id, row_number() OVER (ORDER BY id) AS rn FROM contact) ranked
+		        WHERE rn > $1 AND rn <= $2
+		      ), companies AS (
+		        SELECT id, row_number() OVER (ORDER BY id) AS rn FROM company
+		      )
+		      INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		      SELECT 'employment', p.id, o.id, 'manual', 'human:bench'
+		      FROM contacts p JOIN companies o ON o.rn = p.target_rn`, w.from, w.to)
+		analyze(`relationship`)
+	}
 
 	anchor := seedBenchAnchor(t, owner, ws, spec)
 

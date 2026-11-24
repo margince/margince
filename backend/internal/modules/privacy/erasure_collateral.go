@@ -21,7 +21,7 @@ import (
 // took of their text. Those copies go for the held activities too: the floor
 // keeps the original record, never a voice sample read from it.
 func (e *Eraser) purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities, held []ids.UUID, reason string) error {
-	if err := purgeActivityTraces(ctx, tx, activities, e.payloads); err != nil {
+	if err := purgeActivityTraces(ctx, tx, activities); err != nil {
 		return err
 	}
 	if err := e.purgeTextCopies(ctx, tx, append(slices.Clone(activities), held...)); err != nil {
@@ -30,7 +30,7 @@ func (e *Eraser) purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, act
 	return tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causeContactErasure)
 }
 
-func purgeActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, payloads PayloadPurger) error {
+func purgeActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID) error {
 	if err := purgeActivityIndexes(ctx, tx, activities); err != nil {
 		return err
 	}
@@ -49,7 +49,10 @@ func purgeActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, 
 	// The transmitted copy of every activity just redacted. Without this the
 	// timeline row is a tombstone while the send log still holds the message.
 	// That copy carries the address, the subject line and the body.
-	return redactDeliveries(ctx, tx, activities, erasedName, payloads)
+	if err := redactLinkSuggestionReasons(ctx, tx, nil, activities); err != nil {
+		return err
+	}
+	return redactDeliveries(ctx, tx, activities, erasedName)
 }
 
 const (
@@ -93,21 +96,29 @@ func (e *Eraser) redactSubjectActivities(ctx context.Context, tx pgx.Tx, subject
 	if err != nil {
 		return nil, nil, err
 	}
+	if err := redactSubjectLegalReviewText(ctx, tx, subject.UUID, keys.emails, keys.displayName, reason, causeContactErasure); err != nil {
+		return nil, nil, err
+	}
 	// The same floor assigns each timeline row to erasure or restricted retention.
-	activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities), floor, e.payloads)
+	activitiesHeld, err := holdShieldedTimeline(ctx, tx, subject, keys.emails, channelActivityKeys(keys.identities), floor)
 	if err != nil {
 		return nil, nil, err
 	}
 	if err := e.purgeRedactedActivityTraces(ctx, tx, activitiesRedacted, activitiesHeld, reason); err != nil {
 		return nil, nil, err
 	}
-	if err := purgeActivityTraces(ctx, tx, notesRedacted, e.payloads); err != nil {
+	if err := purgeActivityTraces(ctx, tx, notesRedacted); err != nil {
 		return nil, nil, err
 	}
 	if err := e.purgeTextCopies(ctx, tx, notesRedacted); err != nil {
 		return nil, nil, err
 	}
 	activitiesRedacted = append(activitiesRedacted, notesRedacted...)
+	// After the timeline, because a derived signal on a company cites the
+	// messages just emptied and is found by their ids.
+	if err := scrubSubjectSignals(ctx, tx, subject, activitiesRedacted, reason, causeContactErasure); err != nil {
+		return nil, nil, err
+	}
 	if len(pending) > 0 {
 		if err := e.invalidateEdges(ctx, tx, pending); err != nil {
 			return nil, nil, err

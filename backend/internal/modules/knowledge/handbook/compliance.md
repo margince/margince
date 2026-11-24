@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/settings/controllerparticulars.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/consent/recipientpack.go backend/internal/modules/consent/draftcontent.go frontend/src/components/lawfulbasiswarning.tsx frontend/src/features/mail/composecountry.tsx backend/internal/modules/consent/requesttask.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -50,7 +50,7 @@ What the switch cannot promise:
 
 Also called: works council, Betriebsrat, figures per rep, team figures.
 
-## The four compliance documents, in order
+## Staff mail capture documents for Germany
 
 1. **Tell the colleagues whose mail will be read**: the
    *Beschäftigteninformation* (Art. 13 GDPR). Do it before a mailbox is
@@ -81,6 +81,14 @@ Also called: works council, Betriebsrat, figures per rep, team figures.
 With Germany chosen as the law, the templates are on **Settings → Compliance →
 Jurisdiction**, to read and download. The English set is for reading and for
 passing around inside the company; the German versions are the ones to sign.
+They are drafts written by AI, not legal advice, so have a lawyer check
+them first.
+
+## Vietnamese staff mail capture documents
+
+Choose the Vietnamese rules in **Settings → Compliance → Jurisdiction** to find the
+staff notice, its English copy and the receipt. Fill in the Vietnamese notice and give
+it to staff before connecting their mailboxes. Keep the signed receipt as a record.
 
 ## What Margince gives you to point at
 
@@ -88,6 +96,8 @@ passing around inside the company; the German versions are the ones to sign.
 | --- | --- |
 | Does mail leave the company's systems? | The AI egress reference, which lists every AI task and whether its text can leave your installation |
 | Who decided this message was private, and when? | The message's audience reason, and the audit log |
+| Does the AI read private mail? | Only to find a request owed an answer or a request for a quotation. It reads only mail private because of a mailbox setting. The AI never reads mail marked confidential or held by hand. It also skips mail held because of who it is with, or because only colleagues are on it. It waits until a thread's own privacy check is done. **Check private mail for requests**, under **Settings → AI models → Tasks**, turns this off; it is on at installation. Only a signed-in admin changes it, never an AI agent |
+| Is anything from private mail shared with the workspace? | Only a request for a quotation, and only from mail private because of a mailbox setting. It opens a deal, and everyone in the workspace sees on that deal what the customer asked for. Mail on the workspace sharing floor, in a held shared mailbox, filed under no record, or held by any seat is never shared. **Share quotation requests from private mail**, beside the switch above, turns this off; it is on at installation |
 | What was decided about the senders who write to me? | Settings → Connections → Activity → Sender decisions, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
@@ -100,21 +110,68 @@ templates have blanks to fill in. For erasure, access requests, retention and co
 
 ## Which law applies
 
-Margince follows one law for the whole installation. An admin chooses it at first setup, or later on **Settings → Compliance → Jurisdiction**. The page shows what the choice changes:
+An admin chooses the law of the default company at first setup, or later on **Settings → Compliance → Jurisdiction**. Each further legal entity follows its own law, as the end of this page says. The page shows what the choice changes:
 
 - how long business mail is kept before anyone may delete it;
 - the due date of a privacy request;
 - who your company says it is, and whom to ask about data, at the foot of its mail;
 - the sales-mail rules for recipients under that law.
 
+The rules, deadlines and documents on that page are drafts written by AI, not legal advice. The page marks them with \* and says so at its foot. Have a lawyer check them before you use them.
+
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
+
+To fix the law for one message, press the recipient's chip in the composer. It names the law Margince read and where it read it. You can pick another one or clear it for this message only, and the contact's record does not change. With it cleared, mail they did not ask for still needs their consent, and a stop they asked for still holds. Your company's own lines at the foot stay. The audit log names your choice, and an agent cannot make it.
+
+Some laws change what the mails to a contact about their own data may ask:
+
+- Under German law, the mail that asks a contact to check their details asks nothing about news.
+- Under Vietnamese law, Margince sends the mail that asks a contact to confirm a subscription only when the contact asked for it first. Log the request on the contact first: their call, the form they sent, or their mail.
+- Under Korean law, the same holds for a mail that asks for consent to sales mail or sales calls.
+- Under Italian law, the same holds for every mail that asks for consent.
+
+When you create a contact by hand, say where it came from. The contact's privacy page shows your answer. It says the source is unknown only when you leave the answer empty.
 
 Under Vietnamese law, a contact who refuses marketing email gets a receipt at once. It states when the refusal reached you and when sending stopped, in the contact's local time, and carries no "Powered by Margince" line. A refusal can come by phone or mail. Then tell your agent when it reached you. The receipt prints that time, not the time it was recorded. A receipt not sent within an hour shows in **Settings → System health** under **Opt-out receipts**.
 
+Under Korean law, a contact who refuses marketing email gets a receipt too, with its times in Korean time. A receipt not sent within 14 days shows in the same place.
+
+Vietnamese data-protection law also follows the recipient. When a contact's or lead's address is a Vietnamese one, the Vietnamese rules apply to them whatever law you chose:
+
+- the privacy notice, the record confirmation and the privacy page are written in Vietnamese, with the Vietnamese rights text;
+- the foot of their mail says who your company is and whom to ask about data;
+- a request to fix their details is due in 10 days, to delete them in 20 days, and to stop using them in 15 days. Margince makes a task for each request, due on that date;
+- the first answer to a request is due in 2 working days, counted in Vietnamese time from Monday to Friday;
+- when they object to the use of their data or take back their consent, Margince makes a task due in 15 days;
+- a request to stop using their data, or to take back consent to anything other than marketing, also gets an email at once. It says when the request arrived and when it will be done;
+- the reason recorded for using their data is their consent to that use, with its date. Your own business need is never enough;
+- without that consent, the send screen and the approval card show the warning **No valid basis recorded**. You can still send once you confirm it with **Send anyway**. The audit log records your confirmation, and one confirmation covers one send. A send you did not confirm stays held until you confirm it. Only you can send it; a colleague or an admin cannot;
+- **Ask for consent** in that warning sends the contact the mail that asks for their consent, and does not send your message. It shows when a consent purpose covers this kind of mail, as the built-in **Business correspondence** purpose covers replies and other business mail. Once the contact confirms, the warning no longer shows for them. Sales mail is different: without the contact's consent it goes out only as one message its sender sends with a recorded reason.
+
+Margince learns where a contact is only from the addresses above. A Vietnamese contact whose address is not a Vietnamese one is not found. The Vietnamese rules do not apply to that contact.
+
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
+
+The **Company details in mail** card on the same page holds what your mail says about your company. Its fields are **Legal name**, **Postal address**, **Data protection contact**, **How to refuse advertising** and **Advertiser contact**.
+
+Where a law in use asks for its own language, the card shows the same fields in that language. Mail and pages in that language show this text where you fill it in.
+
+Under Vietnamese law, **How to refuse advertising** must name a web page or social network link, an email address and a phone number. Saving without one of them shows which part is missing. Sales mail to a recipient under Vietnamese law goes out only once **How to refuse advertising** and **Advertiser contact** are filled in, in Vietnamese.
+
+While you write sales mail to a recipient under Vietnamese law, notes above the send button say what the mail does not meet. None of them stops the send:
+
+- The mail does not start in Vietnamese.
+- The mail claims to be the best, the leading or the only one, in Vietnamese or in English, and names no proof. Name the proving document with its number and date in the mail.
+- Your company is not set up under Vietnamese law. A company from outside that does not work there must use a Vietnamese business whose service is sending sales mail for others. Your company has to see to this.
+
+Vietnamese law does not ask for sales mail to go out from a Vietnamese mail server. If you run your own, ask whoever runs Margince to use a Vietnamese mail server where there is one.
 
 How long business mail is kept follows the legal entity of the colleague it belongs to. That is the colleague who sent it, or whose mailbox it arrived in. Mail that names no colleague follows the owner of the contact or deal it is filed under. A legal entity that follows another law keeps its colleagues' mail under that law, but never for a shorter time than the law chosen here. Mail that belongs to nobody uses the law chosen here. When the colleagues of one mail work under two different laws, the mail is kept for the longer time.
 
 When a colleague moves to another legal entity, or a legal entity changes its law, mail already kept keeps its time.
+
+Each legal entity has a **Country**, where its address is, and a **Jurisdiction**, the law it follows. The two may differ: a company with its address in Germany may follow Italian law. The default company follows the law chosen on this page, and its own form shows that law without a field to change it. You choose the **Jurisdiction** of each further company on its form under **Settings → Company profile → Legal entities**. With more than one legal entity, the page lists each one with its law.
+
+A contact or lead follows the legal entity of the colleague who owns it. That entity sets when a privacy request about the contact is due, and which company the contact's privacy page names. Mail that Margince sends to the contact on its own, such as a confirmation request, goes out for that company too. A contact with no owner follows the default company.
 
 A change to a law that keeps mail for a shorter time does not cut that time for mail you already hold. That mail keeps the old time, and the page says until when.

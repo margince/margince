@@ -8,12 +8,13 @@ import type { MarginceCoreState } from "../../../design-system/margince-core";
 import {
   OnboardingStage,
   type StageProgress,
+  useStageTitleRescue,
 } from "../../../design-system/onboarding-stage";
 import { type Translator, useLocale, useT } from "../../../i18n";
 import { useCan } from "../../../lib/capability";
 import { labelFor } from "../../../lib/labelfor";
 import { throwProblem, unwrap } from "../../../lib/problem";
-import { loadWizardState } from "../onboarding-progress";
+import { OnboardingAccount } from "../onboarding-account";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
 
@@ -56,14 +57,14 @@ export function configuredModelLabel(
 // configured model with. One hook so the gate, the read theatre and the
 // workbench cannot disagree about what is answering — and one ["ai-profile"]
 // cache entry, so naming it in three places still costs one request.
-export function useConfiguredModel(): string {
+export function useConfiguredModel(shown = true): string {
   const t = useT();
   // GET /ai/profile is gated on automation:update server-side, so a rep's
   // journey skips the read and names no model rather than drawing a 403.
   const canReadProfile = useCan("automation", "update");
   const profile = useQuery({
     queryKey: ["ai-profile"],
-    enabled: canReadProfile,
+    enabled: shown && canReadProfile,
     queryFn: async (): Promise<AiProfile> => {
       return unwrap(await api.GET("/ai/profile"));
     },
@@ -71,6 +72,11 @@ export function useConfiguredModel(): string {
   });
   return configuredModelLabel(profile.data, t("ob.ai.runtimeUnavailable"), t);
 }
+
+// The read the restore found at mount. A read started later is shown by its
+// own act, which already holds it.
+const RestoredRead = createContext<string | null>(null);
+export const RestoredReadScope = RestoredRead.Provider;
 
 /**
  * What this cold start has spent, for every screen that is not the one holding
@@ -87,12 +93,9 @@ export function useConfiguredModel(): string {
  * this one. Both go through the same `["onboarding-conv-read", readId]` entry,
  * so naming it on five screens still costs one request.
  */
-function useSetupRuntime(): AiRunSummary | undefined {
-  const wizard = useQuery({
-    queryKey: ["onboarding-conv-state"],
-    queryFn: loadWizardState,
-  });
-  const readId = wizard.data?.site_read_id ?? null;
+function useSetupRuntime(shown: boolean): AiRunSummary | undefined {
+  const restored = useContext(RestoredRead);
+  const readId = shown ? restored : null;
   const read = useQuery({
     queryKey: ["onboarding-conv-read", readId],
     queryFn:
@@ -141,7 +144,9 @@ function shownStore(): ShownStore {
  * shell appears. The company act opens on the full-screen gate, so a flag set
  * at the scope's own mount would flip before the first workbench rendered.
  */
-const WorkbenchShown = createContext<ShownStore>(shownStore());
+// Outside a scope no earlier stage is known, so every shell is the first. A
+// module-wide default store would carry one mount's history into the next.
+const WorkbenchShown = createContext<ShownStore | null>(null);
 
 export function WorkbenchEntranceScope({
   children,
@@ -157,9 +162,9 @@ export function WorkbenchEntranceScope({
 // mid-animation.
 function useFirstWorkbench(): boolean {
   const shown = useContext(WorkbenchShown);
-  const [first] = useState(() => !shown.seen());
+  const [first] = useState(() => shown === null || !shown.seen());
   useEffect(() => {
-    shown.markSeen();
+    shown?.markSeen();
   }, [shown]);
   return first;
 }
@@ -205,12 +210,16 @@ export function ConversationWorkbench({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const configured = useConfiguredModel();
-  const setupRuntime = useSetupRuntime();
+  // A member's journey reads no site and runs no research, so its band names
+  // neither: the status and the chip would describe the administrator's setup.
+  const showsRuntime = !railState.memberPath;
+  const configured = useConfiguredModel(showsRuntime);
+  const setupRuntime = useSetupRuntime(showsRuntime);
   const first = useFirstWorkbench();
+  useStageTitleRescue(railState.phase, !first);
   // Built here rather than per act, so four acts cannot drift into four
   // different ideas of where the journey is.
-  const stops = railStops(railState.memberPath);
+  const stops = railStops(railState.memberPath, railState.voiceStep);
   const steps = stops.map((stop) => ({
     label: t(stop.labelKey),
     state: stopState(stop.key, railState),
@@ -248,31 +257,34 @@ export function ConversationWorkbench({
         coreHidden={coreHidden}
         coreScale="work"
         anchor="start"
-        coreStateLabel={status}
+        coreStateLabel={showsRuntime ? status : undefined}
         aside={
           // The band's right slot, and the reason this screen can be trusted
           // about what it costs.
-          <AiRuntimeChip
-            runtime={runtime ?? setupRuntime}
-            configured={configured}
-            locale={locale}
-            labels={{
-              configured: t("ob.ai.configured"),
-              used: t("ob.ai.modelsUsed"),
-              route: t("ob.ai.route"),
-              calls: t("ob.ai.calls"),
-              tokens: t("ob.ai.tokens"),
-              latency: t("ob.ai.latency"),
-              estimatedCost: t("ob.ai.estimatedCost"),
-              partial: t("ob.ai.partialEstimate"),
-              awaiting: t("ob.ai.awaitingModel"),
-              unavailable: t("ob.ai.notAvailableYet"),
-              chip: t("ob.ai.runtimeChip"),
-              answering: t("ob.ai.answeringNow"),
-              scope: t("ob.ai.runScope"),
-            }}
-          />
+          showsRuntime && (
+            <AiRuntimeChip
+              runtime={runtime ?? setupRuntime}
+              configured={configured}
+              locale={locale}
+              labels={{
+                configured: t("ob.ai.configured"),
+                used: t("ob.ai.modelsUsed"),
+                route: t("ob.ai.route"),
+                calls: t("ob.ai.calls"),
+                tokens: t("ob.ai.tokens"),
+                latency: t("ob.ai.latency"),
+                estimatedCost: t("ob.ai.estimatedCost"),
+                partial: t("ob.ai.partialEstimate"),
+                awaiting: t("ob.ai.awaitingModel"),
+                unavailable: t("ob.ai.notAvailableYet"),
+                chip: t("ob.ai.runtimeChip"),
+                answering: t("ob.ai.answeringNow"),
+                scope: t("ob.ai.runScope"),
+              }}
+            />
+          )
         }
+        account={<OnboardingAccount />}
         progress={stageProgress}
         where={bandWhere}
         eyebrow={eyebrow}

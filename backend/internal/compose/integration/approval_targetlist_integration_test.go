@@ -5,9 +5,8 @@
 
 package integration
 
-// The inbox filtered to the records one task touched. An agent asks it before
-// it reports the work finished. It answers what those records left waiting,
-// and still hides what the caller cannot decide.
+// The inbox filtered to the records one task touched. It answers what those
+// records left waiting, and still hides what the caller cannot decide.
 
 import (
 	"errors"
@@ -78,7 +77,7 @@ func TestListApprovalsWithTargetsAnswersOnlyTheNamedRecords(t *testing.T) {
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "finishing agent", "read", "write", "enrich"))
 	touched, onTouched := q.stageAConfirmFirstCall(t, invoke, "Touched Account")
-	onOther := stageEnrichOn(t, q, invoke, "other.example.com")
+	onOther := stageEnrichOn(t, q, invoke, "other.example.test")
 
 	read := func(targets string) map[string]bool {
 		t.Helper()

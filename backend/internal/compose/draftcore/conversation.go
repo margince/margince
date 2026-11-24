@@ -19,14 +19,12 @@ const TurnTextRunes = 800
 
 // Turn is one exchange of the conversation as a drafting prompt reads it.
 type Turn struct {
-	ID        string
-	Kind      crmcontracts.ActivityKind
-	Direction string
-	// ByColleague says a seat in this workspace wrote this turn, from the row's
-	// own voice rather than from which way it travelled. A colleague's mail can
-	// arrive inbound, and direction alone calls that the counterparty's.
-	ByColleague bool
-	At          time.Time
+	ID   string
+	Kind crmcontracts.ActivityKind
+	// Ours and SideKnown are activities.WroteItOurSide for the row: who wrote
+	// it, never which way it travelled.
+	Ours, SideKnown bool
+	At              time.Time
 	// DateOnly says At is a day entry's anchor, so only its date is known.
 	DateOnly bool
 	Subject  string
@@ -48,11 +46,13 @@ func TurnText(body string) string {
 }
 
 // TheirWord says the other side wrote this turn.
-//
-// One answer, so a reader never recombines the voice and the transport and
-// reaches a different verdict from its neighbour.
 func (t Turn) TheirWord() bool {
-	return !t.ByColleague && t.Direction == string(crmcontracts.ActivityDirectionInbound)
+	return t.SideKnown && !t.Ours
+}
+
+// OurWord says our side wrote this turn.
+func (t Turn) OurWord() bool {
+	return t.SideKnown && t.Ours
 }
 
 // FromThem says the other side wrote this activity: the row's voice where it
@@ -71,9 +71,9 @@ func FromThem(activity crmcontracts.Activity) bool {
 // It is the anchor itself. It is a note or meeting that records no contact
 // (see IsLoggedTouch). Our own sent mail keeps its text, so a follow-up knows
 // what we already asked.
-func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activity, now time.Time, zone *time.Location, limit int) []Turn {
+func Conversation(rows []crmcontracts.Activity, anchor *crmcontracts.Activity, now time.Time, zone *time.Location, limit int) []Turn {
 	var turns []Turn
-	for _, activity := range activities {
+	for _, activity := range rows {
 		if len(turns) == limit {
 			break
 		}
@@ -94,12 +94,7 @@ func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activ
 			DateOnly: occurredday.IsDay(activity.OccurredPrecision),
 			Logged:   logged,
 		}
-		if activity.Direction != nil {
-			turn.Direction = string(*activity.Direction)
-		}
-		if voice := activity.Voice; voice != nil && voice.Author != nil {
-			turn.ByColleague = voice.Author.Kind == crmcontracts.ActivityAuthorKindColleague
-		}
+		turn.Ours, turn.SideKnown = activities.WroteItOurSide(activity)
 		if activity.Subject != nil {
 			turn.Subject = *activity.Subject
 		}

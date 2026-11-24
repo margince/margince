@@ -189,8 +189,7 @@ function ShareDialog({
 //
 // Dismissing destroys the only copy: it lives in this component's state and no
 // read returns it. So Copy is the primary act and Done is the quiet one, and
-// the caution says in words what leaving costs — the same shape the webhook
-// signing secret settled on, for the same reason.
+// the caution says in words what leaving costs.
 //
 // Close link ends it before its expiry, for a link sent to the wrong address:
 // here while the link is in hand, and later from Shared links.
@@ -232,6 +231,8 @@ function ShareLinkReveal({
       open
       onClose={onClose}
       title={t("analytics.share.linkTitle")}
+      unsaved={!copy.copied}
+      unsavedBody={t("analytics.share.leaveWarning")}
       confirmLabel={copy.label}
       onConfirm={copy.copy}
       error={revoke.error ? problemMessageOf(revoke.error, t) : undefined}

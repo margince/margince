@@ -58,9 +58,9 @@ func TestTheVerdictWriteRechecksAUsersAgentEdit(t *testing.T) {
 		Changes:       []deals.VerdictChange{{Correction: deals.VerdictAmountCorrection, AmountMinor: 4_500_000, NewestCitedAt: v.now}},
 		Allowed:       func(context.Context, pgx.Tx, string) (bool, error) { return true, nil },
 		EvidenceHolds: func(context.Context, pgx.Tx) (bool, error) { return true, nil },
-		Record: func(context.Context, pgx.Tx, []deals.VerdictChange) error {
+		Record: func(context.Context, pgx.Tx, []deals.VerdictChange) (ids.UUID, error) {
 			t.Error("a protected edit was overwritten")
-			return nil
+			return ids.Nil, nil
 		},
 		AsOwner: ownersAgentTx(v.pass.users, v.Rep1, marginceActorID),
 	})

@@ -73,6 +73,8 @@ esac
 STUB
 chmod +x "$stub_dir/gh"
 export PATH="$stub_dir:$PATH"
+# Every case runs as the default branch unless it says otherwise.
+export GITHUB_REF=refs/heads/main DEFAULT_BRANCH=main
 
 readonly GATE_TITLE="SonarCloud quality gate is not green on main"
 
@@ -148,13 +150,19 @@ expect_llm() {
 	echo "ok: $name"
 }
 
-LLM_LANE_TITLE="the weekly model-driven use cases could not run"
+LLM_LANE_TITLE="the model-driven use cases could not run"
 LLM_CASE_TITLE="a use case is failing when driven by a real model"
 
 expect_llm "a model lane that never drove a scenario is not reported as a bad answer" \
 	"lane-failed" "$LLM_LANE_TITLE"
 expect_llm "a scenario that drove and failed is reported as the use case failing" \
 	"scenario-failed" "$LLM_CASE_TITLE"
+expect_llm "a shard that ran out of time is reported as cut off, not as a bad answer" \
+	"cut-off" "the model-driven use cases were cut off"
+expect_actions "a model lane the runner cancelled is reported as cut off" \
+	"create the model-driven use cases were cut off" "" LLM_RESULT=cancelled
+expect_actions "a finished run retracts an open cut-off issue" \
+	"close 10" "$(printf '10\t%s\n' "the model-driven use cases were cut off")" LLM_RESULT=success
 
 # The body told a reader that case 6 was a known standing failure and to file a
 # case 6 red away as the existing finding. #6298 fixed case 6 — it passes 3 of 3
@@ -272,15 +280,20 @@ expect_actions "a red all-stories render files its issue" \
 expect_actions "a green all-stories render closes it" \
 	"close 40" "$(printf '40\t%s\n' "$STORIES_TITLE")" STORIES_RESULT=success
 
-RECORDS_TITLE="the weekly records pull request could not be opened"
-expect_actions "records/a failed render files its issue" \
-	"create $RECORDS_TITLE" "" RECORDS_RESULT=failure RECORDS_PR_RESULT=skipped
-expect_actions "records/a failed proposal files its issue" \
-	"create $RECORDS_TITLE" "" RECORDS_RESULT=success RECORDS_PR_RESULT=failure
-expect_actions "records/an opened pull request closes it" \
-	"close 41" "$(printf '41\t%s\n' "$RECORDS_TITLE")" RECORDS_RESULT=success RECORDS_PR_RESULT=success
-expect_actions "records/nothing recorded neither files nor closes" \
-	"" "$(printf '41\t%s\n' "$RECORDS_TITLE")" RECORDS_RESULT=success RECORDS_PR_RESULT=skipped
+SPEED_TITLE="the speed records pull request could not be opened"
+MCP_RECORDS_TITLE="the MCP verdicts pull request could not be opened"
+expect_actions "records/a failed render or proposal files its part's issue" \
+	"create $SPEED_TITLE" "" SPEED_RECORDS_RESULT=failure SPEED_RECORDS_PR_RESULT=
+expect_actions "records/an opened pull request closes its part's issue" \
+	"close 41" "$(printf '41\t%s\n' "$SPEED_TITLE")" SPEED_RECORDS_RESULT=success SPEED_RECORDS_PR_RESULT=success
+expect_actions "records/nothing proposed neither files nor closes" \
+	"" "$(printf '41\t%s\n' "$SPEED_TITLE")" SPEED_RECORDS_RESULT=success SPEED_RECORDS_PR_RESULT=
+expect_actions "records/a green speed proposal leaves the MCP part's issue open" \
+	"" "$(printf '42\t%s\n' "$MCP_RECORDS_TITLE")" SPEED_RECORDS_RESULT=success SPEED_RECORDS_PR_RESULT=success
+expect_actions "records/a failed MCP proposal files its own issue" \
+	"create $MCP_RECORDS_TITLE" "" MCP_RECORDS_RESULT=failure MCP_RECORDS_PR_RESULT=
+expect_actions "records/an opened MCP pull request closes its issue" \
+	"close 42" "$(printf '42\t%s\n' "$MCP_RECORDS_TITLE")" MCP_RECORDS_RESULT=success MCP_RECORDS_PR_RESULT=success
 
 # --- retraction where ONE job result feeds TWO titles ---------------------------
 #
@@ -321,6 +334,24 @@ expect_split growth GROWTH_RESULT GROWTH_OUTCOME breach \
 expect_split perf PERF_RESULT PERF_OUTCOME breach \
 	"the weekly PERF-3/PERF-7 run could not complete" \
 	"a PERF-3/PERF-7 budget is breaching on main"
+expect_split perf-mid-market PERF_MM_RESULT PERF_MM_OUTCOME breach \
+	"the weekly PERF-3/PERF-7 run on the mid-market tier could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main (mid-market tier)"
+
+# A measure-only dispatch runs with the gate off. Its green is no verdict and its
+# lane failure is not the weekly lane's, so no outcome may open or close an issue,
+# on either tier.
+perf_open="$(printf '10\t%s\n20\t%s\n30\t%s\n40\t%s\n' \
+	"the weekly PERF-3/PERF-7 run on the mid-market tier could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main (mid-market tier)" \
+	"the weekly PERF-3/PERF-7 run could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main")"
+expect_actions "perf measure-only/a green run closes nothing" "" "$perf_open" \
+	PERF_MEASURE_ONLY=true PERF_MM_RESULT=success PERF_MM_OUTCOME=ok PERF_RESULT=success
+expect_actions "perf measure-only/a breach files nothing" "" "$perf_open" \
+	PERF_MEASURE_ONLY=true PERF_MM_RESULT=failure PERF_MM_OUTCOME=breach
+expect_actions "perf measure-only/a lane failure files nothing" "" "$perf_open" \
+	PERF_MEASURE_ONLY=true PERF_MM_RESULT=failure PERF_MM_OUTCOME=lane-failed
 
 expect_split renovate RENOVATE_RESULT RENOVATE_OUTCOME quiet \
 	"the Renovate liveness check could not run" \
@@ -368,8 +399,12 @@ expect_split mobile MOBILE_RESULT MOBILE_OUTCOME breach \
 	"PERF-1's perceived budget is breaching on main"
 
 expect_split llm LLM_RESULT LLM_OUTCOME scenario-failed \
-	"the weekly model-driven use cases could not run" \
+	"the model-driven use cases could not run" \
 	"a use case is failing when driven by a real model"
+
+expect_split backend-clock BACKEND_CLOCK_RESULT BACKEND_CLOCK_OUTCOME calendar \
+	"the backend clock-drift lane could not complete" \
+	"the backend suite's verdict depends on the calendar"
 
 # --- main-health arms ----------------------------------------------------------
 #
@@ -827,32 +862,36 @@ done
 # runs, goes red, and is reported by nobody — which is indistinguishable from a
 # lane that passed.
 sched="$root/.github/workflows/scheduled.yml"
-sched_report="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$sched")"
-if [[ -z "$sched_report" ]]; then
-	echo "FAIL: no 'report' job found in scheduled.yml — the wiring checks below would pass by scanning nothing"
-	failures=$((failures + 1))
-fi
-sched_needs="$(grep -oE '^    needs: \[[^]]*\]' <<<"$sched_report" | sed -E 's/^    needs: \[//; s/\]$//')"
-
-# The job keys are the two-space-indented ones after `jobs:`; a step or a `with:`
-# sits deeper and a top-level key sits shallower. Derived from the workflow
-# rather than listed, so a job added tomorrow is covered without editing this.
-for job in $(awk '/^jobs:/{j=1;next} j&&/^  [A-Za-z_][A-Za-z0-9_-]*:/{gsub(/[: ]/,"");print}' "$sched"); do
-	[[ "$job" == "report" ]] && continue
-	case ",${sched_needs// /}," in
-	*",$job,"*) ;;
-	*)
-		echo "FAIL: scheduled.yml job '$job' is not in its report job's 'needs:' — it can go red with nobody reporting it"
+# mcp-sweep.yml is the same lane's by-hand half, so it answers the same question.
+for wf in "$sched" "$root/.github/workflows/mcp-sweep.yml"; do
+	wf_name="$(basename "$wf")"
+	wf_report="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$wf")"
+	if [[ -z "$wf_report" ]]; then
+		echo "FAIL: no 'report' job found in $wf_name — the wiring checks below would pass by scanning nothing"
 		failures=$((failures + 1))
-		;;
-	esac
+	fi
+	wf_needs="$(grep -oE '^    needs: \[[^]]*\]' <<<"$wf_report" | sed -E 's/^    needs: \[//; s/\]$//')"
+
+	# The job keys are the two-space-indented ones after `jobs:`; a step or a `with:`
+	# sits deeper and a top-level key sits shallower. Derived from the workflow
+	# rather than listed, so a job added tomorrow is covered without editing this.
+	for job in $(awk '/^jobs:/{j=1;next} j&&/^  [A-Za-z_][A-Za-z0-9_-]*:/{gsub(/[: ]/,"");print}' "$wf"); do
+		[[ "$job" == "report" ]] && continue
+		case ",${wf_needs// /}," in
+		*",$job,"*) ;;
+		*)
+			echo "FAIL: $wf_name job '$job' is not in its report job's 'needs:' — it can go red with nobody reporting it"
+			failures=$((failures + 1))
+			;;
+		esac
+	done
 done
 
 # The other end: every result and outcome the reporter READS is handed in by one
-# of the workflows that CALL it. Three do, and the reporter serves all three from
-# one set of arms — MAIN_* is main-health's, MERGE_VERDICT_* is merge-attest's —
-# so asking scheduled.yml alone for every variable reports the other two
-# workflows' arms as unwired.
+# of the workflows that CALL it. The reporter serves every caller from one set
+# of arms — MAIN_* is main-health's, MERGE_VERDICT_* is merge-attest's, MCP_* is
+# mcp-sweep's — so asking one workflow alone for every variable reports the
+# other callers' arms as unwired.
 #
 # The callers are derived by grepping for the script, and the block searched is
 # the JOB that runs it rather than the whole file: any other job's matching line
@@ -1049,7 +1088,7 @@ fi
 # the silent direction — green run, skipped job, issue left open over a fixed
 # tree, and no assertion anywhere fails. That is how the defect this change
 # fixes went unnoticed for as long as it did.
-for wf in "$health" "$root/.github/workflows/scheduled.yml"; do
+for wf in "$health" "$root/.github/workflows/scheduled.yml" "$root/.github/workflows/mcp-sweep.yml"; do
 	wf_name="$(basename "$wf")"
 	wf_job="$(awk '/^  report:/{inside=1} inside&&/^  [A-Za-z_][A-Za-z0-9_-]*:/&&!/^  report:/{exit} inside' "$wf")"
 	if [[ -z "$wf_job" ]]; then
@@ -1082,6 +1121,118 @@ for wf in "$health" "$root/.github/workflows/scheduled.yml"; do
 	fi
 	echo "ok: $wf_name's report job is reached whatever its lanes said"
 done
+
+# Both ends of the backend clock lane's verdict: the line the drift script prints
+# when its suites fail, and the pattern scheduled.yml greps for to set outcome.
+verdict_pattern="$(sed -nE "s/.*grep -q '(\^backend-clock-drift: [^']*)' clock-drift\.log.*/\1/p" "$sched")"
+mkdir -p "$stub_dir/red-make"
+printf '#!/bin/sh\nexit 2\n' >"$stub_dir/red-make/make"
+chmod +x "$stub_dir/red-make/make"
+printed="$(PATH="$stub_dir/red-make:$PATH" BACKEND_CLOCK_SKEW=fixture:200 \
+	bash "$root/scripts/backend-clock-drift.sh" 2>&1 || true)"
+if [[ -z "$verdict_pattern" ]] || ! grep -q "$verdict_pattern" <<<"$printed"; then
+	echo "FAIL: scheduled.yml greps for '${verdict_pattern}', which backend-clock-drift.sh does not print when its suites fail"
+	failures=$((failures + 1))
+else
+	echo "ok: a failed suite at the moved clock prints the line scheduled.yml reads as its verdict"
+fi
+
+# --- only the default branch files or closes ------------------------------------
+#
+# The rule lives in the reporter, so it holds for every caller. A red lane and a
+# green one on another ref must both leave the tracker alone.
+expect_actions "a red check on another branch files nothing" \
+	"" "" GATE_RESULT=failure GATE_STATUS=ERROR GITHUB_REF=refs/heads/feature
+expect_actions "a green check on another branch closes nothing" \
+	"" "$(printf '7\t%s\n' "$GATE_TITLE")" GATE_RESULT=success GITHUB_REF=refs/heads/feature
+set +e
+noref_out="$(env -u DEFAULT_BRANCH OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo \
+	RUN_URL=https://example.test/run/1 GATE_RESULT=failure \
+	"$root/scripts/scheduled-report.sh" 2>&1)"
+noref_status=$?
+set -e
+if [[ "$noref_status" -eq 0 ]]; then
+	echo "FAIL: the reporter ran with no DEFAULT_BRANCH, so it cannot know whose issues it files"
+	printf '  output: %s\n' "$noref_out" | head -3
+	failures=$((failures + 1))
+else
+	echo "ok: the reporter refuses to run without DEFAULT_BRANCH"
+fi
+
+# And every caller hands the default branch in, read from the event rather than
+# typed, so a renamed default branch moves with it.
+for wf in $callers; do
+	wf_job="$(awk '
+		/^  [A-Za-z_][A-Za-z0-9_-]*:/ { if (buf ~ /scheduled-report\.sh/) printf "%s", buf; buf = "" }
+		{ buf = buf $0 "\n" }
+		END { if (buf ~ /scheduled-report\.sh/) printf "%s", buf }
+	' "$wf")"
+	if ! grep -qE '^ *DEFAULT_BRANCH: \$\{\{ github\.event\.repository\.default_branch \}\}' <<<"$wf_job"; then
+		echo "FAIL: $(basename "$wf") calls scheduled-report.sh without DEFAULT_BRANCH from the event"
+		failures=$((failures + 1))
+	fi
+done
+
+# --- what a shard of the model sweep did ------------------------------------------
+#
+# scripts/e2e-llm-shard-outcome.sh reads evidence: verdict lines and LANE DONE.
+# "Could not run" is only true when no case was driven; a shard that drove
+# cases and then stopped, however it stopped, is a cut-off.
+outcome_dir="$stub_dir/outcome"
+mkdir -p "$outcome_dir"
+expect_outcome() {
+	local name="$1" want="$2"
+	shift 2
+	local got
+	got="$("$root/scripts/e2e-llm-shard-outcome.sh" "$@" | paste -sd' ' -)"
+	if [[ "$got" != "$want" ]]; then
+		echo "FAIL: $name"
+		echo "  want '$want' got '$got'"
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: $name"
+}
+printf 'BATCH ci1 #1: 2 cases\nci1 case1_a: PASS\nci1 case2_b: PASS\nLANE DONE ci1\n' >"$outcome_dir/done.log"
+expect_outcome "a finished shard with every case passing is ok" "outcome=ok driven=2" shard "$outcome_dir/done.log"
+printf 'ci1 case1_a: PASS\nci1 case2_b: FAIL (1/3)\nLANE DONE ci1\n' >"$outcome_dir/fail.log"
+expect_outcome "a finished shard with a case below its bar is scenario-failed" \
+	"outcome=scenario-failed driven=2" shard "$outcome_dir/fail.log"
+printf 'ci1 case1_a: PASS\nci1 case2_b: FAIL (0/3)\nci1 case2_b: PASS\nci1 case3_c: PASS\n' >"$outcome_dir/crash.log"
+expect_outcome "a shard that drove cases and crashed is cut off, each case counted once" \
+	"outcome=cut-off driven=3" shard "$outcome_dir/crash.log"
+printf 'ci1 case1_a: PASS\nLANE STOPPED ci1: read x\n' >"$outcome_dir/stopped.log"
+expect_outcome "a shard stopped after driving a case is cut off" "outcome=cut-off driven=1" shard "$outcome_dir/stopped.log"
+printf 'BATCH ci1 #1: 2 cases\nHARNESS: no stamp\n' >"$outcome_dir/none.log"
+expect_outcome "a shard that drove nothing could not run" "outcome=lane-failed driven=0" shard "$outcome_dir/none.log"
+expect_outcome "a shard with no log could not run" "outcome=lane-failed driven=0" shard "$outcome_dir/missing.log"
+
+run_dir() {
+	local dir="$outcome_dir/$1"
+	shift
+	rm -rf "$dir" && mkdir -p "$dir"
+	local i=0 pair
+	for pair in "$@"; do
+		i=$((i + 1))
+		echo "${pair%%:*}" >"$dir/outcome-$i"
+		echo "${pair##*:}" >"$dir/driven-$i"
+	done
+	echo "$dir"
+}
+expect_outcome "every shard finished and the verdicts are whole: ok" \
+	"outcome=ok driven=5" run "$(run_dir whole ok:2 ok:3)" 2 yes
+expect_outcome "a finished run with a failing case is scenario-failed" \
+	"outcome=scenario-failed driven=5" run "$(run_dir red ok:2 scenario-failed:3)" 2 yes
+expect_outcome "one shard that could not run beside one that drove makes a cut-off, not could-not-run" \
+	"outcome=cut-off driven=3" run "$(run_dir half lane-failed:0 ok:3)" 2 yes
+expect_outcome "a shard that never reported makes a cut-off when another drove" \
+	"outcome=cut-off driven=3" run "$(run_dir short ok:3)" 2 yes
+expect_outcome "finished shards whose verdicts do not cover every scenario are a cut-off" \
+	"outcome=cut-off driven=5" run "$(run_dir gap ok:2 ok:3)" 2 no
+expect_outcome "no shard drove a case: could not run" \
+	"outcome=lane-failed driven=0" run "$(run_dir dead lane-failed:0 lane-failed:0)" 2 no
+expect_outcome "no shard reported at all: could not run" \
+	"outcome=lane-failed driven=0" run "$(run_dir empty)" 2 no
 
 if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s)" >&2

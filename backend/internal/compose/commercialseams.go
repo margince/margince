@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -57,7 +58,12 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 		// the argument would get whatever the two happened to add up to, and
 		// be told nothing was cut.
 		asked := agents.CommitmentSweepLimit(in.Limit)
+		zone, dayZone, err := dayrule.ForAssignee(ctx, pool, in.AssigneeID)
+		if err != nil {
+			return agents.CommitmentSweep{}, err
+		}
 		query := activities.ListOpenTasksInput{
+			DayZone:    dayZone,
 			AsOf:       now,
 			AssigneeID: in.AssigneeID, Limit: asked,
 			// The bound cuts before the merge does, so the store has to keep
@@ -81,11 +87,7 @@ func commitmentLister(pool *pgxpool.Pool) agents.CommitmentLister {
 		if err != nil {
 			return agents.CommitmentSweep{}, err
 		}
-		promises, cut := rankPromises(now, asCommitments(filed), asExtracted(said), asked)
-		zone, err := installationZone(ctx, pool)
-		if err != nil {
-			return agents.CommitmentSweep{}, err
-		}
+		promises, cut := rankPromises(now, zone, asCommitments(filed), asExtracted(said), asked)
 		return agents.CommitmentSweep{
 			AsOf:        now,
 			TimeZone:    zone.String(),
@@ -130,12 +132,12 @@ func extractedCommitments(
 // fact. Ranking them together in kernel/owedwork is the same ordering the
 // contact and company cards apply, so an agent and a reader looking at one
 // account agree about what is most overdue.
-func rankPromises(now time.Time, filed, said []agents.OpenCommitment, limit int) ([]agents.OpenCommitment, bool) {
+func rankPromises(now time.Time, zone *time.Location, filed, said []agents.OpenCommitment, limit int) ([]agents.OpenCommitment, bool) {
 	items := make([]owedwork.Item, 0, len(filed)+len(said))
 	for _, promise := range filed {
 		items = append(items, owedwork.Item{
 			Ref: promise, Source: owedwork.FromTask,
-			DueAt: promise.DueAt, FiledAt: promise.FiledAt,
+			DueAt: promise.RankedDue(zone), FiledAt: promise.FiledAt,
 		})
 	}
 	for _, promise := range said {
@@ -198,7 +200,7 @@ func asCommitments(tasks []activities.OpenTask) []agents.OpenCommitment {
 		out = append(out, agents.OpenCommitment{
 			Source: agents.CommitmentFromTask,
 			TaskID: &taskID, Subject: t.Subject, DueAt: t.DueAt, DueHasTime: t.DueHasTime,
-			DueIntent:  t.DueIntent,
+			DueIntent: t.DueIntent, Overdue: &t.Overdue,
 			FiledAt:    t.CreatedAt,
 			AssigneeID: t.AssigneeID, AssigneeName: t.AssigneeName, About: about,
 		})

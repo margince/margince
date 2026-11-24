@@ -1,5 +1,13 @@
 import type { RelationshipMapLabels } from "./relationshipmap";
-import { type MapNode, type Placed, truncate } from "./relationshipmap.layout";
+import {
+  fitLabel,
+  type MapNode,
+  NAME_CHARS,
+  NODE_INSET,
+  type Placed,
+  SUB_CHARS,
+} from "./relationshipmap.layout";
+import type { MapTextMeasures } from "./relationshipmap.measure";
 
 export function Node({
   placed,
@@ -11,10 +19,12 @@ export function Node({
   faded,
   tabbable,
   onPress,
+  measures,
 }: Readonly<{
   placed: Placed;
   node?: MapNode;
   labels: RelationshipMapLabels;
+  measures: MapTextMeasures;
   lane?: { label: string; hidden: number };
   focused: boolean;
   related: boolean;
@@ -30,6 +40,7 @@ export function Node({
         hidden={lane?.hidden ?? 0}
         tabbable={tabbable}
         onPress={onPress}
+        measures={measures}
       />
     );
   }
@@ -41,6 +52,8 @@ export function Node({
   const name = [node.label, node.sublabel, lane?.label, node.engagementLabel]
     .filter(Boolean)
     .join(", ");
+  const room = placed.w - NODE_INSET * 2;
+  const textX = placed.x + NODE_INSET;
   return (
     // biome-ignore lint/a11y/useSemanticElements: a <button> cannot be an SVG child; the node carries the role, label, pressed state and tab stop instead.
     <g
@@ -66,21 +79,21 @@ export function Node({
         height={placed.h}
         rx={placed.kind === "company" ? 12 : 8}
       />
-      <text className="rmap-name" x={placed.x + 12} y={placed.y + 22}>
-        {truncate(node.label)}
+      <text className="rmap-name" x={textX} y={placed.y + 22}>
+        {fitLabel(node.label, room, measures.name, NAME_CHARS)}
       </text>
       {node.sublabel && (
-        <text className="rmap-sub" x={placed.x + 12} y={placed.y + 38}>
-          {truncate(node.sublabel, 26)}
+        <text className="rmap-sub" x={textX} y={placed.y + 38}>
+          {fitLabel(node.sublabel, room, measures.sub, SUB_CHARS)}
         </text>
       )}
       {node.engagementLabel && (
         <text
           className={`rmap-pill-${node.engagement ?? "untried"}`}
-          x={placed.x + 12}
+          x={textX}
           y={placed.y + 54}
         >
-          {node.engagementLabel}
+          {fitLabel(node.engagementLabel, room, measures.pill)}
         </text>
       )}
     </g>
@@ -97,12 +110,14 @@ function MoreRow({
   hidden,
   tabbable,
   onPress,
+  measures,
 }: Readonly<{
   placed: Placed;
   labels: RelationshipMapLabels;
   hidden: number;
   tabbable: boolean;
   onPress: (id: string) => void;
+  measures: MapTextMeasures;
 }>) {
   return (
     // biome-ignore lint/a11y/useSemanticElements: a <button> cannot be an SVG child; the role and tab stop carry what it would have given.
@@ -121,8 +136,12 @@ function MoreRow({
         height={placed.h}
         rx={8}
       />
-      <text x={placed.x + 12} y={placed.y + 19}>
-        {labels.laneMore(hidden)}
+      <text x={placed.x + NODE_INSET} y={placed.y + 19}>
+        {fitLabel(
+          labels.laneMore(hidden),
+          placed.w - NODE_INSET * 2,
+          measures.more,
+        )}
       </text>
     </g>
   );

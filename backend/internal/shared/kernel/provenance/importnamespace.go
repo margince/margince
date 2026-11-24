@@ -72,6 +72,10 @@ const (
 	LeadForContactSource = "lead_for_contact"
 )
 
+// PrivacyRequestTaskSource names the task a data-subject request owes under a
+// pack with deadlines of its own. Its source_id names the request's act.
+const PrivacyRequestTaskSource = "privacy_request"
+
 // WhichDealSource names the one "Which deal is this about?" task capture raises
 // for a mail several open deals fit. Its source_id is the mail's thread, so a
 // thread is asked about once.
@@ -92,8 +96,9 @@ const WebsiteLeadSource = "siteread"
 const WebFormSource = "web_form"
 
 // ChatSummarySource names a note summarising chat channel talk. Its source_id
-// is the channel and the talk's first message, so a replay files nothing. A
-// client that could spell it would claim a summary before it is written.
+// is the channel, the talk's first message and the record, so a replay files
+// nothing. A client that could spell it would claim a summary before it is
+// written.
 const ChatSummarySource = "dispact"
 
 // WebsiteInquirySource binds a task and its handling run to one accepted submission.

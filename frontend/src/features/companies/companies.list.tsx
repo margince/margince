@@ -28,14 +28,15 @@ import { useOwnerChips } from "../../components/ownerdials";
 import {
   createdColumn,
   lastActivityColumn,
-  mineEmptyNote,
+  mineEmptyLine,
   ownerColumn,
   standardViews,
   tagsColumn,
 } from "../../components/recordlist";
 import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
-import { CellStrip } from "../../design-system/listtable";
+import { CellStrip, useListRefusal } from "../../design-system/listtable";
+import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
@@ -51,13 +52,16 @@ import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useActionRefusal } from "../../lib/writerefusal";
 import {
   SavedViewsFailure,
   SaveViewAction,
   useSavedViewTabs,
 } from "../lists/savedviews";
 import type { Company } from "./companies";
+import { DORMANCY_LABELS, DORMANCY_RUNGS } from "./companyactivity";
 import { offerDomainContacts } from "./companycontacts/domaincontacts";
+import { announceCompanyDuplicates } from "./companyduplicates";
 import { displayHost } from "./companyheader";
 import { partnerMarkText } from "./companymarks";
 import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
@@ -97,7 +101,11 @@ export function CompaniesScreen({
 }: Readonly<{ startCreating?: boolean }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const pageName = usePageName("companies");
+  const refusal = useListRefusal(
+    useActionRefusal({ object: "company", action: "create" }),
+  );
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const cf = useObjectCustomFields("company", "create");
@@ -179,12 +187,14 @@ export function CompaniesScreen({
         title={pageName}
         state={state}
         unit="unit.companies"
-        emptyNote={mineEmptyNote({
+        unitOne="unit.company"
+        emptyLine={mineEmptyLine({
           t,
           state,
           viewerId,
           unit: "unit.companies",
         })}
+        refusal={refusal}
         action={
           <>
             <Button onClick={() => navigate({ screen: "partners" })}>
@@ -192,6 +202,8 @@ export function CompaniesScreen({
             </Button>
             <CreateAction
               label={t("create.company")}
+              requires={{ object: "company", action: "create" }}
+              refusalId={refusal?.id}
               invalidate="companies"
               screen="companies"
               listCreate={{ open: startCreating }}
@@ -199,7 +211,15 @@ export function CompaniesScreen({
                 createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
-              onCreated={(company) => offerDomainContacts(queryClient, company)}
+              onCreated={(company) => {
+                offerDomainContacts(queryClient, company);
+                void announceCompanyDuplicates(
+                  queryClient,
+                  toast,
+                  t,
+                  company.id,
+                );
+              }}
               fields={[...companyCreateFields(t, locale), ...cf.formFields]}
             />
           </>
@@ -234,10 +254,12 @@ export function CompaniesScreen({
             header: t("company.description"),
             cell: (company: Company) => company.description ?? "",
             sort: "description",
+            initiallyHidden: true,
           },
-          tagsColumn<Company>(t),
+          { ...tagsColumn<Company>(t), initiallyHidden: true },
           {
             key: "website",
+            initiallyHidden: true,
             header: t("company.website"),
             // Sorted by the host the cell prints; the scheme is a constant.
             sort: "website_url",
@@ -262,6 +284,7 @@ export function CompaniesScreen({
             // must tell "no contacts" from "not shown".
             key: "contacts",
             header: t("company.contactCount"),
+            initiallyHidden: true,
             numeric: true,
             cell: (company: Company) => company.contact_count ?? "",
             // A reader shown no count is ordered by none: such rows go last.
@@ -359,6 +382,17 @@ export function CompaniesScreen({
                 text: label,
               })),
             ],
+          },
+          {
+            // The server's dormancy ladder, read from each company's last
+            // activity by the rule the company page uses.
+            key: "dormancy",
+            label: "company.dormancy",
+            allLabel: "company.filterDormancyAll",
+            options: DORMANCY_RUNGS.map((value) => ({
+              value,
+              label: labelFor(DORMANCY_LABELS, value),
+            })),
           },
         ]}
         dataViews={savedViews}

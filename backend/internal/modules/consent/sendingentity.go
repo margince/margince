@@ -26,8 +26,11 @@ func sendingEntityOf(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 type sendingEntityFacts struct {
 	isDefault bool
 	found     bool
-	country   string
-	legalName string
+	// country is the address country; jurisdiction is the pack whose law the
+	// entity follows. The two may differ.
+	country      string
+	jurisdiction string
+	legalName    string
 	// address is the registered address as a block of lines, country last.
 	address string
 }
@@ -43,13 +46,13 @@ func sendingEntityFactsTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (send
 		return sendingEntityFacts{}, nil
 	}
 	var out sendingEntityFacts
-	var country, legalName, line1, line2, postalCode, city, region *string
+	var country, law, legalName, line1, line2, postalCode, city, region *string
 	args := []ids.UUID{entity}
 	err := tx.QueryRow(ctx, `
-		SELECT is_default, country, coalesce(legal_name, display_name),
+		SELECT is_default, country, jurisdiction, coalesce(legal_name, display_name),
 		       address_line1, address_line2, address_postal_code, address_city, address_region
 		  FROM legal_entity WHERE id = `+storekit.Placeholders(args), entity).
-		Scan(&out.isDefault, &country, &legalName, &line1, &line2, &postalCode, &city, &region)
+		Scan(&out.isDefault, &country, &law, &legalName, &line1, &line2, &postalCode, &city, &region)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return sendingEntityFacts{}, nil
 	}
@@ -57,7 +60,7 @@ func sendingEntityFactsTx(ctx context.Context, tx pgx.Tx, entity ids.UUID) (send
 		return sendingEntityFacts{}, fmt.Errorf("consent: reading the sending legal entity: %w", err)
 	}
 	out.found = true
-	out.country, out.legalName = deref(country), deref(legalName)
+	out.country, out.jurisdiction, out.legalName = deref(country), deref(law), deref(legalName)
 	out.address = joinStated("\n", deref(line1), deref(line2),
 		joinStated(" ", deref(postalCode), deref(city)), deref(region), strings.ToUpper(out.country))
 	return out, nil
@@ -72,6 +75,12 @@ func controllerOf(installation ControllerParticulars, entity sendingEntityFacts)
 	}
 	out := installation
 	out.LegalName, out.PostalAddress = entity.legalName, entity.address
+	// A translated name and address are the installation's, never the entity's.
+	out.Translations = make([]ParticularsTranslation, 0, len(installation.Translations))
+	for _, t := range installation.Translations {
+		t.LegalName, t.PostalAddress = "", ""
+		out.Translations = append(out.Translations, t)
+	}
 	return out
 }
 

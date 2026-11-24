@@ -23,6 +23,7 @@ package integration
 
 import (
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -90,5 +91,43 @@ func TestBothOpenPipelineReadsAgreeOnAYenDeal(t *testing.T) {
 	}
 	if strip.BaseCurrency == nil || *strip.BaseCurrency != "EUR" {
 		t.Errorf("the page labels the figure %v, want EUR", strip.BaseCurrency)
+	}
+}
+
+// After a same-day correction both surfaces price the account at the corrected
+// rate. The SQL function once ordered by date alone and could answer with
+// either version of the day.
+func TestBothOpenPipelineReadsAgreeAfterASameDayRateCorrection(t *testing.T) {
+	e := Setup(t)
+	e.Deals.SetClock(func() time.Time { return roomFixedNow })
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	companyID := e.SeedCompany(t, "Corrected Yen KK", nil)
+	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Osaka renewal", AmountMinor: new(int64(5_000_000)), Currency: new("JPY"),
+		PipelineID: pipeline, StageID: open, CompanyID: new(companyIDOf(companyID)), Source: "manual",
+	}); err != nil {
+		t.Fatalf("seeding the yen deal: %v", err)
+	}
+	for _, rate := range []string{"0.006", "0.007"} {
+		if _, err := e.Deals.SetFxRate(e.Admin(), deals.SetFxRateInput{FromCurrency: "JPY", Rate: rate}); err != nil {
+			t.Fatalf("setting the JPY rate to %s: %v", rate, err)
+		}
+	}
+	const wantMinorBase = int64(3_500_000)
+
+	company, err := e.Contacts.GetCompany(e.Admin(), companyIDOf(companyID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("reading the company: %v", err)
+	}
+	record := computedFieldByKey(*company.ComputedFields, "open_pipeline")
+	if record.ValueMinor == nil || *record.ValueMinor != wantMinorBase {
+		t.Errorf("the company RECORD says %v, want %d at the corrected rate", record.ValueMinor, wantMinorBase)
+	}
+	page, err := companySurfaceService(e).Assemble(e.Admin(), companyIDOf(companyID))
+	if err != nil {
+		t.Fatalf("assembling the company page: %v", err)
+	}
+	if strip := page.StateStrip.Commercial; strip == nil || strip.OpenPipelineMinorBase == nil || int64(*strip.OpenPipelineMinorBase) != wantMinorBase {
+		t.Errorf("the company PAGE says %v, want %d at the corrected rate", strip, wantMinorBase)
 	}
 }

@@ -1,16 +1,27 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Check, RefreshCw, Send, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
+import { useIdempotencyKey } from "../../api/idempotencykey";
 import { ifMatch, requireVersion } from "../../api/version";
+import { ArchiveAction } from "../../components/archive";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { useT } from "../../i18n";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { type Translator, useT } from "../../i18n";
+import { fromHere } from "../../lib/navigatefrom";
+import {
+  problemCodeOf,
+  problemMessageOf,
+  throwProblem,
+  unwrap,
+} from "../../lib/problem";
 import { reloadReportingFigures } from "../../lib/reportingfigures";
-import { navigate } from "../../lib/router";
 import { dealProductsKey } from "./deal360/dealproducts";
 import type { Offer } from "./offers";
 
@@ -20,6 +31,12 @@ import type { Offer } from "./offers";
 // Send is the confirm-first (🟡) action: a human's own click on this REST path
 // is the approval. So no ApprovalToken or Idempotency-Key is sent here; that
 // plumbing belongs to the agent/passport path.
+// A refused lifecycle step most often means the offer moved on elsewhere (a
+// newer revision, another tab, an agent), so the page re-reads its status.
+function rereadOffer(queryClient: QueryClient, id: string) {
+  return queryClient.invalidateQueries({ queryKey: ["offer", id] });
+}
+
 export function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -40,6 +57,7 @@ export function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       queryClient.setQueryData(["offer", offer.id], data);
       setOpen(false);
     },
+    onError: () => rereadOffer(queryClient, offer.id),
   });
 
   const errorMessage = mutation.isError
@@ -57,7 +75,10 @@ export function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       </Button>
       <ConfirmModal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          mutation.reset();
+          setOpen(false);
+        }}
         title={t("offer.sendConfirm")}
         tier="confirm"
         // The confirm names its write: send, accept and reject sit one press
@@ -106,6 +127,7 @@ export function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       void reloadReportingFigures(queryClient);
       setOpen(false);
     },
+    onError: () => rereadOffer(queryClient, offer.id),
   });
 
   const errorMessage = mutation.isError
@@ -123,7 +145,10 @@ export function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       </Button>
       <ConfirmModal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          mutation.reset();
+          setOpen(false);
+        }}
         title={t("offer.acceptConfirm")}
         confirmLabel={t("offer.accept")}
         onConfirm={() => mutation.mutate()}
@@ -170,6 +195,7 @@ export function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       setOpen(false);
       setReason("");
     },
+    onError: () => rereadOffer(queryClient, offer.id),
   });
 
   const errorMessage = mutation.isError
@@ -187,7 +213,10 @@ export function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       </Button>
       <ConfirmModal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          mutation.reset();
+          setOpen(false);
+        }}
         title={t("offer.rejectConfirm")}
         confirmLabel={t("offer.reject")}
         confirmVariant="danger"
@@ -210,52 +239,122 @@ export function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   );
 }
 
+// An earlier attempt under this key started and left no answer, so it may have
+// made the offer. The deal's offers are read again to show one that landed.
+// The next press takes a new key, as the server asks once that is checked.
+export function settleUnsureOfferWrite(
+  error: unknown,
+  queryClient: QueryClient,
+  dealId: string,
+  renew: () => void,
+): void {
+  if (problemCodeOf(error) !== UNSURE_WRITE) return;
+  void queryClient.invalidateQueries({ queryKey: ["deal-offers", dealId] });
+  renew();
+}
+
+/** Why an offer create or regenerate failed, in the reader's words. */
+export function offerWriteRefusal(error: unknown, t: Translator): string {
+  return problemCodeOf(error) === UNSURE_WRITE
+    ? t("offer.writeUnsure")
+    : problemMessageOf(error, t);
+}
+
+const UNSURE_WRITE = "idempotency_key_failed";
+
 // Regenerate a new draft revision from a sent offer. The 201 response is the
 // only place the AI provenance notice and diff summary appear. Every later
 // read of that offer returns them null. So the new draft's cache entry is
-// seeded from this response before navigating, and OfferScreen's query skips
-// its refetch on mount (`refetchOnMount: false` in offers.tsx). The sent offer
+// seeded from this response before navigating. OfferScreen's query skips
+// its refetch on mount for an AI-generated draft (offers.tsx). The sent offer
 // stays sent or superseded on the server, never deleted. So unlike Send,
 // regenerate needs no confirm modal.
 export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const queryClient = useQueryClient();
 
+  const { key, renew } = useIdempotencyKey();
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (input: { offerId: string; key: string }) => {
       return unwrap(
         await api.POST("/offers/{id}/regenerate", {
-          params: { path: { id: offer.id } },
+          params: {
+            path: { id: input.offerId },
+            header: { "Idempotency-Key": input.key },
+          },
         }),
       );
     },
-    onSuccess: (newDraft) => {
+    onMutate: fromHere,
+    onSuccess: (newDraft, _vars, from) => {
+      renew();
       queryClient.setQueryData(["offer", newDraft.id], newDraft);
+      // The server has just superseded this offer; going back must not find it sent.
+      void rereadOffer(queryClient, offer.id);
       // The new draft revision is a new offer row on the same deal. The deal's
       // offers panel (deals.overview.tsx) must see it too, as AcceptOfferAction
       // invalidates after its own change.
       queryClient.invalidateQueries({
         queryKey: ["deal-offers", newDraft.deal_id],
       });
-      navigate({ screen: "offers", id: newDraft.id });
+      from.navigate({ screen: "offers", id: newDraft.id });
+    },
+    onError: (error) => {
+      settleUnsureOfferWrite(error, queryClient, offer.deal_id, renew);
+      return rereadOffer(queryClient, offer.id);
     },
   });
 
   const errorMessage = mutation.isError
-    ? problemMessageOf(mutation.error, t)
+    ? offerWriteRefusal(mutation.error, t)
     : null;
 
   return (
     <>
       <Button
         data-testid="regenerate-offer"
-        disabled={mutation.isPending}
-        onClick={() => mutation.mutate()}
+        pending={mutation.isPending}
+        onClick={() => mutation.mutate({ offerId: offer.id, key })}
       >
         <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
       {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
     </>
+  );
+}
+
+// Only a live draft takes edits; an archived one is read like a sent one.
+export function isOpenDraft(offer: Offer): boolean {
+  return offer.status === "draft" && offer.archived_at == null;
+}
+
+// Discarding archives the draft, which leaves the deal's offers. The reader
+// goes back to the deal, since nothing on this page can change any more.
+export function DiscardOfferAction({ offer }: Readonly<{ offer: Offer }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  return (
+    <ArchiveAction
+      requires={{ object: "offer", action: "delete" }}
+      label={t("offer.discard")}
+      confirmText={t("offer.discardBody")}
+      archivedMessage={t("record.archiveDone", { name: offer.offer_number })}
+      invalidate={[["deal-offers", offer.deal_id]]}
+      recordKey="offer"
+      onArchived={(from) =>
+        from.closeOnto({ screen: "deals", id: offer.deal_id })
+      }
+      archive={async () => {
+        const result = await api.DELETE("/offers/{id}", {
+          params: {
+            path: { id: offer.id },
+            ...ifMatch(requireVersion(offer.version)),
+          },
+        });
+        if (result.error) void rereadOffer(queryClient, offer.id);
+        return unwrap(result);
+      }}
+    />
   );
 }
 
@@ -301,7 +400,7 @@ export function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
         <>
           <Button
             data-testid="render-pdf"
-            disabled={mutation.isPending}
+            pending={mutation.isPending}
             onClick={() => mutation.mutate()}
           >
             {t("offer.renderPdf")}

@@ -33,9 +33,9 @@ var activityColumns = map[string]Column{
 		Vi: "Nội dung ghi chú, hoặc những gì đã nói trong cuộc gọi, cuộc họp hoặc email.",
 	}, Example: langcopy.Phrase{En: "Asked for a quote by Friday", De: "Wünscht ein Angebot bis Freitag", Vi: "Yêu cầu báo giá trước thứ Sáu"}},
 	"occurred_at": {Description: langcopy.Phrase{
-		En: "When it happened: YYYY-MM-DD, or a full timestamp with its time zone. A date alone means midnight UTC. A time without a zone, or in the future, is refused.",
-		De: "Wann es stattfand: YYYY-MM-DD oder ein vollständiger Zeitstempel mit Zeitzone. Ein Datum allein bedeutet Mitternacht UTC. Eine Uhrzeit ohne Zeitzone oder in der Zukunft wird abgelehnt.",
-		Vi: "Thời điểm xảy ra: YYYY-MM-DD, hoặc mốc thời gian đầy đủ kèm múi giờ. Chỉ có ngày nghĩa là nửa đêm UTC. Giờ không có múi giờ hoặc ở tương lai sẽ bị từ chối.",
+		En: "When it happened: YYYY-MM-DD, or a full timestamp with its time zone. A date alone names the day, with no time. A time without a zone, or in the future, is refused.",
+		De: "Wann es stattfand: YYYY-MM-DD oder ein vollständiger Zeitstempel mit Zeitzone. Ein Datum allein nennt den Tag, ohne Uhrzeit. Eine Uhrzeit ohne Zeitzone oder in der Zukunft wird abgelehnt.",
+		Vi: "Thời điểm xảy ra: YYYY-MM-DD, hoặc mốc thời gian đầy đủ kèm múi giờ. Chỉ có ngày nghĩa là ghi ngày, không có giờ. Giờ không có múi giờ hoặc ở tương lai sẽ bị từ chối.",
 	}, Example: same("2026-03-02 · 2026-03-02T10:00:00+07:00"), RequiredOnNew: true},
 	"links": {Description: langcopy.Phrase{
 		En: "The records the activity is about, as type:key pairs separated by semicolons. The type is company, contact, lead or deal; the key is a ref, an email, a domain or a Margince ID. A call or meeting links to a contact, not a company.",
@@ -54,12 +54,12 @@ var activityColumns = map[string]Column{
 	}, Example: same("held")},
 	"direction": {Description: langcopy.Phrase{
 		En: "Which way it went: inbound if the contact reached you, outbound if you reached them. Written only when a row creates the activity.",
-		De: "In welche Richtung es ging: inbound, wenn der Kontakt dich erreicht hat, outbound, wenn du ihn erreicht hast. Wird nur geschrieben, wenn eine Zeile die Aktivität anlegt.",
+		De: "In welche Richtung es ging: inbound, wenn der Kontakt dich erreicht hat, outbound, wenn du ihn erreicht hast. Wird nur geschrieben, wenn eine Zeile die Aktivität erstellt.",
 		Vi: "Chiều của hoạt động: inbound nếu liên hệ tìm bạn, outbound nếu bạn tìm họ. Chỉ được ghi khi dòng tạo hoạt động mới.",
 	}, Example: same("outbound")},
 	"activity.owner_email": {Description: langcopy.Phrase{
 		En: "Email of the Margince user the activity is attributed to, and who hosts a meeting. If no user has this email, you become the author and the import preview says so. Written only when a row creates the activity.",
-		De: "E-Mail-Adresse des Mitglieds, dem die Aktivität zugeschrieben wird und das einen Termin leitet. Hat kein Mitglied diese Adresse, wirst du Verfasser, und die Importvorschau weist darauf hin. Wird nur geschrieben, wenn eine Zeile die Aktivität anlegt.",
+		De: "E-Mail-Adresse des Mitglieds, dem die Aktivität zugeschrieben wird und das einen Termin leitet. Hat kein Mitglied diese Adresse, wirst du Verfasser, und die Importvorschau weist darauf hin. Wird nur geschrieben, wenn eine Zeile die Aktivität erstellt.",
 		Vi: "Email của thành viên Margince được ghi là tác giả hoạt động và là chủ trì cuộc họp. Nếu không thành viên nào có email này, bạn sẽ là tác giả và bản xem trước lần nhập sẽ báo điều này. Chỉ được ghi khi dòng tạo hoạt động mới.",
 	}, Example: same("mai@yourcompany.com")},
 }

@@ -30,6 +30,12 @@ func requireParentOrHide(ctx context.Context, entityType string, action principa
 	return nil
 }
 
+// requireAttachmentWrite is the object grant behind adding a file or a link:
+// Update on the record it is filed under, checked before any lookup.
+func requireAttachmentWrite(ctx context.Context, entityType string) error {
+	return auth.Require(ctx, entityType, principal.ActionUpdate)
+}
+
 // deniedChange answers a caller refused a change to a file. One who may read
 // its record is told the change is not theirs, which they could see anyway.
 // One who may not learns nothing.

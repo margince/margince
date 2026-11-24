@@ -76,3 +76,20 @@ func TestThePublicSourceAcquisitionIsSpelledTheSameOnBothSides(t *testing.T) {
 			"drift shows the reader a token the vocabulary no longer has.", owner, mirror)
 	}
 }
+
+// TestTheFormAcquisitionIsSpelledTheSameOnBothSides holds consent's
+// acquisitionEventOrForm (requestevidence.go) to the contacts owner: a form
+// the contact came in through is a request a consent mail may answer.
+func TestTheFormAcquisitionIsSpelledTheSameOnBothSides(t *testing.T) {
+	t.Parallel()
+	owner := stringConstantIn(t,
+		filepath.Join(repoRoot, "backend", "internal", "modules", "contacts", "acquisition.go"),
+		`AcquiredEventOrForm\s*=\s*"([^"]+)"`)
+	mirror := stringConstantIn(t,
+		filepath.Join(repoRoot, "backend", "internal", "modules", "consent", "requestevidence.go"),
+		`acquisitionEventOrForm\s*=\s*"([^"]+)"`)
+	if owner != mirror {
+		t.Errorf("contacts spells the form acquisition %q and consent spells it %q, so a "+
+			"contact who came in through a form reads as never having asked", owner, mirror)
+	}
+}

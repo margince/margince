@@ -55,6 +55,15 @@ func workSeeders(s sweepSeed) map[string]func() string {
 				"source": "manual", "rfc_message_id": "<sweep-" + ids.NewV7().String() + "@role-sweep.test>",
 			})
 		},
+		// A note on a deal, so the deal link has a mark to set.
+		"deal_note": func() string {
+			deal := s.create["deal"]()
+			note := s.post("/v1/activities", integration.AnyMap{
+				"kind": "note", "subject": "Role sweep", "links": []integration.AnyMap{{"entity_type": "deal", "entity_id": deal}},
+			})
+			s.pool.note(note, "deal", deal)
+			return note
+		},
 		// An invitation the seat's own mailbox received, for an event its calendar holds.
 		"calendar_invitation": func() string {
 			uid := "sweep-" + ids.NewV7().String() + "@role-sweep.test"
@@ -375,7 +384,15 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 			}
 			if existing := s.ownerScalar(`SELECT count(*)::text FROM activity WHERE thread_key = $1`, apptest.ChannelThreadKey); existing != "0" {
 				connected()
-				return s.ownerScalar(`SELECT id::text FROM activity WHERE thread_key = $1`, apptest.ChannelThreadKey)
+				conversation := s.ownerScalar(`SELECT id::text FROM activity WHERE thread_key = $1 AND direction = 'inbound'
+					ORDER BY occurred_at, id LIMIT 1`, apptest.ChannelThreadKey)
+				// A reply files onto the contact, which takes the right to change
+				// it, so the contact passes to this pool's owner.
+				contact := s.ownerScalar(`SELECT contact_id::text FROM activity_link WHERE activity_id = $1 AND contact_id IS NOT NULL
+					ORDER BY contact_id LIMIT 1`, conversation)
+				defer s.asRoles("admin")()
+				s.call("PATCH", "/v1/contacts/"+contact, integration.AnyMap{"owner_id": s.owner}, nil, nil)
+				return conversation
 			}
 			defer s.asRoles("admin")()
 			c.ContactID = s.create["contact"]()

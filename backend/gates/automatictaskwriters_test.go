@@ -58,6 +58,7 @@ var taskSourceWriters = map[string][]string{
 	"compose/decisionseam.go:Record":                                      {provenance.AnalyticsDecisionSource},
 	"compose/leadsla.go:Plan":                                             {provenance.LeadSLATaskSource},
 	"compose/capturewhichdeal.go:Ask":                                     {provenance.WhichDealSource},
+	"compose/requesttask/requesttask.go:OpenRequestTaskTx":                {provenance.PrivacyRequestTaskSource},
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
 	"compose/leadsla.go:Apply":                                            {provenance.LeadSLATaskSource},
 	"compose/reconcile.go:followUpTaskInput":                              {provenance.OvernightReconcileSource},
@@ -76,6 +77,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/deals/handlers_deal.go:ListDeals":                            {writesNoTask},
 	"compose/dealroomtimeline.go:write":                                   {writesNoTask},
 	"compose/chatsync/summary.go:fileNote":                                {writesNoTask},
+	"compose/jobs_dealbackfill.go:recordOfferedBack":                      {writesNoTask},
 	"compose/dealcloselost.go:recordOnTimeline":                           {writesNoTask},
 	"compose/dealscoutopen.go:recordOnTimeline":                           {writesNoTask},
 	"compose/dealscoutrevive.go:recordRevivalOnTimeline":                  {writesNoTask},
@@ -113,23 +115,29 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/outboundmessage.go:activity":                      {writesNoTask},
 	"modules/activities/meetingnotesrepair.go:connectMeetingNotesTx":      {writesNoTask},
 	"modules/activities/meetingnotes.go:LandMeetingNotesTx":               {writesNoTask},
+	"modules/activities/meetingnotesmail.go:LandMeetingNotesMailTx":       {writesNoTask},
 }
 
 // openTaskReadersElsewhere is each reader of open tasks that does not apply
 // storekit.CurrentTaskClause itself, with why.
 // gatekit:fixture the declared readers of another population, checked both ways below
 var openTaskReadersElsewhere = map[string]string{
+	"modules/activities/dealactions.go:DealActionsBetweenTx":          "Lists tasks that were finished inside a window, never open ones, so the forecast movement can name the work done on a deal. It surfaces no open work.",
 	"modules/activities/systemtaskopen.go:lockOpenSystemTask":         "Finds the record's open task of one source, current or stale, so an arrival keeps or repoints it instead of filing a second. It surfaces no open work.",
 	"modules/activities/duplicatesystemtasks.go:duplicateLeadTaskSQL": "Duplicate repair compares all open source tasks, current or stale, to preserve one newest task per lead. It returns no worklist rows.",
 
 	"modules/activities/taskanswered.go:answeredTaskSQL":                  "The answered-task rule: completes every existing open task for the sender and addressed contact, including dormant automatic tasks. It creates and surfaces no open work.",
 	"modules/activities/taskansweredbatch.go:CompleteAnsweredTasksTx":     "Pages the same rule over open contact tasks once, to close those stored mail already answered. It creates and surfaces no open work.",
 	"modules/activities/taskansweredbatch.go:CountAnsweredTaskCandidates": "Counts the open contact tasks the one-time batch will inspect, for its progress estimate. It surfaces no open work.",
-	"modules/activities/taskanswered.go:RecentTaskCompletions":            "Reads only completed tasks from audit evidence for Done for you, never open work.",
+	"modules/activities/taskanswered.go:answerableTaskSQL":                "The task side the booking and chat doors share: the holder's open tasks a user made on the evidence's records, current or dormant. It creates and surfaces no open work.",
+	"modules/activities/taskbooked.go:answeredByCalledOffMeetingSQL":      "Reopens only the tasks a called-off booking closed itself, found by their completion evidence. It surfaces no list.",
+	"modules/activities/taskanswered.go:RecentTaskCompletions":            "Reads the tasks a mail, booking or chat completed, and the open tasks a chat moved, from audit evidence for Done for you. It assigns and lists no open work.",
 	"modules/activities/memberhandover.go:ConsolidateMemberTasksTx":       "moves every open task during an admitted identity merge, including tasks no longer current, so none can be left on a hidden account",
 	"compose/automaticworksql.go:automaticItemsSQL":                       "lists what Margince did, done or not, for Done for you; it reports work, it assigns none",
 	"modules/activities/bulkcomplete.go:LockTaskForBulkTx":                "locks one task a human chose to complete",
 	"modules/activities/requestcheck.go:uncheckableReminders":             "annotates tasks the lane already chose; it surfaces no open work of its own",
+	"modules/activities/awaitingreply.go:promiseKeptSQL":                  "ends a follow-up reminder once its own mail's tasks are all done; any open one, current or not, keeps the reminder, and it surfaces no task",
+	"modules/activities/followuppromises.go:followUpPromisesSQL":          "names the reader's open tasks of a mail by id and due date only; the Worklist draws one only through the task lane's own read, which applies the clause",
 	"compose/reportprojects.go:projectCommitmentsSpec":                    "a report over the project's recorded promises, not a personal queue",
 	"modules/activities/companyscope.go:ownQueueClause":                   "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/companyscope.go:unassignedQueueClause":            "narrows a list the caller already gates with the worklist clauses",

@@ -21,6 +21,9 @@
 //
 // These types are frozen published API from their first external consumer; they
 // evolve additively or through versioned successors, never in place (EXT-P3).
+// Additive means new fields, so an extension must write its literals of these
+// types keyed (Instrument{Name: ...}). An unkeyed literal stops compiling when
+// a field is added.
 //
 //margince:extension-surface
 package messaging
@@ -125,6 +128,28 @@ type Rules struct {
 	// uncapped by this jurisdiction.
 	FrequencyCap *FrequencyCap
 
+	// Advertising content and layout: where the refusal sits, and which
+	// claims need a stated proof. The language advertising leads with is
+	// DisclosureLanguage.
+
+	// RefusalSectionLast says an advertising message ends with its refusal
+	// section. It states the right to refuse all advertising from the
+	// advertiser, then the objection route and the opt-out links. The
+	// advertiser's contact block stands directly before it.
+	RefusalSectionLast bool
+
+	// ClaimsNeedProof are the words of a claim an advertising draft may make
+	// only beside a stated proof: the proving document's name, number and
+	// date. A draft that uses one without a proof is flagged before it is
+	// sent; nothing is refused.
+	ClaimsNeedProof []string
+
+	// ForeignAdvertiserNeedsLocalAgency says an advertiser not established in
+	// this jurisdiction must advertise here through a local advertising
+	// service business. An advertising draft to a recipient here, from a
+	// sending entity established elsewhere, gets a notice; nothing is refused.
+	ForeignAdvertiserNeedsLocalAgency bool
+
 	// OptOutAcknowledgement records whether an opt-out is owed a confirming
 	// message. False means none is owed, which is the default.
 	//
@@ -142,6 +167,50 @@ type Rules struct {
 	// OptOutRecordsKeep is how long a refusal and its receipt are kept from the
 	// refusal, out of every retention policy's reach. Zero sets no floor.
 	OptOutRecordsKeep time.Duration
+
+	// DataProtectionFollowsRecipient says this jurisdiction's data-protection
+	// law reaches a recipient here whatever country the controller is in. The
+	// disclosures, the privacy page and the request deadlines then follow the
+	// recipient's pack instead of the sender's. False keeps the sender's.
+	DataProtectionFollowsRecipient bool
+
+	// NoLegitimateInterests says the law has no legitimate-interest basis: each
+	// use rests on the recipient's consent or on a case the law names. The
+	// engine then never records legitimate interests for a recipient here.
+	NoLegitimateInterests bool
+
+	// DisclosureLanguage is the language the recipient's disclosures and
+	// privacy pages are written in, as a lower-case ISO 639-1 code. It applies
+	// only with DataProtectionFollowsRecipient. Empty keeps the installation's.
+	// Advertising to a recipient here leads with it, and its objection route
+	// and advertiser contact must be stated in it before such a send.
+	DisclosureLanguage string
+
+	// RecordConfirmationWithoutNews says the mail that asks a recipient to
+	// check their details must not also ask whether they want news. The link
+	// then pins no question, its page shows none and its submit takes none.
+	RecordConfirmationWithoutNews bool
+
+	// ConsentConfirmationNeedsRequest says a mail asking for consent may be
+	// sent only when the recipient's own request to subscribe is on record. A
+	// mail asking for consent nobody requested is itself unsolicited.
+	ConsentConfirmationNeedsRequest bool
+
+	// ConsentRequestFirstFor are the purpose classes the rule above covers; empty covers all.
+	ConsentRequestFirstFor []PurposeClass
+
+	// Provenance is who reviewed this rule set and when the next review is due.
+	Provenance Provenance
+
+	// Citations name the law behind the engine's findings and refusals, one
+	// per code and sender territory. Each names one of Instruments, and only a
+	// reviewed pack may carry any. Shown to a rep, never applied: a citation
+	// changes no verdict.
+	Citations []Citation
+
+	// Digest is the SHA-256 of the source this rule set was compiled from, in
+	// lower-case hex. Empty for a pack written by hand. A decision records it.
+	Digest string
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -174,7 +243,8 @@ func (k ExceptionKind) Validate() error {
 type MarketingException struct {
 	Kind ExceptionKind
 
-	// RequiresSaleEvidence: there must be a recorded sale to this contact.
+	// RequiresSaleEvidence: there must be a recorded sale to this contact, and
+	// the address the message goes to must have come with that sale.
 	RequiresSaleEvidence bool
 
 	// RequiresCollectionTimeOptOut: the address must have been collected with
@@ -244,10 +314,46 @@ type Disclosure struct {
 	// MarketingOnly limits the obligation to advertising. False means every
 	// first message carries it.
 	MarketingOnly bool
+
+	// Means are the ways of reaching someone the stated text must name. Text
+	// that lacks one does not meet the obligation. Empty asks for none.
+	Means []ContactMeans
 }
 
-// Validate checks the kind.
-func (d Disclosure) Validate() error { return d.Kind.Validate() }
+// Validate checks the kind and each means.
+func (d Disclosure) Validate() error {
+	if err := d.Kind.Validate(); err != nil {
+		return err
+	}
+	for _, m := range d.Means {
+		if err := m.Validate(); err != nil {
+			return fmt.Errorf("disclosure %q: %w", string(d.Kind), err)
+		}
+	}
+	return nil
+}
+
+// ContactMeans names one way of reaching someone that a disclosed text must
+// name. Closed, because the engine has to recognise each one in the text.
+type ContactMeans string
+
+const (
+	// MeansWeb is a web page or a social-network link.
+	MeansWeb ContactMeans = "web"
+	// MeansEmail is an email address.
+	MeansEmail ContactMeans = "email"
+	// MeansPhone is a phone number.
+	MeansPhone ContactMeans = "phone"
+)
+
+// Validate enforces membership in the closed set.
+func (m ContactMeans) Validate() error {
+	switch m {
+	case MeansWeb, MeansEmail, MeansPhone:
+		return nil
+	}
+	return fmt.Errorf("contact means %q is not one the engine recognises", string(m))
+}
 
 // FrequencyCap bounds how many advertising messages one address may receive in
 // a rolling window.
@@ -261,34 +367,6 @@ type FrequencyCap struct {
 	Messages int
 	// Window is the rolling period the count covers.
 	Window time.Duration
-}
-
-// Instrument is one law or decree a rule set states, and when it took effect.
-//
-// It is DOCUMENTATION IN THE RECORD, not an obligation. A decision records the
-// ruleset version it was judged under; this says what that number meant. Two
-// instruments with different commencement dates may both be live, which is the
-// ordinary case when a decree amends rather than replaces — Vietnam's Decree
-// 91/2020 and Law 91/2025 sit that way — so this is a list and the pack states
-// every instrument its obligations rest on.
-type Instrument struct {
-	// Name is the instrument as a regulator cites it, e.g.
-	// "Decree 91/2020/ND-CP". Not translated: a citation is the same string
-	// in every locale, and translating one would make it unfindable.
-	Name string
-
-	// EffectiveFrom is the instrument's own commencement date, never the date
-	// this product learned about it. Zero means the pack did not state one,
-	// which is legal and says less rather than saying "the epoch".
-	EffectiveFrom time.Time
-}
-
-// Validate refuses an instrument that names nothing.
-func (i Instrument) Validate() error {
-	if strings.TrimSpace(i.Name) == "" {
-		return errors.New("an instrument carries no name — a commencement date with nothing to commence names no law")
-	}
-	return nil
 }
 
 // Validate refuses a cap that cannot bind.
@@ -365,6 +443,43 @@ func (r Rules) Validate() error {
 		if err := r.FrequencyCap.Validate(); err != nil {
 			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 		}
+	}
+	if err := r.validateClaims(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	if err := r.validateRequestFirstFor(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	if err := errors.Join(r.validateCitations(), r.validateDigest()); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	return r.validateDisclosureLanguage()
+}
+
+// validateClaims refuses a claim word that matches nothing or everything.
+func (r Rules) validateClaims() error {
+	for _, word := range r.ClaimsNeedProof {
+		if strings.TrimSpace(word) == "" || strings.TrimSpace(word) != word {
+			return fmt.Errorf("claim word %q is empty or padded, so it would flag every draft or none", word)
+		}
+	}
+	return nil
+}
+
+// validateDisclosureLanguage refuses a language that is not two lower-case
+// letters, or one stated where the recipient's pack does not apply.
+func (r Rules) validateDisclosureLanguage() error {
+	language := r.DisclosureLanguage
+	if language == "" {
+		return nil
+	}
+	if !r.DataProtectionFollowsRecipient {
+		return fmt.Errorf("messaging rules for %q name a disclosure language and do not follow the recipient, so nothing would use it",
+			string(r.Jurisdiction))
+	}
+	if len(language) != 2 || strings.Trim(language, "abcdefghijklmnopqrstuvwxyz") != "" {
+		return fmt.Errorf("messaging rules for %q name disclosure language %q; use a lower-case ISO 639-1 code",
+			string(r.Jurisdiction), language)
 	}
 	return nil
 }

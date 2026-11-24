@@ -3,11 +3,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { stubClipboard } from "../../design-system/clipboard-testing";
+import { replaceDial } from "../../lib/urlstate";
 import { meFixture } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { jsonResponse, render } from "../../testing/settings.testkit";
@@ -15,6 +16,7 @@ import { SystemHealthPage } from "./settings.systemhealth";
 import {
   attentionReport,
   healthReport,
+  informationReport,
   overdueFinding,
 } from "./systemhealth.fixtures";
 
@@ -160,7 +162,6 @@ it("copies safe evidence without sending a message", async () => {
 });
 
 it("withholds source conditions and counts without permission", async () => {
-  const user = userEvent.setup();
   stub({
     ...healthReport,
     sources: [
@@ -178,7 +179,9 @@ it("withholds source conditions and counts without permission", async () => {
   await screen.findByRole("heading", {
     name: "Some checks have no result",
   });
-  await user.click(screen.getByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(screen.queryByText(/Permission required/)).toBeNull();
   expect(screen.queryByText(/Background jobs/)).toBeNull();
 });
@@ -241,16 +244,16 @@ it("explains the installation effect of stopped mail sorting without claiming ma
   ).toBeVisible();
 });
 it("names the missing check instead of a vague evidence status", async () => {
-  const user = userEvent.setup();
   stub();
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(screen.getAllByText("No restore test recorded")[0]).toBeVisible();
   expect(screen.queryByText("Not enough evidence")).toBeNull();
 });
 
 it("limits a partial capture check to the categories it actually read", async () => {
-  const user = userEvent.setup();
   stub({
     ...healthReport,
     sources: [
@@ -266,7 +269,9 @@ it("limits a partial capture check to the categories it actually read", async ()
     ],
   });
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(
     screen.getByText(/Mail capture/, { selector: ".disclosure-label" }),
   ).toHaveTextContent("No capture action needed in checked categories");
@@ -274,7 +279,6 @@ it("limits a partial capture check to the categories it actually read", async ()
 });
 
 it("shows what a successful refusal check established about connector activity", async () => {
-  const user = userEvent.setup();
   stub({
     ...healthReport,
     sources: [
@@ -290,11 +294,40 @@ it("shows what a successful refusal check established about connector activity",
     ],
   });
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(
     screen.getByText(/Connector intake/, { selector: ".disclosure-label" }),
   ).toHaveTextContent("activity is not verified");
   expect(screen.queryByText("Working normally")).toBeNull();
+});
+
+it("files the changes Home leaves out under For information, never Passing", async () => {
+  stub(informationReport);
+  render(<SystemHealthPage />);
+  const group = await screen.findByRole("list", { name: "For information" });
+  expect(within(group).getByText("Changes Home leaves out")).toBeVisible();
+  expect(
+    within(group).getByText("Information").closest(".badge"),
+  ).not.toHaveClass("badge-success");
+  const passing = screen.getByRole("list", { name: "Passing" });
+  expect(within(passing).queryByText("Changes Home leaves out")).toBeNull();
+  expect(screen.queryByText(/Problems? needing action/)).toBeNull();
+  expect(screen.getByText("5 passing")).toBeVisible();
+
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
+  const value = (term: string) =>
+    screen.getByText(term, { selector: "dt" }).nextElementSibling;
+  expect(value("notice · update")).toHaveTextContent("3");
+  expect(value("booking_page · update")).toHaveTextContent("2");
+  const chip = screen
+    .getByText(/Changes Home leaves out/, { selector: ".disclosure-label" })
+    .querySelector(".badge");
+  expect(chip).toHaveClass("badge");
+  expect(chip).not.toHaveClass("badge-success");
 });
 
 it("does not assume rejected imports are still missing after a possible later success", async () => {
@@ -405,13 +438,14 @@ it("makes a focused diagnostics filter visible and removable", async () => {
 });
 
 it("keeps the outgoing-link check discoverable under All checks", async () => {
-  const user = userEvent.setup();
   stub({
     ...healthReport,
     public_origin: { origin: "https://crm.example.test", reachable: true },
   });
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(
     screen.getByText("Reachable from this server").closest(".badge"),
   ).not.toHaveClass("badge-success");
@@ -431,4 +465,85 @@ it("explains which company-page details a failed lookup can leave outdated", asy
   expect(
     screen.getByRole("button", { name: "Inspect background work" }),
   ).toBeVisible();
+});
+
+// Every history read, as the query it asked; the first page offers a second.
+function stubHistory(): URLSearchParams[] {
+  const fetcher = stub(attentionReport);
+  const others = fetcher.getMockImplementation();
+  const asked: URLSearchParams[] = [];
+  fetcher.mockImplementation(async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (!url.includes("/admin/job-health/history"))
+      return others ? others(input, init) : jsonResponse({});
+    const query = new URL(url, "https://test.local").searchParams;
+    asked.push(query);
+    const first = !query.has("cursor");
+    return jsonResponse({
+      coverage: "retained_only",
+      observed_at: attentionReport.generated_at,
+      cutoff: attentionReport.generated_at,
+      window_start: attentionReport.generated_at,
+      groups: [],
+      runs: [],
+      has_more: first,
+      ...(first ? { next_cursor: "page-2" } : {}),
+      population_may_have_changed: false,
+    });
+  });
+  return asked;
+}
+
+const JOBS = "#/settings/system-health/diagnostics?section=settings.jobs";
+const pill = async (group: string, name: string) =>
+  within(await screen.findByRole("group", { name: group })).getByRole(
+    "button",
+    { name },
+  );
+
+it("keeps the failure history's state filter in the address, both ways", async () => {
+  const user = userEvent.setup();
+  const asked = stubHistory();
+  window.location.hash = JOBS;
+  render(<SystemHealthPage view="diagnostics" />);
+  await user.click(await pill("State", "Retrying"));
+  expect(window.location.hash).toContain("state=retryable");
+  // Back or Forward to an entry that names another state.
+  act(() => replaceDial("state", "cancelled"));
+  expect(await pill("State", "Canceled")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await waitFor(() =>
+    expect(asked.map((query) => query.get("state"))).toContain("cancelled"),
+  );
+});
+
+it("keeps the pressed pill and the window when a state filter moves the history", async () => {
+  const user = userEvent.setup();
+  stubHistory();
+  window.location.hash = JOBS;
+  render(<SystemHealthPage view="diagnostics" />);
+  await user.click(await pill("Reporting window", "Last day"));
+  // Discarded runs lead the section, so this one also moves the history.
+  const discarded = await pill("State", "Discarded");
+  await user.click(discarded);
+  expect(window.location.hash).toContain("state=discarded");
+  await waitFor(() => expect(document.activeElement).toBe(discarded));
+  expect(await pill("Reporting window", "Last day")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
+it("starts a changed filter on its first page", async () => {
+  const user = userEvent.setup();
+  const asked = stubHistory();
+  window.location.hash = JOBS;
+  render(<SystemHealthPage view="diagnostics" />);
+  await user.click(await screen.findByRole("button", { name: "Next page" }));
+  await waitFor(() => expect(asked.at(-1)?.get("cursor")).toBe("page-2"));
+  await user.click(await pill("State", "Retrying"));
+  await waitFor(() => expect(asked.at(-1)?.get("state")).toBe("retryable"));
+  expect(asked.at(-1)?.has("cursor")).toBe(false);
 });

@@ -398,7 +398,24 @@ describe("what the fit is judged on", () => {
 
   type ProfileField = components["schemas"]["CompanyProfileField"];
 
-  function route(fit: GrowthFit, read: readonly ProfileField[]) {
+  type Fact = components["schemas"]["CompanyFact"];
+  const STATED_SIZE: Fact = {
+    id: "f-1",
+    category: "company",
+    field: "employee_range",
+    value: "51-200",
+    value_key: "",
+    source: "human",
+    captured_by: "human:u-1",
+    version: 1,
+    updated_at: "2026-08-01T09:00:00Z",
+  };
+
+  function route(
+    fit: GrowthFit,
+    read: readonly ProfileField[],
+    facts: readonly Fact[],
+  ) {
     const answer = (body: unknown) =>
       new Response(JSON.stringify(body), {
         status: 200,
@@ -433,19 +450,7 @@ describe("what the fit is judged on", () => {
           });
         }
         if (path.endsWith("/facts")) {
-          return answer({
-            data: [
-              {
-                id: "f-1",
-                category: "company",
-                field: "employee_range",
-                value: "51-200",
-                source: "human",
-                version: 1,
-                updated_at: "2026-08-01T09:00:00Z",
-              },
-            ],
-          });
+          return answer({ data: facts });
         }
         return answer(fit);
       }),
@@ -455,8 +460,9 @@ describe("what the fit is judged on", () => {
   async function showFor(
     record: typeof company,
     read: readonly ProfileField[] = [],
+    facts: readonly Fact[] = [STATED_SIZE],
   ) {
-    route(THREE_OF_SEVEN, read);
+    route(THREE_OF_SEVEN, read, facts);
     render(
       <QueryClientProvider
         client={
@@ -521,6 +527,37 @@ describe("what the fit is judged on", () => {
     expect(screen.getAllByText("Missing")).toHaveLength(3);
   });
 
+  // The size band under About is the record's own answer to its size. The row
+  // shows it as the recorded value and offers no form to add one.
+  it("shows the company's size band as its employees when no fact says it", async () => {
+    await showFor({ ...company, industry: null, size_band: "51-200" }, [], []);
+
+    expect(screen.getByText(/51–200 employees/)).toBeTruthy();
+    expect(screen.getAllByText("Missing")).toHaveLength(4);
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
+  });
+
+  // A site read's range ages out while the band does not, so an old read
+  // never stands in for the band the fit counts.
+  it("shows the size band over an old site-read employee range", async () => {
+    await showFor(
+      { ...company, industry: null, size_band: "11-50" },
+      [],
+      [
+        {
+          ...STATED_SIZE,
+          value: "201-500",
+          source: "site_read",
+          captured_by: "agent:site-read",
+          updated_at: "2025-01-01T09:00:00Z",
+        },
+      ],
+    );
+
+    expect(screen.getByText(/11–50 employees/)).toBeTruthy();
+    expect(screen.queryByText(/201-500/)).toBeNull();
+  });
+
   it("tells a reader who cannot edit the account why, once", async () => {
     await showFor({
       ...company,
@@ -530,7 +567,10 @@ describe("what the fit is judged on", () => {
     });
 
     expect(
-      screen.getAllByText(translate("en", "record.notYoursToChange")),
+      screen.getAllByText(translate("en", "record.notYoursToChange"), {
+        // Each read-only value keeps it as a hidden description; on screen once.
+        ignore: "script, style, [hidden]",
+      }),
     ).toHaveLength(1);
     // The gaps still show, with no editor that could only fail at the save.
     expect(screen.getAllByText("Missing")).toHaveLength(4);

@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/capturepurgebind"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -42,7 +43,8 @@ func (h captureExclusionHandlers) CreateCaptureExclusion(w http.ResponseWriter, 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	rule, err := h.store.Add(r.Context(), string(req.Scope), string(req.Kind), req.Value)
+	rule, err := h.store.Add(r.Context(), string(req.Scope), string(req.Kind), req.Value,
+		capture.MailboxNamed("", req.ConnectionId).ID)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -64,6 +66,7 @@ func toContractExclusion(rule capture.Exclusion) crmcontracts.CaptureExclusion {
 		Scope:         crmcontracts.CaptureExclusionScope(rule.Scope),
 		Kind:          crmcontracts.CaptureExclusionKind(rule.Kind),
 		Value:         rule.Value,
+		ConnectionId:  (*openapi_types.UUID)(rule.ConnectionID),
 		CreatedAt:     rule.CreatedAt,
 		CreatedByName: rule.CreatedByName,
 	}
@@ -92,7 +95,12 @@ func (h captureExclusionHandlers) PurgeCaptureExclusion(
 		return
 	}
 	preview := params.Preview != nil && *params.Preview
-	outcome, err := h.purger.Purge(r.Context(), ids.UUID(id), preview)
+	ctx, err := capturepurgebind.Bind(r.Context(), params.ExpectDestroyed, params.ExpectReleased, params.ExpectAnonymised)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	outcome, err := h.purger.Purge(ctx, ids.UUID(id), preview)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

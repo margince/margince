@@ -41,7 +41,7 @@ func (r approvalPreviewReader) mergeLinkDetails(ctx context.Context, scope conta
 		}
 	}
 	for _, address := range scope.Addresses {
-		details = append(details, mergeIdentityDetail("merge_address", address.Value, address.ID), previewDetail("merge_address_kind", address.Kind), previewDetail("merge_address_usage", address.Usage), mergeBooleanDetail("merge_address_primary_before", address.WasPrimary), mergeBooleanDetail("merge_address_primary_after", address.WillBePrimary))
+		details = append(details, mergeIdentityDetail("merge_address", address.Value, address.ID), previewDetail("merge_address_kind", address.Kind), previewDetail("merge_address_usage", address.Usage), mergeBooleanDetail("merge_address_primary_before", address.WasPrimary), mergeBooleanDetail("merge_address_primary_after", address.WillBePrimary), mergeBooleanDetail("merge_address_already_held", address.AlreadyHeld))
 	}
 	for _, social := range scope.Social {
 		details = append(details, mergeIdentityDetail("merge_social_handle", social.SourceHandle, social.SourceID), previewDetail("merge_social_platform", social.Platform))

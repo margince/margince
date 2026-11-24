@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type FormEvent, useId, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { SUBMIT_COPY, type SubmitIntent } from "../../components/create";
-import { LogActivityAction } from "../../components/logactivity.action";
 import {
   Button,
   EmptyState,
@@ -15,8 +14,9 @@ import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
+import { RecordFormDialog } from "../../design-system/recordformdialog";
+import { useFieldFaults } from "../../design-system/savepage";
 import { MultiSelect, Select } from "../../design-system/select";
-import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
   useCanWrite,
@@ -34,12 +34,13 @@ import {
   partnerStageLabel,
   usePartnerStages,
 } from "../../lib/partnerstages.queries";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { blankRequired, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { PartnerCommissions } from "./partnercommissions";
 import { PartnerDeals } from "./partnerdeals";
 import { ActivationNote, MarginTierRow } from "./partners.detailrows";
+import { PartnerNextStep } from "./partners.nextstep";
 import {
   CERT_LABELS,
   CERT_STATUSES,
@@ -112,14 +113,21 @@ function PartnerForm({
   onSaved,
   onCancel,
   intent,
+  dialogTitle,
 }: Readonly<{
   companyId: string;
   partner?: Partner;
   onSaved: () => void;
   onCancel?: () => void;
   intent: SubmitIntent;
+  /** Draws the form open in a dialog with this title, instead of in the page. */
+  dialogTitle?: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const [faults, faultsRoot] = useFieldFaults();
+  const formId = useId();
+  const kindsLabel = t("partner.kinds");
   // This form mounts only while editing (PartnerDetail/PartnerTab remount it
   // each time `editing` flips true), so the lazy initializer is all the
   // seeding it needs. A re-sync effect keyed on `partner` would re-run on a
@@ -156,29 +164,32 @@ function PartnerForm({
     onSuccess: onSaved,
   });
 
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!refuseUnreadableField(event.currentTarget)) {
-          mutation.mutate(partner);
-        }
-      }}
-      className="form-stack"
-    >
-      <Field label={t("partner.kinds")} required>
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const blank = blankRequired(locale, {
+      partner_kinds: [kindsLabel, values.partner_kinds.join(",")],
+    });
+    if (faults.show(blank)) return;
+    if (!refuseUnreadableField(event.currentTarget)) {
+      mutation.mutate(partner);
+    }
+  };
+  const fields = (
+    <>
+      <Field label={kindsLabel} required error={faults.of("partner_kinds")}>
         {(control) => (
           <MultiSelect
             {...control}
             values={values.partner_kinds}
-            onChange={(picked) =>
+            onChange={(picked) => {
+              faults.edited("partner_kinds");
               setValues({
                 ...values,
                 partner_kinds: PARTNER_KINDS.filter((kind) =>
                   picked.includes(kind),
                 ),
-              })
-            }
+              });
+            }}
             options={PARTNER_KINDS.map((kind) => ({
               value: kind,
               label: t(labelFor(KIND_LABELS, kind)),
@@ -264,22 +275,60 @@ function PartnerForm({
         )}
       </Field>
       <ErrorLine error={mutation.error} />
-      <div className="form-actions">
-        {onCancel && (
-          <Button type="button" onClick={onCancel}>
-            {t("create.cancel")}
-          </Button>
-        )}
+    </>
+  );
+  const actions = (
+    <>
+      {onCancel && (
         <Button
-          variant="primary"
-          type="submit"
-          disabled={!mutation.isPending && values.partner_kinds.length === 0}
-          pending={mutation.isPending}
-          busyLabel={t(SUBMIT_COPY[intent].busy)}
+          type="button"
+          onClick={onCancel}
+          disabled={dialogTitle !== undefined && mutation.isPending}
         >
-          {t(SUBMIT_COPY[intent].label)}
+          {t("create.cancel")}
         </Button>
-      </div>
+      )}
+      <Button
+        variant="primary"
+        type="submit"
+        form={formId}
+        pending={mutation.isPending}
+        busyLabel={t(SUBMIT_COPY[intent].busy)}
+      >
+        {t(SUBMIT_COPY[intent].label)}
+      </Button>
+    </>
+  );
+  if (dialogTitle !== undefined) {
+    return (
+      <RecordFormDialog
+        open
+        title={dialogTitle}
+        onClose={() => onCancel?.()}
+        fieldCount={5}
+        unsaved={
+          !mutation.isPending &&
+          JSON.stringify(values) !== JSON.stringify(defaultFormValues(partner))
+        }
+        closeDisabled={mutation.isPending}
+        form={
+          <form
+            id={formId}
+            ref={faultsRoot}
+            onSubmit={submit}
+            className="form-stack"
+          >
+            {fields}
+          </form>
+        }
+        actions={actions}
+      />
+    );
+  }
+  return (
+    <form id={formId} ref={faultsRoot} onSubmit={submit} className="form-stack">
+      {fields}
+      <div className="form-actions">{actions}</div>
     </form>
   );
 }
@@ -299,24 +348,6 @@ function PartnerDetail({
   const { locale } = useLocale();
   const zone = useViewerZone();
   const [editing, setEditing] = useState(false);
-
-  if (editing) {
-    return (
-      <div>
-        <SectionHeader title={t("partner.edit")} />
-        <PartnerForm
-          companyId={companyId}
-          partner={partner}
-          intent="save"
-          onCancel={() => setEditing(false)}
-          onSaved={() => {
-            setEditing(false);
-            onSaved();
-          }}
-        />
-      </div>
-    );
-  }
 
   return (
     <Panel
@@ -347,8 +378,8 @@ function PartnerDetail({
             {partnerStageLabel(partner, t)}
             <ActivationNote partner={partner} locale={locale} zone={zone} />
           </dd>
-          <dt>{t("partner.nextStep")}</dt>
-          <dd>
+          <dt className="detail-grid-wide">{t("partner.nextStep")}</dt>
+          <dd className="detail-grid-wide">
             <PartnerNextStep companyId={companyId} partner={partner} />
           </dd>
           {partner.served_segments && partner.served_segments.length > 0 && (
@@ -359,6 +390,19 @@ function PartnerDetail({
           )}
         </dl>
       </PanelBody>
+      {editing && (
+        <PartnerForm
+          companyId={companyId}
+          partner={partner}
+          intent="save"
+          dialogTitle={t("partner.edit")}
+          onCancel={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            onSaved();
+          }}
+        />
+      )}
     </Panel>
   );
 }
@@ -441,41 +485,5 @@ export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
         )
       }
     </QueryGate>
-  );
-}
-
-/**
- * The partner's next step is a task on its company, with a colleague who does
- * it and a due date. So it reaches that colleague's Home and Worklist. Text
- * written before that stays readable here until someone turns it into a task.
- */
-function PartnerNextStep({
-  companyId,
-  partner,
-}: Readonly<{ companyId: string; partner: Partner }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
-  const canFileTask = useCanWrite("activity", "create");
-  const due = partner.next_step_due_at;
-  return (
-    <div className="form-stack">
-      {(partner.next_step || due) && (
-        <p>
-          {partner.next_step && <span>{partner.next_step}</span>}
-          {partner.next_step && due && " · "}
-          {due && <span>{formatDate(due, locale, zone)}</span>}
-          <br />
-          <span className="t-caption">{t("partner.nextStepOld")}</span>
-        </p>
-      )}
-      {canFileTask && (
-        <LogActivityAction
-          entityType="company"
-          entityId={companyId}
-          askedKind="task"
-        />
-      )}
-    </div>
   );
 }

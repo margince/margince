@@ -44,13 +44,13 @@ refuse() {
 }
 
 expect "a resolved base gives its version and revision" \
-	"$(printf 'first_release=false\nbase_version=1970.41.0\nbase_revision=%s' "$SHA1")" \
-	"{\"event\":\"patch-base-resolved\",\"version\":\"1970.41.0\",\"revision\":\"$SHA1\"}
+	"$(printf 'first_release=false\nbase_version=0.41.0\nbase_revision=%s' "$SHA1")" \
+	"{\"event\":\"patch-base-resolved\",\"version\":\"0.41.0\",\"revision\":\"$SHA1\"}
 "
 
-expect "a SHA-256 revision and a patch level are a base too" \
-	"$(printf 'first_release=false\nbase_version=2028.0.3-p2\nbase_revision=%s' "$SHA256")" \
-	"{\"event\":\"patch-base-resolved\",\"version\":\"2028.0.3-p2\",\"revision\":\"$SHA256\"}
+expect "a SHA-256 revision is a base too" \
+	"$(printf 'first_release=false\nbase_version=10.0.3\nbase_revision=%s' "$SHA256")" \
+	"{\"event\":\"patch-base-resolved\",\"version\":\"10.0.3\",\"revision\":\"$SHA256\"}
 "
 
 expect "no release went out: the first release" \
@@ -62,32 +62,38 @@ refuse "the CLI's error record is no answer" \
 	'{"event":"error","message":"read the release list: dist answered 401 Unauthorized"}
 '
 refuse "an unknown event is no answer" \
-	"{\"event\":\"patch-base-guessed\",\"version\":\"1970.41.0\",\"revision\":\"$SHA1\"}
+	"{\"event\":\"patch-base-guessed\",\"version\":\"0.41.0\",\"revision\":\"$SHA1\"}
 "
 refuse "a base without a revision" \
-	'{"event":"patch-base-resolved","version":"1970.41.0"}
+	'{"event":"patch-base-resolved","version":"0.41.0"}
 '
 refuse "a base without a version" \
 	"{\"event\":\"patch-base-resolved\",\"revision\":\"$SHA1\"}
 "
 refuse "a malformed version" \
-	"{\"event\":\"patch-base-resolved\",\"version\":\"v1970.41\",\"revision\":\"$SHA1\"}
+	"{\"event\":\"patch-base-resolved\",\"version\":\"v0.41.0\",\"revision\":\"$SHA1\"}
+"
+refuse "a version with a suffix" \
+	"{\"event\":\"patch-base-resolved\",\"version\":\"1.0.3-p2\",\"revision\":\"$SHA1\"}
+"
+refuse "a dated version with a leading zero" \
+	"{\"event\":\"patch-base-resolved\",\"version\":\"2026.01.0\",\"revision\":\"$SHA1\"}
 "
 refuse "a version that carries shell" \
-	"{\"event\":\"patch-base-resolved\",\"version\":\"1970.41.0\$(id)\",\"revision\":\"$SHA1\"}
+	"{\"event\":\"patch-base-resolved\",\"version\":\"0.41.0\$(id)\",\"revision\":\"$SHA1\"}
 "
 refuse "an abbreviated revision" \
-	'{"event":"patch-base-resolved","version":"1970.41.0","revision":"3f78685"}
+	'{"event":"patch-base-resolved","version":"0.41.0","revision":"3f78685"}
 '
 refuse "a revision that is a ref name" \
-	'{"event":"patch-base-resolved","version":"1970.41.0","revision":"main"}
+	'{"event":"patch-base-resolved","version":"0.41.0","revision":"main"}
 '
 refuse "two records" \
 	"{\"event\":\"first-release\"}
-{\"event\":\"patch-base-resolved\",\"version\":\"1970.41.0\",\"revision\":\"$SHA1\"}
+{\"event\":\"patch-base-resolved\",\"version\":\"0.41.0\",\"revision\":\"$SHA1\"}
 "
 refuse "no record at all" ""
-refuse "a line that is not JSON" 'patch base 1970.41.0
+refuse "a line that is not JSON" 'patch base 0.41.0
 '
 
 if [[ "$FAILURES" -ne 0 ]]; then

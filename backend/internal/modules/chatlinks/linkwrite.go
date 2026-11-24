@@ -6,7 +6,6 @@ package chatlinks
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -22,7 +21,8 @@ import (
 const chatLinkEntity = "chat_link"
 
 // insertLink writes the link under the record's lock, with its audit row and
-// the flush that posts the card. A deal whose project has no channel brings
+// the flush that posts the card. A link that asks for the talk so far queues
+// its bot's pull too, rather than waiting for the sweep. A deal whose project has no channel brings
 // the project along, because a deal and its project share one channel.
 func (s *Store) insertLink(ctx context.Context, kind string, id ids.UUID, session Session, channel dispact.Channel, req LinkRequest) (Link, error) {
 	actor, err := linkActor(ctx)
@@ -41,17 +41,12 @@ func (s *Store) insertLink(ctx context.Context, kind string, id ids.UUID, sessio
 		if err != nil {
 			return err
 		}
-		var key *string
-		if req.Mode == ModeCreate {
-			k := externalKey(kind, id)
-			key = &k
-		}
 		out, err = scanLink(tx.QueryRow(ctx, `INSERT INTO chat_link
-			(connection_id, provider, channel_slug, channel_name, channel_external_key, deal_id, project_id,
+			(connection_id, provider, channel_slug, channel_name, deal_id, project_id,
 			 verbosity, backfill_requested, linked_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			RETURNING `+linkColumns,
-			session.ConnectionID, ProviderDispact, channel.Slug, channel.Name, key, deal, project,
+			session.ConnectionID, ProviderDispact, channel.Slug, channel.Name, deal, project,
 			req.Verbosity, req.SummarizeHistory != nil && *req.SummarizeHistory, actor))
 		if err != nil {
 			return linkUniqueness(err)
@@ -59,7 +54,12 @@ func (s *Store) insertLink(ctx context.Context, kind string, id ids.UUID, sessio
 		if _, err := storekit.Audit(ctx, tx, "create", chatLinkEntity, out.ID, nil, auditImage(out)); err != nil {
 			return err
 		}
-		return s.flush.EnqueueFlushTx(ctx, tx, out.ID)
+		if out.BackfillRequested {
+			if err := s.jobs.EnqueuePullTx(ctx, tx, out.ConnectionID); err != nil {
+				return err
+			}
+		}
+		return s.jobs.EnqueueFlushTx(ctx, tx, out.ID)
 	})
 	return out, err
 }
@@ -163,20 +163,11 @@ func (s *Store) Unlink(ctx context.Context, kind string, id ids.UUID) error {
 		if err := auth.EnsureRetractable(ctx, tx, kind, id); err != nil {
 			return err
 		}
-		before, err := liveLinkOf(ctx, tx, kind, id)
+		before, err := heldLiveLinkOf(ctx, tx, kind, id)
 		if err != nil {
 			return err
 		}
-		tag, err := tx.Exec(ctx, `UPDATE chat_link SET archived_at = now()
-			WHERE id = $1 AND archived_at IS NULL`, before.ID)
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("chatlinks: unlinking %s: %w", before.ID, ErrLinkNotFound)
-		}
-		_, err = storekit.Audit(ctx, tx, "archive", chatLinkEntity, before.ID, auditImage(before), nil)
-		return err
+		return retireLink(ctx, tx, before)
 	})
 }
 

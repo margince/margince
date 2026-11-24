@@ -19,6 +19,7 @@ func (e *transcriptEnv) linkTranscriptContact(t *testing.T, contact ids.UUID) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	e.ShareForWriting(t, "contact", contact, "user", e.Rep1)
 	links := []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}}
 	if original.Links != nil {
 		for _, link := range *original.Links {

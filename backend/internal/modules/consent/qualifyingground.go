@@ -302,7 +302,7 @@ func inboundQualifyingEvent(ctx context.Context, tx pgx.Tx, subject subjectRef, 
 	if err != nil {
 		return QualifyingEvent{}, false, fmt.Errorf("read the inbound qualifying message: %w", err)
 	}
-	event.Kind = "inbound_message"
+	event.Kind = kindInboundMessage
 	event.SourceEntityType = entityActivity
 	event.SourceEntityID = activityID
 	return event, true, nil
@@ -379,7 +379,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	err = tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
-		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
+		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid AND p.relinked_at IS NULL
 		WHERE `+capturedMeetingSQL("$3")+`
 		  AND `+occurredday.FromSQL("a", "$2")+`
 		  AND `+visible+`
@@ -403,8 +403,39 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 // meeting a rep typed by hand is not evidence of anything the contact did.
 // meetingQualifyingEvent and requestedNegotiation both read this one rule.
 func capturedMeetingSQL(asOf string) string {
+	// A caller matching the subject on a participant row also guards
+	// `p.relinked_at IS NULL`: a relinked row is a member's edit, not attendance.
 	return `a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND a.counterparty_email IS NULL
 		  AND a.captured_by LIKE 'connector:%'
 		  AND ` + relstrength.MeetingInTouchSQL("a", asOf)
+}
+
+// agreedAppointment reports whether the subject accepted or organised a
+// calendar meeting still to come that nobody called off. A message about moving
+// it continues something they agreed to. A named meeting must be that meeting;
+// with none named, any such meeting answers. A hand-typed meeting, and a
+// participant a relink moved onto them, show nothing they agreed to.
+func agreedAppointment(ctx context.Context, tx pgx.Tx, contactID string, named *ids.UUID, asOf time.Time, entity ids.UUID) (bool, error) {
+	args := []any{contactID, asOf, entity, named}
+	visible, err := activityEvidenceSQL(ctx, "$3", &args)
+	if err != nil {
+		return false, err
+	}
+	var found bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM activity a
+		  JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
+		       AND (p.response = 'accepted' OR p.role = 'organizer') AND p.relinked_at IS NULL
+		  WHERE a.kind = 'meeting' AND a.archived_at IS NULL
+		    AND a.counterparty_email IS NULL
+		    AND a.captured_by LIKE 'connector:%'
+		    AND `+relstrength.MeetingAheadSQL("a", "$2")+`
+		    AND ($4::uuid IS NULL OR a.id = $4::uuid)
+		    AND `+visible+`)`, args...).Scan(&found)
+	if err != nil {
+		return false, fmt.Errorf("read the agreed appointment: %w", err)
+	}
+	return found, nil
 }

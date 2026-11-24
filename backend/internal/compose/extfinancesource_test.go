@@ -87,12 +87,18 @@ func TestComposedSourcesOfferEveryUnitsProviderWithItsDescriptionAndDocuments(t 
 	source := &recordingSource{}
 	bare := source.declare("alpha_books")
 	bare.InvoiceDocument = nil
-	composeBooks(t, source.declare("zeta_books"), bare)
+	named := source.declare("zeta_books")
+	named.DisplayName = "Zeta Books"
+	composeBooks(t, named, bare)
 
 	offered := composedFinanceSources{}.Providers()
 	if len(offered) != 2 || offered[0].Provider != "alpha_books" || offered[1].Provider != "zeta_books" ||
 		offered[0].Documents || !offered[1].Documents || offered[0].Description != "Reads the books." {
 		t.Fatalf("offered %+v, want both providers sorted with the unit's description, and documents on zeta_books alone", offered)
+	}
+	if offered[0].DisplayName != "" || offered[1].DisplayName != "Zeta Books" {
+		t.Errorf("display names %q and %q, want none for alpha_books and the declared one for zeta_books",
+			offered[0].DisplayName, offered[1].DisplayName)
 	}
 	if alpha, ok := (composedFinanceSources{}).Open("alpha_books", accounting.Connection{}); !ok {
 		t.Fatal("alpha_books was not opened")

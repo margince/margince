@@ -50,7 +50,11 @@ func logResolvedBindings(t *testing.T, routing ai.RoutingConfig) {
 		if ai.Status(task) != ai.StatusShipped {
 			continue
 		}
-		lead := ai.LeadingTier(task)
+		ladder := routing.Ladder(task)
+		if len(ladder) == 0 {
+			continue
+		}
+		lead := ladder[0]
 		if b, ok := routing.Tiers[lead]; ok {
 			t.Logf("routed: %-34s %-12s %s:%s", task, lead, b.Provider, b.Model)
 		}
@@ -194,8 +198,8 @@ func TestE2ECertify(t *testing.T) {
 		t.Log("no record written: every candidate's record is current (STALE_ONLY=0 to re-measure)")
 	}
 	for _, r := range records {
-		t.Logf("%s: %s (reliability=%.2f judge_score_p50=%d self_judged=%v)",
-			r.Task, r.Verdict, r.Reliability, r.JudgeScoreP50, r.SelfJudged)
+		t.Logf("%s: %s (reliability=%s judge_score_p50=%s self_judged=%v)",
+			r.Task, r.Verdict, aicert.ReliabilityCell(r.Passed, r.Runs), aicert.JudgeScoreCell(r.JudgeScoreP50), r.SelfJudged)
 	}
 }
 

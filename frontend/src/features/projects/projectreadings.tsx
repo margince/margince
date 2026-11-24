@@ -5,6 +5,7 @@ import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { attachmentTitle } from "../../lib/attachmentlink";
 import { reveal } from "../../lib/reveal";
 import { useViewerZone } from "../../lib/viewerzone";
 import { type Project360, stateOf } from "./projectsections";
@@ -127,7 +128,7 @@ function OpenCommitmentsCell({ view }: Readonly<{ view: Project360 }>) {
           : undefined
       }
       peek={commitmentsPeek(view, { t, plural, locale, zone }, open)}
-      onOpen={open}
+      onOpen={reading.open > 0 ? open : undefined}
     />
   );
 }
@@ -176,7 +177,7 @@ function DocumentsCell({
           ? plural("project.standing.documentsFloor", documents.length, count)
           : formatNumber(documents.length, locale)
       }
-      detail={newest?.title || newest?.filename}
+      detail={newest ? attachmentTitle(newest) : undefined}
       peek={documentsPeek(view, { t, plural, locale, zone })}
       onOpen={onOpen}
     />

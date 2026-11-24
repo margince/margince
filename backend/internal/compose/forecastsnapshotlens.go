@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/focusactions"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -22,7 +23,7 @@ import (
 // newForecastStore is the one way compose builds a forecasting store, so every
 // snapshot read passes through forecastSnapshotReadLens.
 func newForecastStore(db *database.DB) *forecasting.Store {
-	return forecasting.NewStore(db).WithSnapshotLens(forecastSnapshotReadLens)
+	return forecasting.NewStore(db).WithSnapshotLens(forecastSnapshotReadLens).WithFocusActions(focusactions.Between)
 }
 
 // forecastSnapshotReadLens is forecastSnapshotLens for a snapshot read whole,
@@ -61,12 +62,11 @@ func newForecastStoreFor(pool *pgxpool.Pool) *forecasting.Store {
 }
 
 // forecastSnapshotLens holds a frozen snapshot to what the live forecast would
-// show this caller, since its rows carry the same per-deal figures.
-//
-// The caller must be allowed to assert about the population, or the snapshot
-// is not found, because whether it was frozen is itself the disclosure. Deals
-// the caller cannot read are dropped. A masked amount is nulled as the live
-// reading nulls it, so a movement prints no figure the forecast hid.
+// show this caller. A caller who may not assert about the population finds no
+// snapshot, since whether it was frozen is itself the disclosure. Deals the
+// caller cannot read are dropped, and the rest carry their live name. A masked
+// amount is nulled as the live reading nulls it, so a movement prints no
+// figure the forecast hid.
 func forecastSnapshotLens(
 	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, pipelineID *ids.UUID, rows []forecasting.Contribution,
 ) ([]forecasting.Contribution, error) {
@@ -85,17 +85,18 @@ func forecastSnapshotLens(
 	if len(rows) == 0 {
 		return rows, nil
 	}
-	masked, err := readableDeals(ctx, tx, rows)
+	sights, err := readableDeals(ctx, tx, rows)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]forecasting.Contribution, 0, len(rows))
 	for _, row := range rows {
-		withheld, readable := masked[row.DealID]
+		seen, readable := sights[row.DealID]
 		if !readable {
 			continue
 		}
-		if withheld {
+		row.Name = seen.name
+		if seen.withheld {
 			row.AmountMinor, row.BaseMinor, row.WeightedMinor = nil, nil, 0
 			row.Currency = ""
 		}
@@ -104,13 +105,20 @@ func forecastSnapshotLens(
 	return out, nil
 }
 
-// readableDeals answers, per deal the caller may read, whether its amount is
-// masked from them. A deal absent from the map is not theirs to see.
+// dealSight is what the caller sees of one frozen deal: its live name, and
+// whether its amount is masked from them.
+type dealSight struct {
+	name     string
+	withheld bool
+}
+
+// readableDeals answers, per deal the caller may read, its dealSight. A deal
+// absent from the map is not theirs to see.
 func readableDeals(
 	ctx context.Context, tx pgx.Tx, rows []forecasting.Contribution,
-) (map[string]bool, error) {
+) (map[string]dealSight, error) {
 	if !auth.ReadGranted(ctx, tableDeal) {
-		return map[string]bool{}, nil
+		return map[string]dealSight{}, nil
 	}
 	dealIDs := make([]ids.UUID, 0, len(rows))
 	for _, row := range rows {
@@ -134,20 +142,20 @@ func readableDeals(
 		return nil, err
 	}
 	found, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT d.id, d.amount_minor IS NOT NULL AND (%s) IS NULL
+		SELECT d.id, d.name, d.amount_minor IS NOT NULL AND (%s) IS NULL
 		FROM deal d WHERE d.id = ANY($1) AND %s`, amountSQL, scopeClause), args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading which snapshot deals the caller may see: %w", err)
 	}
 	defer found.Close()
-	out := make(map[string]bool, len(rows))
+	out := make(map[string]dealSight, len(rows))
 	for found.Next() {
 		var id ids.UUID
-		var withheld bool
-		if err := found.Scan(&id, &withheld); err != nil {
+		var seen dealSight
+		if err := found.Scan(&id, &seen.name, &seen.withheld); err != nil {
 			return nil, fmt.Errorf("compose: reading a snapshot deal's visibility: %w", err)
 		}
-		out[id.String()] = withheld
+		out[id.String()] = seen
 	}
 	if err := found.Err(); err != nil {
 		return nil, fmt.Errorf("compose: reading which snapshot deals the caller may see: %w", err)

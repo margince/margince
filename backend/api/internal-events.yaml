@@ -326,6 +326,21 @@ components:
           type: integer
           minimum: 0
           description: How much the occurrence handled, in quantity_unit.
+        processed:
+          type: integer
+          minimum: 0
+          description: >-
+            How much of its work a LIVE occurrence has finished so far, in the
+            unit its source counts (a website read counts pages). Absent while
+            unknown, which is not zero. Never the settled quantity: a settled
+            event carries none.
+        total:
+          type: integer
+          minimum: 1
+          description: >-
+            How much the occurrence expects to finish in all, in the unit of
+            processed. Absent while the source does not know its length, and a
+            ceiling it might stop short of is not a length.
         quantity_unit:
           type: string
           enum: [messages, records, contacts, documents]
@@ -435,42 +450,6 @@ components:
       description: >-
         A rep dismissed a suggestion for the whole workspace. The company is
         suggested again only on evidence newer than the dismissal.
-      additionalProperties: false
-    InternalEventLegalReviewRequested:
-      type: object
-      x-event-type: legal_review.requested
-      x-entity-type: ""
-      description: >-
-        A deal's side asked legal to review the deal. Entity-less, which keeps
-        it off the subscribable set: the review's note and pack are for holders
-        of the legal_review grant, and no webhook consumer can be held to that.
-        The deal and the review stay on the audit row the emit points at.
-      required:
-        - has_note
-      properties:
-        has_note:
-          type: boolean
-          description: Whether the request carries a note for legal.
-      additionalProperties: false
-    InternalEventLegalReviewDecided:
-      type: object
-      x-event-type: legal_review.decided
-      x-entity-type: ""
-      description: >-
-        Legal answered a request. An approval has already settled the deal's
-        legal_reviewed criteria in the same transaction, so no consumer has to.
-      required:
-        - outcome
-      properties:
-        outcome:
-          type: string
-          description: approved or changes_needed.
-      additionalProperties: false
-    InternalEventLegalReviewWithdrawn:
-      type: object
-      x-event-type: legal_review.withdrawn
-      x-entity-type: ""
-      description: The deal's side took back an open request.
       additionalProperties: false
     InternalEventTagSuggestionCreated:
       type: object

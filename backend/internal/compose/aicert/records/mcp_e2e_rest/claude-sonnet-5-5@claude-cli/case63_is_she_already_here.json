@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 0,
+  "passed": 2,
   "runs": 2,
   "pass_at": 2,
   "driver": "claude:cli",
@@ -12,13 +12,77 @@
   "search": "semantic",
   "door": "rest",
   "self_judged": true,
+  "stamp": {
+    "scenario": "72c99e85a3a6457f",
+    "tools": "8b653e7a3d01b493",
+    "instructions": "a0e5174113e30161",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "3c5ae56fd224848216c4b07ceb76534496ef14fc",
+    "ran_at": "2026-11-21T23:01:25Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:36:57Z"
+  },
   "usage": {
-    "input_tokens": 12,
-    "output_tokens": 1674,
-    "cache_creation_input_tokens": 29003,
-    "cache_read_input_tokens": 128110,
+    "input_tokens": 24,
+    "output_tokens": 2262,
+    "cache_creation_input_tokens": 11966,
+    "cache_read_input_tokens": 58668,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1456
+    "cost_usd": 0.0764
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "list_records",
+        "search_records",
+        "skill_file"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "find_records",
+        "read_record",
+        "search_records",
+        "skill_file"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 7.5,
+      "min": 7,
+      "max": 8
+    },
+    "turns": {
+      "median": 8.5,
+      "min": 8,
+      "max": 9
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 35329,
+      "min": 29219,
+      "max": 41439
+    },
+    "output_tokens": {
+      "median": 1131,
+      "min": 1089,
+      "max": 1173
+    },
+    "duration_ms": {
+      "median": 14857.5,
+      "min": 13725,
+      "max": 15990
+    }
   }
 }

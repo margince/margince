@@ -31,3 +31,53 @@ func TestAZoneTheDatabaseLacksIsRefused(t *testing.T) {
 		}
 	}
 }
+
+// A claim that sends a zone Go or the database does not know succeeds, and
+// the installation and its first admin are stored in UTC.
+func TestAClaimWithAZoneTheServerDoesNotKnowStoresUTC(t *testing.T) {
+	for name, sent := range map[string]string{
+		"a name neither engine knows": "Margince/Nowhere",
+		"a rule only Postgres reads":  "XYZ-3",
+	} {
+		t.Run(name, func(t *testing.T) {
+			svc := newSetupService(t)
+			ctx := context.Background()
+			token, err := svc.MintSetupToken(ctx)
+			if err != nil {
+				t.Fatalf("minting: %v", err)
+			}
+			in := claimInput("zoned")
+			in.Timezone = sent
+			if _, _, err := svc.ClaimInstallation(ctx, token, in, nil); err != nil {
+				t.Fatalf("a claim sending %q was refused: %v", sent, err)
+			}
+			var installation, admin string
+			if err := pgx.BeginFunc(ctx, svc.db.Pool(), func(tx pgx.Tx) error {
+				return tx.QueryRow(ctx, `
+					SELECT (SELECT value #>> '{}' FROM setting WHERE key = $1),
+					       (SELECT timezone FROM app_user WHERE email = $2)`,
+					Timezone.Key(), in.AdminEmail).Scan(&installation, &admin)
+			}); err != nil {
+				t.Fatalf("reading the stored zones: %v", err)
+			}
+			if installation != "UTC" || admin != "UTC" {
+				t.Errorf("the claim stored %q for the installation and %q for its admin, want UTC for both", installation, admin)
+			}
+		})
+	}
+}
+
+// A malformed zone is still refused: UTC stands in for an unknown name only.
+func TestAClaimWithAMalformedZoneIsRefused(t *testing.T) {
+	svc := newSetupService(t)
+	ctx := context.Background()
+	token, err := svc.MintSetupToken(ctx)
+	if err != nil {
+		t.Fatalf("minting: %v", err)
+	}
+	in := claimInput("malformed")
+	in.Timezone = "Local"
+	if _, _, err := svc.ClaimInstallation(ctx, token, in, nil); err == nil {
+		t.Error("a claim sending the zone Local was accepted")
+	}
+}

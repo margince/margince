@@ -15,9 +15,14 @@ import { Badge } from "../../design-system/atoms";
 import { formatDateTime } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { type ActorFields, actorAttribution } from "../../lib/auditactor";
+import {
+  type ActorFields,
+  actorAttribution,
+  qualifierPhrase,
+} from "../../lib/auditactor";
 import { SEARCH_HIT_KIND_KEY } from "../../lib/searchkinds";
 import { useViewerZone } from "../../lib/viewerzone";
+import { AUDIT_KIND_LABEL } from "./audit.kinds";
 import "./audit.css";
 
 // Reusable audit attribution — turns a raw AuditLogEntry into a line a contact
@@ -98,11 +103,15 @@ export function actionLabel(action: string, t: Translator): string {
 
 const KIND_LABELS = new Map<string, MessageKey>([
   ...Object.entries(SEARCH_HIT_KIND_KEY),
+  ...Object.entries(AUDIT_KIND_LABEL),
   ["custom_field", "audit.kind.customField"],
 ]);
 
-// A record kind reads in the reader's language; a governance object keeps its
-// own name.
+export const AUDIT_ENTITY_TYPE_VALUES: readonly string[] = [
+  ...KIND_LABELS.keys(),
+];
+
+// A type newer than this client still reads as words rather than as a key.
 export function entityLabel(entityType: string, t: Translator): string {
   const key = KIND_LABELS.get(entityType);
   return key ? t(key) : humanizeToken(entityType);
@@ -129,8 +138,9 @@ export function ActorTag({
 }: Readonly<{ entry: ActorFields; meUserId?: string }>) {
   const t = useT();
   const Icon = ACTOR_ICON[entry.actor_type];
-  const { labelKey, name, qualifierKey, qualifierName, identifier } =
-    actorAttribution(entry, meUserId);
+  const who = actorAttribution(entry, meUserId);
+  const { labelKey, name, identifier } = who;
+  const qualifier = qualifierPhrase(who, t);
 
   return (
     <span className="audit-actor">
@@ -142,10 +152,7 @@ export function ActorTag({
         {name ?? (labelKey ? t(labelKey) : null)}
       </span>
       {identifier && <span>{identifier}</span>}
-      {qualifierName && (
-        <span>{t("audit.viaNamed", { client: qualifierName })}</span>
-      )}
-      {!qualifierName && qualifierKey && <span>{t(qualifierKey)}</span>}
+      {qualifier && <span>{qualifier}</span>}
     </span>
   );
 }

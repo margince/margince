@@ -7,9 +7,8 @@
 // still be real work. So the close asks, and completes them only when the
 // reader picks Complete all, through the bulk change and its usual undo.
 
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import {
   type BulkBatch,
@@ -29,7 +28,7 @@ import { useTruncationTooltip } from "../../../design-system/tooltip";
 import { formatNumber } from "../../../format/format";
 import { formatDue } from "../../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../../i18n";
-import { unwrap } from "../../../lib/problem";
+import { openTasksQuery, useOpenTasks } from "../../../lib/opentasks";
 import { displayedSubject } from "../../../lib/systemdisplay";
 import { useViewerZone } from "../../../lib/viewerzone";
 import "./closetasks.css";
@@ -37,51 +36,6 @@ import "./closetasks.css";
 type Activity = components["schemas"]["Activity"];
 
 export type CloseTasksAnswer = "complete" | "keep";
-
-// The page size the list read allows at most; a deal past it is read page by page.
-const TASK_PAGE = 200;
-
-// Checked on the row too, not only asked of the server. A row that is not a
-// task carries no is_done, so it would read as an open task.
-function isOpenTask(row: Activity): boolean {
-  return row.kind === "task" && row.is_done !== true;
-}
-
-/**
- * The open tasks filed on the deal itself. A task filed only on the deal's
- * company or contact is not the deal's, so the deal-link narrowing leaves it
- * out. Under the deal's timeline key, so a task written anywhere refreshes it.
- */
-function useDealOpenTasks(dealId: string | null) {
-  return useQuery({
-    queryKey: ["activities", "deal", dealId, "open-tasks"],
-    enabled: dealId !== null,
-    queryFn: async () => {
-      const open: Activity[] = [];
-      let cursor: string | undefined;
-      do {
-        const page = unwrap(
-          await api.GET("/activities", {
-            params: {
-              query: {
-                entity_type: "deal",
-                entity_id: dealId ?? "",
-                kind: ["task"],
-                limit: TASK_PAGE,
-                cursor,
-              },
-            },
-          }),
-        );
-        open.push(...page.data.filter(isOpenTask));
-        cursor = page.page.has_more
-          ? (page.page.next_cursor ?? undefined)
-          : undefined;
-      } while (cursor);
-      return open;
-    },
-  });
-}
 
 type BulkSkip = components["schemas"]["BulkSkip"];
 
@@ -107,17 +61,28 @@ function completionRequests(tasks: readonly Activity[]): BulkChangeRequest[] {
  * Completes the tasks the dialog listed, in bulk changes of at most
  * BULK_MAX_ITEMS. Each preview mints the confirm token its execute needs above
  * ten records. One note reports them all; its Undo reverses every batch.
+ *
+ * The listed tasks are read again first. A win stamps every activity on the
+ * deal, so the versions the dialog read are stale once the close lands. A
+ * listed task no longer open is left out.
  */
 function useCompleteDealTasks() {
   const t = useT();
   const toast = useToast();
   const report = useBulkOutcome();
-  return async (tasks: readonly Activity[]) => {
+  const client = useQueryClient();
+  return async (dealId: string, tasks: readonly Activity[]) => {
     const batches: BulkBatch[] = [];
     let firstSkip: BulkSkip | undefined;
     let failed = false;
     try {
-      for (const request of completionRequests(tasks)) {
+      const listed = new Set(tasks.map((task) => task.id));
+      const current = await client.fetchQuery({
+        ...openTasksQuery("deal", dealId),
+        staleTime: 0,
+      });
+      const still = current.filter((task) => listed.has(task.id));
+      for (const request of completionRequests(still)) {
         const preview = await previewBulkChange(request, t);
         firstSkip ??= preview.excluded[0];
         if (preview.count === 0) {
@@ -174,7 +139,7 @@ function NothingCompleted({ skip }: Readonly<{ skip: BulkSkip | undefined }>) {
 export function useCloseTasks(dealId: string | null) {
   const t = useT();
   const [answer, setAnswer] = useState<CloseTasksAnswer | "">("");
-  const read = useDealOpenTasks(dealId);
+  const read = useOpenTasks("deal", dealId);
   const listed = read.data ?? [];
   const complete = useCompleteDealTasks();
   return {

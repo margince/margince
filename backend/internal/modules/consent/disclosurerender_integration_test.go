@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -294,6 +295,9 @@ func TestTheParticularsRoundTrip(t *testing.T) {
 		PrivacyContact:    "datenschutz@beispiel.test",
 		ObjectionRoute:    "Reply with STOP.",
 		AdvertiserContact: "+49 30 123456",
+		Translations: []ParticularsTranslation{{
+			Language: "vi", ObjectionRoute: "Trả lời email này với từ STOP.",
+		}},
 	}
 
 	store := settingsStoreFor(t)
@@ -304,7 +308,7 @@ func TestTheParticularsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading them back: %v", err)
 	}
-	if read != in {
+	if !reflect.DeepEqual(read, in) {
 		t.Errorf("the read answered %+v, want what was stored", read)
 	}
 }
@@ -395,7 +399,7 @@ func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the particulars back: %v", err)
 	}
-	if after != stated {
+	if !reflect.DeepEqual(after, stated) {
 		t.Errorf("the refused request still changed the particulars to %+v: the read gate "+
 			"has to run BEFORE the write, or a 403 arrives after the mutation committed",
 			after)
@@ -418,9 +422,9 @@ func TestAFurtherEntityNamesItselfAsTheController(t *testing.T) {
 		LegalName: "Beispiel GmbH", PostalAddress: "Hauptstraße 1\n10115 Berlin", PrivacyContact: "privacy@beispiel.test",
 	})
 	branch := ids.NewV7()
-	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country,
+	e.exec(t, `INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction,
 		  address_line1, address_postal_code, address_city, captured_by)
-		VALUES ($1, 'Branch', 'Branch Co Ltd', 'zk', '1 Le Loi', '700000', 'Saigon', 'human:x')`, branch)
+		VALUES ($1, 'Branch', 'Branch Co Ltd', 'zk', 'zk', '1 Le Loi', '700000', 'Saigon', 'human:x')`, branch)
 	textOf := func(entity ids.UUID) map[string]string {
 		t.Helper()
 		out := map[string]string{}

@@ -22,6 +22,7 @@
 # both when it looked and when it did not, and a case whose evidence is
 # indistinguishable from its absence measures nothing.
 name: case23_find_us_a_slot
+title: Find us a slot
 criteria: [1, 2]
 
 # WRITES: nothing — this case only reads. Said out loud because a scenario that
@@ -36,11 +37,18 @@ prompt: |
   can offer her.
 
 # The only free/busy read. prep_for_meeting prepares for a meeting that already
-# exists and book_meeting commits one; neither answers when a host is open, and
+# exists and schedule_meeting books one; neither answers when a host is open, and
 # an answer assembled from the timeline instead is a second implementation of
-# the availability walk.
+# the availability walk. The slots are true only when read from the host's
+# calendar, and they move with the day the lane runs, so no fixed fact in the
+# answer can hold them: the read is the check.
 must_call:
   - check_availability
+
+# The user asked for options to offer, not a booking. schedule_meeting queues a
+# real invitation to Mai, so a run that books a slot has asked her unbidden.
+must_not_call_with:
+  - invite_meeting~.
 
 may_call:
   # Finding Mai and her company is a legitimate first step — the prompt names

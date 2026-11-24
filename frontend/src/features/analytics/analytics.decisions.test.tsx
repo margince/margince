@@ -70,11 +70,14 @@ it("lists the open decision and records its outcome without touching the deal", 
 
   await user.click(screen.getByRole("button", { name: "Record outcome" }));
   const save = screen.getByRole("button", { name: "Save outcome" });
-  expect(save).toBeDisabled();
-  await user.type(
-    screen.getByRole("textbox", { name: "What work was completed?" }),
-    "Buyer met",
-  );
+  const result = screen.getByRole("textbox", {
+    name: "What work was completed?",
+  });
+  await user.click(save);
+  expect(screen.getByText("This field is required.")).toBeVisible();
+  expect(result).toHaveFocus();
+  expect(outcome).not.toHaveBeenCalled();
+  await user.type(result, "Buyer met");
   await user.click(save);
   await waitFor(() => expect(outcome).toHaveBeenCalledTimes(1));
   expect(outcome.mock.calls[0]?.[0]).toEqual({ result: "Buyer met" });
@@ -140,4 +143,46 @@ it("can record the first manual decision without drawing an empty table", async 
   expect(screen.queryByRole("table")).toBeNull();
   await userEvent.setup().click(action);
   expect(await screen.findByRole("dialog")).toBeVisible();
+});
+
+async function typePastReviewDay(settings: Record<string, string>) {
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-11-21T12:00:00Z") });
+  const read = vi.fn(() => jsonResponse(settings));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "GET /me": meRoute({ activity: ["read", "create"], deal: ["read"] }),
+    "GET /analytics/decisions": () => jsonResponse({ data: [] }),
+    "GET /installation/settings": read,
+  });
+  render(
+    <StoryProviders>
+      <DecisionsPanel />
+    </StoryProviders>,
+  );
+  const user = userEvent.setup({
+    delay: null,
+    advanceTimers: vi.advanceTimersByTime,
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Record decision" }),
+  );
+  const field = await screen.findByRole("textbox", { name: /^Review on/ });
+  await waitFor(() => expect(read).toHaveBeenCalled());
+  await new Promise((settled) => setTimeout(settled, 50));
+  await user.type(field, "01/01/2020");
+  await user.tab();
+}
+
+it("refuses a review day before today in the installation's zone", async () => {
+  await typePastReviewDay({ timezone: "Pacific/Auckland" });
+  expect(await screen.findByText("Earliest date: 22/11/2026")).toBeVisible();
+  vi.useRealTimers();
+});
+
+it("leaves the review day open when the installation zone is unknown", async () => {
+  await typePastReviewDay({});
+  await waitFor(() =>
+    expect(screen.queryByText(/Earliest date/)).not.toBeInTheDocument(),
+  );
+  vi.useRealTimers();
 });

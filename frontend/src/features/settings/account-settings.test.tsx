@@ -9,6 +9,7 @@ import {
   setSingleKeyShortcutsOn,
   singleKeyShortcutsOn,
 } from "../../lib/shortcuts";
+import { setThemeChoice, useThemeChoice } from "../../lib/theme";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -21,12 +22,14 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   act(() => setSingleKeyShortcutsOn(true));
+  act(() => setThemeChoice("system"));
 });
 
 it("says so on the save bar and under the field when the account refuses the new language", async () => {
   const user = userEvent.setup();
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
     "PUT /me/locale": () =>
       new Response(
         JSON.stringify({
@@ -64,6 +67,7 @@ it("says so on the save bar and under the field when the account refuses the new
 it("says an agent set the time zone while the zone is the agent's", async () => {
   const seat = meFixture({});
   installFetchStub({
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
     "GET /me": () =>
       jsonResponse({
         ...seat,
@@ -88,6 +92,7 @@ it("saves the picked time zone as the user's own choice", async () => {
   const writes: unknown[] = [];
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
     "PUT /me/timezone": (body) => {
       writes.push(body);
       return jsonResponse({
@@ -121,7 +126,10 @@ it("saves the picked time zone as the user's own choice", async () => {
 // A Switch writes when turned, so the page's save bar never hears of it.
 it("turns single-key shortcuts off for this browser on the flip", async () => {
   const user = userEvent.setup();
-  installFetchStub({ "GET /me": () => jsonResponse(meFixture({})) });
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+  });
   render(
     <StoryProviders>
       <SavePageProvider>
@@ -139,4 +147,127 @@ it("turns single-key shortcuts off for this browser on the flip", async () => {
   expect(shortcuts).not.toBeChecked();
   expect(singleKeyShortcutsOn()).toBe(false);
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+});
+
+function ThemeChoiceProbe() {
+  return <output aria-label="Theme in use">{useThemeChoice()}</output>;
+}
+
+// The account menu offers the same choice and applies it on the click, so this
+// row does too and the two never show different themes.
+it("paints the picked appearance at once, with no save bar", async () => {
+  const user = userEvent.setup();
+  installFetchStub({ "GET /me": () => jsonResponse(meFixture({})) });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+        <ThemeChoiceProbe />
+        <PageSaveBar />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  const dark = await screen.findByRole("button", { name: "Dark" });
+
+  await user.click(dark);
+  expect(dark).toHaveAttribute("aria-pressed", "true");
+  expect(
+    screen.getByRole("status", { name: "Theme in use" }),
+  ).toHaveTextContent("dark");
+  expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+
+  act(() => setThemeChoice("light"));
+  expect(screen.getByRole("button", { name: "Light" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
+
+it("scrolls to the language and time zone card a setup step points at, then clears the dial", async () => {
+  window.location.hash = "#/settings/account?focus=account-language";
+  const scrolled: (string | null)[] = [];
+  vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function (
+    this: Element,
+  ) {
+    scrolled.push(this.id);
+  });
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  await screen.findByRole("combobox", { name: "Time zone" });
+  await vi.waitFor(() => expect(scrolled).toEqual(["account-language"]));
+  expect(window.location.hash).toBe("#/settings/account");
+  window.location.hash = "";
+});
+
+it("keeps the language on screen as the account's own choice in one click", async () => {
+  const user = userEvent.setup();
+  const writes: unknown[] = [];
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+    "PUT /me/locale": (body) => {
+      writes.push(body);
+      return jsonResponse({ ...meFixture({}).user, locale: "en" });
+    },
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  await user.click(await screen.findByRole("button", { name: "Keep English" }));
+  await vi.waitFor(() => expect(writes).toEqual([{ locale: "en" }]));
+});
+
+it("keeps a guessed time zone as the account's own choice in one click", async () => {
+  const user = userEvent.setup();
+  const writes: unknown[] = [];
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+    "PUT /me/timezone": (body) => {
+      writes.push(body);
+      return jsonResponse({ ...meFixture({}).user, timezone_chosen: true });
+    },
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Keep Europe/Berlin" }),
+  );
+  await vi.waitFor(() =>
+    expect(writes).toEqual([{ timezone: "Europe/Berlin", source: "chosen" }]),
+  );
+});
+
+it("offers no keep button once the account chose both", async () => {
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({ personalChoicesMade: true })),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+  });
+  render(
+    <StoryProviders>
+      <SavePageProvider>
+        <AccountSettings />
+      </SavePageProvider>
+    </StoryProviders>,
+  );
+  await screen.findByRole("combobox", { name: "Time zone" });
+  expect(screen.queryByRole("button", { name: /^Keep/ })).toBeNull();
 });

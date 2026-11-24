@@ -11,6 +11,7 @@ import {
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { openFilterValues } from "../../testing/listquery.testkit";
+import { openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { LeadScreen, LeadsScreen } from "./leads";
 import {
@@ -75,6 +76,27 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
 
     await waitFor(() =>
       expect(urls.some((url) => url.includes("status=contacted"))).toBe(true),
+    );
+  });
+
+  it("a status filter naming a closed status reads the archived leads it names", async () => {
+    // Qualifying or disqualifying archives the lead, so the filter alone would
+    // match nothing while Show archived is off.
+    const user = userEvent.setup();
+    const { urls } = stubFetch(async () => emptyPage());
+    render(<LeadsScreen />);
+    await waitFor(() => expect(urls.length).toBeGreaterThan(0));
+
+    await pickFilter(user, "Status", "Disqualified");
+
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("status=disqualified") &&
+            url.includes("include_archived=true"),
+        ),
+      ).toBe(true),
     );
   });
 
@@ -177,6 +199,11 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     await user.click(screen.getByLabelText("New owner"));
     await user.click(await screen.findByRole("option", { name: "Lena F." }));
     await user.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Assign",
+      }),
+    );
 
     await waitFor(() => expect(sent).not.toBeNull());
     expect(sent).toEqual({
@@ -192,6 +219,10 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     // The row that refused is named, with the outcome the server reported.
     expect(await screen.findByText(/1 not applied/)).toBeTruthy();
     expect(screen.getByText(/Otto Fischer: /)).toBeTruthy();
+    // The row that moved is counted, whatever the view shows of it.
+    expect(
+      await screen.findByText(/^1 lead assigned to Lena F\./),
+    ).toBeTruthy();
   });
 
   it("says so when the whole bulk assign is refused, not just when rows are", async () => {
@@ -237,6 +268,11 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     await user.click(screen.getByLabelText("New owner"));
     await user.click(await screen.findByRole("option", { name: "Lena F." }));
     await user.click(screen.getByRole("button", { name: "Assign" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Assign",
+      }),
+    );
 
     expect(
       await screen.findByText(/active colleague you may assign work to/),
@@ -496,7 +532,12 @@ describe("LeadsScreen — rich create (P-15)", () => {
       }
       return emptyPage();
     });
+    const user = userEvent.setup();
     render(<LeadsScreen />);
+    const step = within(await openViewStep(user, "Columns"));
+    await user.click(
+      await step.findByRole("checkbox", { name: "Referred by partner" }),
+    );
 
     expect(await screen.findByText("Former Partner AG")).toBeTruthy();
     expect(screen.queryByText("c-old")).toBeNull();
@@ -594,6 +635,20 @@ describe("LeadsScreen — archived marking (P-3)", () => {
       .getAllByText("Disqualified", { selector: ".badge-label" })
       .filter((label) => label.closest(".badge.badge-warning"));
     expect(warned).toHaveLength(1);
+  });
+});
+
+describe("LeadsScreen — the count line", () => {
+  it("names one lead in the singular", async () => {
+    stubFetch(async () =>
+      jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<LeadsScreen />);
+    expect(await screen.findByText(/1 to 1 of 1 lead\b/)).toBeTruthy();
+    expect(screen.queryByText(/of 1 leads/)).toBeNull();
   });
 });
 

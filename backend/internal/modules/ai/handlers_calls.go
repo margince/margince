@@ -246,7 +246,7 @@ func (h Handlers) GetAiTaskFlow(w http.ResponseWriter, r *http.Request, params c
 		httperr.Write(w, r, err)
 		return
 	}
-	flow, err := h.calls.TaskFlow(r.Context(), Task(params.Task), span)
+	flow, err := h.calls.TaskFlow(r.Context(), Task(params.Task), h.taskOrder(Task(params.Task)), span)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

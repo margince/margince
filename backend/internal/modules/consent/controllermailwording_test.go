@@ -51,3 +51,43 @@ func TestEveryDisclosedParticularIsLabelledInTheMailsLanguage(t *testing.T) {
 		t.Errorf("the German controller label is %q", got)
 	}
 }
+
+// TestTheExpiryLineNamesTheCountryItIsGivenIn. An expiry given with a country
+// names that country's time beside the offset; one given without prints the
+// offset alone.
+func TestTheExpiryLineNamesTheCountryItIsGivenIn(t *testing.T) {
+	saigon, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	expires := time.Date(2026, 11, 28, 8, 21, 0, 0, time.UTC)
+	cases := []struct {
+		name   string
+		expiry linkExpiry
+		want   string
+	}{
+		{
+			"a contact in Vietnam",
+			linkExpiry{at: expires.In(saigon), country: "vn"},
+			"Liên kết có hiệu lực đến 28/11/2026, 15:21 (giờ Việt Nam, UTC+07:00).",
+		},
+		{
+			"a contact with no known zone",
+			linkExpiry{at: expires.In(berlin)},
+			"Liên kết có hiệu lực đến 28/11/2026, 09:21 (UTC+01:00).",
+		},
+	}
+	for _, tc := range cases {
+		rendered, _, err := renderTemplate(TemplateRecordConfirmation, tc.expiry, "vi", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(rendered.Body, tc.want) {
+			t.Errorf("%s: the mail does not say %q:\n%s", tc.name, tc.want, rendered.Body)
+		}
+	}
+}

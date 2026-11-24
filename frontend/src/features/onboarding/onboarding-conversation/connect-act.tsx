@@ -1,6 +1,8 @@
+import { ArrowLeft } from "lucide-react";
 import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
-import { ErrorLine } from "../../../design-system/errorline";
+import { Button } from "../../../design-system/atoms";
+import { StageActions } from "../../../design-system/onboarding-stage";
 import { vendorOf } from "../../../format/connectorprovider";
 import { ordinalNumber } from "../../../format/format";
 import { useT } from "../../../i18n/index";
@@ -11,7 +13,7 @@ import {
   useSetAgentGrant,
 } from "../../../lib/overnight-grant";
 import { problemMessageOf } from "../../../lib/problem";
-import { navigateReplacing } from "../../../lib/router";
+import { useAddressWriters } from "../../../lib/urlstate";
 import { useSaveLinkedInAccount } from "../../../lib/use-linkedin-account";
 import { EMPTY_DRAFT } from "../onboarding";
 import {
@@ -82,6 +84,7 @@ export function ConnectAct({
   returningProvider,
 }: ConnectActProps) {
   const t = useT();
+  const { navigateReplacing } = useAddressWriters();
   // The account whose ask is open. On the page load a proven redirect lands on,
   // it is the account that trip was for. A refused consent can then be asked
   // again from where the reader left.
@@ -117,7 +120,7 @@ export function ConnectAct({
     setVendor(null);
     setResultSettled(true);
     if (outcome !== undefined) {
-      navigateReplacing({ screen: "onboarding", id: "company" });
+      navigateReplacing({ screen: "onboarding", id: "connect" });
     }
   };
 
@@ -128,12 +131,17 @@ export function ConnectAct({
   // false, and the store keeps whatever authorization already exists. Unlike
   // mail, resolving LinkedIn never touches `finish` — it is a card on the same
   // screen, not a gate on it.
-  const saveLinkedin = (profileUrl: string) => {
+  const saveLinkedin = (profileUrl: string, onSaved: () => void) => {
     linkedin.mutate(
       { profileUrl, connected: false },
       {
-        onSuccess: () =>
-          dispatch({ type: "LINKEDIN_SAVED", profile: profileUrl }),
+        onSuccess: () => {
+          // A change to a profile saved on this step is no second answer.
+          if (state.linkedinStatus === "pending") {
+            dispatch({ type: "LINKEDIN_SAVED", profile: profileUrl });
+          }
+          onSaved();
+        },
       },
     );
   };
@@ -184,9 +192,9 @@ export function ConnectAct({
     // and leaving an opt-out as unanswered is what makes the product ask the
     // declining rep again every night.
     //
-    // A rep who SKIPS the connect records nothing, whatever the box says — the
-    // agent reads their mail to build the brief, so an answer about a mailbox
-    // that was never connected is an answer about nothing.
+    // A rep who skips the connect records nothing and was never shown the
+    // switch. The agent reads their mail to build the brief, and an answer
+    // about a mailbox that was never connected is an answer about nothing.
     //
     // Its failure does not fail the step, but it is not swallowed either: the
     // rep is told, and the question is askable again in Settings. Blocking
@@ -214,7 +222,7 @@ export function ConnectAct({
   };
 
   // Where the journey stands, in the rail's own counting.
-  const stops = railStops(state.memberPath);
+  const stops = railStops(state.memberPath, state.voiceStep);
   const eyebrow = t("ob.conv.scene.step", {
     n: ordinalNumber(stops.findIndex((stop) => stop.key === "connect") + 1),
     m: ordinalNumber(stops.length),
@@ -229,46 +237,49 @@ export function ConnectAct({
       title={t("ob.conv.connect.sceneTitle")}
       sub={t("ob.conv.connect.sceneSub")}
     >
-      {
-        <ConnectScene
-          vendor={vendor}
-          onVendorChange={setVendor}
-          askBusy={askBusy}
-          onAskBusyChange={setAskBusy}
-          onImapDone={settleResult}
-          onFinish={(skipped) => void finish(skipped)}
-          finishing={finishing}
-          wantsOvernight={wantsOvernight}
-          onWantsOvernightChange={chooseOvernight}
-          overnightFailed={overnightFailed}
-          linkedinStatus={state.linkedinStatus}
-          onLinkedinSave={saveLinkedin}
-          onLinkedinSkip={() => dispatch({ type: "LINKEDIN_SKIPPED" })}
-          linkedinPending={linkedin.isPending}
-          linkedinError={
-            linkedin.isError ? problemMessageOf(linkedin.error, t) : null
-          }
-          // A redirect already returned: what it could not do, shown inline whether or
-          // not this tab can vouch for the trip. A stale link still reports what the
-          // roster says.
-          returnPanel={
-            outcome !== undefined && !resultSettled ? (
-              <OAuthReturnPanel
-                outcome={outcome}
-                provider={returningProvider}
-                onDone={settleResult}
-              />
-            ) : null
-          }
-        />
-      }
-      {/* The consent narration and the picker prompt are said once, on the
-          scene itself now (the guarantees grid, each provider's own
-          disclosure). What survives from the thread is the one thing a
-          reader still has to act on: a finish that could not be recorded. */}
-      {finishFailed && (
-        <ErrorLine>{t("ob.conv.connect.persistFailed")}</ErrorLine>
+      {/* Before the scene, so it fills the rail first and stands leftmost. */}
+      {state.voiceStep && (
+        <StageActions>
+          <Button
+            variant="ghost"
+            disabled={askBusy || finishing}
+            onClick={() => dispatch({ type: "CONNECT_BACK" })}
+          >
+            <ArrowLeft aria-hidden /> {t("ob.back")}
+          </Button>
+        </StageActions>
       )}
+      <ConnectScene
+        vendor={vendor}
+        onVendorChange={setVendor}
+        askBusy={askBusy}
+        onAskBusyChange={setAskBusy}
+        onImapDone={settleResult}
+        onFinish={(skipped) => void finish(skipped)}
+        finishing={finishing}
+        finishFailed={finishFailed}
+        wantsOvernight={wantsOvernight}
+        onWantsOvernightChange={chooseOvernight}
+        overnightFailed={overnightFailed}
+        linkedinStatus={state.linkedinStatus}
+        onLinkedinSave={saveLinkedin}
+        onLinkedinSkip={() => dispatch({ type: "LINKEDIN_SKIPPED" })}
+        linkedinPending={linkedin.isPending}
+        linkedinError={
+          linkedin.isError ? problemMessageOf(linkedin.error, t) : null
+        }
+        // A returned redirect shows what it could not do, whether or not this
+        // tab can vouch for the trip. A stale link still reports the roster.
+        returnPanel={
+          outcome !== undefined && !resultSettled ? (
+            <OAuthReturnPanel
+              outcome={outcome}
+              provider={returningProvider}
+              onDone={settleResult}
+            />
+          ) : null
+        }
+      />
     </ConversationWorkbench>
   );
 }

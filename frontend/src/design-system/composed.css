@@ -104,12 +104,23 @@
   min-width: 0;
   min-height: 120px;
 }
-/* A folded column is as wide as its head, and the head's bleed leaves that
- * untouched: the negative inline margin comes straight back as the head's own
- * inline padding, so the name and the count still decide the width. */
-.board-col-collapsed .board-col-head {
-  writing-mode: horizontal-tb;
+/* A FOLDED COLUMN READS SIDEWAYS, one line wide. Written across, a name and
+ * its count make a fold about 150px, and the lead board's three stages and two
+ * folds would need 1258px of the 1116px a 1440px window leaves them. Turned, a
+ * fold is about 40px and the whole board fits.
+ *
+ * The head and the line below it turn; the column does not, so its border,
+ * height and drop target stay what an open stage has. The margins are
+ * PHYSICAL here because a turned head's inline axis is the vertical one, and
+ * the bleed has to stay on the left and right. */
+.board-col-collapsed .board-col-head,
+.board-col-collapsed .board-col-sub {
+  writing-mode: vertical-rl;
   white-space: nowrap;
+}
+.board-col-collapsed .board-col-head {
+  margin: 0 calc(-1 * var(--space-3));
+  padding: var(--space-3) var(--space-2) 4px;
 }
 /* STUCK TO THE TOP OF ITS COLUMN, AND IT SEALS IT. A stage is the only thing
  * that says which pile a card belongs to, and a reader scrolled halfway down a
@@ -216,6 +227,9 @@
   color: var(--textSecondary);
   font-variant-numeric: tabular-nums;
 }
+.board-col-partial {
+  color: var(--textSecondary);
+}
 .board-col-weighted-figure {
   color: var(--accentText);
   font-weight: var(--fontWeightMedium);
@@ -252,10 +266,10 @@
   color: var(--textSecondary);
   font: var(--fontBodySmall);
 }
-/* A folded column is as wide as its head, and the reason wraps inside that
-   width rather than widening the fold to one line of prose. */
+/* In a turned fold the reason runs down the column, and wraps into a second
+   line only when the column is shorter than the sentence. */
 .board-col-collapsed .board-col-refusal {
-  contain: inline-size;
+  white-space: normal;
 }
 
 /* A phone SWIPES between stages rather than showing them all at once. One stage
@@ -454,6 +468,12 @@
   line-clamp: 2;
   overflow: hidden;
   overflow-wrap: anywhere;
+}
+/* Above the stretched link, like the owner, or the pointer never reaches the
+   name and the tip with the whole of a clamped one never opens. */
+.deal-card .deal-name-text {
+  position: relative;
+  z-index: 1;
 }
 .deal-card .deal-figure {
   display: flex;
@@ -661,12 +681,18 @@
   margin-block-start: var(--space-6);
 }
 
-/* The details card's sections, at a tighter step than the stack above: a
-   detail is a glance and a feed card is something you read. */
+/* The details card's panes, closer than a feed's stack: a detail is a glance.
+   Only a phone's card keeps its edge, so only there do the panes stand in. */
 .record-aside {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+@media (max-width: 700px) {
+  .record-aside {
+    padding-inline: var(--space-3);
+  }
 }
 
 /* The dials above the chronology: the cuts, then the narrowing. Its own
@@ -776,7 +802,6 @@
   inline-size: 0.5rem;
   block-size: 0.5rem;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderStrong);
   border: 1px solid var(--borderStrong);
 }
@@ -832,7 +857,6 @@
   width: 24px;
   height: 24px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   border: 1px solid var(--borderStrong);
   display: grid;
@@ -939,8 +963,20 @@
  * cleaner for a taller, denser field set. */
 .detail-grid {
   display: grid;
-  grid-template-columns: 140px 1fr;
+  grid-template-columns: 140px minmax(0, 1fr);
   gap: 8px 16px;
+}
+/* A value is data: a served segment need not hold a space to break at. */
+.detail-grid > dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* A value that is a list of its own, such as a partner's open tasks, needs
+ * the panel's width on a phone, so below the fold it goes under its term. */
+@media (max-width: 720px) {
+  .detail-grid > .detail-grid-wide {
+    grid-column: 1 / -1;
+  }
 }
 
 /* A timeline list whose rows carry no date gutter or rail of their own —
@@ -1137,7 +1173,6 @@
   width: 28px;
   height: 28px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   border: 1px solid var(--borderStrong);
 }

@@ -1,4 +1,5 @@
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
+import { GREETING_REGISTER_LABEL } from "../format/greetingregister";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -6,12 +7,14 @@ import type { QueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
 import { listedSocial } from "../lib/socialplatforms";
 import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import { addressPatch } from "./companyform";
 import type { CreateField, FormRows } from "./create";
 import type { NameOffer } from "./create.offered";
+import { withPrimaryDefault } from "./createrows";
 import { searchCompanies } from "./filterreference";
 import { normalizeProfileUrl } from "./profileurl";
 
@@ -40,26 +43,30 @@ function asPhoneType(
 // both: create and update describing an address differently is exactly what
 // that shared schema exists to prevent.
 function contactEmailInputs(rows: FormRows) {
-  return (rows.emails ?? [])
-    .filter((row) => (row.email ?? "").trim().length > 0)
-    .map((row, index) => ({
-      email: (row.email ?? "").trim(),
-      email_type: asEmailType(row.email_type),
-      is_primary: row.is_primary === "true",
-      position: index,
-    }));
+  return withPrimaryDefault(
+    (rows.emails ?? [])
+      .filter((row) => (row.email ?? "").trim().length > 0)
+      .map((row, index) => ({
+        email: (row.email ?? "").trim(),
+        email_type: asEmailType(row.email_type),
+        is_primary: row.is_primary === "true",
+        position: index,
+      })),
+  );
 }
 
 // The phone rows, the same way and for the same reason.
 function contactPhoneInputs(rows: FormRows) {
-  return (rows.phones ?? [])
-    .filter((row) => (row.phone ?? "").trim().length > 0)
-    .map((row, index) => ({
-      phone: (row.phone ?? "").trim(),
-      phone_type: asPhoneType(row.phone_type),
-      is_primary: row.is_primary === "true",
-      position: index,
-    }));
+  return withPrimaryDefault(
+    (rows.phones ?? [])
+      .filter((row) => (row.phone ?? "").trim().length > 0)
+      .map((row, index) => ({
+        phone: (row.phone ?? "").trim(),
+        phone_type: asPhoneType(row.phone_type),
+        is_primary: row.is_primary === "true",
+        position: index,
+      })),
+  );
 }
 
 // The first work address typed, the primary one first, once it reads as a whole
@@ -154,12 +161,40 @@ export function mapContactBody(
     emails: emails.length > 0 ? emails : undefined,
     phones: phones.length > 0 ? phones : undefined,
     ...companyChoice(values),
+    ...statedSource(values),
     source: "manual",
   };
 }
 
+// The stated source and its note, sent only when the user gave one.
+function statedSource(values: Record<string, string>) {
+  const source = values.acquisition_source ?? "";
+  const note = values.acquisition_note?.trim() || undefined;
+  return isStatedSource(source)
+    ? { acquisition_source: source, acquisition_note: note }
+    : { acquisition_note: note };
+}
+
+function isStatedSource(
+  value: string,
+): value is keyof typeof STATED_SOURCE_LABEL {
+  return Object.hasOwn(STATED_SOURCE_LABEL, value);
+}
+
 function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
+}
+
+// The register the form holds: unset and an unknown value both clear it, and a
+// form that never showed the field leaves it alone.
+function greetingRegisterChoice(
+  values: Record<string, unknown>,
+): UpdateContactRequest["greeting_register"] {
+  if (!Object.hasOwn(values, "greeting_register")) {
+    return undefined;
+  }
+  const choice = values.greeting_register;
+  return choice === "formal" || choice === "familiar" ? choice : null;
 }
 
 // Builds the PATCH body.
@@ -186,6 +221,7 @@ export function mapContactUpdate(
     first_name: scalar("first_name"),
     last_name: scalar("last_name"),
     title: scalar("title"),
+    greeting_register: greetingRegisterChoice(values),
     owner_id: scalar("owner_id"),
     visibility:
       values.visibility === "workspace" || values.visibility === "owner"
@@ -241,7 +277,18 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       maxLength: TEXT_LIMITS.label,
     },
     contactCompanyField,
-    { key: "social.linkedin", label: "create.linkedin" },
+    {
+      key: "social.linkedin",
+      label: "create.linkedin",
+      validate: (value, values, rows = {}) =>
+        !values?.full_name?.trim() ||
+        value.trim() ||
+        contactEmailInputs(rows).length ||
+        contactPhoneInputs(rows).length
+          ? undefined
+          : t("create.contactChannelRequired"),
+      wireField: "linkedin_url",
+    },
     {
       key: "emails",
       label: "create.email",
@@ -266,8 +313,9 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         },
       ],
       primaryKey: "is_primary",
+      rowsUnique: true,
       typeKey: "email_type",
-      typeDefault: "work", // matches asEmailType's own fallback
+      typeDefault: "work",
     },
     {
       key: "phones",
@@ -289,21 +337,76 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       ],
       primaryKey: "is_primary",
       typeKey: "phone_type",
-      typeDefault: "work", // matches asPhoneType's own fallback
+      typeDefault: "work",
+    },
+    {
+      key: "acquisition_source",
+      label: "create.acquisitionSource",
+      type: "select",
+      options: Object.entries(STATED_SOURCE_LABEL).map(([value, label]) => ({
+        value,
+        label: t(label),
+      })),
+      hint: t("create.acquisitionSourceHint"),
+    },
+    {
+      key: "acquisition_note",
+      label: "create.acquisitionNote",
+      type: "textarea",
+      maxLength: 500,
+      requiredWhen: (values) => values.acquisition_source === "other",
     },
   ];
 }
 
-// The split name parts are taken once, for a mail merge's greeting. The
-// employer is an edge, edited on the Company card.
+// Where a contact typed in by hand came from. The contact's privacy page
+// prints the answer, so "source unknown" is left for when none was given.
+const STATED_SOURCE_LABEL: Readonly<
+  Record<NonNullable<CreateContactRequest["acquisition_source"]>, MessageKey>
+> = {
+  met_in_person: "create.source.metInPerson",
+  business_card: "create.source.businessCard",
+  referral: "create.source.referral",
+  website: "create.source.website",
+  other: "create.source.other",
+};
+
+// The employer is an edge, edited on the Company card.
 const CREATE_ONLY = new Set([
-  "first_name",
-  "last_name",
   contactCompanyField.key,
+  "acquisition_source",
+  "acquisition_note",
 ]);
 
+// The register a rep sets once so every draft to the contact opens the same way.
+// The empty option clears it, which hands the choice back to Margince.
+function greetingRegisterField(t: ReturnType<typeof useT>): CreateField {
+  return {
+    key: "greeting_register",
+    label: "create.greetingRegister",
+    type: "select",
+    options: [
+      { value: "", label: t("create.greetingRegister.unset") },
+      ...Object.entries(GREETING_REGISTER_LABEL).map(([value, label]) => ({
+        value,
+        label: t(label),
+      })),
+    ],
+    hint: t("create.greetingRegisterHint"),
+  };
+}
+
 export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {
-  return contactCreateFields(t).filter((field) => !CREATE_ONLY.has(field.key));
+  return contactCreateFields(t)
+    .filter((field) => !CREATE_ONLY.has(field.key))
+    .flatMap((field) => {
+      if (field.key === "social.linkedin") {
+        return [{ ...field, validate: undefined }];
+      }
+      return field.key === "title"
+        ? [field, greetingRegisterField(t)]
+        : [field];
+    });
 }
 
 // Compare replace-sets in their request shape; row ids and server metadata
@@ -311,20 +414,26 @@ export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {
 export function contactEditComparison(
   record: components["schemas"]["Contact"],
 ) {
+  const social = listedSocial(record.social);
   return {
     ...record,
-    social: listedSocial(record.social),
-    emails: (record.emails ?? []).map((row, position) => ({
-      email: row.email,
-      email_type: row.email_type ?? "work",
-      is_primary: row.is_primary,
-      position,
-    })),
-    phones: (record.phones ?? []).map((row, position) => ({
-      phone: row.phone,
-      phone_type: row.phone_type ?? "work",
-      is_primary: row.is_primary,
-      position,
-    })),
+    // The form opens a missing link as an empty field, so an untouched one is no change.
+    social: { ...social, linkedin: social.linkedin ?? "" },
+    emails: withPrimaryDefault(
+      (record.emails ?? []).map((row, position) => ({
+        email: row.email,
+        email_type: row.email_type ?? "work",
+        is_primary: row.is_primary,
+        position,
+      })),
+    ),
+    phones: withPrimaryDefault(
+      (record.phones ?? []).map((row, position) => ({
+        phone: row.phone,
+        phone_type: row.phone_type ?? "work",
+        is_primary: row.is_primary,
+        position,
+      })),
+    ),
   };
 }

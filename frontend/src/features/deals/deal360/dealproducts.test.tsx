@@ -97,7 +97,15 @@ describe("the deal's products", () => {
       [`GET ${ROUTE}`]: () => jsonResponse({ data: FROM_OFFER, tag: "read-1" }),
       "GET /products": () =>
         jsonResponse({
-          data: [{ id: "p-impl", name: "Implementation" }],
+          data: [
+            {
+              id: "p-impl",
+              name: "Implementation",
+              unit: "day",
+              unit_price_minor: 120_000,
+              currency: "EUR",
+            },
+          ],
           next_cursor: null,
           has_more: false,
         }),
@@ -125,7 +133,7 @@ describe("the deal's products", () => {
       await within(dialog).findByRole("button", { name: /Implementation/ }),
     );
     await user.type(
-      within(dialog).getByRole("spinbutton", {
+      within(dialog).getByRole("textbox", {
         name: "Amount for Implementation",
       }),
       "5000",
@@ -179,10 +187,10 @@ describe("the deal's products", () => {
       await within(dialog).findByText(/Someone saved this deal’s products/),
     ).toBeTruthy();
     expect(
-      within(dialog).getByRole<HTMLInputElement>("spinbutton", {
+      within(dialog).getByRole<HTMLInputElement>("textbox", {
         name: "Amount for ERP licence",
       }).value,
-    ).toBe("9000");
+    ).toBe("9000.00");
     await user.click(save);
     await waitFor(() => expect(sent).toHaveLength(2));
     expect(

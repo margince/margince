@@ -112,15 +112,14 @@ func TestDedupeQueueHidesAPairTheCallerCanOnlyHalfSee(t *testing.T) {
 // THE BADGE OBEYS THE SAME RULE AS THE LANE, which is the half the list test
 // above cannot see.
 //
-// CountOpenDedupeCandidates is what the daily digest reports and what the
-// attention card badges, and it is a reader's invitation to open a queue. A
-// count taken without the pair's both-sides rule is two defects at once: the
-// reader is told twelve and shown three, and the number moves as records they
-// may not open come and go — a weak existence oracle over somebody else's
-// capture-private contact.
+// The open total of ListFirstDedupePage is what the attention card badges. It
+// invites a reader to open a queue. A total taken without the both-sides rule
+// is two defects at once. The reader is told twelve and shown three. The number
+// also moves as records they may not open come and go, a weak existence oracle
+// over somebody else's capture-private contact.
 //
-// Run over the same arms and both slots as the list, because the count assembles
-// its clause separately and a slip in one spelling does not show in the other.
+// Run over the same arms and both slots as the list. The total is a separate
+// column of the statement, and it must obey the same clause.
 func TestTheOpenCountHidesAPairTheCallerCanOnlyHalfSee(t *testing.T) {
 	for _, arm := range halfVisibleArms() {
 		for _, hide := range []string{"first-created", "second-created"} {
@@ -158,7 +157,7 @@ func TestTheOpenCountHidesAPairTheCallerCanOnlyHalfSee(t *testing.T) {
 // countOpen reads the badge through the production entry point.
 func countOpen(ctx context.Context, t *testing.T, e *dedupeEnv) int {
 	t.Helper()
-	open, err := e.store.CountOpenDedupeCandidates(ctx)
+	_, open, err := e.store.ListFirstDedupePage(ctx, FirstDedupePageInput{Limit: 1})
 	if err != nil {
 		t.Fatalf("counting open candidates: %v", err)
 	}

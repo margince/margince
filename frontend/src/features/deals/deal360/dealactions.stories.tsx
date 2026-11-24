@@ -53,6 +53,8 @@ const deal = (over: Partial<Deal> = {}): Deal =>
     stalled: false,
     source: "manual",
     version: 1,
+    writable: true,
+    archivable: true,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...over,
@@ -99,6 +101,12 @@ const actions = (
 /** An open deal a rep may write to: every verb live. */
 export const Open: Story = { render: () => actions() };
 
+/** A deal whose company is not shared with this reader: Meet says so, rather
+ * than claiming the deal has no company. */
+export const CompanyWithheld: Story = {
+  render: () => actions({ company_id: null, masked_fields: ["company_id"] }),
+};
+
 /**
  * A seat that may read the deal but not log against it. The two recording verbs
  * keep their place and point at one sentence — withholding twelve buttons
@@ -116,13 +124,61 @@ export const LoggingRefused: Story = {
       ),
     );
     await expect(email).toBeDisabled();
+    const host = email.closest(".icon-action");
+    await expect(host).not.toBeNull();
+    if (host) {
+      await userEvent.hover(host);
+    }
+    await waitFor(() =>
+      expect(screen.getByRole("tooltip")).toHaveTextContent(
+        "Email. You do not have permission to log activities on this record.",
+      ),
+    );
   },
 };
 
 /**
- * Archived. The page's own sentence refuses every verb at once, and Reopen is
- * DRAWN (refused) rather than absent, because a reader who archived a closed
- * deal came here asking whether it can come back.
+ * A closed deal this reader may not write: permission, not state, withholds
+ * Reopen and the write verbs, so they are absent. Add task stays, shut, with
+ * the reason.
+ */
+export const ReadOnlyDeal: Story = {
+  render: () => actions({ status: "lost", writable: false }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    const addTask = await screen.findByRole("button", { name: "Add task" });
+    // Until /me answers every deal reads as unwritable, so absence proves
+    // nothing before the seat that holds deal:update has loaded. Once it has,
+    // the row that stays says why it is shut.
+    await waitFor(() =>
+      expect(addTask).toHaveAccessibleDescription(
+        "You can only read this record. Ask its owner for write access.",
+      ),
+    );
+    await expect(addTask).toBeDisabled();
+    for (const name of [
+      "Reopen",
+      "Archive deal",
+      "Edit details",
+      "Share",
+      "Correct close day",
+    ]) {
+      await expect(
+        screen.queryByRole("button", { name }),
+      ).not.toBeInTheDocument();
+    }
+  },
+};
+
+/**
+ * Archived. The page's one sentence refuses the logging verbs, Share, Correct
+ * close day, Reopen and Archive; Edit details stays enabled, opening a
+ * read-only drawer. Reopen is DRAWN (refused) rather than absent, because a
+ * reader who archived a closed deal came here asking whether it can come back.
  */
 export const Archived: Story = {
   render: () =>
@@ -131,6 +187,16 @@ export const Archived: Story = {
       { deal: ["read", "update"], activity: ["create"] },
       "deal-archived",
     ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "More actions",
+      }),
+    );
+    const reopen = await screen.findByRole("button", { name: "Reopen" });
+    await waitFor(() => expect(reopen).toBeDisabled());
+    await expect(reopen).toHaveAttribute("aria-describedby", "deal-archived");
+  },
 };
 
 /**
@@ -155,7 +221,7 @@ export const OverflowOnAClosedDeal: Story = {
     ).toBeVisible();
     await expect(
       await screen.findByRole("button", { name: "Archive deal" }),
-    ).toBeVisible();
+    ).toBeEnabled();
   },
 };
 

@@ -179,6 +179,9 @@ function renderTab(
       ) {
         return jsonResponse({ data: [] });
       }
+      if (key === "GET /capture/unrouted-mail") {
+        return jsonResponse({ messages: 0, data: [] });
+      }
       if (key === "GET /capture/activity/workspace") {
         return jsonResponse(windowBody({ data: [], funnel: {} }));
       }
@@ -777,7 +780,9 @@ describe("the pipeline drill-down", () => {
     ).toBeInTheDocument();
     // The rung that motivated the whole surface: a step that DECLINED, saying
     // why, where before there was nothing at all.
-    expect(await screen.findByText(/reads email only/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/does not read messages that arrived this way/i),
+    ).toBeInTheDocument();
   });
 
   it("renders a stage this build has never heard of", async () => {

@@ -45,7 +45,7 @@ func readChatScreenshot(t *testing.T, modelReply string) chatFixture {
 	contact := env.SeedContact(t, "Lena Hoffmann", &env.AdminUser)
 	att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
 		EntityType: "contact", EntityID: contact, Filename: "chat.png", ContentType: "image/png",
-		Content: bytes.NewReader(cardPNG(t)),
+		Content: bytes.NewReader(tallPNG(t)),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -65,7 +65,7 @@ func readChatScreenshot(t *testing.T, modelReply string) chatFixture {
 
 func (f chatFixture) file(t *testing.T, body *string) (ids.UUID, error) {
 	t.Helper()
-	out, err := NewChatCaptureFile(f.env.Pool).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
+	out, err := NewChatCaptureFile(f.env.Pool, nil).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
 		ExtractionId: openapi_types.UUID(f.reading), ChannelProvider: "whatsapp", Body: body,
 	})
 	return ids.UUID(out.ActivityId), err
@@ -139,14 +139,14 @@ func TestAChatScreenshotIsStillFiledWhenTheModelCouldNotReadIt(t *testing.T) {
 func TestAChatConfirmThatCannotBeTrustedWritesNothing(t *testing.T) {
 	f := readChatScreenshot(t, chatReply())
 	body := chatScreenshotText
-	_, err := NewChatCaptureFile(f.env.Pool).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
+	_, err := NewChatCaptureFile(f.env.Pool, nil).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
 		ExtractionId: openapi_types.UUID(f.reading), ChannelProvider: "carrier_pigeon", Body: &body,
 	})
 	var refused *activities.ChatCaptureError
 	if !errors.As(err, &refused) || refused.Field != "channel_provider" {
 		t.Fatalf("an unregistered channel was not refused by name: %v", err)
 	}
-	_, err = NewChatCaptureFile(f.env.Pool).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
+	_, err = NewChatCaptureFile(f.env.Pool, nil).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
 		ExtractionId: openapi_types.UUID(ids.NewV7()), ChannelProvider: "whatsapp", Body: &body,
 	})
 	if err == nil {
@@ -162,12 +162,14 @@ func TestAChatIsReadOnlyFromAnImageTheReaderTakes(t *testing.T) {
 	ctx := env.Admin()
 	store := activities.NewStore(env.DB()).WithBlobstore(blobstore.NewMemory())
 	contact := env.SeedContact(t, "Not An Image", &env.AdminUser)
-	for _, file := range []struct{ name, mime string }{
-		{"chat.txt", "text/plain"}, {"chat.tiff", "image/tiff"}, {"chat.heic", "image/heic"},
+	for _, file := range []struct{ name, mime, body string }{
+		{"chat.txt", "text/plain", "not a png"},
+		{"chat.tiff", "image/tiff", "II*\x00 not a png"},
+		{"chat.heic", "image/heic", "\x00\x00\x00\x18ftypheic not a png"},
 	} {
 		att, err := store.UploadAttachment(ctx, activities.AttachmentInput{
 			EntityType: "contact", EntityID: contact, Filename: file.name, ContentType: file.mime,
-			Content: strings.NewReader("not a png"),
+			Content: strings.NewReader(file.body),
 		})
 		if err != nil {
 			t.Fatal(err)

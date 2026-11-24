@@ -14,7 +14,10 @@ export type CatalogLevel = "essential" | "complete";
 export const loadedCatalogs = new Set<Locale>();
 const essentialCatalogs = new Set<Locale>();
 const catalogFailures = new Map<string, unknown>();
-const catalogLoads = new Map<string, Promise<void>>();
+// Marked the way React's `use()` reads a settled thenable, so a render after
+// the catalog arrives reads it without suspending.
+type CatalogLoad = Promise<void> & { status?: string; value?: undefined };
+const catalogLoads = new Map<string, CatalogLoad>();
 const catalogLoaders = {
   en: () => import("./en").then((module) => module.en),
   de: () => import("./de").then((module) => module.de),
@@ -34,16 +37,19 @@ export function localeLoaded(locale: Locale, level: CatalogLevel): boolean {
 }
 
 function loadCatalog(locale: Locale, level: CatalogLevel): Promise<void> {
-  if (localeLoaded(locale, level)) return Promise.resolve();
+  // The complete catalog answers for the essential one as well.
+  const answers = loadedCatalogs.has(locale) ? "complete" : level;
+  const known = catalogLoads.get(`${locale}/${answers}`);
+  if (known) return known;
   const key = `${locale}/${level}`;
-  const pending = catalogLoads.get(key);
-  if (pending) return pending;
   catalogFailures.delete(key);
   const loader = level === "complete" ? catalogLoaders : essentialLoaders;
-  const loading = loader[locale]()
+  const loading: CatalogLoad = loader[locale]()
     .then((catalog) => {
       Object.assign(catalogs[locale], catalog);
       (level === "complete" ? loadedCatalogs : essentialCatalogs).add(locale);
+      loading.status = "fulfilled";
+      loading.value = undefined;
     })
     .catch((error: unknown) => {
       catalogLoads.delete(key);
@@ -52,6 +58,11 @@ function loadCatalog(locale: Locale, level: CatalogLevel): Promise<void> {
     });
   catalogLoads.set(key, loading);
   return loading;
+}
+
+/** Whether something has asked for the complete catalog of `locale`. */
+export function completeRequested(locale: Locale): boolean {
+  return loadedCatalogs.has(locale) || catalogLoads.has(`${locale}/complete`);
 }
 
 export function loadLocale(locale: Locale): Promise<void> {

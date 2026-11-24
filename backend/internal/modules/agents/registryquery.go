@@ -203,7 +203,7 @@ func (r *Registry) asSeenBy(ctx context.Context, spec mcp.ToolSpec) mcp.ToolSpec
 		return spec
 	}
 	if len(spec.Actions) == 0 {
-		if tier := auth.TierFor(p, spec); tier != spec.Tier {
+		if tier := auth.TierFor(ctx, p, spec); tier != spec.Tier {
 			spec.Tier, spec.TierResolver = tier, nil
 		}
 		return spec
@@ -212,7 +212,7 @@ func (r *Registry) asSeenBy(ctx context.Context, spec mcp.ToolSpec) mcp.ToolSpec
 	agree := true
 	for i, action := range spec.Actions {
 		if verb, registered := r.Spec(action.Verb); registered {
-			action.Tier = auth.TierFor(p, verb)
+			action.Tier = auth.TierFor(ctx, p, verb)
 		}
 		actions[i] = action
 		agree = agree && action.Tier == actions[0].Tier

@@ -216,6 +216,17 @@ func TestADealCreatedAndWonBetweenSnapshotsAppearsOnce(t *testing.T) {
 	reconciles(t, m)
 }
 
+func TestMovementAcrossTheOpenOnlyCoverageCountsIsADefinitionChange(t *testing.T) {
+	t.Parallel()
+	m := Classify(ReadingOpen,
+		side("forecast_v5", open("d1", 10_000)),
+		side(DefinitionVersion, open("d1", 12_000)))
+	if len(m.Buckets) != 1 || m.Buckets[0].Name != BucketDefinition {
+		t.Fatalf("a snapshot frozen under forecast_v5 against %s gave buckets %v, want only %q",
+			DefinitionVersion, m.Buckets, BucketDefinition)
+	}
+}
+
 func TestMovementAcrossTheSignalRulesChangeIsADefinitionChange(t *testing.T) {
 	t.Parallel()
 	// forecast_v3 learned risk effects under the v1 signal rules, so its weights

@@ -11,18 +11,15 @@
 # her LEAD's promotion. A run that takes her off the list and stops has tidied
 # the list and left the mistake. Demotion itself retires the contact the
 # promotion made, and a retired contact leaves every list it was on — so no
-# separate remove_member is owed, and none is required here. change_lists is
-# still required, for the member the prompt asks to ADD.
+# separate remove_member is owed. The end state reads the member the prompt
+# asks to ADD.
 #
-# bulk_update_records is preview-then-execute by its own contract, and the list
-# is twelve contacts because the tool's own description sends anything over ten
-# rows there: handing three contacts over is a loop of update_record, and a
-# case that allowed that would measure nothing about the bulk door. The prompt
-# gives the go-ahead in advance ("show me what it would change, then do it"), so a
-# run that previews and hands the question back has refused authority it was
-# given, and one that executes with no preview has skipped the half that makes the
-# change reviewable.
+# The list is twelve contacts because bulk_update_records' own description
+# sends anything over ten rows there. The prompt gives the go-ahead in advance,
+# so a run that hands the question back has refused authority it was given. No
+# tool is pinned: the end state reads the list and every owner.
 name: case47_tidy_the_fair_list
+title: Tidy the fair list
 criteria: [1, 2, 3]
 
 # WRITES: the author's own statement that this case changes the world. It is not
@@ -38,11 +35,6 @@ prompt: |
   she is off the list. Add Jens Falk, met him at the stand. Then everyone left
   on it goes to Sofia Meier — tell me what that changes and just do it.
 
-must_call:
-  - read_lists
-  - demote_lead
-  - change_lists
-  - bulk_update_records
 may_call:
   - search_records
   - read_record
@@ -51,12 +43,10 @@ may_call:
   - read_workspace
   - query_workspace
   - whoami
-
-must_call_with:
-  - change_lists.mode=add_member
-  - bulk_update_records.mode=preview
-  - bulk_update_records.mode=execute
-  - bulk_update_records.verb=reassign_owner
+  - read_lists
+  - demote_lead
+  - change_lists
+  - bulk_update_records
 
 must_mention:
   - "Mara"
@@ -67,6 +57,34 @@ judge:
   - "Criterion 1. The answer shows it read the list: it says Mara Voigt was on the Messe Hannover list, and says who else was or how many were. Answer no if it gives no account of what was on the list, or never mentions that Mara was on it."
   - "Criterion 2. The answer says Mara Voigt's conversion was undone — she is a lead again — and that she is no longer on the list, and says Jens Falk was added. Answer no if it says she was deleted or disqualified, says she is still a contact, or does not report Jens as added."
   - "Criterion 3. The answer reports the hand-over to Sofia Meier as covering everybody who stayed on the list plus Jens Falk, and not Mara Voigt. Answer no if it hands Mara to Sofia, hands over only some of the people, or says nothing about who was handed over."
+
+# Mara is a lead again, and everyone else on the list, Jens included, is
+# Sofia's. Her contact row is gone once the conversion is undone, so no name
+# finds it: the count says she left. The seed puts twelve on the list, Mara
+# among them, and Jens takes her place.
+# The form execute puts up asks for the go-ahead the prompt already gave
+# ("just do it"), so the user answers yes. A host that cannot answer it, such as
+# `claude -p`, cancels it, and the hand-over never runs.
+elicitation:
+  - "Give a new owner to => accept confirm=true"
+
+must_end_with:
+  - list "Messe Hannover 2026" member=Jens Falk
+  - list "Messe Hannover 2026" members=12
+  - lead "Mara Voigt" records=1
+  - contact "Mara Voigt" records=0
+  - contact "Ralf Thiel" owner=Sofia Meier
+  - contact "Sabine Ott" owner=Sofia Meier
+  - contact "Dirk Hallmann" owner=Sofia Meier
+  - contact "Inge Rohde" owner=Sofia Meier
+  - contact "Tobias Kruse" owner=Sofia Meier
+  - contact "Wiebke Lange" owner=Sofia Meier
+  - contact "Hartmut Seidel" owner=Sofia Meier
+  - contact "Ute Brandl" owner=Sofia Meier
+  - contact "Florian Eck" owner=Sofia Meier
+  - contact "Marlene Pohl" owner=Sofia Meier
+  - contact "Gernot Vahl" owner=Sofia Meier
+  - contact "Jens Falk" owner=Sofia Meier
 
 runs: 3
 pass_at: 2

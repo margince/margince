@@ -50,9 +50,13 @@ const UNITS: Readonly<Record<MetricID, string>> = {
   partner_activity: "count",
   stage_conversion: "percent",
   lead_cohort_outcomes: "percent",
+  account_progression: "percent",
+  source_quality: "count",
   bookings_mix: "Commercial mix",
   qualified_opportunities_created: "Qualified opportunities",
   initiative_pipeline: "Initiative pipeline by origin",
+  introductions_made: "count",
+  meetings_booked_for_colleagues: "count",
 };
 
 const SALES_METRICS: readonly MetricID[] = [
@@ -246,9 +250,15 @@ export function prospectingEvaluation(
     metric("meetings_held", 4, {
       target: 24,
       target_actual: 18,
+      target_delta: -6,
       attainment: 75,
     }),
-    metric("accepted_opportunities", 2, { target: 8, target_actual: 6 }),
+    metric("accepted_opportunities", 2, {
+      target: 8,
+      target_actual: 6,
+      target_delta: -2,
+      attainment: 75,
+    }),
     metric("leads_qualified", 3, { denominator: 11 }),
     metric("lead_first_response", 1.7),
     metric("leads_awaiting_response", 3),

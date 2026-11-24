@@ -4,6 +4,7 @@ import { usePageTitle, Wordmark } from "../../components/auth-identity";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { LanguageSelect } from "../../design-system/languageselect";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { browserZone } from "../../format/timezone";
@@ -14,7 +15,8 @@ import {
   useLocale,
   useT,
 } from "../../i18n";
-import { isTooShort } from "./passwordrule";
+import { blankRequired } from "../../lib/problem";
+import { passwordFault } from "./passwordrule";
 import "../../components/auth-core.css";
 
 // The first-run claim (ADR-0105). An installation whose deployment file names no
@@ -126,6 +128,7 @@ export function SetupClaimScreen({
   const [fields, setFields] = useState<ClaimFields>(claimDefaults);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [faults, faultsRoot] = useFieldFaults();
   // The root credential is typed once with no confirm field to disagree with
   // it, so reading it back is the only check there is.
   const reveal = usePasswordReveal({
@@ -133,11 +136,17 @@ export function SetupClaimScreen({
     hide: t("auth.hidePassword"),
   });
 
-  const set = (key: keyof ClaimFields) => (value: string) =>
+  const set = (key: keyof ClaimFields) => (value: string) => {
     setFields((current) => ({ ...current, [key]: value }));
+    faults.edited(key);
+  };
 
-  async function submit(event: React.FormEvent) {
+  function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (!submitting && !faults.show(faultsAtSubmit())) void claim();
+  }
+
+  async function claim() {
     setError(null);
     setSubmitting(true);
     try {
@@ -189,7 +198,7 @@ export function SetupClaimScreen({
     }
   }
 
-  const passwordShort = isTooShort(fields.adminPassword);
+  const passwordFaultKey = passwordFault(fields.adminPassword);
   // The server refuses a currency that is not three letters, so saying so here
   // keeps the operator from spending a round-trip to learn it. The check is
   // shape only: which three letters are a real currency is the server's to
@@ -197,22 +206,32 @@ export function SetupClaimScreen({
   const currencyMalformed =
     fields.baseCurrency.trim() !== "" &&
     !/^[A-Za-z]{3}$/.test(fields.baseCurrency.trim());
-  const complete =
-    fields.setupToken.trim() !== "" &&
-    fields.companyName.trim() !== "" &&
-    fields.adminName.trim() !== "" &&
-    fields.adminEmail.trim() !== "" &&
-    fields.timezone.trim() !== "" &&
-    fields.baseCurrency.trim() !== "" &&
-    fields.country !== "" &&
-    !currencyMalformed &&
-    !passwordShort &&
-    fields.adminPassword !== "";
+  // Each empty field says it is required; a currency or password the rule
+  // refuses already says so, and the press takes focus there.
+  function faultsAtSubmit(): Map<string, string> {
+    const found = blankRequired(locale, {
+      setupToken: [t("setup.token"), fields.setupToken],
+      companyName: [t("setup.company"), fields.companyName],
+      baseCurrency: [t("setup.baseCurrency"), fields.baseCurrency],
+      country: [t("setup.jurisdiction"), fields.country],
+      timezone: [t("setup.timezone"), fields.timezone],
+      adminName: [t("setup.adminName"), fields.adminName],
+      adminEmail: [t("setup.adminEmail"), fields.adminEmail],
+      adminPassword: [t("setup.adminPassword"), fields.adminPassword],
+    });
+    if (currencyMalformed) {
+      found.set("baseCurrency", t("setup.baseCurrencyMalformed"));
+    }
+    if (passwordFaultKey && !found.has("adminPassword")) {
+      found.set("adminPassword", t(passwordFaultKey));
+    }
+    return found;
+  }
 
   return (
     <AuthExperience phase="unavailable">
       <Wordmark alt={t("auth.title")} />
-      <form className="auth-card" onSubmit={submit}>
+      <form className="auth-card" ref={faultsRoot} onSubmit={submit} noValidate>
         <AuthCardTitle>{t("setup.title")}</AuthCardTitle>
         <p>{t("setup.body")}</p>
         {error && (
@@ -222,7 +241,12 @@ export function SetupClaimScreen({
           </p>
         )}
         <div className="auth-fields">
-          <Field label={t("setup.token")} required hint={t("setup.tokenHint")}>
+          <Field
+            label={t("setup.token")}
+            required
+            hint={t("setup.tokenHint")}
+            error={faults.of("setupToken")}
+          >
             {(control) => (
               <TextInput
                 {...control}
@@ -236,7 +260,11 @@ export function SetupClaimScreen({
               />
             )}
           </Field>
-          <Field label={t("setup.company")} required>
+          <Field
+            label={t("setup.company")}
+            required
+            error={faults.of("companyName")}
+          >
             {(control) => (
               <TextInput
                 {...control}
@@ -256,7 +284,9 @@ export function SetupClaimScreen({
             required
             hint={currencyMalformed ? undefined : t("setup.baseCurrencyHint")}
             error={
-              currencyMalformed ? t("setup.baseCurrencyMalformed") : undefined
+              currencyMalformed
+                ? t("setup.baseCurrencyMalformed")
+                : faults.of("baseCurrency")
             }
           >
             {(control) => (
@@ -291,6 +321,7 @@ export function SetupClaimScreen({
             label={t("setup.jurisdiction")}
             required
             hint={t("setup.jurisdictionHint")}
+            error={faults.of("country")}
           >
             {(control) => (
               <Select
@@ -312,6 +343,7 @@ export function SetupClaimScreen({
             label={t("setup.timezone")}
             required
             hint={t("setup.timezoneHint")}
+            error={faults.of("timezone")}
           >
             {(control) => (
               <TextInput
@@ -325,7 +357,11 @@ export function SetupClaimScreen({
               />
             )}
           </Field>
-          <Field label={t("setup.adminName")} required>
+          <Field
+            label={t("setup.adminName")}
+            required
+            error={faults.of("adminName")}
+          >
             {(control) => (
               <TextInput
                 {...control}
@@ -336,7 +372,11 @@ export function SetupClaimScreen({
               />
             )}
           </Field>
-          <Field label={t("setup.adminEmail")} required>
+          <Field
+            label={t("setup.adminEmail")}
+            required
+            error={faults.of("adminEmail")}
+          >
             {(control) => (
               <TextInput
                 {...control}
@@ -355,11 +395,15 @@ export function SetupClaimScreen({
           <Field
             label={t("setup.adminPassword")}
             required
-            error={passwordShort ? t("setup.passwordShort") : undefined}
+            error={
+              passwordFaultKey
+                ? t(passwordFaultKey)
+                : faults.of("adminPassword")
+            }
             // The rule, until the rule is being broken — at which point the
             // refusal restates it in the danger tone and a second grey copy of
             // the same sentence underneath is noise.
-            hint={passwordShort ? undefined : t("setup.passwordHint")}
+            hint={passwordFaultKey ? undefined : t("setup.passwordHint")}
             trailing={reveal.trailing}
           >
             {(control) => (
@@ -379,7 +423,6 @@ export function SetupClaimScreen({
           <Button
             type="submit"
             variant="primary"
-            disabled={!submitting && !complete}
             pending={submitting}
             busyLabel={t("setup.claiming")}
           >

@@ -30,11 +30,19 @@ const composeRootDir = "internal/compose"
 // The ceilings sit a little above the size the package was when this gate
 // landed, so branches already open could still merge. Lower one whenever a
 // change moves code out. Raising one needs a reason in the pull request.
+//
+// The ceilings below hold develop and main together: each side's additions
+// stayed under its own ceilings, and the two sets of additions sum to these.
 const (
-	composeRootProductionFiles = 1376
-	composeRootTestFiles       = 1901
-	composeRootProductionLines = 229_151
-	composeRootTestLines       = 356_651
+	composeRootProductionFiles = 1383
+	composeRootTestFiles       = 1909
+	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
+	// by 1 for the import that binds one zone lookup to each attention read.
+	// Raised by 249 production and 62 test lines for the full-path certification
+	// cases of two capture sites, which drive private engine code that cannot
+	// leave this package.
+	composeRootProductionLines = 230_518
+	composeRootTestLines       = 359_389
 )
 
 // A read under these floors stopped early or read the wrong place, and would

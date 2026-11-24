@@ -3,12 +3,9 @@
 
 package compose
 
-// The request-time send pre-flight, over the SAME capture registry the connect
-// flows write to (telegram-oa design §8.1). It sits apart from the transmit lane
-// in commsjobs.go because it answers a different question at a different moment:
-// not "which credential carries this delivery", but "is there a credential at
-// all", asked while the contact who can do something about the answer is still on
-// the screen.
+// The request-time send pre-flight reads the capture registry the connect flows
+// write to. It sits apart from the transmit lane in commsjobs.go. It asks whether
+// any credential exists while the user who can fix it is still on screen.
 //
 // Which table holds that credential is the whole subtlety, and it is why this is
 // one type with one branch rather than two authorities: a mailbox is one human's
@@ -44,6 +41,8 @@ type mailboxGrants interface {
 	// — so it cannot be answered by the scope lookup above, and a pre-flight
 	// that tried would report every channel send as ungranted.
 	ChannelSendCapable(ctx context.Context, provider string) (bool, error)
+	ChooseSendingMailbox(ctx context.Context, userID ids.UserID, from ids.UUID, anchor ids.ActivityID, providers []string,
+		canSend func(capture.SendingMailbox) (bool, error)) (capture.SendingMailbox, error)
 }
 
 var _ mailboxGrants = (*capture.Registry)(nil)
@@ -83,12 +82,11 @@ type mailboxAuthority struct {
 var _ activities.SendAuthority = mailboxAuthority{}
 
 // mailAppConfigured is the Server's answer to that question. It reads the fields
-// at CALL time, not at install. So the two install sites need no ordering rule
-// against the options that record the facts.
+// at CALL time, so the install sites need no order against the options.
 //
-// A provider with no arm is not configured, which is also the only honest
-// answer: comms.SendScopeFor gives a send scope to the mail providers alone, so
-// no other provider reaches this at all.
+// IMAP needs no app: its sealed credential carries the SMTP server. A provider
+// with no arm is not configured. comms.SendScopeFor scopes only mail providers,
+// so no other provider reaches this.
 func (s *Server) mailAppConfigured(ctx context.Context, provider string) (bool, error) {
 	switch provider {
 	case providerGmail:
@@ -96,10 +94,11 @@ func (s *Server) mailAppConfigured(ctx context.Context, provider string) (bool, 
 	case providerGraph:
 		return envOrStoredApp(ctx, s.graphAppConfigured, s.microsoftAppResolver)
 	case testmailbox.Name:
-		// No credential to check — the deployment flag itself IS the whole
-		// configuration question for this connector, already recorded on
-		// s.captureConfig by WithCaptureConfig (compose/capture.go).
+		// No credential to check: the deployment flag (WithCaptureConfig) is
+		// the whole configuration question for this connector.
 		return s.captureConfig.AllowTestMailbox, nil
+	case providerIMAP:
+		return true, nil
 	default:
 		return false, nil
 	}
@@ -123,34 +122,27 @@ func installSendPreflight(s *Server, pool *pgxpool.Pool) {
 	})(s, pool)
 }
 
-// SendableMailProvider names the mailbox this user's next send goes out
-// through: the first mail provider they hold a transmitting grant for.
-//
-// DERIVED from comms' own census rather than from a list here, so a vendor
-// added there is one this can already choose — and asked through SendCapable,
-// so "can this user send through it" is the same question in both directions
-// rather than two that could disagree.
-//
-// FIRST, in the census's own order, and that order is alphabetical rather than
-// meaningful. It matters only to somebody holding two sendable mailboxes at
-// once, which nothing in the product asks them to do and no surface lets them
-// choose between; until one does, a stable answer beats an arbitrary-looking
-// one that changes between sends. A rep with one mailbox — every rep today —
-// gets theirs.
-//
-// Empty means none of them can transmit, which the caller turns into the
-// refusal naming what to fix.
-func (m mailboxAuthority) SendableMailProvider(ctx context.Context) (string, error) {
-	for _, provider := range comms.MailSendProviders() {
-		capable, err := m.SendCapable(ctx, provider)
-		if err != nil {
-			return "", err
-		}
-		if capable {
-			return provider, nil
-		}
+// SendableMailbox names the live mailbox this user sends through
+// (capture.Registry.ChooseSendingMailbox). Each needs a configured app and a
+// grant with comms' send scope, as SendCapable does; none is refused by name.
+func (m mailboxAuthority) SendableMailbox(ctx context.Context, from ids.UUID, anchor ids.ActivityID) (string, ids.UUID, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return "", ids.Nil, nil
 	}
-	return "", nil
+	chosen, err := m.grants.ChooseSendingMailbox(ctx, ids.From[ids.UserKind](actor.UserID), from, anchor, comms.MailSendProviders(),
+		func(mailbox capture.SendingMailbox) (bool, error) {
+			scope, _ := comms.SendScopeFor(mailbox.Provider)
+			configured, err := m.mailAppConfigured(ctx, mailbox.Provider)
+			return configured && slices.Contains(mailbox.ProviderScopes, scope), err
+		})
+	if errors.Is(err, capture.ErrNoConnection) {
+		return "", ids.Nil, &activities.MailboxNotConnectedError{}
+	}
+	if err != nil {
+		return "", ids.Nil, err
+	}
+	return chosen.Provider, chosen.ID, nil
 }
 
 func (m mailboxAuthority) SendCapable(ctx context.Context, provider string) (bool, error) {

@@ -145,7 +145,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
 		            OR ($1::uuid IS NULL AND `+storekit.StopOnAddressesSQL("live", "$9", "$10")+`)))
 		RETURNING id`,
-		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
+		zeroAsNull(ref.LeadID.UUID), normalizeAddress(ref.Address), commsauthz.ReasonObjection,
 		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID, string(commsauthz.RecordedBySubject),
 		lowered, hashes, stoppedAt).Scan(&stopID)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -162,6 +162,10 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		lead := subject{id: ref.LeadID.UUID, entityType: entityLead}
 		if err := s.acknowledgeOptOutTx(ctx, tx, lead, commsauthz.ReasonObjection, stopID,
 			RefusalTimes{ReceivedAt: stoppedAt, StoppedAt: stoppedAt}); err != nil {
+			return false, err
+		}
+		who := ruleSubject{Kind: entityLead, ID: ref.LeadID.String()}
+		if err := s.openRequestTaskTx(ctx, tx, who, RequestTaskObjection, stopID.String(), s.now()); err != nil {
 			return false, err
 		}
 	}
@@ -239,37 +243,68 @@ func (s *Store) StopForCredential(ctx context.Context, token string) (bool, erro
 	return stopped, nil
 }
 
-// WithdrawMarketingNamed stops ONE purpose, and only if it is one an
-// all-marketing link may stop.
+// PublicStopNamedOrAll stops the purpose a press names, or all marketing when
+// the key fails the test for the credential that carried it.
 //
-// The named-purpose branch of the one-click path used to take the query
-// string as given, which is right for a preference token — the mailbox
-// provider names the purpose the message was sent under, and second-guessing
-// it would refuse a legitimate press. A withdrawal credential is different:
-// its scope is part of the credential, so a request naming a purpose outside
-// that scope is asking the link to exceed itself.
+// An all-marketing credential may name only a purpose a link may name. The
+// mint gave every other key this credential, so its press means all marketing.
+// A preference token may name any live purpose, as its links always could.
+// A key that fails stops all marketing, so a product-built link never errors.
 //
-// A purpose outside the marketing classes answers "nothing changed" rather
-// than an error. The presser is a mailbox provider acting on a header, not a
-// contact who typed something wrong, and a 4xx would turn a press we simply
-// decline to widen into a delivery failure they retry.
-func (s *Store) WithdrawMarketingNamed(
-	ctx context.Context, contactID ids.ContactID, key string,
+// One transaction: the test and the withdrawal see one catalog.
+func (s *Store) PublicStopNamedOrAll(
+	ctx context.Context, contactID ids.ContactID, key string, viaCredential bool,
 ) ([]string, error) {
-	var allowed bool
-	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT EXISTS (
-			  SELECT 1 FROM consent_purpose
-			   WHERE key = $1 AND archived_at IS NULL
-			     AND class IN ('marketing', 'phone_outreach'))`, key).Scan(&allowed)
-	}); err != nil {
-		return nil, fmt.Errorf("consent: checking whether this link may stop that purpose: %w", err)
+	var changed []string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		contactID, err := lockPressSubject(ctx, tx, contactID)
+		if err != nil {
+			return err
+		}
+		_, named, err := livePurposeTx(ctx, tx, key, viaCredential)
+		if err != nil {
+			return err
+		}
+		keys := []string{key}
+		if !named {
+			if keys, err = withdrawableMarketingPurposeKeysTx(ctx, tx); err != nil {
+				return err
+			}
+		}
+		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, keys)
+		return err
+	})
+	if err != nil {
+		return nil, err
 	}
-	if !allowed {
-		return []string{}, nil
+	return changed, nil
+}
+
+// PublicWithdrawPurposeID stops the one purpose a named credential was minted
+// for. By id, so the credential's scope never depends on a key matching again.
+func (s *Store) PublicWithdrawPurposeID(
+	ctx context.Context, contactID ids.ContactID, purposeID ids.UUID,
+) ([]string, error) {
+	var changed []string
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		contactID, err := lockPressSubject(ctx, tx, contactID)
+		if err != nil {
+			return err
+		}
+		var key string
+		if err := tx.QueryRow(ctx, `SELECT key FROM consent_purpose WHERE id = $1`, purposeID).Scan(&key); err != nil {
+			return fmt.Errorf("consent: reading the purpose the link was minted for: %w", err)
+		}
+		moved, err := s.withdrawPurposeTx(ctx, tx, contactID, ids.From[ids.PurposeKind](purposeID), key)
+		if moved {
+			changed = []string{key}
+		}
+		return err
+	})
+	if err != nil {
+		return nil, err
 	}
-	return s.PublicWithdrawAll(ctx, contactID, []string{key})
+	return changed, nil
 }
 
 // stopSubjectKey is what this press locks under: the lead when one holds the

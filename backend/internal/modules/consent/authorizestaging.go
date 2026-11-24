@@ -69,7 +69,7 @@ func (g *Gate) AuthorizeStagingWithDecisionTx(
 // first, so this fires only when the record changed in between. Composing
 // again adds the objection route and the unsubscribe link.
 var errAdvertisingDutiesMissing = fmt.Errorf(
-	"consent: a recipient of this message is now read as advertising, and the message was composed without "+
+	"a recipient of this message is now read as advertising, and the message was composed without "+
 		"the advertising disclosures and unsubscribe link; send it again so they are added: %w", apperrors.ErrConflict)
 
 func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, req commsauthz.Request, directed *directedExecution) (commsauthz.DecisionSet, error) {
@@ -81,7 +81,10 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	}
 	if len(req.Recipients) == 0 {
 		return commsauthz.DecisionSet{}, fmt.Errorf(
-			"consent: a staging decision needs at least one recipient: %w", apperrors.ErrInvalidArgument)
+			"a staging decision needs at least one recipient: %w", apperrors.ErrInvalidArgument)
+	}
+	if err := refuseAMachineStatedCountry(ctx, req); err != nil {
+		return commsauthz.DecisionSet{}, err
 	}
 	req.DeliveryID = deliveryID
 
@@ -92,12 +95,12 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
-	if req, err = withSendingEntity(ctx, tx, req); err != nil {
+	if req, err = withSendFacts(ctx, tx, req); err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
 	// Each recipient's country, resolved once: the decision and its recorded
 	// stamp read this one answer.
-	countries, err := recipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
+	countries, err := g.store.resolveRecipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
@@ -109,12 +112,18 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 			return commsauthz.DecisionSet{}, err
 		}
 		d.Phase = commsauthz.PhaseStaging
+		if d, err = requireConfirmationTx(ctx, tx, d, deliveryID); err != nil {
+			return commsauthz.DecisionSet{}, err
+		}
 		// From the RESOLVED category, so the authority stamped on the row is
 		// the one belonging to what the engine decided the message is.
 		d.Mode = ModeFor(modes, d.Resolved)
 		d.Requested = req.Context
 		set.Decisions = append(set.Decisions, d)
 	}
+	// Refused here, while the draft can still be edited; transmit holds what
+	// slips past.
+	set = withSubjectLabels(set, countries, req.Subject)
 	if req.OmitsAdvertisingDuties && set.AdvertisesToASubject() {
 		return commsauthz.DecisionSet{}, errAdvertisingDutiesMissing
 	}
@@ -195,7 +204,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		// is absent here rather than being handed to a phase that runs as the
 		// system principal. See authorizeevidencecarry.go, and decideOne's own
 		// note on why the two differ.
-		evidence, err := evidenceJSON(d.Evidence)
+		evidence, err := evidenceJSON(d.Evidence, countries[i].Sender)
 		if err != nil {
 			return err
 		}
@@ -236,17 +245,18 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			string(d.Resolved), string(d.Verdict), d.ReasonCode,
 			nullableBasis(d.Basis), nullableText(d.Suppression),
 			sum[:], string(d.Mode), by, evidence, authority, instructionID,
-			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
-			groundNotice(d), groundOffer(d), groundSoldAt(d), protection,
+			ruleset.Version, ruleset.Codes, ruleset.Digest, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			groundNotice(d), groundOffer(d), groundSoldAt(d), dataProtectionStampFor(countries[i], protection),
+			nullableText(string(countries[i].Source)),
 		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, mode, actor, evidence, execution_authority, instruction_id,
-			   ruleset_version, ruleset_codes, legal_entity_id, purpose_key,
+			   ruleset_version, ruleset_codes, ruleset_digest, legal_entity_id, purpose_key,
 			   existing_customer_notice_id, existing_customer_offer_id, existing_customer_sold_at,
-			   data_protection_country)
+			   data_protection_country, country_source)
 			VALUES (`+storekit.Placeholders(values)+`)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`, values...)
 		if err != nil {

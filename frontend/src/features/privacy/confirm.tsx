@@ -12,7 +12,8 @@ import {
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { useT } from "../../i18n";
+import { INTL_LOCALE } from "../../format/intllocale";
+import { type Locale, useLocale, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
 import { LinkInvalidError, RateLimitedError } from "../settings/preferences";
 import {
@@ -28,7 +29,7 @@ import {
   SubscriptionConfirm,
 } from "./confirmsubscription";
 import { useMailLanguage } from "./publiclocale";
-import { PublicPage } from "./publicpage";
+import { DeadLinkPage, PublicPage } from "./publicpage";
 import "./confirm.css";
 
 // The public, anonymous confirm-your-details page: what a contact lands on from
@@ -46,11 +47,7 @@ import "./confirm.css";
 export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
   const t = useT();
   if (!token) {
-    return (
-      <PublicPage>
-        <EmptyState>{t("confirm.invalidLink")}</EmptyState>
-      </PublicPage>
-    );
+    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
   }
   return <ConfirmDetailsBody token={token} />;
 }
@@ -60,9 +57,17 @@ export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
 // that pinned none falls back to this build's own sentence.
 function marketingQuestion(
   t: ReturnType<typeof useT>,
+  locale: Locale,
   served: components["schemas"]["ConfirmQuestion"] | undefined,
+  controllerName: string | undefined,
 ) {
-  const ask = served?.ask ?? t("confirm.marketing.ask");
+  const ask =
+    served?.ask ??
+    t("confirm.marketing.ask", {
+      controller:
+        controllerName ??
+        sentenceStart(t("confirm.controllerFallback"), locale),
+    });
   return {
     ask,
     yes: served?.answers[0] ?? t("confirm.marketing.yes"),
@@ -71,8 +76,30 @@ function marketingQuestion(
   };
 }
 
+// A link the server refused as unknown or spent, on the read or on the press.
+function isDeadLink(error: unknown): boolean {
+  return error instanceof LinkInvalidError;
+}
+
+function refusalOf(readError: unknown, pressError: unknown): unknown {
+  return readError ?? (isDeadLink(pressError) ? pressError : undefined);
+}
+
+function RefusedPage({ error }: Readonly<{ error: unknown }>) {
+  const t = useT();
+  if (isDeadLink(error)) {
+    return <DeadLinkPage>{t("confirm.deadLinkBody")}</DeadLinkPage>;
+  }
+  return (
+    <PublicPage>
+      <EmptyState>{explainConfirmError(error, t)}</EmptyState>
+    </PublicPage>
+  );
+}
+
 function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   const t = useT();
+  const { locale } = useLocale();
 
   const details = useQuery({
     queryKey: ["confirm-details", token],
@@ -121,7 +148,12 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   // now that the union is honest, which is how this one was found — it ran on
   // both bodies before, silently.
   const record = card?.kind === "record_confirmation" ? card : undefined;
-  const question = marketingQuestion(t, record?.question);
+  const question = marketingQuestion(
+    t,
+    locale,
+    record?.question,
+    record?.controller?.legal_name,
+  );
 
   const corrections = useMemo(() => {
     if (!record) {
@@ -185,12 +217,9 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </PublicPage>
     );
   }
-  if (details.error || !card) {
-    return (
-      <PublicPage>
-        <EmptyState>{explainConfirmError(details.error, t)}</EmptyState>
-      </PublicPage>
-    );
+  const refusal = refusalOf(details.error, submit.error);
+  if (refusal || !card) {
+    return <RefusedPage error={refusal} />;
   }
   // THE DISCRIMINATOR, ASKED BEFORE ANY RECORD FIELD IS READ.
   //
@@ -220,7 +249,13 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
           <Heading size="xlarge" className="t-h2">
             {t("confirm.done.title")}
           </Heading>
-          <p className="t-body">{t("confirm.done.body")}</p>
+          <p className="t-body">
+            {card.controller?.legal_name
+              ? t("confirm.done.bodyNamed", {
+                  controller: card.controller.legal_name,
+                })
+              : t("confirm.done.body")}
+          </p>
           <RequestReceipts receipts={receipts} />
         </Card>
       </PublicPage>
@@ -270,30 +305,15 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         </ul>
       </Card>
 
-      <Card>
-        <Heading size="large" className="t-h3">
-          {t("confirm.marketing.title")}
-        </Heading>
-        <p className="t-body">{t("confirm.marketing.optional")}</p>
-        <p className="t-body">{question.ask}</p>
-        <div className="confirm-choices">
-          <Button
-            variant={marketing === "granted" ? "primary" : "ghost"}
-            aria-pressed={marketing === "granted"}
-            onClick={() => setMarketing("granted")}
-          >
-            {question.yes}
-          </Button>
-          <button
-            type="button"
-            className="confirm-decline"
-            aria-pressed={marketing === "withdrawn"}
-            onClick={() => setMarketing("withdrawn")}
-          >
-            {question.no}
-          </button>
-        </div>
-      </Card>
+      {/* A link whose recipient may not be asked about news here pins no
+          question, and the server refuses an answer to one. */}
+      {card.asks_news === false ? null : (
+        <NewsQuestion
+          question={question}
+          marketing={marketing}
+          onChoose={setMarketing}
+        />
+      )}
 
       <details className="confirm-provenance">
         <summary>{t("confirm.provenance.title")}</summary>
@@ -348,4 +368,48 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </div>
     </PublicPage>
   );
+}
+
+// The news question: its sentence and two buttons of one size, so consent and
+// refusal weigh the same. Neither answer is pre-selected.
+function NewsQuestion({
+  question,
+  marketing,
+  onChoose,
+}: Readonly<{
+  question: ReturnType<typeof marketingQuestion>;
+  marketing: "granted" | "withdrawn" | null;
+  onChoose: (choice: "granted" | "withdrawn") => void;
+}>) {
+  const t = useT();
+  return (
+    <Card>
+      <Heading size="large" className="t-h3">
+        {t("confirm.marketing.title")}
+      </Heading>
+      <p className="t-body">{t("confirm.marketing.optional")}</p>
+      <p className="t-body">{question.ask}</p>
+      <div className="confirm-choices">
+        <Button
+          variant={marketing === "granted" ? "primary" : "ghost"}
+          aria-pressed={marketing === "granted"}
+          onClick={() => onChoose("granted")}
+        >
+          {question.yes}
+        </Button>
+        <Button
+          variant={marketing === "withdrawn" ? "primary" : "ghost"}
+          aria-pressed={marketing === "withdrawn"}
+          onClick={() => onChoose("withdrawn")}
+        >
+          {question.no}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+/** A sentence that opens with a filled-in word starts with a capital. */
+export function sentenceStart(word: string, locale: Locale): string {
+  return word.charAt(0).toLocaleUpperCase(INTL_LOCALE[locale]) + word.slice(1);
 }

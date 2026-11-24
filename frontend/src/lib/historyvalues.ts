@@ -2,8 +2,13 @@ import {
   formatActivityWhen,
   type OccurredPrecision,
 } from "../format/activitywhen";
+import { isRealCalendarDay } from "../format/calendarday";
 import { EMAIL_TYPE_LABEL, PHONE_TYPE_LABEL } from "../format/contactchannels";
-import { formatDateTime, formatMoneyOrAbsent } from "../format/format";
+import {
+  formatDateAbbrev,
+  formatDateTime,
+  formatMoneyOrAbsent,
+} from "../format/format";
 import { INDUSTRY_FIELD, industryWords } from "../format/industry";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -112,27 +117,67 @@ function withKind(value: string, kind: string | undefined): string {
 }
 
 // One entry of a stored list. Phones, emails and domains are stored as rows,
-// and a row read through String() prints "[object Object]".
+// and a row read through String() prints "[object Object]". Older contact rows
+// spell the keys as the Go input did (`Phone`, `PhoneType`), and audit_log
+// keeps them as written.
 function listItem(item: unknown, locale: Locale): string {
   if (!isPlainObject(item)) {
     return String(item);
   }
-  if (typeof item.phone === "string") {
+  const phone = item.phone ?? item.Phone;
+  if (typeof phone === "string") {
     return withKind(
-      item.phone,
-      channelKind(PHONE_TYPE_LABEL, item.phone_type, locale),
+      phone,
+      channelKind(PHONE_TYPE_LABEL, item.phone_type ?? item.PhoneType, locale),
     );
   }
-  if (typeof item.email === "string") {
+  const email = item.email ?? item.Email;
+  if (typeof email === "string") {
     return withKind(
-      item.email,
-      channelKind(EMAIL_TYPE_LABEL, item.email_type, locale),
+      email,
+      channelKind(EMAIL_TYPE_LABEL, item.email_type ?? item.EmailType, locale),
     );
   }
   if (typeof item.domain === "string") {
     return item.domain;
   }
   return JSON.stringify(item);
+}
+
+// A contact's links by platform, as the addresses they hold. A platform the
+// image names with no link was removed, so a map of only those holds none.
+function socialLinks(value: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return value;
+  }
+  if (!isPlainObject(parsed)) {
+    return value;
+  }
+  const links = Object.values(parsed).filter(
+    (link): link is string => typeof link === "string" && link !== "",
+  );
+  return links.length === 0 ? null : links.join(", ");
+}
+
+// A stored list or link map in words, or `undefined` for a value of neither shape.
+function jsonValue(
+  field: string,
+  value: string,
+  locale: Locale,
+): string | null | undefined {
+  if (field === "social") {
+    return socialLinks(value);
+  }
+  const items = asJsonArray(value);
+  if (items === undefined) {
+    return undefined;
+  }
+  return items.length === 0
+    ? translate(locale, "history.emptyList")
+    : items.map((item) => listItem(item, locale)).join(", ");
 }
 
 // Currency/locale/zone/name-resolution for turning a stored history value
@@ -182,14 +227,17 @@ export function historyValue(
   if (field === INDUSTRY_FIELD) {
     return industryWords((key) => translate(ctx.locale, key), value);
   }
-  if (ISO_TIMESTAMP.test(value)) {
-    return historyMoment(value, ctx, precision);
+  const dated = historyDate(field, value, ctx, precision);
+  if (dated !== undefined) {
+    return dated;
   }
-  const items = asJsonArray(value);
-  if (items !== undefined) {
-    return items.length === 0
-      ? translate(ctx.locale, "history.emptyList")
-      : items.map((item) => listItem(item, ctx.locale)).join(", ");
+  const structured = jsonValue(field, value, ctx.locale);
+  if (structured !== undefined) {
+    return structured;
+  }
+  // A partner stage is stored by its key, which only the stage list can name.
+  if (field === "relationship_stage") {
+    return ctx.nameOf?.(value) ?? value;
   }
   if (isUuid(value)) {
     // Left EXACTLY as stored when the resolver cannot name it — a shortened
@@ -200,6 +248,33 @@ export function historyValue(
     return value.split("/").at(-1) ?? value;
   }
   return value;
+}
+
+// The columns a record update writes as a calendar day: the contract's
+// `format: date` fields. historyvalues.test.ts derives them from the contract.
+const CALENDAR_DAY_FIELDS: ReadonlySet<string> = new Set([
+  "ended_at",
+  "expected_close_date",
+  "fx_rate_date",
+  "started_at",
+  "target_end_date",
+  "wait_until",
+]);
+
+// An instant or a `format: date` column, dated as the record page dates it;
+// undefined for a value that is neither. Text shaped like a day stays text.
+function historyDate(
+  field: string,
+  value: string,
+  ctx: HistoryValueCtx,
+  precision: OccurredPrecision | undefined,
+): string | undefined {
+  if (ISO_TIMESTAMP.test(value)) {
+    return historyMoment(value, ctx, precision);
+  }
+  return CALENDAR_DAY_FIELDS.has(field) && isRealCalendarDay(value)
+    ? formatDateAbbrev(value, ctx.locale, ctx.zone)
+    : undefined;
 }
 
 // A timestamp on the record's clock. An activity time with a known precision

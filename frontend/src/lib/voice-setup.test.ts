@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { voiceRefetchDelay } from "./voice-setup";
+import { voiceRefetchDelay, voiceSetupState } from "./voice-setup";
 
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 type VoiceBuild = components["schemas"]["VoiceBuild"];
@@ -89,5 +89,31 @@ describe("voiceRefetchDelay", () => {
     }
     expect(voiceRefetchDelay(profileWith(null), NOW)).toBe(false);
     expect(voiceRefetchDelay(null, NOW)).toBe(false);
+  });
+});
+
+describe("voiceSetupState", () => {
+  // The server leaves an empty nullable field out of the JSON, so a missing
+  // candidate reads the same as a null one.
+  function withoutCandidate(build: Partial<VoiceBuild> | null): VoiceProfile {
+    const profile = profileWith(build);
+    Reflect.deleteProperty(profile, "candidate_version");
+    return profile;
+  }
+
+  it("asks for no review when the profile carries no candidate key", () => {
+    expect(voiceSetupState(withoutCandidate({ status: "failed" }))).toBe(
+      "failed",
+    );
+    expect(voiceSetupState(withoutCandidate(null))).toBe("ready");
+    expect(
+      voiceSetupState({ ...withoutCandidate(null), maturity: "collecting" }),
+    ).toBe("needsSamples");
+  });
+
+  it("asks for a review once a candidate is trained", () => {
+    expect(
+      voiceSetupState({ ...profileWith(null), candidate_version: 1 }),
+    ).toBe("review");
   });
 });

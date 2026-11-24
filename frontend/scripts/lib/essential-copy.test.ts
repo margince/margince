@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { afterEach, expect, it } from "vitest";
 import { stable } from "../../src/format/collate";
 import { initialEntries } from "../vite-entry-chunks";
-import { essentialKeys } from "./essential-copy";
+import { essentialKeys, essentialModules } from "./essential-copy";
 
 const directories: string[] = [];
 function fixture(bootstrap: string) {
@@ -118,4 +118,22 @@ it("reaches nested essential boundaries", () => {
     'export const label = "common.undo";',
   );
   expect(essentialKeys(root).has("common.undo")).toBe(true);
+});
+
+// Drawn before any session or screen, so a cold load never waits for the
+// complete catalog to show them.
+it("carries the copy of every surface drawn before a screen", () => {
+  const root = join(import.meta.dirname, "../..");
+  const modules = essentialModules(root);
+  const missing = [
+    "App.screens.tsx",
+    "app/authscreens.tsx",
+    "app/bootsplash.tsx",
+    "app/confinement.tsx",
+    "features/sign-in/auth.tsx",
+    "features/sign-in/setupclaim.tsx",
+    "features/sign-in/forcedmfa.tsx",
+    "features/sign-in/forcedpassword.tsx",
+  ].filter((file) => !modules.has(join(root, "src", file)));
+  expect(missing).toEqual([]);
 });

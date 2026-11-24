@@ -1,5 +1,12 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
@@ -30,10 +37,12 @@ afterEach(() => {
   localStorage.clear();
 });
 
+const offerReads = { count: 0 };
+
 function stubDealBackend(
   onRecord: Deal,
   offers: Offer[],
-  onCreateOffer?: (body: unknown) => void,
+  onCreateOffer?: (body: unknown, headers: Headers) => unknown,
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -57,13 +66,18 @@ function stubDealBackend(
       const body = request
         ? await request.json()
         : JSON.parse(String(init?.body));
-      onCreateOffer?.(body);
+      const answer = await onCreateOffer?.(
+        body,
+        new Headers(request ? request.headers : init?.headers),
+      );
+      if (answer instanceof Response) return answer;
       return jsonResponse(
         offer({ id: "new-offer", currency: body.currency }),
         201,
       );
     }
     if (url.includes("/offers")) {
+      offerReads.count += 1;
       return jsonResponse({ data: offers, page: { next_cursor: null } });
     }
     if (url.includes("/history")) {
@@ -467,7 +481,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     expect(await screen.findByText("Moved to Proposal")).toBeTruthy();
   });
 
-  it("says the probability the new stage set, in place of the bare move", async () => {
+  it("says the probability the new stage set beside the move", async () => {
     const d = deal({ id: "x", version: 7, stage_id: "s1" });
     vi.stubGlobal(
       "fetch",
@@ -486,9 +500,8 @@ describe("DealScreen — the stage stepper advances the deal", () => {
     await user.click(await screen.findByRole("button", { name: "Proposal" }));
 
     expect(
-      await screen.findByText("Probability set to 60% by the stage Proposal"),
+      await screen.findByText("Moved to Proposal · probability now 60%"),
     ).toBeTruthy();
-    expect(screen.queryByText("Moved to Proposal")).toBeNull();
   });
 
   // The deal's tags ride in the context rail, beside the seats, the deal room
@@ -673,7 +686,7 @@ describe("DealScreen — the stage stepper advances the deal", () => {
 describe("DealScreen — an archived deal keeps its verbs, refused", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  it("shows Edit, Archive, Share and Reopen disabled, each reachable from the one sentence naming the archive", async () => {
+  it("shows Share and Reopen disabled, each reachable from the one sentence naming the archive", async () => {
     const d = deal({
       id: "x",
       status: "won",
@@ -687,7 +700,6 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
     // Each is awaited, not read in the tick the first arrived in. The note on
     // the same list in companies.header.test.tsx says why.
     const refused = [
-      await screen.findByTestId("archive-record"),
       await screen.findByTestId("share-record"),
       await screen.findByTestId("reopen-open"),
     ];
@@ -730,6 +742,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     expect(screen.queryByRole("button", { name: "Won" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Move to/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "New offer" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Write brief" })).toBeNull();
 
     expect(screen.getByRole("button", { name: "Log activity" })).toBeTruthy();
     await openHeaderMenu(user);
@@ -757,6 +770,10 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Won" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "New offer" })).toBeTruthy();
+    // The brief writes through the page's one deal edit.
+    expect(
+      await screen.findByRole("button", { name: "Write brief" }),
+    ).toBeTruthy();
     expect(screen.queryByText(sentence)).toBeNull();
     await openHeaderMenu(user);
     for (const testId of ["archive-record", "share-record"]) {
@@ -902,6 +919,55 @@ describe("DealScreen offers panel", () => {
     await waitFor(() =>
       expect(window.location.hash).toBe("#/offers/new-offer"),
     );
+  });
+
+  // A double click lands its second press before the first create is drawn
+  // pending. It must not make a second draft and spend a second offer number.
+  it("a double click on New offer posts one draft, under an idempotency key", async () => {
+    const keys: (string | null)[] = [];
+    const { promise, resolve } = Promise.withResolvers<void>();
+    vi.stubGlobal(
+      "fetch",
+      stubDealBackend(deal({ currency: "EUR" }), [], (_body, headers) => {
+        keys.push(headers.get("Idempotency-Key"));
+        return promise;
+      }),
+    );
+    render(<DealScreen id="d1" />);
+    const newOffer = await screen.findByRole("button", { name: "New offer" });
+    fireEvent.click(newOffer);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.click(newOffer);
+    resolve();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/offers/new-offer"),
+    );
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it("says so of a create the server cannot vouch for, reads the offers again, and sends the next press under a new key", async () => {
+    const keys: (string | null)[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubDealBackend(deal({ currency: "EUR" }), [], (_body, headers) => {
+        keys.push(headers.get("Idempotency-Key"));
+        const failed = { status: 409, code: "idempotency_key_failed" };
+        return keys.length === 1 ? jsonResponse(failed, 409) : undefined;
+      }),
+    );
+    render(<DealScreen id="d1" />);
+    const user = userEvent.setup();
+    const newOffer = await screen.findByRole("button", { name: "New offer" });
+    const readsBefore = offerReads.count;
+    await user.click(newOffer);
+    await screen.findByText(translate("en", "offer.writeUnsure"));
+    await waitFor(() => expect(offerReads.count).toBeGreaterThan(readsBefore));
+    await user.click(newOffer);
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).not.toBe(keys[0]);
   });
 });
 

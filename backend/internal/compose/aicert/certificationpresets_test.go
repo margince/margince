@@ -19,14 +19,18 @@ package aicert_test
 // and a ladder rewritten in tasks_gen.go re-attributes every row.
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -37,10 +41,20 @@ var aiCertPresetDir = filepath.Join("..", "..", "..", "..", "config", "presets")
 
 const aiCertPresetLink = corpusLinkPrefix + "config/presets/"
 
+// aiCertPresetTitle reads a preset's plain name. The schema admits no key for
+// it, so it is a comment line the product never reads.
+var aiCertPresetTitle = regexp.MustCompile(`(?m)^# Model setup: (\S.*\S)\s*$`)
+
 // aiCertPreset is one preset file folded over every task this build ships.
 type aiCertPreset struct {
-	File    string `json:"file"`
+	File string `json:"file"`
+	// Title is the file's `# Model setup:` line: the name a client knows the
+	// setup by, where the file name is a builder's.
+	Title   string `json:"title"`
 	Profile string `json:"profile"`
+	// WhereDataGoes is the profile in a client's words, carried in the payload
+	// so a page rendered from it says what this one says.
+	WhereDataGoes string `json:"where_data_goes"`
 	// Tiers is the ladder rungs this preset binds, in the schema's own tier
 	// order, so two presets read side by side line up.
 	Tiers []aiCertPresetTier `json:"tiers"`
@@ -56,6 +70,9 @@ type aiCertPreset struct {
 	// zero today; a nonzero one means the verdict vocabulary grew and this
 	// section is reporting less than it reads.
 	Unrecognised int `json:"unrecognised"`
+	// taskLadders is the preset's reordering of a task's rungs, which the
+	// router walks in place of the contract's order.
+	taskLadders map[ai.Task][]ai.Tier
 }
 
 type aiCertPresetTier struct {
@@ -94,6 +111,18 @@ type aiCertPresetTask struct {
 	// MeasuredOn is the binding whose record grades this rung when it is not
 	// the rung's own (aicert.MeasuredAs), so the page can say so.
 	MeasuredOn *aiCertBindingRef `json:"measured_on,omitempty"`
+	// Unmeasured names the task's sites no record of this rung measured. Any
+	// one leaves the whole task not measured, as the report reads it.
+	Unmeasured []string `json:"unmeasured_sites,omitempty"`
+	// Scope is the narrowest scope any of the task's sites claims. A grade on one
+	// model call or one turn then does not read as one on the whole feature.
+	Scope string `json:"scope"`
+	// Judge scored the answers behind the grade; empty where every case was
+	// checked mechanically.
+	Judge string `json:"judge,omitempty"`
+	// WithoutCompanyContext says production prepends company context to the
+	// task and the grading record's runs were not served it.
+	WithoutCompanyContext bool `json:"without_company_context,omitempty"`
 	// record is the measuring record, which grades a rung only where
 	// aicert.RecordMeasures says it measured that rung.
 	record aicert.Record
@@ -132,14 +161,21 @@ func loadAICertPresets(t *testing.T) []aiCertPreset {
 		if err != nil {
 			t.Fatalf("reading preset %s: %v", entry.Name(), err)
 		}
+		title := aiCertPresetTitle.FindSubmatch(raw)
+		if title == nil {
+			t.Fatalf("preset %s has no `# Model setup: <plain name>` line, so the page could name it only by its file", entry.Name())
+		}
 		cfg, err := ai.ParsePreset(raw)
 		if err != nil {
 			t.Fatalf("preset %s does not parse, so this page would describe a binding nobody can deploy: %v",
 				entry.Name(), err)
 		}
-		presets = append(presets, aiCertPreset{
-			File: entry.Name(), Profile: string(cfg.Profile), Tiers: tiersOfPreset(cfg),
-		})
+		preset := aiCertPreset{
+			File: entry.Name(), Title: string(title[1]), Profile: string(cfg.Profile), Tiers: tiersOfPreset(cfg),
+			taskLadders: cfg.TaskLadders,
+		}
+		preset.WhereDataGoes = aiCertWhereDataGoes(preset)
+		presets = append(presets, preset)
 	}
 	// NOT a tolerated zero: an empty read renders a section claiming the tree
 	// ships no presets, which is a statement rather than a missing one.
@@ -205,15 +241,24 @@ func tiersOfPreset(cfg ai.RoutingConfig) []aiCertPresetTier {
 }
 
 // attributeAICertPresets fills in each preset's per-task verdict from the
-// records the document's site tables carry, so the by-preset section can never
-// claim a band for a pair those tables do not show.
-func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc, records []aicert.Record) []aiCertPreset {
+// records the site tables carry. The by-preset section then never claims a band
+// those tables do not show. The grade is aicert.RungGrade's, the rule
+// `make e2e-ai-report` prints, so a task with an unmeasured site reads not measured.
+func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc, records []aicert.Record,
+	rows []aicert.ReadinessRow, corpus []aicert.Scenario,
+) []aiCertPreset {
+	grades := aiCertRungGrades{
+		rows: rows, scenarios: map[string][]aicert.Scenario{}, scopes: aiCertTaskScopes(doc), contextOwed: aiCertContextOwed(doc),
+	}
+	for _, sc := range corpus {
+		grades.scenarios[sc.Task] = append(grades.scenarios[sc.Task], sc)
+	}
 	measured := aiCertTaskVerdicts(doc, records)
 	filled := make([]aiCertPreset, 0, len(presets))
 	for _, preset := range presets {
 		preset.Tasks = []aiCertPresetTask{}
 		for _, task := range aiCertTasksOf(doc) {
-			preset.Tasks = append(preset.Tasks, presetTaskRow(task, preset, measured))
+			preset.Tasks = append(preset.Tasks, presetTaskRow(task, preset, measured, grades))
 		}
 		for _, row := range preset.Tasks {
 			countPresetTask(&preset, row)
@@ -227,8 +272,8 @@ func attributeAICertPresets(presets []aiCertPreset, doc aiCertDoc, records []aic
 // the first rung the preset binds answers, and the next is where a failed call
 // falls. A task whose primary tier the preset leaves unbound is served by the
 // next one down, so reporting the primary would credit a model it never reaches.
-func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertPresetTask) aiCertPresetTask {
-	row := aiCertPresetTask{Task: task, Label: ai.DisplayName(ai.Task(task))}
+func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertPresetTask, grades aiCertRungGrades) aiCertPresetTask {
+	row := aiCertPresetTask{Task: task, Label: ai.DisplayName(ai.Task(task)), Scope: grades.scopes[task]}
 	rungs := aicert.RungsBound(preset.routing(), ai.Task(task))
 	if len(rungs) == 0 {
 		return row
@@ -237,21 +282,80 @@ func presetTaskRow(task string, preset aiCertPreset, measured map[string]aiCertP
 	row.Tier, row.Model = string(first.Tier), presetBindingRef(first.Binding, preset.Profile)
 	if seen, on, ok := measuredOn(task, first.Binding, row.Model, measured); ok {
 		row.MeasuredOn = on
-		row.Band, row.State, row.Runs, row.Passed = seen.Band, seen.State, seen.Runs, seen.Passed
+		row.Runs, row.Passed, row.Judge = seen.Runs, seen.Passed, seen.record.JudgeServedModel
+		row.WithoutCompanyContext = grades.contextOwed[task] && !seen.record.ContextApplied
 		row.CasesFailingOften, row.CasesBelowQualityBar = seen.CasesFailingOften, seen.CasesBelowQualityBar
 		row.Abandoned = seen.Abandoned
 	}
+	row.Band, row.State, row.Unmeasured = grades.of(task, first.Binding, preset.Profile)
 	if len(rungs) > 1 {
 		next := rungs[1]
 		row.Fallback = &aiCertFallback{
 			Tier: string(next.Tier), Model: presetBindingRef(next.Binding, preset.Profile),
 			SameModel: next.Binding.Provider == first.Binding.Provider && next.Binding.Model == first.Binding.Model,
 		}
-		if seen, on, ok := measuredOn(task, next.Binding, row.Fallback.Model, measured); ok {
-			row.Fallback.Band, row.Fallback.State, row.Fallback.MeasuredOn = seen.Band, seen.State, on
+		if _, on, ok := measuredOn(task, next.Binding, row.Fallback.Model, measured); ok {
+			row.Fallback.MeasuredOn = on
 		}
+		row.Fallback.Band, row.Fallback.State, _ = grades.of(task, next.Binding, preset.Profile)
 	}
 	return row
+}
+
+// aiCertRungGrades is what aicert.RungGrade reads: every readiness row, and
+// each task's corpus and narrowest site scope.
+type aiCertRungGrades struct {
+	rows        []aicert.ReadinessRow
+	scenarios   map[string][]aicert.Scenario
+	scopes      map[string]string
+	contextOwed map[string]bool
+}
+
+// of is the band and state of the record grading binding on task, with the
+// sites that have no such record. Both are empty when any site has none.
+func (g aiCertRungGrades) of(task string, binding ai.ProviderConfig, profile string) (band, state string, unmeasured []string) {
+	scenarios := g.scenarios[task]
+	state, verdict := aicert.RungGrade(g.rows, scenarios, binding, ai.Profile(profile), ai.Task(task))
+	if state != aicert.StatusAbsent {
+		return verdict, state, nil
+	}
+	bySite := map[string][]aicert.Scenario{}
+	var sites []string
+	for _, sc := range scenarios {
+		if bySite[sc.Site] == nil {
+			sites = append(sites, sc.Site)
+		}
+		bySite[sc.Site] = append(bySite[sc.Site], sc)
+	}
+	for _, site := range sites {
+		if siteState, _ := aicert.RungGrade(g.rows, bySite[site], binding, ai.Profile(profile), ai.Task(task)); siteState == aicert.StatusAbsent {
+			unmeasured = append(unmeasured, task+"/"+site)
+		}
+	}
+	return "", "", unmeasured
+}
+
+// aiCertContextOwed marks the tasks a record was certified without the company
+// context production sends them, which the document's sites already name.
+func aiCertContextOwed(doc aiCertDoc) map[string]bool {
+	owed := map[string]bool{}
+	for _, site := range doc.Sites {
+		owed[site.Task] = owed[site.Task] || len(site.MissingContextScopes) > 0
+	}
+	return owed
+}
+
+// aiCertTaskScopes is each task's narrowest site scope among the sites it ships
+// test cases for.
+func aiCertTaskScopes(doc aiCertDoc) map[string]string {
+	scopes := map[string]string{}
+	for _, site := range doc.Sites {
+		if len(site.Scenarios) == 0 {
+			continue
+		}
+		scopes[site.Task] = aitasks.NarrowerScope(scopes[site.Task], site.Scope)
+	}
+	return scopes
 }
 
 // measuredOn is the record that grades a rung, by the rule the runner's
@@ -284,7 +388,7 @@ func presetBindingRef(binding ai.ProviderConfig, profile string) aiCertBindingRe
 
 // routing is the preset as the router reads it: its profile and its rungs.
 func (p aiCertPreset) routing() ai.RoutingConfig {
-	cfg := ai.RoutingConfig{Profile: ai.Profile(p.Profile), Tiers: map[ai.Tier]ai.ProviderConfig{}}
+	cfg := ai.RoutingConfig{Profile: ai.Profile(p.Profile), Tiers: map[ai.Tier]ai.ProviderConfig{}, TaskLadders: p.taskLadders}
 	for _, tier := range p.Tiers {
 		cfg.Tiers[ai.Tier(tier.Tier)] = tier.binding
 	}
@@ -524,6 +628,127 @@ func assertAICertPresetsReadTheRecords(t *testing.T, presets []aiCertPreset, rec
 	}
 }
 
+// presetReportDisagreements holds every preset row to aicert.PresetRungs, which
+// `make e2e-ai-report` prints its preset tables from. The page's grade and state
+// for each rung are the report's. A rung the report reads as absent is one the
+// page calls not measured.
+func presetReportDisagreements(p aiCertPreset, rungs []aicert.PresetRungState) []string {
+	byTask := map[string]aicert.PresetRungState{}
+	for _, rung := range rungs {
+		byTask[string(rung.Task)] = rung
+	}
+	var problems []string
+	for _, row := range p.Tasks {
+		rung, reported := byTask[row.Task]
+		switch {
+		case row.Tier == "" && !reported:
+			continue
+		case row.Tier == "" || !reported:
+			problems = append(problems, fmt.Sprintf("%s %s: the page binds tier %q and the report has a rung: %v", p.File, row.Task, row.Tier, reported))
+			continue
+		}
+		if band, state := reportedGrade(rung.FirstState, rung.FirstVerdict); row.Band != band || row.State != state {
+			problems = append(problems, fmt.Sprintf("%s %s: the page grades the answering rung %q %q, the report %q %q",
+				p.File, row.Task, row.Band, row.State, rung.FirstVerdict, rung.FirstState))
+		}
+		if rung.FallbackState == aicert.RungNone || rung.FallbackState == aicert.RungSameModel || row.Fallback == nil {
+			continue
+		}
+		if band, state := reportedGrade(rung.FallbackState, rung.FallbackVerdict); row.Fallback.Band != band || row.Fallback.State != state {
+			problems = append(problems, fmt.Sprintf("%s %s: the page grades the fallback %q %q, the report %q %q",
+				p.File, row.Task, row.Fallback.Band, row.Fallback.State, rung.FallbackVerdict, rung.FallbackState))
+		}
+	}
+	return problems
+}
+
+// reportedGrade is the report's state and verdict as the page stores them: an
+// absent rung has no band, since no record measured all of it.
+func reportedGrade(state, verdict string) (band, pageState string) {
+	if state == aicert.StatusAbsent {
+		return "", ""
+	}
+	return verdict, state
+}
+
+func assertAICertPresetsMatchTheReport(t *testing.T, presets []aiCertPreset,
+	corpus []aicert.Scenario, census *aitasks.Registry, records []aicert.Record,
+) {
+	t.Helper()
+	for _, p := range presets {
+		rungs, err := aicert.PresetRungs(context.Background(), p.routing(), corpus, census, records)
+		if err != nil {
+			t.Fatalf("reading preset %s as the report does: %v", p.File, err)
+		}
+		for _, problem := range presetReportDisagreements(p, rungs) {
+			t.Error(problem)
+		}
+	}
+}
+
+// The gate fails a page row whose grade the report would not print, on the
+// answering rung and on the fallback alike.
+func TestThePresetGateFailsARowTheReportGradesOtherwise(t *testing.T) {
+	row := aiCertPresetTask{
+		Task: "summarize", Tier: "cheap_cloud", Band: aicert.VerdictCertified, State: aicert.StatusCurrent,
+		Fallback: &aiCertFallback{Band: aicert.VerdictCertified, State: aicert.StatusCurrent},
+	}
+	preset := aiCertPreset{File: "p.yaml", Tasks: []aiCertPresetTask{row}}
+	agree := aicert.PresetRungState{
+		Task: "summarize", FirstState: aicert.StatusCurrent, FirstVerdict: aicert.VerdictCertified,
+		FallbackState: aicert.StatusCurrent, FallbackVerdict: aicert.VerdictCertified,
+	}
+	if problems := presetReportDisagreements(preset, []aicert.PresetRungState{agree}); len(problems) != 0 {
+		t.Fatalf("a row the report grades the same failed: %q", problems)
+	}
+	absent := agree
+	absent.FirstState, absent.FirstVerdict = aicert.StatusAbsent, aicert.VerdictNotSupported
+	staleFallback := agree
+	staleFallback.FallbackState = aicert.StatusStale
+	for name, rung := range map[string]aicert.PresetRungState{"absent answering rung": absent, "stale fallback": staleFallback} {
+		if problems := presetReportDisagreements(preset, []aicert.PresetRungState{rung}); len(problems) != 1 {
+			t.Errorf("%s: problems = %q, want exactly one", name, problems)
+		}
+	}
+	if problems := presetReportDisagreements(preset, nil); len(problems) != 1 {
+		t.Errorf("a row the report has no rung for: problems = %q, want exactly one", problems)
+	}
+}
+
+// A task with a site no record measured reads not measured on the page, as in
+// the report. The record of its other site does not change that.
+func TestATaskWithAnUnmeasuredSiteReadsNotMeasured(t *testing.T) {
+	task := ai.TaskSummarize
+	binding := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/m"}
+	tiers := map[ai.Tier]ai.ProviderConfig{}
+	for _, tier := range ai.TaskLadder(task) {
+		tiers[tier] = binding
+	}
+	rec := measuredRecord(task, binding, ai.ProfileCloudFrontier, aicert.VerdictCertified, 0)
+	preset := aiCertPreset{File: "p.yaml", Profile: string(ai.ProfileCloudFrontier), Tiers: tiersOfPreset(ai.RoutingConfig{Tiers: tiers})}
+	measured := attributeMeasured([]aiCertPreset{preset}, rec)
+	doc := aiCertDoc{Sites: []aiCertSite{{Task: string(task), Scenarios: []aiCertScenario{{}}}}}
+	rows, _ := aicert.Readiness(aicert.Census{Sites: []aitasks.Site{
+		{Task: task, Variant: fixtureSite}, {Task: task, Variant: "unmeasured"},
+	}}, map[string]string{string(task): fixtureStamp}, map[string]map[string]string{
+		string(task) + "/" + fixtureSite: {fixtureScenario: fixtureStamp},
+	}, []aicert.Record{rec})
+	corpus := []aicert.Scenario{
+		{Task: string(task), Site: fixtureSite, Name: fixtureScenario},
+		{Task: string(task), Site: "unmeasured", Name: "unmeasured_case"},
+	}
+	got := attributeAICertPresets([]aiCertPreset{preset}, doc, []aicert.Record{rec}, rows, corpus)[0].Tasks[0]
+	if measured[0].Tasks[0].Band != aicert.VerdictCertified {
+		t.Fatalf("with every site measured the row reads %q, want certified", measured[0].Tasks[0].Band)
+	}
+	if got.Band != "" || aiCertGrade(got) != aiCertUnproven {
+		t.Errorf("with a site unmeasured the row reads %q (%s), want not measured", got.Band, aiCertGrade(got))
+	}
+	if want := []string{string(task) + "/unmeasured"}; !slices.Equal(got.Unmeasured, want) {
+		t.Errorf("unmeasured sites = %v, want %v", got.Unmeasured, want)
+	}
+}
+
 // A thinking level changes how a model answers, so a record run at one level
 // grades only the preset whose rung sets the same level — in both directions.
 func TestAPresetIsCreditedOnlyByARecordAtItsOwnThinkingLevel(t *testing.T) {
@@ -543,15 +768,11 @@ func TestAPresetIsCreditedOnlyByARecordAtItsOwnThinkingLevel(t *testing.T) {
 				EnvClass: string(ai.ProfileEUHosted), ThinkingLevel: tc.recordLevel,
 				Verdict: aicert.VerdictCertified, Runs: 3, Passed: 3,
 			}
-			doc := aiCertDoc{Sites: []aiCertSite{{
-				Task:    rec.Task,
-				Records: []aiCertRecord{{Binding: bindingRefOf(rec), State: aicert.StatusCurrent}},
-			}}}
 			preset := aiCertPreset{File: "flash-lite.yaml", Profile: rec.EnvClass, Tiers: []aiCertPresetTier{{
 				Tier: string(ai.TierCheapCloud), Provider: "gemini", Model: flashLite, ThinkingLevel: tc.presetLevel,
 				binding: ai.ProviderConfig{Provider: "gemini", Model: flashLite, ThinkingLevel: tc.presetLevel},
 			}}}
-			got := attributeAICertPresets([]aiCertPreset{preset}, doc, []aicert.Record{rec})[0].Tasks[0]
+			got := attributeMeasured([]aiCertPreset{preset}, rec)[0].Tasks[0]
 			if got.Band != tc.wantBand {
 				t.Errorf("preset at %q reads band %q from a record at %q, want %q",
 					tc.presetLevel, got.Band, tc.recordLevel, tc.wantBand)
@@ -584,15 +805,11 @@ func TestAPresetIsCreditedOnlyByARecordAtTheLevelsItServesEachSite(t *testing.T)
 				EnvClass: string(ai.ProfileCloudFrontier), SiteThinking: tc.siteThinking,
 				Verdict: aicert.VerdictCertified, Runs: 3, Passed: 3,
 			}
-			doc := aiCertDoc{Sites: []aiCertSite{{
-				Task:    rec.Task,
-				Records: []aiCertRecord{{Binding: bindingRefOf(rec), State: aicert.StatusCurrent}},
-			}}}
 			preset := aiCertPreset{File: "gemini.yaml", Profile: rec.EnvClass, Tiers: []aiCertPresetTier{{
 				Tier: string(ai.TierCheapCloud), Provider: "gemini", Model: flashLite,
 				binding: ai.ProviderConfig{Provider: "gemini", Model: flashLite},
 			}}}
-			got := attributeAICertPresets([]aiCertPreset{preset}, doc, []aicert.Record{rec})[0].Tasks[0]
+			got := attributeMeasured([]aiCertPreset{preset}, rec)[0].Tasks[0]
 			if got.Band != tc.wantBand {
 				t.Errorf("preset reads band %q from a record with site levels %v, want %q", got.Band, tc.siteThinking, tc.wantBand)
 			}
@@ -605,18 +822,48 @@ func TestAPresetIsCreditedOnlyByARecordAtTheLevelsItServesEachSite(t *testing.T)
 func attributeOneTask(task ai.Task, profile ai.Profile, tiers map[ai.Tier]ai.ProviderConfig,
 	records ...aicert.Record,
 ) aiCertPreset {
-	site := aiCertSite{Task: string(task)}
-	for _, rec := range records {
-		site.Records = append(site.Records, aiCertRecord{Binding: bindingRefOf(rec), State: aicert.StatusCurrent})
-	}
 	preset := aiCertPreset{File: "p.yaml", Profile: string(profile), Tiers: tiersOfPreset(ai.RoutingConfig{Tiers: tiers})}
-	return attributeAICertPresets([]aiCertPreset{preset}, aiCertDoc{Sites: []aiCertSite{site}}, records)[0]
+	return attributeMeasured([]aiCertPreset{preset}, records...)[0]
+}
+
+// The one site and case every record below measured, under the stamp it ran.
+const (
+	fixtureSite     = "brief"
+	fixtureScenario = "brief_case"
+	fixtureStamp    = "stamp"
+)
+
+// attributeMeasured attributes presets over records as current measurements of
+// one site per task, judged by aicert.Readiness as the page's own rows are.
+func attributeMeasured(presets []aiCertPreset, records ...aicert.Record) []aiCertPreset {
+	var sites []aitasks.Site
+	var corpus []aicert.Scenario
+	taskStamps, perSite := map[string]string{}, map[string]map[string]string{}
+	for i, rec := range records {
+		if len(rec.Scenarios) == 0 {
+			rec.Scenarios = []aicert.ScenarioRecord{{Runs: rec.Runs, Passed: rec.Passed}}
+		}
+		for j := range rec.Scenarios {
+			rec.Scenarios[j].Site, rec.Scenarios[j].Scenario, rec.Scenarios[j].Stamp = fixtureSite, fixtureScenario, fixtureStamp
+		}
+		rec.PromptVersion = fixtureStamp
+		records[i] = rec
+		if _, seen := taskStamps[rec.Task]; !seen {
+			sites = append(sites, aitasks.Site{Task: ai.Task(rec.Task), Variant: fixtureSite})
+			corpus = append(corpus, aicert.Scenario{Task: rec.Task, Site: fixtureSite, Name: fixtureScenario})
+			taskStamps[rec.Task] = fixtureStamp
+			perSite[rec.Task+"/"+fixtureSite] = map[string]string{fixtureScenario: fixtureStamp}
+		}
+	}
+	rows, unclaimed := aicert.Readiness(aicert.Census{Sites: sites}, taskStamps, perSite, records)
+	doc := buildAICertDoc(rows, unclaimed, corpus, records, nil)
+	return attributeAICertPresets(presets, doc, records, rows, corpus)
 }
 
 func measuredRecord(task ai.Task, binding ai.ProviderConfig, profile ai.Profile, verdict string, abandoned int) aicert.Record {
 	return aicert.Record{
 		Task: string(task), Provider: binding.Provider, ServedModel: binding.Model, EnvClass: string(profile),
-		Verdict: verdict, Runs: 6, Passed: 6 - abandoned,
+		WireRule: ai.WireRule(binding.Provider), Verdict: verdict, Runs: 6, Passed: 6 - abandoned,
 		Scenarios: []aicert.ScenarioRecord{{Runs: 6, Passed: 6 - abandoned, Abandoned: abandoned}},
 	}
 }

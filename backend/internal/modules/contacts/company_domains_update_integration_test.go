@@ -287,3 +287,40 @@ func TestUpdateCompanyAcceptsDomainsAndRelationshipTypesTogether(t *testing.T) {
 		t.Errorf("got %d company.updated events, want exactly 1", n)
 	}
 }
+
+func TestAnInternationalisedCompanyDomainIsOneCompanyInEitherSpelling(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Stadtwerke Muenchen", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "münchen.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatalf("a domain with an umlaut must be accepted: %v", err)
+	}
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	if live := liveDomainsOf(ctx, t, e, companyID); len(live) != 1 || !live["xn--mnchen-3ya.test"] {
+		t.Fatalf("stored domains = %+v, want only the punycode form", live)
+	}
+
+	_, err = e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Twin", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "XN--MNCHEN-3YA.test", IsPrimary: true}},
+	})
+	var dup *DuplicateDomainError
+	if !errors.As(err, &dup) || dup.ExistingID != companyID {
+		t.Fatalf("the punycode spelling must hit the same company, got %v", err)
+	}
+	for _, spelling := range []string{"münchen.test", "xn--mnchen-3ya.test", "https://www.münchen.test/"} {
+		if got := foldDomainQuery(spelling); got != "xn--mnchen-3ya.test" {
+			t.Errorf("foldDomainQuery(%q) = %q, want the stored form", spelling, got)
+		}
+	}
+
+	if _, err := e.store.CreateCompany(ctx, CreateCompanyInput{
+		DisplayName: "Lookalike", Source: "manual",
+		Domains: []CompanyDomainInput{{Domain: "аpple.test", IsPrimary: true}},
+	}); err == nil {
+		t.Fatal("a label mixing Cyrillic and Latin must be refused")
+	}
+}

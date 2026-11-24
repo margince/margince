@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // DealBasis is the rung of the deal rule that reached a verdict.
@@ -29,6 +30,10 @@ const (
 	DealBasisSoleOpenDeal DealBasis = "sole_open_deal"
 	DealBasisStakeholder  DealBasis = "stakeholder"
 	DealBasisAmbiguous    DealBasis = "ambiguous"
+	// DealBasisNamedStakeholder is a seat at another company that cannot file
+	// the mail alone. The contact is only named in a header, or holds seats on
+	// several deals. It asks a colleague, and the topic check never picks.
+	DealBasisNamedStakeholder DealBasis = "named_stakeholder"
 )
 
 // NeedsTopicCheck says which verdicts are suggestions
@@ -48,9 +53,13 @@ type DealTopic struct {
 }
 
 // ErrTopicAbstained is a check that gave no answer: no model is configured,
-// the budget is spent, or every model declined. The mail is then filed on no
-// suggested deal, and a later pass asks again.
+// the budget is spent, or the subject is restricted. The mail is then filed on
+// no suggested deal, and a later pass asks again.
 var ErrTopicAbstained = errors.New("capture: the deal topic check gave no answer")
+
+// ErrTopicDeferred joins ErrTopicAbstained when the model is blocked or its
+// budget is spent: the same mail will get an answer later.
+var ErrTopicDeferred = errors.New("capture: the deal topic check is deferred")
 
 // DealTopicCheck asks a model which of deals the mail is about. Compose
 // injects it; a nil check abstains.
@@ -82,6 +91,9 @@ type topicAnswer struct {
 	digest   string
 	topic    DealTopic
 	answered bool
+	// deferred marks an abstention that will pass: the model is blocked or its
+	// budget is spent. A pass that must not skip the mail retries it.
+	deferred bool
 }
 
 // topicQuestion is what a filing could not settle without the model.
@@ -133,7 +145,7 @@ func checkedFiling(
 func askTopic(check DealTopicCheck, q topicQuestion) (topicAnswer, error) {
 	topic, err := check.Check(q.decider, q.mail, q.deals, q.digest)
 	if errors.Is(err, ErrTopicAbstained) {
-		return topicAnswer{digest: q.digest}, nil
+		return topicAnswer{digest: q.digest, deferred: errors.Is(err, ErrTopicDeferred)}, nil
 	}
 	if err != nil {
 		return topicAnswer{}, err
@@ -146,7 +158,7 @@ func askTopic(check DealTopicCheck, q topicQuestion) (topicAnswer, error) {
 // files nothing and asks nobody. Doubt or no answer files nothing, and an
 // ambiguous mail still asks its question.
 func settleSuggestion(verdict DealVerdict, answer topicAnswer) DealVerdict {
-	none := DealVerdict{Outcome: DealNone, Basis: verdict.Basis}
+	none := DealVerdict{Outcome: DealNone, Basis: verdict.Basis, Hooks: verdict.Hooks}
 	switch {
 	case !answer.answered || !answer.topic.Confident:
 		if verdict.Outcome == DealAmbiguous {
@@ -156,16 +168,25 @@ func settleSuggestion(verdict DealVerdict, answer topicAnswer) DealVerdict {
 	case answer.topic.Deal.IsZero() || !slices.Contains(verdict.Candidates, answer.topic.Deal):
 		return none
 	}
-	return DealVerdict{Outcome: DealLinked, Deal: answer.topic.Deal, Basis: verdict.Basis, Candidates: verdict.Candidates}
+	return DealVerdict{
+		Outcome: DealLinked, Deal: answer.topic.Deal, Basis: verdict.Basis, Candidates: verdict.Candidates,
+		Relevance: relstrength.DealRelevant, Hooks: verdict.Hooks,
+	}
 }
 
 // decideFiling is the deal rule with the topic check folded in. A suggestion
 // whose question was already answered for this mail files nothing more. One
 // still to ask comes back as a question, with no verdict to write.
 func decideFiling(f dealFiling, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, *topicQuestion, error) {
-	verdict, err := decideDeal(f.decider, tx, facts, candidates)
-	if err != nil || !verdict.Basis.NeedsTopicCheck() || len(verdict.Candidates) == 0 {
+	verdict, err := decideDeal(f.decider, tx, facts, candidates, f.hooks)
+	if err != nil {
 		return verdict, nil, err
+	}
+	if !f.admit.IsZero() {
+		verdict = confirmAdmitted(verdict, f.admit)
+	}
+	if !verdict.Basis.NeedsTopicCheck() || len(verdict.Candidates) == 0 {
+		return verdict, nil, nil
 	}
 	if f.topic == nil {
 		return settleSuggestion(verdict, topicAnswer{}), nil, nil
@@ -197,9 +218,26 @@ func FileOnDealChecked(ctx context.Context, db TxRunner, mail ids.ActivityID, ru
 	_, err := checkedFiling(ctx, db, rule.Check, func(tx pgx.Tx, topic *dealTopicState) (*topicQuestion, error) {
 		var question *topicQuestion
 		var err error
-		f := dealFiling{decider: ctx, writer: ctx, filer: rule.Filer, topic: topic}
+		f := dealFiling{decider: ctx, writer: ctx, filer: rule.Filer, hooks: rule.Hooks, topic: topic}
 		verdict, question, err = fileOnDeal(f, tx, mail, rule.Candidates, rule.Ask)
 		return question, err
 	})
 	return verdict, err
+}
+
+// confirmAdmitted holds a filing on the one closed deal a repair admits to the
+// topic check, whichever rung found it. A verdict for any other deal files
+// nothing, and so does a check that does not confirm this one.
+func confirmAdmitted(verdict DealVerdict, admit ids.UUID) DealVerdict {
+	if verdict.Outcome != DealLinked {
+		return verdict
+	}
+	if verdict.Deal != admit {
+		return DealVerdict{Outcome: DealNone, Basis: verdict.Basis}
+	}
+	if !verdict.Basis.NeedsTopicCheck() {
+		verdict.Basis = DealBasisSoleOpenDeal
+	}
+	verdict.Candidates = []ids.UUID{admit}
+	return verdict
 }

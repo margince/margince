@@ -34,9 +34,9 @@ func (h Handlers) DeclareServiceMember(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, httperr.Validation("extension", "length", "an extension name of 1–64 characters is required"))
 		return
 	}
-	name := strings.TrimSpace(req.DisplayName)
-	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > 255 {
-		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
+	name := displayNameLine(req.DisplayName)
+	if err := validateDisplayName(name); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	member, err := h.svc.DeclareServiceMember(r.Context(), actor, ServiceMemberInput{Extension: extension, DisplayName: name})

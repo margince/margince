@@ -60,23 +60,23 @@ func (s *Store) ListScheduledSends(ctx context.Context, status string) ([]Schedu
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	actor, err := storekit.Actor(ctx)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	// The surrounding transaction only requires a workspace; this predicate is
+	// what narrows the read to the author.
+	own, err := ScheduledSendReadableSQL(ctx, "scheduled_send", arg)
 	if err != nil {
 		return nil, err
 	}
+	statusAt := arg(status)
 	var out []ScheduledSend
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// Scheduled mail is the SENDER's own: an unsent message's body and its
-		// blind-copy list are not workspace-readable the way a sent activity
-		// is. The scheduled_by predicate below is what narrows the read to the
-		// actor; the surrounding transaction only requires a workspace on the
-		// context, it does not filter rows on its own.
-		rows, err := tx.Query(ctx, `
+		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT`+scheduledSendColumns+`
 			  FROM scheduled_send
-			 WHERE scheduled_by = $1 AND ($2 = '' OR `+scheduledSendStatusExpr+` = $2)
-			 ORDER BY scheduled_at ASC`,
-			actor.UserID, status)
+			 WHERE %s AND ($%[2]d = '' OR `+scheduledSendStatusExpr+` = $%[2]d)
+			 ORDER BY scheduled_at ASC`, own, statusAt),
+			args...)
 		if err != nil {
 			return fmt.Errorf("scheduled send: listing: %w", err)
 		}
@@ -153,8 +153,8 @@ func (s *Store) stampReviews(ctx context.Context, rows []ScheduledSend) {
 		return
 	}
 	for i := range rows {
-		if id, ok := reviews[rows[i].ID]; ok {
-			rows[i].ReviewID = id
+		if review, ok := reviews[rows[i].ID]; ok {
+			rows[i].ReviewID, rows[i].ReviewActions = review.ID, review.Actions
 		}
 	}
 }
@@ -177,20 +177,20 @@ func (s *Store) GetScheduledSend(ctx context.Context, id ids.UUID) (ScheduledSen
 	return one[0], nil
 }
 
-// readScheduledSendTx is the detail read inside a caller's transaction.
+// readScheduledSendTx is the detail read inside a caller's transaction, under
+// the list's own read rule.
 func readScheduledSendTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (ScheduledSend, error) {
-	actor, err := storekit.Actor(ctx)
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	own, err := ScheduledSendReadableSQL(ctx, "scheduled_send", arg)
 	if err != nil {
 		return ScheduledSend{}, err
 	}
-	return readScheduledSendForSeatTx(ctx, tx, id, actor.UserID)
-}
-
-func readScheduledSendForSeatTx(ctx context.Context, tx pgx.Tx, id, seat ids.UUID) (ScheduledSend, error) {
-	rows, err := tx.Query(ctx, `
+	query := fmt.Sprintf(`
 		SELECT`+scheduledSendColumns+`
 		  FROM scheduled_send
-		 WHERE id = @id AND scheduled_by = @seat`, pgx.NamedArgs{"id": id, argSeat: seat})
+		 WHERE id = $%d AND %s`, arg(id), own)
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: reading: %w", err)
 	}
@@ -226,20 +226,19 @@ func (s *Store) RescheduleScheduledSend(ctx context.Context, id ids.UUID, sched 
 	if timer == nil {
 		return ScheduledSend{}, errNoScheduleTimer
 	}
-	normalized, err := normalizeSchedule(sched)
+	sched, err := s.CheckLater(sched)
 	if err != nil {
 		return ScheduledSend{}, err
-	}
-	sched = normalized
-	if err := validateSchedule(sched, s.now()); err != nil {
-		return ScheduledSend{}, err
-	}
-	if !sched.At.After(s.now()) {
-		return ScheduledSend{}, &InvalidScheduleError{Field: FieldScheduledAt, Reason: "is in the past"}
 	}
 	current, err := s.GetScheduledSend(ctx, id)
 	if err != nil {
 		return ScheduledSend{}, err
+	}
+	// The version check below refuses a row that was held after this read.
+	if current.Status == ScheduledStatusHeld {
+		if err := mayReleaseHeld(ctx); err != nil {
+			return ScheduledSend{}, err
+		}
 	}
 
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -299,24 +298,15 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		// time and finds a row whose due moment has moved, which it re-snoozes
 		// or ignores — the row is the schedule, the job is only an alarm.
 		// The rep answered the hold, so its card goes with it.
-		if err := s.resolveHeld(ctx, tx, id); err != nil {
+		if err := s.resolveHeld(ctx, tx, id, HeldResolvedByRep); err != nil {
 			return err
 		}
-		// THE REVIEW STAYS LIVE, and that is a decision this slice reversed
-		// after tracing where a rescheduled message actually goes.
-		//
-		// Closing it here reads right — nothing is sent now, and the row is
-		// 'scheduled' again — and it loses the refusal. The fire path holds a
-		// refused message (scheduledsendfire.go, holdInTx) and opens NO review:
-		// only the staging path does that, through RecordPendingReview, and a
-		// timer-driven refire never reaches it. So a message closed here and
-		// refused again at its new moment would sit held with nothing routable
-		// in front of anybody — the exact silence the review exists to end.
-		//
-		// Left live it stays honest instead: the decision really is still
-		// outstanding, the message really is still going out, and if it is
-		// refused again OpenReviewTx upserts on the live-intent index and
-		// refreshes this row's refusals rather than opening a rival.
+		// A review whose decision is already recorded stays, and the fire at
+		// the new moment spends it. One nobody decided closes with the card;
+		// a refusal at the new moment opens a fresh one.
+		if err := s.closeReview(ctx, tx, id, ReviewOutcomeMoved); err != nil {
+			return err
+		}
 		return timer.ScheduleTx(ctx, tx, id, keptAt)
 	}
 }
@@ -360,7 +350,7 @@ func (s *Store) CancelInTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		}
 		// Answered, like the reschedule above: a cancelled message needs no
 		// decision, so its card must not outlive it.
-		if err := s.resolveHeld(ctx, tx, id); err != nil {
+		if err := s.resolveHeld(ctx, tx, id, HeldResolvedByRep); err != nil {
 			return err
 		}
 		// AND THE REVIEW, if this message was one a refusal froze. Cancelling
@@ -401,11 +391,11 @@ func (s *Store) closeReview(
 
 // resolveHeld clears the inbox card a hold raised, once the rep has acted on
 // the message. A surface with no notifier wired has nothing to clear.
-func (s *Store) resolveHeld(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+func (s *Store) resolveHeld(ctx context.Context, tx pgx.Tx, id ids.UUID, how HeldResolution) error {
 	if s.heldNotifier == nil {
 		return nil
 	}
-	return s.heldNotifier.ResolveHeldInTx(ctx, tx, id)
+	return s.heldNotifier.ResolveHeldInTx(ctx, tx, id, how)
 }
 
 // scanScheduledSend reads one row, thawing the payload for the fields the

@@ -463,3 +463,56 @@ func TestTheTaskOverrideContractIsTheServersBounds(t *testing.T) {
 		}
 	}
 }
+
+// The Azure `location:` matrix. The editor refuses spellings no region has.
+// Only the parser refuses a well-formed region it does not list, because the
+// schema cannot hold the region list.
+func TestTheSchemaAndTheParserAgreeOnEveryAzurePlacement(t *testing.T) {
+	t.Parallel()
+	sch := compiledRoutingSchema(t)
+
+	const embedder = "{provider: gemini, model: e}"
+	const host = "base_url: 'https://contoso.openai.azure.com'"
+	lane := func(location string) string {
+		return "{provider: azure_openai, model: m, " + host + ", location: " + location + "}"
+	}
+	routing := func(tier, embeddings string) string {
+		return "profile: cloud_frontier\ntiers:\n  premium: " + tier + "\nembeddings: " + embeddings + "\n"
+	}
+	onProvider := func(location string) string {
+		return "profile: cloud_frontier\nproviders:\n  azure_openai: {" + host + ", location: " + location + "}\ntiers:\n  premium: {provider: azure_openai, model: m}\nembeddings: " + embedder + "\n"
+	}
+	for name, tc := range map[string]struct {
+		yaml          string
+		legal         bool
+		editorLenient bool
+	}{
+		"a listed region":                 {routing(lane("swedencentral"), embedder), true, false},
+		"a listed region on the provider": {onProvider("swedencentral"), true, false},
+		"the embeddings lane":             {routing(embedder, lane("germanywestcentral")), true, false},
+		"a Vertex-spelled region":         {routing(lane("europe-west4"), embedder), false, false},
+		"a mixed-case region":             {routing(lane("SwedenCentral"), embedder), true, false},
+		"a host smuggled in":              {routing(lane("'sweden.attacker.example'"), embedder), false, false},
+		"a well-formed unlisted region":   {routing(lane("marscentral"), embedder), false, true},
+		"an unlisted region on the provider": {
+			onProvider("marscentral"), false, true,
+		},
+		"a location on another wire": {routing("{provider: openai, model: m, location: swedencentral}", embedder), false, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var doc any
+			if err := yaml.Unmarshal([]byte(tc.yaml), &doc); err != nil {
+				t.Fatalf("test yaml is not yaml: %v", err)
+			}
+			schemaAccepts := sch.Validate(doc) == nil
+			_, parseErr := ai.ParseRouting([]byte(tc.yaml))
+			if want := tc.legal || tc.editorLenient; schemaAccepts != want {
+				t.Errorf("the EDITOR accepts=%v, want %v", schemaAccepts, want)
+			}
+			if parserAccepts := parseErr == nil; parserAccepts != tc.legal {
+				t.Errorf("the PARSER accepts=%v, want %v (err: %v)", parserAccepts, tc.legal, parseErr)
+			}
+		})
+	}
+}

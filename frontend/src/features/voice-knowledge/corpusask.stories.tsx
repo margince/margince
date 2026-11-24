@@ -295,7 +295,7 @@ export const RetrievalUnavailable: Story = {
   render: askCard("how long are captured messages kept", () =>
     jsonResponse(RETRIEVAL_UNAVAILABLE),
   ),
-  play: seeAnswer(/Nothing was searched/),
+  play: seeAnswer(/nothing was searched/),
 };
 
 // Neither an answer nor a refusal: the search found these passages and nothing
@@ -360,6 +360,15 @@ export const HandTyped: Story = {
     await pressAsk();
     await canvas.findByText(/Captured messages are kept for 400 days/);
   },
+};
+
+// A carried question past the limit. The box keeps it to be shortened, and the
+// counter and the refusal sit under it. Ask waits until it fits.
+export const CarriedTooLong: Story = {
+  render: askCard("How long are captured messages kept? ".repeat(28), () =>
+    jsonResponse(ANSWERED),
+  ),
+  play: askStaysRefused,
 };
 
 // Two sets, which is the only condition under which the picker exists — a

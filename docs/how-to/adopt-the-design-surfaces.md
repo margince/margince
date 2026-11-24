@@ -62,7 +62,7 @@ Two files, one board. `dealroomthreads.tsx` draws for both sides and takes the v
 ## 8a. Base layout for each width
 
 The product already folds at three widths. `pagezones.css` folds at 1200px and 720px. The phone bar and the
-390px axe sweep live in `shell.css` and `ac.spec.ts`. The new style keeps those break points and gives every
+390px axe sweep live in `shell.css` and `ac*.spec.ts`. The new style keeps those break points and gives every
 record page one ladder. That work is in Step 3 (`composed.css`, `pagezones.css`, `statstrip.css`) and Step 4
 (`shell.css`):
 
@@ -83,7 +83,7 @@ Rules:
 - the head's `h1` may wrap; the numbers of the readings may not.
 
 Every state story in section 3.4 gets a 390px and a 1024px viewport form in Storybook. The 390px sweep of
-`ac.spec.ts` runs on every record page in pull requests 5–8.
+`ac*.spec.ts` runs on every record page in pull requests 5–8.
 
 ## 8b. Records with more, and records with less
 

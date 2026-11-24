@@ -135,6 +135,26 @@ func TestCSVSourceSkipsARowWithNoSourceKey(t *testing.T) {
 	}
 }
 
+// An exported row with no value in its key column still names its record by
+// the id column. It is identified, not skipped.
+func TestCSVSourceIdentifiesAKeylessRowByItsIDColumn(t *testing.T) {
+	const id = "0192f3a0-0000-7000-8000-000000000001"
+	mapping := map[string]string{"Email": "email", "Id": "id"}
+	body := "Email,Id\n," + id + "\nb@x.test,\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectContact, mapping, "Email")
+
+	rows, err := src.Rows(context.Background(), ObjectContact, 0, 10)
+	if err != nil {
+		t.Fatalf("Rows: %v", err)
+	}
+	if len(rows) != 2 || rows[0].ExternalID != id || rows[1].ExternalID != "b@x.test" {
+		t.Fatalf("rows = %+v, want the id for the keyless row and the email for the other", rows)
+	}
+	if got := src.Skipped(); len(got) != 0 {
+		t.Fatalf("skipped = %+v, want none", got)
+	}
+}
+
 func TestCSVSourceCountsRowsAndNamesItsObject(t *testing.T) {
 	mapping, sourceKey := leadMapping()
 	body := "Email,First Name\na@x.test,A\nb@x.test,B\nc@x.test,C\n"
@@ -286,6 +306,29 @@ func TestARowCarriesTheFileLineItCameFrom(t *testing.T) {
 				row.ExternalID, row.Line, want)
 		}
 	}
+}
+
+func TestRowNumbersCountRecordsNotFileLines(t *testing.T) {
+	mapping, sourceKey := leadMapping()
+	body := "Email,First Name\na@x.test,\"A\nB\nC\"\nb@x.test,B\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectLead, mapping, sourceKey)
+
+	rows, err := src.Rows(context.Background(), ObjectLead, 0, 10)
+	if err != nil {
+		t.Fatalf("Rows: %v", err)
+	}
+	if len(rows) != 2 || rows[0].Line != 2 || rows[1].Line != 3 {
+		t.Fatalf("rows = %+v, want rows 2 and 3 as a spreadsheet numbers them, not the file line 5", rows)
+	}
+}
+
+func TestARefusedFileNamesTheFileLineNotTheRow(t *testing.T) {
+	mapping, sourceKey := leadMapping()
+	body := "Email,First Name\na@x.test,\"A\nB\"\nb@x.test\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectLead, mapping, sourceKey)
+
+	_, err := src.Rows(context.Background(), ObjectLead, 0, 10)
+	wantParams(t, fileFaultOf(t, err, ErrSourceUnreadable), values{ParamReason: string(FileFieldCount), ParamLine: "4"})
 }
 
 // A row's outcome carries the row's line into the report, so a skip the WRITER

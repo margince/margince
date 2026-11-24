@@ -106,6 +106,33 @@ describe("the page's name in the header", () => {
   });
 });
 
+// The reason for a refused verb sits under the head, so the head keeps one row
+// and the verb names the reason as its description.
+describe("a refused head action", () => {
+  it("says why under the head, and the refused verb is described by it", () => {
+    const { container } = render(
+      <ListTable
+        title="Companies"
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        refusal={{ id: "why-refused", text: "Your seat is read-only." }}
+        action={
+          <button type="button" disabled aria-describedby="why-refused">
+            New company
+          </button>
+        }
+      />,
+    );
+    const why = screen.getByText("Your seat is read-only.");
+    expect(container.querySelector(".lt-head")?.contains(why)).toBe(false);
+    expect(
+      screen.getByRole("button", { name: "New company" }),
+    ).toHaveAccessibleDescription("Your seat is read-only.");
+  });
+});
+
 describe("a folded header's verbs are live", () => {
   function stubNarrowViewport() {
     vi.stubGlobal("matchMedia", (query: string) => ({
@@ -551,35 +578,49 @@ describe("empty state", () => {
     ).toBeTruthy();
   });
 
+  const ownerChips: readonly ListChip[] = [
+    {
+      key: "owner_id",
+      label: "Owner",
+      allLabel: "Any owner",
+      options: [{ value: "u-9", label: "Me" }],
+    },
+  ];
+
   it("names it under the no-matches copy too, since a narrowing can be the cause", () => {
-    // The case the prop was written for is a narrowed one: a "Mine" view for a
-    // reader who owns nothing. Drawn only over the unnarrowed line, that note
-    // never appeared at all. The caller knows which emptiness a note explains.
-    // A caller whose note would blame the data source for the reader's own dial
-    // passes none.
     render(
       <ListTable
         rows={[]}
         columns={columns}
         rowKey={(row) => row.id}
         unit="rows"
-        emptyNote="You own no rows."
-        chips={[
-          {
-            key: "owner_id",
-            label: "Owner",
-            allLabel: "Any owner",
-            options: [{ value: "u-9", label: "Me" }],
-          },
-        ]}
+        emptyNote="Your role cannot narrow this list by Owner."
+        chips={ownerChips}
         chosen={{ owner_id: "u-9" }}
       />,
     );
     expect(screen.getByText("No rows match these filters.")).toBeTruthy();
-    expect(screen.getByText("You own no rows.")).toBeTruthy();
-    // Two different offers: one undoes every narrowing, the screen's own note
-    // usually undoes one.
+    expect(
+      screen.getByText("Your role cannot narrow this list by Owner."),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
+  });
+
+  it("puts a caller's empty line in place of the no-matches copy and its Clear", () => {
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        emptyLine="You own no rows."
+        chips={ownerChips}
+        chosen={{ owner_id: "u-9" }}
+      />,
+    );
+    expect(screen.getByText("You own no rows.")).toBeTruthy();
+    expect(screen.queryByText(/match these filters/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
   });
 });
 

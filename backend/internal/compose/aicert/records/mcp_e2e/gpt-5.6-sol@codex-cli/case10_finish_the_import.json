@@ -4,7 +4,7 @@
     1,
     2
   ],
-  "passed": 2,
+  "passed": 0,
   "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -12,13 +12,71 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "a07831aa1b353c64",
+    "tools": "bb43c0cbad588045",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "8551a428626d254858a634a2d1e0b95a0e03f93a",
+    "ran_at": "2026-11-22T09:14:04Z",
+    "graded_commit": "43efe5d1f04ce6aea932838d625278cfa438cc2f",
+    "graded_at": "2026-11-22T15:30:25Z"
+  },
   "usage": {
-    "input_tokens": 105043,
-    "output_tokens": 3986,
+    "input_tokens": 60575,
+    "output_tokens": 4786,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 721280,
+    "cache_read_input_tokens": 541952,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "commit_import",
+        "describe_import_format",
+        "find_records",
+        "preview_import",
+        "read_import",
+        "read_import_report",
+        "resolve_entities"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "read_workspace",
+        "resolve_entities"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 12.5,
+      "min": 6,
+      "max": 19
+    },
+    "refused": {
+      "median": 7,
+      "min": 1,
+      "max": 13
+    },
+    "prompt_tokens": {
+      "median": 301263.5,
+      "min": 232104,
+      "max": 370423
+    },
+    "output_tokens": {
+      "median": 2393,
+      "min": 1582,
+      "max": 3204
+    }
   }
 }

@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -35,6 +36,8 @@ type shareFrame struct {
 	ForwardMeasure   *string
 	LandingMeasure   *string
 	LandingCallMinor *int64
+	// PipelineID names the one pipeline a snapshot read, nil for every pipeline.
+	PipelineID *ids.UUID
 	// QualifiedPolicy is the viability policy the retired qualified forecast
 	// enforced when the snapshot was taken, nil while it was off.
 	QualifiedPolicy *string
@@ -51,16 +54,16 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 	if err := tx.QueryRow(ctx, `
 		SELECT s.period_start, s.period_end, s.base_currency, s.taken_at,
 		       COALESCE(st.value #>> '{}', 'UTC'), s.self_correcting,
-		       s.forward_measure, s.landing_measure, s.landing_call_minor, s.qualified_policy_version
+		       s.forward_measure, s.landing_measure, s.landing_call_minor, s.qualified_policy_version, s.pipeline_id
 		FROM forecast_snapshot s
 		LEFT JOIN setting st ON st.key = 'installation.timezone'
 		WHERE s.id = $1`, id).Scan(
 		&out.Period.StartDate, &out.Period.EndDate, &out.BaseCurrency, &out.TakenAt,
 		&zoneName, &out.SelfCorrecting,
-		&out.ForwardMeasure, &out.LandingMeasure, &out.LandingCallMinor, &out.QualifiedPolicy); err != nil {
+		&out.ForwardMeasure, &out.LandingMeasure, &out.LandingCallMinor, &out.QualifiedPolicy, &out.PipelineID); err != nil {
 		return shareFrame{}, fmt.Errorf("compose: reading a shared snapshot's frame: %w", err)
 	}
-	zone, err := time.LoadLocation(zoneName)
+	zone, err := time.LoadLocation(storekit.EffectiveZone(ctx, zoneName))
 	if err != nil {
 		return shareFrame{}, fmt.Errorf(
 			"compose: the installation zone %q is not a zone: %w", zoneName, err)
@@ -70,12 +73,9 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 }
 
 // frozenShareLanding is a snapshot's landing over the rows this reader may
-// read. It takes the frozen measure, and the frozen call only where the reader
-// may see it. A reader who may not falls back as GET /forecast does. The
-// caller passes only a frame that kept its landing.
-func frozenShareLanding(
-	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, shared SharedSnapshot, frame shareFrame,
-) (crmcontracts.ForecastLanding, error) {
+// read. It takes the frozen measure and the call FrozenCallSeen gives this
+// reader. The caller passes only a frame that kept its landing.
+func frozenShareLanding(call forecasting.SeenCall, shared SharedSnapshot, frame shareFrame) (crmcontracts.ForecastLanding, error) {
 	stored := frame.LandingMeasure
 	if frame.ForwardMeasure != nil {
 		stored = frame.ForwardMeasure
@@ -89,16 +89,6 @@ func frozenShareLanding(
 	if qualified {
 		readings.EvidenceMinor = shared.Supported.LikelyMinor
 		readings.WeightedMinor = shared.Supported.WeightedMinor
-	}
-	var call *int64
-	if frame.LandingCallMinor != nil {
-		mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
-		if err != nil {
-			return crmcontracts.ForecastLanding{}, err
-		}
-		if mayAssert {
-			call = frame.LandingCallMinor
-		}
 	}
 	landing, err := forecasting.ProjectLanding(readings, measure, call)
 	if err != nil {

@@ -10,13 +10,13 @@ import type { Screen } from "../src/lib/router";
  * silently: a sixth record page joins the product and both sweeps keep passing
  * over five.
  *
- * `screen` is what makes this list a census rather than a habit. It is held
- * against `GRIDDED_RECORD_SCREENS` — the shell's own answer to which screens
- * have a record page — by `src/app/recordcensus.test.ts`, which fails when a
- * screen the shell caps has no route here. That check is a vitest test rather
- * than a test in these specs because `app/nav.ts` reaches `app/custom.ts` and
- * its `import.meta.glob`, which only Vite compiles: importing the set here
- * takes down Playwright's transform before a single spec is collected.
+ * `screen` is what makes this list a census rather than a habit.
+ * `src/app/recordcensus.test.ts` holds it against `RECORD_VIEW_SCREENS`, the
+ * shell's own answer to which screens have a record page. It fails when such a
+ * screen has no route here. That check is a vitest test, not a spec:
+ * `app/nav.ts` reaches the `import.meta.glob` in `app/custom.ts`, which only
+ * Vite compiles. Importing the set here takes down Playwright's transform
+ * before a single spec is collected.
  *
  * Pure data, therefore, and no import that reaches a React screen or a
  * stylesheet: the constraint `src/features/settings/settingscatalog.ts` states for the

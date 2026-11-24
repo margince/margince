@@ -15,9 +15,9 @@ import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
+import { dealRoleLabel } from "../../lib/recordlabels";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
 
@@ -28,6 +28,7 @@ export function ContactFacts({
   buyingRole,
 }: Readonly<{ contact: Contact; buyingRole?: string | null }>): ReactNode {
   const t = useT();
+  const role = dealRoleLabel(buyingRole ?? "", t);
   const { locale } = useLocale();
   const zone = useViewerZone();
   const ownerName = useMemberName(contact.owner_id);
@@ -89,11 +90,7 @@ export function ContactFacts({
           t("contact.page.ownerUnassigned"),
         )}
       </Fact>
-      {buyingRole && (
-        <Fact label={t("contact.page.buyingRole")}>
-          {buyingRoleLabel(buyingRole, t)}
-        </Fact>
-      )}
+      {role && <Fact label={t("contact.page.buyingRole")}>{role}</Fact>}
       <Fact label={t("list.created")}>
         {formatDateAbbrev(contact.created_at, locale, zone)}
       </Fact>

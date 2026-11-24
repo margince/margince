@@ -73,13 +73,19 @@ var errProviderRefused = errors.New("ai: the configured AI provider turned the c
 // Every 429 carries errProviderRefused, so "did we reach the model?" is one
 // question with one answer whatever the cause turned out to be. A caller that needs the cause asks for the specific sentinel on top.
 func providerRefusal(resp *http.Response, limitSource string, err error) error {
+	return providerRefusalAfter(resp, limitSource, err, retryafter.Of(resp))
+}
+
+// providerRefusalAfter is providerRefusal with the wait the caller already
+// read, for an adapter whose provider states it somewhere besides Retry-After.
+func providerRefusalAfter(resp *http.Response, limitSource string, err error, wait time.Duration) error {
 	if resp == nil {
 		return err
 	}
 	if resp.StatusCode != http.StatusTooManyRequests {
 		return providerFaultOf(resp.StatusCode, err)
 	}
-	return refusedAs(refusalKind(limitSource, err.Error(), retryafter.Of(resp)), err)
+	return refusedAs(refusalKind(limitSource, err.Error(), wait), err)
 }
 
 // refusedAs is the error for a refusal whose kind is known, whether a 429 or a
@@ -175,6 +181,9 @@ func (e *BudgetDeferralError) Error() string {
 }
 
 func (e *BudgetDeferralError) Unwrap() error { return ErrBudgetDeferred }
+
+// RetryAt is when the deferred task may ask again; a job waits until then.
+func (e *BudgetDeferralError) RetryAt() (time.Time, bool) { return e.NextAttemptAt, true }
 
 // BudgetPolicy answers "how many tokens may this workspace burn per
 // month". Injected so the composition layer can derive it from seat

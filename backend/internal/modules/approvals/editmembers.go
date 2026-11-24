@@ -26,6 +26,10 @@ var editableMembers = map[string][]string{
 	kindLinkedInMatch: {"use_as_title", "use_as_employer"},
 	// A handover is answered yes or no, and its effect trusts every member.
 	approvalsubject.KindOwnershipTransfer: {},
+	// A share request is answered yes or no; every member names a record.
+	approvalsubject.KindContactShare: {},
+	// An edit access request is answered yes or no; its fields name the parties.
+	approvalsubject.KindEditAccess: {},
 }
 
 // assertEditableMembers refuses an edit that changes a member its kind does not
@@ -93,4 +97,33 @@ func memberUnion(before, after map[string]json.RawMessage) map[string]struct{} {
 func isJSONBool(raw json.RawMessage) bool {
 	trimmed := bytes.TrimSpace(raw)
 	return bytes.Equal(trimmed, []byte("true")) || bytes.Equal(trimmed, []byte("false"))
+}
+
+// mailKinds are the staged kinds that put a message on the wire.
+var mailKinds = map[string]bool{kindHeldDraft: true, "send_email": true, "send_company_email": true}
+
+// assertMailHasText refuses an edit that blanks the subject or the body of a
+// staged mail. Nobody meant to release such a message. The send would refuse
+// it only after the decision was recorded. A REST staging carries the message
+// in its `body` member, a tool or automation staging at the top level.
+func assertMailHasText(kind string, edited json.RawMessage) error {
+	if !mailKinds[kind] {
+		return nil
+	}
+	members, err := jsonObjectMembers(edited)
+	if err != nil {
+		return &InvalidEditError{Cause: fmt.Errorf("the edit is not a JSON object: %w", err)}
+	}
+	if isRESTStaging(members) {
+		if members, err = jsonObjectMembers(members[callIdentityBody]); err != nil {
+			return &InvalidEditError{Cause: fmt.Errorf("the edited request body is not a JSON object: %w", err)}
+		}
+	}
+	for _, member := range []string{"subject", "body"} {
+		var text string
+		if err := json.Unmarshal(members[member], &text); err != nil || strings.TrimSpace(text) == "" {
+			return &InvalidEditError{Cause: fmt.Errorf("%s must be written and not empty", member)}
+		}
+	}
+	return nil
 }

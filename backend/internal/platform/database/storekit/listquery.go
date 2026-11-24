@@ -185,10 +185,15 @@ func (s *ListSort) orderExpr() string {
 	if expr == "" {
 		expr = quoteColumnIdentifier(s.name)
 	}
-	if s.kind == fieldcatalog.TypeText || s.kind == fieldcatalog.TypePicklist {
+	if s.kind == fieldcatalog.TypeText || s.kind == fieldcatalog.TypePicklist || s.kind == fieldcatalog.TypeURL {
 		return fmt.Sprintf("left(%s, %d)", expr, sortKeyPrefixChars)
 	}
 	return expr
+}
+
+// Orders reports whether this sort is field in the given direction.
+func (s *ListSort) Orders(field string, desc bool) bool {
+	return s != nil && s.name == field && s.desc == desc
 }
 
 // OrderBy renders the ORDER BY clause: the sort field first (NULLS LAST
@@ -224,11 +229,11 @@ func (s *ListSort) CursorKeySuffix() string {
 // tuple, extended under a non-default sort with the sort field, its
 // direction, and the last row's key (nil = the row sits in the NULL
 // tail) so the next page can only continue the SAME ordering.
-func (s *ListSort) EncodePageCursor(sortKey *string, createdAt time.Time, id ids.UUID) (string, error) {
+func (s *ListSort) EncodePageCursor(scope string, sortKey *string, createdAt time.Time, id ids.UUID) (string, error) {
 	if s == nil {
-		return EncodeCursor(createdAt, id)
+		return EncodeCursor(scope, createdAt, id)
 	}
-	return EncodeOpaque(Cursor{CreatedAt: createdAt, ID: id, SortField: s.cursorField, SortDesc: s.desc, SortKey: sortKey})
+	return EncodeOpaque(Cursor{Scope: scope, CreatedAt: createdAt, ID: id, SortField: s.cursorField, SortDesc: s.desc, SortKey: sortKey})
 }
 
 // KeysetClause renders the WHERE fragment that continues the page after
@@ -241,8 +246,8 @@ func (s *ListSort) EncodePageCursor(sortKey *string, createdAt time.Time, id ids
 // equal-key rows past the (created_at, id) tie-breaker, OR the NULL tail
 // that sorts after every key; once inside the NULL tail only the house
 // tuple advances.
-func (s *ListSort) KeysetClause(token string, arg func(any) int) (string, error) {
-	c, err := DecodeCursor(token)
+func (s *ListSort) KeysetClause(scope, token string, arg func(any) int) (string, error) {
+	c, err := DecodeCursor(scope, token)
 	if err != nil {
 		return "", err
 	}

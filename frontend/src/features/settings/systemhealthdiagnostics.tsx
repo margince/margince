@@ -19,7 +19,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
-import { useUrlParams } from "../../lib/urlstate";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { useViewerZone } from "../../lib/viewerzone";
 import { AutomaticWorkHealthCard } from "./automaticworkhealth";
 import { CaptureHealthCard } from "./capturehealth";
@@ -38,6 +38,7 @@ import {
   healthSectionForSource,
   healthSourceForSection,
 } from "./systemhealthnavigation";
+import { VacuumHealthCard } from "./vacuumhealth";
 
 type Report = components["schemas"]["SystemHealth"];
 type State = "retryable" | "discarded" | "cancelled";
@@ -46,6 +47,12 @@ const jobStateLabels: Readonly<Record<State, MessageKey>> = {
   discarded: "jobs.state.discarded",
   cancelled: "jobs.state.cancelled",
 };
+
+function jobState(value: string | undefined): State | undefined {
+  return value === "retryable" || value === "discarded" || value === "cancelled"
+    ? value
+    : undefined;
+}
 
 export default function SystemHealthDiagnostics({
   report,
@@ -99,21 +106,28 @@ export default function SystemHealthDiagnostics({
       {(selected ? [selected] : related).map((f) => (
         <FindingPanel key={f.id} finding={f} detail />
       ))}
+      {/* Keyed, so a state pill that reorders the two moves the history
+          rather than remounting it, and its window stays. */}
       {source === "jobs" &&
         (params.get("state") === "discarded" ? (
           <>
-            <JobHistory />
-            <JobHealthCard showHistory={false} />
+            <JobHistory key="history" />
+            <JobHealthCard key="card" showHistory={false} />
           </>
         ) : (
           <>
-            <JobHealthCard showHistory={false} />
-            <JobHistory />
+            <JobHealthCard key="card" showHistory={false} />
+            <JobHistory key="history" />
           </>
         ))}
       {source === "capture" && <CaptureHealthCard />}
       {source === "intake" && <ExtensionIngestHealthCard />}
-      {source === "recovery" && <RecoveryHealthCard />}
+      {source === "recovery" && (
+        <>
+          <RecoveryHealthCard />
+          <VacuumHealthCard />
+        </>
+      )}
       {source === "automatic" && <AutomaticWorkHealthCard />}
       {source === "providers" && <ProviderHealthCard />}
       {source === "search" && <EmbedReindexCard />}
@@ -132,28 +146,19 @@ function JobHistoryBody() {
   const t = useT();
   const { locale } = useLocale();
   const [params] = useUrlParams();
-  const requestedState = params.get("state");
-  const [state, setState] = useState<State | undefined>(
-    requestedState === "discarded" ||
-      requestedState === "retryable" ||
-      requestedState === "cancelled"
-      ? requestedState
-      : undefined,
-  );
+  const state = jobState(params.get("state"));
+  const kind = params.get("kind") || undefined;
   const [days, setDays] = useState(7);
-  const [kind, setKind] = useState<string | undefined>(
-    params.get("kind") || undefined,
-  );
-  const [cursor, setCursor] = useState<string | undefined>();
+  // A page of runs belongs to the filters it was read under, so Back to other
+  // filters starts on their first page.
+  const filters = JSON.stringify([state, days, kind]);
+  const [page, setPage] = useState<{ filters: string; cursor?: string }>({
+    filters,
+  });
+  const cursor = page.filters === filters ? page.cursor : undefined;
+  const setCursor = (next: string | undefined) =>
+    setPage({ filters, cursor: next });
   const query = useJobHistory({ state, days, kind }, cursor);
-  const changeState = (value: string) => {
-    setState(
-      value === "retryable" || value === "discarded" || value === "cancelled"
-        ? value
-        : undefined,
-    );
-    setCursor(undefined);
-  };
   return (
     <Panel title={t("health.history")}>
       <PanelBody>
@@ -187,7 +192,7 @@ function JobHistoryBody() {
               <p>{t("health.historyWindow")}</p>
               <FilterPills
                 value={state ?? "all"}
-                onChange={changeState}
+                onChange={(value) => replaceDial("state", jobState(value))}
                 label={t("jobs.col.state")}
                 pills={[
                   { value: "all", label: t("health.all") },
@@ -198,10 +203,7 @@ function JobHistoryBody() {
               />
               <FilterPills
                 value={days === 1 ? "1" : "7"}
-                onChange={(value) => {
-                  setDays(Number(value));
-                  setCursor(undefined);
-                }}
+                onChange={(value) => setDays(Number(value))}
                 label={t("health.window")}
                 pills={[
                   { value: "1", label: t("health.oneDay") },
@@ -259,12 +261,7 @@ function JobHistoryBody() {
                     key: "open",
                     header: t("health.inspect"),
                     render: (g) => (
-                      <Button
-                        onClick={() => {
-                          setKind(g.kind);
-                          setCursor(undefined);
-                        }}
-                      >
+                      <Button onClick={() => replaceDial("kind", g.kind)}>
                         {t("health.inspect")}
                       </Button>
                     ),
@@ -272,12 +269,7 @@ function JobHistoryBody() {
                 ]}
               />
               {kind && (
-                <Button
-                  onClick={() => {
-                    setKind(undefined);
-                    setCursor(undefined);
-                  }}
-                >
+                <Button onClick={() => replaceDial("kind", undefined)}>
                   {t("health.all")}
                 </Button>
               )}

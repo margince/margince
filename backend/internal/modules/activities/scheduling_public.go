@@ -134,6 +134,9 @@ type BookingMarketing struct {
 	// authenticated booking names a linked contact rather than typing an email,
 	// so there is no second address for the two to disagree about.
 	TickedFrom string
+	// AskedBySubject is true when the contact ticked the box on the public
+	// page, and false when a signed-in user's booking asked on their behalf.
+	AskedBySubject bool
 }
 
 // requestedPurpose is the purpose id a form NAMED, or nothing. The contract's
@@ -186,8 +189,8 @@ type ConsentCapturer interface {
 	// booking on somebody's behalf is not that somebody initiating contact.
 	RecordBookingInquiry(ctx context.Context, contactID, activityID ids.UUID) error
 	// CaptureLeadBookingConsent records the operational grant for a booker who
-	// is a live lead. A newsletter tick is not asked about: its confirmation
-	// link is minted against a contact's own address, and a lead has none.
+	// is a live lead. A newsletter tick is asked about through the lead's own
+	// address, by the same confirmation link a contact gets.
 	CaptureLeadBookingConsent(ctx context.Context, leadID ids.LeadID, consent BookingConsent) (MarketingOutcome, error)
 }
 
@@ -202,12 +205,12 @@ type MarketingOutcome string
 const (
 	// MarketingNotRequested is a form that carried no tick, or an unticked box.
 	MarketingNotRequested MarketingOutcome = "not_requested"
-	// MarketingPendingConfirmation is the ordinary success: the question was
-	// mailed and the grant waits on the subject answering it.
+	// MarketingPendingConfirmation answers every accepted tick on the public
+	// form, mailed or not, so the answer reveals nothing about the address.
 	MarketingPendingConfirmation MarketingOutcome = "pending_confirmation"
-	// MarketingNotAsked is a question this installation could not put: no live
-	// mailbox on the record, a purpose archived since the form was published,
-	// or a mail lane that refused it. The booking stands either way.
+	// MarketingNotAsked is a question this installation could not put, such as
+	// one with no mail lane. A signed-in user's refused ask reports it too.
+	// The booking stands in every case.
 	MarketingNotAsked MarketingOutcome = "not_asked"
 )
 
@@ -228,7 +231,7 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 		httperr.Write(w, r, err)
 		return
 	}
-	profile, ok := h.openBookingPage(w, r, page)
+	profile, team, ok := h.openBookingPage(w, r, page)
 	if !ok {
 		return
 	}
@@ -238,12 +241,22 @@ func (h Handlers) GetPublicAvailability(w http.ResponseWriter, r *http.Request, 
 	}
 	profile = bookingLength(profile, params.L)
 	duration := time.Duration(profile.DurationMinutes) * time.Minute
-	slots, truncated, err := h.store.ReliableAvailability(r.Context(), page.HostUserID, params.From, params.To, duration)
+	slots, truncated, err := h.store.PageAvailability(r.Context(), page.HostUserID, team, params.From, params.To, duration)
 	if err != nil {
-		writeStoreErr(w, r, err)
+		writeGuestAvailabilityErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"slots": slots, "truncated": truncated})
+}
+
+// writeGuestAvailabilityErr answers a guest's availability read. A host with no
+// calendar reads as a paused page, so the guest learns nothing of the host's setup.
+func writeGuestAvailabilityErr(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, errNoCalendarToRead) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	writeStoreErr(w, r, err)
 }
 
 // bookingRequestIsWritable refuses a request before anything is written.
@@ -324,7 +337,7 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		writePublicInvitation(w, *recovered, intent.Marketing)
 		return
 	}
-	if _, err := h.store.validateInvitationTime(r.Context(), page.HostUserID, req.Start, req.End); err != nil {
+	if err := h.store.validatePageTime(r.Context(), page.HostUserID, open.team, req.Start, req.End); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
@@ -431,7 +444,7 @@ func (h Handlers) bookPublicMeetingForLead(w http.ResponseWriter, r *http.Reques
 // way to name one: a parameter of that type would have to restate the whole
 // literal, field tags included.
 func (h Handlers) admitBookingMarketing(w http.ResponseWriter, r *http.Request, c crmcontracts.CaptureConsent, tickedFrom string) (*BookingMarketing, bool) {
-	marketing, err := prepareBookingMarketing(r.Context(), c, tickedFrom, h.publicConsent)
+	marketing, err := prepareBookingMarketing(r.Context(), c, tickedFrom, true, h.publicConsent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return nil, false

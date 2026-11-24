@@ -229,7 +229,7 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	st := connectState{
-		Workspace: ws, User: actor.UserID, Provider: string(provider),
+		Workspace: ws, User: actor.UserID, Provider: string(provider), Connection: ask.connection,
 		ReturnTo: ask.returnTo, Then: ask.then, WindowMonths: ask.windowMonths,
 		SharedConsent: sharesConsent(string(provider), ask.then),
 	}
@@ -340,9 +340,13 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 		return
 	}
 
-	if _, err := h.registry.Connect(runCtx, string(provider), auth); err != nil {
+	if st.Connection, err = h.registry.Grant(runCtx, string(provider), auth, st.Connection); err != nil {
 		slog.ErrorContext(ctx, "connector callback: persisting connection", "err", err, "provider", string(provider))
-		land(outcomeError)
+		outcome := outcomeError
+		if errors.Is(err, capture.ErrReconnectOtherAccount) {
+			outcome = outcomeOtherAccount
+		}
+		land(outcome)
 		return
 	}
 	h.offerConnectPicture(runCtx, st.User, consent, auth)
@@ -389,20 +393,15 @@ func (h connectorHandlers) liveGrantorAuthority(ctx context.Context, st connectS
 	if h.authority == nil {
 		return authz.RBAC{}, "", errors.New("connector callback: no authority resolver wired — a grant cannot be checked against live authority")
 	}
-	rbac, err := h.authority.EffectiveRBAC(ctx, st.Workspace, st.User)
-	if err != nil {
-		return authz.RBAC{}, "", err
-	}
-	seat, err := h.authority.SeatType(ctx, st.Workspace, st.User)
-	return rbac, seat, err
+	return h.authority.AdmittedAuthority(ctx, st.Workspace, st.User, ids.Nil)
 }
 
-func (h connectorHandlers) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h connectorHandlers) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.DisconnectConnectorParams) {
 	if h.registry == nil {
 		httperr.NotImplemented(w, r, "DisconnectConnector")
 		return
 	}
-	if err := h.registry.Disconnect(r.Context(), string(provider)); err != nil {
+	if err := h.registry.Disconnect(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId)); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -412,7 +411,7 @@ func (h connectorHandlers) DisconnectConnector(w http.ResponseWriter, r *http.Re
 // SetConnectorSignatureEnrichment: PUT /connectors/{provider}/signature-enrichment.
 // The mailbox owner's own switch over the nightly signature pass; the registry
 // owns the scoping and the audit, and this is wire-only.
-func (h connectorHandlers) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h connectorHandlers) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.SetConnectorSignatureEnrichmentParams) {
 	if h.registry == nil {
 		httperr.NotImplemented(w, r, "SetConnectorSignatureEnrichment")
 		return
@@ -426,7 +425,7 @@ func (h connectorHandlers) SetConnectorSignatureEnrichment(w http.ResponseWriter
 		httperr.Write(w, r, err)
 		return
 	}
-	view, err := h.registry.SetSignatureEnrichment(r.Context(), string(provider), req.Enabled)
+	view, err := h.registry.SetSignatureEnrichment(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), req.Enabled)
 	// A mailbox this caller has not connected is not theirs to configure, and
 	// answers as absent — the registry's sentinel is a plain error and would
 	// otherwise reach the client as a 500 about a state the product reaches
@@ -445,7 +444,7 @@ func (h connectorHandlers) SetConnectorSignatureEnrichment(w http.ResponseWriter
 // SetConnectorMailPosture: PUT /connectors/{provider}/mail-posture.
 // What this mailbox asks of the mail it brings in; the registry owns the
 // scoping, the workspace opt-in and the audit, and this is wire-only.
-func (h connectorHandlers) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h connectorHandlers) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.SetConnectorMailPostureParams) {
 	if h.registry == nil {
 		httperr.NotImplemented(w, r, "SetConnectorMailPosture")
 		return
@@ -457,8 +456,13 @@ func (h connectorHandlers) SetConnectorMailPosture(w http.ResponseWriter, r *htt
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	var posture *string
+	if req.Posture != nil {
+		posture = new(string(*req.Posture))
+	}
 	applyToHistory := req.ApplyToHistory != nil && *req.ApplyToHistory
-	view, err := h.registry.SetMailPosture(r.Context(), string(provider), string(req.Posture), applyToHistory)
+	asked := capture.MailboxSettings{Posture: posture, ApplyToHistory: applyToHistory, DefaultSender: req.DefaultSender != nil && *req.DefaultSender}
+	view, err := h.registry.SetMailboxSettings(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), asked)
 	// A mailbox this caller has not connected is not theirs to configure, and
 	// answers as absent, for the reason the sibling above says.
 	if errors.Is(err, capture.ErrNoConnection) {

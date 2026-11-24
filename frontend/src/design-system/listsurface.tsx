@@ -2,6 +2,7 @@ import {
   type ComponentProps,
   type ReactNode,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
@@ -23,6 +24,7 @@ import { ArchivedSwitch, Toolbar, VIEW_MENU } from "./listtoolbar";
 import type { ViewRow, ViewToggle } from "./listviewmenu";
 import "./listtable.css";
 import { Heading } from "./heading";
+import { clippedClass, useClippedEdges } from "./scrollregion";
 import { useTruncationTooltip } from "./tooltip";
 
 // The list surface's shell: header, caption and toolbar. It knows nothing of
@@ -49,6 +51,17 @@ export {
   sortDirection,
 };
 
+/** A refused head action's sentence, and the id its verbs name it by. */
+export type ListRefusal = Readonly<{ id: string; text: string }>;
+
+/** The head's refusal for `text`, or none while nothing is refused. */
+export function useListRefusal(
+  text: string | undefined,
+): ListRefusal | undefined {
+  const id = useId();
+  return text === undefined ? undefined : { id, text };
+}
+
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 const NO_ROWS: readonly ViewRow[] = [];
 const NO_TOGGLES: readonly ViewToggle[] = [];
@@ -62,6 +75,7 @@ export function ListSurface({
   count,
   holdCount = false,
   action,
+  refusal,
   caption,
   search,
   sort,
@@ -115,6 +129,12 @@ export function ListSurface({
   holdCount?: boolean;
   /** The one primary action for this surface, e.g. "New contact". */
   action?: ReactNode;
+  /**
+   * Why the head's action is refused: one line under the head, so the head
+   * keeps one row. A refused verb names it by `refusal.id`, as `CreateAction`'s
+   * `refusalId`.
+   */
+  refusal?: ListRefusal;
   /**
    * A standing note about what this list is, when the list needs one. The
    * screen's name is not it: the shell already says which screen you are on,
@@ -215,19 +235,11 @@ export function ListSurface({
             </Heading>
           )}
           {views.length > 0 && (
-            <div className="lt-views">
-              {views.map((view, index) => (
-                <button
-                  type="button"
-                  key={view.id ?? view.label}
-                  className={`lt-vtab${index === activeView ? " on" : ""}`}
-                  aria-pressed={index === activeView}
-                  onClick={() => onViewChange?.(index)}
-                >
-                  {view.label}
-                </button>
-              ))}
-            </div>
+            <ViewTabs
+              views={views}
+              activeView={activeView}
+              onViewChange={onViewChange}
+            />
           )}
           <div className="lt-head-end">
             {!chromeless && <HeadCount hold={holdCount}>{count}</HeadCount>}
@@ -236,6 +248,11 @@ export function ListSurface({
         </div>
       )}
 
+      {refusal && (
+        <p className="lt-caption t-caption" id={refusal.id}>
+          {refusal.text}
+        </p>
+      )}
       {caption && <p className="lt-caption">{caption}</p>}
 
       {!chromeless && (
@@ -268,6 +285,38 @@ export function ListSurface({
       {children}
 
       {footer}
+    </div>
+  );
+}
+
+/**
+ * The view tabs. Where the head is too narrow they scroll sideways with no
+ * bar, and an end that hides tabs fades, as a record's tab strip does.
+ */
+function ViewTabs({
+  views,
+  activeView,
+  onViewChange,
+}: Readonly<{
+  views: readonly ListView[];
+  activeView: number;
+  onViewChange?: (index: number) => void;
+}>) {
+  const rail = useRef<HTMLDivElement>(null);
+  const edges = useClippedEdges(rail);
+  return (
+    <div className={clippedClass("lt-views", edges)} ref={rail}>
+      {views.map((view, index) => (
+        <button
+          type="button"
+          key={view.id ?? view.label}
+          className={`lt-vtab${index === activeView ? " on" : ""}`}
+          aria-pressed={index === activeView}
+          onClick={() => onViewChange?.(index)}
+        >
+          {view.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -357,6 +406,7 @@ export function countSays(total: number, sortedBy?: string): boolean {
  */
 export function CountLine({
   unit,
+  unitOne = unit,
   first,
   last,
   total,
@@ -365,6 +415,8 @@ export function CountLine({
   sortedBy,
 }: Readonly<{
   unit: string;
+  /** The noun for a total of one, where it differs from `unit`. */
+  unitOne?: string;
   first: number;
   last: number;
   total: number;
@@ -390,7 +442,7 @@ export function CountLine({
     first: formatNumber(first, locale),
     last: formatNumber(last, locale),
     count: formatNumber(total, locale),
-    unit,
+    unit: total === 1 ? unitOne : unit,
   };
   // An empty list says why in its body: none yet, none matching, a failed read.
   // A zero here would only repeat that sentence or contradict it.

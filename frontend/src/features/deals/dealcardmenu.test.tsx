@@ -319,3 +319,347 @@ describe("deal card menu on the deals board", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });
+
+// The board's backend, with a colleague to hand a deal to and a PATCH the
+// test may refuse.
+function withColleague(
+  backend: ReturnType<typeof stubBackend>,
+  refusal?: Record<string, unknown>,
+) {
+  return (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = input instanceof Request ? input : null;
+    const url = request ? request.url : String(input);
+    const method = request?.method ?? init?.method ?? "GET";
+    if (method === "GET" && url.includes("/users")) {
+      return Promise.resolve(
+        jsonResponse({
+          data: [
+            { id: "u-me", display_name: "Me", email: "me@acme.test" },
+            {
+              id: "u-42",
+              display_name: "Dana Fischer",
+              email: "dana@acme.test",
+            },
+          ],
+          page: { next_cursor: null },
+        }),
+      );
+    }
+    if (refusal && method === "PATCH") {
+      return backend(input, init).then(() =>
+        jsonResponse(refusal, Number(refusal.status)),
+      );
+    }
+    return backend(input, init);
+  };
+}
+
+describe("changing a deal's owner from its card", () => {
+  it("sits right after the close date, which follows the moves", async () => {
+    vi.stubGlobal("fetch", withColleague(stubBackend([deal({})])));
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await menu.findByRole("button", { name: "Mark won" });
+
+    const names = menu
+      .getAllByRole("button")
+      .map((button) => button.textContent);
+    const moves = names.indexOf("Mark won");
+    expect(names.slice(moves + 1, moves + 3)).toEqual([
+      "Change close date",
+      "Change owner",
+    ]);
+  });
+
+  it("PATCHes owner_id once with the drawn version, says so and closes the menu", async () => {
+    const patches: [unknown, string | null][] = [];
+    vi.stubGlobal(
+      "fetch",
+      withColleague(
+        stubBackend([deal({ owner_id: "u-me" })], {
+          onPatch: (body, ifMatch) => patches.push([body, ifMatch]),
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    await user.click(menu.getByRole("button", { name: "Change owner" }));
+    await user.click(
+      await screen.findByRole("option", { name: "Dana Fischer" }),
+    );
+
+    expect(await screen.findByText("Assigned to Dana Fischer")).toBeTruthy();
+    expect(patches).toEqual([[{ owner_id: "u-42" }, "4"]]);
+    expect(invalidate).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["deals"] }),
+    );
+    expect(
+      screen.getByRole("button", { name: "More actions for Fleet retrofit" }),
+    ).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("writes nothing when the deal's own owner is picked", async () => {
+    const patches: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      withColleague(
+        stubBackend([deal({ owner_id: "u-42" })], {
+          onPatch: (body) => patches.push(body),
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    await user.click(menu.getByRole("button", { name: "Change owner" }));
+    const current = await screen.findByRole("option", { name: "Dana Fischer" });
+    expect(current).toHaveAttribute("aria-selected", "true");
+    await user.click(current);
+
+    await settled(client);
+    expect(patches).toEqual([]);
+  });
+
+  it("keeps a refused change in its list, saying why", async () => {
+    vi.stubGlobal(
+      "fetch",
+      withColleague(stubBackend([deal({})]), {
+        status: 403,
+        title: "Forbidden",
+        detail: "Dana Fischer may not own deals in this pipeline.",
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await user.click(menu.getByRole("button", { name: "Change owner" }));
+    await user.click(
+      await screen.findByRole("option", { name: "Dana Fischer" }),
+    );
+
+    const list = within(await screen.findByRole("dialog"));
+    expect(await list.findByRole("alert")).toHaveTextContent(
+      "Dana Fischer may not own deals in this pipeline.",
+    );
+    expect(screen.queryByText("Assigned to Dana Fischer")).toBeNull();
+  });
+
+  it.each([
+    ["an archived deal", { archived_at: "2026-06-02T00:00:00Z" }],
+    ["a deal the seat may not change", { writable: false }],
+  ])("is not offered on %s", async (_, overrides) => {
+    vi.stubGlobal("fetch", withColleague(stubBackend([deal(overrides)])));
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await menu.findByRole("button", { name: "Copy link" });
+
+    expect(menu.queryByRole("button", { name: "Change owner" })).toBeNull();
+  });
+});
+
+async function openCloseDate(user: ReturnType<typeof userEvent.setup>) {
+  const menu = await openCardMenu(user);
+  await user.click(menu.getByRole("button", { name: "Change close date" }));
+  return within(await screen.findByRole("dialog", { name: "Expected close" }));
+}
+
+describe("changing a deal's close date from its card", () => {
+  it("PATCHes only the close date once, pinned to the drawn version", async () => {
+    const patches: [unknown, string | null][] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ expected_close_date: "2027-03-14" })], {
+        onPatch: (body, ifMatch) => patches.push([body, ifMatch]),
+      }),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    render(<DealsScreen />, client);
+    const dialog = await openCloseDate(user);
+    const box = dialog.getByRole("textbox", { name: "Expected close" });
+    expect(box).toHaveValue("14/03/2027");
+    await user.clear(box);
+    await user.type(box, "2027-04-30{Enter}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(patches).toEqual([[{ expected_close_date: "2027-04-30" }, "4"]]);
+    expect(invalidate).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: ["deals"] }),
+    );
+  });
+
+  it("writes nothing when the date is saved unchanged", async () => {
+    const patches: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({ expected_close_date: "2027-03-14" })], {
+        onPatch: (body) => patches.push(body),
+      }),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const dialog = await openCloseDate(user);
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await settled(client);
+    expect(patches).toEqual([]);
+  });
+
+  it("keeps a refused date in the dialog, saying why", async () => {
+    vi.stubGlobal(
+      "fetch",
+      withColleague(stubBackend([deal({})]), {
+        status: 422,
+        title: "Unprocessable",
+        detail: "An open deal cannot close in the past.",
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const dialog = await openCloseDate(user);
+    await user.type(
+      dialog.getByRole("textbox", { name: "Expected close" }),
+      "2020-01-02{Enter}",
+    );
+
+    expect(await dialog.findByRole("alert")).toHaveTextContent(
+      "An open deal cannot close in the past.",
+    );
+    expect(dialog.getByRole("textbox", { name: "Expected close" })).toHaveValue(
+      "02/01/2020",
+    );
+  });
+
+  it("refuses a day the server cannot store on the field, before sending", async () => {
+    const patches: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { onPatch: (body) => patches.push(body) }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const dialog = await openCloseDate(user);
+    const box = dialog.getByRole("textbox", { name: "Expected close" });
+    await user.type(box, "31/12/9999{Enter}");
+
+    expect(
+      await dialog.findByText(
+        "Expected close must be from 02/01/0001 to 30/12/9999.",
+      ),
+    ).toBeInTheDocument();
+    expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(patches).toEqual([]);
+  });
+
+  it("opens from the keyboard and gives focus back to the menu's trigger on Escape", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    menu.getByRole("button", { name: "Change close date" }).focus();
+    await user.keyboard("{Enter}");
+    const dialog = await screen.findByRole("dialog", {
+      name: "Expected close",
+    });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(dialog).getByRole("textbox", { name: "Expected close" }),
+      ),
+    );
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "More actions for Fleet retrofit" }),
+    );
+  });
+
+  it.each([
+    ["won", { status: "won", stage_id: "s3" }],
+    ["lost", { status: "lost", stage_id: "s1" }],
+  ] as const)(
+    "is not offered on a %s deal, which keeps its owner change",
+    async (_, overrides) => {
+      vi.stubGlobal("fetch", withColleague(stubBackend([deal(overrides)])));
+      const user = userEvent.setup();
+      render(<DealsScreen />);
+      const menu = await openCardMenu(user);
+      await menu.findByRole("button", { name: "Change owner" });
+
+      expect(
+        menu.queryByRole("button", { name: "Change close date" }),
+      ).toBeNull();
+    },
+  );
+
+  it("keeps the opened version and the typed day across a refetch of the board", async () => {
+    const rows = [deal({ expected_close_date: "2027-03-14" })];
+    const patches: [unknown, string | null][] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend(rows, {
+        onPatch: (body, ifMatch) => patches.push([body, ifMatch]),
+      }),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const dialog = await openCloseDate(user);
+    const box = dialog.getByRole("textbox", { name: "Expected close" });
+    await user.clear(box);
+    await user.type(box, "2027-04-30{Tab}");
+
+    rows[0] = deal({ expected_close_date: "2027-03-14", version: 5 });
+    await client.invalidateQueries({ queryKey: ["deals"] });
+    await settled(client);
+    expect(box).toHaveValue("30/04/2027");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(patches).toEqual([[{ expected_close_date: "2027-04-30" }, "4"]]);
+  });
+
+  it("shows itself busy, and opens nothing, while another write on the deal is out", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    const item = menu.getByRole("button", { name: "Change close date" });
+    void client
+      .getMutationCache()
+      .build(client, {
+        mutationKey: ["deal-edit", "d1"],
+        mutationFn: () => new Promise<never>(() => undefined),
+      })
+      .execute(undefined);
+
+    await waitFor(() => expect(item).toHaveAttribute("aria-busy", "true"));
+    await user.click(item);
+    expect(screen.queryByRole("dialog", { name: "Expected close" })).toBeNull();
+  });
+
+  it.each([
+    ["an archived deal", { archived_at: "2026-06-02T00:00:00Z" }],
+    ["a deal the seat may not change", { writable: false }],
+  ])("is not offered on %s", async (_, overrides) => {
+    vi.stubGlobal("fetch", stubBackend([deal(overrides)]));
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await menu.findByRole("button", { name: "Copy link" });
+
+    expect(
+      menu.queryByRole("button", { name: "Change close date" }),
+    ).toBeNull();
+  });
+});

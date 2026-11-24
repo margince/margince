@@ -69,8 +69,8 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureReadable":     {argument: 2},
 	"EnsureChangeable":   {argument: 2},
 	"EnsureLinkTarget":   {argument: 2},
-	// The attach direction's probe opens with EnsureLinkTarget and narrows the
-	// share arm, so it bounds a reference at least as tightly.
+	// The attach direction's probe opens with EnsureLinkTarget and adds write
+	// authority, so it bounds a reference at least as tightly.
 	"EnsureAttachTarget": {argument: 2},
 	"VisibleTo":          {argument: 2},
 	"VisibleSubset":      {argument: 2},
@@ -616,7 +616,8 @@ const (
 	// find the contact ids held by a live lead's historical or identity links.
 	// The data task runs as the system principal over the workspace. A unique id
 	// goes only into promoteLeadTx, which locks both records and rechecks the
-	// promotion; several ids leave the lead untouched. No id reaches a caller.
+	// promotion. Several ids leave the lead untouched and go to the duplicate
+	// review. No id reaches a caller.
 	//
 	// 145-146: contacts.retractUnsupportedPhones reads contact ids to lock and
 	// audit unsupported signature numbers. Its caller requires the system actor;
@@ -676,5 +677,21 @@ const (
 	// after auth.HoldWritableLive on that deal. AdoptProject runs only under the
 	// chat engine's system principal. Each project id is stored on the link,
 	// never returned to a caller.
-	modulesTierUnscopedCeiling = 165
+	//
+	// 166: forecasting.FocusLists reads the deal ids of a team's stored focus
+	// list. Each list passes the store's SnapshotLens, which compose binds and
+	// which applies the deal row scope, as it does for SnapshotSide.
+	//
+	// 167: contacts.CompaniesWhoseEmploymentEndedTx reads the company ids of
+	// employments that ended, as the system principal (auth.RequireSystem). The
+	// clock refold job takes them and returns nothing to a caller.
+	//
+	// 168: contacts.autoMove reads the contact id of a claim it moves as the
+	// system principal (auth.RequireSystem in the sweep's entry points). The id
+	// goes to the claim's audit row and is returned to no caller.
+	//
+	// 169: forecasting.addTeamStandings reads a team freeze's deal ids and hands
+	// them to the snapshot lens before any caller sees one. The lens applies the
+	// reader's deal row scope and the team's assertion check, as FocusLists does.
+	modulesTierUnscopedCeiling = 169
 )

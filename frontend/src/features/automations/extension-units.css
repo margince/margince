@@ -6,9 +6,23 @@
   gap: var(--space-3);
 }
 
+/* The name over its one-line summary. */
+.extunits-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 /* A unit key has no spaces to break on, so it wraps anywhere instead of
    pushing the chevron off the row. */
 .extunits-name {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* The two ways out of a row sit together at its far edge. */
+.extunits-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
 }

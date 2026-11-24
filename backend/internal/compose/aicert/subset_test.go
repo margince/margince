@@ -8,8 +8,10 @@ package aicert
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -190,6 +192,38 @@ func TestAMergedRecordKeepsTheWorstOfItsTwoRuns(t *testing.T) {
 	}
 }
 
+// A filtered run that measured every row again dates the record by itself.
+func TestAMergeThatReplacesEveryRowTakesTheNewDate(t *testing.T) {
+	dir := t.TempDir()
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	committed.RanAt = "2026-09-01T08:00:00Z"
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	measured := certifyCorpusWith(t, corpus, "")
+	measured.RanAt = "2026-09-02T08:00:00Z"
+	merged, err := mergeIntoCommitted(dir, measured, corpus)
+	if err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	if merged.RanAt != measured.RanAt {
+		t.Errorf("merged ran_at %s, want %s: no row of the older run is left", merged.RanAt, measured.RanAt)
+	}
+}
+
+// STALE_ONLY measures a record past its age again; an unreadable date is old.
+func TestARecordPastItsAgeIsNoLongerCurrent(t *testing.T) {
+	now := time.Date(2026, 11, 22, 0, 0, 0, 0, time.UTC)
+	young := Record{Task: "a", RanAt: now.Add(-recordMaxAge).Format(time.RFC3339)}
+	old := Record{Task: "b", RanAt: now.Add(-recordMaxAge - time.Hour).Format(time.RFC3339)}
+	undated := Record{Task: "c", RanAt: "not a date"}
+	kept := recordsWithin([]Record{young, old, undated}, now, recordMaxAge)
+	if len(kept) != 1 || kept[0].Task != "a" {
+		t.Errorf("kept %+v, want the record at the age limit alone", kept)
+	}
+}
+
 func TestAFilteredRunIsRefusedARecordWhoseModelWasIdentifiedAnotherWay(t *testing.T) {
 	dir := t.TempDir()
 	corpus := mixedCorpus()
@@ -200,5 +234,107 @@ func TestAFilteredRunIsRefusedARecordWhoseModelWasIdentifiedAnotherWay(t *testin
 	}
 	if _, err := mergeIntoCommitted(dir, certifyCorpusWith(t, corpus[:1], ""), corpus); err == nil {
 		t.Fatal("rows whose served model was identified two ways were pooled under one served_identity_source")
+	}
+}
+
+// Rows measured over another wire translation are another measurement.
+func TestAFilteredRunIsRefusedARecordMeasuredOverAnotherWire(t *testing.T) {
+	dir := t.TempDir()
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	committed.WireRule = "gemini-wire-older"
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	_, err := mergeIntoCommitted(dir, certifyCorpusWith(t, corpus[:1], ""), corpus)
+	if err == nil || !strings.Contains(err.Error(), "another wire") {
+		t.Fatalf("err = %v; rows sent over two wire translations must not pool into one verdict", err)
+	}
+}
+
+// withOwed is rec with each row's context count set to owed and the record's
+// set to their sum. Nil leaves every count unwritten, as an older record has it.
+func withOwed(rec Record, owed *int) Record {
+	rec.Scenarios = slices.Clone(rec.Scenarios)
+	rec.ContextOwed = nil
+	for i := range rec.Scenarios {
+		rec.Scenarios[i].ContextOwed = owed
+	}
+	if owed != nil {
+		rec.ContextOwed = new(*owed * len(rec.Scenarios))
+	}
+	return rec
+}
+
+// mergeContext writes committed, merges measured into it, and returns the result.
+func mergeContext(t *testing.T, committed, measured Record) Record {
+	t.Helper()
+	dir := t.TempDir()
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	merged, err := mergeIntoCommitted(dir, measured, mixedCorpus())
+	if err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+	return merged
+}
+
+// context_applied over a merge reads only the rows that owed context, and is
+// never raised over rows whose context nobody counted.
+func TestAMergedContextClaimReadsTheRowsThatOwedIt(t *testing.T) {
+	corpus := mixedCorpus()
+	committed := certifyCorpusWith(t, corpus, "")
+	measured := certifyCorpusWith(t, corpus[:1], "")
+
+	// Shaped like an older record: it owed context (it names scopes), was not
+	// served it, and never wrote a count.
+	older := withOwed(committed, nil)
+	older.ContextApplied, older.ContextScopes = false, []string{"identity"}
+	served := withOwed(measured, new(3))
+	served.ContextApplied = true
+	if mergeContext(t, older, served).ContextApplied {
+		t.Error("a subset that carried context raised the claim over older rows nobody counted")
+	}
+
+	unowed := withOwed(committed, new(0))
+	if !mergeContext(t, unowed, served).ContextApplied {
+		t.Error("rows that owed no context kept the claim down after the subset that owed it carried it")
+	}
+
+	carried := withOwed(committed, new(3))
+	carried.ContextApplied = true
+	quiet := withOwed(measured, new(0))
+	if !mergeContext(t, carried, quiet).ContextApplied {
+		t.Error("a subset that owed no context wiped the claim of the rows that did")
+	}
+	missed := withOwed(measured, new(3))
+	missed.ContextApplied = false
+	if mergeContext(t, carried, missed).ContextApplied {
+		t.Error("a subset that owed context and missed it kept the claim")
+	}
+}
+
+// A measured row replaces a committed one, so its context count is counted
+// once, however often the merge is made.
+func TestAMergeCountsAReplacedRowsContextOnce(t *testing.T) {
+	corpus := mixedCorpus()
+	committed := withOwed(certifyCorpusWith(t, corpus, ""), new(3))
+	measured := withOwed(certifyCorpusWith(t, corpus[:1], ""), new(3))
+	dir := t.TempDir()
+	if err := WriteRecord(dir, committed); err != nil {
+		t.Fatalf("writing the committed record: %v", err)
+	}
+	for range 2 {
+		merged, err := mergeIntoCommitted(dir, measured, corpus)
+		if err != nil {
+			t.Fatalf("merging: %v", err)
+		}
+		if merged.ContextOwed == nil || *merged.ContextOwed != *committed.ContextOwed {
+			t.Fatalf("merged context_owed = %v, want %d: a replaced row counted twice", merged.ContextOwed, *committed.ContextOwed)
+		}
+		if err := WriteRecord(dir, merged); err != nil {
+			t.Fatalf("writing the merged record: %v", err)
+		}
 	}
 }

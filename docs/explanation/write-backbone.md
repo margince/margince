@@ -151,6 +151,11 @@ Each string it changes must be the old string with spans replaced by the mask ma
 statutory hold keeps its trail.
 The trigger is in [the repair's migration](../../backend/migrations/core/1794348833_the_credential_repair_may_rewrite_an_audit_image.up.sql).
 
+**Growth.** The table keeps every row for good. No retention rule deletes a row or removes its
+personal values because the row is old. No job passes the guard that stops rows from changing. A row is about 600 bytes with
+its indexes, one for each change to a record. An operator who needs the disk space copies old rows to
+storage outside the product.
+
 The actor columns mirror the envelope's `Actor` (see *The envelope*): the same kinds of actor. A
 fitness test keeps the two in step, so a new kind cannot reach the bus and break the mirror.
 
@@ -288,7 +293,7 @@ time reports it.
 | `cg:notice-case-open` | open, and later end, the case for what the installation owes a contact it learned of without asking them | **live** |
 | `cg:approval-notify` | on `approval.requested`, put the card in the queue of the one member it names | **live** (worker) |
 | `cg:approval-notice-retract` | on a decided or timed-out card, take back the lines it put in other seats' queues | **live** |
-| `cg:overnight-agent` | on `approval.decided`, start again the waiting Surface-B run with the human's answer | **live** (worker; only when a model is set up) |
+| `cg:overnight-agent` | on `approval.decided`, start again the waiting run of a night helper with the human's answer | **live** (worker; only when a model is set up) |
 | `cg:workflows` | start the workflow engine on matching events | **live** (worker) |
 | `cg:webhooks` | send subscribed events to outbound endpoints | **live** (the relay inside the API) |
 | `cg:capture` | (reserved) | declared, no subscriber |
@@ -326,6 +331,12 @@ to keep events. The stream is capped by a count (`MAXLEN ~`), not by a time, so 
 rate an event can stay longer. A consumer that takes it back after its dedupe entry timed out runs the
 handler again, and the key layer makes that run do nothing.
 
+A group may declare the event types its handler acts on (`Group.Types`). The subscriber acks every
+other entry before `Dedupe` runs, in one `XACK` for each read, so such an entry leaves no mark. The
+handler tests its input against the same set. `TestEveryHandlerIgnoresTheTypesItsGroupLeavesOut` in
+`backend/gates/consumergrouptypes_test.go` feeds each handler every type its group leaves out. A
+group with no list gets every type on its streams.
+
 ---
 
 ## 6. Correlation & causation (the trace)
@@ -333,8 +344,8 @@ handler again, and the key layer makes that run do nothing.
 The `Trace` on every envelope lets you build one request or run back up as a single story:
 
 - **`correlation_id`** groups every event that one request or run starts. The HTTP middleware makes it
-  **once** per HTTP request (`internal/platform/httpserver/chassis.go`) and returns it in `X-Correlation-ID`.
-  It ignores a client-supplied value. Each agent run binds one too (`compose/runnerservice.go`).
+  **once** per HTTP request (`internal/platform/httpserver/chassis.go`) and returns it in `X-Request-Id`
+  ([trace-a-request.md](../how-to/trace-a-request.md)). It ignores a client-supplied value. Each agent run binds one too (`compose/runnerservice.go`).
   A background job that emits events must bind its own, since `Emit` fails without one.
   It binds it together with the actor, through
   `principal.SystemActing(ctx, "system:<pass>")`.

@@ -54,9 +54,9 @@ type EmbeddingsConfig struct {
 	Dimensions int `yaml:"dimensions" json:"dimensions"`
 }
 
-// RoutingConfig is the parsed ai-routing.yaml: the ONLY place vendor
-// names appear (§1.4). A malformed binding fails at startup, not on the
-// first model call at 3am.
+// RoutingConfig is the parsed routing setting, stored in the database and
+// changed through Settings -> AI. It is the only place vendor names appear.
+// A malformed binding fails at startup, not on the first model call at 3am.
 type RoutingConfig struct {
 	Tiers      map[Tier]ProviderConfig `yaml:"tiers" json:"tiers"`
 	Embeddings EmbeddingsConfig        `yaml:"embeddings" json:"embeddings"`
@@ -67,6 +67,9 @@ type RoutingConfig struct {
 	// Decisions is the optional decision-model lane (decisionlane.go). Last and
 	// omitempty, so a config binding none encodes and digests as it always did.
 	Decisions *DecisionsConfig `yaml:"decisions" json:"decisions,omitempty"`
+	// TaskLadders reorders a task's rungs under this config (taskladders.go);
+	// omitempty, so a config reordering none digests as it always did.
+	TaskLadders map[Task][]Tier `yaml:"task_ladders" json:"task_ladders,omitempty"`
 	// sourceHash is the sha256 digest of the raw yaml bytes this config was
 	// parsed from (spec §4) — the routing half of the ai_call_config
 	// dimension key, alongside the generated TaskContractHash. Set by
@@ -258,6 +261,9 @@ func (cfg RoutingConfig) validate() error {
 	if len(cfg.Tiers) == 0 {
 		return errors.New("ai: routing config: no tiers bound")
 	}
+	if err := cfg.validateTaskLadders(); err != nil {
+		return err
+	}
 	// Every tier's routing faults are gathered before refusing, so an editor
 	// that sent several bad values hears about all of them at once.
 	var routingFaults []error
@@ -312,6 +318,9 @@ func (cfg RoutingConfig) validate() error {
 	if err := validateVertexPlacement("the embeddings lane", cfg.Embeddings.ProviderConfig); err != nil {
 		return err
 	}
+	if err := validateAzurePlacement("the embeddings lane", cfg.Profile, cfg.Embeddings.ProviderConfig); err != nil {
+		return err
+	}
 	// The embed lane dials an operator-supplied host like any chat tier, so it
 	// carries the same egress rule on every profile.
 	if err := requireDialableEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
@@ -325,9 +334,7 @@ func (cfg RoutingConfig) validate() error {
 	// The rule itself is the chat tiers': SelectBrain builds this lane's client
 	// too, and refuses openai_compatible without a host.
 	if chatHostMissing(cfg.Embeddings.Provider, cfg.Embeddings.BaseURL) {
-		return missingHostError{provider: cfg.Embeddings.Provider, reason: "ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
-			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
-			"e.g. https://openrouter.ai/api"}
+		return missingHostError{provider: cfg.Embeddings.Provider, reason: noHostReason("the embeddings lane", cfg.Embeddings.Provider)}
 	}
 	return cfg.validateDecisionsLane()
 }
@@ -382,6 +389,9 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	if err := validateVertexPlacement(fmt.Sprintf("tier %s", tier), binding); err != nil {
 		return err
 	}
+	if err := validateAzurePlacement(fmt.Sprintf("tier %s", tier), profile, binding); err != nil {
+		return err
+	}
 	// EVERY profile, not only sovereign. base_url is the address this server
 	// dials, and outside the sovereign branch above nothing looked at it at
 	// all: any string that parsed was persisted and later handed to the
@@ -398,23 +408,20 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	// operator sees "saved" and no change, with the reason in a log they are not
 	// reading.
 	if chatHostMissing(binding.Provider, binding.BaseURL) {
-		return missingHostError{provider: binding.Provider, reason: fmt.Sprintf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
-			"give it the vendor host root, with no version segment (the adapter adds /v1), "+
-			"e.g. https://openrouter.ai/api", tier)}
+		return missingHostError{provider: binding.Provider, reason: noHostReason(fmt.Sprintf("tier %s", tier), binding.Provider)}
 	}
 	return validateInput(fmt.Sprintf("tier %s", tier), binding.Input)
 }
 
 // UnboundLadderWarnings reports every task whose entire fallback ladder
-// has no bound tier in cfg.Tiers: a call for that task has nowhere to
+// has no bound tier in cfg.Tiers. A call for that task has nowhere to
 // route and is refused outright, not merely degraded. This is not a
-// startup error — a deployment legitimately narrows to only the
-// workloads it actually runs — but it must be loud: an operator should
-// read the gap off the boot log, not discover it from a refused call at
-// 3am. AllTasks()'s sorted order keeps the result deterministic.
+// startup error, because a deployment legitimately narrows to the
+// workloads it runs. It must be loud, so an operator reads the gap off
+// the boot log and not from a refused call at 3am. RoutedTasks()'s sorted order keeps the result deterministic.
 func (cfg RoutingConfig) UnboundLadderWarnings() []string {
 	var warnings []string
-	for _, task := range AllTasks() {
+	for _, task := range RoutedTasks() {
 		ladder := taskLadders[task]
 		bound := false
 		for _, tier := range ladder {

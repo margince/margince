@@ -224,6 +224,10 @@ describe("opening a DSR (G-2)", () => {
     );
     await screen.findByText(/GDPR, one calendar month/);
     await userEvent.type(
+      screen.getByRole("textbox", { name: /received on/i }),
+      "15/07/2026",
+    );
+    await userEvent.type(
       screen.getByRole("textbox", { name: /earlier deadline/i }),
       "15/07/2026",
     );
@@ -239,6 +243,7 @@ describe("opening a DSR (G-2)", () => {
     expect(posts[0]?.body).toEqual({
       kind: "rectify",
       subject_ref: "anna@acme.test",
+      received_at: "2026-07-15T04:00:00.000Z",
       due_at: "2026-07-16T03:59:59.999Z",
     });
     expect(await screen.findByText(/15\/07\/2026/)).toBeInTheDocument();

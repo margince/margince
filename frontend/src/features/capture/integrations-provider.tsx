@@ -11,6 +11,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { Meter } from "../../design-system/readings";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
+import { formatMonthAbbrev } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useProviderConnections } from "../../lib/provider-status";
@@ -150,7 +151,9 @@ function SpendReading({
       key: "month",
       header: t("provider.spend.month"),
       render: (month) =>
-        month.month === current ? t("provider.spend.thisMonth") : month.month,
+        month.month === current
+          ? t("provider.spend.thisMonth")
+          : formatMonthAbbrev(month.month, locale),
     },
     { key: "pool", header: t("provider.spend.pool"), render: (m) => m.pool },
     {

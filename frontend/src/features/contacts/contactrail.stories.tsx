@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ContactRail } from "./contactrail";
 import "./contact360.css";
@@ -291,6 +291,28 @@ export const EverySectionGranted: Story = {
   render: () => rail(granted),
 };
 
+// A source a reviewer confirmed: the Source section stays and says what was
+// confirmed, when it was obtained, and who confirmed it.
+export const SourceConfirmed: Story = {
+  name: "Source confirmed",
+  render: () =>
+    rail({
+      ...granted,
+      privacy_source_reviews: [],
+      privacy_confirmed_source: {
+        case_id: "case-source",
+        source_kind: "in_person_permission",
+        source_obtained_at: "2026-11-15T12:00:00Z",
+        confirmed_at: "2026-11-16T12:00:00Z",
+        confirmed_by: {
+          actor_type: "human",
+          actor_id: "human:u-admin",
+          actor_name: "Demo Admin",
+        },
+      },
+    }),
+};
+
 // On one Shortlist, for a seat that may change lists: the chip, Add to
 // Shortlist and the way to every list.
 export const Lists: Story = {
@@ -381,9 +403,9 @@ export const BoughtPhone: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: "Open a chat" });
     const number = canvas.getByRole("link", { name: "+493012345678" });
-    const handle = number.closest(".fieldgrid-handle");
+    const handle = number.closest(".reachline");
     const mark = handle?.querySelector(":scope > .evmark");
-    const chats = handle?.querySelector(":scope > .callaction-chats");
+    const chats = handle?.querySelector(".callaction-chats");
     if (!mark || !chats) {
       throw new Error("the phone row lost its bought mark or its chat glyph");
     }
@@ -407,8 +429,8 @@ export const BoughtPhonePhone: Story = {
 const LONG_ADDRESS =
   "sebastian.sachsinger.procurement@straight-logistics-holding.de";
 
-// An address wider than the column breaks at its `@`: the domain drops under
-// the mailbox name, and neither half is cut.
+// An address wider than the card keeps to one line, ends in "…" and stays
+// inside the card.
 export const LongAddress: Story = {
   name: "Long address, phone",
   render: () =>
@@ -427,19 +449,72 @@ export const LongAddress: Story = {
     const link = await within(canvasElement).findByRole("link", {
       name: LONG_ADDRESS,
     });
-    const local = link.querySelector<HTMLElement>(".contactlink-email-local");
-    const domain = link.querySelector<HTMLElement>(".contactlink-email-domain");
-    const column = link.closest(".factlist-value");
-    if (!local || !domain || !column) {
-      throw new Error("the address lost a half");
+    const face = link.querySelector<HTMLElement>(".contactlink-email");
+    const card = link.closest(".reachcard");
+    if (!face || !card) {
+      throw new Error("the address left its card");
     }
-    await expect(local.scrollWidth).toBeLessThanOrEqual(local.clientWidth);
-    await expect(domain.scrollWidth).toBeLessThanOrEqual(domain.clientWidth);
-    await expect(domain.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      local.getBoundingClientRect().bottom - 0.5,
+    await expect(face.scrollWidth).toBeGreaterThan(face.clientWidth);
+    await expect(face.getBoundingClientRect().right).toBeLessThanOrEqual(
+      card.getBoundingClientRect().right,
     );
-    await expect(domain.getBoundingClientRect().right).toBeLessThanOrEqual(
-      column.getBoundingClientRect().right,
-    );
+  },
+};
+
+const editable: View = {
+  ...granted,
+  contact: { ...contact, owner_id: "u-1", writable: true },
+};
+
+// Each section that holds a field this reader may change ends its label line
+// in Edit, and Escape hands focus back to it.
+export const SectionEdits: Story = {
+  name: "Section edits",
+  render: () => rail(editable),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const user = userEvent.setup();
+    for (const name of [
+      "Edit About",
+      "Edit Address",
+      "Edit Ownership",
+      "Edit Consent and channels",
+    ]) {
+      await expect(await canvas.findByRole("button", { name })).toBeVisible();
+    }
+    const about = canvas.getByRole("button", { name: "Edit About" });
+    await user.click(about);
+    const dialog = await screen.findByRole("dialog", { name: "About" });
+    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(
+      within(dialog).queryByRole("textbox", { name: "City" }),
+    ).toBeNull();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(about).toHaveFocus());
+  },
+};
+
+export const SectionEditsDark: Story = {
+  ...SectionEdits,
+  name: "Section edits, dark",
+  globals: { theme: "dark" },
+};
+
+export const SectionEditsPhone: Story = {
+  ...SectionEdits,
+  name: "Section edits, phone",
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// A reader without the write grant reads every section and is offered no Edit.
+export const SectionEditsReadOnly: Story = {
+  name: "Section edits, read only",
+  render: () => rail(editable, guard.entries, meRoute({ contact: ["read"] })),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Head of Fleet");
+    await expect(canvas.queryByRole("button", { name: /^Edit / })).toBeNull();
   },
 };

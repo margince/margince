@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type MouseEvent, type ReactNode, useId } from "react";
+import { foldForMatch } from "../format/collate";
 import { AppLink } from "./applink";
 import { Button } from "./atoms";
 import { useTooltip } from "./tooltip";
@@ -39,13 +40,18 @@ type IconActionFace = {
 
 type IconActionPress = {
   href?: undefined;
-  /** Why this verb is unavailable; refuses the press, as on `Button`. */
+  /** Why this verb is unavailable; refuses the press, as on `Button`, and is the tip. */
   reason?: string;
   /**
    * The id of a sentence ALREADY on the page saying why — for a surface where
    * one fact refuses several verbs, as `Button.reasonId` is for.
    */
   reasonId?: string;
+  /**
+   * The sentence `reasonId` names, shown in the tip beside the glyph. The
+   * description keeps pointing at the page's copy, so it is heard once.
+   */
+  reasonTip?: string;
   /**
    * A precondition this verb is waiting on, with no sentence to go with it —
    * the third refusal `Button` already draws and the one a glyph most often
@@ -96,8 +102,9 @@ export function IconAction(
 ) {
   const { label, hint, icon, inline, word } = props;
   const hintId = useId();
+  const why = props.reasonId === undefined ? props.reason : props.reasonTip;
   const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(
-    hint === undefined ? label : `${label}. ${hint}`,
+    tipText(label, why ?? hint),
   );
   const face = (
     <>
@@ -124,7 +131,7 @@ export function IconAction(
           reasonId={props.reasonId}
           disabled={props.disabled}
           pending={props.pending}
-          aria-label={label}
+          aria-label={verbName(word, label)}
           aria-describedby={describedBy}
           aria-pressed={props.pressed}
           aria-expanded={props.disclosure?.expanded}
@@ -141,7 +148,7 @@ export function IconAction(
           className={`btn btn-${props.variant ?? "ghost"} btn-icon`}
           href={props.href}
           onClick={props.onClick}
-          aria-label={label}
+          aria-label={verbName(word, label)}
           aria-describedby={describedBy}
           data-testid={props.testId}
         >
@@ -162,6 +169,37 @@ export function IconAction(
 }
 
 /**
+ * What a verb's hover shows: its name, then the one sentence beside it. A
+ * worded verb whose hover is its `title` uses it for the same text.
+ */
+export function tipText(label: string, sentence?: string): string {
+  return sentence ? `${label}. ${sentence}` : label;
+}
+
+/**
+ * The name of a verb that shows `word` under its glyph. A speech user says
+ * the word they see. A name that does not hold it as whole words starts with
+ * it, since "Meetings" does not answer to "Meet".
+ */
+export function verbName(word: string | undefined, label: string): string {
+  if (!word) {
+    return label;
+  }
+  const shown = wordsOf(word);
+  const named = wordsOf(label);
+  const holds = named.some(
+    (_, at) => named.slice(at, at + shown.length).join(" ") === shown.join(" "),
+  );
+  return holds ? label : `${word}, ${label}`;
+}
+
+function wordsOf(text: string): string[] {
+  return foldForMatch(text)
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+}
+
+/**
  * A verb's short tile word with its full name for a screen reader. It serves a
  * verb drawn as a plain `Button` or a popover face in the record verb bar.
  * The word shows only inside that bar.
@@ -175,7 +213,7 @@ export function VerbWord({
       <span className="verb-word" aria-hidden="true">
         {word}
       </span>
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{verbName(word, label)}</span>
     </>
   );
 }

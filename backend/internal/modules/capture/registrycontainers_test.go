@@ -21,7 +21,7 @@ func TestListContainersReportsAProviderThatCannotList(t *testing.T) {
 	r := NewRegistry(nil, nil, nil, nil)
 	r.Register(&listlessConnector{})
 
-	_, _, err := r.ListContainers(context.Background(), listlessName, ids.UserID{})
+	_, _, err := r.ListContainers(context.Background(), ProviderMailbox(listlessName), ids.UserID{})
 	if !errors.Is(err, ErrContainersUnsupported) {
 		t.Fatalf("err = %v, want ErrContainersUnsupported", err)
 	}
@@ -33,7 +33,7 @@ func TestListContainersReportsAnUnknownProviderAsAbsent(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry(nil, nil, nil, nil)
 
-	_, _, err := r.ListContainers(context.Background(), "nosuchprovider", ids.UserID{})
+	_, _, err := r.ListContainers(context.Background(), ProviderMailbox("nosuchprovider"), ids.UserID{})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want not-found for a provider that is not compiled in", err)
 	}

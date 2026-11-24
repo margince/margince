@@ -32,10 +32,10 @@ type closeFacts struct {
 	refusalAt     *time.Time
 	// refusal is the newest message judged a refusal; zero when none was.
 	refusal ids.UUID
-	// replyOwed is a customer request on the deal still waiting for our
-	// answer, as the deal card's "Team reply owed" reads it.
+	// replyOwed is a current customer request on the deal that nobody has
+	// settled, whether or not we replied on its thread.
 	replyOwed bool
-	// waitUntil is the day the customer asked us to wait until; meetingAhead
+	// waitUntil is the instant the wait ends (deals.PauseEndsSQL); meetingAhead
 	// is a meeting still to come that a customer guest accepted.
 	waitUntil    *time.Time
 	meetingAhead bool
@@ -67,7 +67,7 @@ var closeFactsSQL = `
 	       (SELECT max(a.occurred_at) FROM activity a JOIN activity_link al ON al.activity_id = a.id
 	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[1]s),
 	       refusal.id, refusal.occurred_at,
-	       d.wait_until,
+	       ` + deals.PauseEndsSQL("d") + `,
 	       EXISTS (SELECT 1 FROM activity a JOIN activity_link al ON al.activity_id = a.id
 	                WHERE al.deal_id = d.id AND a.archived_at IS NULL AND a.kind = 'meeting' AND %[3]s
 	                  AND EXISTS (SELECT 1 FROM activity_participant p
@@ -105,8 +105,9 @@ func closeFactsFor(
 }
 
 func closeFactsRead(ctx context.Context, tx pgx.Tx, now time.Time, dealIDs []string) (map[string]closeFacts, error) {
-	query := fmt.Sprintf(closeFactsSQL, customerProgressAnyAudienceSQL("a", "$2"), customerRefusalAnyAudienceSQL("a", "$2"),
-		relstrength.MeetingAheadSQL("a", "$2"), dealMailboxesAnyAudienceSQL("d"))
+	keptOpen := relstrength.DealKeptOpenSQL("a", "al.deal_id")
+	query := fmt.Sprintf(closeFactsSQL, customerProgressAnyAudienceSQL("a", keptOpen, "$2"), customerRefusalAnyAudienceSQL("a", "al.deal_id", "$2"),
+		dealMeetingAheadSQL("a", keptOpen, "$2"), dealMailboxesAnyAudienceSQL("d"))
 	rows, err := tx.Query(ctx, query, dealIDs, now, deals.CloseLostCorrection,
 		activities.OriginHuman, principal.HumanIDPrefix)
 	if err != nil {
@@ -130,9 +131,9 @@ func closeFactsRead(ctx context.Context, tx pgx.Tx, now time.Time, dealIDs []str
 	return out, rows.Err()
 }
 
-// repliesOwed reports, per deal, whether a customer request is still owed our
-// answer. It is the read behind the deal card's "Team reply owed", over mail
-// of every audience: the close reads only that a request is open.
+// repliesOwed reports, per deal, whether a customer request is still open. It
+// reads the deal card's current requests over mail of every audience: the
+// close reads only that a request is open.
 //
 // It reads as the sweep, not as the caller. The re-check under the row lock
 // runs as the owner's agent, which cannot list a colleague's private thread.

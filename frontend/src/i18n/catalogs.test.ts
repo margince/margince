@@ -16,6 +16,19 @@ it("loads the chosen language without loading the other dictionaries", async () 
   expect(loadedCatalogs.has("vi")).toBe(true);
 });
 
+// `use()` reads a settled load without suspending only if it is marked so, and
+// a replayed render needs the same object it suspended on.
+it("hands back one settled load per dictionary once it has arrived", async () => {
+  vi.resetModules();
+  const { loadLocale, localeReady } = await import("./catalogs");
+  const pending = localeReady("de");
+  expect(localeReady("de")).toBe(pending);
+  await loadLocale("de");
+  expect(localeReady("de")).toBe(pending);
+  expect(localeReady("de", "essential")).toBe(pending);
+  expect(pending).toMatchObject({ status: "fulfilled" });
+});
+
 it("keeps readable error copy before a dictionary has loaded", async () => {
   vi.resetModules();
   const { catalogs } = await import("./catalogs");

@@ -30,8 +30,8 @@ type afterPartyAuthorityRead struct {
 	once  sync.Once
 }
 
-func (a *afterPartyAuthorityRead) EffectiveAuthority(ctx context.Context, workspace, user ids.UUID) (authz.RBAC, principal.SeatType, error) {
-	rbac, seat, err := a.PartyAuthority.EffectiveAuthority(ctx, workspace, user)
+func (a *afterPartyAuthorityRead) AdmittedAuthority(ctx context.Context, workspace, user, passport ids.UUID) (authz.RBAC, principal.SeatType, error) {
+	rbac, seat, err := a.PartyAuthority.AdmittedAuthority(ctx, workspace, user, passport)
 	if err == nil {
 		a.once.Do(a.after)
 	}

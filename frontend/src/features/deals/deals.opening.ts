@@ -34,7 +34,8 @@ export function dealFiltersOf(
 ): DealFilters {
   return {
     pipelineId: pipeline?.id ?? "",
-    q: query.q,
+    // Spaces alone find nothing a reader meant to find, so they search nothing.
+    q: query.q.trim(),
     sort: query.sort,
     includeArchived: query.includeArchived,
     filters: query.filters,

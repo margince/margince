@@ -362,6 +362,29 @@ describe("ConsentSection", () => {
     );
   });
 
+  it("shows a mailed, unspent confirmation as waiting and not as consent", async () => {
+    stubRoutes({
+      "GET /contacts/contact-1/consent": () =>
+        jsonResponse({
+          ...CONSENT,
+          state: [
+            CONSENT.state[0],
+            {
+              purpose_id: "p2",
+              purpose_key: "marketing_email",
+              state: "unknown",
+              confirmation_pending_until: "2030-01-10T10:00:00Z",
+            },
+          ],
+        }),
+    });
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
+    const row = await findConsentRow("Marketing");
+    expect(row).toHaveTextContent(/Waiting for them to confirm by email/i);
+    expect(row).toHaveTextContent(/unknown/i);
+    expect(row).not.toHaveTextContent(/granted/i);
+  });
+
   it("says who confirms a double-opt-in purpose, on that row only", async () => {
     stubRoutes();
     render(<ConsentSection contactId="contact-1" contact={writableContact} />);

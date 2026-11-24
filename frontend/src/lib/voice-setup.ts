@@ -48,7 +48,8 @@ export function voiceSetupState(profile: VoiceProfile | null): VoiceSetupState {
   if ((profile.profile_version ?? 0) > 0) {
     return "active";
   }
-  if (profile.candidate_version !== null) {
+  // The server omits a null candidate, so a missing key is no candidate too.
+  if (profile.candidate_version != null) {
     return "review";
   }
   switch (profile.latest_build?.status) {

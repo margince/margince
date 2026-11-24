@@ -15,10 +15,18 @@ import { Heading } from "../../design-system/heading";
 import type { DrawerSpan } from "../../design-system/modal";
 import { useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
-import { navigateReplacing, useHash } from "../../lib/router";
+import { closeOnto } from "../../lib/navigatefrom";
+import { navigate, useHash } from "../../lib/router";
 import { useScrollMemory } from "../../lib/scrollmemory";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
-import { NO_URL_PARAMS, useUrlParams } from "../../lib/urlstate";
+import {
+  currentParams,
+  NO_URL_PARAMS,
+  type UrlParams,
+  useAddressWriters,
+  useUrlParams,
+} from "../../lib/urlstate";
+import { WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
 import { drawerScope } from "../worklist/worklist.address";
 import { worklistFilterFrom } from "../worklist/worklist.header";
 import { WorklistReturnScope } from "../worklist/worklist.return";
@@ -38,9 +46,45 @@ const WorklistScreen = lazy<
   Pending,
 );
 
+// The dials that narrow the drawer. Opening from Home clears them, so it always
+// shows the reader's own Today with every category; closing drops them too.
+const DRAWER_DIALS = [
+  "queue_scope",
+  WORKLIST_VIEW_PARAM,
+  "filter",
+  "owner",
+  "selected",
+];
+
+/** Whether these dials open Home's queue drawer. */
+export const drawerOpen = (params: UrlParams): boolean =>
+  params.get("queue") === "1";
+
+/** Close the drawer onto Home as it stood under it. */
+export function closeQueue(): void {
+  const next = new Map(currentParams());
+  if (!drawerOpen(next)) return;
+  next.delete("queue");
+  for (const dial of DRAWER_DIALS) next.delete(dial);
+  closeOnto({ screen: "home" }, next);
+}
+
+/**
+ * Open the drawer on a new entry, so Back closes it. It reads the address as
+ * it is now: a second press before the first has drawn adds no second entry.
+ */
+export function openQueue(): void {
+  const next = new Map(currentParams());
+  if (drawerOpen(next)) return;
+  for (const dial of DRAWER_DIALS) next.delete(dial);
+  next.set("queue", "1");
+  navigate({ screen: "home" }, next);
+}
+
 /** Older shared links open the same queue, including its owner and narrowing. */
 export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
   const [params] = useUrlParams();
+  const { navigateReplacing } = useAddressWriters();
   useEffect(() => {
     const next = new Map(params);
     next.set("queue", "1");
@@ -50,7 +94,7 @@ export function WorklistRedirect({ opensOn }: Readonly<{ opensOn?: string }>) {
     else if (opensOn === "unassigned") next.set("queue_scope", "unassigned");
     if (opensOn && opensOn !== "unassigned") next.set("owner", opensOn);
     navigateReplacing({ screen: "home" }, next);
-  }, [opensOn, params]);
+  }, [opensOn, params, navigateReplacing]);
   return null;
 }
 
@@ -67,22 +111,15 @@ export function BriefQueue() {
   const t = useT();
   const titleId = useId();
   const body = useRef<HTMLDivElement>(null);
-  const [params, setParams] = useUrlParams();
+  const [params] = useUrlParams();
   // Kept per narrowing for the whole load rather than per history entry: a
   // record's "Back to Worklist" reopens the drawer on a NEW entry, and the
   // reader expects the place they left in this same list.
   const owner = params.get("owner");
-  useScrollMemory(
-    body,
-    useHash(),
-    `worklist-drawer:${drawerScope(params)}:${worklistFilterFrom(params)}:${owner ?? ""}`,
-    "load",
-  );
-  const close = () => {
-    const next = new Map(params);
-    next.delete("queue");
-    setParams(next);
-  };
+  useScrollMemory(body, useHash(), {
+    lane: `worklist-drawer:${drawerScope(params)}:${worklistFilterFrom(params)}:${owner ?? ""}`,
+    span: "load",
+  });
   // Kept by this browser, so every way into the drawer opens it as wide as the
   // reader left it. A shared link carries no one's layout.
   const [span, setSpan] = useState<DrawerSpan>(() =>
@@ -94,8 +131,8 @@ export function BriefQueue() {
   };
   return (
     <Modal
-      open={params.get("queue") === "1"}
-      onClose={close}
+      open={drawerOpen(params)}
+      onClose={closeQueue}
       labelledBy={titleId}
       intent="drawer-reading"
       span={span}

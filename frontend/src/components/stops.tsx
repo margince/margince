@@ -10,10 +10,11 @@ import { Badge, Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { ErrorLine } from "../design-system/errorline";
 import { Field, Textarea } from "../design-system/field";
+import { useFieldFaults } from "../design-system/savepage";
 import { formatDateAbbrev } from "../format/format";
 import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, unwrap } from "../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 
 type ContactStop = components["schemas"]["ContactStop"];
@@ -247,9 +248,12 @@ function LiftStop({
   withNotice?: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState("");
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const reasonLabel = t("consent.stopReason");
   const lift = useMutation({
     mutationFn: async (words: string) => {
       const request = {
@@ -297,23 +301,30 @@ function LiftStop({
         onClose={() => {
           setAsking(false);
           lift.reset();
+          faults.show(new Map());
         }}
         title={t(labels.title)}
         confirmLabel={t(labels.action)}
         confirmVariant="danger"
-        confirmDisabled={words === ""}
-        onConfirm={() => lift.mutate(words)}
+        bodyRef={faultsRoot}
+        onConfirm={() => {
+          const blank = blankRequired(locale, { reason: [undefined, words] });
+          if (!faults.show(blank)) lift.mutate(words);
+        }}
         pending={lift.isPending}
         error={lift.isError ? problemMessageOf(lift.error, t) : null}
       >
         <p className="t-body">{t(labels.body)}</p>
-        <Field label={t("consent.stopReason")} required>
+        <Field label={reasonLabel} required error={faults.of("reason")}>
           {(control) => (
             <Textarea
               {...control}
               value={reason}
               maxLength={REASON_MAX}
-              onChange={(event) => setReason(event.target.value)}
+              onChange={(event) => {
+                setReason(event.target.value);
+                faults.edited("reason");
+              }}
             />
           )}
         </Field>

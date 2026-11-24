@@ -13,13 +13,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { STORAGE_KEYS, writeStored } from "../lib/storage";
-import { openViewStep } from "../testing/listview.testkit";
+import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
+import { openView, openViewStep } from "../testing/listview.testkit";
 import { type ListColumn, ListTable } from "./listtable";
 import { orderedColumns } from "./listtable.order";
 
-// Column order in the Columns step: a grip moves a column, the grid follows,
-// and the order holds between visits under the table's name.
+// The Columns step: a grip moves a column and a tick hides one, the grid
+// follows, and both hold between visits under the table's name.
 
 afterEach(() => {
   cleanup();
@@ -88,6 +88,28 @@ describe("column order", () => {
     expect(headers()).toEqual(["Name", "Stage", "City"]);
   });
 
+  it("keeps a column the reader hid hidden after a remount under the same table name", async () => {
+    const user = userEvent.setup();
+    const first = render(grid("hidden-test"));
+    const step = within(await openViewStep(user, "Columns"));
+    await user.click(step.getByRole("checkbox", { name: "City" }));
+    first.unmount();
+
+    render(grid("hidden-test"));
+    expect(headers()).toEqual(["Name", "Stage"]);
+  });
+
+  it("shows every column again on a table with no name", async () => {
+    const user = userEvent.setup();
+    const first = render(grid());
+    const step = within(await openViewStep(user, "Columns"));
+    await user.click(step.getByRole("checkbox", { name: "City" }));
+    first.unmount();
+
+    render(grid());
+    expect(headers()).toEqual(["Name", "City", "Stage"]);
+  });
+
   it("ignores a stored key whose column is gone, and never moves the fixed column", () => {
     writeStored(
       { family: STORAGE_KEYS.tableOrder, member: "stale" },
@@ -95,6 +117,53 @@ describe("column order", () => {
     );
     render(grid("stale"));
     expect(headers()).toEqual(["Name", "Stage", "City"]);
+  });
+});
+
+describe("row density", () => {
+  const dense = (member: string) => ({
+    family: STORAGE_KEYS.tableDense,
+    member,
+  });
+
+  it("reads a table's stored Compact on mount", () => {
+    writeStored(dense("dense-test"), "true");
+    render(grid("dense-test"));
+    expect(screen.getByRole("table")).toHaveClass("dense");
+  });
+
+  it("stores Compact under the table's name and leaves another table loose", async () => {
+    const user = userEvent.setup();
+    const first = render(grid("dense-leads"));
+    const panel = within(await openView(user));
+    await user.click(panel.getByRole("button", { name: "Compact" }));
+    expect(readStored(dense("dense-leads"))).toBe("true");
+    first.unmount();
+
+    const again = render(grid("dense-leads"));
+    expect(screen.getByRole("table")).toHaveClass("dense");
+    again.unmount();
+
+    render(grid("dense-contacts"));
+    expect(screen.getByRole("table")).not.toHaveClass("dense");
+  });
+
+  it("draws loose rows when the stored value is not a boolean", () => {
+    writeStored(dense("dense-garbage"), '"yes"');
+    render(grid("dense-garbage"));
+    expect(screen.getByRole("table")).not.toHaveClass("dense");
+  });
+
+  it("keeps Compact for this mount only on a table with no name", async () => {
+    const user = userEvent.setup();
+    const first = render(grid());
+    const panel = within(await openView(user));
+    await user.click(panel.getByRole("button", { name: "Compact" }));
+    expect(screen.getByRole("table")).toHaveClass("dense");
+    first.unmount();
+
+    render(grid());
+    expect(screen.getByRole("table")).not.toHaveClass("dense");
   });
 });
 

@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
@@ -26,13 +28,51 @@ func TestADSNParameterIsNamedInTheSpellingTheDSNUses(t *testing.T) {
 		{"a URL with no query string opens one", "postgres://h/db", "postgres://h/db?statement_timeout=5000"},
 		{"a URL that already has one appends", "postgres://h/db?sslmode=disable", "postgres://h/db?sslmode=disable&statement_timeout=5000"},
 		{"the postgresql scheme is the same form", "postgresql://h/db", "postgresql://h/db?statement_timeout=5000"},
-		{"a keyword/value DSN separates with a space", "host=h dbname=db", "host=h dbname=db statement_timeout=5000"},
+		{"a keyword/value DSN gets it in front", "host=h dbname=db", "statement_timeout=5000 host=h dbname=db"},
 		{"a DSN that already names it keeps its own", "host=h statement_timeout=1", "host=h statement_timeout=1"},
+		{"a value is not a parameter name", "host=h password='statement_timeout'", "statement_timeout=5000 host=h password='statement_timeout'"},
+		{"a quoted value may contain an assignment", "host=h password=' statement_timeout=1'", "statement_timeout=5000 host=h password=' statement_timeout=1'"},
+		{"an encoded URL key still wins", "postgres://h/db?statement%5Ftimeout=1", "postgres://h/db?statement%5Ftimeout=1"},
+		{"a malformed DSN is left for the pool to reject", "postgres://%/db", "postgres://%/db"},
+		{"a longer name that starts with it is another parameter", "host=h statement_timeout_x=1", "statement_timeout=5000 host=h statement_timeout_x=1"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			if got := database.WithDSNParam(tc.dsn, "statement_timeout", "5000"); got != tc.want {
 				t.Errorf("WithDSNParam(%q) = %q, want %q", tc.dsn, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestAnAddedParameterLeavesEveryOtherValueAsItWas parses the result. A
+// keyword/value DSN ending in an empty value or a backslash takes in what
+// follows it, and the string still parses.
+func TestAnAddedParameterLeavesEveryOtherValueAsItWas(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, dsn, password string
+	}{
+		{"an empty last value", "host=h user=app password=", ""},
+		{"an empty last value with a trailing space", "host=h user=app password= ", ""},
+		{"a quoted empty last value", "host=h user=app password=''", ""},
+		{"a quoted value with spaces", "host=h password='a b=c'", "a b=c"},
+		{"a trailing backslash", `host=h password=secret\`, "secret"},
+		{"trailing whitespace", "host=h password=secret \t", "secret"},
+		{"a URL with an empty password", "postgres://app:@h/db", ""},
+		{"a URL with a query string", "postgres://app:secret@h/db?sslmode=disable", "secret"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			cfg, err := pgconn.ParseConfig(database.WithDSNParam(tc.dsn, "pool_max_conn_lifetime", "10m0s"))
+			if err != nil {
+				t.Fatalf("the DSN no longer parses: %v", err)
+			}
+			if cfg.Password != tc.password {
+				t.Errorf("password became %q, want %q", cfg.Password, tc.password)
+			}
+			if got := cfg.RuntimeParams["pool_max_conn_lifetime"]; got != "10m0s" {
+				t.Errorf("pool_max_conn_lifetime = %q, want 10m0s", got)
 			}
 		})
 	}
@@ -133,16 +173,83 @@ func TestAPoolRetiresItsConnectionsWithinMinutes(t *testing.T) {
 		lifetime, jitter time.Duration
 	}{
 		{"a bare DSN gets both defaults", "postgres://h/db", 10 * time.Minute, 2 * time.Minute},
-		{"a DSN lifetime wins", "postgres://h/db?pool_max_conn_lifetime=1h", time.Hour, 2 * time.Minute},
+		{"a DSN lifetime wins and its jitter is a fifth of it", "postgres://h/db?pool_max_conn_lifetime=1h", time.Hour, 12 * time.Minute},
 		{"a DSN jitter keeps the default lifetime", "postgres://h/db?pool_max_conn_lifetime_jitter=30s", 10 * time.Minute, 30 * time.Second},
+		{"a keyword/value DSN names both", "host=h pool_max_conn_lifetime_jitter=1m pool_max_conn_lifetime=20m", 20 * time.Minute, time.Minute},
 	} {
 		cfg, err := database.PoolConfig(tc.dsn)
 		if err != nil {
 			t.Fatalf("%s: PoolConfig: %v", tc.name, err)
 		}
+		if cfg.ConnConfig.RuntimeParams["jit"] != "off" {
+			t.Fatal("a pool setting suppressed the JIT ceiling")
+		}
 		if cfg.MaxConnLifetime != tc.lifetime || cfg.MaxConnLifetimeJitter != tc.jitter {
 			t.Errorf("%s: lifetime %v jitter %v, want %v and %v",
 				tc.name, cfg.MaxConnLifetime, cfg.MaxConnLifetimeJitter, tc.lifetime, tc.jitter)
+		}
+	}
+}
+
+func TestPoolLimitsIgnoreParameterNamesInValues(t *testing.T) {
+	for _, dsn := range []string{
+		"postgres://app:pool_max_conns@h/db",
+		"host=h dbname=pool_min_conns password=pool_max_conn_idle_time",
+	} {
+		cfg, err := database.PoolConfig(dsn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.MaxConns != 16 || cfg.MinConns != 2 || cfg.MaxConnIdleTime != database.DefaultConnIdleTime {
+			t.Fatalf("a value suppressed pool defaults: max=%d min=%d idle=%s", cfg.MaxConns, cfg.MinConns, cfg.MaxConnIdleTime)
+		}
+	}
+	cfg, err := database.PoolConfig("postgres://h/db?pool%5Fmax_conns=4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.MaxConns != 4 {
+		t.Fatalf("encoded pool key overridden: got %d", cfg.MaxConns)
+	}
+	if _, err := database.PoolConfig(database.WithDSNParam("postgres://%/db", "pool_max_conns", "4")); err == nil {
+		t.Fatal("a malformed DSN lost its parse error")
+	}
+}
+
+func TestExplicitRuntimeParametersKeepTheirCaseInsensitiveNames(t *testing.T) {
+	for _, dsn := range []string{"host=h STATEMENT_TIMEOUT=0", "postgres://h/db?STATEMENT_TIMEOUT=0"} {
+		cfg, err := database.PoolConfig(dsn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for name, want := range map[string]string{"STATEMENT_TIMEOUT": "0"} {
+			if cfg.ConnConfig.RuntimeParams[name] != want {
+				t.Fatalf("explicit %s was changed", name)
+			}
+			if _, duplicate := cfg.ConnConfig.RuntimeParams[strings.ToLower(name)]; duplicate {
+				t.Fatalf("default duplicates explicit %s", name)
+			}
+		}
+	}
+}
+
+func TestADSNCannotTurnJITOn(t *testing.T) {
+	for _, dsn := range []string{"host=h JIT=on", "postgres://h/db?jit=on", "postgres://h/db?JIT=on&STATEMENT_TIMEOUT=0"} {
+		cfg, err := database.PoolConfig(dsn)
+		if err != nil {
+			t.Fatal(err)
+		}
+		jit := 0
+		for name, value := range cfg.ConnConfig.RuntimeParams {
+			if strings.EqualFold(name, "jit") {
+				jit++
+				if value != "off" {
+					t.Errorf("%s: jit is %q on the pool", dsn, value)
+				}
+			}
+		}
+		if jit != 1 {
+			t.Errorf("%s: %d jit parameters, want exactly one", dsn, jit)
 		}
 	}
 }

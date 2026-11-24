@@ -8,6 +8,11 @@
         "model": "claude-sonnet-5-5",
         "key_env": ""
       },
+      "sdk": {
+        "wire": "claude-sdk",
+        "model": "claude-sonnet-5-5",
+        "key_env": ""
+      },
       "api": {
         "wire": "messages",
         "model": "claude-sonnet-5-5",
@@ -81,13 +86,13 @@
     "judge_routes": {
       "api": {
         "wire": "messages",
-        "model": "claude-haiku-4-5-20251001",
+        "model": "claude-haiku-5-5",
         "base_url": "https://api.anthropic.com",
         "key_env": "ANTHROPIC_API_KEY"
       },
       "openrouter": {
         "wire": "chat",
-        "model": "anthropic/claude-haiku-4.5",
+        "model": "anthropic/claude-haiku-5.5",
         "key_env": "OPENAI_COMPATIBLE_API_KEY"
       }
     }

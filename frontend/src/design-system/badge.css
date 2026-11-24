@@ -27,7 +27,6 @@
      leaves it transparent, so a row of mixed variants shares one height. */
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgChip);
   /* Its own ink, never the row's: inside a caption it inherited --textSecondary,
      an ink the chipInks contrast pairs never measure. */
@@ -42,12 +41,13 @@
 .badge > svg {
   flex: none;
 }
-/* A label whose every word is read wraps instead. It takes a box's radius, so
-   two lines leave the end letters clear of the curve; one line still reads as
-   the pill. */
+/* A label whose every word is read wraps instead, between its words, and inside
+   one only when it is wider than the box. It takes a box's radius, so two lines
+   leave the end letters clear of the curve; one line still reads as the pill. */
 .badge-wrap,
 .badge-wrap .badge-label {
   white-space: normal;
+  overflow-wrap: break-word;
 }
 .badge-wrap {
   border-radius: var(--r-sm);
@@ -156,7 +156,6 @@
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: currentColor;
   flex: none;
 }

@@ -5,6 +5,7 @@ package storekit
 
 import (
 	"context"
+	"errors"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -24,8 +25,9 @@ type ListMemberFilterResolver func(ctx context.Context, listID ids.UUID, entityT
 
 // ResolveListMembership turns the list a filter named into a member narrowing,
 // before the read, as the HTTP door does. Both doors narrow through one
-// resolver. With no resolver, lists are off and a list id names nothing: not
-// found, as REST answers it. No list named narrows nothing.
+// resolver. A list the caller cannot find, or any list while lists are off,
+// narrows to no rows, as an unknown tag or owner does. No list named narrows
+// nothing.
 func ResolveListMembership(ctx context.Context, listID *ids.UUID, resolve ListMemberFilterResolver,
 	entityType string,
 ) (ListMemberFilter, error) {
@@ -33,7 +35,17 @@ func ResolveListMembership(ctx context.Context, listID *ids.UUID, resolve ListMe
 		return nil, nil //nolint:nilnil // a nil filter is the absence of a narrowing, which no list named means
 	}
 	if resolve == nil {
-		return nil, apperrors.ErrNotFound
+		return noListMembers, nil
 	}
-	return resolve(ctx, *listID, entityType)
+	members, err := resolve(ctx, *listID, entityType)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return noListMembers, nil
+	}
+	return members, err
 }
+
+// matchesNoRow is the predicate of a filter that must narrow to nothing.
+const matchesNoRow = "FALSE"
+
+// noListMembers keeps an unknown or hidden list from telling whether it exists.
+func noListMembers(string, func(any) int) (string, error) { return matchesNoRow, nil }

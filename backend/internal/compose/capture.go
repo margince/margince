@@ -16,6 +16,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturetimeline"
+	"github.com/margince/margince/backend/internal/compose/duequestion"
+	"github.com/margince/margince/backend/internal/compose/mailhooks"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
@@ -32,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // gmailScopes are the Google scopes a Gmail connection requests: mail read for
@@ -84,7 +87,6 @@ var graphScopes = []string{"offline_access", "User.Read", "Mail.Read", graph.Sen
 // workspace's own, edited in the settings surface and read per transaction, so
 // a correction takes effect on the next message instead of the next restart.
 type CaptureConfig struct {
-	bookingVault       keyvault.Vault
 	TransactionalExtra []string // capture.transactional_extra (CAP-PARAM-6 infra eSLDs)
 	TransactionalNever []string // capture.transactional_never (CAP-PARAM-6 allowlist)
 	// TracePayloads is capture.trace_payloads, already resolved against its
@@ -106,8 +108,13 @@ type CaptureConfig struct {
 	MaxBackfillMonths  int
 	HistoryConcurrency int
 	HistoryHold        bool
-	GmailMailboxQuota  int
-	GmailProjectQuota  int
+	// HistoryPageSize, HistoryFetchWorkers, HistoryLookahead and HistoryPageDelay
+	// are already resolved against their defaults by CaptureConfigFromDeploy. A
+	// zero value, as in a bare construction, keeps the built-in behaviour.
+	HistoryPageSize, HistoryFetchWorkers, HistoryLookahead int
+	HistoryPageDelay                                       time.Duration
+	GmailMailboxQuota                                      int
+	GmailProjectQuota                                      int
 	// Now is the clock the deal question judges a mail's currentness by. Nil
 	// is the wall clock.
 	Now func() time.Time
@@ -171,6 +178,12 @@ var RatesModelPricing = config.Define(config.Spec[map[string]string]{
 	Doc: "Ignored, with a warning at boot; kept so existing files load.",
 })
 
+// historyTuning is the history import's page size and fetching, as the
+// connectors take them.
+func (c CaptureConfig) historyTuning() connector.BackfillTuning {
+	return connector.BackfillTuning{PageSize: c.HistoryPageSize, FetchWorkers: c.HistoryFetchWorkers, Lookahead: c.HistoryLookahead}
+}
+
 // NewCaptureRegistry builds the connector registry; process roles register
 // their compiled-in connectors on it and drive SyncOnce. The vault seals and
 // resolves each connection's credential (nil is valid for a role that only
@@ -184,7 +197,6 @@ var RatesModelPricing = config.Define(config.Spec[map[string]string]{
 // that takes it that way — asking which transports this binary compiled in is a
 // question about the binary, not about any database.
 func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureConfig) *capture.Registry {
-	cfg.bookingVault = vault
 	db := InstallationDB(pool)
 	r := capture.NewRegistry(db, newCaptureSink(pool, cfg), identity.NewService(pool), vault).
 		// How far back this installation lets a mailbox import reach. Zero
@@ -192,17 +204,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 		// construction and every deployment that has not set one get.
 		WithMaxBackfillMonths(cfg.MaxBackfillMonths).
 		WithBackfillAdmission(cfg.HistoryConcurrency, cfg.HistoryHold).
-		// The digest's projects section is answered here because its reads
-		// span the deals module's tables (digestprojects.go).
-		WithDigestProjects(digestProjectsSource)
-	// What is waiting for the reader, counted through the same seams the Today
-	// surface counts it with (digestreview.go). Skipped without a pool, which
-	// is the enumerate-only construction CoreChannelProviders makes: it builds
-	// no digest, so a source reading a database it does not have would fail on
-	// a path that never counts anything.
-	if pool != nil {
-		r = r.WithDigestReview(newDigestReviewSource(pool, NewApprovalsService(db)))
-	}
+		WithBackfillPageDelay(cfg.HistoryPageDelay)
 	// The standing IMAP connector needs no deployment config — credentials
 	// are per-connection, vault-sealed — so every capture-capable role
 	// carries it. With a pool it also records the delivery reports the
@@ -274,14 +276,14 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 	// store). Asking which transports a binary compiled in must not hand
 	// anything the power to destroy mail.
 	var purgeRemoved capture.MessagePurger
-	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger(), cfg.bookingVault); purger != nil {
+	if purger := capturePurgerFor(pool, cfg.Blob, cfg.logger()); purger != nil {
 		purgeRemoved = purger.PurgeRemovedAdmitted
 	}
 	return capture.NewSink(InstallationDB(pool)).
 		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
 		// A seat's own sent echo re-keys the send it copies when the send's
 		// read-back failed, through the module that owns the deliveries.
-		WithSentEchoAdoption(comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))).AdoptEchoIdentityTx).
+		WithSentEchoAdoption(comms.NewStore(InstallationDB(pool), time.Now, sentIdentity(InstallationDB(pool))).AdoptEchoIdentityTx).
 		WithPartyReceiptSettlement(sentPartySettlement(pool)).
 		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns
@@ -296,6 +298,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		}).
 		WithClock(cfg.clock()).
 		WithStager(mergeStager{svc: NewApprovalsService(InstallationDB(pool))}).
+		WithDueAsker(duequestion.Asker{Approvals: NewApprovalsService(InstallationDB(pool))}).
 		WithTaskAssigneeCheck(activities.CheckNewTaskAssignee).
 		WithContactArrivals(contactArrivalTeller{
 			store: newContactsStore(InstallationDB(pool)).
@@ -326,18 +329,16 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithProjectAttribution(capture.ProjectAttribution{
 			Keys:  ProjectsStore(pool),
 			Stamp: activities.StampCorrespondenceForProject,
+			File:  activities.FileOnProjectTx,
 		}).
 		// The deal rule reads its candidates from the module that owns `deal`,
 		// and asks its one question through the store that owns tasks.
 		WithDealAttribution(capture.DealAttribution{
 			Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-			Ask: whichDealAsker{
-				tasks: activities.NewStore(InstallationDB(pool)),
-				deals: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-				now:   cfg.clock(),
-			}.Ask,
-			Filer: ActivityDealFiler{},
-			Check: NewDealTopicCheck(pool, cfg.DealTopicBrain),
+			Ask:        newWhichDealAsker(pool, cfg.clock()).Ask,
+			Filer:      ActivityDealFiler{},
+			Check:      NewDealTopicCheck(pool, cfg.DealTopicBrain),
+			Hooks:      mailhooks.New(ComposedExtensions, pool),
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives

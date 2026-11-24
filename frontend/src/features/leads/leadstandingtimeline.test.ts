@@ -48,16 +48,27 @@ function row(extra: Partial<Activity>): Activity {
 }
 
 describe("leadTimeline", () => {
+  it("names who marked the lead contacted instead of claiming a reply", () => {
+    const marked = { ...lead, first_response_marked_by: "u2" };
+    const title = (context: ReadingContext) =>
+      leadTimeline(marked, [], {}, "", context).events.find(
+        (event) => event.key === "first-response",
+      )?.title;
+    expect(title({ ...ctx, markedBy: "Ana" })).toBe(
+      'lead.timeline.markedContacted:{"user":"Ana"}',
+    );
+    expect(title(ctx)).toBe("lead.timeline.markedContactedNoName");
+    expect(
+      leadTimeline(lead, [], {}, "", ctx).events.find(
+        (event) => event.key === "first-response",
+      )?.title,
+    ).toBe("lead.timeline.weReplied");
+  });
+
   it("draws arrival, our answer, their newest message and a meeting ahead", () => {
     const { events } = leadTimeline(
       lead,
       [
-        row({ id: "in", direction: "inbound" }),
-        row({
-          id: "out",
-          direction: "outbound",
-          occurred_at: "2026-08-02T10:00:00Z",
-        }),
         row({
           id: "demo",
           kind: "meeting",
@@ -66,6 +77,14 @@ describe("leadTimeline", () => {
           occurred_at: "2026-08-15T09:00:00Z",
         }),
       ],
+      {
+        inbound: row({ id: "in", direction: "inbound" }),
+        outbound: row({
+          id: "out",
+          direction: "outbound",
+          occurred_at: "2026-08-02T10:00:00Z",
+        }),
+      },
       "Web form",
       ctx,
     );
@@ -81,7 +100,8 @@ describe("leadTimeline", () => {
   it("counts the silence since the newest exchange and says whose move it is", () => {
     const theirs = leadTimeline(
       lead,
-      [row({ direction: "inbound" })],
+      [],
+      { inbound: row({ direction: "inbound" }) },
       "Web form",
       ctx,
     );
@@ -92,14 +112,15 @@ describe("leadTimeline", () => {
     });
     const ours = leadTimeline(
       lead,
-      [
-        row({
+      [],
+      {
+        inbound: row({
           id: "in",
           direction: "inbound",
           occurred_at: "2026-08-05T09:00:00Z",
         }),
-        row({ id: "out", direction: "outbound" }),
-      ],
+        outbound: row({ id: "out", direction: "outbound" }),
+      },
       "Web form",
       ctx,
     );
@@ -110,30 +131,30 @@ describe("leadTimeline", () => {
     expect(
       leadTimeline(
         { ...lead, archived_at: "2026-08-12T09:00:00Z" },
-        [row({ direction: "inbound" })],
+        [],
+        { inbound: row({ direction: "inbound" }) },
         "Web form",
         ctx,
       ).gap,
     ).toBeUndefined();
-    expect(leadTimeline(lead, [], "Web form", ctx).gap).toBeUndefined();
+    expect(leadTimeline(lead, [], {}, "Web form", ctx).gap).toBeUndefined();
   });
 
-  it("does not count a called-off meeting as contact", () => {
+  // The newest message may sit on a page the lead's thread never loaded.
+  it("draws their newest message from the server's dating, not the loaded page", () => {
     const { events } = leadTimeline(
       lead,
-      [
-        row({
-          kind: "meeting",
+      [],
+      {
+        inbound: row({
+          id: "old",
           direction: "inbound",
-          meeting_status: "canceled",
+          occurred_at: "2026-01-02T09:00:00Z",
         }),
-      ],
+      },
       "Web form",
       ctx,
     );
-    expect(events.map((event) => event.key)).toEqual([
-      "received",
-      "first-response",
-    ]);
+    expect(events.map((event) => event.key)).toContain("inbound-old");
   });
 });

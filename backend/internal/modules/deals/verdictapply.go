@@ -113,8 +113,9 @@ type VerdictInput struct {
 	// checksum and the cited activities, neither of them this module's.
 	EvidenceHolds func(ctx context.Context, tx pgx.Tx) (bool, error)
 	// Record writes the timeline entry for what applied, in the same
-	// transaction. It is not called when nothing applied.
-	Record func(ctx context.Context, tx pgx.Tx, applied []VerdictChange) error
+	// transaction, and answers the id of the note. It is not called when
+	// nothing applied.
+	Record func(ctx context.Context, tx pgx.Tx, applied []VerdictChange) (ids.UUID, error)
 	// AsOwner binds the owner's agent as of the write's transaction. An
 	// owner who left or lost the deal grant since the read changes nothing.
 	AsOwner OwnerAuthorityTx
@@ -136,16 +137,16 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 	if err := auth.Require(ctx, "deal", principal.ActionUpdate); err != nil {
 		return VerdictResult{}, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return VerdictResult{}, err
-	}
 	result := VerdictResult{Outcomes: make([]string, len(in.Changes))}
 	outcomes := result.Outcomes
 	for i := range outcomes {
 		outcomes[i] = VerdictDroppedStale
 	}
-	err = s.Tx(ctx, func(tx pgx.Tx) error {
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		ctx, held, err := actAsOwnerNow(ctx, tx, in.AsOwner, requireDealUpdate)
 		if err != nil {
 			return err
@@ -170,22 +171,28 @@ func (s *Store) ApplyVerdict(ctx context.Context, in VerdictInput) (VerdictResul
 			result.dropAsMoved()
 			return nil
 		}
-		applied, err := s.applyVerdictChanges(ctx, tx, lock, in, current, active, outcomes)
+		applied, corrections, err := s.applyVerdictChanges(ctx, tx, lock, in, current, active, outcomes)
 		if err != nil || len(applied) == 0 {
 			return err
 		}
-		return in.Record(ctx, tx, applied)
+		note, err := in.Record(ctx, tx, applied)
+		if err != nil {
+			return err
+		}
+		return linkCorrectionNote(ctx, tx, corrections, note)
 	})
 	return result, err
 }
 
 // applyVerdictChanges writes each change on the locked deal, the stage move
-// first, sets its outcome and answers the changes that applied.
+// first, and sets its outcome. It answers the changes that applied, with the
+// ids of their correction rows.
 func (s *Store) applyVerdictChanges(
 	ctx context.Context, tx pgx.Tx, lock storekit.RowLock, in VerdictInput, current VerdictValues,
 	active []fieldcatalog.Column, outcomes []string,
-) ([]VerdictChange, error) {
+) ([]VerdictChange, []ids.UUID, error) {
 	var applied []VerdictChange
+	var corrections []ids.UUID
 	// Asked of the deal as locked, before a stage move resets its
 	// probability: that reset is ours, not a colleague's edit.
 	heldStill := make([]bool, len(in.Changes))
@@ -195,26 +202,28 @@ func (s *Store) applyVerdictChanges(
 	for _, i := range stageMoveFirst(in.Changes) {
 		change := in.Changes[i]
 		var outcome string
+		var correction ids.UUID
 		var err error
 		switch {
 		case !heldStill[i]:
 			outcome = VerdictDroppedStale
 		case change.Correction == VerdictStageMoveCorrection:
-			outcome, current, err = s.applyVerdictStageMove(ctx, tx, in, current, change, active)
+			outcome, current, correction, err = s.applyVerdictStageMove(ctx, tx, in, current, change, active)
 		default:
 			now := in
 			now.Seen = current
-			outcome, err = applyVerdictChange(ctx, tx, lock, now, current, change)
+			outcome, correction, err = applyVerdictChange(ctx, tx, lock, now, current, change)
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		outcomes[i] = outcome
 		if outcome == VerdictApplied {
 			applied = append(applied, change)
+			corrections = append(corrections, correction)
 		}
 	}
-	return applied, nil
+	return applied, corrections, nil
 }
 
 // dropAsMoved drops every change because what the verdict rested on moved
@@ -271,54 +280,56 @@ func lockVerdictDeal(ctx context.Context, tx pgx.Tx, in VerdictInput) (storekit.
 }
 
 // applyVerdictChange writes one change, unless its switch is off, the field
-// moved since the decision, or a colleague edited it after the evidence.
+// moved since the decision, or a colleague edited it after the evidence. An
+// applied change answers the id of its correction row.
 func applyVerdictChange(
 	ctx context.Context, tx pgx.Tx, lock storekit.RowLock, in VerdictInput, current VerdictValues, change VerdictChange,
-) (string, error) {
+) (string, ids.UUID, error) {
 	allowed, err := in.Allowed(ctx, tx, change.Correction)
 	if err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
 	if !allowed {
-		return VerdictDroppedSwitch, nil
+		return VerdictDroppedSwitch, ids.Nil, nil
 	}
 	columns, unchanged := verdictColumns(change.Correction, in.Seen, current)
 	if columns == nil || !unchanged {
-		return VerdictDroppedStale, nil
+		return VerdictDroppedStale, ids.Nil, nil
 	}
 	edited, err := humanEditedAfter(ctx, tx, in.DealID, columns, change.NewestCitedAt)
 	if err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
 	if edited {
-		return VerdictDroppedHuman, nil
+		return VerdictDroppedHuman, ids.Nil, nil
 	}
 	patch := storekit.NewPatch()
 	if !verdictPatch(patch, change, current) {
-		return VerdictDroppedStale, nil
+		return VerdictDroppedStale, ids.Nil, nil
 	}
 	if patch.Empty() {
-		return VerdictDroppedNoChange, nil
+		return VerdictDroppedNoChange, ids.Nil, nil
 	}
 	var owned *LineOwnedValueError
 	if err := refuseTypedMoneyOnLines(ctx, tx, in.DealID, patch); errors.As(err, &owned) {
-		return VerdictDroppedLines, nil
+		return VerdictDroppedLines, ids.Nil, nil
 	} else if err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
 	evidence := verdictEvidence(in, change)
 	if change.Correction == VerdictProbabilityCorrection {
 		if err := addProbabilityValuation(ctx, tx, in.DealID, current, evidence); err != nil {
-			return "", err
+			return "", ids.Nil, err
 		}
 	}
-	if err := commitCorrection(ctx, tx, lock, correctionWrite{
+	correction, err := commitCorrection(ctx, tx, lock, correctionWrite{
 		deal: in.DealID, correction: change.Correction, patch: patch, auditEvidence: evidence,
 		changedFields: map[string]any{CorrectionKindEvidenceKey: change.Correction},
-	}); err != nil {
-		return "", err
+	})
+	if err != nil {
+		return "", ids.Nil, err
 	}
-	return VerdictApplied, nil
+	return VerdictApplied, correction, nil
 }
 
 // verdictColumns names the columns a correction writes, and whether they still

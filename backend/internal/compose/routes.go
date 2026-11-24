@@ -22,6 +22,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
+	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -88,6 +90,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		// which is what lets chiRoutePattern answer.
 		coreFeatureGate(srv.coreFeatures),
 		srv.httpMetrics.Measure(chiRoutePattern),
+		httpserver.NoteRoute(chiRoutePattern),
 	)
 }
 
@@ -175,7 +178,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// configures one.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
-	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault(), srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
+	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault, srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
 		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) }, SchemaAtHead(pool))...))
 	// The claim surface, beside the probes rather than under /v1: the session
 	// middleware fronting /v1 resolves the singleton company first and
@@ -209,9 +212,10 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	publicEdge := publicInstrument(ComposedExtensions(), newPublicInstrumentLimiter())(
 		publicForms(srv.webFormsHandlers)(
 			publicConfirm(newPublicConfirmLimiters())(
-				publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
+				publicPreferences(consent.NewStore(InstallationDB(pool)).
+					WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool))}), newPublicPreferenceLimiters())(
 					publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters(), srv)(
-						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
+						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters(), httpserver.ConfiguredOrigin(srv.send.PublicBaseURL))(
 							extensionEdge(srv, log)(api),
 						),
 					),
@@ -225,15 +229,13 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// shared/kernel/capabilitypath, not named at each mount. The booking
 	// page's slug is on that list because it is the only admission check on a
 	// route that writes.
-	// boundByResponseDeadline sits OUTSIDE the handler chain because a
-	// write deadline has to be set before anything starts writing — including
-	// the access log's own wrapper, which is what holds the ResponseWriter the
-	// controller reaches through.
+	// boundByResponseDeadline sits outside the chain: a write deadline must be
+	// set before anything writes. The access recorder passes it on via Unwrap.
 	if srv.routesForTest != nil {
 		publicEdge = srv.routesForTest(publicEdge)
 	}
-	mux.Handle("/v1/", boundByResponseDeadline(httpserver.Correlate(
-		httpserver.AccessLog(log, publicRecordPreviews(srv, identitySvc)(authH.Middleware(readerDisplayLocale(pool)(publicEdge)))))))
+	mux.Handle("/v1/", boundByResponseDeadline(
+		privateUnlessStated(publicRecordPreviews(srv, identitySvc)(authH.Middleware(readerlocale.Middleware(pool)(publicEdge))))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728
@@ -420,6 +422,7 @@ func WithUploadLimits(limits UploadLimits) Option {
 		s.knowledgeHandlers = knowledgeWithUploadLimit(s.knowledgeHandlers, limits.KnowledgeDocument)
 		s.uploadLimit = limits.CSVImport
 		s.maxUploadBytes = limits.Attachment
+		s.maxKnowledgeDocumentBytes = limits.KnowledgeDocument
 	}
 }
 

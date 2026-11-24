@@ -2,7 +2,11 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { GrantSpec } from "../../testing/mefixture";
-import { StoryProviders, stubWithSession } from "../../testing/story-utils";
+import {
+  jsonResponse,
+  StoryProviders,
+  stubWithSession,
+} from "../../testing/story-utils";
 import { JurisdictionReading } from "./settings.jurisdiction";
 
 // Settings → Governance → Jurisdiction. The reading is rendered directly. Every
@@ -20,7 +24,7 @@ const SIX_YEARS = {
 const AVAILABLE: Jurisdiction["available"] = [
   {
     code: "de",
-    unit_name: "de",
+    unit_name: "eu",
     unit_version: "1.0.0",
     description:
       "German jurisdiction pack: the statutory retention floors and the outbound-messaging rules.",
@@ -28,7 +32,7 @@ const AVAILABLE: Jurisdiction["available"] = [
   },
   {
     code: "vn",
-    unit_name: "vn",
+    unit_name: "apac",
     unit_version: "1.0.0",
     description: "Vietnamese jurisdiction pack: the advertising-email rules.",
   },
@@ -99,12 +103,43 @@ const VIETNAM_CARRIED: Jurisdiction = {
   },
 };
 
+const TWO_ENTITIES = {
+  data: [
+    {
+      id: "le-home",
+      is_default: true,
+      display_name: "Gradion GmbH",
+      address: {},
+      member_count: 4,
+      version: 1,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    },
+    {
+      id: "le-vn",
+      is_default: false,
+      display_name: "Gradion Vietnam",
+      country: "vn",
+      jurisdiction: "vn",
+      address: {},
+      member_count: 3,
+      version: 1,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    },
+  ],
+};
+
 function story(
   jurisdiction: Jurisdiction,
   actions: GrantSpec["installation_settings"] = ["read", "update"],
+  entities: object = { data: [] },
 ) {
   return () => {
-    stubWithSession({}, { installation_settings: actions });
+    stubWithSession(
+      { "GET /legal-entities": () => jsonResponse(entities) },
+      { installation_settings: actions },
+    );
     return (
       <StoryProviders>
         <JurisdictionReading jurisdiction={jurisdiction} />
@@ -127,6 +162,15 @@ export const NotSetDark: Story = { ...NotSet, globals: { theme: "dark" } };
 /** Germany, with its retention classes, rule set and one document. */
 export const Germany: Story = { render: story(GERMANY) };
 export const GermanyDark: Story = { ...Germany, globals: { theme: "dark" } };
+
+/** Two legal entities: each company's country is listed under the selection. */
+export const TwoEntities: Story = {
+  render: story(GERMANY, ["read", "update"], TWO_ENTITIES),
+};
+export const TwoEntitiesDark: Story = {
+  ...TwoEntities,
+  globals: { theme: "dark" },
+};
 
 /** Vietnam after a change from unset: no floor of its own, the old one carried. */
 export const CarriedFloor: Story = { render: story(VIETNAM_CARRIED) };

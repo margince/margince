@@ -17,11 +17,14 @@ import { fileListKeys } from "../../lib/attachmentkeys";
 import { uploadAttachment } from "../../lib/attachmentupload";
 // The installation read every form shares: one query, one key, so the currency
 // this form writes is the same fact the settings screen shows.
-import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { SignedFileField } from "./contractform.signedfile";
 import { contractTermsBody } from "./contracttermsbody";
-import { ContractTermsFields } from "./contracttermsfields";
+import {
+  ContractTermsFields,
+  useContractCurrency,
+  useTermsFaults,
+} from "./contracttermsfields";
 import { createContract, patchContract } from "./contractwrites";
 
 // Recording an agreement.
@@ -111,11 +114,7 @@ export function ContractForm({
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<ContractDraft>(draftOf(contract));
   const [file, setFile] = useState<File | undefined>();
-  // The installation's own declared currency — the only one this form can
-  // supply, since it offers the reader no currency control. Undefined while the
-  // read is in flight and if it never answers, and undefined stays undefined:
-  // guessing a unit is the failure this whole pairing exists to prevent.
-  const baseCurrency = useInstallationSettings().data?.base_currency;
+
   const cf = useObjectCustomFields("contract", contract ? "record" : "create");
   // What the custom fields held when this form opened, raw. The patch is a
   // DIFF against it rather than a snapshot of the whole slice: no cf_ column
@@ -128,13 +127,13 @@ export function ContractForm({
   // to "1", and a genuine edit to 1 then compared EQUAL and vanished.
   const [openedCustom, setOpenedCustom] = useState<Record<string, unknown>>({});
 
-  // The scale the amount field reads and writes in. A recorded agreement keeps
-  // its OWN currency (draftOf preserves it); a new one takes the installation's
-  // declared code once that read lands. The empty-string fallback is not a
-  // guessed currency — it reaches only minorUnitDigits, whose unusable-code
-  // answer is ISO's own default of two, which is what this field assumed
-  // unconditionally before.
-  const contractCurrency = draft.currency || baseCurrency || "";
+  // A recorded agreement keeps its own currency (draftOf preserves it); a new
+  // one takes the installation's, which this form offers no control for.
+  const {
+    base: baseCurrency,
+    currency: contractCurrency,
+    unread: currencyUnread,
+  } = useContractCurrency(draft.currency);
 
   // Re-seed when the modal opens on a DIFFERENT agreement. Without this the
   // form keeps the previous row's values, and a reader correcting the second
@@ -234,9 +233,16 @@ export function ContractForm({
   });
 
   const invalid = draftProblem(draft);
+  const [terms, termsRoot] = useTermsFaults(draft, setDraft);
+  const refusedRest = terms.rest(save.error);
+  const close = () => {
+    save.reset();
+    terms.clear();
+    onClose();
+  };
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
       <DrawerHead>
         <Heading size="large" id={titleId}>
           {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
@@ -247,6 +253,7 @@ export function ContractForm({
             draftProblem and the server accept. */}
         <form
           id={formId}
+          ref={termsRoot}
           className="form-stack"
           noValidate
           onSubmit={(event) => {
@@ -254,15 +261,22 @@ export function ContractForm({
             if (refuseUnreadableField(event.currentTarget)) {
               return;
             }
-            if (invalid === null) {
-              save.mutate({ draft: pricedIn(draft, baseCurrency), file });
+            if (invalid === null && !terms.refused()) {
+              save.mutate(
+                { draft: pricedIn(draft, baseCurrency), file },
+                {
+                  onError: terms.showRefusal,
+                },
+              );
             }
           }}
         >
           <ContractTermsFields
             draft={draft}
-            setDraft={setDraft}
+            setDraft={terms.setDraft}
             currency={contractCurrency}
+            currencyUnread={currencyUnread}
+            errors={terms.errors}
           />
           <CustomFieldControls
             fields={cf.formFields}
@@ -275,11 +289,11 @@ export function ContractForm({
             file={file}
             onPick={setFile}
           />
-          <ErrorLine error={save.error} />
+          {refusedRest ? <ErrorLine>{refusedRest}</ErrorLine> : null}
         </form>
       </DrawerBody>
       <DrawerFoot className="actions">
-        <Button onClick={onClose}>{t("create.cancel")}</Button>
+        <Button onClick={close}>{t("create.cancel")}</Button>
         {/* A reason in a paragraph above the button reaches no screen reader. */}
         <Button
           type="submit"
@@ -366,9 +380,18 @@ export function pricedIn(
 // server would make a legal agreement unrecordable.
 export function draftProblem(
   draft: ContractDraft,
-): "contracts.form.errNoName" | "contracts.form.errTermOrder" | null {
+):
+  | "contracts.form.errNoName"
+  | "contracts.form.errTermOrder"
+  | "contracts.form.errNegativeAmount"
+  | null {
   if (draft.title.trim() === "") {
     return "contracts.form.errNoName";
+  }
+  // The body sends an amount below zero as "no amount", which would clear the
+  // stored one; refusing here keeps it.
+  if (draft.valueMinor < 0 || draft.arrMinor < 0) {
+    return "contracts.form.errNegativeAmount";
   }
   if (
     draft.startsOn !== "" &&

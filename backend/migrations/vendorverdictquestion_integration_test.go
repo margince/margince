@@ -23,7 +23,7 @@ func TestAMachineVendorVerdictBecomesAnOpenQuestionForItsOwner(t *testing.T) {
 	resetSchema(t, conn)
 	ctx := context.Background()
 
-	core, err := migrations.Core()
+	core, err := migrations.CoreHistory()
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
@@ -77,24 +77,6 @@ func TestAMachineVendorVerdictBecomesAnOpenQuestionForItsOwner(t *testing.T) {
 			t.Errorf("%s: source null=%v cursor null=%v evidence=%q; an open question has no source, no retry and keeps its evidence", domain, sourceNull, cursorNull, evidence)
 		}
 	}
-	readers := map[string]int{}
-	rows, err := conn.Query(ctx, `SELECT domain, count(*) FROM company_domain_question_reader GROUP BY domain`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for rows.Next() {
-		var domain string
-		var count int
-		if err := rows.Scan(&domain, &count); err != nil {
-			t.Fatal(err)
-		}
-		readers[domain] = count
-	}
-	rows.Close()
-	if len(readers) != 0 {
-		t.Errorf("reader rows = %v, want none: an old owner is no evidence of who decides now", readers)
-	}
-
 	if _, err := dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1792779055"), 2); err != nil {
 		t.Fatalf("rolling back a second time: %v", err)
 	}

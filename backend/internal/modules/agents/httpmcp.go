@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -225,16 +227,20 @@ func WithTaskStore(tasks Tasks, approvals TaskApprovals) HTTPOption {
 // long-lived pipe rather than one request.
 func bindAuthenticated(ctx context.Context) (context.Context, error) { return ctx, nil }
 
+// mcpAllowedMethods leaves DELETE out: it authenticates, but always answers 405.
+const mcpAllowedMethods = http.MethodPost
+
 func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost, http.MethodDelete:
 	default:
 		// The GET stream is a later phase; every other verb is refused
 		// outright.
+		w.Header().Set("Allow", mcpAllowedMethods)
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusMethodNotAllowed,
 			Code:   "method_not_allowed",
-			Detail: "MCP is POST and DELETE only on this transport.",
+			Detail: "MCP is POST only on this transport.",
 		})
 		return
 	}
@@ -278,6 +284,7 @@ func (h *httpMCPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// and this server no longer mints one, so a legacy client has nothing
 		// to name here either — and telling it so beats a 404 it would read as
 		// "your session expired" and re-handshake over.
+		w.Header().Set("Allow", mcpAllowedMethods)
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusMethodNotAllowed,
 			Code:   "method_not_allowed",
@@ -304,7 +311,9 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 	}
 	defer release()
 	var req rpcRequest
-	if err := json.Unmarshal(body, &req); err != nil {
+	// Nested tool arguments are decoded later, past this point, so the whole
+	// request is held to the text rule once, here.
+	if err := json.Unmarshal(body, &req); err != nil || datasource.HasMalformedText(body) {
 		// The body is what normally decides the era, and this one does not
 		// decode, so the header is the only thing left that can say. A caller
 		// that named the modern revision gets the status that framing pins for
@@ -410,7 +419,7 @@ func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rp
 	// handler behind it, which keeps its goroutine and every database
 	// connection it takes from there on. Both halves, or the response is lost
 	// and the pool is still paying for it.
-	ctx, done := context.WithTimeout(r.Context(), mcpCallDeadline)
+	ctx, done := httpserver.WithinResponseDeadline(r.Context(), mcpCallDeadline)
 	defer done()
 	resp := h.server.handle(ctx, req, fr)
 	status := http.StatusOK

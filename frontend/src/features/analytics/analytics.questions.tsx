@@ -8,26 +8,28 @@ import { EntityRef } from "../../components/entityref";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
+import { ErrorLine } from "../../design-system/errorline";
 import { FactList } from "../../design-system/factlist";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { Stack } from "../../design-system/stack";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatAnalyticsMoneyOrAbsent } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import {
   openAnalyticsSection,
   openSavedQuestion,
 } from "../../lib/analytics.address";
-import { unwrap } from "../../lib/problem";
+import { isGone, unwrap } from "../../lib/problem";
 import { routeHash, useRoute } from "../../lib/router";
 import {
   type AnalyticsContext,
   type AnalyticsScope,
   type AnalyticsSelection,
+  scopeName,
   scopeQuery,
 } from "./analytics.context";
-import { AnswerTable, QuestionFailure } from "./analytics.questions.answer";
+import { AnswerTable } from "./analytics.questions.answer";
 import { QuestionBuilder } from "./analytics.questions.builder";
 import {
   draftFromQuery,
@@ -36,6 +38,13 @@ import {
   type QuestionDraft,
   toQuery,
 } from "./analytics.questions.draft";
+import { QuestionFailure } from "./analytics.questions.failure";
+import {
+  filterAmountCurrency,
+  type MoneyFields,
+  moneyFieldsOf,
+  NO_MONEY,
+} from "./analytics.questions.money";
 import { useValueNamer } from "./analytics.questions.names";
 import {
   SAVED_QUESTIONS_KEY,
@@ -48,7 +57,6 @@ import {
   type CustomLabels,
   customLabels,
   entityLabel,
-  filterAmountCurrency,
   measureLabel,
   opLabel,
   takesValue,
@@ -85,10 +93,11 @@ export function QuestionsView({
   const baseCurrency = context.base_currency || null;
   const route = useRoute();
   const runId = route.screen === "analytics" ? route.id2 : undefined;
+  const entities = useAnalyticsSchema().data?.entities ?? [];
   const [draft, setDraft] = useState<QuestionDraft>(() => newDraft(""));
   // Set when an edited question was saved over a population this reader may
   // not measure, so the builder says it will be asked over another one.
-  const [scopeNotice, setScopeNotice] = useState<string | null>(null);
+  const [scopeNotice, setScopeNotice] = useState<AnalyticsScope | null>(null);
   if (runId) {
     return (
       <SavedQuestion
@@ -97,7 +106,13 @@ export function QuestionsView({
         allowedScopes={allowedScopes}
         baseCurrency={baseCurrency}
         onEdit={(query) => {
-          setDraft(draftFromQuery(query, baseCurrency));
+          setDraft(
+            draftFromQuery(
+              query,
+              baseCurrency,
+              moneyFieldsOf(entities, query.entity),
+            ),
+          );
           // The question was asked over a population; editing it keeps that
           // population, and says so when this reader may not measure it
           // rather than quietly re-asking over another.
@@ -108,7 +123,7 @@ export function QuestionsView({
               )
             : defaultScope;
           onSelectScope(known ?? defaultScope);
-          setScopeNotice(known ? null : defaultScope.label);
+          setScopeNotice(known ? null : defaultScope);
           openAnalyticsSection("questions");
         }}
       />
@@ -141,7 +156,7 @@ function AskQuestion({
   draft: QuestionDraft;
   onDraft: (next: QuestionDraft) => void;
   baseCurrency: string | null;
-  scopeNotice: string | null;
+  scopeNotice: AnalyticsScope | null;
   onAsked: () => void;
 }>) {
   const t = useT();
@@ -172,6 +187,7 @@ function AskQuestion({
         : question,
       scope,
       baseCurrency,
+      entity?.money ?? NO_MONEY,
     );
   };
   // An answer is shown only under the population it was asked over. Changing
@@ -201,7 +217,7 @@ function AskQuestion({
                 tone="info"
                 kind="standing"
                 title={t("analytics.q.scopeNotAvailable", {
-                  scope: scopeNotice,
+                  scope: scopeName(scopeNotice, t) ?? "",
                 })}
               />
             )}
@@ -274,15 +290,16 @@ function scopeLabel(
   query: AnalyticsQuery,
   defaultScope: AnalyticsScope,
   allowedScopes: readonly AnalyticsScope[],
+  t: Translator,
 ): string | null {
   if (!query.scope_kind) {
-    return defaultScope.label;
+    return scopeName(defaultScope, t);
   }
   const wanted = queryScopeKey(query);
   const known = allowedScopes.find(
     (scope) => queryScopeKey(scopeQuery(scope)) === wanted,
   );
-  return known ? known.label : null;
+  return known ? scopeName(known, t) : null;
 }
 
 /**
@@ -316,10 +333,8 @@ function SavedQuestion({
   });
   // A run asked before a field was renamed reads under today's name; a field
   // no longer reportable falls back to its column name.
-  const fieldLabels = customLabels(
-    t,
-    useAnalyticsSchema().data?.entities ?? [],
-  );
+  const entities = useAnalyticsSchema().data?.entities ?? [];
+  const fieldLabels = customLabels(t, entities);
   const link = `${globalThis.location.origin}${globalThis.location.pathname}${routeHash(
     { screen: "analytics", id: "questions", id2: runId },
   )}`;
@@ -334,7 +349,11 @@ function SavedQuestion({
   if (run.isError) {
     return (
       <Stack gap="3">
-        <QuestionFailure error={run.error} />
+        {isGone(run.error) ? (
+          <ErrorLine>{t("analytics.q.gone")}</ErrorLine>
+        ) : (
+          <QuestionFailure error={run.error} />
+        )}
         <div>
           <Button onClick={() => openAnalyticsSection("questions")}>
             {t("analytics.q.newQuestion")}
@@ -344,7 +363,7 @@ function SavedQuestion({
     );
   }
   const saved = run.data;
-  const population = scopeLabel(saved.query, defaultScope, allowedScopes);
+  const population = scopeLabel(saved.query, defaultScope, allowedScopes, t);
   return (
     <Stack gap="4">
       <Panel
@@ -364,6 +383,7 @@ function SavedQuestion({
             query={saved.query}
             fieldLabels={fieldLabels}
             baseCurrency={baseCurrency}
+            money={moneyFieldsOf(entities, saved.query.entity)}
             population={population}
             askedBy={<EntityRef kind="user" id={saved.asked_by} />}
           />
@@ -390,12 +410,14 @@ function QuestionSummary({
   query,
   fieldLabels,
   baseCurrency,
+  money,
   population,
   askedBy,
 }: Readonly<{
   query: AnalyticsQuery;
   fieldLabels: CustomLabels;
   baseCurrency: string | null;
+  money: MoneyFields;
   population: string | null;
   askedBy: ReactNode;
 }>) {
@@ -410,7 +432,12 @@ function QuestionSummary({
   const none = t("analytics.q.none");
   // An amount travels in minor units and reads as money.
   const filterValueText = (filter: (typeof filters)[number]) => {
-    const currency = filterAmountCurrency(filter.field, filters, baseCurrency);
+    const currency = filterAmountCurrency(
+      filter.field,
+      filters,
+      baseCurrency,
+      money,
+    );
     return currency && typeof filter.value === "number"
       ? formatAnalyticsMoneyOrAbsent(filter.value, currency, locale)
       : namer(filter.field, filter.value);

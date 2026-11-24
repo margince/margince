@@ -65,6 +65,7 @@ const ines: Seat = {
 
 const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   deal_id: DEAL_ID,
+  max_engaged_seats: 1,
   stakeholders: [dana, tomas, ines],
   our_side: [],
   risks: [],

@@ -44,32 +44,32 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "status", Values: []string{"open", "done"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/editions/{id}/evidence": {
-		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: false, Explode: true},
+		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline", "account_progression", "source_quality", "introductions_made", "meetings_booked_for_colleagues"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/evaluate": {
-		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
+		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort", "account_cohort", "source_quality"}, Array: true, Explode: true},
 		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open", "custom"}, Array: false, Explode: true},
-		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
-		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
+		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline", "account_progression", "source_quality", "introductions_made", "meetings_booked_for_colleagues"}, Array: true, Explode: true},
+		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "last_quarter", "last_year", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
 		{Name: "value_basis", Values: []string{"all", "software", "implementation"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/evaluate.csv": {
-		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
+		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort", "account_cohort", "source_quality"}, Array: true, Explode: true},
 		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open", "custom"}, Array: false, Explode: true},
-		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
-		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
+		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline", "account_progression", "source_quality", "introductions_made", "meetings_booked_for_colleagues"}, Array: true, Explode: true},
+		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "last_quarter", "last_year", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
 		{Name: "value_basis", Values: []string{"all", "software", "implementation"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/evidence": {
-		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort"}, Array: true, Explode: true},
+		{Name: "blocks", Values: []string{"bookings_trend", "stage_distribution", "owner_attainment", "stage_age", "sdr_outcomes", "target_progress", "forecast_support", "pipeline_movement", "metric_reading", "breakdown", "stage_cohort", "lead_cohort", "account_cohort", "source_quality"}, Array: true, Explode: true},
 		{Name: "close_window", Values: []string{"fiscal_quarter", "all_open", "custom"}, Array: false, Explode: true},
-		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: false, Explode: true},
-		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline"}, Array: true, Explode: true},
-		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "custom"}, Array: false, Explode: true},
+		{Name: "metric", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline", "account_progression", "source_quality", "introductions_made", "meetings_booked_for_colleagues"}, Array: false, Explode: true},
+		{Name: "metrics", Values: []string{"bookings_won", "closed_win_rate", "open_pipeline", "stage_age", "qualified_pipeline_created", "meetings_held", "accepted_opportunities", "forecast_landing", "leads_created", "lead_status_moves", "leads_promoted", "leads_qualified", "lead_first_response", "leads_awaiting_response", "leads_awaiting_response_now", "partner_pipeline", "partner_won", "partner_commission", "partner_activity", "stage_conversion", "lead_cohort_outcomes", "bookings_mix", "qualified_opportunities_created", "initiative_pipeline", "account_progression", "source_quality", "introductions_made", "meetings_booked_for_colleagues"}, Array: true, Explode: true},
+		{Name: "period", Values: []string{"this_week", "this_month", "last_month", "last_week", "this_quarter", "last_quarter", "last_year", "custom"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 		{Name: "target_basis", Values: []string{"month", "fiscal_quarter"}, Array: false, Explode: true},
 		{Name: "value_basis", Values: []string{"all", "software", "implementation"}, Array: false, Explode: true},
@@ -98,7 +98,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "scope_kind", Values: []string{"owner", "team", "workspace"}, Array: false, Explode: true},
 	},
 	"GET /v1/analytics/sdr-team": {
-		{Name: "period", Values: []string{"this_week", "last_week", "this_month", "last_month"}, Array: false, Explode: true},
+		{Name: "period", Values: []string{"this_week", "last_week", "this_month", "last_month", "last_quarter", "last_year"}, Array: false, Explode: true},
 		{Name: "scope_kind", Values: []string{"team", "workspace", "managed_teams", "owner"}, Array: false, Explode: true},
 	},
 	"GET /v1/approvals": {
@@ -127,6 +127,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/companies": {
 		{Name: "captured_by_kind", Values: []string{"human", "agent", "connector", "system"}, Array: false, Explode: true},
+		{Name: "dormancy", Values: []string{"active", "cooling", "dormant", "stale"}, Array: false, Explode: true},
 		{Name: "industry", Values: []string{"agriculture", "automotive", "aerospace_defense", "chemicals_materials", "construction", "consumer_goods_retail", "education", "energy_utilities", "entertainment_media", "financial_services", "food_beverage", "government_public_sector", "healthcare", "hospitality_tourism", "insurance", "it_services", "software", "legal_professional_services", "logistics_transport", "manufacturing", "marketing_advertising", "mining_metals", "nonprofit", "pharma_biotech", "real_estate", "telecommunications"}, Array: false, Explode: true},
 		{Name: "lifecycle", Values: []string{"unknown", "target", "prospect", "opportunity", "onboarding", "live", "customer", "former_customer", "disqualified"}, Array: false, Explode: true},
 		{Name: "partner_kind", Values: []string{"hosting", "consulting", "strategic", "referral"}, Array: false, Explode: true},
@@ -241,13 +242,13 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "sharing", Values: []string{"private", "team", "workspace"}, Array: true, Explode: true},
 	},
 	"GET /v1/mail-drafts": {
-		{Name: "anchor_type", Values: []string{"activity", "contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
+		{Name: "anchor_type", Values: []string{"activity", "forward", "contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 	},
 	"GET /v1/me": {
 		{Name: "prepare", Values: []string{"analytics"}, Array: false, Explode: true},
 	},
 	"GET /v1/me/ai-activity": {
-		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret", "reader_rendering", "deal_verdict", "rewrite", "chat_summary"}, Array: true, Explode: true},
+		{Name: "kinds", Values: []string{"morning_brief", "overnight_at_risk_sweep", "document_extract", "site_read", "brief_ranking", "capture_classify", "capture_confidentiality_verdict", "capture_counterparty_verdict", "cert_judge", "cold_start", "deal_health", "draft_reply", "enrich", "extension_task", "growth_fit", "nl_search", "offer_draft", "rate_extract", "signal_extract", "site_extract", "site_fact_extract", "site_triage", "stage_evidence_extract", "summarize", "transcript", "transcript_propose", "voice_build", "corpus_ask", "weekly_review", "weekly_learnings", "propose_roles", "owed_verdict", "request_settlement", "account_scan", "tag_suggest", "report_setup", "report_interpret", "reader_rendering", "deal_verdict", "rewrite", "chat_summary", "chat_task_reading"}, Array: true, Explode: true},
 	},
 	"GET /v1/meeting-prep": {
 		{Name: "record_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
@@ -438,6 +439,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/confirm-submissions": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/consent-purposes/send-counts": {
+		{Name: "days", Minimum: 1},
+	},
 	"GET /v1/contacts": {
 		{Name: "limit", Minimum: 1},
 	},
@@ -566,6 +570,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/relationships": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/retention/archive": {
+		{Name: "limit", Minimum: 1},
+	},
 	"GET /v1/retention/legal-holds": {
 		{Name: "limit", Minimum: 1},
 	},
@@ -603,17 +610,22 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"POST /v1/analytics/reports/{id}/questions/{card_id}/explain": {
 		{Name: "revision", Minimum: 1},
 	},
+	"POST /v1/capture/exclusions/{id}/purge": {
+		{Name: "expect_anonymised", Minimum: 0},
+		{Name: "expect_destroyed", Minimum: 0},
+		{Name: "expect_released", Minimum: 0},
+	},
 }
 
 var deprecationTable = map[string]map[string]string{
 	"DELETE /v1/lead-sources/{id}":                               {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/companies/{id}/brief":                               {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/deals/{id}/viability":                               {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+	"GET /v1/digest":                                             {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/forecast/assurance/enforcement":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/lead-sources":                                       {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/stage-automation/policies/{id}":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/stage-automation/report":                            {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
-	"GET /v1/weekly-reviews/team":                                {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"PATCH /v1/lead-sources/{id}":                                {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/ai-model-rates/propose-refresh":                    {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/companies/{id}/brief":                              {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},

@@ -8,50 +8,110 @@ import (
 	"testing"
 )
 
+// unrelatedCompanyNames are pairs of two companies that score at or above the
+// review threshold on Jaro-Winkler alone.
+var unrelatedCompanyNames = [][2]string{
+	// The nine that broke a CSV import of 107 contacts.
+	{"Bytesforce", "Salesforce"},
+	{"ACY Capital", "Soda Capital"},
+	{"Fenwick Software", "Centric Software"},
+	{"Pronto Software", "Centric Software"},
+	{"TLC Healthcare", "HealthCare Logic"},
+	{"The NMG Group", "The Performance Network Group (TPNG)"},
+	{"The Alta Group", "Thinksmart Group"},
+	{"Multimedia Technology", "MTA TECH"},
+	{"Digital Matter", "Elephant Digital"},
+	// The highest-scoring noise in the same corpus.
+	{"Stripe", "Strix"},
+	{"HPS", "KPS"},
+	{"FIS", "igus"},
+	{"EMS", "OPMS"},
+	{"netcare", "Newtrend"},
+	{"adesso", "ADSSI"},
+	{"SORA", "Suraksha"},
+	// Generic words shared, nothing else.
+	{"The Group", "The Holding"},
+	{"Health Care", "Medical Care"},
+	// The control on the squashed-name comparison: two companies that
+	// share a generic first word are not one company.
+	{"Capital One", "Capital Group"},
+	{"Digital Ocean", "Digital Matter"},
+	{"Media Markt", "Media Monks"},
+	{"Health Engine", "Health Direct"},
+	// A word is not a prefix of another word. Jaro-Winkler boosts a shared
+	// start, so "base" reaches 0.90 against "baseplan". These are two companies.
+	{"Base.com", "Baseplan"},
+	// Two domains share their suffix, not their identity. Without the
+	// country code and the level beneath it, both of these reduce to "or".
+	{"giba.or.kr", "utp.or.kr"},
+}
+
+// duplicateCompanyNames are pairs of one company written two ways.
+var duplicateCompanyNames = [][2]string{
+	// The legal-suffix case the fuzzy tier exists for (PO-PARAM-1).
+	{"Acme Inc", "Acme GmbH"},
+	{"Siemens AG", "Siemens"},
+	{"basecom GmbH & Co. KG", "basecom"},
+	{"Shopware AG", "shopware"},
+	// A qualifier added or dropped.
+	{"Arvato", "Arvato Systems"},
+	{"Sun", "Sun Microsystems"},
+	{"The NMG Group", "NMG Group"},
+	{"Fenwick Software", "Fenwick Software Pty Ltd"},
+	{"ACY Capital", "ACY Capital Pty Ltd"},
+	{"Digital Matter", "Digital Matter Pty Ltd"},
+	// Transliteration, which the DACH market produces daily.
+	{"Müller Software", "Mueller Software"},
+	{"Straße Handel", "Strasse Handel"},
+	// Spacing and compounding.
+	{"TLC Healthcare", "TLC Health Care"},
+	{"Pricewaterhouse Coopers", "PricewaterhouseCoopers"},
+	{"Dynamic-QS", "Dynamic QS"},
+	{"E-Commerce Ltd", "Ecommerce Ltd"},
+	// A hyphen joins two words, and treating the pair as one token lost
+	// this: "acme-group" matches nothing, while "acme" matches "acme".
+	{"Acme Ltd", "ACME-Group Ltd"},
+	{"Rich Media", "Rich-Media Solutions"},
+	// A short name is the company: length is not a filter.
+	{"3M", "3M Company"},
+	{"Box", "Box Inc"},
+	{"IBM", "IBM"},
+	{"HPS", "HPS"},
+	// Every word generic, so there is no distinctive token to gate on.
+	{"Health Care", "Healthcare"},
+	{"The Group", "The Group Ltd"},
+	{"Digital Solutions", "Digital Solutions GmbH"},
+	// A generic word compounded onto the distinctive one. The compound form
+	// leaves the token pass nothing to match, so the squashed name matches.
+	{"Digital Ocean", "DigitalOcean"},
+	{"Media Markt", "MediaMarkt"},
+	{"Tech Data", "TechData Corp"},
+	{"Health Engine", "HealthEngine"},
+	// A company whose whole name is a word this gate calls generic.
+	{"Capital", "Capital Ltd"},
+	{"Capital One", "Capital One Financial"},
+	// A brand written as its own domain. The strip must not empty the name
+	// and leave the top-level domain as its identity.
+	{"Capital", "Capital.com"},
+	{"Digital", "Digital.ai"},
+	{"Media", "Media.net"},
+	// Punctuation is a word separator, whatever punctuation it is. An
+	// earlier version listed six ASCII characters and missed the period.
+	{"Hewlett Packard", "Hewlett.Packard"},
+	// Short transliterations. German turns an umlaut into a second vowel,
+	// which lands these at three and four runes.
+	{"Bär", "Baer"},
+	{"Röhm", "Roehm"},
+	{"Götz", "Goetz"},
+}
+
 // The pairs that sent an operator looking for records that did not exist.
 //
 // Each is a real name from one workspace, and each scored at or above the 0.72
 // review threshold on Jaro-Winkler alone. None is a duplicate of the other.
 // This is the regression: the character metric said yes and the estate said no.
 func TestUnrelatedCompaniesAreNotScoredAgainstEachOther(t *testing.T) {
-	unrelated := [][2]string{
-		// The nine that broke a CSV import of 107 contacts.
-		{"Bytesforce", "Salesforce"},
-		{"ACY Capital", "Soda Capital"},
-		{"Fenwick Software", "Centric Software"},
-		{"Pronto Software", "Centric Software"},
-		{"TLC Healthcare", "HealthCare Logic"},
-		{"The NMG Group", "The Performance Network Group (TPNG)"},
-		{"The Alta Group", "Thinksmart Group"},
-		{"Multimedia Technology", "MTA TECH"},
-		{"Digital Matter", "Elephant Digital"},
-		// The highest-scoring noise in the same corpus.
-		{"Stripe", "Strix"},
-		{"HPS", "KPS"},
-		{"FIS", "igus"},
-		{"EMS", "OPMS"},
-		{"netcare", "Newtrend"},
-		{"adesso", "ADSSI"},
-		{"SORA", "Suraksha"},
-		// Generic words shared, nothing else.
-		{"The Group", "The Holding"},
-		{"Health Care", "Medical Care"},
-		// The control on the squashed-name comparison: two companies that
-		// share a generic FIRST word are not one company, however the
-		// separators fall.
-		{"Capital One", "Capital Group"},
-		{"Digital Ocean", "Digital Matter"},
-		{"Media Markt", "Media Monks"},
-		{"Health Engine", "Health Direct"},
-		// A word is not a prefix of another word. Jaro-Winkler boosts a shared
-		// start, so "base" reaches exactly 0.90 against "baseplan" — and these
-		// are two companies in one real workspace.
-		{"Base.com", "Baseplan"},
-		// Two domains share their suffix, not their identity. Without the
-		// country code and the level beneath it, both of these reduce to "or".
-		{"giba.or.kr", "utp.or.kr"},
-	}
-	for _, pair := range unrelated {
+	for _, pair := range unrelatedCompanyNames {
 		got := bestCompanyNamePairing(pair[0], "", pair[1], "").Confidence
 		if got >= dedupeReviewThreshold {
 			t.Errorf("%q vs %q scores %.4f, at or above the %.2f review threshold — "+
@@ -64,66 +124,7 @@ func TestUnrelatedCompaniesAreNotScoredAgainstEachOther(t *testing.T) {
 // The gate must not cost recall. Every pair here is one company written two
 // ways, and every one has to survive.
 func TestRealDuplicatesStillMeetAtTheFuzzyTier(t *testing.T) {
-	duplicates := [][2]string{
-		// The legal-suffix case the fuzzy tier exists for (PO-PARAM-1).
-		{"Acme Inc", "Acme GmbH"},
-		{"Siemens AG", "Siemens"},
-		{"basecom GmbH & Co. KG", "basecom"},
-		{"Shopware AG", "shopware"},
-		// A qualifier added or dropped.
-		{"Arvato", "Arvato Systems"},
-		{"Sun", "Sun Microsystems"},
-		{"The NMG Group", "NMG Group"},
-		{"Fenwick Software", "Fenwick Software Pty Ltd"},
-		{"ACY Capital", "ACY Capital Pty Ltd"},
-		{"Digital Matter", "Digital Matter Pty Ltd"},
-		// Transliteration, which the DACH market produces daily.
-		{"Müller Software", "Mueller Software"},
-		{"Straße Handel", "Strasse Handel"},
-		// Spacing and compounding.
-		{"TLC Healthcare", "TLC Health Care"},
-		{"Pricewaterhouse Coopers", "PricewaterhouseCoopers"},
-		{"Dynamic-QS", "Dynamic QS"},
-		{"E-Commerce Ltd", "Ecommerce Ltd"},
-		// A hyphen joins two words, and treating the pair as one token lost
-		// this: "acme-group" matches nothing, while "acme" matches "acme".
-		{"Acme Ltd", "ACME-Group Ltd"},
-		{"Rich Media", "Rich-Media Solutions"},
-		// A short name IS the company: length is not a filter.
-		{"3M", "3M Company"},
-		{"Box", "Box Inc"},
-		{"IBM", "IBM"},
-		{"HPS", "HPS"},
-		// Every word generic, so there is no distinctive token to gate on.
-		{"Health Care", "Healthcare"},
-		{"The Group", "The Group Ltd"},
-		{"Digital Solutions", "Digital Solutions GmbH"},
-		// A generic word compounded onto the distinctive one. Half of all
-		// brands are written both ways, and the compound form leaves the token
-		// pass nothing to match: "digitalocean" shares no word with "digital
-		// ocean". These are the pairs the squashed-name comparison exists for.
-		{"Digital Ocean", "DigitalOcean"},
-		{"Media Markt", "MediaMarkt"},
-		{"Tech Data", "TechData Corp"},
-		{"Health Engine", "HealthEngine"},
-		// A company whose whole name is a word this gate calls generic.
-		{"Capital", "Capital Ltd"},
-		{"Capital One", "Capital One Financial"},
-		// A brand written as its own domain. The strip must not empty the name
-		// and leave the top-level domain as its identity.
-		{"Capital", "Capital.com"},
-		{"Digital", "Digital.ai"},
-		{"Media", "Media.net"},
-		// Punctuation is a word separator, whatever punctuation it is. An
-		// earlier version listed six ASCII characters and missed the period.
-		{"Hewlett Packard", "Hewlett.Packard"},
-		// Short transliterations. German turns an umlaut into a second vowel,
-		// which lands these at three and four runes.
-		{"Bär", "Baer"},
-		{"Röhm", "Roehm"},
-		{"Götz", "Goetz"},
-	}
-	for _, pair := range duplicates {
+	for _, pair := range duplicateCompanyNames {
 		got := bestCompanyNamePairing(pair[0], "", pair[1], "").Confidence
 		if got < dedupeReviewThreshold {
 			t.Errorf("%q vs %q scores %.4f, below the %.2f review threshold — "+
@@ -202,8 +203,8 @@ func TestCompoundingDoesNotDecideIdentity(t *testing.T) {
 // maxLength in the contract, so one create can hand it a megabyte; unbounded,
 // that would pin every company-name writer in the workspace behind it.
 //
-// The 256-rune cap in jaroWinkler does not help: it bounds each call, and this
-// is about the number of calls.
+// The 256-rune cap in namematch.JaroWinkler bounds each call. This is about
+// the number of calls.
 func TestTheTokenLoopIsBounded(t *testing.T) {
 	huge := strings.Repeat("acme ", 20000)
 	if got := len(distinctiveCompanyTokens(huge)); got > companyGateTokenBudget {

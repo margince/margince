@@ -48,6 +48,9 @@ type Fact struct {
 	// Reopened marks an entry made straight from a won or lost close.
 	Entry    string `json:"entry,omitempty"`
 	Reopened bool   `json:"reopened,omitempty"`
+	// ViaID is the lead a company fact was derived from. A reader sees the
+	// company fact only where they may also see that lead.
+	ViaID *ids.UUID `json:"via_id,omitempty"`
 }
 
 // SetEvidenceDate keeps a display date out of event and privacy buckets.

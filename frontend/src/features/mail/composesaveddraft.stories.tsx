@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
-import { refusedPreview } from "../../testing/sendpermission.testkit";
+import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -13,7 +13,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The rep's own unsent message as the composer holds it: put back when the
 // composer opens, saved beside Send, and refused when another window moved it.
@@ -36,6 +36,37 @@ const SAVED: components["schemas"]["MailDraft"] = {
   updated_at: "2026-09-20T09:05:00Z",
 };
 
+// The send's own refusal: a follow-up on a deal alone, with no request on record.
+const DEAL_NOT_REQUESTED = {
+  code: "consent_not_granted",
+  title: "Conflict",
+  status: 409,
+  details: {
+    review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
+    available_actions: [],
+    refusals: [
+      {
+        address: "buyer@acme.test",
+        reason_code: "deal_not_requested",
+        category: "active_deal_followup",
+      },
+    ],
+    review: {
+      id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
+      state: "needs_context",
+      kind: "single",
+      reason_code: "deal_not_requested",
+      refusals: [
+        {
+          address: "buyer@acme.test",
+          reason_code: "deal_not_requested",
+          category: "active_deal_followup",
+        },
+      ],
+    },
+  },
+};
+
 function versionSkew() {
   return new Response(
     JSON.stringify({ code: "version_skew", title: "Conflict" }),
@@ -47,13 +78,14 @@ function savedDraftStory(routes: RouteMap) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
+      "GET /connectors": () => jsonResponse(CONNECTED_ROSTER),
       "GET /mail-drafts": () => jsonResponse(SAVED),
       ...routes,
     });
     return (
       <StoryProviders>
         <ToastProvider>
-          <ComposeModal
+          <ComposeWindow
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
@@ -189,14 +221,7 @@ export const RestoredDealContext: Story = {
           page: { has_more: false },
         },
       }),
-    "POST /emails:preview": () =>
-      jsonResponse(
-        refusedPreview("buyer@acme.test", {
-          reason_code: "deal_not_requested",
-          decided_by: "user",
-          resolved_category: "active_deal_followup",
-        }),
-      ),
+    "POST /emails": () => jsonResponse(DEAL_NOT_REQUESTED, 409),
   }),
   play: async () => {
     await restoredOnScreen();
@@ -204,7 +229,11 @@ export const RestoredDealContext: Story = {
       name: "Deal this follow-up is about",
     });
     await expect(deal).toHaveTextContent("Seat expansion");
-    await screen.findByText(/A deal alone does not show/);
+    // The composer asks the engine when Send is pressed, not before.
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await screen.findByText(
+      /No reason to contact buyer@acme.test is on record/,
+    );
   },
 };
 

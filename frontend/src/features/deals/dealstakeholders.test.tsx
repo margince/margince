@@ -30,6 +30,7 @@ const stakeholder = {
   deal_id: DEAL,
   contact_id: CONTACT,
   role: "champion",
+  can_archive: true,
   is_current_primary: false,
   source: "manual",
   captured_by: "human:u-1",
@@ -170,7 +171,7 @@ describe("the stakeholders on a deal", () => {
     await user.click(await screen.findByTestId("add-relationship"));
     const dialog = within(screen.getByRole("dialog"));
     await user.type(dialog.getByLabelText("Role"), "economic_buyer");
-    await user.type(dialog.getByPlaceholderText("Search…"), "mai");
+    await user.type(dialog.getByRole("searchbox", { name: "Contact" }), "mai");
     settleSearch();
     await user.click(await dialog.findByRole("button", { name: "Mai Trần" }));
     await user.click(screen.getByTestId("add-relationship-submit"));
@@ -221,7 +222,7 @@ describe("the stakeholders on a deal", () => {
 
     await user.click(await screen.findByTestId("add-relationship"));
     const dialog = within(screen.getByRole("dialog"));
-    await user.type(dialog.getByPlaceholderText("Search…"), "mai");
+    await user.type(dialog.getByRole("searchbox", { name: "Contact" }), "mai");
     settleSearch();
     await user.click(await dialog.findByRole("button", { name: "Mai Trần" }));
     await user.click(screen.getByTestId("add-relationship-submit"));

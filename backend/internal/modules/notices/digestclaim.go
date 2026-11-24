@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
@@ -250,8 +251,10 @@ func (s *Store) ClaimDigestRunTx(ctx context.Context, tx pgx.Tx, user ids.UserID
 	claim := func() error {
 		tag, txErr := tx.Exec(ctx, `
 			INSERT INTO notification_digest_run (user_id, digest_date)
-			VALUES ($1, $2)
-			ON CONFLICT DO NOTHING`, user, day)
+			SELECT $1::uuid, $2::date
+			 WHERE NOT EXISTS (SELECT 1 FROM notification_digest_run r
+			        WHERE r.user_id = $1 AND r.mail_attempted_at > now() - $3::interval)
+			ON CONFLICT DO NOTHING`, user, day, occurredday.EditionGap)
 		if txErr != nil {
 			return fmt.Errorf("claiming the day: %w", txErr)
 		}
@@ -323,7 +326,7 @@ func (s *Store) DigestBody(ctx context.Context, user ids.UserID, w Window) ([]No
 	}
 	if seat != user.UUID {
 		return nil, fmt.Errorf(
-			"notices: a morning digest is read under its own recipient's authority: %w",
+			"a morning digest is read under its own recipient's authority: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	var batched []Notice

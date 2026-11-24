@@ -5,17 +5,8 @@
 
 package compose
 
-// The nightly pass turns its findings into work, against a real database.
-//
-// This suite exists because the store's own tests could not prove it. Every one
-// of them calls the bundling store directly and seeds its task rows with raw
-// SQL, so all of them stayed green while NOTHING in the tree called the store —
-// a running installation had zero cycles and zero task items, and no assertion
-// anywhere said so.
-//
-// So these drive the WORKER, through the same assureWorkspace River calls per
-// tenant, and read the result as a rep would: an ordinary task, linked to the
-// deal, on somebody's list.
+// The nightly pass turns its findings into work, against a real database. These
+// drive the worker and read the result as a rep would: a task on their list.
 
 import (
 	"context"
@@ -44,11 +35,7 @@ type bundledTask struct {
 	findings int
 }
 
-// The pass hands a rep ONE task for a deal with several findings.
-//
-// This is the whole of #4004: a deal with four problems produced four findings,
-// and a rep clearing them cleared the same deal four times. One task, several
-// findings filed under it.
+// The pass hands a rep one task for a deal with several findings.
 func TestTheNightlyPassBundlesADealsFindingsIntoOneTask(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -63,21 +50,11 @@ func TestTheNightlyPassBundlesADealsFindingsIntoOneTask(t *testing.T) {
 	}
 	task := tasks[0]
 	if task.findings < 2 {
-		t.Fatalf("the task carries %d finding(s); this suite is about BUNDLING, so it "+
-			"needs a deal the scan faults more than once — the fixture's faulted deal "+
-			"no longer produces several findings and the assertion below cannot see a "+
-			"grouping bug it would have caught", task.findings)
+		t.Fatalf("the task carries %d finding(s); bundling needs a deal the scan faults more than once", task.findings)
 	}
 
-	// THE assertion this test turns on, because a count of tasks cannot see the
-	// grouping at all.
-	//
-	// OpenTaskFor re-finds the cycle's first task for a subject whatever the
-	// seam grouped by, so a version minting one task PER FINDING still ends with
-	// one task row and three items — the store absorbs the bug and every count
-	// agrees. What does not agree is the subject line: it takes the size of the
-	// group its task was minted for. Grouped by subject it says three; grouped
-	// by finding it says one, on a task that then collects two more.
+	// OpenTaskFor re-finds the cycle's first task whatever the grouping, so only
+	// the subject line, written from the group's size, shows a wrong grouping.
 	want := bundleSubjectIn(t, textlang.English, task.findings)
 	if task.subject != want {
 		t.Errorf("the task carrying %d findings is titled %q, want %q — the subject "+
@@ -92,13 +69,8 @@ func TestTheNightlyPassBundlesADealsFindingsIntoOneTask(t *testing.T) {
 	}
 }
 
-// The task goes to the DEAL'S OWNER, not to the system principal the pass runs
-// as.
-//
-// activities.taskAssignee leaves the column NULL for a system actor that names
-// nobody, and an unassigned remediation task waits in the unassigned queue that
-// nobody opens. A task about a rep's own deal that never reaches their list is
-// the failure this whole feature would quietly have.
+// The task goes to the deal's owner, not to the system principal the pass runs
+// as: an unassigned task waits in a queue nobody opens.
 func TestTheBundledTaskIsAssignedToTheDealsOwner(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -183,13 +155,8 @@ func TestATaskWhoseOwnerSeatIsGoneLandsUnassigned(t *testing.T) {
 	}
 }
 
-// A SECOND pass mints a second task, and that is the design rather than a leak.
-//
-// The cycle is the run, so tomorrow night is a new cycle and a finding still
-// present is a fresh ask. What must NOT happen is two tasks from one pass, or
-// the second pass filing its findings onto the first night's task — the first is
-// the duplication the cycle exists to prevent, the second would leave a rep
-// looking at a task whose findings kept changing under them.
+// One pass mints one task per deal, and a second pass files onto the task the
+// first left open rather than minting another.
 func TestASecondPassAdoptsTheTaskTheFirstOneLeftOpen(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -265,8 +232,8 @@ func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
 	for range 2 {
 		if _, err := e.Pool.Exec(context.Background(), `
 			WITH night AS (
-			    INSERT INTO assurance_cycle (id, scope, opened_by, closed_at)
-			    VALUES (gen_random_uuid(), 'seeded:' || gen_random_uuid()::text, 'system:test', now())
+			    INSERT INTO assurance_cycle (id, scope, closed_at)
+			    VALUES (gen_random_uuid(), 'seeded:' || gen_random_uuid()::text, now())
 			    RETURNING id
 			), copy AS (
 			    INSERT INTO activity (kind, subject, source, captured_by, origin)
@@ -278,9 +245,9 @@ func TestTheDuplicatesAnEarlierBuildLeftBehindAreSettled(t *testing.T) {
 			    SELECT (SELECT id FROM copy), 'deal', $2
 			)
 			INSERT INTO assurance_task_item
-			       (cycle_id, exception_id, task_activity_id, subject_kind, subject_id, state)
+			       (cycle_id, exception_id, task_activity_id, subject_kind, subject_id)
 			SELECT (SELECT id FROM night), i.exception_id, (SELECT id FROM copy),
-			       i.subject_kind, i.subject_id, 'open'
+			       i.subject_kind, i.subject_id
 			  FROM assurance_task_item i WHERE i.task_activity_id = $1 LIMIT 1`,
 			original.id, original.dealID); err != nil {
 			t.Fatalf("seeding an earlier night's task: %v", err)
@@ -363,12 +330,8 @@ func TestATaskRelinkedToAnotherDealIsNeitherAdoptedNorArchived(t *testing.T) {
 	}
 }
 
-// Every cycle the pass opens is CLOSED when it finishes.
-//
-// A partial unique index admits one open cycle per scope, and a cycle left open
-// is one nothing closes later — the scope is a run id nobody revisits. The cost
-// is not this night: it is that assurance_cycle accumulates open rows for ever,
-// and any future move to a longer-lived scope finds them in the way.
+// Every cycle the pass opens is closed when it finishes. Its scope is a run id
+// nobody revisits, so an open one would stay open for ever.
 func TestThePassClosesTheCycleItOpened(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -387,15 +350,8 @@ func TestThePassClosesTheCycleItOpened(t *testing.T) {
 	}
 }
 
-// The task is filed as system_remediation, so asking about a silent deal does
-// not make it look freshly touched.
-//
-// This is the feedback loop migration 1788386600 was written to prevent, before
-// this writer existed: every recency reading folds the newest activity into
-// last_activity_at, and the four helpers carve out exactly this origin. Left as
-// the default `human`, buyer_silent would stop firing on a deal it had just
-// faulted, CloseCleared would close its own finding as condition_cleared, and
-// the engine would switch itself off one deal at a time with nothing failing.
+// The task is filed as system_remediation. So it is no recent activity on the
+// deal, and cannot switch off the check that filed it.
 func TestTheBundledTaskIsNotBuyerActivity(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -431,12 +387,8 @@ func TestTheBundledTaskIsNotBuyerActivity(t *testing.T) {
 	}
 }
 
-// A finding somebody DEFERRED is not asked again tonight.
-//
-// remind_later leaves the exception open on purpose, and CloseCleared carves the
-// same rows out of its own sweep. Without the matching clause here a rep who
-// deferred a finding for two weeks is handed a fresh task about it every night
-// for fourteen nights, which makes the deferral a no-op against this feature.
+// A finding somebody deferred files no task tonight, or a deferral of two
+// weeks would bring a fresh task every night.
 func TestADeferredFindingIsNotBundledAgain(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -466,14 +418,8 @@ func TestADeferredFindingIsNotBundledAgain(t *testing.T) {
 	}
 }
 
-// The cycle closes even when the pass FAILS after opening it.
-//
-// The happy-path test above cannot see this: it is the failure paths that leave
-// a cycle behind, and a cycle left behind is left behind for ever — its scope is
-// a run id nobody revisits, and the partial unique index refuses a second open
-// cycle over the same scope. The failure is injected at the exception read
-// because that is the return the close was originally registered BELOW, so this
-// fails against that ordering and passes against the current one.
+// The cycle closes even when the pass fails after opening it. The failure is
+// injected at the exception read, the return the close once sat below.
 func TestAFailedPassStillClosesItsCycle(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -519,13 +465,9 @@ func (e *assuranceJobEnv) runWithFindings(
 	}, ids.NewV7())
 }
 
-// bundledTasks reads back what the pass minted, joined to the finding count each
-// task stands for.
-//
-// It reads the ACTIVITY table rather than assurance_task_item alone, because the
-// question this suite asks is whether a rep gets a task — a bundle row pointing
-// at an activity that was never written would satisfy the module's own tests and
-// none of these.
+// bundledTasks reads back what the pass minted, with the findings each task
+// stands for. It reads the activity table, because the question is whether a
+// rep gets a task.
 func (e *assuranceJobEnv) bundledTasks(t *testing.T) []bundledTask {
 	t.Helper()
 	// activity_link is polymorphic by COLUMN, not by a shared entity_id: a shape
@@ -564,12 +506,8 @@ func (e *assuranceJobEnv) bundledTasks(t *testing.T) []bundledTask {
 	return out
 }
 
-// The task is HELD while the findings are filed, so a rep completing it cannot
-// land between the read that found it open and the write that files onto it.
-//
-// Deterministic rather than timed: a transaction takes the same share lock and
-// holds it open, and the probe asks whether a completion could take the row —
-// so this fails when the hold is absent rather than when a machine is slow.
+// The task is held while the findings are filed, so a completion cannot land
+// between the read that found it open and the write. A held share lock, not a timer.
 func TestTheBundlingHoldsTheTaskItFilesOnto(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -647,14 +585,8 @@ func TestTheBundlingHoldsTheTaskItFilesOnto(t *testing.T) {
 	}
 }
 
-// taskStillOpenTx's own answer, which is the read side of the window.
-//
-// The hold above stops a completion landing AFTER the check; this is what the
-// check itself says when one landed before the transaction opened. Asked of the
-// function rather than through a pass, because the pass cannot reach it — the
-// adoption already skips a task it read as done, so a case driving the whole
-// night would be asserting that older behaviour and would pass with this branch
-// deleted. It was written that way first and said nothing.
+// taskStillOpenTx's own answer when a completion landed before the transaction
+// opened. Asked of the function, because a whole pass skips a done task earlier.
 func TestTheHeldTaskReadsAsClosedOnceSomebodyAnswersIt(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -703,13 +635,8 @@ func TestTheHeldTaskReadsAsClosedOnceSomebodyAnswersIt(t *testing.T) {
 	}
 }
 
-// A task somebody ARCHIVED is not adopted, and the night mints afresh.
-//
-// Distinct from the completed case beside it: a completed task is still there
-// to read and is skipped on its own status, while an archived one is gone from
-// the live read entirely. Both end with a new task, and only one of them was
-// exercised — so the arm that turns "not found" into "mint" was carrying the
-// pass's behaviour with nothing asking about it.
+// A task somebody archived is not adopted, and the night mints afresh. Unlike
+// a completed task, it is gone from the live read.
 func TestAnArchivedTaskIsNotAdoptedAndTheNightMintsAfresh(t *testing.T) {
 	e := setupAssuranceJob(t)
 

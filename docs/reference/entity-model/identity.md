@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-39 columns · primary key `(id)` · referenced by 158 foreign keys
+39 columns · primary key `(id)` · referenced by 154 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -65,6 +65,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 - `app_user_avatar_origin_check`: `CHECK ((avatar_origin = ANY (ARRAY['upload', 'google'])))`
 - `app_user_delivery_hour_check`: `CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23))))`
 - `app_user_does_not_merge_into_itself`: `CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id)))`
+- `app_user_email_is_canonical`: `CHECK ((email = lower(btrim(email))))`
 - `app_user_failed_login_count_check`: `CHECK ((failed_login_count >= 0))`
 - `app_user_forced_rotation_needs_a_password`: `CHECK ((NOT (must_change_password AND (password_hash IS NULL))))`
 - `app_user_greeting_name_length`: `CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 120))))`
@@ -130,6 +131,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `auth_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `auth_token_purpose_check`: `CHECK ((purpose = ANY (ARRAY['password_reset', 'email_verify', 'invite'])))`
+- `auth_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 
 **Indexes**
 
@@ -312,6 +314,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `oauth_authorization_code_code_hash_check`: `CHECK ((code_hash ~ '^[0-9a-f]{64}$'))`
 - `oauth_authorization_code_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `oauth_code_unique`: `UNIQUE (code_hash)`
 
@@ -353,6 +356,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `idx_oauth_client_self_registered`: `btree (created_at, id) WHERE (created_via = ANY (ARRAY['dcr', 'cimd']))`
 - `oauth_client_client_id_key`: `unique, btree (client_id)`
 - `oauth_client_pkey`: `unique, btree (id)`
 
@@ -363,7 +367,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## oauth_grant
 
-10 columns · primary key `(id)` · referenced by 3 foreign keys
+10 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -388,6 +392,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
+- `idx_oauth_grant_client`: `btree (client_id)`
 - `idx_oauth_grant_user`: `btree (user_id)`
 - `oauth_grant_lent_passport_ix`: `btree (lent_passport_id)`
 - `oauth_grant_pkey`: `unique, btree (id)`
@@ -421,6 +426,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Rules**
 
 - `oauth_refresh_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `oauth_refresh_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `oauth_refresh_unique`: `UNIQUE (token_hash)`
 
 **Indexes**
@@ -516,6 +522,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `passport_app_caller_pair`: `CHECK (((app_issuer IS NULL) = (app_subject IS NULL)))`
 - `passport_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `passport_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `passport_token_hash_key`: `UNIQUE (token_hash)`
 - `uq_passport_id_owner`: `UNIQUE (id, on_behalf_of)`
 
@@ -687,6 +694,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Rules**
 
 - `session_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `session_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `session_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**
@@ -713,6 +721,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `setup_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `setup_token_token_hash_key`: `UNIQUE (token_hash)`
 
 **Indexes**

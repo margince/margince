@@ -9,10 +9,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -32,9 +34,17 @@ func (w *windowRecorder) TasksOnDeals(context.Context, TaskWindow, []ids.UUID) (
 	return nil, nil
 }
 
+func (w *windowRecorder) FollowUpPromises(context.Context, []ids.UUID) ([]activities.FollowUpPromise, error) {
+	return nil, nil
+}
+
+func (w *windowRecorder) TasksIn(context.Context, TaskWindow, []ids.UUID) ([]Task, error) {
+	return nil, nil
+}
+
 func tailToken(t *testing.T, rest *backlogCursor) string {
 	t.Helper()
-	token, err := storekit.EncodeOpaque(worklistCursor{At: 3, Params: fingerprint(scopeMine, "", ids.Nil), Rest: rest})
+	token, err := storekit.EncodeSigned(worklistCursor{At: 3, Params: fingerprint(scopeMine, "", ids.Nil), Rest: rest}, cursorKey())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +89,7 @@ func TestTheTailProtocolIsInTheFingerprint(t *testing.T) {
 	if older == fingerprint(scopeMine, "", ids.Nil) {
 		t.Fatal("the fingerprint does not carry the tail protocol, so an older binary accepts a tailed token")
 	}
-	token, err := storekit.EncodeOpaque(worklistCursor{At: 3, Params: older})
+	token, err := storekit.EncodeSigned(worklistCursor{At: 3, Params: older}, cursorKey())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,5 +182,71 @@ func TestAFailedCountLeavesItsCategoryAFloorAndNoPartialTotal(t *testing.T) {
 		case tc.want != nil && (upcoming.Total == nil || *upcoming.Total != *tc.want):
 			t.Errorf("%s: upcoming publishes total %s, want %d", tc.name, total, *tc.want)
 		}
+	}
+}
+
+// editedToken re-signs nothing: it swaps the body of a minted token for the
+// body of an edited cursor and keeps the old signature.
+func editedToken(t *testing.T, minted string, edit func(*worklistCursor)) string {
+	t.Helper()
+	_, signature, _ := strings.Cut(minted, ".")
+	cursor, err := openCursor(minted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	edit(&cursor)
+	body, err := storekit.EncodeOpaque(cursor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body + "." + signature
+}
+
+func TestAnEditedTailIsRefusedAndAnUntouchedOneResumes(t *testing.T) {
+	window := tailWindow{AsOf: rankInstant, Until: rankInstant.Add(time.Hour), Zone: "UTC"}
+	minted := tailToken(t, &backlogCursor{At: map[string]string{"task": ""}, Window: window})
+	if _, err := decodeCursor(minted, scopeMine, "", ids.Nil); err != nil {
+		t.Fatalf("an untouched cursor was refused: %v", err)
+	}
+	position, err := storekit.EncodeOpaque(map[string]string{"id": ids.NewV7().String()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, edit := range map[string]func(*worklistCursor){
+		"a shifted tail position": func(c *worklistCursor) { c.Rest.At["task"] = position },
+		"a moved AsOf":            func(c *worklistCursor) { c.Rest.Window.AsOf = c.Rest.Window.AsOf.Add(-time.Hour) },
+		"a changed offset":        func(c *worklistCursor) { c.At = 0 },
+	} {
+		_, err := decodeCursor(editedToken(t, minted, edit), scopeMine, "", ids.Nil)
+		if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
+			t.Errorf("%s: decoded with %v, want the invalid-cursor refusal", name, err)
+		}
+	}
+	unsigned, _, _ := strings.Cut(minted, ".")
+	if _, err := decodeCursor(unsigned, scopeMine, "", ids.Nil); err == nil {
+		t.Error("a cursor with no signature was accepted")
+	} else if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
+		t.Errorf("an unsigned cursor answered %v, want the invalid-cursor refusal", err)
+	}
+}
+
+// Two replicas, or one process before and after a restart, derive the cursor
+// key independently. Each must accept the other's cursors.
+func TestCursorsResumeOnAnotherReplicaAndAfterARestart(t *testing.T) {
+	rootKey := []byte("0123456789abcdef0123456789abcdef")
+	for name, derive := range map[string]func() []byte{
+		"no root key": func() []byte { return cursorKeyFrom(nil) },
+		"a root key":  func() []byte { return cursorKeyFrom(append([]byte(nil), rootKey...)) },
+	} {
+		minted, err := storekit.EncodeSigned(worklistCursor{At: 3, Params: fingerprint(scopeMine, "", ids.Nil)}, derive())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := storekit.DecodeSigned[worklistCursor](minted, derive()); err != nil {
+			t.Errorf("%s: an independently derived key refused the cursor: %v", name, err)
+		}
+	}
+	if string(cursorKeyFrom(nil)) == string(cursorKeyFrom(append([]byte(nil), rootKey...))) {
+		t.Error("a configured root key must sign under its own key, not the shared fallback")
 	}
 }

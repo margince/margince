@@ -46,16 +46,26 @@ func NotImplemented(w http.ResponseWriter, r *http.Request, op string) {
 	})
 }
 
-// Unavailable is ServiceUnavailable with a code of its own.
+// UnavailableProblem is a 503 with a code of its own. It is an error, so a
+// caller that answers through a handler it does not own can return it.
 //
-// The code is what a UI can translate. `service_unavailable` says only that
-// something is down, so a client with a reader to speak to has to render the
-// detail verbatim — and the detail is written in one language, which is how an
-// English sentence ends up inside a German screen. A named code lets the client
-// carry its own copy and keeps the detail for everyone else: curl, a log, an
-// integrator with no catalog.
-func Unavailable(w http.ResponseWriter, r *http.Request, code, detail string) {
-	writeProblem(w, problem{Status: http.StatusServiceUnavailable, Code: code, Detail: detail})
+// The code is what a UI translates; the detail is one language, kept for a
+// caller with no catalog (curl, a log, an integrator).
+func UnavailableProblem(code, detail string) *DetailedError {
+	return &DetailedError{Status: http.StatusServiceUnavailable, Code: code, Detail: detail}
+}
+
+// CodeAINotConfigured is the one problem code that says no AI model is bound.
+// A screen maps it to its "connect an AI" copy.
+const CodeAINotConfigured = "ai_not_configured"
+
+// ErrNotConfigured is what a model call returns while no AI model is bound.
+// It is a 409 with CodeAINotConfigured: the request is fine and the
+// installation lacks a model. A job that meets it has nothing to do yet, and a
+// handler that returns it as it came says the same to its caller.
+var ErrNotConfigured = &DetailedError{
+	Status: http.StatusConflict, Code: CodeAINotConfigured,
+	Detail: "No AI model is connected. Connect one under Settings, AI.",
 }
 
 // NotImplementedBecause is NotImplemented for a route that IS implemented and
@@ -95,13 +105,33 @@ func TooLong(field string, limit, actual int) *DetailedError {
 	if actual > 0 {
 		message += fmt.Sprintf("; this one has %d", actual)
 	}
-	return withMax(Validation(field, "too_long", message), limit)
+	return Validation(field, "too_long", message).WithMax(limit)
 }
 
-// withMax states the limit on a one-field refusal.
-func withMax(refusal *DetailedError, limit int) *DetailedError {
-	refusal.Fields[0].Max = limit
-	return refusal
+// WithMax states the limit a one-field refusal names.
+func (e *DetailedError) WithMax(limit int) *DetailedError {
+	e.Fields[0].Max = limit
+	return e
+}
+
+// fieldMaxer is a FieldFault that also states the limit it refused at. It is
+// declared here rather than in apperrors because only this mapping reads it.
+type fieldMaxer interface {
+	FieldMax() int
+}
+
+// fieldParamser is a FieldFault that also states the values its code names.
+type fieldParamser interface {
+	FieldParams() map[string]string
+}
+
+// WithParams states the values a one-field refusal's code names, so a screen
+// can word the code in the reader's language without reading the message.
+func (e *DetailedError) WithParams(params map[string]string) *DetailedError {
+	if len(params) > 0 {
+		e.Fields[0].Params = params
+	}
+	return e
 }
 
 // RequirePair refuses a filter that names half of a discriminated reference.
@@ -191,6 +221,9 @@ func fieldDetails(fields []FieldError) map[string]any {
 		if f.Max > 0 {
 			entry["max"] = f.Max
 		}
+		if len(f.Params) > 0 {
+			entry["params"] = f.Params
+		}
 		errs = append(errs, entry)
 	}
 	return map[string]any{fieldErrorsKey: errs}
@@ -214,7 +247,14 @@ func Duplicate(code, existingID string) *DetailedError {
 // codeInternal is the wire code of every opaque 500.
 const codeInternal = "internal"
 
+// sessionChallenge is what a 401 names when its writer named no scheme of its
+// own. RFC 9110 requires a challenge, and /v1 takes a passport as a bearer.
+const sessionChallenge = `Bearer realm="margince"`
+
 func writeProblem(w http.ResponseWriter, p problem) {
+	if p.Status == http.StatusUnauthorized && w.Header().Get("WWW-Authenticate") == "" {
+		w.Header().Set("WWW-Authenticate", sessionChallenge)
+	}
 	if p.Type == "" {
 		p.Type = problemTypeBase + p.Code
 	}

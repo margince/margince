@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { DateFormatsProvider } from "../../app/dateformats";
+import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { pickOption } from "../../design-system/select-testing";
 import { formatDate } from "../../format/format";
 import { LocaleProvider, useLocale } from "../../i18n";
@@ -134,6 +135,14 @@ async function openFrom(
   return screen.getByRole("dialog");
 }
 
+function UnsavedProbe() {
+  return (
+    <span data-testid="unsaved-probe">
+      {useHasUnsavedChanges() ? "dirty" : "clean"}
+    </span>
+  );
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -208,6 +217,30 @@ describe("InstallationSettingsCard", () => {
     await waitFor(() =>
       expect(patch()).toEqual({ forecast_likely_threshold: 75 }),
     );
+  });
+
+  it("says on a cleared Likely threshold what it takes, in percent, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(<InstallationSettingsCard part="forecast" />);
+    const dialog = await openFrom(user, /edit likely threshold/i);
+    const threshold = within(dialog).getByLabelText(/likely threshold/i);
+    await user.clear(threshold);
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    expect(
+      await within(dialog).findByText(
+        "Likely threshold must be from 1% to 100%.",
+      ),
+    ).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(threshold));
+    expect(patch()).toBeNull();
+    await user.type(threshold, "80");
+    expect(
+      within(dialog).queryByText("Likely threshold must be from 1% to 100%."),
+    ).toBeNull();
   });
 
   // The company profile owns the name; a second editor here would let the two drift.
@@ -294,7 +327,11 @@ describe("InstallationSettingsCard", () => {
     // it is read before the dialog is opened over a field nobody can type in.
     expect(await screen.findByText(reason)).not.toBeNull();
 
-    const dialog = await openFrom(user, /edit base currency/i);
+    // A frozen currency has nothing to edit, so its row offers no Edit.
+    expect(
+      screen.queryByRole("button", { name: /edit base currency/i }),
+    ).toBeNull();
+    const dialog = await openFrom(user, /edit company time zone/i);
     const currency = within(dialog).getByLabelText(
       /base currency/i,
     ) as HTMLInputElement;
@@ -306,6 +343,95 @@ describe("InstallationSettingsCard", () => {
       /company time zone/i,
     ) as HTMLInputElement;
     expect(zone.disabled).toBe(false);
+  });
+
+  it("discards the dialog's draft on Cancel, so reopening shows the saved value and leaving asks nothing", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <UnsavedGuard address="settings" onKeep={() => undefined}>
+        {() => (
+          <>
+            <InstallationSettingsCard />
+            <UnsavedProbe />
+          </>
+        )}
+      </UnsavedGuard>,
+    );
+
+    let dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.clear(zone);
+    await user.type(zone, "Europe/Vienna");
+    expect(screen.getByTestId("unsaved-probe").textContent).toBe("dirty");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByTestId("unsaved-probe").textContent).toBe("clean");
+    dialog = await openFrom(user, /edit company time zone/i);
+    expect(
+      (within(dialog).getByLabelText(/company time zone/i) as HTMLInputElement)
+        .value,
+    ).toBe("Europe/Berlin");
+    expect(patch()).toBeNull();
+  });
+
+  it("asks before Escape throws away a changed draft, and closes at once when nothing changed", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    await openFrom(user, /edit company time zone/i);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.clear(zone);
+    await user.type(zone, "Europe/Vienna");
+    await user.keyboard("{Escape}");
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await user.click(
+      within(question).getByRole("button", { name: "Discard changes" }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    const reopened = await openFrom(user, /edit company time zone/i);
+    expect(
+      (
+        within(reopened).getByLabelText(
+          /company time zone/i,
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("Europe/Berlin");
+  });
+
+  it("opens a dialog with only the tab's own facts, titled for the tab", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard part="forecast" />);
+    const forecast = await openFrom(user, /edit likely threshold/i);
+    expect(
+      within(forecast).getByRole("heading", { name: "Forecast rules" }),
+    ).toBeTruthy();
+    expect(within(forecast).getByLabelText(/likely threshold/i)).toBeTruthy();
+    expect(within(forecast).queryByLabelText(/company time zone/i)).toBeNull();
+    expect(within(forecast).queryByLabelText(/base currency/i)).toBeNull();
+    cleanup();
+
+    render(<InstallationSettingsCard part="regional" />);
+    const regional = await openFrom(user, /edit fiscal year starts/i);
+    expect(
+      within(regional).getByRole("heading", { name: "Regional and calendar" }),
+    ).toBeTruthy();
+    expect(within(regional).getByLabelText(/company time zone/i)).toBeTruthy();
+    expect(within(regional).queryByLabelText(/likely threshold/i)).toBeNull();
+    expect(within(regional).queryByText("Projection basis")).toBeNull();
   });
 
   it("refuses a fact a boot source sets, says where to change it, and saves the rest", async () => {
@@ -469,6 +595,55 @@ describe("InstallationSettingsCard", () => {
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
+  it("marks the field a server refusal names by its setting key", async () => {
+    const user = userEvent.setup();
+    const sentence =
+      '"Mars/Olympus" is not an IANA zone name this server knows — use one like Europe/Berlin';
+    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+      refuse: [
+        {
+          field: "installation.timezone",
+          code: "setting_invalid",
+          message: sentence,
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.clear(zone);
+    await user.type(zone, "Mars/Olympus");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await within(dialog).findByText(/use one like Europe\/Berlin/);
+    expect(zone.getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("shows a refusal naming a field the dialog does not draw", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+      refuse: [
+        {
+          field: "installation.forecast_likely_threshold",
+          code: "setting_invalid",
+          message: "Threshold out of range.",
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const dialog = await openFrom(user, /edit company time zone/i);
+    const zone = within(dialog).getByLabelText(/company time zone/i);
+    await user.type(zone, "x");
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+
+    await within(dialog).findByText("Settings not saved");
+    expect(dialog.querySelector('[aria-invalid="true"]')).toBeNull();
+  });
+
   it("says a refusal once — on the field, or in the summary, never both", async () => {
     const user = userEvent.setup();
     const { fetchMock } = backendFor(SETTINGS_EDITOR, {
@@ -490,15 +665,16 @@ describe("InstallationSettingsCard", () => {
     await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
 
     const refusal = await screen.findByText(
-      "This value is at most 64 characters.",
+      "Company time zone: at most 64 characters.",
     );
     // One occurrence, and it is the FIELD's. A refusal drawn on the input AND
     // repeated in a paragraph below states one problem twice, and the paragraph
     // is the copy a reader learns to skip — so the blanket summary carries only
     // what no field claimed.
     expect(
-      screen.getAllByText("This value is at most 64 characters."),
+      screen.getAllByText("Company time zone: at most 64 characters."),
     ).toHaveLength(1);
+    await waitFor(() => expect(document.activeElement).toBe(zone));
     expect(refusal.className).toContain("field-error");
     expect(screen.getAllByRole("alert")).toHaveLength(1);
   });
@@ -759,7 +935,7 @@ it("states how many saved questions and reports a new fiscal start concerns, bef
   ).toBeTruthy();
   expect(
     within(dialog).getByText(
-      "3 reports read this quarter, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
+      "3 reports read this quarter, the last completed quarter or year, a fiscal-quarter target or a fiscal-quarter close window. They follow the new start.",
     ),
   ).toBeTruthy();
 });

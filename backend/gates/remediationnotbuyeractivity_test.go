@@ -44,12 +44,31 @@ var recencyFloor = []string{
 	"last_activity_of_project",
 	"last_activity_of_activity",
 	"last_activity_of_company_activity",
+	"last_activity_of_deal_activity",
 }
+
+// dealClockFunctions also count mail limited to its participants, because such
+// a message still shows its deal was worked. They carry their own audience
+// clause by design, and the census asserts that one instead. They also carry
+// relstrength.DealEvidenceSQL, so neither a personal meeting nor a link judged
+// not about the deal moves its clock.
+var dealClockFunctions = []string{"last_activity_of_deal", "last_activity_of_deal_activity"}
+
+// companyClockFunctions refuse personal mail in every arm
+// (relstrength.NotPersonalSQL), so a personal thread never keeps an account
+// warm. Their arm through a deal reads relstrength.DealEvidenceSQL, as the deal
+// clock does.
+var companyClockFunctions = []string{"last_activity_of_company", "last_activity_of_company_activity"}
+
+// companyDealArm is the join that marks a company clock's arm through a deal.
+const companyDealArm = "JOIN activity_link l ON l.deal_id = d.id"
 
 // recencyFunctionRe finds a recency function's definition or its drop, by the
 // prefix every one carries. A dropped function is not live, so it leaves the
 // census. Case and line breaks are free in SQL, so neither may hide one.
 var recencyFunctionRe = regexp.MustCompile(`(?i)(CREATE\s+(?:OR\s+REPLACE\s+)?|DROP\s+)FUNCTION\s+(?:IF\s+EXISTS\s+)?(last_activity_of_\w+)`)
+
+const dealClockAudienceClause = "a.audience IN ('workspace', 'participants')"
 
 const remediationOrigin = "system_remediation"
 
@@ -96,16 +115,38 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 		// see, and a careless replace here would re-open that. Asserting it
 		// arm-for-arm means this gate fails rather than the privacy test
 		// failing somewhere else.
+		if slices.Contains(dealClockFunctions, name) {
+			if audience := strings.Count(body, dealClockAudienceClause); audience < arms {
+				t.Errorf("%s: %d activity arm(s) but only %d %q filter(s) — a deal clock counts "+
+					"participants-only mail but never a selected audience's", name, arms, audience, dealClockAudienceClause)
+			}
+			if evidence := strings.Count(body, relstrength.DealEvidenceSQL("a", "l.deal_id")); evidence < arms {
+				t.Errorf("%s: %d activity arm(s) but only %d relstrength.DealEvidenceSQL clause(s), so a "+
+					"personal meeting or a link marked not about the deal keeps it warm. Replace the function in a new migration with %q in every arm",
+					name, arms, evidence, relstrength.DealEvidenceSQL("a", "l.deal_id"))
+			}
+			continue
+		}
 		if audience := strings.Count(body, workspaceAudienceClause); audience < arms {
 			t.Errorf("%s: %d activity arm(s) but only %d audience filter(s) — a "+
 				"replacement copied from a stale definition dropped one",
 				name, arms, audience)
+		}
+		if slices.Contains(companyClockFunctions, name) {
+			checkCompanyClockEvidence(t, name, body)
 		}
 	}
 }
 
 // currentRecencyBodies returns each function's newest definition, keyed by name.
 func currentRecencyBodies(t *testing.T) map[string]string {
+	t.Helper()
+	return currentFunctionBodies(t, recencyFunctionRe)
+}
+
+// currentFunctionBodies is the live body of every function re names, read from
+// the migrations in apply order.
+func currentFunctionBodies(t *testing.T, re *regexp.Regexp) map[string]string {
 	t.Helper()
 	dir := filepath.Join("migrations", "core")
 	entries, err := gatekit.ReadDir(dir)
@@ -130,7 +171,7 @@ func currentRecencyBodies(t *testing.T) map[string]string {
 		}
 		// In statement order, so a file that drops one function and creates
 		// another leaves the census as the database does.
-		for _, m := range recencyFunctionRe.FindAllStringSubmatchIndex(string(raw), -1) {
+		for _, m := range re.FindAllStringSubmatchIndex(string(raw), -1) {
 			name := strings.ToLower(string(raw[m[4]:m[5]]))
 			if strings.EqualFold(string(raw[m[2]:m[2]+4]), "DROP") {
 				delete(bodies, name)
@@ -257,5 +298,34 @@ func TestWrittenByHumanCarriesTheOriginRule(t *testing.T) {
 	if !strings.Contains(relstrength.WrittenByHumanSQL("a"), relstrength.OriginIsEngagementSQL("a")) {
 		t.Error("relstrength.WrittenByHumanSQL no longer carries OriginIsEngagementSQL, so a recency " +
 			"reader that calls it counts work the product filed about the record")
+	}
+}
+
+// checkCompanyClockEvidence reads a company clock arm by arm, split at each
+// `UNION ALL`. Each arm that joins an activity refuses personal mail. Each arm
+// through a deal reads the deal evidence rule. A count over the whole body would let one arm
+// carry two clauses and another none.
+func checkCompanyClockEvidence(t *testing.T, name, body string) {
+	t.Helper()
+	dealArms := 0
+	for i, arm := range strings.Split(body, "UNION ALL") {
+		if !strings.Contains(arm, "activity a ON a.id = l.activity_id") {
+			continue
+		}
+		if !strings.Contains(arm, relstrength.NotPersonalSQL("a")) {
+			t.Errorf("%s: arm %d carries no relstrength.NotPersonalSQL clause, so personal mail keeps the account warm. "+
+				"Replace the function in a new migration with %q in every arm", name, i+1, relstrength.NotPersonalSQL("a"))
+		}
+		if !strings.Contains(arm, companyDealArm) {
+			continue
+		}
+		dealArms++
+		if !strings.Contains(arm, relstrength.DealEvidenceSQL("a", "l.deal_id")) {
+			t.Errorf("%s: arm %d goes through a deal and carries no relstrength.DealEvidenceSQL clause, so a link "+
+				"marked not about the deal still warms its company", name, i+1)
+		}
+	}
+	if dealArms == 0 {
+		t.Errorf("%s: no arm through a deal found, so the census cannot check its deal evidence", name)
 	}
 }

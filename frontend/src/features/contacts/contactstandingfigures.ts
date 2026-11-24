@@ -19,6 +19,7 @@ import { recordsAnotherMeeting } from "../../lib/meetingrecord";
 import { dealRoleLabel } from "../../lib/recordlabels";
 import { omitted } from "./contact360";
 import { contactFirstName } from "./contactfirstname";
+import { owedPromises } from "./contactpromises";
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -27,6 +28,7 @@ export type StandingWords = Readonly<{
   t: Translator;
   locale: Locale;
   zone: string;
+  companyZone?: string;
 }>;
 
 /** One cell of the figures strip, and where pressing it leads. */
@@ -175,10 +177,7 @@ function openDeal(view: Contact360, words: StandingWords): ContactFigure {
       t("co.strip.unpriced"),
       formatMoneyCompact,
     ),
-    detail: [
-      deal.title,
-      commercial.role ? dealRoleLabel(commercial.role, t) : null,
-    ]
+    detail: [deal.title, dealRoleLabel(commercial.role ?? "", t)]
       .filter(Boolean)
       .join(" · "),
     tone: "neutral",
@@ -257,26 +256,24 @@ function datedPromises(
 ): TimelineEvent[] {
   const { t, locale, zone } = words;
   const asOf = Date.parse(view.as_of);
-  return (view.claims ?? []).flatMap((claim): TimelineEvent[] => {
-    if (
-      claim.kind !== "commitment_ours" ||
-      claim.status !== "open" ||
-      !claim.due_at
-    ) {
-      return [];
-    }
-    const late = daysPast(Date.parse(claim.due_at), asOf).late;
-    const day = formatDayMonth(claim.due_at, locale, zone);
-    return [
-      {
-        key: `promise-${claim.id}`,
-        at: claim.due_at,
-        title: t("contact.standing.event.promiseDue"),
-        sub: late ? `${day} · ${t("co.next.overdue").toLowerCase()}` : day,
-        kind: late ? "late" : "ahead",
-      },
-    ];
-  });
+  return (owedPromises(view, t, words) ?? []).flatMap(
+    ({ key, due, zone: dueZone }): TimelineEvent[] => {
+      if (!due) {
+        return [];
+      }
+      const late = daysPast(Date.parse(due), asOf).late;
+      const day = formatDayMonth(due, locale, dueZone ?? zone);
+      return [
+        {
+          key: `promise-${key}`,
+          at: due,
+          title: t("contact.standing.event.promiseDue"),
+          sub: late ? `${day} · ${t("co.next.overdue").toLowerCase()}` : day,
+          kind: late ? "late" : "ahead",
+        },
+      ];
+    },
+  );
 }
 
 function lastWrote(view: Contact360, words: StandingWords): TimelineEvent[] {

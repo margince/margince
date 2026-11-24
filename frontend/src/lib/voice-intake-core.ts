@@ -1,8 +1,10 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { problemCode, problemDetails } from "./problembody";
+import { ProblemError } from "./problem";
+import { problemCode } from "./problembody";
 import { readCorpusFile } from "./voice-corpus-file";
 import { ensureProfileId } from "./voice-profile";
+import { type RefusalReason, refusalOf } from "./voice-refusal";
 
 // The voice-corpus intake, spelled once for both surfaces that collect writing
 // samples: the onboarding voice act and the Settings Voice DNA card. What lives
@@ -19,6 +21,7 @@ import { ensureProfileId } from "./voice-profile";
 type CorpusPreview = components["schemas"]["VoiceCorpusPreviewResult"];
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type IngestStats = components["schemas"]["VoiceIngestStats"];
+type CorpusSource = components["schemas"]["VoiceCorpusSource"];
 type IngestRequest = components["schemas"]["IngestVoiceCorpusSourceRequest"];
 
 // The file extensions that are conversational by name. A CLIENT-side rule,
@@ -159,7 +162,7 @@ export function sourceRef(
 //
 // The share is computed from the server's own counts, never from the text.
 export function routePreview(
-  name: string,
+  name: string | null,
   preview: CorpusPreview,
 ): "ask-speaker" | "refuse" | "document" {
   if (preview.ingestible_as_transcript) {
@@ -169,7 +172,7 @@ export function routePreview(
   // an older or partial response falls back to refusing a transcript-shaped
   // file rather than ingesting it.
   const speakers = preview.speakers ?? [];
-  if (TRANSCRIPT_EXT.test(name)) {
+  if (name !== null && TRANSCRIPT_EXT.test(name)) {
     return "refuse";
   }
   if (speakers.length > 0) {
@@ -188,40 +191,6 @@ function labelsAreAMinority(preview: CorpusPreview): boolean {
   return total > 0 && attributed * 2 < total;
 }
 
-/** Why the server would not take a source, as a category both surfaces phrase
- * in their own words. `null` means the refusal carried no code either surface
- * knows — the caller states the server's own detail instead of inventing one. */
-export type RefusalReason = "unattributed" | "speaker" | "unsupported";
-
-const refusalReasons: Record<string, RefusalReason> = {
-  unattributed_transcript: "unattributed",
-  speaker_label_required: "unattributed",
-  speaker_not_found: "speaker",
-  unsupported_format: "unsupported",
-};
-
-// Every stable machine code an RFC 7807 body carries: the top-level `code` plus
-// any per-field `details.errors[].code`.
-function problemCodes(problem: unknown): string[] {
-  const top = problemCode(problem);
-  const errors = problemDetails(problem)?.errors;
-  const fieldCodes = Array.isArray(errors)
-    ? errors.map(problemCode).filter((code) => code !== null)
-    : [];
-  return top === null ? fieldCodes : [top, ...fieldCodes];
-}
-
-// The refusal category a 422 names, or null when no code here recognizes it.
-export function refusalOf(problem: unknown): RefusalReason | null {
-  for (const code of problemCodes(problem)) {
-    const reason = refusalReasons[code];
-    if (reason !== undefined) {
-      return reason;
-    }
-  }
-  return null;
-}
-
 /** What one intake attempt ended as. Every path a source can take terminates in
  * exactly one of these — there is no silent outcome. */
 export type IntakeOutcome =
@@ -229,6 +198,8 @@ export type IntakeOutcome =
       kind: "ingested";
       ref: string;
       label: string;
+      /** The row the write landed in, whose id and version a removal names. */
+      source: CorpusSource;
       stats: IngestStats;
       summary: CorpusSummary;
       /** Kept-of-total is worth showing only where filtering discarded turns. */
@@ -312,6 +283,28 @@ function transcriptBody(
   };
 }
 
+// A role that may not create the profile is refused at the first sample, and
+// that answer resolves. A body with no problem code is still a fault.
+async function profileOrRefusal(
+  ref: string,
+  label: string,
+): Promise<string | IntakeOutcome> {
+  try {
+    return await ensureProfileId();
+  } catch (err) {
+    if (err instanceof ProblemError && problemCode(err.problem) !== null) {
+      return {
+        kind: "refused",
+        ref,
+        label,
+        reason: refusalOf(err.problem),
+        problem: err.problem,
+      };
+    }
+    throw err;
+  }
+}
+
 // One ingest call: the profile is resolved through the shared ensureProfileId,
 // so a first sample from either surface mints the one profile rather than a
 // second beside it. A server refusal RESOLVES as a "refused" outcome; only a
@@ -322,7 +315,10 @@ async function ingest(
   transcript: boolean,
   onIssue?: () => void,
 ): Promise<IntakeOutcome> {
-  const profileId = await ensureProfileId();
+  const profileId = await profileOrRefusal(body.source_ref, label);
+  if (typeof profileId !== "string") {
+    return profileId;
+  }
   // Called at the moment this write is issued, so a caller ordering concurrent
   // ingests stamps them by when the SERVER was asked — not by when the reader
   // picked the file, which a slow read or preview would distort.
@@ -344,6 +340,7 @@ async function ingest(
     kind: "ingested",
     ref: body.source_ref,
     label,
+    source: data.source,
     stats: data.ingest_stats,
     summary: data.summary,
     transcript,
@@ -359,6 +356,7 @@ async function ingest(
 async function intakePreviewed(
   ref: string,
   label: string,
+  fileName: string | null,
   text: string,
   proseBody: (ref: string, label: string, content: string) => IngestRequest,
   onIssue?: () => void,
@@ -368,7 +366,10 @@ async function intakePreviewed(
   if (text.split(/\s+/).filter(Boolean).length === 0) {
     return { kind: "skipped", ref, label, reason: "empty" };
   }
-  const profileId = await ensureProfileId();
+  const profileId = await profileOrRefusal(ref, label);
+  if (typeof profileId !== "string") {
+    return profileId;
+  }
   const { data, error } = await api.POST(
     "/voice-profiles/{id}/sources/preview",
     {
@@ -385,7 +386,7 @@ async function intakePreviewed(
       problem: error,
     };
   }
-  const route = routePreview(label, data);
+  const route = routePreview(fileName, data);
   if (route === "ask-speaker") {
     return { kind: "speaker-needed", ref, label, content: text, preview: data };
   }
@@ -409,7 +410,7 @@ export function intakeUpload(
   text: string,
   onIssue?: () => void,
 ): Promise<IntakeOutcome> {
-  return intakePreviewed(ref, name, text, documentBody, onIssue);
+  return intakePreviewed(ref, name, name, text, documentBody, onIssue);
 }
 
 /**
@@ -449,7 +450,8 @@ export function intakePaste(
   content: string,
   onIssue?: () => void,
 ): Promise<IntakeOutcome> {
-  return intakePreviewed(ref, label, content, pasteBody, onIssue);
+  // A paste has no file name: its label is the reader's own words.
+  return intakePreviewed(ref, label, null, content, pasteBody, onIssue);
 }
 
 /** The owner named themselves in a conversational source: ingest with the
@@ -468,4 +470,18 @@ export function intakeTranscript(
     true,
     onIssue,
   );
+}
+
+// Several pastes share one prefix, so each label carries its own opening
+// words; the cap keeps a paste with no spaces from filling the row.
+const PASTE_LABEL_WORDS = 6;
+const PASTE_LABEL_CHARS = 60;
+
+/** The label a pasted text is listed under: the prefix, then its first words. */
+export function pasteLabel(prefix: string, text: string): string {
+  const words = text.split(/\s+/).filter(Boolean);
+  const start = words.slice(0, PASTE_LABEL_WORDS).join(" ");
+  const cut = clamp(start, PASTE_LABEL_CHARS);
+  const more = words.length > PASTE_LABEL_WORDS || cut !== start;
+  return `${prefix} – ${cut}${more ? "…" : ""}`;
 }

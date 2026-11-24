@@ -108,7 +108,7 @@ func seedOwnedProject(t *testing.T, e *integration.Env) ids.UUID {
 	ref, err := NewProvider(e.Pool).Create(e.Admin(), datasource.CreateInput{
 		EntityType: datasource.EntityProject,
 		Fields:     json.RawMessage(`{"name":"Owned Project","company_id":"` + company.String() + `"}`),
-		Source:     "test",
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("seeding the project: %v", err)

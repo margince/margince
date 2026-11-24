@@ -35,8 +35,9 @@ func (l *confirmLaneEnv) refusingLead(t *testing.T, email *string) ids.UUID {
 	t.Helper()
 	company := l.e.SeedCompany(t, "Receipt Company", nil)
 	l.e.WsExec(t, `UPDATE company SET address_country = upper($2) WHERE id = $1`, company, string(receiptOwed))
+	// Rep1 records the press, and its receipt is filed onto the lead.
 	lead, _, err := l.e.Contacts.CreateLead(l.e.Admin(), contacts.CreateLeadInput{
-		FullName: new("Lead Refusal"), Email: email, Source: "manual",
+		FullName: new("Lead Refusal"), Email: email, Source: "manual", OwnerID: new(ids.From[ids.UserKind](l.e.Rep1)),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +153,7 @@ func TestALeadErasedBeforeItsReceiptIsSentGetsNeitherReceiptNorNotice(t *testing
 	l.pressLeadLink(t, lead, leadReceiptAddress)
 	due := l.leadReceiptDue(t, lead)
 
-	if err := ComposedEraser(l.e.Pool, nil, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
+	if err := ComposedEraser(l.e.Pool, nil).EraseContact(l.e.Admin(), l.contact, "Art. 17 request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	if n := l.e.WsCount(t, `

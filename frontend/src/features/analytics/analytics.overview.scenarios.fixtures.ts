@@ -460,6 +460,8 @@ export const OVERVIEW_SCENARIOS = {
               target_comparison: {
                 status: "fx_missing",
                 target_metric: "bookings_won",
+                target: 80_000_000,
+                won: 42_000_000,
               },
             }),
           ],

@@ -77,7 +77,10 @@ type OwnerIdentity struct {
 
 // OwnerIdentityStore reads and writes the per-seat identity list.
 type OwnerIdentityStore struct {
-	db *database.DB
+	db             *database.DB
+	addressClaimed AddressClaimHook
+	// addressWithdrawn undoes addressClaimed when the claim is withdrawn.
+	addressWithdrawn AddressWithdrawnHook
 }
 
 // NewOwnerIdentityStore builds the store over the app pool.
@@ -102,7 +105,7 @@ func seatItself(ctx context.Context) (principal.Principal, error) {
 	}
 	if !actor.HumanOrItsAgent() || actor.UserID == ids.Nil {
 		return principal.Principal{}, fmt.Errorf(
-			"capture: an owner identity is a user's own claim about themselves: %w", apperrors.ErrPermissionDenied)
+			"an owner identity is a user's own claim about themselves: %w", apperrors.ErrPermissionDenied)
 	}
 	return actor, nil
 }
@@ -153,6 +156,13 @@ func scanOwnerIdentity(row pgx.CollectableRow) (OwnerIdentity, error) {
 // claim binds only their own mail. Idempotent on the folded value, so re-adding
 // answers the existing row rather than refusing.
 func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerIdentity, error) {
+	return s.AddConfirmed(ctx, kind, raw, false)
+}
+
+// AddConfirmed is Add for a caller that may carry the answer to a question.
+// A contact's address or a company's domain is stored only when confirmed.
+// A consumer-mail domain is refused either way.
+func (s *OwnerIdentityStore) AddConfirmed(ctx context.Context, kind, raw string, confirmed bool) (OwnerIdentity, error) {
 	actor, err := seatItself(ctx)
 	if err != nil {
 		return OwnerIdentity{}, err
@@ -163,6 +173,9 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 	}
 	var out OwnerIdentity
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := checkIdentityClaim(ctx, tx, kind, value, confirmed); err != nil {
+			return err
+		}
 		if kind == IdentityKindAddress {
 			if err := storekit.LockSeatAddressClaims(ctx, tx, value); err != nil {
 				return err
@@ -179,7 +192,9 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 			Scan(&out.ID, &out.UserID, &out.Kind, &out.Value, &out.Source, &out.CreatedAt); err != nil {
 			return fmt.Errorf("capture: adding an owner identity: %w", err)
 		}
-		database.Forget(tx, ownerIdentitiesMemo)
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		// A claim about an address already WAITING on a verdict retires that
 		// question. Without this the gates only bind mail that arrives from
 		// now on: an address deferred moments before the claim keeps its
@@ -188,6 +203,9 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 		// close. Only the claimant's own rows — the ledger is owner-scoped,
 		// and a colleague's verdict about the same address is theirs.
 		if err := retirePendingForIdentityTx(ctx, tx, actor.UserID, out); err != nil {
+			return err
+		}
+		if err := s.addressClaimedTx(ctx, tx, out); err != nil {
 			return err
 		}
 		// Audit-only, like the exclusion list and the own-domain list beside
@@ -224,9 +242,11 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
-		database.Forget(tx, ownerIdentitiesMemo)
 		if err != nil {
 			return fmt.Errorf("capture: removing an owner identity: %w", err)
+		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
 		}
 		// "archive", not a delete verb: the audit vocabulary is closed and
 		// withdrawing a claim IS retiring it, as the exclusion list reads it.
@@ -236,6 +256,9 @@ func (s *OwnerIdentityStore) Remove(ctx context.Context, id ids.UUID) error {
 			return err
 		}
 		withdrawn.auditID, withdrawn.withdrawnBy = auditID, actor.ID
+		if err := s.addressWithdrawnTx(ctx, tx, withdrawn.OwnerIdentity); err != nil {
+			return err
+		}
 		return keepWithdrawalTx(ctx, tx, withdrawn)
 	})
 }
@@ -275,13 +298,13 @@ func ownerIdentitiesTx(ctx context.Context, tx pgx.Tx) (SelfSet, error) {
 	}
 	// A message asks this about eight times in one transaction; the
 	// transaction remembers it, and every writer of what it reads forgets it.
-	return database.Remember(tx, ownerIdentitiesMemo+user.String(), func() (SelfSet, error) { return readOwnerIdentitiesTx(ctx, tx, user) })
+	return storekit.RememberCaptureFact(ctx, tx, ownerIdentitiesMemo+user.String(), func() (SelfSet, error) { return readOwnerIdentitiesTx(ctx, tx, user) })
 }
 
 // ownerIdentitiesMemo prefixes a seat's identities in a transaction's memo.
 // Every writer of an owner identity or a connection label forgets it
-// (TestEveryWriterOfAMemoizedReadForgetsIt).
-const ownerIdentitiesMemo = "capture.owner_identities:"
+// (gates/capturefactwriters_test.go).
+const ownerIdentitiesMemo = storekit.CaptureFactsMemo + "owner_identities:"
 
 func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfSet, error) {
 	// The MAILBOX OWNER, resolved the way the creation ladder resolves them:
@@ -314,19 +337,25 @@ func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfS
 	// It is read rather than declared because nobody should have to declare who
 	// they are to the product they are signed in to.
 	rows, err := tx.Query(ctx, `
-		SELECT kind, value, source FROM capture_owner_identity WHERE user_id = $1
+		SELECT own.kind, own.value, own.source, own.source = $2 AND EXISTS (
+		         SELECT 1 FROM capture_owner_identity other
+		           JOIN app_user u ON u.id = other.user_id AND `+workforce.CaptureSeatSQL("u")+`
+		          WHERE other.user_id <> own.user_id AND other.kind = own.kind
+		            AND other.value = own.value AND other.source = $2)
+		  FROM capture_owner_identity own WHERE own.user_id = $1
 		 UNION ALL
-		SELECT 'address', account_label, '' FROM capture_connection
+		SELECT 'address', account_label, '', false FROM capture_connection
 		 WHERE user_id = $1 AND coalesce(account_label, '') <> '' AND archived_at IS NULL
-`, user)
+`, user, IdentitySourceDeliveredTo)
 	if err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
 	}
 	defer rows.Close()
-	var addresses, domains []string
+	var addresses, domains, shared []string
 	for rows.Next() {
 		var kind, value, source string
-		if err := rows.Scan(&kind, &value, &source); err != nil {
+		var heldByAnotherSeat bool
+		if err := rows.Scan(&kind, &value, &source, &heldByAnotherSeat); err != nil {
 			return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
 		}
 		if discoveredMachineAddress(source, value) {
@@ -340,6 +369,9 @@ func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfS
 		// already stored bare (ValidExclusionValue parses it), so this changes
 		// nothing for those and is what makes the label usable.
 		addresses = append(addresses, bareAddress(value))
+		if heldByAnotherSeat {
+			shared = append(shared, value)
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return SelfSet{}, fmt.Errorf("capture: reading the mailbox owner's identities: %w", err)
@@ -358,7 +390,7 @@ func readOwnerIdentitiesTx(ctx context.Context, tx pgx.Tx, user ids.UUID) (SelfS
 	if login != "" {
 		identityOnly = append(identityOnly, login)
 	}
-	return NewSelfSetWithIdentityOnly(addresses, identityOnly, domains), nil
+	return NewSelfSetWithIdentityOnly(addresses, identityOnly, domains).withShared(shared), nil
 }
 
 // seatLoginAddressTx is the address this seat signs in with.

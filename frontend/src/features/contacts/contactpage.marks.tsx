@@ -12,10 +12,10 @@ export function ContactMarks({
   view,
 }: Readonly<{ view: Contact360 }>): ReactNode {
   const t = useT();
-  const role = view.commercial?.role;
+  const role = dealRoleLabel(view.commercial?.role ?? "", t);
   return (
     <>
-      {role && <Badge>{dealRoleLabel(role, t)}</Badge>}
+      {role && <Badge>{role}</Badge>}
       <RecordAccess
         key={view.contact.id}
         kind="contact"
@@ -28,6 +28,7 @@ export function ContactMarks({
       <ContactCaseEntry
         key={`case-${view.contact.id}`}
         contactId={view.contact.id}
+        followSurvivor
       />
     </>
   );

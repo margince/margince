@@ -116,7 +116,7 @@ func TestAPatchRetypesATaskAndATypeOnAnotherKindIsRefused(t *testing.T) {
 	}
 }
 
-func TestAReplyNamesTheWayItsMessageCameIn(t *testing.T) {
+func TestAReplyOrReachOutNamesTheWayItsConversationWent(t *testing.T) {
 	s := setupStanding(t)
 	for _, tc := range []struct {
 		name, sourceKind string
@@ -126,7 +126,9 @@ func TestAReplyNamesTheWayItsMessageCameIn(t *testing.T) {
 		{"a reply to a call", "call", crmcontracts.TaskTypeReply, new(crmcontracts.ActivityReplyChannelCall)},
 		{"a reply to a note", "note", crmcontracts.TaskTypeReply, nil},
 		{"a reply with no source", "", crmcontracts.TaskTypeReply, nil},
-		{"a reach out after a call", "call", crmcontracts.TaskTypeReachOut, nil},
+		{"a reach out after a mail", "email", crmcontracts.TaskTypeReachOut, new(crmcontracts.ActivityReplyChannelEmail)},
+		{"a reach out after a call", "call", crmcontracts.TaskTypeReachOut, new(crmcontracts.ActivityReplyChannelCall)},
+		{"a meeting after a call", "call", crmcontracts.TaskTypeMeet, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			contact := s.contactAt(t, "Ida Brandt", "")
@@ -135,6 +137,32 @@ func TestAReplyNamesTheWayItsMessageCameIn(t *testing.T) {
 				source := s.writtenAbout(t, tc.sourceKind, contact)
 				s.WsExec(t, `UPDATE activity SET source_activity_id = $2 WHERE id = $1`, row, source)
 			}
+			got := s.readTask(t, row).ReplyChannel
+			if (got == nil) != (tc.want == nil) || (got != nil && *got != *tc.want) {
+				t.Errorf("reply_channel = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// A reply task projects its source's channel kind only to a reader who may
+// read that source. A caller outside the source's audience gets nil, not the
+// kind of a message they cannot open. The workspace case is the control: a
+// source the reader can see still names email, so the nil is the gate.
+func TestAReplyWithdrawsTheKindOfASourceTheReaderCannotSee(t *testing.T) {
+	s := setupStanding(t)
+	email := crmcontracts.ActivityReplyChannelEmail
+	for _, tc := range []struct {
+		name, audience string
+		want           *crmcontracts.ActivityReplyChannel
+	}{
+		{"a source in the reader's audience", "workspace", &email},
+		{"a source outside the reader's audience", "participants", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			row := s.typedTask(t, crmcontracts.TaskTypeReply, s.contactAt(t, "Ida Brandt", ""))
+			source := s.message(t, "reply-source-"+tc.audience, tc.audience)
+			s.WsExec(t, `UPDATE activity SET source_activity_id = $2 WHERE id = $1`, row, source)
 			got := s.readTask(t, row).ReplyChannel
 			if (got == nil) != (tc.want == nil) || (got != nil && *got != *tc.want) {
 				t.Errorf("reply_channel = %v, want %v", got, tc.want)

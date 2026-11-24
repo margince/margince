@@ -14,6 +14,7 @@ import { todayIn } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { AI_RATE_DAY_ZONE, browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ModelPricesCard } from "../ai/ai-price-sync";
 import { FxRatesCard } from "./rates";
@@ -221,6 +222,13 @@ describe("the rate sheets", () => {
     // trimDecimal turns the numeric(20,10) value into a readable 0.92.
     await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
     expect(screen.getByText("0.92")).toBeTruthy();
+    // The day a rate takes effect reads like every other date in Settings,
+    // never as the stored ISO string.
+    const fx = rateCard("Currency rates");
+    expect(
+      within(fx).getByText(formatDate("2026-07-23", "en", browserZone())),
+    ).toBeTruthy();
+    expect(within(fx).queryByText("2026-07-23")).toBeNull();
     expect(screen.getByText("claude-opus-4-8")).toBeTruthy();
     expect(screen.getByText(/\$6\.25$/)).toBeTruthy();
 
@@ -287,16 +295,24 @@ describe("the rate sheets", () => {
       }),
     );
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByLabelText("From")).toBeTruthy();
+    expect(within(dialog).getByRole("textbox", { name: "From" })).toBeTruthy();
     expect(
-      within(dialog).getByLabelText("Rate (to base currency)"),
+      within(dialog).getByRole("textbox", { name: "Rate (to base currency)" }),
     ).toBeTruthy();
-    expect(within(dialog).getByLabelText("Effective")).toBeTruthy();
-    // The currency and the rate are still required: an empty dialog cannot be
-    // saved, which is the predicate the conversion had to leave alone.
-    expect(within(dialog).getByRole("button", { name: "Save" })).toHaveProperty(
-      "disabled",
-      true,
+    expect(
+      within(dialog).getByRole("textbox", { name: "Effective" }),
+    ).toBeTruthy();
+    // An empty dialog says on each required box what it needs, sends nothing,
+    // and puts the reader on the first one.
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await within(dialog).findByText("From is required.")).toBeTruthy();
+    expect(
+      within(dialog).getByText("Rate (to base currency) is required."),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(dialog).getByRole("textbox", { name: "From" }),
+      ),
     );
   });
 
@@ -320,21 +336,25 @@ describe("the rate sheets", () => {
     );
     await user.click(screen.getByRole("option", { name: "gemini" }));
     for (const label of [
-      "Provider",
-      "Model",
-      "Input $/M",
-      "Output $/M",
+      "Provider *",
+      "Model *",
+      "Input $/M *",
+      "Output $/M *",
       "Cache read $/M",
       "Cache write $/M",
-      "Effective",
+      "Effective *",
     ]) {
       expect(within(dialog).getByLabelText(label)).toBeTruthy();
     }
-    // Provider, model and the two prices are required; the cache columns
-    // default to 0 and do not hold the button.
-    expect(within(dialog).getByRole("button", { name: "Save" })).toHaveProperty(
-      "disabled",
-      true,
+    // Model and the two prices are required; the cache columns default to 0
+    // and are left alone by Save.
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(within(dialog).getByText("Model is required.")).toBeTruthy();
+    expect(within(dialog).getByText("Input $/M is required.")).toBeTruthy();
+    expect(within(dialog).getByText("Output $/M is required.")).toBeTruthy();
+    expect(within(dialog).queryByText(/^Cache .* is required\.$/)).toBeNull();
+    expect(document.activeElement).toBe(
+      within(dialog).getByRole("combobox", { name: "Model" }),
     );
   });
 
@@ -358,8 +378,11 @@ describe("the rate sheets", () => {
       }),
     );
     const dialog = within(await screen.findByRole("dialog"));
-    await user.type(dialog.getByLabelText("From"), "GBP");
-    await user.type(dialog.getByLabelText("Rate (to base currency)"), "1.17");
+    await user.type(dialog.getByRole("textbox", { name: "From" }), "GBP");
+    await user.type(
+      dialog.getByRole("textbox", { name: "Rate (to base currency)" }),
+      "1.17",
+    );
     await user.click(dialog.getByRole("button", { name: /^Choose date/ }));
     await user.click(
       await screen.findByRole("button", { name: "Friday, 24 July 2026" }),
@@ -371,6 +394,134 @@ describe("the rate sheets", () => {
         { from_currency: "GBP", rate: "1.17", effective_date: "2026-07-24" },
       ]),
     );
+  });
+
+  // A rate is read by the shared parser and sent as decimal text. A comma is
+  // the decimal sign, and the digits are kept as written.
+  it("sends a currency rate typed with a comma as a plain decimal", async () => {
+    const backend = ratesBackend(RATE_SETTER, "full", []);
+    const posted: unknown[] = [];
+    vi.stubGlobal("fetch", async (input: Request) => {
+      if (input.method === "POST") posted.push(await input.clone().json());
+      return backend(input);
+    });
+    const user = userEvent.setup();
+    render(<RateSheets />);
+    await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
+    await user.click(
+      within(rateCard("Currency rates")).getByRole("button", {
+        name: "Set rate",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(dialog.getByRole("textbox", { name: "From" }), "GBP");
+    const rate = dialog.getByRole("textbox", {
+      name: "Rate (to base currency)",
+    });
+    await user.type(rate, "1.170,5");
+    expect(
+      dialog.getByText(
+        "Enter the number without thousands separators, such as 1234.5.",
+      ),
+    ).toBeTruthy();
+    await user.clear(rate);
+    await user.type(rate, "0,00000012");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(posted).toMatchObject([
+        { from_currency: "GBP", rate: "0.00000012" },
+      ]),
+    );
+  });
+
+  // The checks the server makes that need no database run before sending, in
+  // the words the server's refusal gets.
+  it("refuses a code that is no currency, the base currency and a rate of zero before sending", async () => {
+    const backend = ratesBackend(RATE_SETTER, "full", []);
+    const posted: unknown[] = [];
+    vi.stubGlobal("fetch", async (input: Request) => {
+      if (input.method === "POST") posted.push(await input.clone().json());
+      if (input.url.endsWith("/v1/installation/settings")) {
+        return jsonResponse({ base_currency: "EUR" });
+      }
+      return backend(input);
+    });
+    const user = userEvent.setup();
+    render(<RateSheets />);
+    await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
+    await user.click(
+      within(rateCard("Currency rates")).getByRole("button", {
+        name: "Set rate",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    const from = dialog.getByRole("textbox", { name: "From" });
+    await user.type(from, "ZZZ");
+    await user.type(
+      dialog.getByRole("textbox", { name: "Rate (to base currency)" }),
+      "0",
+    );
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    expect(
+      await dialog.findByText(en["settings.rates.fromNotCurrency"]),
+    ).toBeTruthy();
+    expect(dialog.getByText(en["settings.rates.rateNotPositive"])).toBeTruthy();
+    expect(from.getAttribute("aria-invalid")).toBe("true");
+
+    await user.clear(from);
+    expect(dialog.queryByText(en["settings.rates.fromNotCurrency"])).toBeNull();
+    await user.type(from, "eur");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    expect(
+      await dialog.findByText(en["settings.rates.fromIsBase"]),
+    ).toBeTruthy();
+    expect(posted).toEqual([]);
+  });
+
+  it("puts the server's refusal of a past date on the Effective field", async () => {
+    const backend = ratesBackend(RATE_SETTER, "full", []);
+    vi.stubGlobal("fetch", async (input: Request) => {
+      if (input.method === "POST") {
+        return jsonResponse(
+          {
+            status: 422,
+            code: "validation_error",
+            detail: "effective_date cannot be in the past",
+            details: {
+              errors: [
+                {
+                  field: "effective_date",
+                  code: "fx_rate_past",
+                  message: "effective_date cannot be in the past",
+                },
+              ],
+            },
+          },
+          422,
+        );
+      }
+      return backend(input);
+    });
+    const user = userEvent.setup();
+    render(<RateSheets />);
+    await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
+    await user.click(
+      within(rateCard("Currency rates")).getByRole("button", {
+        name: "Set rate",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(dialog.getByRole("textbox", { name: "From" }), "GBP");
+    await user.type(
+      dialog.getByRole("textbox", { name: "Rate (to base currency)" }),
+      "1.17",
+    );
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    expect(await dialog.findByText(en["settings.rates.pastDate"])).toBeTruthy();
+    const effective = dialog.getByRole("textbox", { name: "Effective" });
+    await waitFor(() => expect(document.activeElement).toBe(effective));
+    expect(dialog.queryByText(/cannot be in the past/)).toBeNull();
+    expect(dialog.queryByText(en["settings.rates.notSaved"])).toBeNull();
   });
 
   it("refuses a model price effective before the reader's today", async () => {

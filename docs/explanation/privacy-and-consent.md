@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/de -->
+<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/eu extensions/apac -->
 # Privacy, consent & the GDPR engines
 
 ## The authorization engine (`consent`)
@@ -191,30 +191,30 @@ consent's settings. The two are different authorities. Consent's settings decide
 rules. This decides who may act against the answer those rules gave about one contact. An
 installation that handed over the first has not handed over the second with it.
 
-The check is `requireAUserOrTheirAgent` plus the grant, so a connector cannot make one. A user's agent
-carries out the user's own decision on `send_outbound`, with the `send` scope, and asks first.
-`directed_by` names the user who took it on and `directed_by_agent` names the agent.
+The check is `requireAHumanAtTheKeyboard` plus the grant, so only the user takes the decision, in a
+session. The route is human-only, and no agent or connector records one. `directed_by` names the user.
+`directed_by_agent` is never written; older rows may carry it.
 
-Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
-alone does not say which refusals a seat may send past. Each refusal reason declares what can
-resolve it in `commsauthz.RemediesFor`.
+Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. Only the
+message's author may direct it, since it sends from their mailbox (`heldreason.RefuseAnotherSeat`).
+Anyone else gets 403 and no `direct_send`. The grant alone does not say which refusals a seat may
+send past. Each refusal reason declares what can resolve it in `commsauthz.RemediesFor`.
 
-- A reason that lists the plain exception can be sent past by any holder of the grant. Missing
-  evidence is one such reason. It does not replace a required marketing basis.
-- A hard bounce, an opt-in not yet confirmed or an unknown recipient needs a fix. A rep exception cannot answer them.
-- An unknown purpose or a claim that conflicts with the record needs a corrected request.
 - A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
   objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
   rests on a request alone when the contact opted out of marketing after that request
   (`opted_out_after_request`). A request recorded after the opt-out carries the quote again.
-- Some packs list nothing either. A pack that sets `ConsentOnly` (Vietnam does)
-  turns marketing without consent into `marketing_consent_required`. No exception and no standing
-  override answers it. Nobody sends past a pack's limit on advertising mail
-  (`frequency_cap_reached`); it clears with time.
+- Every other policy refusal lists the plain exception, so the author can send one message past it
+  with a recorded reason. That includes a missing marketing basis, `marketing_consent_required`,
+  `frequency_cap_reached` and an opt-in not yet confirmed. Consent rows and the verdict stay as they were.
+- A hard bounce and a recipient that resolves to no single contact list nothing. No decision makes
+  a dead address accept mail, and an unresolved recipient was never checked for its stops.
+- A decision sends the reasons its user was shown (`shown_reasons`); a changed review is stale.
 
 `Review.DirectableBy` is the check both `DirectSend` and a refusal's actions ask.
-Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` again.
-A new stop leaves the direction not used. A new grant lets the held message go
+Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` and
+`instructionStillAnswers` again. A refusal the review did not show, or a stop or withdrawal
+recorded after the decision, leaves the direction not used. A new grant lets the held message go
 on that basis and records no exception instruction.
 
 A contact can be written to about a thread when three things hold:
@@ -404,9 +404,9 @@ reason that stands alone. A waiver with no reason, or an out-of-date one, fails 
 
 ## What an erasure reaches in the AI telemetry, and what it does not
 
-With payload capture turned on (`ai.capture_payloads`, opt-in), `ai_call_payload` holds the request
-and response of every model call. For a reading of a meeting transcript, that request **is** the
-transcript. That makes it the longest copy of someone's words this product holds.
+With payload capture on (`ai.capture_payloads`, opt-in), `ai_call_payload` holds each model call's
+request and response, unless [ai-egress.md](../reference/ai-egress.md) says it is not kept. A reading
+of a meeting transcript sends the transcript, so that is the longest copy of someone's words here.
 
 An erasure reaches that table two ways, and they cover different calls.
 
@@ -430,13 +430,13 @@ record, or is listed as owing one.
 ## The installation's jurisdiction
 
 An installation runs under one jurisdiction, stored as `installation.country`. It comes from
-`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/de`, `extensions/vn`), built in through the
-`ports/jurisdiction` seam; see [extensibility.md](extensibility.md). Core code never names a
+`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/eu`, `extensions/apac`), built in through the
+`ports/jurisdiction` seam; see [extensibility.md](extensibility.md), and [messaging-policy-packs.md](messaging-policy-packs.md) for where their rules are read. Core code never names a
 jurisdiction.
 
-The selected pack is the jurisdiction of the installation's default legal entity. It decides the retention
-floor and the request deadlines. Messaging rules are chosen by two other selectors, one per message
-recipient (see [Which rules a send follows](#which-rules-a-send-follows)).
+The selected pack is the default legal entity's jurisdiction, its only one. Someone acting uses their own
+entity (`legal_entity_member`, else the default); a record nobody acts on uses its owner's
+(`consent/recordentity.go`). Messaging rules: [Which rules a send follows](#which-rules-a-send-follows).
 
 - With no jurisdiction set, requests get one calendar month (GDPR Art. 12(3)). Retention keeps the
   longest floor of every compiled-in pack, so a new release exposes no mail that was kept safe the day
@@ -455,24 +455,24 @@ it down.
 
 `consent/ruleselectors.go` holds two selectors. Each recipient of a message is put to them on their own.
 
-- **Marketing rules follow the recipient's jurisdiction.** They set the advertising cap, the
-  advertising label on the subject, how to object, the receipt for an opt-out, and the follow-up
-  windows. The jurisdiction is the first `address_country` the record states: the contact's own, then
-  that of their current primary employer. A lead takes the one of the company it is filed under. A
-  free-text value that is not a two-letter code is skipped.
-- **Data protection follows the sending legal entity's jurisdiction.** This covers the controller
-  identity and privacy contact at the foot of the mail. `storekit.LegalEntityOf` reads the sending
-  user's membership; none, or an archived entity, gives `installation.country`. A further entity
-  puts its own legal name and address in the foot. Staging stores the entity.
+- **Marketing rules follow the recipient's jurisdiction**: the advertising cap and label, how to
+  object, the opt-out receipt and the marketing exception. A jurisdiction a human stated for the message
+  wins; else the contact's `address_country`, then their primary employer's, or a lead's company's.
+- **Data protection follows the sending legal entity's jurisdiction**: the controller, its legal
+  name and address, and the privacy contact in the foot. `storekit.LegalEntityOf` reads the sending
+  user's membership; none, or an archived entity, gives `installation.country`. Staging stores the entity.
+  A recipient pack that sets `data-protection-follows-recipient` takes disclosures and deadlines.
+- **The legal basis follows both, the stricter winning**, and its warning cites both laws (see
+  [messaging-policy-packs.md](messaging-policy-packs.md#which-country-judges-a-recipient)).
 
-A recipient whose record states no jurisdiction, or one no pack covers, gets the baseline: no pack
-duties. Marketing still needs consent, because the verdict asks for it everywhere, and the send path
-adds the unsubscribe link in every case. The email domain, the jurisdiction of the user who sends
-and the least strict pack never stand in for the recipient's jurisdiction.
+A recipient whose record states no jurisdiction, or one no pack covers, has no recipient pack
+duties. The sending entity's pack alone judges the legal basis. Marketing still needs consent, as
+the verdict asks for it everywhere, and the send path always adds the unsubscribe link. The email
+domain, the jurisdiction of the user who sends and the least strict pack never stand in for the recipient's.
 
-Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`) and the
-`data_protection_country` of the user who sends. `CheckMessage` reads the codes back, so the advertising label is
-owed if any recipient's pack asks for it. One message goes to every recipient, so its foot carries
+Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`, and a compiled
+pack's `ruleset_digest`) and the `data_protection_country` of the user who sends. Preview and staging refuse an advertising subject without a recipient's label (`subject_label_missing`).
+They also refuse recipients whose packs fix different labels (`subject_labels_conflict`); no exception passes either. `CheckMessage` parks a delivery that got past them at transmit; all three ask `subjectLabelCheck` in `internal/modules/consent/requirements.go`. One message goes to every recipient, so its foot carries
 each recipient's marketing duties.
 
 ### Request deadlines
@@ -617,4 +617,4 @@ Later mail capture and data tasks keep a user's confirmed source decision.
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
 | The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
 | Cross-store agreement | `backend/gates/tableownershipwaivers_test.go` |
-| Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/de/` |
+| Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/eu/`, `extensions/apac/` |

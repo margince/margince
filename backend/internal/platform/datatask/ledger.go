@@ -52,6 +52,7 @@ type Progress struct {
 	BlockedBy            string
 	MissingPrerequisites []string
 	Activation           *Activation
+	Action               *ActionNeeded
 }
 
 // Engine shares one ledger between worker execution and operator controls.
@@ -80,13 +81,13 @@ func New(pool *pgxpool.Pool, tasks []Task, release string, now func() time.Time,
 
 const progressColumns = `task_id, step, run_id, task_version, status, cursor, batch_limit,
  scanned, changed, batches, estimate, estimate_capped, estimated_at, consecutive_failures,
- last_error_class, next_attempt_at, last_progress_at, first_release, version, activation`
+ last_error_class, next_attempt_at, last_progress_at, first_release, version, activation, action_needed`
 
 func scanProgress(row pgx.Row) (Progress, error) {
 	var p Progress
 	err := row.Scan(&p.TaskID, &p.Step, &p.RunID, &p.TaskVersion, &p.Status, &p.Cursor, &p.BatchLimit,
 		&p.Scanned, &p.Changed, &p.Batches, &p.Estimate, &p.EstimateCapped, &p.EstimatedAt,
-		&p.ConsecutiveFailures, &p.LastErrorClass, &p.NextAttemptAt, &p.LastProgressAt, &p.FirstRelease, &p.Version, &p.Activation)
+		&p.ConsecutiveFailures, &p.LastErrorClass, &p.NextAttemptAt, &p.LastProgressAt, &p.FirstRelease, &p.Version, &p.Activation, &p.Action)
 	return p, err
 }
 

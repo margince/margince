@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import { formatSizeBand } from "../../components/companylookups";
 import { Badge, Button } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
@@ -10,15 +11,12 @@ import { PanelBody } from "../../design-system/panel";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useLatestSiteRead } from "./companydeepread";
 import { AddFactForm, useCompanyFacts } from "./companyfactspanel";
 import { emptyReason } from "./companyprofiletab";
-import {
-  useCompanyEditGate,
-  useIndustryOptions,
-  useRowBuilders,
-} from "./companyrail";
+import { useCompanyEditGate, useRowBuilders } from "./companyrail";
 import { SidecarFieldValue } from "./companyraildetails";
 import { useCompanyProfileFields } from "./evidenceverdict";
 
@@ -150,7 +148,7 @@ function ProfileInputRow({
 function IndustryRow({ company, input, present, edit }: RowProps) {
   const t = useT();
   const { choice } = useRowBuilders(company, edit);
-  const options = useIndustryOptions(company);
+  const options = useIndustryOptions(company.industry);
   const row = choice("industry", "create.industry", options);
   const profile = useCompanyProfileFields(company.id);
   const read = row.empty
@@ -175,9 +173,16 @@ function FactInputRow({ company, input, present, edit, reasonId }: RowProps) {
   const t = useT();
   const [adding, setAdding] = useState(false);
   const facts = useCompanyFacts(company.id).data ?? [];
-  const values = facts
+  const stated = facts
     .filter((fact) => fact.field === input && fact.value.trim())
     .map((fact) => fact.value);
+  // The fit counts the company's own size band ahead of any stated range. So
+  // the row shows the band whenever the record has one.
+  const band =
+    input === "employee_range" && company.size_band
+      ? formatSizeBand(t, company.size_band)
+      : undefined;
+  const values = band ? [band] : stated;
   const stateable = STATEABLE_FACTS[input];
   let action: ReactNode = null;
   if (stateable && adding) {

@@ -526,7 +526,9 @@ describe("CompanyContextCard write posture", () => {
       await waitFor(
         () =>
           expect(document.activeElement).toBe(
-            within(dialog).getByLabelText("Products and services"),
+            within(dialog).getByRole("textbox", {
+              name: "Products and services",
+            }),
           ),
         { timeout: SETTLE_MS },
       );
@@ -548,7 +550,7 @@ describe("CompanyContextCard write posture", () => {
       await waitFor(
         () =>
           expect(document.activeElement).toBe(
-            within(dialog).getByLabelText("Ideal customer"),
+            within(dialog).getByRole("textbox", { name: "Ideal customer" }),
           ),
         { timeout: SETTLE_MS },
       );
@@ -570,7 +572,7 @@ describe("CompanyContextCard write posture", () => {
       await waitFor(
         () =>
           expect(document.activeElement).toBe(
-            within(dialog).getByLabelText("Company name"),
+            within(dialog).getByRole("textbox", { name: "Company name" }),
           ),
         { timeout: SETTLE_MS },
       );
@@ -842,7 +844,8 @@ describe("CompanyContextCard save refusals", () => {
                       field: "display_name",
                       code: "too_long",
                       message:
-                        "a company name is at most 200 characters; this one is 201",
+                        "a company name is at most 120 characters; this one is 121",
+                      max: 120,
                     },
                   ],
                 },
@@ -872,17 +875,19 @@ describe("CompanyContextCard save refusals", () => {
         within(dialog).getByRole("button", { name: "Save company context" }),
       );
 
-      expect(
-        await within(dialog).findByText(
-          "Shorten the company name.",
-          undefined,
-          {
-            timeout: SETTLE_MS,
-          },
-        ),
-      ).toBeTruthy();
-      expect(within(dialog).queryByText(/at most 200/)).toBeNull();
+      const said = await within(dialog).findByText(
+        "Company name: at most 120 characters.",
+        undefined,
+        { timeout: SETTLE_MS },
+      );
+      expect(said.className).toContain("field-error");
+      expect(within(dialog).getAllByText(/at most 120/)).toHaveLength(1);
       expect(within(dialog).queryByText(/failed validation/)).toBeNull();
+      const name = within(dialog).getByRole("textbox", {
+        name: "Company name",
+      });
+      expect(name.getAttribute("aria-invalid")).toBe("true");
+      expect(name.getAttribute("data-character-limit")).toBe("120");
     },
     DIALOG_MS,
   );
@@ -909,7 +914,8 @@ describe("ManualCompanySetup save refusals", () => {
                   {
                     field: "display_name",
                     code: "too_long",
-                    message: "a company name is at most 200 characters",
+                    message: "a company name is at most 120 characters",
+                    max: 120,
                   },
                 ],
               },
@@ -932,7 +938,43 @@ describe("ManualCompanySetup save refusals", () => {
       screen.getByRole("button", { name: "Create company context" }),
     );
 
-    expect(await screen.findByText("Shorten the company name.")).toBeTruthy();
-    expect(screen.queryByText(/at most 200|failed validation/)).toBeNull();
+    expect(
+      await screen.findByText("Company name: at most 120 characters."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/failed validation/)).toBeNull();
+  });
+});
+
+describe("ManualCompanySetup once saved", () => {
+  it("puts Home in the spent form's place", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(String(input), init);
+        const path = new URL(request.url).pathname;
+        if (request.method === "PUT" && path === "/v1/company") {
+          return Response.json(COMPANY);
+        }
+        return Response.json(routeBody(path));
+      }),
+    );
+    globalThis.history.replaceState(null, "", "#/onboarding");
+    const entries = globalThis.history.length;
+    render(
+      <Providers>
+        <ManualCompanySetup />
+      </Providers>,
+    );
+    for (const box of screen.getAllByRole("textbox")) {
+      await user.type(box, "Acme");
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Create company context" }),
+    );
+
+    await waitFor(() => expect(globalThis.location.hash).toBe("#/home"));
+    expect(globalThis.history.length).toBe(entries);
   });
 });

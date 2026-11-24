@@ -5,10 +5,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { EditAccessRequest } from "../../components/editaccessrequest";
 import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { WriteRefused } from "../../design-system/querystates";
 import { useT } from "../../i18n";
+import { useCanWrite } from "../../lib/capability";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import type { LeadWriter } from "./leads";
@@ -77,6 +79,7 @@ export function leadBand({
           reader was on History said nothing at all. */}
       <WriteRefused titleKey="lead.writeRefused" error={refusal} />
       {sentence && <p id={reasonId}>{sentence}</p>}
+      {sentence && <EditAccessRequest kind="lead" record={lead} />}
     </>
   );
 }
@@ -116,17 +119,20 @@ export function ReopenAction({ lead }: Readonly<{ lead: Lead }>) {
       setOpen(false);
     },
   });
+  // The server asks for both grants, since reopening un-archives the row. An
+  // archived lead is never `writable`, so that flag cannot be this gate.
+  const mayUpdate = useCanWrite("lead", "update");
+  const mayUnarchive = useCanWrite("lead", "delete");
   const close = () => {
     setOpen(false);
     reopen.reset();
   };
-  // The way back is offered only on a disqualification a reader may write. The
-  // promoted closure is the demote's to reverse, and a reader who cannot
-  // change this lead cannot reopen it either.
+  // The promoted closure is the demote's to reverse.
   if (
     !lead.archived_at ||
     lead.status !== "disqualified" ||
-    lead.writable === false
+    !mayUpdate ||
+    !mayUnarchive
   ) {
     return null;
   }

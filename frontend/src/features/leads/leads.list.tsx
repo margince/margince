@@ -19,7 +19,7 @@ import {
   useListQuery,
 } from "../../components/listquery";
 import {
-  mineEmptyNote,
+  mineEmptyLine,
   standardViews,
   useOwnerTagChips,
 } from "../../components/recordlist";
@@ -45,7 +45,7 @@ import {
   SaveViewAction,
   useSavedViewTabs,
 } from "../lists/savedviews";
-import { LeadBulkBar } from "./leadbulk";
+import { LeadBulkBar, useBulkDoneMessage } from "./leadbulk";
 import { useLeadSettings } from "./leadhandling";
 import { leadIdentityName } from "./leadname";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
@@ -57,7 +57,6 @@ import {
   useRefusalOf,
   useWithheldLeadDials,
 } from "./leads.companydials";
-import { leadIdentityFields } from "./leads.contactoffers";
 import "./leads.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
@@ -195,10 +194,10 @@ function LeadsWorkbench({
   const [noteDismissed, setNoteDismissed] = useState(
     () => readStored(STORAGE_KEYS.segregationNoteDismissed) === "1",
   );
-  // What the last bulk write did to a row the current view then stopped
-  // showing — a successful assign out of "Mine" must never look like nothing
-  // happened (or like a failure).
+  // What the last bulk write did, said every time. The moved rows leave the
+  // selection, and an assign out of "Mine" leaves the view as well.
   const assignedAway = useOwnToast({ leavesWithCaller: true });
+  const bulkDone = useBulkDoneMessage();
   const showingMine = state.query.filters.owner_id === viewerId;
   const chosen = useRowSelection({
     rows: state.rows,
@@ -246,15 +245,18 @@ function LeadsWorkbench({
       <ListTable
         title={pageName}
         emptyNote={
-          refused.length > 0 ? (
+          refused.length > 0 && (
             <RefusedFiltersNote
               message={t("lead.filterRefused", { dial: refusedNames })}
               dials={refused}
               names={refusedNames}
             />
-          ) : (
-            mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })
           )
+        }
+        emptyLine={
+          refused.length > 0
+            ? undefined
+            : mineEmptyLine({ t, state, viewerId, unit: "unit.leads" })
         }
         // The board renders inside the surface, so the toolbar stays above it:
         // a narrowed answer always shows the way to change what narrowed it.
@@ -272,9 +274,11 @@ function LeadsWorkbench({
         bodyOwnsPaging={view === "board" && refused.length === 0}
         state={state}
         unit="unit.leads"
+        unitOne="unit.lead"
         action={
           <CreateAction
             label={t("create.lead")}
+            requires={{ object: "lead", action: "create" }}
             invalidate="leads"
             screen="leads"
             listCreate={{ open: startCreating }}
@@ -287,7 +291,13 @@ function LeadsWorkbench({
                 : { screen: "leads", id }
             }
             fields={[
-              ...leadIdentityFields,
+              // Typed, never offered from the contacts: someone is either a
+              // lead or a contact, and the server refuses a contact's address.
+              { key: "full_name", label: "create.fullName", required: true },
+              { key: "email", label: "create.email", type: "email" },
+              { key: "linkedin_url", label: "create.linkedinUrl" },
+              { key: "title", label: "create.contactTitle" },
+              { key: "company_name", label: "create.companyName" },
               {
                 key: "industry",
                 label: "create.industry",
@@ -347,11 +357,11 @@ function LeadsWorkbench({
                 // must not stand beside this one's rows.
                 assignedAway.withdraw();
                 const moved = outcomes.filter((o) => !o.error);
+                if (moved.length === 0) return;
                 if (
                   action.kind === "assign" &&
                   showingMine &&
-                  action.ownerId !== viewerId &&
-                  moved.length > 0
+                  action.ownerId !== viewerId
                 ) {
                   // The verb goes through `action`: the region draws it as one
                   // control on one ground, not a `Button` hand-placed on the
@@ -373,6 +383,8 @@ function LeadsWorkbench({
                       },
                     },
                   );
+                } else {
+                  assignedAway.show(bulkDone(moved.length, action));
                 }
               }}
             />
@@ -438,7 +450,7 @@ function LeadsWorkbench({
           },
           { label: "lead.viewNew", sort: "", filters: { status: "new" } },
           {
-            label: "lead.viewNeedsFollowUp",
+            label: "lead.viewContacted",
             sort: "",
             filters: { status: "contacted" },
           },

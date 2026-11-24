@@ -5,8 +5,11 @@ package assurance
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/closerisk"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
@@ -25,6 +28,9 @@ type Subject struct {
 	// The close date the deal carries, and whether anybody confirmed it.
 	ExpectedClose    *time.Time
 	CloseProvisional bool
+	// Zone is the installation's reporting zone, which names the day a close
+	// date is held against. Nil reads asOf's own location.
+	Zone *time.Location
 	// WinProbability is the deal's effective probability, and Likely whether
 	// it reaches the installation's Likely threshold.
 	WinProbability int
@@ -61,9 +67,6 @@ type SubjectViability struct {
 	Outcome    viability.Outcome
 	Reasons    []viability.Reason
 	SilentDays int
-	// NextChange is when the answer changes by the clock alone; nil when only
-	// new evidence can change it.
-	NextChange *time.Time
 	// Fingerprint is what the assessment read. The freshness check compares it
 	// with the deal's current one to find the deals worth checking again.
 	Fingerprint string
@@ -113,7 +116,7 @@ const TypeDealViability = "deal_viability"
 
 // retiredRules are types no rule raises, with the sources a pass must have read
 // before it may close their open findings in absence.
-var retiredRules = []Rule{{Type: TypeBuyerSilent, Version: "retired", Needs: []string{sourceMail}}}
+var retiredRules = []Rule{{Type: TypeBuyerSilent, Needs: []string{sourceMail}}}
 
 // sourceMail names the mailbox among the coverage sources.
 const sourceMail = "mail"
@@ -148,22 +151,53 @@ type Rule struct {
 	// a rule that could mint two types would give one finding two identities
 	// and a reader two things to resolve.
 	Type string
-	// Version changes when the rule's judgement changes. A finding appearing
-	// or vanishing because a rule moved is not the business moving, and a
-	// reader comparing two nights has to be able to tell.
-	Version string
 	// Needs names the coverage sources this rule stands on, both to raise a
 	// finding and to clear one. A rule that reads only the deal graph needs
 	// none: the subjects read itself proves the graph was reachable.
 	Needs []string
-	Ask   func(asOf time.Time, s Subject, cfg Config) *Finding
+	// AnsweredBy is the viability reason behind this rule's question. The walk
+	// skips the rule where viability judged the deal without that reason, and
+	// on a judged deal its finding files no task (ViabilityAnsweredTypes).
+	AnsweredBy viability.Reason
+	Ask        func(asOf time.Time, s Subject, cfg Config) *Finding
+}
+
+// ViabilityAnsweredTypes are the rule types the viability decision answers.
+// It asks nobody about a deal it judged, so their findings file no task there.
+func ViabilityAnsweredTypes() []string {
+	var out []string
+	for _, rule := range Rules() {
+		if rule.AnsweredBy != "" {
+			out = append(out, rule.Type)
+		}
+	}
+	return out
+}
+
+// answeredOtherwise reports a rule whose question the viability decision
+// answered "no" on this deal. A deal it could not judge keeps the record's own
+// answer. The bundler's twin is bundleableFindings in compose/assurancebundle.go.
+func answeredOtherwise(rule Rule, s Subject) bool {
+	return rule.AnsweredBy != "" && judged(s) && !slices.Contains(s.Viability.Reasons, rule.AnsweredBy)
+}
+
+// judged reports a deal the viability decision could judge.
+func judged(s Subject) bool {
+	return s.Viability != nil && s.Viability.Outcome != viability.OutcomeUnknown
+}
+
+// lacksNextStep is the one answer to "does the deal lack a next step": the
+// viability decision's where it judged the deal, else the record's. A wait the
+// customer asked for, or a meeting they accepted, is a next step.
+func lacksNextStep(s Subject) bool {
+	if judged(s) {
+		return slices.Contains(s.Viability.Reasons, viability.ReasonNoNextStep)
+	}
+	return !s.HasNextStep
 }
 
 // Config is what an installation decides rather than the product.
 type Config struct {
-	// ReceiptLifetime is how long a viability receipt stands before the next
-	// scheduled check should have replaced it.
-	ReceiptLifetime time.Duration
 	// MaterialMinor is the amount below which a discrepancy is not worth a
 	// contact's morning.
 	MaterialMinor int64
@@ -198,14 +232,18 @@ func Rules() []Rule {
 // there is, and the one that quietly inflates a quarter: nobody moved the date,
 // so the deal still counts toward a period it cannot close in.
 func closePast() Rule {
-	return Rule{Type: TypeClosePast, Version: "v1", Ask: func(asOf time.Time, s Subject, _ Config) *Finding {
-		if s.ExpectedClose == nil || !s.ExpectedClose.Before(day(asOf)) {
+	return Rule{Type: TypeClosePast, AnsweredBy: viability.ReasonCloseDateUnsupported, Ask: func(asOf time.Time, s Subject, _ Config) *Finding {
+		zone := s.Zone
+		if zone == nil {
+			zone = asOf.Location()
+		}
+		if s.ExpectedClose == nil || !closerisk.Overdue(*s.ExpectedClose, asOf, zone) {
 			return nil
 		}
 		return &Finding{
 			Type: TypeClosePast, SubjectID: s.DealID, Severity: SeverityHigh,
 			Claim:         map[string]any{"expected_close": s.ExpectedClose.Format(time.DateOnly)},
-			Observed:      map[string]any{"as_of": day(asOf).Format(time.DateOnly)},
+			Observed:      map[string]any{"as_of": storekit.WorkspaceDay(asOf, zone).Format(time.DateOnly)},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
 	}}
@@ -215,7 +253,7 @@ func closePast() Rule {
 // guess, which the evidence reading excludes. A manager asking "are we sure"
 // is asking about such a deal.
 func closeUnconfirmed() Rule {
-	return Rule{Type: TypeCloseUnconfirmed, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+	return Rule{Type: TypeCloseUnconfirmed, AnsweredBy: viability.ReasonCloseDateUnsupported, Ask: func(_ time.Time, s Subject, _ Config) *Finding {
 		if !s.Likely || !s.CloseProvisional {
 			return nil
 		}
@@ -231,7 +269,7 @@ func closeUnconfirmed() Rule {
 // A date that keeps moving. Each individual move is defensible; the pattern is
 // the finding, and it is invisible to anyone looking at the deal today.
 func closePushed() Rule {
-	return Rule{Type: TypeClosePushed, Version: "v1", Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
+	return Rule{Type: TypeClosePushed, Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
 		if !closeKeepsMoving(s, cfg) {
 			return nil
 		}
@@ -247,7 +285,7 @@ func closePushed() Rule {
 // The deal says one number and the offer that was sent says another. The buyer
 // is looking at the offer.
 func amountVsOffer() Rule {
-	return Rule{Type: TypeAmountVsOffer, Version: "v1", Needs: []string{"offers"}, Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
+	return Rule{Type: TypeAmountVsOffer, Needs: []string{"offers"}, Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
 		return amountDisagreement(TypeAmountVsOffer, s, s.OfferTotalMinor, "offer_total", cfg)
 	}}
 }
@@ -258,7 +296,7 @@ func amountVsOffer() Rule {
 // subjects read succeeding is what proves it was reachable — there is no
 // graded coverage source for it to stand on.
 func amountVsContract() Rule {
-	return Rule{Type: TypeAmountVsContract, Version: "v1", Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
+	return Rule{Type: TypeAmountVsContract, Ask: func(_ time.Time, s Subject, cfg Config) *Finding {
 		f := amountDisagreement(TypeAmountVsContract, s, s.ContractTotalMinor, "contract_total", cfg)
 		if f != nil {
 			f.Severity = SeverityHigh
@@ -295,11 +333,8 @@ func amountDisagreement(kind string, s Subject, against *int64, slot string, cfg
 // bookkeeping complaint: a deal nobody can say the next step for is usually a
 // deal that has stopped moving.
 func noNextStep() Rule {
-	return Rule{Type: TypeNoNextStep, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if !s.Likely {
-			return nil
-		}
-		if s.HasNextStep {
+	return Rule{Type: TypeNoNextStep, AnsweredBy: viability.ReasonNoNextStep, Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely || !lacksNextStep(s) {
 			return nil
 		}
 		return &Finding{
@@ -314,7 +349,7 @@ func noNextStep() Rule {
 // A Likely deal with nobody identified who can sign. Late-stage deals
 // without an economic buyer are where forecasts go to die.
 func noEconomicBuyer() Rule {
-	return Rule{Type: TypeNoEconomicBuyer, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+	return Rule{Type: TypeNoEconomicBuyer, Ask: func(_ time.Time, s Subject, _ Config) *Finding {
 		if !s.Likely || s.HasEconomicBuyer {
 			return nil
 		}
@@ -331,7 +366,7 @@ func noEconomicBuyer() Rule {
 // contributes nothing to the money, which is correct. A deal rated that
 // high that nobody has priced is worth asking about.
 func commitUnpriced() Rule {
-	return Rule{Type: TypeCommitUnpriced, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+	return Rule{Type: TypeCommitUnpriced, Ask: func(_ time.Time, s Subject, _ Config) *Finding {
 		if !s.Likely || s.AmountMinor != nil {
 			return nil
 		}
@@ -352,10 +387,10 @@ func LogicalKey(f Finding) string {
 	return fmt.Sprintf("%s:%s", f.Type, f.SubjectID)
 }
 
-// day drops the clock. A rule comparing a date against an instant would answer
-// differently at noon than at midnight on the same day.
-func day(at time.Time) time.Time {
-	return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, at.Location())
+// closeDayOn places a close date, a zoneless day, on loc's calendar, so it
+// compares with a day cut in loc.
+func closeDayOn(closeDate *time.Time, loc *time.Location) time.Time {
+	return time.Date(closeDate.Year(), closeDate.Month(), closeDate.Day(), 0, 0, 0, 0, loc)
 }
 
 // A deal in a stage whose own exit criteria are not met.
@@ -368,7 +403,7 @@ func day(at time.Time) time.Time {
 // contradicted later is unmet again, which is why the evidence carries a
 // refutation rather than being deleted.
 func stageExitUnmet() Rule {
-	return Rule{Type: TypeStageExitUnmet, Version: "v1", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+	return Rule{Type: TypeStageExitUnmet, Ask: func(_ time.Time, s Subject, _ Config) *Finding {
 		if s.UnmetExitCriteria == 0 {
 			return nil
 		}

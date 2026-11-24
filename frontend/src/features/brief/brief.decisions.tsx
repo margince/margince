@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppLink } from "../../design-system/applink";
 import type {
   DecisionCardLabels,
@@ -33,9 +33,11 @@ import {
 import type { MessageKey } from "../../i18n/en";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
+import { useReaderApproval } from "../../lib/approvalstagenames";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
+import { hideHomeRows } from "../../lib/homerows";
+import { fromHere } from "../../lib/navigatefrom";
 import { isVersionSkewOf, problemMessageOf } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -45,6 +47,7 @@ import {
 import { ApprovalEvidence } from "../automations/approvalevidence";
 import {
   approvalAcceptLabel,
+  approvalEditable,
   approvalExpiryLabel,
   approvalKindLabel,
   decisionSkewKey,
@@ -54,7 +57,11 @@ import {
   useApprovalNames,
 } from "../automations/approvalresponsibility";
 import { worklistLaneHref } from "../worklist/worklist.header";
-import { commitTray } from "./brief.decisions.commit";
+import {
+  type CommitResult,
+  commitTray,
+  decidedRows,
+} from "./brief.decisions.commit";
 import { DECK_KEY_WORDS } from "./brief.deckwords";
 
 // The decisions half of Brief: the deck, its tray, and the one act that sends
@@ -93,6 +100,36 @@ function verdictFailure(
   return isVersionSkewOf(error)
     ? t(decisionSkewKey(kind))
     : problemMessageOf(error, t);
+}
+
+// What a sent tray did beyond recording the verdicts. An approval the agent
+// has yet to run changed nothing. A failed effect did not happen.
+function announceWhatRan(
+  toast: ReturnType<typeof useToast>,
+  plural: ReturnType<typeof usePlural>,
+  locale: Locale,
+  result: Pick<CommitResult, "awaitingAgent" | "effectFailed">,
+) {
+  const count = (n: number) => ({ count: formatNumber(n, locale) });
+  if (result.awaitingAgent > 0) {
+    toast.show(
+      plural(
+        "brief.deck.awaitingAgent",
+        result.awaitingAgent,
+        count(result.awaitingAgent),
+      ),
+    );
+  }
+  if (result.effectFailed > 0) {
+    toast.show(
+      plural(
+        "brief.deck.effectFailed",
+        result.effectFailed,
+        count(result.effectFailed),
+      ),
+      { tone: "danger", sticky: true },
+    );
+  }
 }
 
 /** The deck's vocabulary, in this surface's own words. */
@@ -177,7 +214,7 @@ const LISTED = 3;
 
 /** The deck and its tray: the staged verdicts, and the one act that sends them. */
 export function DecisionsSection({
-  items,
+  items: storedItems,
   nowMs,
   state,
   onAlreadyDecided,
@@ -196,6 +233,16 @@ export function DecisionsSection({
   const plural = usePlural();
   const { locale } = useLocale();
   const stagedDay = stagedDayFormatter(locale, readerZone);
+  const readerApproval = useReaderApproval();
+  const items = useMemo(
+    () =>
+      storedItems.map((item) =>
+        item.kind === "single"
+          ? { ...item, approval: readerApproval(item.approval) }
+          : { ...item, members: item.members.map(readerApproval) },
+      ),
+    [storedItems, readerApproval],
+  );
   const approvalNames = useApprovalNames(
     items.flatMap((item) =>
       item.kind === "single" ? [item.approval] : item.members,
@@ -217,7 +264,12 @@ export function DecisionsSection({
     // the last render left behind, which on this page is a queue that has just
     // been invalidated.
     mutationFn: commitTray,
-    onSuccess: (result) => {
+    onMutate: async (tray) => ({
+      from: fromHere(),
+      settle: await hideHomeRows(queryClient, decidedRows(tray)),
+    }),
+    onSettled: (_result, _error, _tray, sent) => sent?.settle(),
+    onSuccess: (result, _tray, sent) => {
       setAlreadyDecided(result.alreadyDecided);
       if (result.alreadyDecided) {
         onAlreadyDecided();
@@ -232,10 +284,11 @@ export function DecisionsSection({
         return;
       }
       setFailure(null);
+      announceWhatRan(toast, plural, locale, result);
       // The full queue is where an edit's form lives, so a tray carrying one
       // takes the reader there rather than telling them the deck cannot do it.
       if (result.edits > 0) {
-        navigate({ screen: "worklist" });
+        sent?.from.navigate({ screen: "worklist" });
       }
     },
   });
@@ -339,6 +392,7 @@ export function DecisionsSection({
         // ACT; the body shows one proposal in the set.
         chips={(approval, shared) => ({
           canAccept: approvalAcceptable(approval),
+          canEdit: approvalEditable(approval.kind, approval.proposed_change),
           detail: <ApprovalEvidence approval={approval} />,
           acceptLabel: approvalAcceptLabel(
             shared.kind,

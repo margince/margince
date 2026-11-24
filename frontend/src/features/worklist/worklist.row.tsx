@@ -26,11 +26,8 @@ import {
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
-import {
-  conditionOf,
-  eyebrowKeyFor,
-  kindClass,
-} from "../../lib/worklisteyebrow";
+import { emailNamesRow } from "../../lib/worklistemailrow";
+import { conditionOf, eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import { cardLine, useHappenedClock } from "../../lib/worklisthappened";
 import { useBriefAnswer, withFoldedBrief } from "./worklist.briefverbs";
 import { DepartedOwnerCaption } from "./worklist.departedowner";
@@ -39,7 +36,7 @@ import {
   PutDownByThumb,
   useRowPutDown,
 } from "./worklist.dispositions";
-import { WaitingEmailLine } from "./worklist.emailtitle";
+import { PromiseEmailLine, WaitingEmailLine } from "./worklist.emailtitle";
 import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
@@ -118,11 +115,13 @@ export function WorklistRow({
   onReview,
   onOpenEmail,
   context,
+  verbs,
   menu,
   framed = false,
   quiet = false,
   pick,
   titleEnd,
+  underTitle,
 }: Readonly<{
   item: WorklistItem;
   /** The row's selection checkbox, drawn beside its rank where the list
@@ -131,12 +130,16 @@ export function WorklistRow({
   /** The way into what this row is ABOUT, drawn among its verbs. The Brief
    *  has no pane beside its list, so its focus rows open a drawer instead. */
   context?: ReactNode;
+  /** The surface's own verbs, drawn after the row's answer. */
+  verbs?: ReactNode;
   /** Lines the surface adds at the top of the row's menu. */
   menu?: ReactNode;
   /** The card already holds a filled verb, so the row's own is outlined. */
   quiet?: boolean;
   /** Drawn at the end of the title line. */
   titleEnd?: ReactNode;
+  /** Drawn under the title's own lines, so it follows them in reading order. */
+  underTitle?: ReactNode;
   /** A CARD around this row says whose it is, why it is here and where it
    *  stands, so the row withholds those captions and the verb that only
    *  reaches its record. The Brief's card is the only frame there is. */
@@ -219,7 +222,7 @@ export function WorklistRow({
   // AND somewhere to open it, the title line otherwise. Held as the opener
   // rather than as a flag, so the row cannot be drawn without one — a caller
   // with no drawer keeps the title instead of losing the row's name with it.
-  const emailOpener = item.email_summary != null ? onOpenEmail : undefined;
+  const emailOpener = emailNamesRow(item) ? onOpenEmail : undefined;
   // WHICH RECORD THE ROW IS ABOUT, linked, on the one row that does not link
   // it: a waiting message names its sender as text, where every other title
   // names and links its record (`itemTitle`, `rowHref`). A FRAMED row names it
@@ -259,7 +262,7 @@ export function WorklistRow({
     touch,
     pinned,
   });
-  const named = conditionOf(item, t);
+  const kind = conditionOf(item, t) ?? t(eyebrowKeyFor(item));
   return (
     <PanelRow
       // A CLASS and not a data attribute: `PanelRow` takes a className and
@@ -307,9 +310,9 @@ export function WorklistRow({
             The span is PLACEMENT — the grid cell and the
             width the kinds share; `conditionOf` says what a system row
             draws there instead. */}
-        <span className={kindClass(named)} title={named ?? undefined}>
+        <span className="worklist-row-kind" title={kind}>
           <Badge tone={item.band === "now" ? "warning" : undefined}>
-            {named ?? t(eyebrowKeyFor(item))}
+            {kind}
           </Badge>
         </span>
         <div className="worklist-row-text">
@@ -334,8 +337,10 @@ export function WorklistRow({
               emailOpener={emailOpener}
               badged={badged}
               titleEnd={titleEnd}
+              underTitle={underTitle}
             />
           )}
+          <PromiseEmailLine item={item} onOpen={onOpenEmail} />
           <RowAsk item={item} framed={framed} />
           <PreparationNote item={item} />
           {responsibility && <p className="t-caption">{responsibility}</p>}
@@ -367,7 +372,8 @@ export function WorklistRow({
             equals={answer.equals}
             onReview={onReview}
             context={context}
-            menu={menu}
+            verbs={verbs}
+            menu={joinedMenu(menu, answer.menu)}
             framed={framed}
             titled={titleLinks(emailOpener, href, source.open)}
           />
@@ -380,6 +386,17 @@ export function WorklistRow({
         {source.drawer}
       </PutDownByThumb>
     </PanelRow>
+  );
+}
+
+// The surface's menu lines first, then the lane's rarer answers.
+function joinedMenu(surface: ReactNode, lane: ReactNode): ReactNode {
+  if (!lane) return surface;
+  return (
+    <>
+      {surface}
+      {lane}
+    </>
   );
 }
 

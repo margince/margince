@@ -119,7 +119,6 @@
   padding: 2px var(--space-2); /* ds:ignore a pill's optical vertical padding */
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
-  corner-shape: round;
   white-space: nowrap;
 }
 
@@ -230,7 +229,6 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  corner-shape: round;
   background: var(--accentLight);
   color: var(--accentText);
 }
@@ -353,14 +351,14 @@
    300px, one below that. */
 .pe-overview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   align-items: start;
-  gap: var(--space-4);
+  gap: var(--gapCards);
 }
 .pe-overview-column {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--gapCards);
   min-inline-size: 0;
 }
 

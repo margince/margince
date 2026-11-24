@@ -28,6 +28,8 @@ run:
     # only when the vendor key is set, so this pass is what keeps it building.
     - vendorlive
     - rolesweep
+    # The paid agent_loop lane (make e2e-agent-loop).
+    - e2e_agent_loop
     # The mail-import load test (docs/how-to/measure-mail-import.md).
     - loadrig
 
@@ -189,6 +191,12 @@ linters:
       - path: 'internal/compose/aicert/run\.go$'
         linters: [modernize]
         text: 'embedlit'
+      # wirerule_test.go hashes the Gemini wire code the same way: a rewrite
+      # that keeps behaviour moves gemini_wire.golden and stales every Gemini
+      # record. fits() states "not in the enum and not padding" as the rule.
+      - path: 'internal/modules/ai/geministrict\.go$'
+        linters: [staticcheck]
+        text: 'QF1001'
       # Test files are exempt from gosec's hardcoded-credential heuristic
       # (G101): fitness-test maps key on function names like RotateSecret and
       # unit tests carry obvious fixture secrets — neither is a real

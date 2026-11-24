@@ -387,7 +387,7 @@ func TestOneWebsiteReadIsOneOccurrenceWhateverItRunsInside(t *testing.T) {
 			LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: "completion",
 			CorrelationID: &f.readID, Task: task, Tier: ai.TierCheapCloud,
 			Provider: "anthropic", ModelID: "claude-cheap",
-			ServedIdentitySource: "response", RequestFingerprint: "fp", LatencyMS: 900,
+			ServedIdentitySource: "response", LatencyMS: 900,
 		}}); err != nil {
 			t.Fatalf("recording the %s pass: %v", task, err)
 		}

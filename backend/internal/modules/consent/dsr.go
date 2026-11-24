@@ -267,11 +267,11 @@ func (s *Store) CreateDSR(ctx context.Context, in CreateDSRInput) (dsrRow, error
 				return err
 			}
 		}
-		computed, rule, err := s.requestDeadlineTx(ctx, tx, in.Kind, received)
+		computed, rule, err := s.requestDeadlineTx(ctx, tx, ruleSubject{}, in.Kind, received)
 		if err != nil {
 			return err
 		}
-		due, overridden, err := dueAtFor(in.DueAt, computed, rule)
+		due, overridden, err := dueAtFor(in.DueAt, received, computed, rule)
 		if err != nil {
 			return err
 		}

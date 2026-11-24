@@ -12,6 +12,7 @@ import (
 
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -78,6 +79,11 @@ func faultFor(ctx context.Context, kind string, err error) error {
 	if err == nil {
 		return nil
 	}
+	// The refusal of an unbound model passes through untouched. It names no
+	// tenant data, and Govern completes a quiet job on it without a fault line.
+	if errors.Is(err, httperr.ErrNotConfigured) {
+		return err
+	}
 	// River's own control returns pass through UNTOUCHED. A snooze
 	// reschedules and a cancel deliberately stops; neither is a failure and
 	// neither carries a cause to publish. They reach a worker's return
@@ -93,6 +99,9 @@ func faultFor(ctx context.Context, kind string, err error) error {
 	var cancel *river.JobCancelError
 	if errors.As(err, &snooze) || errors.As(err, &cancel) {
 		return err
+	}
+	if wait := postponed(ctx, kind, err); wait != nil {
+		return wait
 	}
 	// The UNIT'S OWN classification wins over the core vocabulary, and is checked
 	// before it. A tick that wrapped a core sentinel in one of its declared classes
@@ -434,6 +443,7 @@ var vocabulary = []sentinelFault{
 	{apperrors.ErrSeatTierInsufficient, "seat_tier_insufficient", systemtext.Literal("jobs.seat_tier_insufficient.sentence"), systemtext.Literal("jobs.seat_tier_insufficient.remedy")},
 	{apperrors.ErrSeatLimitReached, "seat_limit_reached", systemtext.Literal("jobs.seat_limit_reached.sentence"), systemtext.Literal("jobs.seat_limit_reached.remedy")},
 	{apperrors.ErrTrialEnded, "trial_ended", systemtext.Literal("jobs.trial_ended.sentence"), systemtext.Literal("jobs.trial_ended.remedy")},
+	{apperrors.ErrLicenseLapsed, "license_lapsed", systemtext.Literal("jobs.license_lapsed.sentence"), systemtext.Literal("jobs.license_lapsed.remedy")},
 	{apperrors.ErrScopeExceeded, "scope_exceeded", systemtext.Literal("jobs.scope_exceeded.sentence"), systemtext.Literal("jobs.scope_exceeded.remedy")},
 	{apperrors.ErrApprovalTokenInvalid, "approval_token_spent", systemtext.Literal("jobs.approval_token_spent.sentence"), systemtext.Literal("jobs.approval_token_spent.remedy")},
 	{apperrors.ErrUnsupportedBySoR, "unsupported_by_sor", systemtext.Literal("jobs.unsupported_by_sor.sentence"), systemtext.Literal("jobs.unsupported_by_sor.remedy")},

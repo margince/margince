@@ -73,7 +73,7 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 			if tc.openDeal {
 				pipeline, open, _ := integration.DealFixture(t, e)
 				companyID := ids.From[ids.CompanyKind](company)
-				deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Name: "Example sale", PipelineID: pipeline, StageID: open, CompanyID: &companyID})
+				deal, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{Source: "manual", Name: "Example sale", PipelineID: pipeline, StageID: open, CompanyID: &companyID})
 				if err != nil {
 					t.Fatal(err)
 				}

@@ -14,9 +14,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -73,15 +75,14 @@ func (s *Store) CreateLead(ctx context.Context, in CreateLeadInput) (crmcontract
 	if err != nil {
 		return crmcontracts.Lead{}, false, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
 
 	var out crmcontracts.Lead
 	created := true
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		active, err := s.activeColumnsIn(ctx, tx, "lead")
+		if err != nil {
+			return err
+		}
 		out, created, err = createLeadInTx(ctx, tx, in, by, active)
 		if err != nil || !created {
 			return err
@@ -217,7 +218,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 		return ids.LeadID{}, err
 	}
 	fixed := []any{
-		id, in.FullName, in.Email, in.Title, in.CompanyName, in.CandidateCompanyKey,
+		id, in.FullName, in.Email, in.Title, in.CompanyName, foldedCompanyKey(in.CandidateCompanyKey),
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 		in.Phone, in.Origin, in.OriginDetail, leadEmailDomain(in.Email), in.Industry, in.OwnerID, in.PartnerCompanyID,
 		in.ProductID,
@@ -295,7 +296,22 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 		return CreateLeadInput{}, err
 	}
 	in.Industry = industry
+	if !hasLeadIdentity(in) {
+		return CreateLeadInput{}, httperr.Validation(contactNameColumn, "lead_identity_required",
+			"send at least one of full_name, email, phone, linkedin_url or company_name")
+	}
 	return in, nil
+}
+
+// hasLeadIdentity reports whether a lead names someone: a row with none of
+// these fields could never be recognised, worked or matched.
+func hasLeadIdentity(in CreateLeadInput) bool {
+	for _, field := range []*string{in.FullName, in.Email, in.Phone, in.LinkedInURL, in.CompanyName} {
+		if field != nil && strings.TrimSpace(*field) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // replayedLead resolves the (source_system, source_id) idempotency key:
@@ -378,7 +394,7 @@ func (s *Store) FindLeadByLinkedInURL(ctx context.Context, rawURL string) (*crmc
 		l, err := scanLead(tx.QueryRow(ctx,
 			`SELECT `+columns+` FROM lead
 			 WHERE linkedin_url = $1 AND archived_at IS NULL AND `+scope+`
-			 ORDER BY created_at ASC, id ASC LIMIT 1`, args...), nil, policy)
+			 ORDER BY created_at ASC, id ASC LIMIT 1`, args...), nil, policy, slaNow(ctx), systemtext.Locale(ctx))
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -395,12 +411,12 @@ func (s *Store) GetLead(ctx context.Context, id ids.LeadID, archived storekit.Ar
 	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	active, err := s.activeColumns(ctx, "lead")
-	if err != nil {
-		return crmcontracts.Lead{}, err
-	}
 	var out crmcontracts.Lead
-	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		active, err := s.activeColumnsIn(ctx, tx, "lead")
+		if err != nil {
+			return err
+		}
 		if err := auth.EnsureVisible(ctx, tx, "lead", id.UUID); err != nil {
 			return err
 		}
@@ -408,6 +424,19 @@ func (s *Store) GetLead(ctx context.Context, id ids.LeadID, archived storekit.Ar
 		return err
 	})
 	return out, err
+}
+
+// GetLeadTx is GetLead inside a caller-opened transaction, for a caller that
+// reads many leads at one instant. Same gates in the same order. The grant is
+// asked first, as GetLead asks it, so a caller holding none reads nothing.
+func (s *Store) GetLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.ArchivedFilter, active CustomColumns) (crmcontracts.Lead, error) {
+	if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if err := auth.EnsureVisible(ctx, tx, "lead", id.UUID); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	return readLeadOffered(ctx, tx, id, archived, active.cols)
 }
 
 // leadUniqueViolation maps a lead write's unique-index violation to the

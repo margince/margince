@@ -28,6 +28,9 @@ type stored struct {
 	GeneratedAt       time.Time                   `json:"-"`
 	GeneratedBy       crmcontracts.WrittenBy      `json:"-"`
 	Card              crmcontracts.DealStatusCard `json:"card"`
+	// FactsOnly marks a card a facts-only read wrote where a model was owed. A
+	// facts-only read may serve it; an ordinary read treats it as a miss.
+	FactsOnly bool `json:"facts_only,omitempty"`
 }
 
 // The reader key prevents one seat from receiving another seat’s derived content.

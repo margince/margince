@@ -89,7 +89,8 @@ func (v *viabilityEnv) commitDeal(
 	owner := ids.From[ids.UserKind](v.Rep1)
 	currency := "EUR"
 	created, err := v.Deals.CreateDeal(v.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: pipeline, StageID: stage, OwnerID: &owner,
+		Source: "manual",
+		Name:   name, PipelineID: pipeline, StageID: stage, OwnerID: &owner,
 		AmountMinor: &amount, Currency: &currency, ExpectedClose: &v.closeDate,
 	})
 	if err != nil {
@@ -194,11 +195,10 @@ func TestABrokenColleagueMailboxDoesNotBlindTheOwnersDeals(t *testing.T) {
 	if outcome, _ := v.receiptOf(t, v.silent); outcome != "review_required" {
 		t.Fatalf("the silent deal whose owner's mailbox was read reads %s, want review_required", outcome)
 	}
-	if got := v.WsScalar(t, `SELECT outcome || ':' || array_to_string(reasons, ',')
-		FROM assurance_deal_receipt WHERE deal_id = $1`, theirs); got != "unknown:coverage_unknown" {
-		t.Fatalf("the colleague's deal reads %q, want unknown:coverage_unknown", got)
+	if outcome, reasons := v.receiptOf(t, theirs); outcome != "unknown" || reasons != "coverage_unknown" {
+		t.Fatalf("the colleague's deal reads %s:%s, want unknown:coverage_unknown", outcome, reasons)
 	}
-	if got := v.WsScalar(t, `SELECT status FROM assurance_run ORDER BY created_at DESC, id DESC LIMIT 1`); got != assurance.StatusIncomplete {
+	if got := v.WsScalar(t, `SELECT status FROM assurance_run ORDER BY as_of DESC, id DESC LIMIT 1`); got != assurance.StatusIncomplete {
 		t.Fatalf("the run reads %q, want %q: a broken mailbox still makes the run incomplete", got, assurance.StatusIncomplete)
 	}
 }
@@ -233,9 +233,8 @@ func TestADealWhoseMailReachedABrokenMailboxStaysUnknown(t *testing.T) {
 
 	v.check(t)
 
-	if got := v.WsScalar(t, `SELECT outcome || ':' || array_to_string(reasons, ',')
-		FROM assurance_deal_receipt WHERE deal_id = $1`, v.silent); got != "unknown:coverage_unknown" {
-		t.Fatalf("the silent deal reads %q, want unknown:coverage_unknown", got)
+	if outcome, reasons := v.receiptOf(t, v.silent); outcome != "unknown" || reasons != "coverage_unknown" {
+		t.Fatalf("the silent deal reads %s:%s, want unknown:coverage_unknown", outcome, reasons)
 	}
 }
 
@@ -345,9 +344,8 @@ func TestAPastMeetingNobodyCalledOffIsCustomerProgress(t *testing.T) {
 	pipeline, open, _ := integration.DealFixture(t, e)
 	buyer, now := e.SeedContact(t, "Buyer", nil), clocktest.Now(t)
 	progressOf := func(deal ids.UUID) string {
-		return e.WsScalar(t, `SELECT coalesce(max(a.occurred_at)::text, 'none') FROM activity a
-			JOIN activity_link al ON al.activity_id = a.id
-			WHERE al.deal_id = $1 AND a.archived_at IS NULL AND `+customerProgressSQL("a", "$2"), deal, now)
+		return e.WsScalar(t, `SELECT coalesce(max(a.occurred_at)::text, 'none') FROM activity a JOIN activity_link al ON al.activity_id = a.id
+			WHERE al.deal_id = $1 AND a.archived_at IS NULL AND `+customerProgressSQL("a", "al.deal_id", "$2"), deal, now)
 	}
 	past, ahead := now.AddDate(0, 0, -3), now.AddDate(0, 0, 3)
 	for name, tc := range map[string]struct {

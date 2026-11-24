@@ -23,7 +23,7 @@ import (
 )
 
 // ownRequestKinds are the kinds a user or their agent stages for a colleague to answer.
-var ownRequestKinds = map[string]bool{approvalsubject.KindOwnershipTransfer: true}
+var ownRequestKinds = map[string]bool{approvalsubject.KindOwnershipTransfer: true, approvalsubject.KindEditAccess: true}
 
 // OwnRequest is one open request the caller or their agent staged.
 type OwnRequest struct {
@@ -81,7 +81,7 @@ func ownRequestStager(ctx context.Context, kind string) (ids.UUID, error) {
 	}
 	p, ok := principal.Actor(ctx)
 	if !ok || !p.HumanOrItsAgent() || p.UserID.IsZero() {
-		return ids.Nil, fmt.Errorf("crmapprovals: a colleague's own request is read by that colleague or their agent: %w",
+		return ids.Nil, fmt.Errorf("a colleague's own request is read by that colleague or their agent: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	return p.UserID, nil

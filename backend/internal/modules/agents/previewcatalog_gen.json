@@ -19,7 +19,7 @@
     "address_city":
      "City",
     "address_country":
-     "Country code (ISO 3166)",
+     "Country",
     "address_line1":
      "Street and number",
     "address_line2":
@@ -210,6 +210,8 @@
      "Confirmation destination",
     "confirmed":
      "confirmed",
+    "consent":
+     "consent",
     "consent_contact":
      "Consent contact",
     "consent_policy_version":
@@ -324,6 +326,8 @@
      "Note (optional)",
     "disqualify_reason":
      "Reason",
+    "disqualify_reason_id":
+     "Disqualify reason",
     "domain":
      "Domain",
     "domains":
@@ -346,12 +350,16 @@
      "Email reminder one hour before",
     "emails":
      "Email addresses",
+    "employment_status":
+     "Employment status",
     "empty":
      "empty",
     "en":
      "en",
     "ended_at":
      "Ended",
+    "ended_precision":
+     "End date precision",
     "enrichment_depth":
      "Read scope",
     "execution":
@@ -378,6 +386,8 @@
      "Fields filled in",
     "first_name":
      "First name",
+    "footer_warning":
+     "Email footer warning",
     "format":
      "format",
     "from":
@@ -392,6 +402,8 @@
      "geocode if enabled",
     "granted":
      "granted",
+    "greeting_register":
+     "Greeting",
     "gross_minor":
      "Gross",
     "guest_answers_changed":
@@ -408,6 +420,10 @@
      "href",
     "html_body":
      "Formatted message",
+    "impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
+    "impersonation_warning_cleared":
+     "Impersonation warning cleared",
     "import_apply_tag":
      "Add tag",
     "import_close_deal":
@@ -456,6 +472,8 @@
      "Invitation status",
     "invoice_id":
      "Cited invoice",
+    "is_current_primary":
+     "Primary employer",
     "is_default":
      "Default for this language",
     "is_done":
@@ -546,6 +564,8 @@
      "Account to keep",
     "merge_address":
      "Address moved",
+    "merge_address_already_held":
+     "Survivor already has it",
     "merge_address_kind":
      "Address kind",
     "merge_address_primary_after":
@@ -848,6 +868,8 @@
      "Occurred",
     "occurred_precision":
      "Time precision",
+    "odd_due_date":
+     "This date looks far off: keep it, change it or clear it",
     "offer_line_position":
      "Position",
     "offer_number":
@@ -1150,6 +1172,8 @@
      "Revoked override",
     "revoked_rows":
      "Overrides taken back",
+    "role":
+     "Role",
     "rows":
      "rows",
     "scheduled_at":
@@ -1206,6 +1230,8 @@
      "start project delivery",
     "started_at":
      "Started",
+    "started_precision":
+     "Start date precision",
     "state":
      "state",
     "status":
@@ -1264,6 +1290,8 @@
      "Job title",
     "to":
      "To",
+    "trigger":
+     "Qualified by",
     "true":
      "true",
     "unavailable_name":
@@ -1304,8 +1332,6 @@
      "Visibility",
     "vital_or_security_interest":
      "vital or security interest",
-    "vn_subject_agreement":
-     "vn subject agreement",
     "wait_until":
      "Waiting until",
     "win_probability":
@@ -3466,6 +3492,26 @@
      "Unknown",
     "confirmed/boolean/true":
      "Yes",
+    "consent/lifecycle/customer":
+     "Customer",
+    "consent/lifecycle/disqualified":
+     "Disqualified",
+    "consent/lifecycle/former_customer":
+     "Former customer",
+    "consent/lifecycle/live":
+     "Live",
+    "consent/lifecycle/onboarding":
+     "Onboarding",
+    "consent/lifecycle/opportunity":
+     "Opportunity",
+    "consent/lifecycle/prospect":
+     "Prospect",
+    "consent/lifecycle/target":
+     "Target",
+    "consent/lifecycle/unknown":
+     "Unknown",
+    "consent/boolean/true":
+     "Yes",
     "consent_contact/lifecycle/customer":
      "Customer",
     "consent_contact/lifecycle/disqualified":
@@ -4604,6 +4650,26 @@
      "Unknown",
     "disqualify_reason/boolean/true":
      "Yes",
+    "disqualify_reason_id/lifecycle/customer":
+     "Customer",
+    "disqualify_reason_id/lifecycle/disqualified":
+     "Disqualified",
+    "disqualify_reason_id/lifecycle/former_customer":
+     "Former customer",
+    "disqualify_reason_id/lifecycle/live":
+     "Live",
+    "disqualify_reason_id/lifecycle/onboarding":
+     "Onboarding",
+    "disqualify_reason_id/lifecycle/opportunity":
+     "Opportunity",
+    "disqualify_reason_id/lifecycle/prospect":
+     "Prospect",
+    "disqualify_reason_id/lifecycle/target":
+     "Target",
+    "disqualify_reason_id/lifecycle/unknown":
+     "Unknown",
+    "disqualify_reason_id/boolean/true":
+     "Yes",
     "domain/lifecycle/customer":
      "Customer",
     "domain/lifecycle/disqualified":
@@ -4824,6 +4890,26 @@
      "Unknown",
     "emails/boolean/true":
      "Yes",
+    "employment_status/lifecycle/customer":
+     "Customer",
+    "employment_status/lifecycle/disqualified":
+     "Disqualified",
+    "employment_status/lifecycle/former_customer":
+     "Former customer",
+    "employment_status/lifecycle/live":
+     "Live",
+    "employment_status/lifecycle/onboarding":
+     "Onboarding",
+    "employment_status/lifecycle/opportunity":
+     "Opportunity",
+    "employment_status/lifecycle/prospect":
+     "Prospect",
+    "employment_status/lifecycle/target":
+     "Target",
+    "employment_status/lifecycle/unknown":
+     "Unknown",
+    "employment_status/boolean/true":
+     "Yes",
     "empty/lifecycle/customer":
      "Customer",
     "empty/lifecycle/disqualified":
@@ -4883,6 +4969,26 @@
     "ended_at/lifecycle/unknown":
      "Unknown",
     "ended_at/boolean/true":
+     "Yes",
+    "ended_precision/lifecycle/customer":
+     "Customer",
+    "ended_precision/lifecycle/disqualified":
+     "Disqualified",
+    "ended_precision/lifecycle/former_customer":
+     "Former customer",
+    "ended_precision/lifecycle/live":
+     "Live",
+    "ended_precision/lifecycle/onboarding":
+     "Onboarding",
+    "ended_precision/lifecycle/opportunity":
+     "Opportunity",
+    "ended_precision/lifecycle/prospect":
+     "Prospect",
+    "ended_precision/lifecycle/target":
+     "Target",
+    "ended_precision/lifecycle/unknown":
+     "Unknown",
+    "ended_precision/boolean/true":
      "Yes",
     "enrichment_depth/text/page":
      "Read one page and prepare an enrichment proposal",
@@ -5138,6 +5244,26 @@
      "Unknown",
     "first_name/boolean/true":
      "Yes",
+    "footer_warning/lifecycle/customer":
+     "Customer",
+    "footer_warning/lifecycle/disqualified":
+     "Disqualified",
+    "footer_warning/lifecycle/former_customer":
+     "Former customer",
+    "footer_warning/lifecycle/live":
+     "Live",
+    "footer_warning/lifecycle/onboarding":
+     "Onboarding",
+    "footer_warning/lifecycle/opportunity":
+     "Opportunity",
+    "footer_warning/lifecycle/prospect":
+     "Prospect",
+    "footer_warning/lifecycle/target":
+     "Target",
+    "footer_warning/lifecycle/unknown":
+     "Unknown",
+    "footer_warning/boolean/true":
+     "Yes",
     "format/lifecycle/customer":
      "Customer",
     "format/lifecycle/disqualified":
@@ -5277,6 +5403,26 @@
     "granted/lifecycle/unknown":
      "Unknown",
     "granted/boolean/true":
+     "Yes",
+    "greeting_register/lifecycle/customer":
+     "Customer",
+    "greeting_register/lifecycle/disqualified":
+     "Disqualified",
+    "greeting_register/lifecycle/former_customer":
+     "Former customer",
+    "greeting_register/lifecycle/live":
+     "Live",
+    "greeting_register/lifecycle/onboarding":
+     "Onboarding",
+    "greeting_register/lifecycle/opportunity":
+     "Opportunity",
+    "greeting_register/lifecycle/prospect":
+     "Prospect",
+    "greeting_register/lifecycle/target":
+     "Target",
+    "greeting_register/lifecycle/unknown":
+     "Unknown",
+    "greeting_register/boolean/true":
      "Yes",
     "gross_minor/lifecycle/customer":
      "Customer",
@@ -5437,6 +5583,46 @@
     "html_body/lifecycle/unknown":
      "Unknown",
     "html_body/boolean/true":
+     "Yes",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Customer",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Disqualified",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Former customer",
+    "impersonation_warning_carried/lifecycle/live":
+     "Live",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Opportunity",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Prospect",
+    "impersonation_warning_carried/lifecycle/target":
+     "Target",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Unknown",
+    "impersonation_warning_carried/boolean/true":
+     "Yes",
+    "impersonation_warning_cleared/lifecycle/customer":
+     "Customer",
+    "impersonation_warning_cleared/lifecycle/disqualified":
+     "Disqualified",
+    "impersonation_warning_cleared/lifecycle/former_customer":
+     "Former customer",
+    "impersonation_warning_cleared/lifecycle/live":
+     "Live",
+    "impersonation_warning_cleared/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_cleared/lifecycle/opportunity":
+     "Opportunity",
+    "impersonation_warning_cleared/lifecycle/prospect":
+     "Prospect",
+    "impersonation_warning_cleared/lifecycle/target":
+     "Target",
+    "impersonation_warning_cleared/lifecycle/unknown":
+     "Unknown",
+    "impersonation_warning_cleared/boolean/true":
      "Yes",
     "import_apply_tag/lifecycle/customer":
      "Customer",
@@ -5917,6 +6103,26 @@
     "invoice_id/lifecycle/unknown":
      "Unknown",
     "invoice_id/boolean/true":
+     "Yes",
+    "is_current_primary/lifecycle/customer":
+     "Customer",
+    "is_current_primary/lifecycle/disqualified":
+     "Disqualified",
+    "is_current_primary/lifecycle/former_customer":
+     "Former customer",
+    "is_current_primary/lifecycle/live":
+     "Live",
+    "is_current_primary/lifecycle/onboarding":
+     "Onboarding",
+    "is_current_primary/lifecycle/opportunity":
+     "Opportunity",
+    "is_current_primary/lifecycle/prospect":
+     "Prospect",
+    "is_current_primary/lifecycle/target":
+     "Target",
+    "is_current_primary/lifecycle/unknown":
+     "Unknown",
+    "is_current_primary/boolean/true":
      "Yes",
     "is_default/lifecycle/customer":
      "Customer",
@@ -6809,6 +7015,26 @@
     "merge_address/lifecycle/unknown":
      "Unknown",
     "merge_address/boolean/true":
+     "Yes",
+    "merge_address_already_held/lifecycle/customer":
+     "Customer",
+    "merge_address_already_held/lifecycle/disqualified":
+     "Disqualified",
+    "merge_address_already_held/lifecycle/former_customer":
+     "Former customer",
+    "merge_address_already_held/lifecycle/live":
+     "Live",
+    "merge_address_already_held/lifecycle/onboarding":
+     "Onboarding",
+    "merge_address_already_held/lifecycle/opportunity":
+     "Opportunity",
+    "merge_address_already_held/lifecycle/prospect":
+     "Prospect",
+    "merge_address_already_held/lifecycle/target":
+     "Target",
+    "merge_address_already_held/lifecycle/unknown":
+     "Unknown",
+    "merge_address_already_held/boolean/true":
      "Yes",
     "merge_address_kind/text/domain":
      "Domain",
@@ -9048,6 +9274,18 @@
      "Acquisition source",
     "merge_profile_field/text/address":
      "Address",
+    "merge_profile_field/text/address_city":
+     "City",
+    "merge_profile_field/text/address_country":
+     "Country",
+    "merge_profile_field/text/address_line1":
+     "Street and number",
+    "merge_profile_field/text/address_line2":
+     "Address line 2",
+    "merge_profile_field/text/address_postal_code":
+     "Postal code",
+    "merge_profile_field/text/address_region":
+     "State or region",
     "merge_profile_field/text/admission":
      "Domain intake check",
     "merge_profile_field/text/admission_reason":
@@ -9072,6 +9310,10 @@
      "Notes",
     "merge_profile_field/text/bounce":
      "Delivery bounce",
+    "merge_profile_field/text/buying_center":
+     "Buying center",
+    "merge_profile_field/text/buying_intents":
+     "Purchase triggers",
     "merge_profile_field/text/call_outcome":
      "Call outcome",
     "merge_profile_field/text/candidate_company_key":
@@ -9090,6 +9332,8 @@
      "Commercial motion",
     "merge_profile_field/text/commitment_evidence_unavailable":
      "Commitment evidence unavailable",
+    "merge_profile_field/text/common_objections":
+     "Common objections",
     "merge_profile_field/text/communication_basis":
      "Legal basis",
     "merge_profile_field/text/company_id":
@@ -9104,14 +9348,20 @@
      "Result corrected",
     "merge_profile_field/text/currency":
      "Currency",
+    "merge_profile_field/text/customer_pains":
+     "Customer pains",
     "merge_profile_field/text/decided_by_level":
      "Decided by",
     "merge_profile_field/text/description":
      "Description",
+    "merge_profile_field/text/desired_outcomes":
+     "Desired outcomes",
     "merge_profile_field/text/display_name":
      "Name",
     "merge_profile_field/text/disposition":
      "Disposition",
+    "merge_profile_field/text/disqualify_reason_id":
+     "Disqualify reason",
     "merge_profile_field/text/domain":
      "Domain",
     "merge_profile_field/text/domains":
@@ -9126,8 +9376,12 @@
      "Email",
     "merge_profile_field/text/emails":
      "Email addresses",
+    "merge_profile_field/text/employment_status":
+     "Employment status",
     "merge_profile_field/text/ended_at":
      "Ended",
+    "merge_profile_field/text/ended_precision":
+     "End date precision",
     "merge_profile_field/text/expected_arr_minor":
      "Expected ARR",
     "merge_profile_field/text/expected_close_date":
@@ -9144,6 +9398,8 @@
      "FX rate date",
     "merge_profile_field/text/fx_rate_to_base":
      "FX rate",
+    "merge_profile_field/text/greeting_register":
+     "Greeting",
     "merge_profile_field/text/guest_answers_changed":
      "Guest answers updated from the calendar",
     "merge_profile_field/text/guest_links_added":
@@ -9154,16 +9410,28 @@
      "Guests not listed",
     "merge_profile_field/text/guests_retired":
      "Guests removed by the calendar",
+    "merge_profile_field/text/history":
+     "History",
+    "merge_profile_field/text/icp":
+     "Ideal customer profile",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
+    "merge_profile_field/text/impersonation_warning_cleared":
+     "Impersonation warning cleared",
     "merge_profile_field/text/industry":
      "Industry",
     "merge_profile_field/text/invitation_status":
      "Invitation status",
+    "merge_profile_field/text/is_current_primary":
+     "Primary employer",
     "merge_profile_field/text/is_done":
      "Done",
     "merge_profile_field/text/last_name":
      "Last name",
     "merge_profile_field/text/legal_entity_id":
      "Sending company",
+    "merge_profile_field/text/legal_form":
+     "Legal form",
     "merge_profile_field/text/legal_name":
      "Legal name",
     "merge_profile_field/text/lifecycle":
@@ -9202,6 +9470,8 @@
      "Occurred",
     "merge_profile_field/text/occurred_precision":
      "Time precision",
+    "merge_profile_field/text/offer_summary":
+     "Offering",
     "merge_profile_field/text/origin":
      "Origin",
     "merge_profile_field/text/origin_detail":
@@ -9244,6 +9514,14 @@
      "Link",
     "merge_profile_field/text/recorded_at_level":
      "Recorded at level",
+    "merge_profile_field/text/register_court":
+     "Register court",
+    "merge_profile_field/text/register_number":
+     "Register number",
+    "merge_profile_field/text/register_vat":
+     "Register / VAT ID",
+    "merge_profile_field/text/registered_address":
+     "Registered address",
     "merge_profile_field/text/relationship_mark":
      "Relationship mark",
     "merge_profile_field/text/relationship_types":
@@ -9280,6 +9558,10 @@
      "Revoked override",
     "merge_profile_field/text/revoked_rows":
      "Overrides taken back",
+    "merge_profile_field/text/role":
+     "Role",
+    "merge_profile_field/text/sales_motion":
+     "Sales motion",
     "merge_profile_field/text/scope":
      "Scope",
     "merge_profile_field/text/score":
@@ -9296,6 +9578,8 @@
      "Stage",
     "merge_profile_field/text/started_at":
      "Started",
+    "merge_profile_field/text/started_precision":
+     "Start date precision",
     "merge_profile_field/text/status":
      "Status",
     "merge_profile_field/text/stopped":
@@ -9316,6 +9600,12 @@
      "Task type",
     "merge_profile_field/text/title":
      "Job title",
+    "merge_profile_field/text/trigger":
+     "Qualified by",
+    "merge_profile_field/text/usp":
+     "Differentiation",
+    "merge_profile_field/text/value_proposition":
+     "Value proposition",
     "merge_profile_field/text/vat_checked_at":
      "VAT checked",
     "merge_profile_field/text/vat_consultation_number":
@@ -9348,6 +9638,18 @@
      "Acquisition source",
     "merge_profile_field/lifecycle/address":
      "Address",
+    "merge_profile_field/lifecycle/address_city":
+     "City",
+    "merge_profile_field/lifecycle/address_country":
+     "Country",
+    "merge_profile_field/lifecycle/address_line1":
+     "Street and number",
+    "merge_profile_field/lifecycle/address_line2":
+     "Address line 2",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Postal code",
+    "merge_profile_field/lifecycle/address_region":
+     "State or region",
     "merge_profile_field/lifecycle/admission":
      "Domain intake check",
     "merge_profile_field/lifecycle/admission_reason":
@@ -9372,6 +9674,10 @@
      "Notes",
     "merge_profile_field/lifecycle/bounce":
      "Delivery bounce",
+    "merge_profile_field/lifecycle/buying_center":
+     "Buying center",
+    "merge_profile_field/lifecycle/buying_intents":
+     "Purchase triggers",
     "merge_profile_field/lifecycle/call_outcome":
      "Call outcome",
     "merge_profile_field/lifecycle/candidate_company_key":
@@ -9390,6 +9696,8 @@
      "Commercial motion",
     "merge_profile_field/lifecycle/commitment_evidence_unavailable":
      "Commitment evidence unavailable",
+    "merge_profile_field/lifecycle/common_objections":
+     "Common objections",
     "merge_profile_field/lifecycle/communication_basis":
      "Legal basis",
     "merge_profile_field/lifecycle/company_id":
@@ -9404,14 +9712,20 @@
      "Result corrected",
     "merge_profile_field/lifecycle/currency":
      "Currency",
+    "merge_profile_field/lifecycle/customer_pains":
+     "Customer pains",
     "merge_profile_field/lifecycle/decided_by_level":
      "Decided by",
     "merge_profile_field/lifecycle/description":
      "Description",
+    "merge_profile_field/lifecycle/desired_outcomes":
+     "Desired outcomes",
     "merge_profile_field/lifecycle/display_name":
      "Name",
     "merge_profile_field/lifecycle/disposition":
      "Disposition",
+    "merge_profile_field/lifecycle/disqualify_reason_id":
+     "Disqualify reason",
     "merge_profile_field/lifecycle/domain":
      "Domain",
     "merge_profile_field/lifecycle/domains":
@@ -9426,8 +9740,12 @@
      "Email",
     "merge_profile_field/lifecycle/emails":
      "Email addresses",
+    "merge_profile_field/lifecycle/employment_status":
+     "Employment status",
     "merge_profile_field/lifecycle/ended_at":
      "Ended",
+    "merge_profile_field/lifecycle/ended_precision":
+     "End date precision",
     "merge_profile_field/lifecycle/expected_arr_minor":
      "Expected ARR",
     "merge_profile_field/lifecycle/expected_close_date":
@@ -9444,6 +9762,8 @@
      "FX rate date",
     "merge_profile_field/lifecycle/fx_rate_to_base":
      "FX rate",
+    "merge_profile_field/lifecycle/greeting_register":
+     "Greeting",
     "merge_profile_field/lifecycle/guest_answers_changed":
      "Guest answers updated from the calendar",
     "merge_profile_field/lifecycle/guest_links_added":
@@ -9454,16 +9774,28 @@
      "Guests not listed",
     "merge_profile_field/lifecycle/guests_retired":
      "Guests removed by the calendar",
+    "merge_profile_field/lifecycle/history":
+     "History",
+    "merge_profile_field/lifecycle/icp":
+     "Ideal customer profile",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Impersonation warning kept from merged contact",
+    "merge_profile_field/lifecycle/impersonation_warning_cleared":
+     "Impersonation warning cleared",
     "merge_profile_field/lifecycle/industry":
      "Industry",
     "merge_profile_field/lifecycle/invitation_status":
      "Invitation status",
+    "merge_profile_field/lifecycle/is_current_primary":
+     "Primary employer",
     "merge_profile_field/lifecycle/is_done":
      "Done",
     "merge_profile_field/lifecycle/last_name":
      "Last name",
     "merge_profile_field/lifecycle/legal_entity_id":
      "Sending company",
+    "merge_profile_field/lifecycle/legal_form":
+     "Legal form",
     "merge_profile_field/lifecycle/legal_name":
      "Legal name",
     "merge_profile_field/lifecycle/lifecycle":
@@ -9502,6 +9834,8 @@
      "Occurred",
     "merge_profile_field/lifecycle/occurred_precision":
      "Time precision",
+    "merge_profile_field/lifecycle/offer_summary":
+     "Offering",
     "merge_profile_field/lifecycle/origin":
      "Origin",
     "merge_profile_field/lifecycle/origin_detail":
@@ -9544,6 +9878,14 @@
      "Link",
     "merge_profile_field/lifecycle/recorded_at_level":
      "Recorded at level",
+    "merge_profile_field/lifecycle/register_court":
+     "Register court",
+    "merge_profile_field/lifecycle/register_number":
+     "Register number",
+    "merge_profile_field/lifecycle/register_vat":
+     "Register / VAT ID",
+    "merge_profile_field/lifecycle/registered_address":
+     "Registered address",
     "merge_profile_field/lifecycle/relationship_mark":
      "Relationship mark",
     "merge_profile_field/lifecycle/relationship_types":
@@ -9580,6 +9922,10 @@
      "Revoked override",
     "merge_profile_field/lifecycle/revoked_rows":
      "Overrides taken back",
+    "merge_profile_field/lifecycle/role":
+     "Role",
+    "merge_profile_field/lifecycle/sales_motion":
+     "Sales motion",
     "merge_profile_field/lifecycle/scope":
      "Scope",
     "merge_profile_field/lifecycle/score":
@@ -9596,6 +9942,8 @@
      "Stage",
     "merge_profile_field/lifecycle/started_at":
      "Started",
+    "merge_profile_field/lifecycle/started_precision":
+     "Start date precision",
     "merge_profile_field/lifecycle/status":
      "Status",
     "merge_profile_field/lifecycle/stopped":
@@ -9616,6 +9964,12 @@
      "Task type",
     "merge_profile_field/lifecycle/title":
      "Job title",
+    "merge_profile_field/lifecycle/trigger":
+     "Qualified by",
+    "merge_profile_field/lifecycle/usp":
+     "Differentiation",
+    "merge_profile_field/lifecycle/value_proposition":
+     "Value proposition",
     "merge_profile_field/lifecycle/vat_checked_at":
      "VAT checked",
     "merge_profile_field/lifecycle/vat_consultation_number":
@@ -10644,6 +10998,26 @@
      "Unknown",
     "occurred_precision/boolean/true":
      "Yes",
+    "odd_due_date/lifecycle/customer":
+     "Customer",
+    "odd_due_date/lifecycle/disqualified":
+     "Disqualified",
+    "odd_due_date/lifecycle/former_customer":
+     "Former customer",
+    "odd_due_date/lifecycle/live":
+     "Live",
+    "odd_due_date/lifecycle/onboarding":
+     "Onboarding",
+    "odd_due_date/lifecycle/opportunity":
+     "Opportunity",
+    "odd_due_date/lifecycle/prospect":
+     "Prospect",
+    "odd_due_date/lifecycle/target":
+     "Target",
+    "odd_due_date/lifecycle/unknown":
+     "Unknown",
+    "odd_due_date/boolean/true":
+     "Yes",
     "offer_line_position/lifecycle/customer":
      "Customer",
     "offer_line_position/lifecycle/disqualified":
@@ -11494,6 +11868,8 @@
      "Unknown",
     "promotion_basis_from/boolean/true":
      "Yes",
+    "promotion_basis_kind/text/consent":
+     "Recipient agreement",
     "promotion_basis_kind/text/contract":
      "Contract",
     "promotion_basis_kind/text/existing_customer_exception":
@@ -11508,7 +11884,7 @@
      "Correspondence initiated by the recipient",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Vital or security interest",
-    "promotion_basis_kind/text/vn_subject_agreement":
+    "promotion_basis_kind/lifecycle/consent":
      "Recipient agreement",
     "promotion_basis_kind/lifecycle/contract":
      "Contract",
@@ -11524,8 +11900,6 @@
      "Correspondence initiated by the recipient",
     "promotion_basis_kind/lifecycle/vital_or_security_interest":
      "Vital or security interest",
-    "promotion_basis_kind/lifecycle/vn_subject_agreement":
-     "Recipient agreement",
     "promotion_basis_kind/boolean/true":
      "Yes",
     "promotion_basis_until/lifecycle/customer":
@@ -12087,33 +12461,41 @@
     "promotion_restriction/text/claim_contradicts_resolution":
      "The contact reason given does not match this thread.",
     "promotion_restriction/text/consent_withdrawn":
-     "The recipient withdrew consent for this kind of message, so it cannot go to them.",
+     "The recipient withdrew consent for this kind of message. Sending this email does not restore consent.",
     "promotion_restriction/text/deal_not_requested":
      "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
+    "promotion_restriction/text/footer_incomplete":
+     "Read the footer details below. You can send this email with a recorded reason.",
     "promotion_restriction/text/frequency_cap_reached":
      "The recipient has reached the marketing message limit for now. This clears automatically.",
     "promotion_restriction/text/hard_bounce":
      "This address does not accept mail. Correct the address; an override does not apply.",
+    "promotion_restriction/text/lawful_basis_unconfirmed":
+     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
     "promotion_restriction/text/legacy_transactional_unevidenced":
      "This message uses an old purpose that nothing on record supports.",
     "promotion_restriction/text/marketing_consent_required":
-     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+     "Marketing to a recipient in this country needs their prior consent.",
     "promotion_restriction/text/marketing_objection":
-     "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+     "The recipient objected to marketing. Sending this email does not lift their objection.",
     "promotion_restriction/text/marketing_permission_required":
-     "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+     "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
     "promotion_restriction/text/no_compatible_evidence":
      "Sending is refused until a reason is recorded.",
     "promotion_restriction/text/no_marketing_consent":
      "Marketing needs the recipient’s consent, and none is on record.",
     "promotion_restriction/text/opted_out_after_request":
-     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+     "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
     "promotion_restriction/text/processing_restricted":
-     "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
+     "The recipient’s data is under a processing restriction. Sending this email does not lift the restriction.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
+    "promotion_restriction/text/subject_label_missing":
+     "Marketing to a recipient in this country must start its subject with the label their law sets. Add it to the subject.",
+    "promotion_restriction/text/subject_labels_conflict":
+     "These recipients’ countries set different subject labels for marketing, and a subject starts with one. Send one message per label.",
     "promotion_restriction/text/subject_request":
-     "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
+     "The recipient asked not to be contacted. Sending this email does not change their request.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
      "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
     "promotion_restriction/text/unknown_purpose":
@@ -12121,33 +12503,41 @@
     "promotion_restriction/lifecycle/claim_contradicts_resolution":
      "The contact reason given does not match this thread.",
     "promotion_restriction/lifecycle/consent_withdrawn":
-     "The recipient withdrew consent for this kind of message, so it cannot go to them.",
+     "The recipient withdrew consent for this kind of message. Sending this email does not restore consent.",
     "promotion_restriction/lifecycle/deal_not_requested":
      "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
+    "promotion_restriction/lifecycle/footer_incomplete":
+     "Read the footer details below. You can send this email with a recorded reason.",
     "promotion_restriction/lifecycle/frequency_cap_reached":
      "The recipient has reached the marketing message limit for now. This clears automatically.",
     "promotion_restriction/lifecycle/hard_bounce":
      "This address does not accept mail. Correct the address; an override does not apply.",
+    "promotion_restriction/lifecycle/lawful_basis_unconfirmed":
+     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
     "promotion_restriction/lifecycle/legacy_transactional_unevidenced":
      "This message uses an old purpose that nothing on record supports.",
     "promotion_restriction/lifecycle/marketing_consent_required":
-     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+     "Marketing to a recipient in this country needs their prior consent.",
     "promotion_restriction/lifecycle/marketing_objection":
-     "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+     "The recipient objected to marketing. Sending this email does not lift their objection.",
     "promotion_restriction/lifecycle/marketing_permission_required":
-     "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+     "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
      "Sending is refused until a reason is recorded.",
     "promotion_restriction/lifecycle/no_marketing_consent":
      "Marketing needs the recipient’s consent, and none is on record.",
     "promotion_restriction/lifecycle/opted_out_after_request":
-     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+     "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
     "promotion_restriction/lifecycle/processing_restricted":
-     "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
+     "The recipient’s data is under a processing restriction. Sending this email does not lift the restriction.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
+    "promotion_restriction/lifecycle/subject_label_missing":
+     "Marketing to a recipient in this country must start its subject with the label their law sets. Add it to the subject.",
+    "promotion_restriction/lifecycle/subject_labels_conflict":
+     "These recipients’ countries set different subject labels for marketing, and a subject starts with one. Send one message per label.",
     "promotion_restriction/lifecycle/subject_request":
-     "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
+     "The recipient asked not to be contacted. Sending this email does not change their request.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
      "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
     "promotion_restriction/lifecycle/unknown_purpose":
@@ -13918,6 +14308,26 @@
      "Unknown",
     "revoked_rows/boolean/true":
      "Yes",
+    "role/lifecycle/customer":
+     "Customer",
+    "role/lifecycle/disqualified":
+     "Disqualified",
+    "role/lifecycle/former_customer":
+     "Former customer",
+    "role/lifecycle/live":
+     "Live",
+    "role/lifecycle/onboarding":
+     "Onboarding",
+    "role/lifecycle/opportunity":
+     "Opportunity",
+    "role/lifecycle/prospect":
+     "Prospect",
+    "role/lifecycle/target":
+     "Target",
+    "role/lifecycle/unknown":
+     "Unknown",
+    "role/boolean/true":
+     "Yes",
     "rows/lifecycle/customer":
      "Customer",
     "rows/lifecycle/disqualified":
@@ -14477,6 +14887,26 @@
     "started_at/lifecycle/unknown":
      "Unknown",
     "started_at/boolean/true":
+     "Yes",
+    "started_precision/lifecycle/customer":
+     "Customer",
+    "started_precision/lifecycle/disqualified":
+     "Disqualified",
+    "started_precision/lifecycle/former_customer":
+     "Former customer",
+    "started_precision/lifecycle/live":
+     "Live",
+    "started_precision/lifecycle/onboarding":
+     "Onboarding",
+    "started_precision/lifecycle/opportunity":
+     "Opportunity",
+    "started_precision/lifecycle/prospect":
+     "Prospect",
+    "started_precision/lifecycle/target":
+     "Target",
+    "started_precision/lifecycle/unknown":
+     "Unknown",
+    "started_precision/boolean/true":
      "Yes",
     "state/lifecycle/customer":
      "Customer",
@@ -15052,6 +15482,26 @@
      "Unknown",
     "to/boolean/true":
      "Yes",
+    "trigger/lifecycle/customer":
+     "Customer",
+    "trigger/lifecycle/disqualified":
+     "Disqualified",
+    "trigger/lifecycle/former_customer":
+     "Former customer",
+    "trigger/lifecycle/live":
+     "Live",
+    "trigger/lifecycle/onboarding":
+     "Onboarding",
+    "trigger/lifecycle/opportunity":
+     "Opportunity",
+    "trigger/lifecycle/prospect":
+     "Prospect",
+    "trigger/lifecycle/target":
+     "Target",
+    "trigger/lifecycle/unknown":
+     "Unknown",
+    "trigger/boolean/true":
+     "Yes",
     "true/lifecycle/customer":
      "Customer",
     "true/lifecycle/disqualified":
@@ -15605,26 +16055,6 @@
     "vital_or_security_interest/lifecycle/unknown":
      "Unknown",
     "vital_or_security_interest/boolean/true":
-     "Yes",
-    "vn_subject_agreement/lifecycle/customer":
-     "Customer",
-    "vn_subject_agreement/lifecycle/disqualified":
-     "Disqualified",
-    "vn_subject_agreement/lifecycle/former_customer":
-     "Former customer",
-    "vn_subject_agreement/lifecycle/live":
-     "Live",
-    "vn_subject_agreement/lifecycle/onboarding":
-     "Onboarding",
-    "vn_subject_agreement/lifecycle/opportunity":
-     "Opportunity",
-    "vn_subject_agreement/lifecycle/prospect":
-     "Prospect",
-    "vn_subject_agreement/lifecycle/target":
-     "Target",
-    "vn_subject_agreement/lifecycle/unknown":
-     "Unknown",
-    "vn_subject_agreement/boolean/true":
      "Yes",
     "wait_until/lifecycle/customer":
      "Customer",
@@ -16438,6 +16868,12 @@
      "Not set",
     "confirmed/execution":
      "Set when applied",
+    "consent/boolean":
+     "No",
+    "consent/empty":
+     "Not set",
+    "consent/execution":
+     "Set when applied",
     "consent_contact/boolean":
      "No",
     "consent_contact/empty":
@@ -16780,6 +17216,12 @@
      "Not set",
     "disqualify_reason/execution":
      "Set when applied",
+    "disqualify_reason_id/boolean":
+     "No",
+    "disqualify_reason_id/empty":
+     "Not set",
+    "disqualify_reason_id/execution":
+     "Set when applied",
     "domain/boolean":
      "No",
     "domain/empty":
@@ -16846,6 +17288,12 @@
      "Not set",
     "emails/execution":
      "Set when applied",
+    "employment_status/boolean":
+     "No",
+    "employment_status/empty":
+     "Not set",
+    "employment_status/execution":
+     "Set when applied",
     "empty/boolean":
      "No",
     "empty/empty":
@@ -16863,6 +17311,12 @@
     "ended_at/empty":
      "Not set",
     "ended_at/execution":
+     "Set when applied",
+    "ended_precision/boolean":
+     "No",
+    "ended_precision/empty":
+     "Not set",
+    "ended_precision/execution":
      "Set when applied",
     "enrichment_depth/boolean":
      "No",
@@ -16942,6 +17396,12 @@
      "Not set",
     "first_name/execution":
      "Set when applied",
+    "footer_warning/boolean":
+     "No",
+    "footer_warning/empty":
+     "Not set",
+    "footer_warning/execution":
+     "Set when applied",
     "format/boolean":
      "No",
     "format/empty":
@@ -16983,6 +17443,12 @@
     "granted/empty":
      "Not set",
     "granted/execution":
+     "Set when applied",
+    "greeting_register/boolean":
+     "No",
+    "greeting_register/empty":
+     "Not set",
+    "greeting_register/execution":
      "Set when applied",
     "gross_minor/boolean":
      "No",
@@ -17031,6 +17497,18 @@
     "html_body/empty":
      "Not set",
     "html_body/execution":
+     "Set when applied",
+    "impersonation_warning_carried/boolean":
+     "No",
+    "impersonation_warning_carried/empty":
+     "Not set",
+    "impersonation_warning_carried/execution":
+     "Set when applied",
+    "impersonation_warning_cleared/boolean":
+     "No",
+    "impersonation_warning_cleared/empty":
+     "Not set",
+    "impersonation_warning_cleared/execution":
      "Set when applied",
     "import_apply_tag/boolean":
      "No",
@@ -17175,6 +17653,12 @@
     "invoice_id/empty":
      "Not set",
     "invoice_id/execution":
+     "Set when applied",
+    "is_current_primary/boolean":
+     "No",
+    "is_current_primary/empty":
+     "Not set",
+    "is_current_primary/execution":
      "Set when applied",
     "is_default/boolean":
      "No",
@@ -17445,6 +17929,12 @@
     "merge_address/empty":
      "Not set",
     "merge_address/execution":
+     "Set when applied",
+    "merge_address_already_held/boolean":
+     "No",
+    "merge_address_already_held/empty":
+     "Not set",
+    "merge_address_already_held/execution":
      "Set when applied",
     "merge_address_kind/text":
      "Approval context is unavailable. Reload or request a new proposal.",
@@ -18404,6 +18894,12 @@
      "Not set",
     "occurred_precision/execution":
      "Set when applied",
+    "odd_due_date/boolean":
+     "No",
+    "odd_due_date/empty":
+     "Not set",
+    "odd_due_date/execution":
+     "Set when applied",
     "offer_line_position/boolean":
      "No",
     "offer_line_position/empty":
@@ -19322,6 +19818,12 @@
      "Not set",
     "revoked_rows/execution":
      "Set when applied",
+    "role/boolean":
+     "No",
+    "role/empty":
+     "Not set",
+    "role/execution":
+     "Set when applied",
     "rows/boolean":
      "No",
     "rows/empty":
@@ -19489,6 +19991,12 @@
     "started_at/empty":
      "Not set",
     "started_at/execution":
+     "Set when applied",
+    "started_precision/boolean":
+     "No",
+    "started_precision/empty":
+     "Not set",
+    "started_precision/execution":
      "Set when applied",
     "state/boolean":
      "No",
@@ -19664,6 +20172,12 @@
      "Not set",
     "to/execution":
      "Set when applied",
+    "trigger/boolean":
+     "No",
+    "trigger/empty":
+     "Not set",
+    "trigger/execution":
+     "Set when applied",
     "true/boolean":
      "No",
     "true/empty":
@@ -19784,12 +20298,6 @@
      "Not set",
     "vital_or_security_interest/execution":
      "Set when applied",
-    "vn_subject_agreement/boolean":
-     "No",
-    "vn_subject_agreement/empty":
-     "Not set",
-    "vn_subject_agreement/execution":
-     "Set when applied",
     "wait_until/boolean":
      "No",
     "wait_until/empty":
@@ -19885,7 +20393,7 @@
     "address_city":
      "Stadt",
     "address_country":
-     "Ländercode (ISO 3166)",
+     "Land",
     "address_line1":
      "Straße und Hausnummer",
     "address_line2":
@@ -20076,6 +20584,8 @@
      "Zieladresse der Bestätigung",
     "confirmed":
      "confirmed",
+    "consent":
+     "consent",
     "consent_contact":
      "Kontakt der Einwilligung",
     "consent_policy_version":
@@ -20131,7 +20641,7 @@
     "creation_acquired_at":
      "Erfasst am",
     "creation_acquisition":
-     "Warum dieser Kontakt angelegt wird",
+     "Warum dieser Kontakt erstellt wird",
     "creation_duplicate":
      "Vorgeschlagene Dublette",
     "creation_email_correspondence":
@@ -20190,6 +20700,8 @@
      "Notiz (optional)",
     "disqualify_reason":
      "Grund",
+    "disqualify_reason_id":
+     "Disqualifizierungsgrund",
     "domain":
      "Domain",
     "domains":
@@ -20212,12 +20724,16 @@
      "E-Mail-Erinnerung eine Stunde vorher",
     "emails":
      "E-Mail-Adressen",
+    "employment_status":
+     "Beschäftigungsstatus",
     "empty":
      "empty",
     "en":
      "en",
     "ended_at":
      "Beendet",
+    "ended_precision":
+     "Genauigkeit des Enddatums",
     "enrichment_depth":
      "Leseumfang",
     "execution":
@@ -20244,6 +20760,8 @@
      "Ergänzte Felder",
     "first_name":
      "Vorname",
+    "footer_warning":
+     "Hinweis zur E-Mail-Fußzeile",
     "format":
      "format",
     "from":
@@ -20258,6 +20776,8 @@
      "geocode if enabled",
     "granted":
      "granted",
+    "greeting_register":
+     "Anrede",
     "gross_minor":
      "Brutto",
     "guest_answers_changed":
@@ -20274,6 +20794,10 @@
      "href",
     "html_body":
      "Formatierte Nachricht",
+    "impersonation_warning_carried":
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
+    "impersonation_warning_cleared":
+     "Warnung vor möglicher Täuschung aufgehoben",
     "import_apply_tag":
      "Tag hinzufügen",
     "import_close_deal":
@@ -20322,6 +20846,8 @@
      "Einladungsstatus",
     "invoice_id":
      "Angeführte Rechnung",
+    "is_current_primary":
+     "Hauptarbeitgeber",
     "is_default":
      "Standard für diese Sprache",
     "is_done":
@@ -20412,6 +20938,8 @@
      "Konto behalten",
     "merge_address":
      "Übernommene Adresse",
+    "merge_address_already_held":
+     "Ziel hat sie schon",
     "merge_address_kind":
      "Adressart",
     "merge_address_primary_after":
@@ -20714,6 +21242,8 @@
      "Zeitpunkt",
     "occurred_precision":
      "Zeitgenauigkeit",
+    "odd_due_date":
+     "Dieses Datum wirkt weit weg: behalten, ändern oder leeren",
     "offer_line_position":
      "Position",
     "offer_number":
@@ -20807,7 +21337,7 @@
     "promotion_company_industry":
      "Branche des Unternehmens",
     "promotion_company_proposed":
-     "Unternehmen zum Verknüpfen oder Anlegen",
+     "Unternehmen zum Verknüpfen oder Erstellen",
     "promotion_consent_before":
      "Einwilligung vor der Qualifizierung",
     "promotion_contact_email":
@@ -21016,6 +21546,8 @@
      "Widerrufene Freigabe",
     "revoked_rows":
      "Zurückgenommene Freigaben",
+    "role":
+     "Rolle",
     "rows":
      "rows",
     "scheduled_at":
@@ -21072,6 +21604,8 @@
      "start project delivery",
     "started_at":
      "Beginn",
+    "started_precision":
+     "Genauigkeit des Startdatums",
     "state":
      "state",
     "status":
@@ -21130,6 +21664,8 @@
      "Jobtitel",
     "to":
      "An",
+    "trigger":
+     "Qualifiziert durch",
     "true":
      "true",
     "unavailable_name":
@@ -21170,8 +21706,6 @@
      "Sichtbarkeit",
     "vital_or_security_interest":
      "vital or security interest",
-    "vn_subject_agreement":
-     "vn subject agreement",
     "wait_until":
      "Wartet bis",
     "win_probability":
@@ -23332,6 +23866,26 @@
      "Unbekannt",
     "confirmed/boolean/true":
      "Ja",
+    "consent/lifecycle/customer":
+     "Kunde",
+    "consent/lifecycle/disqualified":
+     "Disqualifiziert",
+    "consent/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "consent/lifecycle/live":
+     "Live",
+    "consent/lifecycle/onboarding":
+     "Onboarding",
+    "consent/lifecycle/opportunity":
+     "Chance",
+    "consent/lifecycle/prospect":
+     "Interessent",
+    "consent/lifecycle/target":
+     "Zielunternehmen",
+    "consent/lifecycle/unknown":
+     "Unbekannt",
+    "consent/boolean/true":
+     "Ja",
     "consent_contact/lifecycle/customer":
      "Kunde",
     "consent_contact/lifecycle/disqualified":
@@ -24470,6 +25024,26 @@
      "Unbekannt",
     "disqualify_reason/boolean/true":
      "Ja",
+    "disqualify_reason_id/lifecycle/customer":
+     "Kunde",
+    "disqualify_reason_id/lifecycle/disqualified":
+     "Disqualifiziert",
+    "disqualify_reason_id/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "disqualify_reason_id/lifecycle/live":
+     "Live",
+    "disqualify_reason_id/lifecycle/onboarding":
+     "Onboarding",
+    "disqualify_reason_id/lifecycle/opportunity":
+     "Chance",
+    "disqualify_reason_id/lifecycle/prospect":
+     "Interessent",
+    "disqualify_reason_id/lifecycle/target":
+     "Zielunternehmen",
+    "disqualify_reason_id/lifecycle/unknown":
+     "Unbekannt",
+    "disqualify_reason_id/boolean/true":
+     "Ja",
     "domain/lifecycle/customer":
      "Kunde",
     "domain/lifecycle/disqualified":
@@ -24690,6 +25264,26 @@
      "Unbekannt",
     "emails/boolean/true":
      "Ja",
+    "employment_status/lifecycle/customer":
+     "Kunde",
+    "employment_status/lifecycle/disqualified":
+     "Disqualifiziert",
+    "employment_status/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "employment_status/lifecycle/live":
+     "Live",
+    "employment_status/lifecycle/onboarding":
+     "Onboarding",
+    "employment_status/lifecycle/opportunity":
+     "Chance",
+    "employment_status/lifecycle/prospect":
+     "Interessent",
+    "employment_status/lifecycle/target":
+     "Zielunternehmen",
+    "employment_status/lifecycle/unknown":
+     "Unbekannt",
+    "employment_status/boolean/true":
+     "Ja",
     "empty/lifecycle/customer":
      "Kunde",
     "empty/lifecycle/disqualified":
@@ -24749,6 +25343,26 @@
     "ended_at/lifecycle/unknown":
      "Unbekannt",
     "ended_at/boolean/true":
+     "Ja",
+    "ended_precision/lifecycle/customer":
+     "Kunde",
+    "ended_precision/lifecycle/disqualified":
+     "Disqualifiziert",
+    "ended_precision/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "ended_precision/lifecycle/live":
+     "Live",
+    "ended_precision/lifecycle/onboarding":
+     "Onboarding",
+    "ended_precision/lifecycle/opportunity":
+     "Chance",
+    "ended_precision/lifecycle/prospect":
+     "Interessent",
+    "ended_precision/lifecycle/target":
+     "Zielunternehmen",
+    "ended_precision/lifecycle/unknown":
+     "Unbekannt",
+    "ended_precision/boolean/true":
      "Ja",
     "enrichment_depth/text/page":
      "Eine Seite lesen und einen Anreicherungsvorschlag vorbereiten",
@@ -25004,6 +25618,26 @@
      "Unbekannt",
     "first_name/boolean/true":
      "Ja",
+    "footer_warning/lifecycle/customer":
+     "Kunde",
+    "footer_warning/lifecycle/disqualified":
+     "Disqualifiziert",
+    "footer_warning/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "footer_warning/lifecycle/live":
+     "Live",
+    "footer_warning/lifecycle/onboarding":
+     "Onboarding",
+    "footer_warning/lifecycle/opportunity":
+     "Chance",
+    "footer_warning/lifecycle/prospect":
+     "Interessent",
+    "footer_warning/lifecycle/target":
+     "Zielunternehmen",
+    "footer_warning/lifecycle/unknown":
+     "Unbekannt",
+    "footer_warning/boolean/true":
+     "Ja",
     "format/lifecycle/customer":
      "Kunde",
     "format/lifecycle/disqualified":
@@ -25143,6 +25777,26 @@
     "granted/lifecycle/unknown":
      "Unbekannt",
     "granted/boolean/true":
+     "Ja",
+    "greeting_register/lifecycle/customer":
+     "Kunde",
+    "greeting_register/lifecycle/disqualified":
+     "Disqualifiziert",
+    "greeting_register/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "greeting_register/lifecycle/live":
+     "Live",
+    "greeting_register/lifecycle/onboarding":
+     "Onboarding",
+    "greeting_register/lifecycle/opportunity":
+     "Chance",
+    "greeting_register/lifecycle/prospect":
+     "Interessent",
+    "greeting_register/lifecycle/target":
+     "Zielunternehmen",
+    "greeting_register/lifecycle/unknown":
+     "Unbekannt",
+    "greeting_register/boolean/true":
      "Ja",
     "gross_minor/lifecycle/customer":
      "Kunde",
@@ -25303,6 +25957,46 @@
     "html_body/lifecycle/unknown":
      "Unbekannt",
     "html_body/boolean/true":
+     "Ja",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Kunde",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Disqualifiziert",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "impersonation_warning_carried/lifecycle/live":
+     "Live",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Chance",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Interessent",
+    "impersonation_warning_carried/lifecycle/target":
+     "Zielunternehmen",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Unbekannt",
+    "impersonation_warning_carried/boolean/true":
+     "Ja",
+    "impersonation_warning_cleared/lifecycle/customer":
+     "Kunde",
+    "impersonation_warning_cleared/lifecycle/disqualified":
+     "Disqualifiziert",
+    "impersonation_warning_cleared/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "impersonation_warning_cleared/lifecycle/live":
+     "Live",
+    "impersonation_warning_cleared/lifecycle/onboarding":
+     "Onboarding",
+    "impersonation_warning_cleared/lifecycle/opportunity":
+     "Chance",
+    "impersonation_warning_cleared/lifecycle/prospect":
+     "Interessent",
+    "impersonation_warning_cleared/lifecycle/target":
+     "Zielunternehmen",
+    "impersonation_warning_cleared/lifecycle/unknown":
+     "Unbekannt",
+    "impersonation_warning_cleared/boolean/true":
      "Ja",
     "import_apply_tag/lifecycle/customer":
      "Kunde",
@@ -25783,6 +26477,26 @@
     "invoice_id/lifecycle/unknown":
      "Unbekannt",
     "invoice_id/boolean/true":
+     "Ja",
+    "is_current_primary/lifecycle/customer":
+     "Kunde",
+    "is_current_primary/lifecycle/disqualified":
+     "Disqualifiziert",
+    "is_current_primary/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "is_current_primary/lifecycle/live":
+     "Live",
+    "is_current_primary/lifecycle/onboarding":
+     "Onboarding",
+    "is_current_primary/lifecycle/opportunity":
+     "Chance",
+    "is_current_primary/lifecycle/prospect":
+     "Interessent",
+    "is_current_primary/lifecycle/target":
+     "Zielunternehmen",
+    "is_current_primary/lifecycle/unknown":
+     "Unbekannt",
+    "is_current_primary/boolean/true":
      "Ja",
     "is_default/lifecycle/customer":
      "Kunde",
@@ -26675,6 +27389,26 @@
     "merge_address/lifecycle/unknown":
      "Unbekannt",
     "merge_address/boolean/true":
+     "Ja",
+    "merge_address_already_held/lifecycle/customer":
+     "Kunde",
+    "merge_address_already_held/lifecycle/disqualified":
+     "Disqualifiziert",
+    "merge_address_already_held/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "merge_address_already_held/lifecycle/live":
+     "Live",
+    "merge_address_already_held/lifecycle/onboarding":
+     "Onboarding",
+    "merge_address_already_held/lifecycle/opportunity":
+     "Chance",
+    "merge_address_already_held/lifecycle/prospect":
+     "Interessent",
+    "merge_address_already_held/lifecycle/target":
+     "Zielunternehmen",
+    "merge_address_already_held/lifecycle/unknown":
+     "Unbekannt",
+    "merge_address_already_held/boolean/true":
      "Ja",
     "merge_address_kind/text/domain":
      "Domain",
@@ -28914,6 +29648,18 @@
      "Akquisitionsquelle",
     "merge_profile_field/text/address":
      "Adresse",
+    "merge_profile_field/text/address_city":
+     "Stadt",
+    "merge_profile_field/text/address_country":
+     "Land",
+    "merge_profile_field/text/address_line1":
+     "Straße und Hausnummer",
+    "merge_profile_field/text/address_line2":
+     "Adresszusatz",
+    "merge_profile_field/text/address_postal_code":
+     "Postleitzahl",
+    "merge_profile_field/text/address_region":
+     "Bundesland oder Region",
     "merge_profile_field/text/admission":
      "Eingangsprüfung der Domain",
     "merge_profile_field/text/admission_reason":
@@ -28938,6 +29684,10 @@
      "Notizen",
     "merge_profile_field/text/bounce":
      "Unzustellbar",
+    "merge_profile_field/text/buying_center":
+     "Buying Center",
+    "merge_profile_field/text/buying_intents":
+     "Kaufanlässe",
     "merge_profile_field/text/call_outcome":
      "Ergebnis des Anrufs",
     "merge_profile_field/text/candidate_company_key":
@@ -28956,6 +29706,8 @@
      "Deal-Typ",
     "merge_profile_field/text/commitment_evidence_unavailable":
      "Nachweis der Zusage nicht verfügbar",
+    "merge_profile_field/text/common_objections":
+     "Häufige Einwände",
     "merge_profile_field/text/communication_basis":
      "Rechtsgrundlage",
     "merge_profile_field/text/company_id":
@@ -28970,14 +29722,20 @@
      "Ergebnis korrigiert",
     "merge_profile_field/text/currency":
      "Währung",
+    "merge_profile_field/text/customer_pains":
+     "Kundenprobleme",
     "merge_profile_field/text/decided_by_level":
      "Entschieden von",
     "merge_profile_field/text/description":
      "Beschreibung",
+    "merge_profile_field/text/desired_outcomes":
+     "Gewünschte Ergebnisse",
     "merge_profile_field/text/display_name":
      "Name",
     "merge_profile_field/text/disposition":
      "Einstufung",
+    "merge_profile_field/text/disqualify_reason_id":
+     "Disqualifizierungsgrund",
     "merge_profile_field/text/domain":
      "Domain",
     "merge_profile_field/text/domains":
@@ -28992,8 +29750,12 @@
      "E-Mail",
     "merge_profile_field/text/emails":
      "E-Mail-Adressen",
+    "merge_profile_field/text/employment_status":
+     "Beschäftigungsstatus",
     "merge_profile_field/text/ended_at":
      "Beendet",
+    "merge_profile_field/text/ended_precision":
+     "Genauigkeit des Enddatums",
     "merge_profile_field/text/expected_arr_minor":
      "Erwarteter ARR",
     "merge_profile_field/text/expected_close_date":
@@ -29010,6 +29772,8 @@
      "Datum des Wechselkurses",
     "merge_profile_field/text/fx_rate_to_base":
      "Wechselkurs",
+    "merge_profile_field/text/greeting_register":
+     "Anrede",
     "merge_profile_field/text/guest_answers_changed":
      "Antworten der Gäste aus dem Kalender aktualisiert",
     "merge_profile_field/text/guest_links_added":
@@ -29020,16 +29784,28 @@
      "Nicht aufgeführte Gäste",
     "merge_profile_field/text/guests_retired":
      "Gäste vom Kalender entfernt",
+    "merge_profile_field/text/history":
+     "Geschichte",
+    "merge_profile_field/text/icp":
+     "Ideales Kundenprofil",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
+    "merge_profile_field/text/impersonation_warning_cleared":
+     "Warnung vor möglicher Täuschung aufgehoben",
     "merge_profile_field/text/industry":
      "Branche",
     "merge_profile_field/text/invitation_status":
      "Einladungsstatus",
+    "merge_profile_field/text/is_current_primary":
+     "Hauptarbeitgeber",
     "merge_profile_field/text/is_done":
      "Erledigt",
     "merge_profile_field/text/last_name":
      "Nachname",
     "merge_profile_field/text/legal_entity_id":
      "Absendendes Unternehmen",
+    "merge_profile_field/text/legal_form":
+     "Rechtsform",
     "merge_profile_field/text/legal_name":
      "Rechtlicher Name",
     "merge_profile_field/text/lifecycle":
@@ -29068,6 +29844,8 @@
      "Zeitpunkt",
     "merge_profile_field/text/occurred_precision":
      "Zeitgenauigkeit",
+    "merge_profile_field/text/offer_summary":
+     "Angebot",
     "merge_profile_field/text/origin":
      "Herkunft",
     "merge_profile_field/text/origin_detail":
@@ -29110,6 +29888,14 @@
      "Verknüpfung",
     "merge_profile_field/text/recorded_at_level":
      "Erfasst auf Ebene",
+    "merge_profile_field/text/register_court":
+     "Registergericht",
+    "merge_profile_field/text/register_number":
+     "Registernummer",
+    "merge_profile_field/text/register_vat":
+     "Register / USt-ID",
+    "merge_profile_field/text/registered_address":
+     "Eingetragene Anschrift",
     "merge_profile_field/text/relationship_mark":
      "Beziehungsmarkierung",
     "merge_profile_field/text/relationship_types":
@@ -29146,6 +29932,10 @@
      "Widerrufene Freigabe",
     "merge_profile_field/text/revoked_rows":
      "Zurückgenommene Freigaben",
+    "merge_profile_field/text/role":
+     "Rolle",
+    "merge_profile_field/text/sales_motion":
+     "Vertriebsprozess",
     "merge_profile_field/text/scope":
      "Umfang",
     "merge_profile_field/text/score":
@@ -29162,6 +29952,8 @@
      "Phase",
     "merge_profile_field/text/started_at":
      "Beginn",
+    "merge_profile_field/text/started_precision":
+     "Genauigkeit des Startdatums",
     "merge_profile_field/text/status":
      "Status",
     "merge_profile_field/text/stopped":
@@ -29182,6 +29974,12 @@
      "Aufgabentyp",
     "merge_profile_field/text/title":
      "Jobtitel",
+    "merge_profile_field/text/trigger":
+     "Qualifiziert durch",
+    "merge_profile_field/text/usp":
+     "Differenzierung",
+    "merge_profile_field/text/value_proposition":
+     "Nutzenversprechen",
     "merge_profile_field/text/vat_checked_at":
      "USt-ID geprüft",
     "merge_profile_field/text/vat_consultation_number":
@@ -29214,6 +30012,18 @@
      "Akquisitionsquelle",
     "merge_profile_field/lifecycle/address":
      "Adresse",
+    "merge_profile_field/lifecycle/address_city":
+     "Stadt",
+    "merge_profile_field/lifecycle/address_country":
+     "Land",
+    "merge_profile_field/lifecycle/address_line1":
+     "Straße und Hausnummer",
+    "merge_profile_field/lifecycle/address_line2":
+     "Adresszusatz",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Postleitzahl",
+    "merge_profile_field/lifecycle/address_region":
+     "Bundesland oder Region",
     "merge_profile_field/lifecycle/admission":
      "Eingangsprüfung der Domain",
     "merge_profile_field/lifecycle/admission_reason":
@@ -29238,6 +30048,10 @@
      "Notizen",
     "merge_profile_field/lifecycle/bounce":
      "Unzustellbar",
+    "merge_profile_field/lifecycle/buying_center":
+     "Buying Center",
+    "merge_profile_field/lifecycle/buying_intents":
+     "Kaufanlässe",
     "merge_profile_field/lifecycle/call_outcome":
      "Ergebnis des Anrufs",
     "merge_profile_field/lifecycle/candidate_company_key":
@@ -29256,6 +30070,8 @@
      "Deal-Typ",
     "merge_profile_field/lifecycle/commitment_evidence_unavailable":
      "Nachweis der Zusage nicht verfügbar",
+    "merge_profile_field/lifecycle/common_objections":
+     "Häufige Einwände",
     "merge_profile_field/lifecycle/communication_basis":
      "Rechtsgrundlage",
     "merge_profile_field/lifecycle/company_id":
@@ -29270,14 +30086,20 @@
      "Ergebnis korrigiert",
     "merge_profile_field/lifecycle/currency":
      "Währung",
+    "merge_profile_field/lifecycle/customer_pains":
+     "Kundenprobleme",
     "merge_profile_field/lifecycle/decided_by_level":
      "Entschieden von",
     "merge_profile_field/lifecycle/description":
      "Beschreibung",
+    "merge_profile_field/lifecycle/desired_outcomes":
+     "Gewünschte Ergebnisse",
     "merge_profile_field/lifecycle/display_name":
      "Name",
     "merge_profile_field/lifecycle/disposition":
      "Einstufung",
+    "merge_profile_field/lifecycle/disqualify_reason_id":
+     "Disqualifizierungsgrund",
     "merge_profile_field/lifecycle/domain":
      "Domain",
     "merge_profile_field/lifecycle/domains":
@@ -29292,8 +30114,12 @@
      "E-Mail",
     "merge_profile_field/lifecycle/emails":
      "E-Mail-Adressen",
+    "merge_profile_field/lifecycle/employment_status":
+     "Beschäftigungsstatus",
     "merge_profile_field/lifecycle/ended_at":
      "Beendet",
+    "merge_profile_field/lifecycle/ended_precision":
+     "Genauigkeit des Enddatums",
     "merge_profile_field/lifecycle/expected_arr_minor":
      "Erwarteter ARR",
     "merge_profile_field/lifecycle/expected_close_date":
@@ -29310,6 +30136,8 @@
      "Datum des Wechselkurses",
     "merge_profile_field/lifecycle/fx_rate_to_base":
      "Wechselkurs",
+    "merge_profile_field/lifecycle/greeting_register":
+     "Anrede",
     "merge_profile_field/lifecycle/guest_answers_changed":
      "Antworten der Gäste aus dem Kalender aktualisiert",
     "merge_profile_field/lifecycle/guest_links_added":
@@ -29320,16 +30148,28 @@
      "Nicht aufgeführte Gäste",
     "merge_profile_field/lifecycle/guests_retired":
      "Gäste vom Kalender entfernt",
+    "merge_profile_field/lifecycle/history":
+     "Geschichte",
+    "merge_profile_field/lifecycle/icp":
+     "Ideales Kundenprofil",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Warnung vor möglicher Täuschung aus Zusammenführung übernommen",
+    "merge_profile_field/lifecycle/impersonation_warning_cleared":
+     "Warnung vor möglicher Täuschung aufgehoben",
     "merge_profile_field/lifecycle/industry":
      "Branche",
     "merge_profile_field/lifecycle/invitation_status":
      "Einladungsstatus",
+    "merge_profile_field/lifecycle/is_current_primary":
+     "Hauptarbeitgeber",
     "merge_profile_field/lifecycle/is_done":
      "Erledigt",
     "merge_profile_field/lifecycle/last_name":
      "Nachname",
     "merge_profile_field/lifecycle/legal_entity_id":
      "Absendendes Unternehmen",
+    "merge_profile_field/lifecycle/legal_form":
+     "Rechtsform",
     "merge_profile_field/lifecycle/legal_name":
      "Rechtlicher Name",
     "merge_profile_field/lifecycle/lifecycle":
@@ -29368,6 +30208,8 @@
      "Zeitpunkt",
     "merge_profile_field/lifecycle/occurred_precision":
      "Zeitgenauigkeit",
+    "merge_profile_field/lifecycle/offer_summary":
+     "Angebot",
     "merge_profile_field/lifecycle/origin":
      "Herkunft",
     "merge_profile_field/lifecycle/origin_detail":
@@ -29410,6 +30252,14 @@
      "Verknüpfung",
     "merge_profile_field/lifecycle/recorded_at_level":
      "Erfasst auf Ebene",
+    "merge_profile_field/lifecycle/register_court":
+     "Registergericht",
+    "merge_profile_field/lifecycle/register_number":
+     "Registernummer",
+    "merge_profile_field/lifecycle/register_vat":
+     "Register / USt-ID",
+    "merge_profile_field/lifecycle/registered_address":
+     "Eingetragene Anschrift",
     "merge_profile_field/lifecycle/relationship_mark":
      "Beziehungsmarkierung",
     "merge_profile_field/lifecycle/relationship_types":
@@ -29446,6 +30296,10 @@
      "Widerrufene Freigabe",
     "merge_profile_field/lifecycle/revoked_rows":
      "Zurückgenommene Freigaben",
+    "merge_profile_field/lifecycle/role":
+     "Rolle",
+    "merge_profile_field/lifecycle/sales_motion":
+     "Vertriebsprozess",
     "merge_profile_field/lifecycle/scope":
      "Umfang",
     "merge_profile_field/lifecycle/score":
@@ -29462,6 +30316,8 @@
      "Phase",
     "merge_profile_field/lifecycle/started_at":
      "Beginn",
+    "merge_profile_field/lifecycle/started_precision":
+     "Genauigkeit des Startdatums",
     "merge_profile_field/lifecycle/status":
      "Status",
     "merge_profile_field/lifecycle/stopped":
@@ -29482,6 +30338,12 @@
      "Aufgabentyp",
     "merge_profile_field/lifecycle/title":
      "Jobtitel",
+    "merge_profile_field/lifecycle/trigger":
+     "Qualifiziert durch",
+    "merge_profile_field/lifecycle/usp":
+     "Differenzierung",
+    "merge_profile_field/lifecycle/value_proposition":
+     "Nutzenversprechen",
     "merge_profile_field/lifecycle/vat_checked_at":
      "USt-ID geprüft",
     "merge_profile_field/lifecycle/vat_consultation_number":
@@ -30510,6 +31372,26 @@
      "Unbekannt",
     "occurred_precision/boolean/true":
      "Ja",
+    "odd_due_date/lifecycle/customer":
+     "Kunde",
+    "odd_due_date/lifecycle/disqualified":
+     "Disqualifiziert",
+    "odd_due_date/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "odd_due_date/lifecycle/live":
+     "Live",
+    "odd_due_date/lifecycle/onboarding":
+     "Onboarding",
+    "odd_due_date/lifecycle/opportunity":
+     "Chance",
+    "odd_due_date/lifecycle/prospect":
+     "Interessent",
+    "odd_due_date/lifecycle/target":
+     "Zielunternehmen",
+    "odd_due_date/lifecycle/unknown":
+     "Unbekannt",
+    "odd_due_date/boolean/true":
+     "Ja",
     "offer_line_position/lifecycle/customer":
      "Kunde",
     "offer_line_position/lifecycle/disqualified":
@@ -31360,6 +32242,8 @@
      "Unbekannt",
     "promotion_basis_from/boolean/true":
      "Ja",
+    "promotion_basis_kind/text/consent":
+     "Zustimmung der empfangenden Person",
     "promotion_basis_kind/text/contract":
      "Vertrag",
     "promotion_basis_kind/text/existing_customer_exception":
@@ -31374,7 +32258,7 @@
      "Von der empfangenden Person begonnene Korrespondenz",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lebenswichtiges Interesse oder Sicherheitsinteresse",
-    "promotion_basis_kind/text/vn_subject_agreement":
+    "promotion_basis_kind/lifecycle/consent":
      "Zustimmung der empfangenden Person",
     "promotion_basis_kind/lifecycle/contract":
      "Vertrag",
@@ -31390,8 +32274,6 @@
      "Von der empfangenden Person begonnene Korrespondenz",
     "promotion_basis_kind/lifecycle/vital_or_security_interest":
      "Lebenswichtiges Interesse oder Sicherheitsinteresse",
-    "promotion_basis_kind/lifecycle/vn_subject_agreement":
-     "Zustimmung der empfangenden Person",
     "promotion_basis_kind/boolean/true":
      "Ja",
     "promotion_basis_until/lifecycle/customer":
@@ -31953,33 +32835,41 @@
     "promotion_restriction/text/claim_contradicts_resolution":
      "Der angegebene Kontaktgrund passt nicht zu diesem Thread.",
     "promotion_restriction/text/consent_withdrawn":
-     "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
+     "Der Kontakt hat seine Einwilligung für diese Art von Nachricht widerrufen. Der Versand dieser E-Mail stellt sie nicht wieder her.",
     "promotion_restriction/text/deal_not_requested":
      "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
+    "promotion_restriction/text/footer_incomplete":
+     "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
     "promotion_restriction/text/frequency_cap_reached":
      "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
     "promotion_restriction/text/hard_bounce":
      "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+    "promotion_restriction/text/lawful_basis_unconfirmed":
+     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
     "promotion_restriction/text/legacy_transactional_unevidenced":
      "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt.",
     "promotion_restriction/text/marketing_consent_required":
-     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
     "promotion_restriction/text/marketing_objection":
-     "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
+     "Der Kontakt hat Werbung widersprochen. Der Versand dieser E-Mail hebt seinen Widerspruch nicht auf.",
     "promotion_restriction/text/marketing_permission_required":
-     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
+     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
     "promotion_restriction/text/no_compatible_evidence":
      "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
     "promotion_restriction/text/no_marketing_consent":
      "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst.",
     "promotion_restriction/text/opted_out_after_request":
-     "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
+     "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
     "promotion_restriction/text/processing_restricted":
-     "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+     "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
+    "promotion_restriction/text/subject_label_missing":
+     "Marketing an eine empfangende Person in diesem Land muss den Betreff mit der Kennzeichnung beginnen, die ihr Recht vorschreibt. Ergänze sie im Betreff.",
+    "promotion_restriction/text/subject_labels_conflict":
+     "Die Länder dieser empfangenden Personen schreiben für Marketing verschiedene Kennzeichnungen im Betreff vor, und ein Betreff beginnt mit einer. Sende eine Nachricht je Kennzeichnung.",
     "promotion_restriction/text/subject_request":
-     "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+     "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
      "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
     "promotion_restriction/text/unknown_purpose":
@@ -31987,33 +32877,41 @@
     "promotion_restriction/lifecycle/claim_contradicts_resolution":
      "Der angegebene Kontaktgrund passt nicht zu diesem Thread.",
     "promotion_restriction/lifecycle/consent_withdrawn":
-     "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
+     "Der Kontakt hat seine Einwilligung für diese Art von Nachricht widerrufen. Der Versand dieser E-Mail stellt sie nicht wieder her.",
     "promotion_restriction/lifecycle/deal_not_requested":
      "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
+    "promotion_restriction/lifecycle/footer_incomplete":
+     "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
     "promotion_restriction/lifecycle/frequency_cap_reached":
      "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
     "promotion_restriction/lifecycle/hard_bounce":
      "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+    "promotion_restriction/lifecycle/lawful_basis_unconfirmed":
+     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
     "promotion_restriction/lifecycle/legacy_transactional_unevidenced":
      "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt.",
     "promotion_restriction/lifecycle/marketing_consent_required":
-     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
     "promotion_restriction/lifecycle/marketing_objection":
-     "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
+     "Der Kontakt hat Werbung widersprochen. Der Versand dieser E-Mail hebt seinen Widerspruch nicht auf.",
     "promotion_restriction/lifecycle/marketing_permission_required":
-     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
+     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
      "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
     "promotion_restriction/lifecycle/no_marketing_consent":
      "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst.",
     "promotion_restriction/lifecycle/opted_out_after_request":
-     "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
+     "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
     "promotion_restriction/lifecycle/processing_restricted":
-     "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+     "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
+    "promotion_restriction/lifecycle/subject_label_missing":
+     "Marketing an eine empfangende Person in diesem Land muss den Betreff mit der Kennzeichnung beginnen, die ihr Recht vorschreibt. Ergänze sie im Betreff.",
+    "promotion_restriction/lifecycle/subject_labels_conflict":
+     "Die Länder dieser empfangenden Personen schreiben für Marketing verschiedene Kennzeichnungen im Betreff vor, und ein Betreff beginnt mit einer. Sende eine Nachricht je Kennzeichnung.",
     "promotion_restriction/lifecycle/subject_request":
-     "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+     "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
      "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
     "promotion_restriction/lifecycle/unknown_purpose":
@@ -33784,6 +34682,26 @@
      "Unbekannt",
     "revoked_rows/boolean/true":
      "Ja",
+    "role/lifecycle/customer":
+     "Kunde",
+    "role/lifecycle/disqualified":
+     "Disqualifiziert",
+    "role/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "role/lifecycle/live":
+     "Live",
+    "role/lifecycle/onboarding":
+     "Onboarding",
+    "role/lifecycle/opportunity":
+     "Chance",
+    "role/lifecycle/prospect":
+     "Interessent",
+    "role/lifecycle/target":
+     "Zielunternehmen",
+    "role/lifecycle/unknown":
+     "Unbekannt",
+    "role/boolean/true":
+     "Ja",
     "rows/lifecycle/customer":
      "Kunde",
     "rows/lifecycle/disqualified":
@@ -34343,6 +35261,26 @@
     "started_at/lifecycle/unknown":
      "Unbekannt",
     "started_at/boolean/true":
+     "Ja",
+    "started_precision/lifecycle/customer":
+     "Kunde",
+    "started_precision/lifecycle/disqualified":
+     "Disqualifiziert",
+    "started_precision/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "started_precision/lifecycle/live":
+     "Live",
+    "started_precision/lifecycle/onboarding":
+     "Onboarding",
+    "started_precision/lifecycle/opportunity":
+     "Chance",
+    "started_precision/lifecycle/prospect":
+     "Interessent",
+    "started_precision/lifecycle/target":
+     "Zielunternehmen",
+    "started_precision/lifecycle/unknown":
+     "Unbekannt",
+    "started_precision/boolean/true":
      "Ja",
     "state/lifecycle/customer":
      "Kunde",
@@ -34918,6 +35856,26 @@
      "Unbekannt",
     "to/boolean/true":
      "Ja",
+    "trigger/lifecycle/customer":
+     "Kunde",
+    "trigger/lifecycle/disqualified":
+     "Disqualifiziert",
+    "trigger/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "trigger/lifecycle/live":
+     "Live",
+    "trigger/lifecycle/onboarding":
+     "Onboarding",
+    "trigger/lifecycle/opportunity":
+     "Chance",
+    "trigger/lifecycle/prospect":
+     "Interessent",
+    "trigger/lifecycle/target":
+     "Zielunternehmen",
+    "trigger/lifecycle/unknown":
+     "Unbekannt",
+    "trigger/boolean/true":
+     "Ja",
     "true/lifecycle/customer":
      "Kunde",
     "true/lifecycle/disqualified":
@@ -35471,26 +36429,6 @@
     "vital_or_security_interest/lifecycle/unknown":
      "Unbekannt",
     "vital_or_security_interest/boolean/true":
-     "Ja",
-    "vn_subject_agreement/lifecycle/customer":
-     "Kunde",
-    "vn_subject_agreement/lifecycle/disqualified":
-     "Disqualifiziert",
-    "vn_subject_agreement/lifecycle/former_customer":
-     "Ehemaliger Kunde",
-    "vn_subject_agreement/lifecycle/live":
-     "Live",
-    "vn_subject_agreement/lifecycle/onboarding":
-     "Onboarding",
-    "vn_subject_agreement/lifecycle/opportunity":
-     "Chance",
-    "vn_subject_agreement/lifecycle/prospect":
-     "Interessent",
-    "vn_subject_agreement/lifecycle/target":
-     "Zielunternehmen",
-    "vn_subject_agreement/lifecycle/unknown":
-     "Unbekannt",
-    "vn_subject_agreement/boolean/true":
      "Ja",
     "wait_until/lifecycle/customer":
      "Kunde",
@@ -36304,6 +37242,12 @@
      "Nicht gesetzt",
     "confirmed/execution":
      "Wird beim Anwenden festgelegt",
+    "consent/boolean":
+     "Nein",
+    "consent/empty":
+     "Nicht gesetzt",
+    "consent/execution":
+     "Wird beim Anwenden festgelegt",
     "consent_contact/boolean":
      "Nein",
     "consent_contact/empty":
@@ -36646,6 +37590,12 @@
      "Nicht gesetzt",
     "disqualify_reason/execution":
      "Wird beim Anwenden festgelegt",
+    "disqualify_reason_id/boolean":
+     "Nein",
+    "disqualify_reason_id/empty":
+     "Nicht gesetzt",
+    "disqualify_reason_id/execution":
+     "Wird beim Anwenden festgelegt",
     "domain/boolean":
      "Nein",
     "domain/empty":
@@ -36712,6 +37662,12 @@
      "Nicht gesetzt",
     "emails/execution":
      "Wird beim Anwenden festgelegt",
+    "employment_status/boolean":
+     "Nein",
+    "employment_status/empty":
+     "Nicht gesetzt",
+    "employment_status/execution":
+     "Wird beim Anwenden festgelegt",
     "empty/boolean":
      "Nein",
     "empty/empty":
@@ -36729,6 +37685,12 @@
     "ended_at/empty":
      "Nicht gesetzt",
     "ended_at/execution":
+     "Wird beim Anwenden festgelegt",
+    "ended_precision/boolean":
+     "Nein",
+    "ended_precision/empty":
+     "Nicht gesetzt",
+    "ended_precision/execution":
      "Wird beim Anwenden festgelegt",
     "enrichment_depth/boolean":
      "Nein",
@@ -36808,6 +37770,12 @@
      "Nicht gesetzt",
     "first_name/execution":
      "Wird beim Anwenden festgelegt",
+    "footer_warning/boolean":
+     "Nein",
+    "footer_warning/empty":
+     "Nicht gesetzt",
+    "footer_warning/execution":
+     "Wird beim Anwenden festgelegt",
     "format/boolean":
      "Nein",
     "format/empty":
@@ -36849,6 +37817,12 @@
     "granted/empty":
      "Nicht gesetzt",
     "granted/execution":
+     "Wird beim Anwenden festgelegt",
+    "greeting_register/boolean":
+     "Nein",
+    "greeting_register/empty":
+     "Nicht gesetzt",
+    "greeting_register/execution":
      "Wird beim Anwenden festgelegt",
     "gross_minor/boolean":
      "Nein",
@@ -36897,6 +37871,18 @@
     "html_body/empty":
      "Nicht gesetzt",
     "html_body/execution":
+     "Wird beim Anwenden festgelegt",
+    "impersonation_warning_carried/boolean":
+     "Nein",
+    "impersonation_warning_carried/empty":
+     "Nicht gesetzt",
+    "impersonation_warning_carried/execution":
+     "Wird beim Anwenden festgelegt",
+    "impersonation_warning_cleared/boolean":
+     "Nein",
+    "impersonation_warning_cleared/empty":
+     "Nicht gesetzt",
+    "impersonation_warning_cleared/execution":
      "Wird beim Anwenden festgelegt",
     "import_apply_tag/boolean":
      "Nein",
@@ -37041,6 +38027,12 @@
     "invoice_id/empty":
      "Nicht gesetzt",
     "invoice_id/execution":
+     "Wird beim Anwenden festgelegt",
+    "is_current_primary/boolean":
+     "Nein",
+    "is_current_primary/empty":
+     "Nicht gesetzt",
+    "is_current_primary/execution":
      "Wird beim Anwenden festgelegt",
     "is_default/boolean":
      "Nein",
@@ -37311,6 +38303,12 @@
     "merge_address/empty":
      "Nicht gesetzt",
     "merge_address/execution":
+     "Wird beim Anwenden festgelegt",
+    "merge_address_already_held/boolean":
+     "Nein",
+    "merge_address_already_held/empty":
+     "Nicht gesetzt",
+    "merge_address_already_held/execution":
      "Wird beim Anwenden festgelegt",
     "merge_address_kind/text":
      "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
@@ -38270,6 +39268,12 @@
      "Nicht gesetzt",
     "occurred_precision/execution":
      "Wird beim Anwenden festgelegt",
+    "odd_due_date/boolean":
+     "Nein",
+    "odd_due_date/empty":
+     "Nicht gesetzt",
+    "odd_due_date/execution":
+     "Wird beim Anwenden festgelegt",
     "offer_line_position/boolean":
      "Nein",
     "offer_line_position/empty":
@@ -39188,6 +40192,12 @@
      "Nicht gesetzt",
     "revoked_rows/execution":
      "Wird beim Anwenden festgelegt",
+    "role/boolean":
+     "Nein",
+    "role/empty":
+     "Nicht gesetzt",
+    "role/execution":
+     "Wird beim Anwenden festgelegt",
     "rows/boolean":
      "Nein",
     "rows/empty":
@@ -39355,6 +40365,12 @@
     "started_at/empty":
      "Nicht gesetzt",
     "started_at/execution":
+     "Wird beim Anwenden festgelegt",
+    "started_precision/boolean":
+     "Nein",
+    "started_precision/empty":
+     "Nicht gesetzt",
+    "started_precision/execution":
      "Wird beim Anwenden festgelegt",
     "state/boolean":
      "Nein",
@@ -39530,6 +40546,12 @@
      "Nicht gesetzt",
     "to/execution":
      "Wird beim Anwenden festgelegt",
+    "trigger/boolean":
+     "Nein",
+    "trigger/empty":
+     "Nicht gesetzt",
+    "trigger/execution":
+     "Wird beim Anwenden festgelegt",
     "true/boolean":
      "Nein",
     "true/empty":
@@ -39650,12 +40672,6 @@
      "Nicht gesetzt",
     "vital_or_security_interest/execution":
      "Wird beim Anwenden festgelegt",
-    "vn_subject_agreement/boolean":
-     "Nein",
-    "vn_subject_agreement/empty":
-     "Nicht gesetzt",
-    "vn_subject_agreement/execution":
-     "Wird beim Anwenden festgelegt",
     "wait_until/boolean":
      "Nein",
     "wait_until/empty":
@@ -39751,7 +40767,7 @@
     "address_city":
      "Thành phố",
     "address_country":
-     "Mã quốc gia (ISO 3166)",
+     "Quốc gia",
     "address_line1":
      "Số nhà và tên đường",
     "address_line2":
@@ -39942,6 +40958,8 @@
      "Địa chỉ nhận xác nhận",
     "confirmed":
      "confirmed",
+    "consent":
+     "consent",
     "consent_contact":
      "Liên hệ đồng ý",
     "consent_policy_version":
@@ -40056,6 +41074,8 @@
      "Ghi chú (không bắt buộc)",
     "disqualify_reason":
      "Lý do",
+    "disqualify_reason_id":
+     "Lý do loại",
     "domain":
      "Tên miền",
     "domains":
@@ -40078,12 +41098,16 @@
      "Nhắc qua email một giờ trước",
     "emails":
      "Địa chỉ email",
+    "employment_status":
+     "Tình trạng việc làm",
     "empty":
      "empty",
     "en":
      "en",
     "ended_at":
      "Kết thúc",
+    "ended_precision":
+     "Độ chính xác ngày kết thúc",
     "enrichment_depth":
      "Phạm vi đọc",
     "execution":
@@ -40110,6 +41134,8 @@
      "Các trường được điền thêm",
     "first_name":
      "Tên",
+    "footer_warning":
+     "Lưu ý về chân trang email",
     "format":
      "format",
     "from":
@@ -40124,6 +41150,8 @@
      "geocode if enabled",
     "granted":
      "granted",
+    "greeting_register":
+     "Cách chào",
     "gross_minor":
      "Sau thuế",
     "guest_answers_changed":
@@ -40140,6 +41168,10 @@
      "href",
     "html_body":
      "Nội dung có định dạng",
+    "impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
+    "impersonation_warning_cleared":
+     "Đã gỡ cảnh báo mạo danh",
     "import_apply_tag":
      "Thêm thẻ",
     "import_close_deal":
@@ -40188,6 +41220,8 @@
      "Trạng thái lời mời",
     "invoice_id":
      "Hóa đơn được viện dẫn",
+    "is_current_primary":
+     "Nơi làm việc chính",
     "is_default":
      "Mặc định cho ngôn ngữ này",
     "is_done":
@@ -40278,6 +41312,8 @@
      "Tài khoản giữ lại",
     "merge_address":
      "Địa chỉ được chuyển",
+    "merge_address_already_held":
+     "Bản ghi giữ lại đã có",
     "merge_address_kind":
      "Loại địa chỉ",
     "merge_address_primary_after":
@@ -40580,6 +41616,8 @@
      "Thời điểm xảy ra",
     "occurred_precision":
      "Độ chính xác của thời gian",
+    "odd_due_date":
+     "Ngày này có vẻ quá xa: giữ, đổi hoặc xóa",
     "offer_line_position":
      "Số thứ tự",
     "offer_number":
@@ -40882,6 +41920,8 @@
      "Ghi đè đã thu hồi",
     "revoked_rows":
      "Số ghi đè đã thu hồi",
+    "role":
+     "Vai trò",
     "rows":
      "rows",
     "scheduled_at":
@@ -40938,6 +41978,8 @@
      "start project delivery",
     "started_at":
      "Bắt đầu",
+    "started_precision":
+     "Độ chính xác ngày bắt đầu",
     "state":
      "state",
     "status":
@@ -40996,6 +42038,8 @@
      "Chức danh",
     "to":
      "Đến",
+    "trigger":
+     "Xác nhận bởi",
     "true":
      "true",
     "unavailable_name":
@@ -41036,8 +42080,6 @@
      "Phạm vi hiển thị",
     "vital_or_security_interest":
      "vital or security interest",
-    "vn_subject_agreement":
-     "vn subject agreement",
     "wait_until":
      "Chờ đến",
     "win_probability":
@@ -43198,6 +44240,26 @@
      "Chưa rõ",
     "confirmed/boolean/true":
      "Có",
+    "consent/lifecycle/customer":
+     "Khách hàng",
+    "consent/lifecycle/disqualified":
+     "Đã loại",
+    "consent/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "consent/lifecycle/live":
+     "Đang vận hành",
+    "consent/lifecycle/onboarding":
+     "Đang triển khai",
+    "consent/lifecycle/opportunity":
+     "Cơ hội",
+    "consent/lifecycle/prospect":
+     "Tiềm năng",
+    "consent/lifecycle/target":
+     "Mục tiêu",
+    "consent/lifecycle/unknown":
+     "Chưa rõ",
+    "consent/boolean/true":
+     "Có",
     "consent_contact/lifecycle/customer":
      "Khách hàng",
     "consent_contact/lifecycle/disqualified":
@@ -44336,6 +45398,26 @@
      "Chưa rõ",
     "disqualify_reason/boolean/true":
      "Có",
+    "disqualify_reason_id/lifecycle/customer":
+     "Khách hàng",
+    "disqualify_reason_id/lifecycle/disqualified":
+     "Đã loại",
+    "disqualify_reason_id/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "disqualify_reason_id/lifecycle/live":
+     "Đang vận hành",
+    "disqualify_reason_id/lifecycle/onboarding":
+     "Đang triển khai",
+    "disqualify_reason_id/lifecycle/opportunity":
+     "Cơ hội",
+    "disqualify_reason_id/lifecycle/prospect":
+     "Tiềm năng",
+    "disqualify_reason_id/lifecycle/target":
+     "Mục tiêu",
+    "disqualify_reason_id/lifecycle/unknown":
+     "Chưa rõ",
+    "disqualify_reason_id/boolean/true":
+     "Có",
     "domain/lifecycle/customer":
      "Khách hàng",
     "domain/lifecycle/disqualified":
@@ -44556,6 +45638,26 @@
      "Chưa rõ",
     "emails/boolean/true":
      "Có",
+    "employment_status/lifecycle/customer":
+     "Khách hàng",
+    "employment_status/lifecycle/disqualified":
+     "Đã loại",
+    "employment_status/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "employment_status/lifecycle/live":
+     "Đang vận hành",
+    "employment_status/lifecycle/onboarding":
+     "Đang triển khai",
+    "employment_status/lifecycle/opportunity":
+     "Cơ hội",
+    "employment_status/lifecycle/prospect":
+     "Tiềm năng",
+    "employment_status/lifecycle/target":
+     "Mục tiêu",
+    "employment_status/lifecycle/unknown":
+     "Chưa rõ",
+    "employment_status/boolean/true":
+     "Có",
     "empty/lifecycle/customer":
      "Khách hàng",
     "empty/lifecycle/disqualified":
@@ -44615,6 +45717,26 @@
     "ended_at/lifecycle/unknown":
      "Chưa rõ",
     "ended_at/boolean/true":
+     "Có",
+    "ended_precision/lifecycle/customer":
+     "Khách hàng",
+    "ended_precision/lifecycle/disqualified":
+     "Đã loại",
+    "ended_precision/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "ended_precision/lifecycle/live":
+     "Đang vận hành",
+    "ended_precision/lifecycle/onboarding":
+     "Đang triển khai",
+    "ended_precision/lifecycle/opportunity":
+     "Cơ hội",
+    "ended_precision/lifecycle/prospect":
+     "Tiềm năng",
+    "ended_precision/lifecycle/target":
+     "Mục tiêu",
+    "ended_precision/lifecycle/unknown":
+     "Chưa rõ",
+    "ended_precision/boolean/true":
      "Có",
     "enrichment_depth/text/page":
      "Đọc một trang và chuẩn bị đề xuất bổ sung thông tin",
@@ -44870,6 +45992,26 @@
      "Chưa rõ",
     "first_name/boolean/true":
      "Có",
+    "footer_warning/lifecycle/customer":
+     "Khách hàng",
+    "footer_warning/lifecycle/disqualified":
+     "Đã loại",
+    "footer_warning/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "footer_warning/lifecycle/live":
+     "Đang vận hành",
+    "footer_warning/lifecycle/onboarding":
+     "Đang triển khai",
+    "footer_warning/lifecycle/opportunity":
+     "Cơ hội",
+    "footer_warning/lifecycle/prospect":
+     "Tiềm năng",
+    "footer_warning/lifecycle/target":
+     "Mục tiêu",
+    "footer_warning/lifecycle/unknown":
+     "Chưa rõ",
+    "footer_warning/boolean/true":
+     "Có",
     "format/lifecycle/customer":
      "Khách hàng",
     "format/lifecycle/disqualified":
@@ -45009,6 +46151,26 @@
     "granted/lifecycle/unknown":
      "Chưa rõ",
     "granted/boolean/true":
+     "Có",
+    "greeting_register/lifecycle/customer":
+     "Khách hàng",
+    "greeting_register/lifecycle/disqualified":
+     "Đã loại",
+    "greeting_register/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "greeting_register/lifecycle/live":
+     "Đang vận hành",
+    "greeting_register/lifecycle/onboarding":
+     "Đang triển khai",
+    "greeting_register/lifecycle/opportunity":
+     "Cơ hội",
+    "greeting_register/lifecycle/prospect":
+     "Tiềm năng",
+    "greeting_register/lifecycle/target":
+     "Mục tiêu",
+    "greeting_register/lifecycle/unknown":
+     "Chưa rõ",
+    "greeting_register/boolean/true":
      "Có",
     "gross_minor/lifecycle/customer":
      "Khách hàng",
@@ -45169,6 +46331,46 @@
     "html_body/lifecycle/unknown":
      "Chưa rõ",
     "html_body/boolean/true":
+     "Có",
+    "impersonation_warning_carried/lifecycle/customer":
+     "Khách hàng",
+    "impersonation_warning_carried/lifecycle/disqualified":
+     "Đã loại",
+    "impersonation_warning_carried/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "impersonation_warning_carried/lifecycle/live":
+     "Đang vận hành",
+    "impersonation_warning_carried/lifecycle/onboarding":
+     "Đang triển khai",
+    "impersonation_warning_carried/lifecycle/opportunity":
+     "Cơ hội",
+    "impersonation_warning_carried/lifecycle/prospect":
+     "Tiềm năng",
+    "impersonation_warning_carried/lifecycle/target":
+     "Mục tiêu",
+    "impersonation_warning_carried/lifecycle/unknown":
+     "Chưa rõ",
+    "impersonation_warning_carried/boolean/true":
+     "Có",
+    "impersonation_warning_cleared/lifecycle/customer":
+     "Khách hàng",
+    "impersonation_warning_cleared/lifecycle/disqualified":
+     "Đã loại",
+    "impersonation_warning_cleared/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "impersonation_warning_cleared/lifecycle/live":
+     "Đang vận hành",
+    "impersonation_warning_cleared/lifecycle/onboarding":
+     "Đang triển khai",
+    "impersonation_warning_cleared/lifecycle/opportunity":
+     "Cơ hội",
+    "impersonation_warning_cleared/lifecycle/prospect":
+     "Tiềm năng",
+    "impersonation_warning_cleared/lifecycle/target":
+     "Mục tiêu",
+    "impersonation_warning_cleared/lifecycle/unknown":
+     "Chưa rõ",
+    "impersonation_warning_cleared/boolean/true":
      "Có",
     "import_apply_tag/lifecycle/customer":
      "Khách hàng",
@@ -45649,6 +46851,26 @@
     "invoice_id/lifecycle/unknown":
      "Chưa rõ",
     "invoice_id/boolean/true":
+     "Có",
+    "is_current_primary/lifecycle/customer":
+     "Khách hàng",
+    "is_current_primary/lifecycle/disqualified":
+     "Đã loại",
+    "is_current_primary/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "is_current_primary/lifecycle/live":
+     "Đang vận hành",
+    "is_current_primary/lifecycle/onboarding":
+     "Đang triển khai",
+    "is_current_primary/lifecycle/opportunity":
+     "Cơ hội",
+    "is_current_primary/lifecycle/prospect":
+     "Tiềm năng",
+    "is_current_primary/lifecycle/target":
+     "Mục tiêu",
+    "is_current_primary/lifecycle/unknown":
+     "Chưa rõ",
+    "is_current_primary/boolean/true":
      "Có",
     "is_default/lifecycle/customer":
      "Khách hàng",
@@ -46541,6 +47763,26 @@
     "merge_address/lifecycle/unknown":
      "Chưa rõ",
     "merge_address/boolean/true":
+     "Có",
+    "merge_address_already_held/lifecycle/customer":
+     "Khách hàng",
+    "merge_address_already_held/lifecycle/disqualified":
+     "Đã loại",
+    "merge_address_already_held/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "merge_address_already_held/lifecycle/live":
+     "Đang vận hành",
+    "merge_address_already_held/lifecycle/onboarding":
+     "Đang triển khai",
+    "merge_address_already_held/lifecycle/opportunity":
+     "Cơ hội",
+    "merge_address_already_held/lifecycle/prospect":
+     "Tiềm năng",
+    "merge_address_already_held/lifecycle/target":
+     "Mục tiêu",
+    "merge_address_already_held/lifecycle/unknown":
+     "Chưa rõ",
+    "merge_address_already_held/boolean/true":
      "Có",
     "merge_address_kind/text/domain":
      "Tên miền",
@@ -48780,6 +50022,18 @@
      "Nguồn tiếp cận",
     "merge_profile_field/text/address":
      "Địa chỉ",
+    "merge_profile_field/text/address_city":
+     "Thành phố",
+    "merge_profile_field/text/address_country":
+     "Quốc gia",
+    "merge_profile_field/text/address_line1":
+     "Số nhà và tên đường",
+    "merge_profile_field/text/address_line2":
+     "Địa chỉ dòng 2",
+    "merge_profile_field/text/address_postal_code":
+     "Mã bưu chính",
+    "merge_profile_field/text/address_region":
+     "Tỉnh hoặc vùng",
     "merge_profile_field/text/admission":
      "Kiểm tra đầu vào tên miền",
     "merge_profile_field/text/admission_reason":
@@ -48804,6 +50058,10 @@
      "Ghi chú",
     "merge_profile_field/text/bounce":
      "Thư bị trả lại",
+    "merge_profile_field/text/buying_center":
+     "Nhóm quyết định mua",
+    "merge_profile_field/text/buying_intents":
+     "Yếu tố thúc đẩy mua",
     "merge_profile_field/text/call_outcome":
      "Kết quả cuộc gọi",
     "merge_profile_field/text/candidate_company_key":
@@ -48822,6 +50080,8 @@
      "Hình thức bán hàng",
     "merge_profile_field/text/commitment_evidence_unavailable":
      "Bằng chứng cam kết không còn khả dụng",
+    "merge_profile_field/text/common_objections":
+     "Ý kiến phản đối thường gặp",
     "merge_profile_field/text/communication_basis":
      "Căn cứ pháp lý",
     "merge_profile_field/text/company_id":
@@ -48836,14 +50096,20 @@
      "Đã sửa kết quả",
     "merge_profile_field/text/currency":
      "Loại tiền",
+    "merge_profile_field/text/customer_pains":
+     "Vấn đề của khách hàng",
     "merge_profile_field/text/decided_by_level":
      "Nguồn quyết định",
     "merge_profile_field/text/description":
      "Mô tả",
+    "merge_profile_field/text/desired_outcomes":
+     "Kết quả mong muốn",
     "merge_profile_field/text/display_name":
      "Tên",
     "merge_profile_field/text/disposition":
      "Kết quả xử lý",
+    "merge_profile_field/text/disqualify_reason_id":
+     "Lý do loại",
     "merge_profile_field/text/domain":
      "Tên miền",
     "merge_profile_field/text/domains":
@@ -48858,8 +50124,12 @@
      "Email",
     "merge_profile_field/text/emails":
      "Địa chỉ email",
+    "merge_profile_field/text/employment_status":
+     "Tình trạng việc làm",
     "merge_profile_field/text/ended_at":
      "Kết thúc",
+    "merge_profile_field/text/ended_precision":
+     "Độ chính xác ngày kết thúc",
     "merge_profile_field/text/expected_arr_minor":
      "ARR dự kiến",
     "merge_profile_field/text/expected_close_date":
@@ -48876,6 +50146,8 @@
      "Ngày tỷ giá",
     "merge_profile_field/text/fx_rate_to_base":
      "Tỷ giá",
+    "merge_profile_field/text/greeting_register":
+     "Cách chào",
     "merge_profile_field/text/guest_answers_changed":
      "Phản hồi của khách được cập nhật từ lịch",
     "merge_profile_field/text/guest_links_added":
@@ -48886,16 +50158,28 @@
      "Khách không được liệt kê",
     "merge_profile_field/text/guests_retired":
      "Khách bị lịch xóa",
+    "merge_profile_field/text/history":
+     "Lịch sử",
+    "merge_profile_field/text/icp":
+     "Hồ sơ khách hàng lý tưởng",
+    "merge_profile_field/text/impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
+    "merge_profile_field/text/impersonation_warning_cleared":
+     "Đã gỡ cảnh báo mạo danh",
     "merge_profile_field/text/industry":
      "Ngành",
     "merge_profile_field/text/invitation_status":
      "Trạng thái lời mời",
+    "merge_profile_field/text/is_current_primary":
+     "Nơi làm việc chính",
     "merge_profile_field/text/is_done":
      "Xong",
     "merge_profile_field/text/last_name":
      "Họ",
     "merge_profile_field/text/legal_entity_id":
      "Công ty gửi",
+    "merge_profile_field/text/legal_form":
+     "Loại hình pháp lý",
     "merge_profile_field/text/legal_name":
      "Tên pháp lý",
     "merge_profile_field/text/lifecycle":
@@ -48934,6 +50218,8 @@
      "Thời điểm xảy ra",
     "merge_profile_field/text/occurred_precision":
      "Độ chính xác của thời gian",
+    "merge_profile_field/text/offer_summary":
+     "Sản phẩm cung cấp",
     "merge_profile_field/text/origin":
      "Nguồn gốc",
     "merge_profile_field/text/origin_detail":
@@ -48976,6 +50262,14 @@
      "Liên kết",
     "merge_profile_field/text/recorded_at_level":
      "Ghi nhận ở cấp",
+    "merge_profile_field/text/register_court":
+     "Tòa án đăng ký",
+    "merge_profile_field/text/register_number":
+     "Số đăng ký kinh doanh",
+    "merge_profile_field/text/register_vat":
+     "Số đăng ký / mã số VAT",
+    "merge_profile_field/text/registered_address":
+     "Địa chỉ đăng ký",
     "merge_profile_field/text/relationship_mark":
      "Nhãn quan hệ",
     "merge_profile_field/text/relationship_types":
@@ -49012,6 +50306,10 @@
      "Ghi đè đã thu hồi",
     "merge_profile_field/text/revoked_rows":
      "Số ghi đè đã thu hồi",
+    "merge_profile_field/text/role":
+     "Vai trò",
+    "merge_profile_field/text/sales_motion":
+     "Cách bán hàng",
     "merge_profile_field/text/scope":
      "Phạm vi",
     "merge_profile_field/text/score":
@@ -49028,6 +50326,8 @@
      "Giai đoạn",
     "merge_profile_field/text/started_at":
      "Bắt đầu",
+    "merge_profile_field/text/started_precision":
+     "Độ chính xác ngày bắt đầu",
     "merge_profile_field/text/status":
      "Trạng thái",
     "merge_profile_field/text/stopped":
@@ -49048,6 +50348,12 @@
      "Loại việc",
     "merge_profile_field/text/title":
      "Chức danh",
+    "merge_profile_field/text/trigger":
+     "Xác nhận bởi",
+    "merge_profile_field/text/usp":
+     "Điểm khác biệt",
+    "merge_profile_field/text/value_proposition":
+     "Đề xuất giá trị",
     "merge_profile_field/text/vat_checked_at":
      "Đã kiểm tra VAT",
     "merge_profile_field/text/vat_consultation_number":
@@ -49080,6 +50386,18 @@
      "Nguồn tiếp cận",
     "merge_profile_field/lifecycle/address":
      "Địa chỉ",
+    "merge_profile_field/lifecycle/address_city":
+     "Thành phố",
+    "merge_profile_field/lifecycle/address_country":
+     "Quốc gia",
+    "merge_profile_field/lifecycle/address_line1":
+     "Số nhà và tên đường",
+    "merge_profile_field/lifecycle/address_line2":
+     "Địa chỉ dòng 2",
+    "merge_profile_field/lifecycle/address_postal_code":
+     "Mã bưu chính",
+    "merge_profile_field/lifecycle/address_region":
+     "Tỉnh hoặc vùng",
     "merge_profile_field/lifecycle/admission":
      "Kiểm tra đầu vào tên miền",
     "merge_profile_field/lifecycle/admission_reason":
@@ -49104,6 +50422,10 @@
      "Ghi chú",
     "merge_profile_field/lifecycle/bounce":
      "Thư bị trả lại",
+    "merge_profile_field/lifecycle/buying_center":
+     "Nhóm quyết định mua",
+    "merge_profile_field/lifecycle/buying_intents":
+     "Yếu tố thúc đẩy mua",
     "merge_profile_field/lifecycle/call_outcome":
      "Kết quả cuộc gọi",
     "merge_profile_field/lifecycle/candidate_company_key":
@@ -49122,6 +50444,8 @@
      "Hình thức bán hàng",
     "merge_profile_field/lifecycle/commitment_evidence_unavailable":
      "Bằng chứng cam kết không còn khả dụng",
+    "merge_profile_field/lifecycle/common_objections":
+     "Ý kiến phản đối thường gặp",
     "merge_profile_field/lifecycle/communication_basis":
      "Căn cứ pháp lý",
     "merge_profile_field/lifecycle/company_id":
@@ -49136,14 +50460,20 @@
      "Đã sửa kết quả",
     "merge_profile_field/lifecycle/currency":
      "Loại tiền",
+    "merge_profile_field/lifecycle/customer_pains":
+     "Vấn đề của khách hàng",
     "merge_profile_field/lifecycle/decided_by_level":
      "Nguồn quyết định",
     "merge_profile_field/lifecycle/description":
      "Mô tả",
+    "merge_profile_field/lifecycle/desired_outcomes":
+     "Kết quả mong muốn",
     "merge_profile_field/lifecycle/display_name":
      "Tên",
     "merge_profile_field/lifecycle/disposition":
      "Kết quả xử lý",
+    "merge_profile_field/lifecycle/disqualify_reason_id":
+     "Lý do loại",
     "merge_profile_field/lifecycle/domain":
      "Tên miền",
     "merge_profile_field/lifecycle/domains":
@@ -49158,8 +50488,12 @@
      "Email",
     "merge_profile_field/lifecycle/emails":
      "Địa chỉ email",
+    "merge_profile_field/lifecycle/employment_status":
+     "Tình trạng việc làm",
     "merge_profile_field/lifecycle/ended_at":
      "Kết thúc",
+    "merge_profile_field/lifecycle/ended_precision":
+     "Độ chính xác ngày kết thúc",
     "merge_profile_field/lifecycle/expected_arr_minor":
      "ARR dự kiến",
     "merge_profile_field/lifecycle/expected_close_date":
@@ -49176,6 +50510,8 @@
      "Ngày tỷ giá",
     "merge_profile_field/lifecycle/fx_rate_to_base":
      "Tỷ giá",
+    "merge_profile_field/lifecycle/greeting_register":
+     "Cách chào",
     "merge_profile_field/lifecycle/guest_answers_changed":
      "Phản hồi của khách được cập nhật từ lịch",
     "merge_profile_field/lifecycle/guest_links_added":
@@ -49186,16 +50522,28 @@
      "Khách không được liệt kê",
     "merge_profile_field/lifecycle/guests_retired":
      "Khách bị lịch xóa",
+    "merge_profile_field/lifecycle/history":
+     "Lịch sử",
+    "merge_profile_field/lifecycle/icp":
+     "Hồ sơ khách hàng lý tưởng",
+    "merge_profile_field/lifecycle/impersonation_warning_carried":
+     "Giữ cảnh báo mạo danh từ liên hệ đã gộp",
+    "merge_profile_field/lifecycle/impersonation_warning_cleared":
+     "Đã gỡ cảnh báo mạo danh",
     "merge_profile_field/lifecycle/industry":
      "Ngành",
     "merge_profile_field/lifecycle/invitation_status":
      "Trạng thái lời mời",
+    "merge_profile_field/lifecycle/is_current_primary":
+     "Nơi làm việc chính",
     "merge_profile_field/lifecycle/is_done":
      "Xong",
     "merge_profile_field/lifecycle/last_name":
      "Họ",
     "merge_profile_field/lifecycle/legal_entity_id":
      "Công ty gửi",
+    "merge_profile_field/lifecycle/legal_form":
+     "Loại hình pháp lý",
     "merge_profile_field/lifecycle/legal_name":
      "Tên pháp lý",
     "merge_profile_field/lifecycle/lifecycle":
@@ -49234,6 +50582,8 @@
      "Thời điểm xảy ra",
     "merge_profile_field/lifecycle/occurred_precision":
      "Độ chính xác của thời gian",
+    "merge_profile_field/lifecycle/offer_summary":
+     "Sản phẩm cung cấp",
     "merge_profile_field/lifecycle/origin":
      "Nguồn gốc",
     "merge_profile_field/lifecycle/origin_detail":
@@ -49276,6 +50626,14 @@
      "Liên kết",
     "merge_profile_field/lifecycle/recorded_at_level":
      "Ghi nhận ở cấp",
+    "merge_profile_field/lifecycle/register_court":
+     "Tòa án đăng ký",
+    "merge_profile_field/lifecycle/register_number":
+     "Số đăng ký kinh doanh",
+    "merge_profile_field/lifecycle/register_vat":
+     "Số đăng ký / mã số VAT",
+    "merge_profile_field/lifecycle/registered_address":
+     "Địa chỉ đăng ký",
     "merge_profile_field/lifecycle/relationship_mark":
      "Nhãn quan hệ",
     "merge_profile_field/lifecycle/relationship_types":
@@ -49312,6 +50670,10 @@
      "Ghi đè đã thu hồi",
     "merge_profile_field/lifecycle/revoked_rows":
      "Số ghi đè đã thu hồi",
+    "merge_profile_field/lifecycle/role":
+     "Vai trò",
+    "merge_profile_field/lifecycle/sales_motion":
+     "Cách bán hàng",
     "merge_profile_field/lifecycle/scope":
      "Phạm vi",
     "merge_profile_field/lifecycle/score":
@@ -49328,6 +50690,8 @@
      "Giai đoạn",
     "merge_profile_field/lifecycle/started_at":
      "Bắt đầu",
+    "merge_profile_field/lifecycle/started_precision":
+     "Độ chính xác ngày bắt đầu",
     "merge_profile_field/lifecycle/status":
      "Trạng thái",
     "merge_profile_field/lifecycle/stopped":
@@ -49348,6 +50712,12 @@
      "Loại việc",
     "merge_profile_field/lifecycle/title":
      "Chức danh",
+    "merge_profile_field/lifecycle/trigger":
+     "Xác nhận bởi",
+    "merge_profile_field/lifecycle/usp":
+     "Điểm khác biệt",
+    "merge_profile_field/lifecycle/value_proposition":
+     "Đề xuất giá trị",
     "merge_profile_field/lifecycle/vat_checked_at":
      "Đã kiểm tra VAT",
     "merge_profile_field/lifecycle/vat_consultation_number":
@@ -50376,6 +51746,26 @@
      "Chưa rõ",
     "occurred_precision/boolean/true":
      "Có",
+    "odd_due_date/lifecycle/customer":
+     "Khách hàng",
+    "odd_due_date/lifecycle/disqualified":
+     "Đã loại",
+    "odd_due_date/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "odd_due_date/lifecycle/live":
+     "Đang vận hành",
+    "odd_due_date/lifecycle/onboarding":
+     "Đang triển khai",
+    "odd_due_date/lifecycle/opportunity":
+     "Cơ hội",
+    "odd_due_date/lifecycle/prospect":
+     "Tiềm năng",
+    "odd_due_date/lifecycle/target":
+     "Mục tiêu",
+    "odd_due_date/lifecycle/unknown":
+     "Chưa rõ",
+    "odd_due_date/boolean/true":
+     "Có",
     "offer_line_position/lifecycle/customer":
      "Khách hàng",
     "offer_line_position/lifecycle/disqualified":
@@ -51226,6 +52616,8 @@
      "Chưa rõ",
     "promotion_basis_from/boolean/true":
      "Có",
+    "promotion_basis_kind/text/consent":
+     "Sự đồng ý của người nhận",
     "promotion_basis_kind/text/contract":
      "Hợp đồng",
     "promotion_basis_kind/text/existing_customer_exception":
@@ -51240,7 +52632,7 @@
      "Trao đổi do người nhận bắt đầu",
     "promotion_basis_kind/text/vital_or_security_interest":
      "Lợi ích thiết yếu hoặc an ninh",
-    "promotion_basis_kind/text/vn_subject_agreement":
+    "promotion_basis_kind/lifecycle/consent":
      "Sự đồng ý của người nhận",
     "promotion_basis_kind/lifecycle/contract":
      "Hợp đồng",
@@ -51256,8 +52648,6 @@
      "Trao đổi do người nhận bắt đầu",
     "promotion_basis_kind/lifecycle/vital_or_security_interest":
      "Lợi ích thiết yếu hoặc an ninh",
-    "promotion_basis_kind/lifecycle/vn_subject_agreement":
-     "Sự đồng ý của người nhận",
     "promotion_basis_kind/boolean/true":
      "Có",
     "promotion_basis_until/lifecycle/customer":
@@ -51819,33 +53209,41 @@
     "promotion_restriction/text/claim_contradicts_resolution":
      "Lý do liên hệ đã chọn không khớp với chuỗi thư này.",
     "promotion_restriction/text/consent_withdrawn":
-     "Người nhận đã rút lại sự đồng ý cho loại thư này, nên không thể gửi thư này cho họ.",
+     "Người nhận đã rút lại sự đồng ý cho loại thư này. Gửi email này không khôi phục sự đồng ý.",
     "promotion_restriction/text/deal_not_requested":
      "Chỉ một giao dịch thì chưa cho thấy người nhận đã yêu cầu cuộc thương lượng này. Yêu cầu của họ, ví dụ qua cuộc gọi hoặc cuộc họp, cần được ghi nhận.",
+    "promotion_restriction/text/footer_incomplete":
+     "Đọc thông tin chân trang bên dưới. Bạn có thể gửi email này kèm lý do được ghi lại.",
     "promotion_restriction/text/frequency_cap_reached":
      "Người nhận đã chạm giới hạn tin tiếp thị trong thời gian này. Hạn chế này sẽ tự hết.",
     "promotion_restriction/text/hard_bounce":
      "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
+    "promotion_restriction/text/lawful_basis_unconfirmed":
+     "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
     "promotion_restriction/text/legacy_transactional_unevidenced":
      "Tin nhắn này dùng một mục đích kiểu cũ mà không dữ liệu nào xác nhận.",
     "promotion_restriction/text/marketing_consent_required":
-     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
+     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
     "promotion_restriction/text/marketing_objection":
-     "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",
+     "Người nhận đã phản đối quảng cáo. Gửi email này không hủy bỏ sự phản đối của họ.",
     "promotion_restriction/text/marketing_permission_required":
-     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
+     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
     "promotion_restriction/text/no_compatible_evidence":
      "Không thể gửi cho đến khi ghi nhận lý do.",
     "promotion_restriction/text/no_marketing_consent":
      "Tin tiếp thị cần sự đồng ý của người nhận, nhưng chưa có sự đồng ý nào được ghi nhận.",
     "promotion_restriction/text/opted_out_after_request":
-     "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
+     "Người nhận đã từ chối quảng cáo sau khi yêu cầu báo giá. Gửi email này không thay đổi lựa chọn của họ.",
     "promotion_restriction/text/processing_restricted":
-     "Dữ liệu của người nhận đang bị hạn chế xử lý. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+     "Dữ liệu của người nhận đang bị hạn chế xử lý. Gửi email này không gỡ bỏ hạn chế đó.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
+    "promotion_restriction/text/subject_label_missing":
+     "Tin tiếp thị gửi người nhận ở quốc gia này phải bắt đầu tiêu đề bằng nhãn mà luật của họ quy định. Thêm nhãn vào tiêu đề.",
+    "promotion_restriction/text/subject_labels_conflict":
+     "Quốc gia của những người nhận này quy định nhãn tiêu đề khác nhau cho tin tiếp thị, và một tiêu đề chỉ bắt đầu bằng một nhãn. Gửi riêng một tin cho mỗi nhãn.",
     "promotion_restriction/text/subject_request":
-     "Người nhận đã yêu cầu không được liên hệ. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+     "Người nhận đã yêu cầu không liên hệ nữa. Gửi email này không thay đổi yêu cầu của họ.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
      "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
     "promotion_restriction/text/unknown_purpose":
@@ -51853,33 +53251,41 @@
     "promotion_restriction/lifecycle/claim_contradicts_resolution":
      "Lý do liên hệ đã chọn không khớp với chuỗi thư này.",
     "promotion_restriction/lifecycle/consent_withdrawn":
-     "Người nhận đã rút lại sự đồng ý cho loại thư này, nên không thể gửi thư này cho họ.",
+     "Người nhận đã rút lại sự đồng ý cho loại thư này. Gửi email này không khôi phục sự đồng ý.",
     "promotion_restriction/lifecycle/deal_not_requested":
      "Chỉ một giao dịch thì chưa cho thấy người nhận đã yêu cầu cuộc thương lượng này. Yêu cầu của họ, ví dụ qua cuộc gọi hoặc cuộc họp, cần được ghi nhận.",
+    "promotion_restriction/lifecycle/footer_incomplete":
+     "Đọc thông tin chân trang bên dưới. Bạn có thể gửi email này kèm lý do được ghi lại.",
     "promotion_restriction/lifecycle/frequency_cap_reached":
      "Người nhận đã chạm giới hạn tin tiếp thị trong thời gian này. Hạn chế này sẽ tự hết.",
     "promotion_restriction/lifecycle/hard_bounce":
      "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
+    "promotion_restriction/lifecycle/lawful_basis_unconfirmed":
+     "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
     "promotion_restriction/lifecycle/legacy_transactional_unevidenced":
      "Tin nhắn này dùng một mục đích kiểu cũ mà không dữ liệu nào xác nhận.",
     "promotion_restriction/lifecycle/marketing_consent_required":
-     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
+     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
     "promotion_restriction/lifecycle/marketing_objection":
-     "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",
+     "Người nhận đã phản đối quảng cáo. Gửi email này không hủy bỏ sự phản đối của họ.",
     "promotion_restriction/lifecycle/marketing_permission_required":
-     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
+     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
      "Không thể gửi cho đến khi ghi nhận lý do.",
     "promotion_restriction/lifecycle/no_marketing_consent":
      "Tin tiếp thị cần sự đồng ý của người nhận, nhưng chưa có sự đồng ý nào được ghi nhận.",
     "promotion_restriction/lifecycle/opted_out_after_request":
-     "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
+     "Người nhận đã từ chối quảng cáo sau khi yêu cầu báo giá. Gửi email này không thay đổi lựa chọn của họ.",
     "promotion_restriction/lifecycle/processing_restricted":
-     "Dữ liệu của người nhận đang bị hạn chế xử lý. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+     "Dữ liệu của người nhận đang bị hạn chế xử lý. Gửi email này không gỡ bỏ hạn chế đó.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
+    "promotion_restriction/lifecycle/subject_label_missing":
+     "Tin tiếp thị gửi người nhận ở quốc gia này phải bắt đầu tiêu đề bằng nhãn mà luật của họ quy định. Thêm nhãn vào tiêu đề.",
+    "promotion_restriction/lifecycle/subject_labels_conflict":
+     "Quốc gia của những người nhận này quy định nhãn tiêu đề khác nhau cho tin tiếp thị, và một tiêu đề chỉ bắt đầu bằng một nhãn. Gửi riêng một tin cho mỗi nhãn.",
     "promotion_restriction/lifecycle/subject_request":
-     "Người nhận đã yêu cầu không được liên hệ. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+     "Người nhận đã yêu cầu không liên hệ nữa. Gửi email này không thay đổi yêu cầu của họ.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
      "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
     "promotion_restriction/lifecycle/unknown_purpose":
@@ -53650,6 +55056,26 @@
      "Chưa rõ",
     "revoked_rows/boolean/true":
      "Có",
+    "role/lifecycle/customer":
+     "Khách hàng",
+    "role/lifecycle/disqualified":
+     "Đã loại",
+    "role/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "role/lifecycle/live":
+     "Đang vận hành",
+    "role/lifecycle/onboarding":
+     "Đang triển khai",
+    "role/lifecycle/opportunity":
+     "Cơ hội",
+    "role/lifecycle/prospect":
+     "Tiềm năng",
+    "role/lifecycle/target":
+     "Mục tiêu",
+    "role/lifecycle/unknown":
+     "Chưa rõ",
+    "role/boolean/true":
+     "Có",
     "rows/lifecycle/customer":
      "Khách hàng",
     "rows/lifecycle/disqualified":
@@ -54209,6 +55635,26 @@
     "started_at/lifecycle/unknown":
      "Chưa rõ",
     "started_at/boolean/true":
+     "Có",
+    "started_precision/lifecycle/customer":
+     "Khách hàng",
+    "started_precision/lifecycle/disqualified":
+     "Đã loại",
+    "started_precision/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "started_precision/lifecycle/live":
+     "Đang vận hành",
+    "started_precision/lifecycle/onboarding":
+     "Đang triển khai",
+    "started_precision/lifecycle/opportunity":
+     "Cơ hội",
+    "started_precision/lifecycle/prospect":
+     "Tiềm năng",
+    "started_precision/lifecycle/target":
+     "Mục tiêu",
+    "started_precision/lifecycle/unknown":
+     "Chưa rõ",
+    "started_precision/boolean/true":
      "Có",
     "state/lifecycle/customer":
      "Khách hàng",
@@ -54784,6 +56230,26 @@
      "Chưa rõ",
     "to/boolean/true":
      "Có",
+    "trigger/lifecycle/customer":
+     "Khách hàng",
+    "trigger/lifecycle/disqualified":
+     "Đã loại",
+    "trigger/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "trigger/lifecycle/live":
+     "Đang vận hành",
+    "trigger/lifecycle/onboarding":
+     "Đang triển khai",
+    "trigger/lifecycle/opportunity":
+     "Cơ hội",
+    "trigger/lifecycle/prospect":
+     "Tiềm năng",
+    "trigger/lifecycle/target":
+     "Mục tiêu",
+    "trigger/lifecycle/unknown":
+     "Chưa rõ",
+    "trigger/boolean/true":
+     "Có",
     "true/lifecycle/customer":
      "Khách hàng",
     "true/lifecycle/disqualified":
@@ -55337,26 +56803,6 @@
     "vital_or_security_interest/lifecycle/unknown":
      "Chưa rõ",
     "vital_or_security_interest/boolean/true":
-     "Có",
-    "vn_subject_agreement/lifecycle/customer":
-     "Khách hàng",
-    "vn_subject_agreement/lifecycle/disqualified":
-     "Đã loại",
-    "vn_subject_agreement/lifecycle/former_customer":
-     "Khách hàng cũ",
-    "vn_subject_agreement/lifecycle/live":
-     "Đang vận hành",
-    "vn_subject_agreement/lifecycle/onboarding":
-     "Đang triển khai",
-    "vn_subject_agreement/lifecycle/opportunity":
-     "Cơ hội",
-    "vn_subject_agreement/lifecycle/prospect":
-     "Tiềm năng",
-    "vn_subject_agreement/lifecycle/target":
-     "Mục tiêu",
-    "vn_subject_agreement/lifecycle/unknown":
-     "Chưa rõ",
-    "vn_subject_agreement/boolean/true":
      "Có",
     "wait_until/lifecycle/customer":
      "Khách hàng",
@@ -56170,6 +57616,12 @@
      "Chưa đặt",
     "confirmed/execution":
      "Được xác định khi áp dụng",
+    "consent/boolean":
+     "Không",
+    "consent/empty":
+     "Chưa đặt",
+    "consent/execution":
+     "Được xác định khi áp dụng",
     "consent_contact/boolean":
      "Không",
     "consent_contact/empty":
@@ -56512,6 +57964,12 @@
      "Chưa đặt",
     "disqualify_reason/execution":
      "Được xác định khi áp dụng",
+    "disqualify_reason_id/boolean":
+     "Không",
+    "disqualify_reason_id/empty":
+     "Chưa đặt",
+    "disqualify_reason_id/execution":
+     "Được xác định khi áp dụng",
     "domain/boolean":
      "Không",
     "domain/empty":
@@ -56578,6 +58036,12 @@
      "Chưa đặt",
     "emails/execution":
      "Được xác định khi áp dụng",
+    "employment_status/boolean":
+     "Không",
+    "employment_status/empty":
+     "Chưa đặt",
+    "employment_status/execution":
+     "Được xác định khi áp dụng",
     "empty/boolean":
      "Không",
     "empty/empty":
@@ -56595,6 +58059,12 @@
     "ended_at/empty":
      "Chưa đặt",
     "ended_at/execution":
+     "Được xác định khi áp dụng",
+    "ended_precision/boolean":
+     "Không",
+    "ended_precision/empty":
+     "Chưa đặt",
+    "ended_precision/execution":
      "Được xác định khi áp dụng",
     "enrichment_depth/boolean":
      "Không",
@@ -56674,6 +58144,12 @@
      "Chưa đặt",
     "first_name/execution":
      "Được xác định khi áp dụng",
+    "footer_warning/boolean":
+     "Không",
+    "footer_warning/empty":
+     "Chưa đặt",
+    "footer_warning/execution":
+     "Được xác định khi áp dụng",
     "format/boolean":
      "Không",
     "format/empty":
@@ -56715,6 +58191,12 @@
     "granted/empty":
      "Chưa đặt",
     "granted/execution":
+     "Được xác định khi áp dụng",
+    "greeting_register/boolean":
+     "Không",
+    "greeting_register/empty":
+     "Chưa đặt",
+    "greeting_register/execution":
      "Được xác định khi áp dụng",
     "gross_minor/boolean":
      "Không",
@@ -56763,6 +58245,18 @@
     "html_body/empty":
      "Chưa đặt",
     "html_body/execution":
+     "Được xác định khi áp dụng",
+    "impersonation_warning_carried/boolean":
+     "Không",
+    "impersonation_warning_carried/empty":
+     "Chưa đặt",
+    "impersonation_warning_carried/execution":
+     "Được xác định khi áp dụng",
+    "impersonation_warning_cleared/boolean":
+     "Không",
+    "impersonation_warning_cleared/empty":
+     "Chưa đặt",
+    "impersonation_warning_cleared/execution":
      "Được xác định khi áp dụng",
     "import_apply_tag/boolean":
      "Không",
@@ -56907,6 +58401,12 @@
     "invoice_id/empty":
      "Chưa đặt",
     "invoice_id/execution":
+     "Được xác định khi áp dụng",
+    "is_current_primary/boolean":
+     "Không",
+    "is_current_primary/empty":
+     "Chưa đặt",
+    "is_current_primary/execution":
      "Được xác định khi áp dụng",
     "is_default/boolean":
      "Không",
@@ -57177,6 +58677,12 @@
     "merge_address/empty":
      "Chưa đặt",
     "merge_address/execution":
+     "Được xác định khi áp dụng",
+    "merge_address_already_held/boolean":
+     "Không",
+    "merge_address_already_held/empty":
+     "Chưa đặt",
+    "merge_address_already_held/execution":
      "Được xác định khi áp dụng",
     "merge_address_kind/text":
      "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",
@@ -58136,6 +59642,12 @@
      "Chưa đặt",
     "occurred_precision/execution":
      "Được xác định khi áp dụng",
+    "odd_due_date/boolean":
+     "Không",
+    "odd_due_date/empty":
+     "Chưa đặt",
+    "odd_due_date/execution":
+     "Được xác định khi áp dụng",
     "offer_line_position/boolean":
      "Không",
     "offer_line_position/empty":
@@ -59054,6 +60566,12 @@
      "Chưa đặt",
     "revoked_rows/execution":
      "Được xác định khi áp dụng",
+    "role/boolean":
+     "Không",
+    "role/empty":
+     "Chưa đặt",
+    "role/execution":
+     "Được xác định khi áp dụng",
     "rows/boolean":
      "Không",
     "rows/empty":
@@ -59221,6 +60739,12 @@
     "started_at/empty":
      "Chưa đặt",
     "started_at/execution":
+     "Được xác định khi áp dụng",
+    "started_precision/boolean":
+     "Không",
+    "started_precision/empty":
+     "Chưa đặt",
+    "started_precision/execution":
      "Được xác định khi áp dụng",
     "state/boolean":
      "Không",
@@ -59396,6 +60920,12 @@
      "Chưa đặt",
     "to/execution":
      "Được xác định khi áp dụng",
+    "trigger/boolean":
+     "Không",
+    "trigger/empty":
+     "Chưa đặt",
+    "trigger/execution":
+     "Được xác định khi áp dụng",
     "true/boolean":
      "Không",
     "true/empty":
@@ -59515,12 +61045,6 @@
     "vital_or_security_interest/empty":
      "Chưa đặt",
     "vital_or_security_interest/execution":
-     "Được xác định khi áp dụng",
-    "vn_subject_agreement/boolean":
-     "Không",
-    "vn_subject_agreement/empty":
-     "Chưa đặt",
-    "vn_subject_agreement/execution":
      "Được xác định khi áp dụng",
     "wait_until/boolean":
      "Không",

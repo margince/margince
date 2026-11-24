@@ -137,7 +137,11 @@ func (h Handlers) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requiresDOI := req.RequiresDoubleOptIn != nil && *req.RequiresDoubleOptIn
-	purpose, err := h.store.CreatePurpose(r.Context(), req.Key, req.Label, requiresDOI)
+	frequency := ""
+	if req.Frequency != nil {
+		frequency = string(*req.Frequency)
+	}
+	purpose, err := h.store.CreatePurpose(r.Context(), req.Key, req.Label, requiresDOI, frequency)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -194,7 +198,7 @@ func (h Handlers) RecordConsent(w http.ResponseWriter, r *http.Request, id crmco
 // evidence only because the data subject completed it from their own mailbox,
 // and an endpoint that handed the token back would let one operator close both
 // halves of that round trip — which is what this one used to do.
-func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.IssueDoubleOptInParams) {
 	var req crmcontracts.IssueDoubleOptInJSONRequestBody
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -346,23 +350,26 @@ func writeConsentErr(w http.ResponseWriter, r *http.Request, err error) {
 
 func wirePurpose(p Purpose) crmcontracts.ConsentPurpose {
 	class := crmcontracts.ConsentPurposeClass(p.Class)
+	frequency := crmcontracts.ConsentPurposeFrequency(p.Frequency)
 	return crmcontracts.ConsentPurpose{
 		Id:                  openapi_types.UUID(p.ID.UUID),
 		Key:                 p.Key,
 		Label:               p.Label,
 		RequiresDoubleOptIn: &p.RequiresDoubleOptIn,
 		Class:               &class,
+		Frequency:           &frequency,
 		CreatedAt:           p.CreatedAt,
 	}
 }
 
 func wireState(st State) crmcontracts.ContactConsentState {
 	out := crmcontracts.ContactConsentState{
-		PurposeId:              openapi_types.UUID(st.PurposeID.UUID),
-		State:                  crmcontracts.ContactConsentStateState(st.State),
-		LawfulBasis:            st.LawfulBasis,
-		DoubleOptInConfirmedAt: st.DoubleOptInConfirmedAt,
-		UpdatedAt:              st.UpdatedAt,
+		PurposeId:                openapi_types.UUID(st.PurposeID.UUID),
+		State:                    crmcontracts.ContactConsentStateState(st.State),
+		LawfulBasis:              st.LawfulBasis,
+		DoubleOptInConfirmedAt:   st.DoubleOptInConfirmedAt,
+		ConfirmationPendingUntil: st.ConfirmationPendingUntil,
+		UpdatedAt:                st.UpdatedAt,
 	}
 	if st.PurposeKey != "" {
 		out.PurposeKey = &st.PurposeKey

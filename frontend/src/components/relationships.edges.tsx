@@ -1,8 +1,10 @@
 import type { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { formatDate } from "../format/format";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "../lib/activitykeys";
-import { stillHeld } from "../lib/employmentcurrency";
+import { careerDate, stillHeld } from "../lib/employmentcurrency";
 import type { EntityKind } from "../lib/entity";
 import { labelFor } from "../lib/labelfor";
 import { unwrap } from "../lib/problem";
@@ -52,6 +54,8 @@ export function scopeQueryKey(
 export function scopeCopy(scope: RelationshipScope): {
   title: MessageKey;
   add: MessageKey;
+  edit: MessageKey;
+  remove: MessageKey;
   empty: MessageKey;
   singleKind: boolean;
 } {
@@ -59,6 +63,8 @@ export function scopeCopy(scope: RelationshipScope): {
     return {
       title: "rel.dealStakeholders",
       add: "rel.addStakeholder",
+      edit: "rel.editStakeholder",
+      remove: "rel.removeStakeholder",
       empty: "rel.dealStakeholdersEmpty",
       singleKind: true,
     };
@@ -66,6 +72,8 @@ export function scopeCopy(scope: RelationshipScope): {
   return {
     title: "tab.relationships",
     add: "rel.add",
+    edit: "rel.edit",
+    remove: "rel.removeRelationship",
     empty: "rel.empty",
     singleKind: false,
   };
@@ -139,21 +147,44 @@ export function kindLabelFor(
   return labelFor(KIND_LABELS, rel.kind);
 }
 
-export function dateRange(
+export const RANGE_DASH = "–";
+
+// The two ends of an edge's dates; an empty string is an end it does not name.
+export function dateRangeParts(
   rel: Relationship,
   t: (key: MessageKey) => string,
-): string {
+  locale: Locale,
+  zone: string,
+  employmentZone: string,
+): Readonly<{ start: string; end: string }> {
   // An employment is current only as the contact page judges it. A job with an
   // unknown status is neither current nor former there, so it names no end.
   const unknown =
     rel.kind === "employment" && rel.employment_status === "unknown";
-  const held = rel.kind !== "employment" || stillHeld(rel);
-  const end =
-    rel.ended_at ?? (unknown ? "" : t(held ? "rel.current" : "rel.former"));
-  if (!end) {
-    return rel.started_at ?? "";
-  }
-  return rel.started_at ? `${rel.started_at} – ${end}` : end;
+  const held = rel.kind !== "employment" || stillHeld(rel, employmentZone);
+  // A table column, so the numeric, sortable date and year-month forms.
+  const day = (value: string) => formatDate(value, locale, zone);
+  const month = (value: string) => value.slice(0, 7);
+  const start = rel.started_at
+    ? careerDate(rel.started_at, rel.started_precision, day, month)
+    : "";
+  const end = rel.ended_at
+    ? careerDate(rel.ended_at, rel.ended_precision, day, month)
+    : unknown
+      ? ""
+      : t(held ? "rel.current" : "rel.former");
+  return { start, end };
+}
+
+export function dateRange(
+  rel: Relationship,
+  t: (key: MessageKey) => string,
+  locale: Locale,
+  zone: string,
+  employmentZone: string,
+): string {
+  const { start, end } = dateRangeParts(rel, t, locale, zone, employmentZone);
+  return [start, end].filter(Boolean).join(` ${RANGE_DASH} `);
 }
 
 // A creatable edge from this scope: the kind, which entity fills the picked

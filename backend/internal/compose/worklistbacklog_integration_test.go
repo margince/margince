@@ -118,8 +118,7 @@ func TestTheTaskTotalsMatchTheWalkInEveryScope(t *testing.T) {
 		ctx             context.Context
 		owner           ids.UUID
 		tasks, upcoming int
-		// stated says which totals the page states. The all scope withholds
-		// the weekly plans, whose rows are tasks too. A team page counts its
+		// stated says which totals the page states. A team page counts its
 		// roster and nobody's tasks, without Rep3 on Team2.
 		tasksStated, upcomingStated bool
 	}{
@@ -127,7 +126,7 @@ func TestTheTaskTotalsMatchTheWalkInEveryScope(t *testing.T) {
 		{"mine", "mine", rep1, ids.Nil, 21, 8, true, true},
 		{"named owner", "mine", r.e.Admin(), r.e.Rep1, 20, 9, true, true},
 		{"team", "team", rep1, ids.Nil, 38, 9, true, true},
-		{"all", "all", r.e.Admin(), ids.Nil, 43, 9, false, true},
+		{"all", "all", r.e.Admin(), ids.Nil, 43, 9, true, true},
 	}
 	for _, check := range checks {
 		t.Run(check.name, func(t *testing.T) {

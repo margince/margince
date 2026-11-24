@@ -1,5 +1,13 @@
-import { useMemo } from "react";
-import { announceAddressChanged, useHash } from "./router";
+import { useCallback, useContext, useMemo, useRef } from "react";
+import {
+  addressMovedFromOutside,
+  announceAddressChanged,
+  navigateReplacing,
+  type Route,
+  samePage,
+  useHash,
+} from "./router";
+import { ScreenAddress } from "./screenaddress";
 
 /**
  * The query half of the address. It names a view of what is on screen: how a
@@ -136,6 +144,21 @@ export function replaceParams(params: UrlParams): void {
 }
 
 /**
+ * For a list whose narrowing just changed: whether the address brought the
+ * change, by a link, history or typing rather than a dial. Such an address
+ * names its page. `narrowedBy` is the narrowing the address spells, without the
+ * page, so typing in a search box or a page-only link moves nothing here.
+ */
+export function useNarrowedFromOutside(narrowedBy: string): () => boolean {
+  const checked = useRef(narrowedBy);
+  return useCallback(() => {
+    const moved = narrowedBy !== checked.current;
+    checked.current = narrowedBy;
+    return moved && addressMovedFromOutside();
+  }, [narrowedBy]);
+}
+
+/**
  * One dial over the address as it stands now: set, or cleared when `value` is
  * empty. Every other dial rides along, so turning one never resets another.
  */
@@ -149,12 +172,7 @@ export function replaceDial(key: string, value: string | undefined): void {
   replaceParams(next);
 }
 
-/**
- * The dials the address carries, and the one way to change them.
- *
- * The setter is module-level and therefore stable, so a caller may depend on it
- * without a memo and an effect keyed on it cannot re-run for a new identity.
- */
+/** The dials the address carries, and the one way to change them. */
 export function useUrlParams(): [UrlParams, (next: UrlParams) => void] {
   const hash = useHash();
   // Keyed on the whole address rather than on its query, because that is what
@@ -162,7 +180,45 @@ export function useUrlParams(): [UrlParams, (next: UrlParams) => void] {
   // long as the reader stays put. A query object rebuilt every render would
   // re-key every react-query read that names it.
   const params = useMemo(() => parseParams(hash), [hash]);
-  return [params, replaceParams];
+  return [params, useAddressWriters().replaceParams];
+}
+
+export type AddressWriters = Readonly<{
+  replaceParams: (next: UrlParams) => void;
+  replaceDial: (key: string, value: string | undefined) => void;
+  navigateReplacing: (route: Route, dials?: UrlParams) => void;
+}>;
+
+const UNBOUND: AddressWriters = {
+  replaceParams,
+  replaceDial,
+  navigateReplacing,
+};
+
+/**
+ * Writers for a write that lands after its render (an effect, a settled
+ * request). Under a routed screen each drops it once the bar leaves the page.
+ */
+export function useAddressWriters(): AddressWriters {
+  const drawnFor = useContext(ScreenAddress);
+  const page =
+    drawnFor === null ? null : hashWithParams(drawnFor, NO_URL_PARAMS);
+  return useMemo(() => (page === null ? UNBOUND : writersOn(page)), [page]);
+}
+
+function writersOn(page: string): AddressWriters {
+  const onPage = () => samePage(globalThis.location.hash, page);
+  return {
+    replaceParams: (next) => {
+      if (onPage()) replaceParams(next);
+    },
+    replaceDial: (key, value) => {
+      if (onPage()) replaceDial(key, value);
+    },
+    navigateReplacing: (route, dials) => {
+      if (onPage()) navigateReplacing(route, dials);
+    },
+  };
 }
 
 // The two dials the Ask dialog rides on, and these are their only writers. They

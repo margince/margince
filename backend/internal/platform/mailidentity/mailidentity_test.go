@@ -17,8 +17,8 @@ func TestHasMachineLocalpartReadsOnlyTheLocalPart(t *testing.T) {
 		"Calendar-Notification@x.test": true,
 		// A human whose name holds a marker word in the middle.
 		"anna.notify.weber@example.com": false,
-		// A mail-infrastructure domain is IsMachineAddress's question, not this one's.
-		"anna@docusign.net": false,
+		// A mail-infrastructure domain with human staff is IsMachineAddress's question.
+		"anna@sendgrid.com": false,
 		"noreply":           false,
 		"@example.com":      false,
 	} {
@@ -128,6 +128,20 @@ func TestRecruitingRelaysRequireTheExactHostAndUUIDShape(t *testing.T) {
 		}
 		if IsDeliverySystemSender(address) {
 			t.Errorf("%s must keep its mail", address)
+		}
+	}
+}
+
+func TestRelayOnlyDomainsAreMachineButTheVendorsOwnDomainIsNot(t *testing.T) {
+	t.Parallel()
+	for _, relay := range []string{"acme+deal42@pipedrivemail.com", "dse_NA3@docusign.net", "team@eu.pipedrivemail.com"} {
+		if !HasMachineLocalpart(relay) || !IsMachineAddress(relay) {
+			t.Errorf("%s is a relay and must not name a human", relay)
+		}
+	}
+	for _, human := range []string{"anna@pipedrive.com", "anna@docusign.com", "anna@pipedrivemail.com.example"} {
+		if HasMachineLocalpart(human) {
+			t.Errorf("%s may be a human and must stay valid", human)
 		}
 	}
 }

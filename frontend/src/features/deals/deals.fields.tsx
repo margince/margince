@@ -1,12 +1,15 @@
 import { searchCompanyTargets } from "../../components/companyform";
-import type { CreateField } from "../../components/create";
-import { currencyField } from "../../components/currencyfield";
+import { type CreateField, dayOutOfRange } from "../../components/create";
+import { amountField, currencyField } from "../../components/currencyfield";
 import { partnerFields } from "../../components/dealpartnerfields";
 import type { ProjectOwnerPicker } from "../../components/projectownerfield";
 import type { LeadingCurrencies } from "../../format/currencychoices";
 import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { AcquisitionSource } from "../../lib/acquisitionsources.queries";
+import { percentLimit } from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+import { winProbabilityFault } from "../../lib/wholenumber";
 import type { Project } from "../projects/projects.form";
 import {
   dealCommercialFields,
@@ -16,23 +19,23 @@ import {
 import { dealProjectFields } from "./dealproject";
 import type { Deal } from "./deals";
 
-const WHOLE_PERCENT = /^(100|[1-9]?\d)$/;
-
 // The deal's own probability. Empty follows the stage, which is also how a
 // probability set on the deal is cleared. A won or lost deal has none to set:
 // its stage fixes it, and the server refuses one.
-function winProbabilityField(t: (k: MessageKey) => string): CreateField {
+function winProbabilityField(
+  t: (k: MessageKey) => string,
+  locale: Locale,
+): CreateField {
+  const label = {
+    label: t("deal.winProbability"),
+    limit: percentLimit(locale),
+  };
   return {
     key: "win_probability",
     label: "deal.winProbability",
     type: "number",
-    step: "1",
-    min: "0",
     hint: t("deal.winProbability.hint"),
-    validate: (value) =>
-      value.trim() === "" || WHOLE_PERCENT.test(value.trim())
-        ? undefined
-        : t("deal.winProbability.invalid"),
+    validate: (value) => winProbabilityFault(value, locale, label),
   };
 }
 
@@ -93,8 +96,35 @@ function companyEditField(
   };
 }
 
-export function dealEditFields(
+export const dealCloseDateField = {
+  key: "expected_close_date",
+  label: "create.expectedClose",
+  type: "date",
+} satisfies CreateField;
+
+// A date field that refuses a day the server cannot store. Its own check, so
+// an edit of the one field in the rail refuses it before sending, as the form does.
+function storableDay(
+  field: CreateField & { label: MessageKey },
   t: (k: MessageKey) => string,
+  locale: Locale,
+): CreateField {
+  return {
+    ...field,
+    validate: (value) => dayOutOfRange(value, locale, t(field.label)),
+  };
+}
+
+/** The deal's close date as every editor of it checks it. */
+export function dealCloseDate(
+  t: (k: MessageKey) => string,
+  locale: Locale,
+): CreateField {
+  return storableDay(dealCloseDateField, t, locale);
+}
+
+export function dealEditFields(
+  t: (k: MessageKey, params?: Record<string, string>) => string,
   opts: {
     partnerOptions: { value: string; label: string }[];
     // The partner this deal already names, when it names one. Keeps the field
@@ -129,19 +159,28 @@ export function dealEditFields(
     { value: opts.me, label: t("deal.ownerMe") },
     { value: "", label: t("deal.ownerUnassign") },
   ];
+  // An inline edit checks one field without the form, so the deal's own
+  // currency stands in for the form's.
+  const money = {
+    currency: (values: Record<string, string>) =>
+      values.currency || opts.currency,
+    locale: opts.locale,
+    t,
+    nonNegative: true,
+  };
   return [
-    { key: "name", label: "create.dealName", required: true },
-    { key: "amount", label: "create.amount", type: "number", step: "any" },
+    {
+      key: "name",
+      label: "create.dealName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
+    amountField({ key: "amount", label: "create.amount" }, money),
     // The recurring half of the price, annual, in the same currency as the
     // amount above. Beside it, not in a section of its own: the two are one
     // money value on the row. They share the currency field below, and the
     // server refuses either one stranded without it.
-    {
-      key: "expected_arr",
-      label: "deal.expectedArr",
-      type: "number",
-      step: "any",
-    },
+    amountField({ key: "expected_arr", label: "deal.expectedArr" }, money),
     {
       ...currencyField(opts.leadingCurrencies, opts.locale, opts.currency),
       required: false,
@@ -160,9 +199,13 @@ export function dealEditFields(
       withheld: opts.masked.includes("partner_company_id"),
       noneYet: opts.noPartnersYet,
     }),
-    ...(opts.closed ? [] : [winProbabilityField(t)]),
-    { key: "expected_close_date", label: "create.expectedClose", type: "date" },
-    { key: "wait_until", label: "deal.waitUntil", type: "date" },
+    ...(opts.closed ? [] : [winProbabilityField(t, opts.locale)]),
+    dealCloseDate(t, opts.locale),
+    storableDay(
+      { key: "wait_until", label: "deal.waitUntil", type: "date" },
+      t,
+      opts.locale,
+    ),
     {
       key: "__commercial__",
       labelText: t("deal.commercialContext"),

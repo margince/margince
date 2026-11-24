@@ -67,7 +67,7 @@ func seedAnsweredCalls(t *testing.T) answeredFixture {
 		f.tasks, f.correlations = append(f.tasks, task), append(f.correlations, correlation)
 		if err := NewCallMeter(db).Record(ctx, []Call{{
 			LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, CorrelationID: &correlation,
-			Task: task, Tier: TierPremium, Provider: c.provider, ModelID: boundGemini, RequestFingerprint: "fp-" + ids.NewV7().String(),
+			Task: task, Tier: TierPremium, Provider: c.provider, ModelID: boundGemini,
 			TokensIn: 1000, TokensOut: 200, ServedModel: c.servedModel, ServedIdentitySource: c.servedSource,
 		}}); err != nil {
 			t.Fatalf("%s: %v", c.name, err)
@@ -76,7 +76,7 @@ func seedAnsweredCalls(t *testing.T) answeredFixture {
 	// The test provider is bound with no model id and names itself as the model.
 	if err := NewCallMeter(db).Record(ctx, []Call{{
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: TaskSummarize,
-		Tier: TierCheapCloud, Provider: "fake", RequestFingerprint: "fp-" + ids.NewV7().String(),
+		Tier: TierCheapCloud, Provider: "fake",
 		TokensIn: 10, TokensOut: 2, ServedModel: "fake", ServedIdentitySource: servedIdentitySourceResponse,
 	}}); err != nil {
 		t.Fatal(err)
@@ -183,7 +183,7 @@ func TestATaskStepNamesTheModelTheProviderSwitchedTo(t *testing.T) {
 	f := seedAnsweredCalls(t)
 	reader := NewCallReadStore(f.db)
 	for i, c := range answeredCases {
-		flow, err := reader.TaskFlow(diagnosticsReader(f.ws), f.tasks[i], 24*time.Hour)
+		flow, err := reader.TaskFlow(diagnosticsReader(f.ws), f.tasks[i], TaskLadder(f.tasks[i]), 24*time.Hour)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -225,7 +225,7 @@ func TestAFailedAttemptIsNotCountedAsASwitch(t *testing.T) {
 	f := seedAnsweredCalls(t)
 	if err := NewCallMeter(f.db).Record(f.ctx, []Call{{
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion, Task: f.tasks[0],
-		Tier: TierLocalSmall, Provider: providerGemini, ModelID: boundGemini, RequestFingerprint: "fp-" + ids.NewV7().String(),
+		Tier: TierLocalSmall, Provider: providerGemini, ModelID: boundGemini,
 		ErrorSentinel: "schema_invalid", ServedModel: answeredGemini, ServedIdentitySource: servedIdentitySourceResponse,
 	}}); err != nil {
 		t.Fatal(err)

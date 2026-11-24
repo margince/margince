@@ -161,7 +161,7 @@ func TestTheContentDecisionRunsOnlyForTheSelectedRows(t *testing.T) {
 	seed(`INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
 	seed(`INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
 	seed(`INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Once deal', 'open', $2, $3, $4, 'seed', 'system')`, deal, e.rep, pipeline, stage)
+		VALUES ($1, 'Once deal', 'open', $2, $3, $4, 'manual', 'system')`, deal, e.rep, pipeline, stage)
 	const matching = 4
 	var first ids.UUID
 	for i := range matching {

@@ -190,7 +190,7 @@ describe("the tag vocabulary card", () => {
       await screen.findByRole("button", { name: en["tagAdmin.add"] }),
     );
     await user.type(
-      screen.getByLabelText(en["tagAdmin.nameLabel"]),
+      screen.getByRole("textbox", { name: en["tagAdmin.nameLabel"] }),
       "key-account",
     );
     // The heading makes the claim; the body names the word it is close to, so
@@ -311,7 +311,10 @@ describe("the tag vocabulary card", () => {
       await screen.findByRole("button", { name: en["tagAdmin.add"] }),
     );
     const dialog = within(await screen.findByRole("dialog"));
-    await user.type(dialog.getByLabelText(en["tagAdmin.nameLabel"]), "Fresh");
+    await user.type(
+      dialog.getByRole("textbox", { name: en["tagAdmin.nameLabel"] }),
+      "Fresh",
+    );
     const add = dialog.getByRole("button", { name: en["tagAdmin.create"] });
     await user.dblClick(add);
     await user.click(add);
@@ -360,7 +363,13 @@ describe("the tag vocabulary card", () => {
       dialog.getByRole("checkbox", { name: en["tagAdmin.suggestibleLabel"] }),
     );
     const save = dialog.getByRole("button", { name: en["tagAdmin.save"] });
-    expect(save).toBeDisabled();
+    await user.click(save);
+    expect(
+      await dialog.findByText(
+        `${en["tagAdmin.descriptionLabel"]} is required.`,
+      ),
+    ).toBeVisible();
+    expect(sent).toEqual([]);
 
     await user.type(
       dialog.getByRole("textbox", { name: en["tagAdmin.descriptionLabel"] }),
@@ -414,5 +423,54 @@ describe("the tag vocabulary card", () => {
     expect(warning.closest(".callout")?.textContent).toContain(
       "becomes available again",
     );
+  });
+});
+
+describe("the tag dialog's refusals", () => {
+  it("asks for a name on the name field and sends nothing", async () => {
+    const user = userEvent.setup();
+    const coin = vi.fn(() => jsonResponse({ id: "t-9", name: "x" }, 201));
+    mount([KEY_ACCOUNT], ADMIN, { "POST /tags": coin });
+    await user.click(
+      await screen.findByRole("button", { name: en["tagAdmin.add"] }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.click(
+      dialog.getByRole("button", { name: en["tagAdmin.create"] }),
+    );
+    expect(await dialog.findByText("Name is required.")).toBeVisible();
+    const name = dialog.getByRole("textbox", {
+      name: en["tagAdmin.nameLabel"],
+    });
+    await waitFor(() => expect(name).toHaveFocus());
+    expect(coin).not.toHaveBeenCalled();
+  });
+
+  it("says on the name field that a tag already has the name, once", async () => {
+    const user = userEvent.setup();
+    mount([KEY_ACCOUNT], ADMIN, {
+      "POST /tags": () =>
+        jsonResponse(
+          { status: 409, code: "conflict", detail: 'tag "VIP": conflict' },
+          409,
+        ),
+    });
+    await user.click(
+      await screen.findByRole("button", { name: en["tagAdmin.add"] }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    const name = dialog.getByRole("textbox", {
+      name: en["tagAdmin.nameLabel"],
+    });
+    await user.type(name, "VIP");
+    await user.click(
+      dialog.getByRole("button", { name: en["tagAdmin.create"] }),
+    );
+    expect(await dialog.findByText(en["tags.nameTaken"])).toBeVisible();
+    expect(dialog.getAllByText(en["tags.nameTaken"])).toHaveLength(1);
+    expect(name).toHaveAttribute("aria-invalid", "true");
+    expect(dialog.queryByText(/conflict/)).toBeNull();
+    await user.type(name, "s");
+    expect(dialog.queryByText(en["tags.nameTaken"])).toBeNull();
   });
 });

@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -24,7 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const csvTargetTags = "tags"
+const csvTargetTags = recordexport.Tags
 
 // splitTags reads a tags cell: semicolon-separated names, spaced as the tag
 // store spells them, each once whatever its case.
@@ -100,7 +101,7 @@ func (r *tagResolver) createMissing(ctx context.Context) error {
 				return fmt.Errorf("import: finding the tag %q: %w", name, err)
 			}
 			if !live {
-				return fmt.Errorf("import: the tag %q was created and retired meanwhile: %w", name, apperrors.ErrConflict)
+				return fmt.Errorf("the tag %q was created and retired meanwhile: %w", name, apperrors.ErrConflict)
 			}
 			r.byName[tagKey(name)] = ids.TagID{UUID: id}
 			continue

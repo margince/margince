@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/activities/meetingnotes.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
+<!-- describes: backend/internal/modules/capture/health.go frontend/src/app/capturehealthbanner.tsx frontend/src/features/capture/connectors.tsx frontend/src/features/capture/imap-connect-form.tsx frontend/src/features/capture/imap-send-fields.tsx frontend/src/features/capture/connectors.telegram.tsx frontend/src/features/capture/backfill.tsx backend/internal/modules/capture/registry_connections.go backend/internal/modules/capture/oauthflow backend/internal/modules/capture/backfill.go backend/internal/modules/capture/historybaseline.go frontend/src/features/capture/connection-service.tsx frontend/src/features/capture/connection-stop.tsx backend/internal/modules/capture/gdocs backend/internal/modules/capture/meetingnotes.go backend/internal/modules/capture/meetingnotesread.go backend/internal/modules/capture/meetingnotesmail.go backend/internal/modules/activities/meetingnotes.go backend/internal/modules/activities/meetingnotesmail.go backend/internal/compose/connectors_sharedconsent.go backend/internal/compose/connectors_picture.go -->
 # Connecting your mailbox and calendar
 
 Capture reads mail and meetings only from an account you connect. This page
@@ -24,11 +24,23 @@ Google also shares your account's picture. If that Google account is the address
 To connect any other mail host to Margince, open **Settings → Connections**, choose **Add account** and pick **Another mail host**. Then fill in the **Connect IMAP mailbox** form.
 1. Open **Settings**, then **Connections**.
 2. Choose **Add account**, pick **Another mail host**, then **Continue**.
-3. Fill **IMAP server**, **Port**, **Email address**, **App password**, **Mailbox** and **Messages per sync**, then press **Connect**.
-Use a password made for this one app. Missing fields show "Required: {fields}". An IMAP mailbox only captures: no calendar, Margince cannot send from it, and it has no past email import.
+3. Fill **IMAP server**, **Port**, **Email address**, **App password**, **Mailbox** and **Messages per sync**.
+4. To send mail from this mailbox too, tick **Send from this mailbox**. Then press **Connect**.
+Use a password made for this one app. Missing fields show "Required: {fields}". An IMAP mailbox has no calendar and no past email import.
 
 **Messages per sync** is the most one check reads. The first messages arrive a few minutes after you connect, not at once.
 Also called: connect Fastmail, connect my own mail server, app password.
+
+### How do I send from an IMAP mailbox?
+To send from an IMAP mailbox, tick **Send from this mailbox** on the **Connect IMAP mailbox** form. Margince then sends through the mailbox's SMTP server.
+- **SMTP server**: leave it empty to use the IMAP server.
+- **Security**: **SSL/TLS** uses port 465, **STARTTLS** uses port 587.
+- **SMTP port**: leave it empty to use the port that goes with **Security**.
+
+Margince logs in to the SMTP server with the same app password before it saves anything. Each mail you send gets a copy in the mailbox's **Sent** folder.
+A mailbox you connected without the tick stays read-only. To turn sending on later, press **Reconnect** and tick the box.
+Mail an agent drafts still waits for your approval, as it does for Gmail and Outlook.
+Also called: SMTP, send through my own mail server.
 
 ### How do I get an app password for IMAP?
 To get an app password, turn on two-step sign-in for your mail account, then create an app password in its security settings.
@@ -40,11 +52,14 @@ Margince seals the password and never shows it again. **Disconnect** deletes it,
 Also called: app-specific password, IMAP password, Gmail app password.
 
 ### Why does my IMAP mailbox not connect?
-When the **Connect IMAP mailbox** form refuses, the message under it says which of two things went wrong.
+When the **Connect IMAP mailbox** form refuses, the message under it says what went wrong.
 - "The mailbox rejected these credentials. Check host, email and app password.": a value is wrong, or you used your normal password.
 - "The mail server could not be reached. Check the host and port.": the server name or port is wrong, or the server is down.
-An IMAP server inside your own network is always unreachable, because Margince never connects to a private address.
-Also called: IMAP login failed, credentials rejected, mail server unreachable.
+- "The SMTP server rejected this login. Check the server, the security and the app password.": sending is ticked, and the SMTP server refused the login.
+- "The SMTP server could not be reached. Check the server and port.": sending is ticked, and its name, port or security is wrong.
+- "To send from this mailbox, its email address must be a plain address, such as name@example.com.": the login is not an email address.
+A mail server inside your own network is always unreachable, because Margince never connects to a private address.
+Also called: IMAP login failed, credentials rejected, mail server unreachable, SMTP login failed.
 
 ### How do I connect my calendar?
 To connect your calendar to Margince, tick **Calendar** when you connect your Google or Microsoft 365 account in **Settings → Connections**. Mail and calendar connect in one go.
@@ -77,6 +92,13 @@ To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar 
 A meeting with notes waiting to be read offers **Connect meeting notes** in its **Files** panel.
 It says when your Google accounts differ. The message leaves once the transcript lands or the reading window ends.
 
+### What happens to the "Notes by Gemini" email?
+Google emails the notes to the guests of the meeting. Margince keeps that email private to those guests. It files the email under no contact, so the contact with your own address does not hold every set of notes.
+
+When the subject names one of your meetings, Margince puts the notes on that meeting as its transcript. The meeting must have started in the 24 hours before the email, and the title must be the same, in any case. The contacts and readers of the meeting get it, and Margince suggests the tasks it finds.
+
+Margince adds nothing if two meetings fit, or if the meeting already has a transcript. It does the same for a forwarded email, or one sent to someone else. It does this only for email Gmail confirms came from Google. This needs no Meeting notes connection, only your connected mailbox and calendar.
+
 Also called: Google Docs, Meet transcripts, Gemini notes, meeting minutes.
 
 ### Who a meeting from your calendar shows
@@ -91,11 +113,13 @@ A colleague's own calendar decides their answer while it is connected. Once they
 
 A colleague on the invitation can read the meeting. A colleague who declined is shown under **Attendees** and cannot read it.
 
-A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. A colleague taken off by whoever set the meeting up leaves it at the next calendar sync of whoever set it up. Their own calendar does not need to sync first. If a colleague deletes the meeting from their own calendar, only they leave it.
+A guest added to the invitation later joins the meeting at the next calendar sync. A guest taken off the invitation leaves it, and a colleague taken off can no longer read it. When the calendars of several colleagues show the same guest, the guest stays until the last of those calendars drops them. Whoever set the meeting up decides alone: a guest or colleague they take off leaves it at their next calendar sync. The calendar of a colleague they took off does not need to sync first. If a colleague deletes the meeting from their own calendar, only they leave it.
 
 If someone set who can see the meeting by hand, a colleague added later is shown but cannot read it unless they are picked. A meeting you imported from another CRM gets its guests from your calendar the same way.
 
 An invitation with more than 50 guests is a mailing list to Margince. It keeps your colleagues on it and names up to 200 outside guests by the name or address on the invitation. Those guests are not linked to a contact, no contact is made for them, and the meeting does not count as contact with anyone. Past 200, the meeting says how many more guests it does not list.
+
+When whoever set up the meeting hides the guest list, your copy of the invitation names only that host and you. Margince files that meeting, and only you and the host can read it. It shows on a guest's record once the host's calendar is connected, because that copy names every guest. Margince does not take guests from an invitation email, because the sender types that list.
 
 ## What you can connect
 
@@ -107,7 +131,7 @@ calendar**. One account is one row, with what it brings in listed under it.
 |---|---|---|
 | **Google** | Mail from Gmail and meetings from Google Calendar, either or both. Meeting notes from Google Meet, if you connect them. | Yes |
 | **Microsoft 365** | Mail and calendar from Outlook on a Microsoft work account, either or both. | Yes |
-| **Another mail host** | "IMAP with an app password. Mail only, no calendar, no sending." | No |
+| **Another mail host** | "IMAP with an app password. Mail only, no calendar. Sending is optional." | If you tick **Send from this mailbox** |
 
 The company's **Telegram** bot lives on **Settings → Integrations**. It is one
 bot for the whole company, connected by an administrator.

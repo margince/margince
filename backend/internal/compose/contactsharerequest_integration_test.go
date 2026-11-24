@@ -186,18 +186,21 @@ func TestAnAcceptedShareRequestLetsTheColleagueEditTheContact(t *testing.T) {
 	}
 }
 
-// The request was filed while Rep2 held a full seat; by the time Rep1 accepts,
-// the seat may only read.
-func TestAShareAcceptedForAReadSeatGrantsRead(t *testing.T) {
-	e, held := heldByRep1(t)
-	createAsRep2(t, e)
-	e.WsExec(t, `UPDATE app_user SET seat_type = 'read' WHERE id = $1`, e.Rep2)
-
-	decideAsRep1(t, e, openShareRequest(t, e, held), true)
-
-	if n := countIn(t, e, `SELECT count(*) FROM record_grant
-		WHERE record_type = 'contact' AND record_id = $1 AND subject_id = $2 AND access = 'read'`, held, e.Rep2); n != 1 {
-		t.Errorf("%d read grants for the read seat, want 1", n)
+// The request was filed while Rep2 could edit; by the accept, the seat or the role may only read.
+func TestAShareAcceptedForAColleagueWhoCannotEditGrantsRead(t *testing.T) {
+	for cause, demote := range map[string]func(*integration.Env){
+		"limited_by_seat": func(e *integration.Env) { e.WsExec(t, `UPDATE app_user SET seat_type = 'read' WHERE id = $1`, e.Rep2) },
+		"limited_by_role": func(e *integration.Env) { e.MoveToRole(t, e.Rep2, "read_only") },
+	} {
+		t.Run(cause, func(t *testing.T) {
+			e, held := heldByRep1(t)
+			createAsRep2(t, e)
+			demote(e)
+			decideAsRep1(t, e, openShareRequest(t, e, held), true)
+			if n := e.CutShareAudits(t, held.UUID, e.Rep2, cause); n != 1 {
+				t.Errorf("%d read grants audited as %s, want 1", n, cause)
+			}
+		})
 	}
 }
 
@@ -243,7 +246,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/v1/contacts/vcard-import", &body).WithContext(rep2(e))
 			req.Header.Set("Content-Type", form.FormDataContentType())
 			rec := httptest.NewRecorder()
-			newContactsHandlers(e.Pool).ImportVCards(rec, req)
+			newContactsHandlers(e.Pool).ImportVCards(rec, req, crmcontracts.ImportVCardsParams{})
 			if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "a colleague already has this contact") {
 				t.Errorf("the vCard import answered %d %s, want the card skipped as held", rec.Code, rec.Body.String())
 			}

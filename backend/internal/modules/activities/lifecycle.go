@@ -88,7 +88,7 @@ func updateActivityInTx(
 	if err := recordMeetingTransition(ctx, tx, meetingTransition{
 		RecordedAt: in.recordedAt,
 		ActivityID: id,
-		Status:     changedMeetingStatus(current, out),
+		Status:     in.transitionStatus(current, out),
 		Scheduled:  scheduledAs(out.OccurredAt, string(out.OccurredPrecision)),
 	}); err != nil {
 		return crmcontracts.Activity{}, err
@@ -198,7 +198,7 @@ func admitActivityPatch(
 	// row under retention hold owes 423 whatever else is wrong with the
 	// request, and answering 422 first would invite the caller to fix the
 	// field and try again against a row that will refuse them either way.
-	if !held && in.MeetingStatus != nil && current.Kind != crmcontracts.ActivityKindMeeting {
+	if !held && (in.MeetingStatus != nil || in.clears(auditFieldMeetingStatus)) && current.Kind != crmcontracts.ActivityKindMeeting {
 		return crmcontracts.Activity{}, held, &MeetingStatusKindError{Kind: string(current.Kind)}
 	}
 	if !held {
@@ -420,7 +420,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		  due_has_time = CASE WHEN $%[11]d THEN false ELSE coalesce($%[17]d, due_has_time) END,
 		  assignee_id = CASE WHEN $%[13]d THEN NULL ELSE coalesce($%[7]d, assignee_id) END,
 		  is_done = coalesce($%[8]d, is_done),
-		  meeting_status = coalesce($%[9]d, meeting_status),
+		  meeting_status = CASE WHEN $%[29]d THEN NULL ELSE coalesce($%[9]d, meeting_status) END,
 		  call_outcome = CASE WHEN $%[19]d THEN NULL ELSE coalesce($%[18]d, call_outcome) END,
 		  task_type = coalesce($%[27]d, task_type),
 		  ai_assisted = ai_assisted OR coalesce($%[28]d, false),
@@ -431,7 +431,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		  -- it again, from the words as they now stand.
 		  language = CASE
 		    WHEN $%[3]d IS NOT NULL OR $%[2]d IS NOT NULL THEN $%[15]d
-		    ELSE language END,
+		    ELSE language END, `+declineStampsClearedWhen(patchChangesTextSQL)+`,
 		  due_wall = coalesce($%[21]d::text::timestamp, due_wall),
 		  due_zone = coalesce($%[22]d, due_zone),
 		  remind_wall = coalesce($%[23]d::text::timestamp, remind_wall),
@@ -449,7 +449,7 @@ func applyActivityPatch(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Up
 		arg(in.OccurredPrecision), arg(relabelledLanguage(current, in)),
 		customAssignments(in.customColumns, in.CustomFields, arg), arg(in.DueHasTime), arg(in.CallOutcome), arg(in.clears(fieldCallOutcome)), arg(in.sourceActivityID),
 		arg(pickedWall(in.DueIntent)), arg(pickedZone(in.DueIntent)), arg(pickedWall(in.RemindIntent)), arg(pickedZone(in.RemindIntent)), arg(pickedWall(in.MeetingIntent)), arg(pickedZone(in.MeetingIntent)),
-		arg(in.TaskType), arg(in.AIAssisted))
+		arg(in.TaskType), arg(in.AIAssisted), arg(in.clears(auditFieldMeetingStatus)))
 	query += fmt.Sprintf(" AND version = $%d", arg(current.Version))
 	result, err := tx.Exec(ctx, query, args...)
 	if err != nil {
@@ -491,6 +491,9 @@ func admitPatchedFields(ctx context.Context, tx pgx.Tx, current crmcontracts.Act
 		return err
 	}
 	if err := in.admitPatchTime(current.Kind); err != nil {
+		return err
+	}
+	if err := in.admitPatchDueWindow(ctx, tx, current); err != nil {
 		return err
 	}
 	return validateActivityDuration(in.DurationSeconds)

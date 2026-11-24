@@ -12,6 +12,7 @@ import { columns, type Row, testRows } from "./listtable.testkit";
 afterEach(() => {
   cleanup();
   Reflect.deleteProperty(Range.prototype, "getBoundingClientRect");
+  Reflect.deleteProperty(Range.prototype, "getClientRects");
 });
 
 // jsdom lays nothing out, so every text run is given the width of a long
@@ -107,8 +108,8 @@ describe("a numeric column's floor", () => {
       ).toBeGreaterThan(160),
     );
     rerender(table(testRows(3)));
-    dragValueTo(container, 90);
-    await waitFor(() => expect(widthOfColumn(container, 1)).toBe("90px"));
+    dragValueTo(container, 100);
+    await waitFor(() => expect(widthOfColumn(container, 1)).toBe("100px"));
   });
 
   it("sets no floor from a cell that holds a strip", async () => {
@@ -131,5 +132,63 @@ describe("a numeric column's floor", () => {
     };
     const { container } = render(table(testRows(3), [name, strip]));
     await waitFor(() => expect(widthOfColumn(container, 1)).toBe("110px"));
+  });
+});
+
+/** Each word of a header inks `PER_CHARACTER` a letter, on one line. */
+function laidOutHeaders() {
+  Object.defineProperty(Range.prototype, "getClientRects", {
+    configurable: true,
+    value(this: Range): DOMRect[] {
+      const width = this.toString().length * PER_CHARACTER;
+      return [
+        {
+          ...{ x: 0, y: 0, top: 0, left: 0, width, height: 16 },
+          ...{ right: width, bottom: 16, toJSON: () => ({}) },
+        },
+      ];
+    },
+  });
+}
+
+describe("a header's floor", () => {
+  const titled = (header: string): ListColumn<Row>[] => [
+    { key: "name", header: "Name", fixed: true, cell: (row) => row.name },
+    { key: "note", header, cell: () => "-" },
+  ];
+
+  it("widens a column to the longest word of its header", async () => {
+    laidOutHeaders();
+    const { container } = render(
+      table(testRows(1), titled("Vermittelndes Partnerunternehmen")),
+    );
+    await waitFor(() =>
+      expect(
+        Number.parseFloat(widthOfColumn(container, 1) ?? ""),
+      ).toBeGreaterThanOrEqual("Partnerunternehmen".length * PER_CHARACTER),
+    );
+  });
+
+  // A locale switch rewrites the header in place, with the table mounted.
+  it("lets go of a long header's width once the header turns short", async () => {
+    laidOutHeaders();
+    const { container, rerender } = render(
+      table(testRows(1), titled("Vermittelndes Partnerunternehmen")),
+    );
+    await waitFor(() =>
+      expect(
+        Number.parseFloat(widthOfColumn(container, 1) ?? ""),
+      ).toBeGreaterThanOrEqual("Partnerunternehmen".length * PER_CHARACTER),
+    );
+
+    rerender(table(testRows(1), titled("Referring partner")));
+
+    await waitFor(() => expect(widthOfColumn(container, 1)).toBe("120px"));
+  });
+
+  it("leaves a column whose header words fit at its minimum", async () => {
+    laidOutHeaders();
+    const { container } = render(table(testRows(1), titled("Last activity")));
+    await waitFor(() => expect(widthOfColumn(container, 1)).toBe("120px"));
   });
 });

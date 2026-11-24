@@ -22,7 +22,6 @@ import {
 } from "../../lib/filtersaddress";
 import { useListsAvailable } from "../../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
-import { navigateReplacing } from "../../lib/router";
 import {
   filterStateFrom,
   filterTreeOf,
@@ -32,6 +31,7 @@ import {
   useSaveView,
 } from "../../lib/savedviews.queries";
 import { type Group, type Node, rootGroup } from "../../lib/segmentpredicate";
+import { useAddressWriters } from "../../lib/urlstate";
 import { useFilterDraft, useFirstAnswer, wireSignature } from "./filterdraft";
 import {
   FilterEditor,
@@ -50,6 +50,7 @@ import { FilterOutcome } from "./filtermatches";
 import { usePlainWords } from "./filterpropose";
 import { type SavedKind, SaveFilterModal, useLandOnSaved } from "./filtersave";
 import { filterSentence, useSentenceWords } from "./filtersentence";
+import { referencedIdsOf } from "./filtersentence.names";
 import { type Reread, useReload } from "./filterview.reload";
 import { DeleteViewAction, RenameViewAction } from "./viewactions";
 import "./filters.css";
@@ -64,13 +65,14 @@ export function OpenedViewPage({
   const opened = useFirstAnswer(read);
   const own = opened ? tabOfViewResource(opened.resource) : undefined;
   const elsewhere = own !== undefined && own !== tab;
+  const { navigateReplacing } = useAddressWriters();
   // A view under another record type's address is still that view: the address
   // is put right rather than the view refused, and Back skips the wrong one.
   useEffect(() => {
     if (elsewhere) {
       navigateReplacing({ screen: "filters", id: own, id2: viewId });
     }
-  }, [elsewhere, own, viewId]);
+  }, [elsewhere, own, viewId, navigateReplacing]);
 
   const tree = opened ? openableTree(opened) : null;
   if (read.isError && !opened) {
@@ -191,7 +193,6 @@ function OpenedView({
 }>) {
   const t = useT();
   const toast = useToast();
-  const sentenceWords = useSentenceWords();
   const listsOn = useListsAvailable();
   const { saveQuery } = useSaveView();
   // Advanced only by this page's own writes: a later read that answers a
@@ -201,6 +202,9 @@ function OpenedView({
     baseline: wireSignature(tree),
   }));
   const [draft, dispatch] = useFilterDraft(() => rootGroup(tree));
+  const sentenceWords = useSentenceWords(
+    referencedIdsOf([draft.tree], vocabulary.data?.fields),
+  );
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState<Saving | null>(null);
   const focus = useFoldFocus();

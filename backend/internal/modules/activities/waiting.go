@@ -133,6 +133,16 @@ type WaitingReply struct {
 	// SenderIsMachine is the message's sender_is_machine stamp: a sending
 	// system wrote it, by mailidentity.InboundFromSendingSystem.
 	SenderIsMachine bool
+	// JudgeWithheld says no model will judge this unjudged message: it is held
+	// for a protecting reason, or private while PrivateMailRequests is off.
+	// OwnerWroteOnThread, set only beside it, says the seat that owes the reply
+	// sent mail on its conversation before it arrived. The queue trusts that in
+	// place of a verdict.
+	JudgeWithheld      bool
+	OwnerWroteOnThread bool
+	// threadWriters are the seats whose earlier mail on the thread the reader
+	// may read, from which OwnerWroteOnThread is decided once the owner is.
+	threadWriters []ids.UUID
 }
 
 // WaitingScanCap bounds the work one read does. Beyond this the answer is
@@ -396,7 +406,8 @@ func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
 		&row.ContactID, &row.CompanyID, &row.DealID,
 		&row.HasOpenDeal, &row.OwedVerdict, &row.CaptureLabel, &row.AddressedElsewhere,
 		&row.Engaged, &row.OwnerID, &row.OwnerKnown, &row.Threaded, &row.ThreadKey, &row.ChannelProvider,
-		&row.MeetingBookedAt, &row.SenderWasStranger, &row.BccOnly, &row.ForeignLink, &row.SenderIsMachine)
+		&row.MeetingBookedAt, &row.SenderWasStranger, &row.BccOnly, &row.ForeignLink, &row.SenderIsMachine,
+		&row.JudgeWithheld, &row.threadWriters)
 	if !row.OwnerKnown {
 		row.OwnerID = ids.Nil
 	}

@@ -11,10 +11,10 @@ import {
 } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
-import { KeyCode } from "./keyedname";
-import { NameDialog } from "./namedialog";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider, translate } from "../i18n";
+import { ProblemError } from "../lib/problem";
+import { NameDialog, nameRefusal } from "./namedialog";
 
 afterEach(cleanup);
 
@@ -60,7 +60,7 @@ it("sends one write for a double Enter", async () => {
   expect(write).toHaveBeenCalledExactlyOnceWith("Berlin");
 });
 
-it("describes the name field by its hint, the key in the code face", async () => {
+it("describes the name field by its hint line", async () => {
   render(
     <LocaleProvider initial="en">
       <NameDialog
@@ -69,7 +69,7 @@ it("describes the name field by its hint, the key in the code face", async () =>
         title="Rename field"
         label="Field name"
         initial="Fleet size"
-        hint={<KeyCode code="deal.cf_fleet_size" />}
+        hint="Existing records keep the old name."
         confirmLabel="Save"
         onSave={() => undefined}
       />
@@ -80,10 +80,8 @@ it("describes the name field by its hint, the key in the code face", async () =>
   const described = document.getElementById(
     field.getAttribute("aria-describedby") ?? "",
   );
-  expect(described).toHaveTextContent("Key: deal.cf_fleet_size");
-  expect(described?.querySelector("code")).toHaveTextContent(
-    "deal.cf_fleet_size",
-  );
+  expect(described).toHaveTextContent("Existing records keep the old name.");
+  expect(described?.querySelector("code")).toBeNull();
 });
 
 function Name({
@@ -169,6 +167,29 @@ it("writes nothing for an unchanged name and sends the typed one", async () => {
   expect(onSave).toHaveBeenCalledExactlyOnceWith("Eingehende Anfragen");
 });
 
+it("says an empty name is required on Save, focuses it, and writes nothing", async () => {
+  const onSave = vi.fn();
+  const user = userEvent.setup({ delay: null });
+  render(
+    <LocaleProvider initial="en">
+      <NameDialog
+        open
+        onClose={() => undefined}
+        title="New view"
+        label="View name"
+        confirmLabel="Create"
+        onSave={onSave}
+      />
+    </LocaleProvider>,
+  );
+
+  await user.click(screen.getByRole("button", { name: "Create" }));
+
+  expect(screen.getByText("View name is required.")).toBeVisible();
+  expect(screen.getByRole("textbox", { name: /View name/ })).toHaveFocus();
+  expect(onSave).not.toHaveBeenCalled();
+});
+
 function Titled({ title, label }: Readonly<{ title: string; label: string }>) {
   return (
     <LocaleProvider initial="en">
@@ -198,4 +219,61 @@ it("prints both when the label differs from the title", () => {
   render(<Titled title="Rename deal" label="Deal name" />);
   expect(screen.getByText("Rename deal")).toBeVisible();
   expect(screen.getByText("Deal name")).not.toHaveClass("sr-only");
+});
+
+describe("nameRefusal", () => {
+  const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
+
+  it("puts a conflict on the name, in the caller's words", () => {
+    const taken = new ProblemError({
+      status: 409,
+      code: "conflict",
+      detail: 'a team named "Ops" already exists: conflict',
+    });
+    expect(nameRefusal(taken, t, "users.teamDuplicate")).toEqual({
+      problem: null,
+      nameProblem: t("users.teamDuplicate"),
+    });
+  });
+
+  it("puts only the caller's own code on the name when it names one", () => {
+    const taken = new ProblemError({
+      status: 409,
+      code: "custom_field_label_taken",
+      detail: "a custom field with this label already exists",
+    });
+    const busy = new ProblemError({
+      status: 409,
+      code: "conflict",
+      detail: "The table is busy. Try again.",
+    });
+    const code = "custom_field_label_taken";
+    expect(nameRefusal(taken, t, "cf.labelTaken", code)).toEqual({
+      problem: null,
+      nameProblem: t("cf.labelTaken"),
+    });
+    expect(nameRefusal(busy, t, "cf.labelTaken", code)).toEqual({
+      problem: "The table is busy. Try again.",
+      nameProblem: null,
+    });
+  });
+
+  it("keeps any other refusal under the form", () => {
+    const denied = new ProblemError({
+      status: 403,
+      code: "permission_denied",
+      detail: "x",
+    });
+    expect(nameRefusal(denied, t, "users.teamDuplicate")).toEqual({
+      problem: t("common.permissionDenied"),
+      nameProblem: null,
+    });
+  });
+
+  it("says nothing before a write is refused", () => {
+    expect(nameRefusal(null, t, "users.teamDuplicate")).toEqual({
+      problem: null,
+      nameProblem: null,
+    });
+  });
 });

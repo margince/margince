@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -43,10 +44,10 @@ func (o scoutDealOpener) reviveOne(ctx context.Context, suggestionID ids.UUID, d
 	if err != nil {
 		return false, err
 	}
-	basis := scoutBasis(suggestion)
+	basis := scoutBasis(suggestion, false)
 	return o.deals.ReviveLostDeal(ownerCtx, deals.ReviveLostDealInput{
 		SuggestionID: suggestionID, DealID: deal, Owner: owner, Basis: basis,
-		EvidenceHolds: scoutEvidenceHolds, Arrival: scoutEvidenceArrival,
+		EvidenceHolds: dealscout.EvidenceHolds, Arrival: scoutEvidenceArrival,
 		SwitchOn: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, owner, deals.DealReviveKind)
 			return mode == approvals.ModeAuto, err
@@ -99,16 +100,16 @@ func scoutEvidenceArrival(ctx context.Context, tx pgx.Tx, evidence []deals.Sugge
 // recordRevivalOnTimeline writes the reopen on the deal's timeline as a note.
 // Its origin keeps it out of every recency clock. The evidence is named only
 // on the owner's receipt, so the note does not cite it.
-func (o scoutDealOpener) recordRevivalOnTimeline(ctx context.Context, tx pgx.Tx, deal ids.DealID, name string) error {
+func (o scoutDealOpener) recordRevivalOnTimeline(ctx context.Context, tx pgx.Tx, deal ids.DealID, name string) (ids.UUID, error) {
 	subject := fmt.Sprintf(systemtext.Copy("deal.reopened", textlang.English), name)
 	body := systemtext.Literal("deal.reopened_body")
-	_, _, err := o.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
+	note, _, err := o.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("deal.reopened", systemtext.Text(name)), Body: systemtext.Sentence("deal.reopened_body")},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: entityTypeDeal, EntityID: deal.UUID}},
 	})
 	if err != nil {
-		return fmt.Errorf("compose: writing the reopen on the deal's timeline: %w", err)
+		return ids.Nil, fmt.Errorf("compose: writing the reopen on the deal's timeline: %w", err)
 	}
-	return nil
+	return ids.UUID(note.Id), nil
 }

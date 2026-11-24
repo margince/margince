@@ -76,8 +76,9 @@ func TestANoticeDisclosesWhatTheExportHoldsAndTheUsesOnRecord(t *testing.T) {
 		}
 	}
 	tag := e.contact.String()[28:]
-	want := []NoticeUse{{"pn_news_" + tag, "consent"}, {businessCorrespondence, "subject_initiated_correspondence"}}
-	if !slices.Equal(got.Uses, want) {
+	want := []NoticeUse{{PurposeKey: "pn_news_" + tag, Basis: "consent"}, {PurposeKey: businessCorrespondence, Basis: "subject_initiated_correspondence"}}
+	sameUse := func(a, b NoticeUse) bool { return a.PurposeKey == b.PurposeKey && a.Basis == b.Basis }
+	if !slices.EqualFunc(got.Uses, want, sameUse) {
 		t.Errorf("uses %v, want only the granted purpose and the live basis: %v", got.Uses, want)
 	}
 	if len(got.Retention) != 1 || got.Retention[0].Scope != "activity" {

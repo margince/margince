@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { DateFormatsProvider } from "../../app/dateformats";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
@@ -12,7 +13,10 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import type { InstallationSettings } from "./installation-settings";
+import type {
+  InstallationPart,
+  InstallationSettings,
+} from "./installation-settings";
 import { InstallationProfileDialog } from "./installation-settings.profile";
 
 const SETTINGS: InstallationSettings = {
@@ -44,20 +48,29 @@ const SETTINGS: InstallationSettings = {
 
 function ProfileForm({
   locale,
+  part = "regional",
   start = SETTINGS,
-}: Readonly<{ locale?: "de" | "vi"; start?: InstallationSettings }>) {
+  refused = new Map(),
+}: Readonly<{
+  locale?: "de" | "vi";
+  part?: InstallationPart;
+  start?: InstallationSettings;
+  refused?: ReadonlyMap<string, string>;
+}>) {
   const [draft, setDraft] = useState(start);
   return (
     <StoryProviders locale={locale}>
       <DateFormatsProvider>
         <InstallationProfileDialog
+          part={part}
           settings={SETTINGS}
           draft={draft}
-          focus="base_currency"
+          focus={part === "forecast" ? "forecast_likely_threshold" : "timezone"}
           canManage
-          dirty={false}
+          dirty={JSON.stringify(draft) !== JSON.stringify(SETTINGS)}
           pending={false}
-          refused={new Map()}
+          refused={refused}
+          formRef={() => undefined}
           blanketError={null}
           describe={(control) => control["aria-describedby"]}
           onChange={setDraft}
@@ -96,5 +109,45 @@ export const FiscalStartMoved: Story = {
         }),
     });
     return <ProfileForm start={{ ...SETTINGS, fiscal_year_start_month: 4 }} />;
+  },
+};
+
+// A cleared Likely threshold, refused on its field with the bounds in percent.
+export const ThresholdRefused: Story = {
+  render: () => (
+    <ProfileForm
+      part="forecast"
+      start={{ ...SETTINGS, forecast_likely_threshold: 0 }}
+      refused={
+        new Map([
+          [
+            "forecast_likely_threshold",
+            "Likely threshold must be from 1% to 100%.",
+          ],
+        ])
+      }
+    />
+  ),
+};
+
+// A changed draft and Escape: the dialog asks before it throws the draft away.
+// Cancel discards at once.
+export const EscapeAsksBeforeDiscarding: Story = {
+  render: () => <ProfileForm />,
+  play: async () => {
+    const user = userEvent.setup();
+    const drawer = within(await screen.findByRole("dialog"));
+    const zone = drawer.getByRole("textbox", { name: "Company time zone" });
+    await user.clear(zone);
+    await user.type(zone, "Europe/Vienna");
+    // Dispatched by hand: Storybook wraps its key presses in act, and the
+    // question opening under one suspends on the copy catalog and warns.
+    zone.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await waitFor(() => expect(question).toBeVisible());
   },
 };

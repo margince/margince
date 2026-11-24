@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -77,7 +78,7 @@ func (e *scoutEnv) backdate(t *testing.T, company ids.UUID, since, at time.Time)
 // owner and as a colleague: both see the reopen, only the owner its reason.
 func (e *scoutEnv) reopenReceiptsShowTheReasonToTheOwnerOnly(t *testing.T, deal ids.DealID) {
 	t.Helper()
-	owned, _, err := e.Deals.DealChanges(e.Admin(), deal, nil, 10)
+	owned, _, err := e.Deals.DealChanges(e.Admin(), deal, nil, 10, deals.DealChangeFilter{})
 	if err != nil || len(owned) != 1 {
 		t.Fatalf("the owner reads %d changes (%v), want the reopen", len(owned), err)
 	}
@@ -85,7 +86,7 @@ func (e *scoutEnv) reopenReceiptsShowTheReasonToTheOwnerOnly(t *testing.T, deal 
 		!strings.Contains(summary, "new_opportunity") {
 		t.Errorf("the owner's receipt = %q, want the reopen with its reason", summary)
 	}
-	seen, _, err := e.Deals.DealChanges(e.rep(e.Rep1, e.Team1), deal, nil, 10)
+	seen, _, err := e.Deals.DealChanges(e.rep(e.Rep1, e.Team1), deal, nil, 10, deals.DealChangeFilter{})
 	if err != nil || len(seen) != 1 {
 		t.Fatalf("a colleague reads %d changes (%v), want the reopen", len(seen), err)
 	}
@@ -133,6 +134,10 @@ func TestMarginceReopensALostDealAndUndoClosesItAgain(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id = a.id
 		 WHERE l.deal_id = $1 AND a.subject = 'Margince reopened Acme platform'`, deal); n != 1 {
 		t.Error("the reopen is not on the deal's timeline")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM deal_correction c JOIN activity a ON a.id = c.note_activity_id
+		 WHERE c.id = $1 AND a.subject = 'Margince reopened Acme platform'`, correction.ID); n != 1 {
+		t.Error("the reopen's correction does not name its note")
 	}
 	e.reopenReceiptsShowTheReasonToTheOwnerOnly(t, deal)
 	if summary, err := e.Deals.PendingChangesOwnedBy(e.Admin(), nil); err != nil || summary.Revived != 1 {
@@ -203,9 +208,7 @@ func TestADepartedOwnerOrASwitchOffKeepsTheLostDealClosed(t *testing.T) {
 	switched := e.SeedCompany(t, "Globex", &e.AdminUser)
 	off := e.lostDeal(t, switched, e.AdminUser, e.daysAgo(40))
 	e.buyerPair(t, switched, e.daysAgo(10))
-	if _, err := approvals.NewService(e.DB()).SetAutoApply(e.Admin(), deals.DealReviveKind, false); err != nil {
-		t.Fatalf("switching deal_revive off: %v", err)
-	}
+	integration.TurnKindOff(e.Admin(), t, approvals.NewService(e.DB()), deals.DealReviveKind)
 
 	if done := e.openScouted(t); done != 0 {
 		t.Fatalf("acted on %d suggestions, want none", done)

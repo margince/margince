@@ -8,8 +8,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { LocaleProvider } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { StoryProviders } from "../../testing/story-utils";
 import { UndoErrors } from "./import.notices";
 import { ProblemTable, problemsHref } from "./import.testrun";
 import type { ImportRowIssue } from "./importtypes";
@@ -17,7 +17,7 @@ import type { ImportRowIssue } from "./importtypes";
 afterEach(cleanup);
 
 function show(ui: ReactNode, locale: Locale) {
-  return render(<LocaleProvider initial={locale}>{ui}</LocaleProvider>);
+  return render(<StoryProviders locale={locale}>{ui}</StoryProviders>);
 }
 
 const coded: ImportRowIssue = {
@@ -65,7 +65,7 @@ describe("a problem's reason", () => {
       params: { plural: "contacts" },
     };
     show(<ProblemTable issues={[refused]} />, "de");
-    expect(screen.getByText(/vom Typ Kontakte anlegen/)).toBeVisible();
+    expect(screen.getByText(/vom Typ Kontakte erstellen/)).toBeVisible();
   });
 
   it("names the deals file by its type in the reader's language", () => {
@@ -77,7 +77,7 @@ describe("a problem's reason", () => {
       params: { plural: "deals" },
     };
     show(<ProblemTable issues={[refused]} />, "de");
-    expect(screen.getByText(/vom Typ Deals anlegen/)).toBeVisible();
+    expect(screen.getByText(/vom Typ Deals erstellen/)).toBeVisible();
   });
 
   it("says an undo refusal from its code", () => {
@@ -120,9 +120,9 @@ describe("a long problem list", () => {
     const view = show(<ProblemTable issues={many} />, "en");
     await user.click(screen.getByRole("button", { name: "Page 2" }));
     view.rerender(
-      <LocaleProvider initial="en">
+      <StoryProviders locale="en">
         <ProblemTable issues={many.slice(0, 55)} />
-      </LocaleProvider>,
+      </StoryProviders>,
     );
     expect(screen.getByText("1 to 25 of 55 issues")).toBeVisible();
   });

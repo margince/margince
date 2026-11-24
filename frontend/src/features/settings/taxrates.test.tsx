@@ -56,7 +56,7 @@ afterEach(() => {
 it("lists the rates and offers no editor to a seat that only reads them", async () => {
   vi.stubGlobal("fetch", backend(READER));
   render(<TaxRatesCard />);
-  expect(await screen.findByText("19.00 %")).toBeInTheDocument();
+  expect(await screen.findByText("19%")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: en["taxRates.add"] })).toBeNull();
 });
 
@@ -95,8 +95,67 @@ it("records a rate in the sheet's spelling", async () => {
   });
 });
 
+it("sends a tiny rate as a plain decimal, never an exponent", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal("fetch", backend(KEEPER, calls));
+  render(<TaxRatesCard />);
+  await user.click(
+    await screen.findByRole("button", { name: en["taxRates.add"] }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: en["taxRates.colCountry"] }),
+    "Austria",
+  );
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: en["taxRates.colCategory"] }),
+    en["taxRates.category.reduced"],
+  );
+  await user.type(
+    within(dialog).getByRole("textbox", { name: en["taxRates.colRate"] }),
+    "0,0000001",
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: en["taxRates.save"] }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  const post = calls.find((call) => call.method === "POST");
+  expect(post?.body).toMatchObject({
+    country: "at",
+    category: "reduced",
+    rate: "0.0000001",
+  });
+});
+
 it("says the sheet is withheld from a seat without the read grant", async () => {
   vi.stubGlobal("fetch", backend({}));
   render(<TaxRatesCard />);
   expect(await screen.findByText(en["taxRates.withheld"])).toBeInTheDocument();
+});
+
+it("says on Save that the country and rate are required, and sends nothing", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal("fetch", backend(KEEPER, calls));
+  render(<TaxRatesCard />);
+  await user.click(
+    await screen.findByRole("button", { name: en["taxRates.add"] }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["taxRates.save"] }),
+  );
+  expect(
+    within(dialog).getByText(`${en["taxRates.colCountry"]} is required.`),
+  ).toBeInTheDocument();
+  expect(
+    within(dialog).getByText(`${en["taxRates.colRate"]} is required.`),
+  ).toBeInTheDocument();
+  expect(document.activeElement).toBe(
+    within(dialog).getByRole("combobox", { name: en["taxRates.colCountry"] }),
+  );
+  expect(calls.filter((call) => call.method === "POST")).toEqual([]);
 });

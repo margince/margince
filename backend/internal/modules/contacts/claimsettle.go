@@ -15,6 +15,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -71,27 +72,45 @@ func (s *Store) SettleConversationClaim(ctx context.Context, claimID ids.UUID, o
 // settlement holds. A claim already at `to` is left alone; one at any other
 // status is a conflict rather than an overwrite.
 func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to string) error {
+	contactID, current, err := lockWritableClaim(ctx, tx, claimID)
+	if err != nil {
+		return err
+	}
+	if current == to {
+		// The goal state already holds, so this is success. Nothing is written:
+		// a second audit row would say the contact's record changed.
+		return nil
+	}
+	if current != from {
+		return fmt.Errorf("this claim was already settled as %s: %w", current, apperrors.ErrConflict)
+	}
+	return writeClaimStatus(ctx, tx, claimID, contactID, current, to, nil)
+}
+
+// lockWritableClaim locks one claim and answers its contact and status, under
+// the gates every settlement holds.
+func lockWritableClaim(ctx context.Context, tx pgx.Tx, claimID ids.UUID) (ids.UUID, string, error) {
 	// LOCKED before the status is read. Without FOR UPDATE two concurrent
 	// settles both read `open`, both pass the transition check, and the
 	// second overwrites the first — 204 to both callers, and the loser's
 	// audit row claims it moved a claim that was already settled. The
 	// conflict below only refuses a settlement it can SEE.
 	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
-		return err
+		return ids.UUID{}, "", err
 	}
 	var contactID, activityID ids.UUID
 	var current string
 	if err := tx.QueryRow(ctx, `
 		SELECT contact_id, source_activity_id, status FROM conversation_claim
 		WHERE id = $1`, claimID).Scan(&contactID, &activityID, &current); err != nil {
-		return fmt.Errorf("read the claim to settle: %w", err)
+		return ids.UUID{}, "", fmt.Errorf("read the claim to settle: %w", err)
 	}
 	// The contact's gate, not the claim's: a claim is reachable through the
 	// contact it is about, so a caller who may not write that contact may not
 	// settle their promises. A contact outside the caller's scope reads as
 	// absent, which is what keeps the claim's existence from leaking.
 	if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID); err != nil {
-		return err
+		return ids.UUID{}, "", err
 	}
 	// And the message the claim was read from, the same gate the recording
 	// path holds. A claim quotes words, and its evidence can be narrowed or
@@ -100,25 +119,24 @@ func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to 
 	// answer would report the claim's current status to somebody who may no
 	// longer read what it rests on.
 	if err := ensureClaimContentVisible(ctx, tx, claimID); err != nil {
-		return err
+		return ids.UUID{}, "", err
 	}
-	if current == to {
-		// The caller's goal state already holds. Settling twice is one
-		// settlement, so this is success and writes nothing — a second audit
-		// row would say a contact's record changed when it did not.
-		return nil
-	}
-	if current != from {
-		return fmt.Errorf("this claim was already settled as %s: %w", current, apperrors.ErrConflict)
-	}
+	return contactID, current, nil
+}
+
+// writeClaimStatus is the one write of a claim's status: the row, its audit
+// row and the changed event commit together. `extra` adds keys to the audit
+// image after.
+func writeClaimStatus(ctx context.Context, tx pgx.Tx, claimID, contactID ids.UUID, current, to string, extra map[string]any) error {
 	if _, err := tx.Exec(ctx, `
-		UPDATE conversation_claim SET status = $2 WHERE id = $1`,
+		UPDATE conversation_claim SET status = $2 WHERE id = $1 AND archived_at IS NULL`,
 		claimID, to); err != nil {
 		return fmt.Errorf("settle the claim: %w", err)
 	}
+	after := map[string]any{"claim_status": to, claimIDKey: claimID.String()}
+	maps.Copy(after, extra)
 	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,
-		map[string]any{"claim_status": current, claimIDKey: claimID.String()},
-		map[string]any{"claim_status": to, claimIDKey: claimID.String()})
+		map[string]any{"claim_status": current, claimIDKey: claimID.String()}, after)
 	if err != nil {
 		return fmt.Errorf("audit the settlement: %w", err)
 	}
@@ -176,4 +194,21 @@ func WithdrawClaimsTx(ctx context.Context, tx pgx.Tx, claimIDs []ids.UUID) error
 		}
 	}
 	return nil
+}
+
+// WithdrawUnplacedCopiesTx dismisses the open claims no one holds that one
+// promise was filed under while its promiser was still unnamed. Each locator
+// is one earlier spelling of the same promise on the same source. A non-empty
+// recipients limits it to the claims on those contacts. A claim a task or a
+// taker holds is left alone.
+func (s *Store) WithdrawUnplacedCopiesTx(ctx context.Context, tx pgx.Tx, source ids.UUID, locators []string, recipients []ids.UUID) error {
+	var claims []ids.UUID
+	for _, locator := range locators {
+		copies, err := s.ownerlessCopies(ctx, tx, PromiseToTake{Source: source, Locator: locator}, recipients)
+		if err != nil {
+			return err
+		}
+		claims = append(claims, copies...)
+	}
+	return WithdrawClaimsTx(ctx, tx, claims)
 }

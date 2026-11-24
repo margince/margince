@@ -1,8 +1,8 @@
 /* The composer's own layout inside its docked window. The window chrome,
  * inputs and pickers come from the design system. Tokens only (ds-purity). */
 
-/* The window's middle: the fields scroll, the band of what stands in the way
-   and the foot stay put under them. */
+/* The window's middle: the sheet keeps its floor, the files and the band of
+   what stands in the way give up height to it, and the foot stays put under. */
 .compose-window {
   flex: 1 1 auto;
   display: flex;
@@ -11,6 +11,13 @@
   /* The containing block for a `.sr-only` inside, which would otherwise
      resolve against the page and scroll it. */
   position: relative;
+}
+/* The files give way first, down to a row: the band says why the send is held. */
+.compose-window > .compose-files {
+  position: relative;
+  flex: 0 8 auto;
+  min-block-size: min(calc(var(--controlHeight) + var(--space-5)), 10%);
+  overflow-y: auto;
 }
 
 .compose-fields {
@@ -32,14 +39,23 @@
 /* The composer window's scrolling sheet: the envelope rows and strips run edge
    to edge and sit flush on one another; what follows keeps the margin. */
 .compose-sheet {
+  --composeHead: calc(2 * (var(--inputHeight) + var(--space-3)));
+  /* After the head and the AI band, 8rem: six 1.25rem lines of --fontBody, and some spare. */
+  --composeFloor: calc(var(--composeHead) + var(--composeBand, 0px) + 8rem);
   position: relative;
-  flex: 1 1 auto;
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-block-size: 0;
+  /* A window too short for the floor still leaves the notices a fifth. */
+  min-block-size: min(var(--composeFloor), 80%);
   overflow-y: auto;
   padding: 0 var(--space-4) var(--space-3);
+}
+/* The AI band opens the sheet too: its steer, two rows of asks, its gaps. */
+.compose-sheet:has(> .compose-aiband) {
+  --composeAsks: calc(var(--controlHeight) + var(--space-4));
+  --composeBand: calc(var(--inputHeight) + 2 * var(--composeAsks));
 }
 .compose-sheet > * {
   flex-shrink: 0;
@@ -118,25 +134,10 @@
   align-items: stretch;
   gap: var(--space-1);
 }
-.schedule-preset {
-  display: flex;
-  align-items: baseline;
+/* The Button's own face, with the moment pushed to the end edge. */
+.btn.schedule-preset {
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-radius: var(--r-sm);
-  background: none;
-  color: var(--textPrimary);
-  text-align: left;
-  cursor: pointer;
-}
-.schedule-preset:hover {
-  background: var(--groundHover);
-}
-.schedule-preset:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
 }
 /* The calendar beside the readout it fills in, because the month is the thing
    being read and the date and hour are what it produces. Stacked on a narrow
@@ -163,32 +164,6 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
 }
-.schedule-hours {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.schedule-hour {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgElevated);
-  color: var(--textPrimary);
-  cursor: pointer;
-}
-.schedule-hour:hover {
-  background: var(--bgHover);
-}
-.schedule-hour:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-.schedule-hour[aria-pressed="true"] {
-  border-color: var(--borderStrong);
-  background: var(--bgChip);
-}
-
 /* The sentence the whole dialog produces, above the control that commits it. */
 .schedule-foot {
   padding-top: var(--space-3);
@@ -218,18 +193,6 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
-}
-
-/* The block a refusal lands in: the consent gate and the two send pre-flight
- * refusals share one treatment, because to the rep they are the same thing —
- * the send did not happen, and here is what to do about it. */
-.compose-refusal {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--r-sm);
-  background: var(--dangerBg);
 }
 
 /* What the draft was written from: a quiet hint under the band's line, and
@@ -369,9 +332,10 @@
    drawn while nothing stands in the way. */
 .compose-blockers {
   position: relative;
-  flex: none;
+  flex: 0 1 auto;
   display: flex;
   flex-direction: column;
+  min-block-size: 0;
   max-block-size: 45%;
   overflow-y: auto;
   border-top: 1px solid var(--borderSubtle);
@@ -436,6 +400,17 @@
 }
 .compose-strip {
   display: flex;
+  flex-wrap: wrap;
+}
+/* Where and when a meeting happened sit on their own line under the pick. */
+.compose-strip-meeting {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+}
+.compose-strip-meeting > :first-child {
+  flex: 1 1 14rem;
 }
 .compose-strip > svg {
   flex: none;
@@ -522,7 +497,6 @@
   padding-inline: var(--space-2);
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .compose-quoted {
   display: flex;
@@ -535,4 +509,19 @@
   padding-inline-start: var(--space-3);
   border-inline-start: 2px solid var(--borderStrong);
   color: var(--textSecondary);
+}
+
+/* Send anyway: the finding strip, then the reason beside its button, both
+   inside the blocker band so the warning sits over the field it explains. */
+.compose-sendanyway-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); /* ds:ignore one strip in the composer's blocker band, matched to compose-strip */
+  background: var(--warningBg);
+}
+.compose-sendanyway-reason {
+  flex: 1 1 16rem;
+  margin: 0;
 }

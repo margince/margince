@@ -247,7 +247,11 @@ describe("a row", () => {
       addEventListener: () => {},
       removeEventListener: () => {},
     }));
-    const { wrapper } = mountFilters({ listsOn: true, lists: [liveList] });
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      lists: [liveList],
+      teams: { [TEAM_ID]: "Team Germany" },
+    });
     render(<FiltersScreen />, { wrapper });
     const mine = await screen.findByRole("region", {
       name: en["filters.library.mine"],
@@ -380,7 +384,7 @@ describe("a saved view's ⋯", () => {
     expect(window.location.hash).toBe("");
     const firstRun = screen.getByText(en["filters.library.viewsEmptyTitle"]);
     await vi.waitFor(() =>
-      expect(firstRun.closest(".library-anchor")).toHaveFocus(),
+      expect(firstRun.closest('[data-testid="library-anchor"]')).toHaveFocus(),
     );
   });
 
@@ -443,6 +447,7 @@ describe("New Shortlist", () => {
     const { written, wrapper } = mountFilters({
       listsOn: true,
       lists: [liveList],
+      teams: { [TEAM_ID]: "Team Germany" },
     });
     const user = userEvent.setup();
     render(<FiltersScreen />, { wrapper });
@@ -495,6 +500,37 @@ describe("New Shortlist", () => {
     );
     await user.click(
       await screen.findByRole("option", { name: en["lists.sharing.private"] }),
+    );
+    await user.click(screen.getByRole("button", { name: en["lists.create"] }));
+    await vi.waitFor(() => expect(written).toHaveLength(1));
+    expect(written[0]?.body).toMatchObject({ sharing: "private" });
+  });
+
+  it("starts a reader in no team on only them, with a team on offer but barred", async () => {
+    const { written, wrapper } = mountFilters({
+      listsOn: true,
+      lists: [liveList],
+    });
+    const user = userEvent.setup();
+    render(<FiltersScreen />, { wrapper });
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.newShortlist"] }),
+    );
+    const sharing = screen.getByRole("combobox", {
+      name: en["lists.sharingLabel"],
+    });
+    expect(sharing).toHaveTextContent(en["lists.sharing.private"]);
+    expect(sharing).toHaveAccessibleDescription(
+      `${en["lists.sharing.noTeamHint"]} ${en["lists.sharingHint"]}`,
+    );
+    await user.click(sharing);
+    expect(
+      await screen.findByRole("option", { name: en["lists.sharing.team"] }),
+    ).toHaveAttribute("aria-disabled", "true");
+    await user.keyboard("{Escape}");
+    await user.type(
+      screen.getByRole("textbox", { name: en["lists.name"] }),
+      "Dinner",
     );
     await user.click(screen.getByRole("button", { name: en["lists.create"] }));
     await vi.waitFor(() => expect(written).toHaveLength(1));

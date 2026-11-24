@@ -65,24 +65,16 @@
      covers it completely when it exists, so animating it would be a
      full-viewport repaint nobody can see. On the surface itself rather than on
      a pseudo-element, which would have to sit either over the words or under
-     the ground. */
+     the ground. Its tint is the live ground's, the agent's indigo. */
+  --authWash: color-mix(in srgb, var(--ai) 12%, transparent);
   background:
+    radial-gradient(48% 44% at 24% 30%, var(--authWash), transparent 72%),
     radial-gradient(
-      34% 30% at 24% 26%,
-      color-mix(in srgb, var(--aiLight) 92%, transparent),
-      transparent 66%
+      44% 42% at 78% 68%,
+      color-mix(in srgb, var(--authWash) 80%, transparent),
+      transparent 70%
     ),
-    radial-gradient(
-      30% 28% at 76% 68%,
-      color-mix(in srgb, var(--accentLight) 88%, transparent),
-      transparent 64%
-    ),
-    radial-gradient(
-      30% 26% at 62% 8%,
-      color-mix(in srgb, var(--coreLight) 70%, transparent),
-      transparent 68%
-    ),
-    var(--bgElevated);
+    var(--bgField);
 }
 .auth-surface-wide {
   --authMeasure: 560px;
@@ -338,33 +330,16 @@
   gap: var(--gapActions);
 }
 .auth-actions .btn {
-  width: 100%;
-  min-height: 48px;
   /* Overrides the atom's `white-space: nowrap`. A nowrap label in a full-width
      button cannot overflow the button — it widens it, and the card with it, until
-     the surface is wider than the viewport. `min-height` rather than `height` is
-     what makes wrapping safe here: a second line grows the control instead of
-     being clipped by it. */
+     the surface is wider than the viewport. */
   white-space: normal;
 }
-/* A link, not a button: no padding, so it sits on the same line as the text
-   beside it and its baseline is the row's baseline. The focus ring is offset
-   instead, which is what the padding was buying. */
-.auth-link {
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  color: var(--accentText);
-  padding: 0;
-}
-.auth-link:hover,
-.auth-link:focus-visible {
-  text-decoration: underline;
-}
-.auth-link:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: var(--r-sm);
+/* A text link in the column keeps its own height. `min-height` rather than
+   `height` lets a second line grow the control instead of being clipped. */
+.auth-actions .btn:not(.btn-link) {
+  width: 100%;
+  min-height: 48px;
 }
 
 /* A rejected credential, a rate limit, an unreachable server: one surface. */
@@ -406,8 +381,13 @@
   gap: var(--space-2);
   margin-top: auto;
 }
-.auth-footer .auth-link[aria-pressed="true"] {
+.auth-footer .btn-link[aria-pressed="true"] {
   color: var(--textPrimary);
+}
+/* The sign-in links sit in a label row and a stacked column sized for bare
+   text, so they drop the link's 2px of block padding to keep that spacing. */
+.auth-task .btn.btn-link {
+  padding-block: 0;
 }
 
 /* Bottom row of the task region's grid, on every outcome. In flow rather than
@@ -465,7 +445,6 @@
   width: 3px;
   height: 3px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderStrong);
 }
 

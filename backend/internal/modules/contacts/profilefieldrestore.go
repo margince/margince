@@ -309,8 +309,8 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	}
 
 	// The replacement first. Retiring it before the old row is revived is what
-	// keeps the primary slot free: the partial unique index permits exactly one
-	// live primary per type, and reviving first would collide with it.
+	// keeps the primary slot free. The partial unique index permits one live
+	// primary per contact, and reviving first would collide with it.
 	tag, err := tx.Exec(ctx, `
 		UPDATE contact_phone SET archived_at = now()
 		 WHERE id = $1 AND archived_at IS NULL`, replacementID)
@@ -319,6 +319,9 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	}
 	if tag.RowsAffected() == 0 {
 		return apperrors.ErrConflict
+	}
+	if err := touchChildSetParent(ctx, tx, entityContact, contactID.UUID); err != nil {
+		return err
 	}
 	revived, err := revivePhoneTx(ctx, tx, contactID, supersededID)
 	if err != nil {
@@ -360,14 +363,14 @@ func refuseIfCorrected(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 // revivePhoneTx brings back one archived number of this contact, and reports
 // whether it did. A number the contact holds live again already is not revived
 // a second time: nothing on the table forbids one contact holding it twice. It
-// comes back primary only while its type has no live primary, which the
+// comes back primary only while the contact has no live primary number, which the
 // partial unique index permits once.
 func revivePhoneTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phoneID ids.UUID) (bool, error) {
 	tag, err := tx.Exec(ctx, `
 		UPDATE contact_phone was SET archived_at = NULL,
 		       is_primary = was.is_primary AND NOT EXISTS (
 			SELECT 1 FROM contact_phone p
-			 WHERE p.contact_id = $2 AND p.phone_type = was.phone_type AND p.is_primary
+			 WHERE p.contact_id = $2 AND p.is_primary
 			   AND p.archived_at IS NULL)
 		 WHERE was.id = $1 AND was.archived_at IS NOT NULL AND was.contact_id = $2
 		   AND NOT EXISTS (
@@ -377,5 +380,8 @@ func revivePhoneTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phon
 	if err != nil {
 		return false, fmt.Errorf("contacts: bringing the replaced number back: %w", err)
 	}
-	return tag.RowsAffected() > 0, nil
+	if tag.RowsAffected() == 0 {
+		return false, nil
+	}
+	return true, touchChildSetParent(ctx, tx, entityContact, contactID.UUID)
 }

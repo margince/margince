@@ -59,6 +59,8 @@ var auditTrailReaders = gatekit.Waive(map[string]string{
 
 	"fieldhistory.go": "the per-field history, projecting before/after to render one column's changes. Its window is bounded by scrubBoundary, so everything strictly older than a certified scrub is withheld — the erasure question. The retention-hold question rides the same open decision as the compliance log above",
 
+	"sidecarhistory.go": "the rows of a company's profile fields and facts, found by entity type company_profile_field or company_fact. No activity can be behind either type, so no activity image is selected, and the window carries the same scrub boundary and verbs as the readers it joins",
+
 	"edgehistory.go": "the history of the LINKS a record is an end of. It projects no image columns of its own: the shared column list carries them, and the rows it adds are edge rows whose images are the edge's, not the activity's",
 
 	"auditattribution.go": "resolves who made a change from the audit rows a history table links. It selects the shared projection but copies only the actor columns into its result, so no before/after image of any record, a held activity's included, leaves it",

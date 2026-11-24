@@ -1,12 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { AddDocumentDialog } from "../../components/adddocument";
 import {
   AttachmentGrid,
   AttachmentTile,
   CATEGORY_LABELS,
+  categoryCuts,
 } from "../../components/attachmenttile";
+import { FileVerbs } from "../../components/filerowverbs";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -17,10 +20,9 @@ import {
 import { formatNumber } from "../../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useCanWrite } from "../../lib/capability";
+import { useCanWrite, useCanWriteRecord } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { DocumentExtractionPanel } from "../voice-knowledge/documentextraction";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -52,12 +54,10 @@ import { companyDocumentsKey } from "../../lib/attachmentkeys";
 type Attachment = components["schemas"]["Attachment"];
 type Category = NonNullable<Attachment["category"]>;
 
-// The chips a reader can press. `contract` is absent because the agreements
-// card above is where contract paper is read — a chip that filtered this list
-// down to the files it deliberately excludes would be a control whose every
-// press looks like a bug. The badge vocabulary above keeps the word, since a
-// file may still carry the category without being filed to an agreement.
-const FILTER_CATEGORIES: readonly Category[] = [
+// The chips always offered. `contract` joins them only while a file holds it.
+// Contract paper filed to an agreement is read in the agreements card above,
+// so the chip counts only a contract file that no agreement holds.
+const STEADY_CUTS: readonly Category[] = [
   "offer",
   "legal",
   "email_attachment",
@@ -120,11 +120,15 @@ function supersededBase(shown: boolean): PluralBase {
 
 export function CompanyDocumentsCard({
   companyId,
+  writable,
   refusedReasonId,
   refusedReason,
   onOpenEmail,
 }: Readonly<{
   companyId: string;
+  // The company's own `writable`: Edit and Delete on a file the account holds
+  // run through the company's write gate, like the upload.
+  writable?: boolean;
   /** Opens a mail in the page's drawer, from the line naming a file's mail. */
   onOpenEmail?: (activityId: string) => void;
   // The id of the page's sentence about why this account takes no changes,
@@ -141,6 +145,9 @@ export function CompanyDocumentsCard({
   // axes — the object grant AND the licensing seat, which the server clamps
   // separately and before RBAC.
   const canWriteDeals = useCanWrite("deal", "update");
+  const mayWrite = useCanWriteRecord("company", { writable });
+  const listRegion = useRef<HTMLDivElement | null>(null);
+  const focusLanding = useCallback(() => listRegion.current, []);
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -246,7 +253,7 @@ export function CompanyDocumentsCard({
             onChange={setCategory}
             pills={[
               { value: "", label: t("docs.category.all"), count: live.length },
-              ...FILTER_CATEGORIES.map((key) => ({
+              ...categoryCuts(live, STEADY_CUTS, category).map((key) => ({
                 value: key,
                 label: t(labelFor(CATEGORY_LABELS, key)),
                 count: live.filter((doc) => doc.category === key).length,
@@ -270,16 +277,20 @@ export function CompanyDocumentsCard({
           </PanelBody>
         ) : (
           <PanelBody>
-            <AttachmentGrid>
-              {documents.map((doc) => (
-                <DocumentRow
-                  key={doc.id}
-                  doc={doc}
-                  canWriteDeals={canWriteDeals}
-                  onOpenEmail={onOpenEmail}
-                />
-              ))}
-            </AttachmentGrid>
+            <div ref={listRegion} tabIndex={-1}>
+              <AttachmentGrid>
+                {documents.map((doc) => (
+                  <DocumentRow
+                    key={doc.id}
+                    doc={doc}
+                    canWriteDeals={canWriteDeals}
+                    mayWrite={mayWrite}
+                    focusLanding={focusLanding}
+                    onOpenEmail={onOpenEmail}
+                  />
+                ))}
+              </AttachmentGrid>
+            </div>
           </PanelBody>
         )
       ) : (
@@ -303,10 +314,14 @@ export function CompanyDocumentsCard({
 function DocumentRow({
   doc,
   canWriteDeals,
+  mayWrite,
+  focusLanding,
   onOpenEmail,
 }: Readonly<{
   doc: Attachment;
   canWriteDeals: boolean;
+  mayWrite: boolean;
+  focusLanding: () => HTMLElement | null;
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
@@ -317,6 +332,8 @@ function DocumentRow({
   // Only a deal-scoped file is offered one, because a deal is the only record
   // the accept can write to.
   const offersReading = doc.entity_type === "deal";
+  // A deal's upload is edited on the deal, which holds its write gate.
+  const ownsFile = mayWrite && doc.entity_type === "company";
   return (
     <li>
       <AttachmentTile
@@ -324,14 +341,17 @@ function DocumentRow({
         onOpenEmail={onOpenEmail}
         withSource
         verbs={
-          offersReading && (
-            <Button
-              aria-expanded={reading}
-              onClick={() => setReading(!reading)}
-            >
-              {t(reading ? "docs.reading.hide" : "docs.reading.show")}
-            </Button>
-          )
+          <>
+            {offersReading && (
+              <Button
+                aria-expanded={reading}
+                onClick={() => setReading(!reading)}
+              >
+                {t(reading ? "docs.reading.hide" : "docs.reading.show")}
+              </Button>
+            )}
+            {ownsFile && <FileVerbs file={doc} focusLanding={focusLanding} />}
+          </>
         }
         after={
           offersReading &&

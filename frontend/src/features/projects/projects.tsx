@@ -86,6 +86,23 @@ const PHASE_TONE = {
   closed: "default",
 } as const satisfies Record<ProjectPhase, ComponentProps<typeof Badge>["tone"]>;
 
+// A null company_id is a hidden customer only when masked_fields says so;
+// otherwise the project has none, as on the project page.
+function ProjectCompanyCell({
+  project,
+  asText,
+}: Readonly<{ project: Project; asText?: boolean }>) {
+  const t = useT();
+  if (project.company_id) {
+    return <EntityRef kind="company" id={project.company_id} asText={asText} />;
+  }
+  return project.masked_fields?.includes("company_id") ? (
+    <span data-testid="project-company-withheld">{t("state.withheld")}</span>
+  ) : asText ? null : (
+    <span data-testid="project-company-none">—</span>
+  );
+}
+
 /** The phase as a status pill: closed is the one terminal reading. */
 export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
   const t = useT();
@@ -134,6 +151,7 @@ function NewProjectAction({ open }: Readonly<{ open: boolean }>) {
   return (
     <CreateAction
       label={t("project.new")}
+      requires={{ object: "project", action: "create" }}
       invalidate="projects"
       screen="projects"
       listCreate={{ open }}
@@ -238,17 +256,16 @@ export function ProjectsScreen({
             // reader who wanted the account behind it had to open the project
             // first and come back out.
             cell: (project: Project) => (
-              <EntityRef kind="company" id={project.company_id} />
+              <ProjectCompanyCell project={project} />
             ),
             // By the company's NAME. One outside this reader's scope orders
             // the page by nothing rather than by a name it withholds.
             sort: "company_id",
             phone: "caption",
             // A list page carries no `companies`; each row reads its company's name.
-            folded: (project: Project) =>
-              project.company_id ? (
-                <EntityRef kind="company" id={project.company_id} asText />
-              ) : null,
+            folded: (project: Project) => (
+              <ProjectCompanyCell project={project} asText />
+            ),
           },
           {
             key: "phase",

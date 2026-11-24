@@ -7,6 +7,7 @@ import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Checkbox, Textarea } from "../../design-system/field";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { MoneyInput } from "../../design-system/moneyinput";
 import {
   formatAnalyticsMoney,
@@ -90,7 +91,7 @@ export function GoalEditor({
     (plan.draft.declared_total_minor ?? monthsTotal(plan.draft.months)) ===
       yearly;
   return (
-    <div className="goal-editor">
+    <div className="goal-editor" data-date-scope>
       {plan.state === "no_goal" && (
         <p className="t-caption goal-note">{t("goals.start")}</p>
       )}
@@ -200,20 +201,26 @@ export function GoalEditor({
           variant="ghost"
           pending={writes.save.isPending}
           reason={reason.trim() === "" ? t("goals.reasonNeeded") : undefined}
-          onClick={() =>
+          onClick={(event) => {
+            // A month or the year holding refused text names why under it.
+            if (refuseUnreadableField(event.currentTarget)) return;
             writes.save.mutate({
               ...path,
               body: draftBody,
               key: requestKey(draftBody),
-            })
-          }
+            });
+          }}
         >
           {t("goals.saveDraft")}
         </Button>
         <Button
           variant="primary"
           reason={publishRefusal(plan, total, unchangedDraft, t)}
-          onClick={() => setConfirming("publish")}
+          onClick={(event) => {
+            if (!refuseUnreadableField(event.currentTarget)) {
+              setConfirming("publish");
+            }
+          }}
         >
           {t("goals.publish")}
         </Button>
@@ -272,7 +279,14 @@ function YearlyGoal({
         <Button
           variant="ghost"
           disabled={yearly === null || yearly <= 0}
-          onClick={() => yearly !== null && onSpread(equalMonths(yearly))}
+          onClick={(event) => {
+            if (
+              yearly !== null &&
+              !refuseUnreadableField(event.currentTarget)
+            ) {
+              onSpread(equalMonths(yearly));
+            }
+          }}
         >
           {t("goals.spread")}
         </Button>
@@ -343,7 +357,7 @@ function PublishConfirm({
       }
     >
       <p>{t("goals.publishBody", { total })}</p>
-      <p className="t-caption">
+      <p className="t-caption goal-reason-text">
         {t("goals.publishReason", { reason: body.reason })}
       </p>
       <Checkbox

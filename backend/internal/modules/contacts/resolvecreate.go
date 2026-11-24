@@ -28,6 +28,7 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -122,10 +123,9 @@ type ContactSpec struct {
 	// who decided it (`agent:<id>` or `human:<uuid>`). Both or neither.
 	RelationshipMark      relationshipmark.Mark
 	RelationshipMarkSetBy string
-	// Quarantined flags the impersonation tells capture screens for; the row
-	// is still created, because hiding suspicious mail is worse than labeling
-	// it.
-	Quarantined bool
+	// QuarantineReason is the sign of impersonation capture saw on the sender,
+	// or "" for none. The row is still created, and wears the warning.
+	QuarantineReason string
 	// ConvertedFromLeadID is set only by promotion — the origin pointer that
 	// makes a promoted contact traceable to the lead it graduated from.
 	ConvertedFromLeadID *ids.UUID
@@ -172,7 +172,7 @@ func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolu
 	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(spec.SourceID, spec.Author, []any{
 		id, spec.FullName, spec.FirstName, spec.LastName, spec.Title, spec.OwnerID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
-		spec.Source, spec.CapturedBy, spec.Visibility, spec.Quarantined, spec.ConvertedFromLeadID,
+		spec.Source, spec.CapturedBy, spec.Visibility, spec.QuarantineReason, spec.ConvertedFromLeadID,
 		spec.SourceSystem, spec.Narrowing, string(spec.RelationshipMark), spec.RelationshipMarkSetBy,
 		spec.CreatedFromActivityID,
 	})
@@ -181,20 +181,30 @@ func createContact(ctx context.Context, tx pgx.Tx, s *Store, match ContactResolu
 		return ids.ContactID{}, err
 	}
 	if err := storekit.ExecSourceInsert(ctx, tx, contactEntity,
-		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason, relationship_mark, relationship_mark_set_by, created_from_activity_id`+provenanceCols+cfCols+`)
+		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, quarantine_reason, converted_from_lead_id, source_system, narrowing_reason, relationship_mark, relationship_mark_set_by, created_from_activity_id`+provenanceCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
 		         coalesce(NULLIF($15, ''), 'workspace'),
-		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, ''), NULLIF($20, ''), NULLIF($21, ''), $22`+provenanceHolders+cfHolders+`)`,
+		         CASE WHEN $16 <> '' THEN now() END, NULLIF($16, ''), $17, $18, NULLIF($19, ''), NULLIF($20, ''), NULLIF($21, ''), $22`+provenanceHolders+cfHolders+`)`,
 		args); err != nil {
 		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
 	}
 	if err := writeContactSocial(ctx, tx, wsID, id, spec.Social, spec.converting); err != nil {
 		return ids.ContactID{}, err
 	}
-	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, spec.Emails, spec.erasure, spec.converting); err != nil {
+	emails := slices.Clone(spec.Emails)
+	primaryFirstIfNone(emails,
+		func(e ContactEmailInput) bool { return e.IsPrimary },
+		func(e ContactEmailInput) int { return e.Position },
+		func(e *ContactEmailInput) { e.IsPrimary = true })
+	if err := insertContactEmails(ctx, tx, wsID, id, spec.Source, spec.CapturedBy, emails, spec.erasure, spec.converting); err != nil {
 		return ids.ContactID{}, err
 	}
-	if err := insertContactPhones(ctx, tx, id, spec.Source, spec.CapturedBy, spec.Phones); err != nil {
+	phones := slices.Clone(spec.Phones)
+	primaryFirstIfNone(phones,
+		func(p ContactPhoneInput) bool { return p.IsPrimary },
+		func(p ContactPhoneInput) int { return p.Position },
+		func(p *ContactPhoneInput) { p.IsPrimary = true })
+	if err := insertContactPhones(ctx, tx, id, spec.Source, spec.CapturedBy, phones); err != nil {
 		return ids.ContactID{}, err
 	}
 	// Why this contact exists, written beside the contact itself.
@@ -234,7 +244,7 @@ func refusedContactCreate(ctx context.Context, tx pgx.Tx, match ContactResolutio
 	// Other lanes name no record: the message says which key collided, never
 	// whose row it was.
 	return fmt.Errorf(
-		"contacts: an exact %q collision already claims this identity: %w",
+		"an exact %q collision already claims this identity: %w",
 		match.MatchedLane, apperrors.ErrConflict)
 }
 
@@ -287,7 +297,7 @@ type CompanySpec struct {
 func refusedCompanyCreate(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec CompanySpec) error {
 	if len(spec.Domains) == 0 {
 		return fmt.Errorf(
-			"contacts: an exact domain collision already claims this identity: %w",
+			"an exact domain collision already claims this identity: %w",
 			apperrors.ErrConflict)
 	}
 	dup := &DuplicateDomainError{Domain: spec.Domains[0].Domain}

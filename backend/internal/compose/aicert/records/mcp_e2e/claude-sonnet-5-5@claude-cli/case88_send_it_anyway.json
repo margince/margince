@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 2,
+  "passed": 0,
   "runs": 2,
   "pass_at": 2,
   "driver": "claude:cli",
@@ -11,13 +11,81 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": true,
+  "stamp": {
+    "scenario": "a4c706099e75c9c6",
+    "tools": "647e2136a01f59e1",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "ff4b14a21e6473da84a88c2801dd84ea4554242e",
+    "ran_at": "2026-11-21T19:33:49Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:31:33Z"
+  },
   "usage": {
     "input_tokens": 12,
-    "output_tokens": 2104,
-    "cache_creation_input_tokens": 7202,
-    "cache_read_input_tokens": 484681,
+    "output_tokens": 1901,
+    "cache_creation_input_tokens": 88017,
+    "cache_read_input_tokens": 409591,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.0983
+    "cost_usd": 0.4121
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "list_contact_stops",
+        "read_details",
+        "search_records"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "list_contact_stops",
+        "read_details",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 248810,
+      "min": 248785,
+      "max": 248835
+    },
+    "output_tokens": {
+      "median": 950.5,
+      "min": 941,
+      "max": 960
+    },
+    "duration_ms": {
+      "median": 10477.5,
+      "min": 10229,
+      "max": 10726
+    }
   }
 }

@@ -25,13 +25,15 @@ import (
 
 // UnsubscribeLinker resolves a recipient address to their preference-center
 // token so the send path can build the List-Unsubscribe URL. ok is false
-// when the address carries no unsubscribe surface — a locked
-// (transactional) purpose, or an address no contact holds — in which case
-// the send carries no unsubscribe header.
+// when the send could be given no stop link, such as for a locked
+// (transactional) purpose or an empty address. The send then carries no
+// unsubscribe header, and one that owed it records the missing link as a
+// footer finding.
 type UnsubscribeLinker interface {
 	// UnsubscribeToken answers the credential the STOP links carry, and ok is
-	// false when this address has no unsubscribe surface at all.
-	UnsubscribeToken(ctx context.Context, recipientEmail, purposeKey string) (token string, ok bool, err error)
+	// false when this address has no unsubscribe surface at all. purpose is
+	// the key that credential stops, empty when it stops all marketing.
+	UnsubscribeToken(ctx context.Context, recipientEmail, purposeKey string) (token, purpose string, ok bool, err error)
 	// ManageToken answers the credential the preference centre resolves, which
 	// is a different capability and now a different kind of token.
 	//
@@ -80,34 +82,6 @@ func (s *Store) WithPublicBaseURL(base string) *Store {
 	return &clone
 }
 
-// SharedUnsubscribeTokenError refuses a send that would put ONE recipient's
-// preference token in front of the others.
-//
-// The token is a bearer credential over that contact's consent record: it reads
-// their per-purpose state, withdraws, and GRANTS — a forged grant re-opens
-// mail to someone who never consented, with a proof row attributing the
-// decision to them. One rendered message carries one token, so a message with
-// a second addressee hands the first recipient's credential to a third party.
-//
-// V1 refuses rather than rendering per addressee, because one token per
-// recipient means one message per recipient and that is a different delivery
-// model. Nothing legitimate is lost: a transactional send carries no token and
-// is unaffected, and a marketing blast addressed To+Cc behind a shared
-// unsubscribe link is not a shape this product supports.
-//
-// It maps to 422 with the fix in the message: the caller re-issues one send
-// per recipient.
-type SharedUnsubscribeTokenError struct{}
-
-func (e *SharedUnsubscribeTokenError) Error() string {
-	return "a send that carries an unsubscribe link reaches one addressee at a time — re-issue it once per recipient, with no cc"
-}
-
-// FieldFault refuses a second addressee: one rendered message carries one recipient's token.
-func (e *SharedUnsubscribeTokenError) FieldFault() (field, code, message string) {
-	return "recipients", "shared_unsubscribe_token", e.Error()
-}
-
 // redactedToken stands in for the recipient's preference token in the copy of
 // the message the workspace RECORDS. The token is a bearer credential over
 // that contact's consent record — on the anonymous public edge it reads their
@@ -129,6 +103,7 @@ const redactedToken = "token-redacted"
 // accept it as bulk mail, in the three renderings that must not be confused
 // for one another.
 type sendDeliverability struct {
+	footerFindings []commsauthz.FooterFinding
 	// listUnsubscribe is the RFC 8058 header value.
 	listUnsubscribe string
 	// disclosures are the obligations this message carries, kept so the MARKUP
@@ -180,19 +155,26 @@ type unsubscribeLinks struct {
 // surfaces that way, static hosting needs no server fallback for them, and
 // the token stays out of ordinary web-server access logs until the page
 // deliberately calls the API with it.
+//
+// An empty purpose names no purpose anywhere: the press then stops all
+// marketing, which is the scope the credential was minted with.
 func unsubscribeLinksFor(baseURL string, tokens unsubscribeTokens, purposeKey string, lang textlang.Lang) unsubscribeLinks {
-	purpose := strings.ToLower(strings.TrimSpace(purposeKey))
+	purpose := commsauthz.NormalizedPurposeKey(purposeKey)
 	query := "?lang=" + url.QueryEscape(string(lang))
 	manageToken := tokens.manage
 	if manageToken == "" {
 		manageToken = tokens.stop
 	}
+	oneClick := baseURL + "/v1/public/preferences/" + url.PathEscape(tokens.stop) + "/unsubscribe"
+	page := baseURL + "/#/unsubscribe/" + url.PathEscape(tokens.stop)
+	if purpose != "" {
+		oneClick += "?purpose=" + url.QueryEscape(purpose)
+		page += "/" + url.PathEscape(purpose)
+	}
 	return unsubscribeLinks{
-		oneClick: baseURL + "/v1/public/preferences/" + url.PathEscape(tokens.stop) +
-			"/unsubscribe?purpose=" + url.QueryEscape(purpose),
-		unsubscribe: baseURL + "/#/unsubscribe/" + url.PathEscape(tokens.stop) + "/" +
-			url.PathEscape(purpose) + query,
-		manage: baseURL + "/#/preferences/" + url.PathEscape(manageToken) + query,
+		oneClick:    oneClick,
+		unsubscribe: page + query,
+		manage:      baseURL + "/#/preferences/" + url.PathEscape(manageToken) + query,
 	}
 }
 
@@ -297,6 +279,10 @@ func (u unsubscribeSurface) carries() bool {
 	return u.purposeKey != "" && !lockedPurposeKey(u.purposeKey)
 }
 
+func (u unsubscribeSurface) privateLinks() bool {
+	return u.carries() && !lockedPurposeKey(u.purposeKey)
+}
+
 // lockedPurposeKey mirrors consent.LockedPurpose for the legacy arm above.
 // activities may not import consent, and the composition root injects the
 // linker rather than the rule, so the one key that has ever been locked is
@@ -307,33 +293,18 @@ func lockedPurposeKey(key string) bool {
 	return strings.EqualFold(strings.TrimSpace(key), "transactional")
 }
 
-// deliverability derives what a send must carry for a mailbox provider to
-// accept it as bulk mail: the RFC 8058 List-Unsubscribe header value and the
-// human-visible footer, both built from ONE token so they cannot diverge.
-// It returns both bodies, footer already applied.
-//
-// ok is false when the address carries no unsubscribe surface — a locked
-// (transactional) purpose, or an address no contact holds — in which case a
-// transactional message has nothing to unsubscribe from and an address the
-// consent gate would refuse discloses nothing. Those sends carry no token, so
-// both bodies are the one the caller wrote.
-//
-// recipients is the MERGED addressee list, every To and Cc address, because
-// the refusal above counts who RECEIVES the rendered message rather than how
-// they were addressed.
-// THE DISCLOSURES GO ON FIRST, before the unsubscribe surface is even asked
-// about. What a jurisdiction demands a message disclose — who is writing, who
-// answers about the data — binds a first contact whatever it is about, while an
-// unsubscribe surface belongs to advertising alone. A disclosure appended
-// inside the marketing arm below would appear on advertising and be absent from
-// the correspondence Art. 13 actually covers.
-//
-// It also has to survive every early return in this function. A send with no
-// linker wired, no recipients, or a category carrying no unsubscribe surface
-// still owes its disclosures, so they are folded into the body BEFORE the
-// branching starts rather than added to each arm.
+// offersUnsubscribe is asked by delivery and the footer preview alike. It reads
+// the category, not the purpose key. A reply carries no key, and must not offer
+// a stop link for a conversation the recipient started.
+func (s *Store) offersUnsubscribe(recipients []string, surface unsubscribeSurface) bool {
+	return s.unsubscribe != nil && len(recipients) > 0 && distinctAddresses(recipients) == 1 &&
+		s.publicOriginUsable() == nil && surface.privateLinks()
+}
+
+// deliverability renders usable disclosures and private links. Missing parts
+// travel with the message for the sender's recorded confirmation.
 func (s *Store) deliverability(
-	ctx context.Context, body, subject string, recipients []string, surface unsubscribeSurface, entity ids.UUID,
+	ctx context.Context, body, subject string, recipients []string, countries []commsauthz.CountryOverride, surface unsubscribeSurface, entity ids.UUID, lang textlang.Lang,
 ) (sendDeliverability, error) {
 	// THE SURFACE decides whether this is advertising, not the category alone.
 	// A caller that names only the deprecated consent key carries no category,
@@ -341,65 +312,47 @@ func (s *Store) deliverability(
 	// German objection route and the Vietnamese advertiser contact — from
 	// exactly the sends that carry an unsubscribe surface and are therefore
 	// advertising by the product's own reckoning.
-	owed, err := s.requiredDisclosures(ctx, string(surface.disclosureCategory()), recipients, entity)
+	if lang == "" {
+		lang = s.footerLanguage(ctx, body, subject)
+	}
+	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), recipients, countries, entity, string(lang))
 	if err != nil {
 		return sendDeliverability{}, err
 	}
 	body = appendDisclosures(body, owed)
 	untokenized := sendDeliverability{
 		transmitted: body, recorded: body, disclosures: owed,
+		footerFindings: s.footerFindings(owed, recipients, surface.privateLinks()),
 	}
-	if s.unsubscribe == nil || len(recipients) == 0 {
+	if !s.offersUnsubscribe(recipients, surface) {
 		return untokenized, nil
 	}
-	// WHICH MESSAGES CARRY THE SURFACE AT ALL, asked before the linker.
-	//
-	// It reads the CATEGORY and not the purpose key. The key answer was
-	// "anything but the locked transactional purpose", which has no meaning for
-	// a send that carries no key — and a composer that omits one, which is now
-	// the ordinary case for a reply, would have every message come out wearing
-	// an offer to unsubscribe from a conversation the recipient started.
-	if !surface.carries() {
-		return untokenized, nil
-	}
-	token, ok, err := s.unsubscribe.UnsubscribeToken(ctx, recipients[0], surface.purposeKey)
+	recipient := soleAddress(recipients)
+	token, purpose, ok, err := s.unsubscribe.UnsubscribeToken(ctx, recipient, surface.purposeKey)
 	if err != nil {
 		return sendDeliverability{}, err
 	}
 	if !ok {
+		// Reached only when the surface owes a stop link (offersUnsubscribe), so a
+		// transactional send, which owes none, never records this finding.
+		untokenized.footerFindings = append(untokenized.footerFindings, commsauthz.FooterFinding{Kind: footerKindUnsubscribeLink})
 		return untokenized, nil
 	}
-	// The refusal is tested HERE, after the linker has answered, because that
-	// answer is what says this purpose carries an unsubscribe surface at all —
-	// a multi-recipient transactional send reached the branch above and left
-	// already, carrying no token to leak.
-	if distinctAddresses(recipients) > 1 {
-		return sendDeliverability{}, &SharedUnsubscribeTokenError{}
-	}
-	// Fail loudly rather than derive the base from the request: the link
-	// carries the recipient's unsubscribe token, and a marketing send may not
-	// go out without a working, non-forgeable List-Unsubscribe URL
-	// (features/06 §1.2). The guard also refuses an origin a recipient's mail
-	// client cannot reach — a localhost base means "this computer" to whoever
-	// clicks it, which is how a real send went out with links nobody outside
-	// this machine could open.
-	if err := s.publicOriginUsable(); err != nil {
-		return sendDeliverability{}, err
-	}
-	lang := s.footerLanguage(ctx, body, subject)
+
 	words := mailcopy.For(string(lang))
 	// Asked AFTER the stop token, and its failure is not the send's. A
 	// recipient who cannot be given a preference centre can still be given a
 	// way to stop, which is the link that matters.
-	manageToken, _, err := s.unsubscribe.ManageToken(ctx, recipients[0])
+	manageToken, _, err := s.unsubscribe.ManageToken(ctx, recipient)
 	if err != nil {
 		return sendDeliverability{}, err
 	}
 	live := unsubscribeLinksFor(s.publicBaseURL,
-		unsubscribeTokens{stop: token, manage: manageToken}, surface.purposeKey, lang)
+		unsubscribeTokens{stop: token, manage: manageToken}, purpose, lang)
 	redacted := unsubscribeLinksFor(s.publicBaseURL,
-		unsubscribeTokens{stop: redactedToken, manage: redactedToken}, surface.purposeKey, lang)
+		unsubscribeTokens{stop: redactedToken, manage: redactedToken}, purpose, lang)
 	return sendDeliverability{
+		footerFindings:  untokenized.footerFindings,
 		listUnsubscribe: listUnsubscribeHeader(live.oneClick),
 		links:           live,
 		words:           words,
@@ -407,6 +360,17 @@ func (s *Store) deliverability(
 		transmitted:     appendUnsubscribeFooter(body, live, words),
 		recorded:        appendUnsubscribeFooter(body, redacted, words),
 	}, nil
+}
+
+// soleAddress is the one normalized address a single-addressee send reaches,
+// whichever of its listed spellings came first.
+func soleAddress(recipients []string) string {
+	for _, addr := range recipients {
+		if key := normalizeAddress(addr); key != "" {
+			return key
+		}
+	}
+	return ""
 }
 
 // distinctAddresses counts who a rendered message actually reaches. Addresses

@@ -291,10 +291,11 @@ it("shows accepted handoffs alone and hides targets without an allocation", asyn
   expect(screen.queryByText("Progress against target")).not.toBeInTheDocument();
 });
 
+// The delta and the share are the server's; the card only words them.
 it.each([
-  { actual: 21600000, label: "€84,000 remaining" },
-  { actual: 34000000, label: "€40,000 above target" },
-])("shows target attainment with $label", ({ actual, label }) => {
+  { actual: 21600000, delta: -8400000, label: "€84,000 remaining" },
+  { actual: 34000000, delta: 4000000, label: "€40,000 above target" },
+])("shows target attainment with $label", ({ actual, delta, label }) => {
   const evaluation = {
     ...reportingStoryEvaluation,
     metrics: [
@@ -302,6 +303,8 @@ it.each([
         ...reportingStoryEvaluation.metrics[0],
         target: 30000000,
         target_actual: actual,
+        target_delta: delta,
+        attainment: (actual / 30000000) * 100,
       },
     ],
   };
@@ -312,6 +315,38 @@ it.each([
     </StoryProviders>,
   );
   expect(screen.getByText(label, { exact: false })).toBeVisible();
+});
+
+// The progress line words what the server sent, which here is not what the
+// target and actual would give (6 and 85%). A zero target has a gap and no
+// share.
+it.each([
+  { delta: -10, attainment: 80, line: "Remaining: 10 · 80% of target" },
+  { delta: 34, attainment: undefined, line: "Remaining: 0" },
+])("words the server's figures as $line", ({ delta, attainment, line }) => {
+  const evaluation = {
+    ...sdrEvaluation,
+    metrics: sdrEvaluation.metrics.map((metric) =>
+      metric.id === "meetings_held"
+        ? {
+            ...metric,
+            target: attainment == null ? 0 : 40,
+            target_delta: delta,
+            attainment,
+          }
+        : metric,
+    ),
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  const lines = [...document.querySelectorAll("p.t-caption")].map(
+    (node) => node.textContent,
+  );
+  expect(lines).toContain(line);
 });
 
 it("omits unassigned target columns for SDR outcomes", async () => {
@@ -636,4 +671,53 @@ it("says why an owner chart drawn from the reader's own figures has one bar", ()
     </StoryProviders>,
   );
   expect(screen.getByText(reason)).toBeInTheDocument();
+});
+
+it("names the forecast's open pipeline by the quarter its deals close in", async () => {
+  installFetchStub(reportingStoryRoutes(forecastEvaluation));
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingForecastGraphs scope={reportingStoryScope} />
+    </StoryProviders>,
+  );
+  expect(
+    (await screen.findAllByText("Open pipeline closing this quarter")).length,
+  ).toBeGreaterThan(0);
+  expect(screen.queryByText("Open pipeline")).not.toBeInTheDocument();
+});
+
+it("titles the drawer after the tile that opened it, and dates mix rows by close day", async () => {
+  const reference = {
+    metric: "bookings_mix",
+    context_id: "interval",
+    group_key: "kind:software",
+  } as const;
+  const won = reportingStoryEvaluation.metrics.find(
+    (metric) => metric.id === "bookings_won",
+  );
+  if (!won) throw new Error("the story evaluation reads sales won");
+  const evaluation = {
+    ...reportingStoryEvaluation,
+    metrics: [
+      ...reportingStoryEvaluation.metrics,
+      { ...won, id: "bookings_mix", evidence: reference },
+    ],
+  } satisfies typeof reportingStoryEvaluation;
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingEvidenceDrawer
+        evaluation={evaluation}
+        reference={reference}
+        title="Product sales"
+        onClose={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Product sales" }),
+  ).toBeInTheDocument();
+  expect(
+    await screen.findByRole("columnheader", { name: "Closed on" }),
+  ).toBeInTheDocument();
 });

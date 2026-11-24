@@ -10,7 +10,7 @@ import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isBareEntry } from "../../lib/returnroute";
-import { navigate } from "../../lib/router";
+import { type AddressWriters, useAddressWriters } from "../../lib/urlstate";
 import { enteredCode, MfaCodeField } from "./mfacode";
 
 // A refused credential never says which half was wrong, and a status decides
@@ -42,11 +42,15 @@ export function loginErrorKey(
   return "auth.errUnreachable";
 }
 
-// A deep link the user followed stays; only a bare entry lands on the Brief.
-export function landSignedIn(onPhase: (phase: AuthPhase) => void) {
+// A followed deep link stays. Only a bare entry lands on the Brief, in its
+// place, so Back skips it.
+export function landSignedIn(
+  onPhase: (phase: AuthPhase) => void,
+  { navigateReplacing }: AddressWriters,
+) {
   onPhase("success");
   if (isBareEntry(globalThis.location?.hash ?? "")) {
-    navigate({ screen: "home" });
+    navigateReplacing({ screen: "home" });
   }
 }
 
@@ -64,6 +68,7 @@ export function MfaForm({
   onBack: () => void;
 }>) {
   const t = useT();
+  const writers = useAddressWriters();
   const [code, setCode] = useState("");
   const codeRef = useRef<HTMLInputElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
@@ -87,7 +92,7 @@ export function MfaForm({
       }
       await onAuthed();
     },
-    onSuccess: () => landSignedIn(onPhase),
+    onSuccess: () => landSignedIn(onPhase, writers),
     onError: (error) => {
       onPhase("error");
       if (error instanceof LoginError && error.failure === "credentials") {
@@ -135,9 +140,9 @@ export function MfaForm({
         >
           {t("auth.mfaVerify")}
         </Button>
-        <button type="button" className="auth-link" onClick={onBack}>
+        <Button type="button" variant="link" onClick={onBack}>
           {t("auth.backToLogin")}
-        </button>
+        </Button>
       </div>
     </form>
   );

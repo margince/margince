@@ -7,14 +7,17 @@ import type { components } from "../../api/schema";
 import type { ProjectScope } from "../../design-system/projectpicker";
 import type { useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { characterCount } from "../../lib/charactercount";
 import { throwProblem } from "../../lib/problem";
 import type { RewriteVerb } from "../../lib/rewrites";
-import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
 import type { RelinkKind } from "./composerelink";
 import { rewriteAsDraft } from "./composerewrite";
+import { stripEveryKeyTag } from "./subjecttag";
 
 type EmailDraft = components["schemas"]["EmailDraft"];
-type DraftReason = components["schemas"]["AccountDraftReason"];
+type RecordDraft = components["schemas"]["CompanyEmailDraft"];
+type WriterOf = Partial<Pick<RecordDraft, "generated_by">>;
+export type DraftReason = components["schemas"]["AccountDraftReason"];
 type Translate = ReturnType<typeof useT>;
 
 // What a drafting call reported about the text it produced. It is kept apart
@@ -26,7 +29,26 @@ export type DraftProvenance = Pick<
   | "voice_profile_version"
   | "voice_degraded"
   | "language"
->;
+> &
+  WriterOf;
+
+/** A model wrote these words; any other answer gets no AI disclosure or arrival. */
+export function modelWrote(
+  draft: Partial<Pick<DraftProvenance, "ai_generated">> | null,
+): boolean {
+  return draft?.ai_generated === true;
+}
+
+/** The server's floor wrote the words: a template that never read the purpose. */
+export function isTemplateDraft(
+  provenance: DraftProvenance | null,
+): provenance is DraftProvenance {
+  return (
+    provenance !== null &&
+    !modelWrote(provenance) &&
+    provenance.generated_by === "deterministic"
+  );
+}
 
 // Why a draft is not on offer. "no_model" is the deployment's answer, while
 // "unsupported_origin" means the rep can still draft from the account.
@@ -55,6 +77,7 @@ export type DraftResult =
   | {
       available: true;
       draft: Pick<EmailDraft, "subject" | "body" | "to"> &
+        WriterOf &
         Partial<
           Pick<
             EmailDraft,
@@ -64,6 +87,8 @@ export type DraftResult =
             | "voice_profile_version"
             | "voice_degraded"
             | "language"
+            | "communication_context"
+            | "evidence"
           >
         >;
       // Account path only: a reply explains itself by the message it answers.
@@ -98,61 +123,6 @@ export type DraftAsk = Readonly<{
   // The answer replaces the body on screen: a rewrite verb or a new language.
   rewrite?: boolean;
 }>;
-
-export function fillFromDraft(
-  result: Extract<DraftResult, { available: true }>,
-  form: Readonly<{
-    subject: string;
-    body: string;
-    toEmpty: boolean;
-    setSubject: (next: string) => void;
-    setBody: (next: string) => void;
-    // The words as the model served them. A rewrite is offered only while
-    // the body still equals them, because an edited body is the rep's work.
-    setServedBody: (next: string) => void;
-    // A rewrite, or a draft the route wrote from the body on screen, replaces
-    // that body. Any other draft fills an empty field and leaves it alone.
-    rewrite?: boolean;
-    setTo: (next: string[]) => void;
-    setDraftRef: (next: string | null) => void;
-    setProvenance: (next: DraftProvenance) => void;
-    setReasoning: (next: DraftReason[]) => void;
-    setScope: (next: ProjectScope | undefined) => void;
-  }>,
-): boolean {
-  const drafted = result.draft;
-  // A subject holding only the project tag has no words of the rep's yet, so
-  // the drafted subject fills in behind the tag.
-  const written = stripEveryKeyTag(form.subject).trim();
-  if (!written) {
-    form.setSubject(
-      form.subject.trim()
-        ? withSubjectTag(drafted.subject, form.subject.trim())
-        : drafted.subject,
-    );
-  }
-  const replacesBody = !form.body || form.rewrite === true;
-  if (replacesBody) {
-    form.setBody(drafted.body);
-    form.setServedBody(drafted.body);
-    form.setDraftRef(drafted.draft_ref ?? null);
-    form.setProvenance({
-      // An absent flag reads as false: it may neither hide a disclosure nor
-      // claim a model wrote untouched text.
-      ai_generated: drafted.ai_generated ?? false,
-      ai_disclosure: drafted.ai_disclosure,
-      voice_profile_version: drafted.voice_profile_version,
-      voice_degraded: drafted.voice_degraded ?? false,
-      language: drafted.language,
-    });
-    form.setReasoning(result.reasoning ?? []);
-    form.setScope(result.scope);
-  }
-  if (form.toEmpty && drafted.to?.length) {
-    form.setTo(drafted.to);
-  }
-  return replacesBody;
-}
 
 // What survives clearing a subject: the project tag. The composer put it
 // there to route the reply, so a rejected draft does not take it along.
@@ -209,7 +179,7 @@ function draftAnswer(
     draft: data,
     reasoning: data.reasoning,
     scope: data.scope,
-    revised: rewriteOf.trim() !== "" && data.ai_generated === true,
+    revised: rewriteOf.trim() !== "" && modelWrote(data),
   };
 }
 
@@ -252,7 +222,7 @@ export function rewriteBlock(
   limit = REWRITE_OF_MAX,
 ): "formatted" | "long" | null {
   if (hasRepFormatting(body.html)) return "formatted";
-  return [...body.text.trim()].length > limit ? "long" : null;
+  return characterCount(body.text.trim()) > limit ? "long" : null;
 }
 
 // The words a draft call is asked to revise: the body on screen, whoever wrote

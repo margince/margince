@@ -40,7 +40,7 @@ func TestAWriteNamingAMissingRecordIsA422NamingTheField(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Missing Refs", "admin@missingrefs.test", "Admin")
 
-	contact := createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Real Contact"})
+	contact := createAndID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Real Contact"})
 	company := createAndID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Real Co"})
 	pipelineID, stageID, dealID := "", "", ""
 	var pipelines struct {
@@ -172,7 +172,8 @@ func TestAMissingRecordAndAHiddenOneAnswerAlike(t *testing.T) {
 	answer := func(company ids.UUID) httperr.Fault {
 		id := ids.From[ids.CompanyKind](company)
 		_, err := e.Deals.CreateDeal(rep, deals.CreateDealInput{
-			Name: "Probe", PipelineID: pipeline, StageID: open, CompanyID: &id, ReferencesFromRequest: true,
+			Source: "manual",
+			Name:   "Probe", PipelineID: pipeline, StageID: open, CompanyID: &id, ReferencesFromRequest: true,
 		})
 		fault, ok := httperr.Classify(err)
 		if !ok {
@@ -211,7 +212,8 @@ func TestADerivedIDThatIsGoneIsNotNamedAsTheCallersField(t *testing.T) {
 	gone := ids.From[ids.CompanyKind](ids.NewV7())
 
 	_, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Derived", PipelineID: pipeline, StageID: open, CompanyID: &gone,
+		Source: "manual",
+		Name:   "Derived", PipelineID: pipeline, StageID: open, CompanyID: &gone,
 	})
 	fault, ok := httperr.Classify(err)
 	if !ok || fault.Status != http.StatusNotFound {

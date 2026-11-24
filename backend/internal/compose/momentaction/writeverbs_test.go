@@ -4,9 +4,11 @@
 package momentaction
 
 import (
+	"context"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -68,7 +70,7 @@ func TestAnUnclassifiedMoveIsRefusedLikeAWrite(t *testing.T) {
 func TestTheRefusalSpeaksTheReadersLanguage(t *testing.T) {
 	ctx := systemtext.WithLocale(reader(readerOnly), textlang.German)
 	got := MoveRefusal(ctx, crmcontracts.WorklistMoveActionCreateTask)
-	if want := "Sie haben keine Berechtigung, Aufgaben anzulegen"; got == nil || *got != want {
+	if want := "Sie haben keine Berechtigung, Aufgaben zu erstellen"; got == nil || *got != want {
 		t.Fatalf("refusal %v, want %q", got, want)
 	}
 }
@@ -107,3 +109,22 @@ func suggestion(kind crmcontracts.Company360SuggestionActionKind) crmcontracts.C
 }
 
 func newOf[T any](*T) *T { return new(T) }
+
+func TestAskingTheManagerAsksTheDealGrantNotTheActivityGrant(t *testing.T) {
+	asWho := func(deal principal.ObjectGrant) context.Context {
+		return principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(), SeatType: principal.SeatFull,
+			Permissions: principal.Permissions{
+				RoleKeys: []string{"rep"}, RowScope: principal.RowScopeAll,
+				Objects: map[string]principal.ObjectGrant{"deal": deal, "activity": writer},
+			},
+		})
+	}
+	got := MoveRefusal(asWho(readerOnly), crmcontracts.WorklistMoveActionBringInManager)
+	if got == nil || *got != "You do not have permission to change deals" {
+		t.Errorf("a reader of deals who may write activities was offered the move live: %v", got)
+	}
+	if got := MoveRefusal(asWho(principal.ObjectGrant{Read: true, Update: true}), crmcontracts.WorklistMoveActionBringInManager); got != nil {
+		t.Errorf("a seat that may update deals was refused: %q", *got)
+	}
+}

@@ -8,7 +8,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { attentionReport, healthReport } from "./systemhealth.fixtures";
+import {
+  attentionReport,
+  healthReport,
+  informationReport,
+  unplacedSource,
+} from "./systemhealth.fixtures";
 import { HealthChecks, healthGroups } from "./systemhealthchecks";
 
 type Source = components["schemas"]["HealthSource"];
@@ -46,6 +51,14 @@ describe("healthGroups", () => {
     ]);
   });
 
+  it("files an information check in its own group, not with the passing ones", () => {
+    const groups = healthGroups(informationReport.sources, []);
+    expect(ids(groups.information)).toEqual(["unplaced"]);
+    expect(ids(groups.passing)).not.toContain("unplaced");
+    expect(ids(groups.waiting)).not.toContain("unplaced");
+    expect(healthGroups(healthReport.sources, []).information).toEqual([]);
+  });
+
   it("leaves a check an open finding explains to that finding", () => {
     const explained = new Set(
       attentionReport.findings
@@ -57,7 +70,12 @@ describe("healthGroups", () => {
       attentionReport.sources,
       attentionReport.findings,
     );
-    const grouped = [...groups.setup, ...groups.waiting, ...groups.passing];
+    const grouped = [
+      ...groups.setup,
+      ...groups.waiting,
+      ...groups.passing,
+      ...groups.information,
+    ];
     expect(grouped.filter((source) => explained.has(source.id))).toEqual([]);
   });
 });
@@ -104,5 +122,24 @@ describe("HealthChecks", () => {
     renderChecks();
     const passing = screen.getByRole("list", { name: "Passing" });
     expect(within(passing).getAllByRole("listitem")).toHaveLength(5);
+  });
+
+  it("keeps a failed read red even for an information check", () => {
+    render(
+      <LocaleProvider initial="en">
+        <HealthChecks
+          groups={healthGroups(
+            [{ ...unplacedSource, availability: "failed" }],
+            [],
+          )}
+        />
+      </LocaleProvider>,
+    );
+    const group = screen.getByRole("list", { name: "For information" });
+    expect(
+      within(group)
+        .getByText("This source could not be read")
+        .closest(".badge"),
+    ).toHaveClass("badge-danger");
   });
 });

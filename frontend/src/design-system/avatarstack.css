@@ -14,8 +14,7 @@
 .avatar-stack-item {
   display: block;
   border-radius: var(--r-full);
-  corner-shape: round;
-  box-shadow: 0 0 0 2px var(--bgElevated);
+  box-shadow: 0 0 0 2px var(--ground);
 }
 /* Half the previous pull, because the ring stopped costing the chip 4px of its
    own: the overlap has to be read against how much of each face is left

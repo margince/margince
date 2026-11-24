@@ -24,10 +24,8 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   leads: 2,
   deals: WHOLE_ADDRESS,
   projects: WHOLE_ADDRESS,
-  // #/worklist/<owner> reaches the screen as `opensOn`, read in useState
-  // initialisers, so only a remount applies a new owner. A lower depth shows
-  // the manager's own queue under a colleague's address.
-  // features/worklist/worklist.identity.test.tsx holds this.
+  // #/worklist/<owner> only redirects to Home's drawer, and the redirect
+  // re-reads its owner on every address (features/brief/brief.queue.tsx).
   worklist: WHOLE_ADDRESS,
   // #/analytics/<section>: each section is a view of one screen.
   analytics: 1,
@@ -46,7 +44,9 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   tags: WHOLE_ADDRESS,
   lists: WHOLE_ADDRESS,
   share: WHOLE_ADDRESS,
-  onboarding: WHOLE_ADDRESS,
+  // #/onboarding/<step>: one conversation holds every step in its own state,
+  // and the address follows it, so a step change must not remount it.
+  onboarding: 1,
   client: WHOLE_ADDRESS,
   book: WHOLE_ADDRESS,
   preferences: WHOLE_ADDRESS,
@@ -58,6 +58,7 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   "oauth-consent": WHOLE_ADDRESS,
   "reset-password": WHOLE_ADDRESS,
   ext: WHOLE_ADDRESS,
+  app: WHOLE_ADDRESS,
   // The key in `#/x/<key>` picks the fork screen, so two keys must remount.
   // One depth serves every fork screen. A fork screen with tabs keeps the tab
   // in its own state, so it never needs an entry here.

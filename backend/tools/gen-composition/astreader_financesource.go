@@ -74,6 +74,8 @@ func (r *unitReader) readFinanceSource(elt ast.Expr, ext string) (declaredFinanc
 		case "Provider":
 			source.Provider, err = r.stringLit(kv.Value, "FinanceSource.Provider")
 			probe.Provider = source.Provider
+		case "DisplayName":
+			_, err = r.stringLit(kv.Value, "FinanceSource.DisplayName")
 		case "Check":
 			if present {
 				probe.Check = presentFinanceCheck

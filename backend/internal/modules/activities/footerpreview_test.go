@@ -18,9 +18,9 @@ import (
 
 type previewUnsubscribeLinker struct{ calls, manageCalls int }
 
-func (l *previewUnsubscribeLinker) UnsubscribeToken(context.Context, string, string) (string, bool, error) {
+func (l *previewUnsubscribeLinker) UnsubscribeToken(_ context.Context, _, purposeKey string) (string, string, bool, error) {
 	l.calls++
-	return "fixture-token", true, nil
+	return "fixture-token", purposeKey, true, nil
 }
 
 func (l *previewUnsubscribeLinker) ManageToken(context.Context, string) (string, bool, error) {
@@ -44,7 +44,7 @@ func TestMailFooterPreviewMatchesDeliveryWithoutCreatingLinks(t *testing.T) {
 			ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:fixture", Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"activity": {Create: true}}}})
 			linker := &previewUnsubscribeLinker{}
 			store := (&Store{}).WithDisclosures(&stubDisclosures{lines: []DisclosureLine{{Kind: "controller_identity", Text: "Example Company"}}}).WithUnsubscribe(linker).WithPublicBaseURL("https://crm.example.test")
-			input := SendEmailInput{Context: tc.category, ConsentPurpose: tc.purpose}
+			input := SendEmailInput{Context: tc.category, ConsentPurpose: tc.purpose, Recipients: []string{"buyer@example.test"}}
 			preview, err := store.PreviewMailFooter(ctx, SendOrigin{}, nil, input, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -55,7 +55,7 @@ func TestMailFooterPreviewMatchesDeliveryWithoutCreatingLinks(t *testing.T) {
 			if preview.OffersUnsubscribe != tc.unsubscribe || len(preview.Disclosures) != 1 {
 				t.Fatalf("footer preview: %+v", preview)
 			}
-			delivered, err := store.deliverability(ctx, "Message", "Subject", []string{"buyer@example.test"}, surfaceFor(input.Context, input.MarketingPurpose, input.ConsentPurpose), ids.Nil)
+			delivered, err := store.deliverability(ctx, "Message", "Subject", []string{"buyer@example.test"}, nil, surfaceFor(input.Context, input.MarketingPurpose, input.ConsentPurpose), ids.Nil, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -86,7 +86,7 @@ func TestTheFooterPreviewShowsTheCategoryTheSendUses(t *testing.T) {
 	gate := previewingGate{resolved: map[string]commsauthz.Category{"b@example.test": commsauthz.CategoryMarketing}}
 	disclosures := &stubDisclosures{lines: []DisclosureLine{{Kind: "objection_route", Text: "Reply STOP."}}}
 	entity := ids.NewV7()
-	preview, err := (&Store{}).WithDisclosures(disclosures).PreviewMailFooter(ctx, SendOrigin{}, nil, SendEmailInput{
+	preview, err := (&Store{}).WithDisclosures(disclosures).WithPublicBaseURL("https://crm.example.test").WithUnsubscribe(&previewUnsubscribeLinker{}).PreviewMailFooter(ctx, SendOrigin{}, nil, SendEmailInput{
 		Context: commsauthz.CategoryReplyToInbound, Recipients: []string{"b@example.test"}, SendingEntity: entity,
 	}, gate)
 	if err != nil {
@@ -100,5 +100,19 @@ func TestTheFooterPreviewShowsTheCategoryTheSendUses(t *testing.T) {
 	}
 	if !slices.Equal(disclosures.entities, []ids.UUID{entity}) {
 		t.Errorf("the preview asked the footer for entities %v, want %s", disclosures.entities, entity)
+	}
+}
+
+// A store with no linker sends no unsubscribe link, so its preview offers none.
+func TestMailFooterPreviewOffersNoUnsubscribeWithoutALinker(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:fixture", Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"activity": {Create: true}}}})
+	store := (&Store{}).WithDisclosures(&stubDisclosures{}).WithPublicBaseURL("https://crm.example.test")
+	input := SendEmailInput{Context: commsauthz.CategoryMarketing, ConsentPurpose: "newsletter", Recipients: []string{"buyer@example.test"}}
+	preview, err := store.PreviewMailFooter(ctx, SendOrigin{}, nil, input, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.OffersUnsubscribe {
+		t.Fatal("the preview offers an unsubscribe link the send cannot add")
 	}
 }

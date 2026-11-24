@@ -5,7 +5,6 @@ package customfields
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -20,12 +19,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// SetOptions replaces a picklist field's allowed option set and
+// SetOptions replaces a picklist or multiselect field's allowed option set and
 // regenerates the physical column's CHECK constraint from it
-// (CUSTOM-FIELDS-PARAM-5) — the one lifecycle mutation besides Create
-// that runs DDL, so it follows the same one-transaction schema-pool
-// shape: the owner ALTER, then the catalog UPDATE + one audit row, all
-// as the schema pool's owner role.
+// (CUSTOM-FIELDS-PARAM-5). Besides Create it is the one lifecycle mutation that
+// runs DDL, so it has the same one-transaction schema-pool shape. It clears
+// removed choices off the records, runs the owner ALTER, then writes the
+// catalog UPDATE and one audit row. All of it runs as the schema pool's owner role. The
+// answer's RecordsChanged counts the records that lost a choice.
 func (s *Service) SetOptions(ctx context.Context, id ids.UUID, options []string) (crmcontracts.CustomField, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.CustomField{}, err
@@ -102,6 +102,10 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
+	oldOptions, err := unmarshalOptions(f.OptionsRaw)
+	if err != nil {
+		return crmcontracts.CustomField{}, err
+	}
 
 	// Same arming as Create (bounded lock waits + one ALTER per core
 	// table at a time). Lock order is row-then-advisory in every flow
@@ -109,11 +113,17 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 	if err := serializeSchemaChange(ctx, tx, f.Object); err != nil {
 		return crmcontracts.CustomField{}, err
 	}
+	if err := lockForTheAlter(ctx, tx, f.Object); err != nil {
+		return crmcontracts.CustomField{}, err
+	}
+	changed, err := s.clearRemovedChoices(ctx, tx, f, removedChoices(oldOptions, options))
+	if err != nil {
+		return crmcontracts.CustomField{}, err
+	}
 	if _, err := tx.Exec(ctx, ddl); err != nil {
 		if _, ok := storekit.CheckViolation(err); ok {
-			// ADD CONSTRAINT validates existing rows: a removed option that
-			// records still carry refuses the edit rather than stranding
-			// data outside its own CHECK.
+			// ADD CONSTRAINT validates existing rows. Only an object no
+			// remover clears can still hold a removed choice here.
 			return crmcontracts.CustomField{}, fmt.Errorf(
 				"existing %s values still use a removed option; migrate them first: %w", f.Object, apperrors.ErrConflict)
 		}
@@ -135,17 +145,13 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 		  WHERE id = $2`, optionsArg, id, options); err != nil {
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: updating options: %w", err)
 	}
+	forgetActiveColumns(tx, f.Object)
 	out, err := readField(ctx, tx, id)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
+	out.RecordsChanged = &changed
 
-	var oldOptions []string
-	if len(f.OptionsRaw) > 0 {
-		if err := json.Unmarshal(f.OptionsRaw, &oldOptions); err != nil {
-			return crmcontracts.CustomField{}, fmt.Errorf("customfields: catalog options column is not a JSON string array: %w", err)
-		}
-	}
 	if _, err := storekit.Audit(ctx, tx, "update", rbacObject, id,
 		map[string]any{fieldOptions: oldOptions, fieldOptionTranslations: f.OptionTranslations},
 		map[string]any{fieldOptions: options, fieldOptionTranslations: labeltranslation.OptionsFromWire(out.OptionTranslations)}); err != nil {

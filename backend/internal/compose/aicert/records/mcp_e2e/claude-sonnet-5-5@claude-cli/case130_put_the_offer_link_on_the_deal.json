@@ -1,0 +1,92 @@
+{
+  "scenario": "case130_put_the_offer_link_on_the_deal",
+  "criteria": [
+    1
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "mcp",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "a20baa8c55e20e46",
+    "tools": "4462b2ec182251c1",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:24:08Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:29:28Z"
+  },
+  "usage": {
+    "input_tokens": 20,
+    "output_tokens": 1718,
+    "cache_creation_input_tokens": 7636,
+    "cache_read_input_tokens": 778657,
+    "runs_measured": 2,
+    "runs_costed": 2,
+    "cost_usd": 0.1256
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "attach_link",
+        "change_activities",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "attach_link",
+        "change_activities",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4,
+      "min": 4,
+      "max": 4
+    },
+    "turns": {
+      "median": 5,
+      "min": 5,
+      "max": 5
+    },
+    "refused": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 393156.5,
+      "min": 393152,
+      "max": 393161
+    },
+    "output_tokens": {
+      "median": 859,
+      "min": 821,
+      "max": 897
+    },
+    "duration_ms": {
+      "median": 10974,
+      "min": 9346,
+      "max": 12602
+    }
+  }
+}

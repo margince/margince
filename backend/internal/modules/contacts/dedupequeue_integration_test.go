@@ -274,10 +274,7 @@ func TestAnOverCapPageAskIsClampedRatherThanResetToTheDefault(t *testing.T) {
 		}
 	}
 
-	open, err := e.store.CountOpenDedupeCandidates(ctx)
-	if err != nil {
-		t.Fatalf("counting open pairs: %v", err)
-	}
+	open := countOpen(ctx, t, e)
 	if open <= dedupeQueueDefaultLimit || open > dedupeQueueMaxLimit {
 		t.Fatalf("the seed left %d open pairs, and this case needs more than one default page of %d and at most the maximum of %d",
 			open, dedupeQueueDefaultLimit, dedupeQueueMaxLimit)
@@ -833,5 +830,16 @@ func TestTheMergeCardAgreesWithTheDispositionEndpoint(t *testing.T) {
 	if _, err := e.store.DisposeDedupeCandidate(colleague, c.ID, "not_a_duplicate", nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("the endpoint admitted a colleague owning neither record (%v), "+
 			"so withholding the verb from them is the card disagreeing with the write", err)
+	}
+}
+
+// Lifting a disposition reads the row it lifts. A candidate no longer there is
+// not-found, so a rolled-back merge never audits a reversal of nothing.
+func TestReopeningADedupeCandidateThatIsGoneIsNotFound(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	err := e.store.tx(ctx, func(tx pgx.Tx) error { return reopenDedupeCandidateTx(ctx, tx, ids.NewV7()) })
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("re-opening a missing candidate = %v, want ErrNotFound", err)
 	}
 }

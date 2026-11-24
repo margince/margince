@@ -26,7 +26,7 @@ Read this before you touch a stylesheet. Each gate checks one clear rule.
 |---|---|---|
 | `tokens.test.ts` | Pins about 40 token values (`canonical`), the surface light ladders in both themes, AA contrast of five ink tokens on five ground tokens, chip colours, `--accent` = `#045647`, `--bgInkField` = `#13231d` and missing from dark, the dark `@media` block byte-equal to `[data-theme="dark"]`, and `brand.css` as derived values only | Change `tokens.css` and the `canonical` table in one commit. Keep both ladders in order. Check the contrast again on the new ground tokens. Keep the two dark blocks the same. Keep `--bgInkField` declared: it is the field under a tooltip, never the sidebar |
 | `check-ds-purity.sh` + `frontend/census/rules/conformance.census.ts` | No colour value outside `tokens.css` (only `provider-mark.tsx` may have one) | Every new colour is a token, each pane included |
-| `check-font-lock.sh` + `frontend/census/rules/conformance.census.ts` + `frontend/census/rules/mono.census.ts` | Three font families only: Outfit, Geist, Geist Mono. Outfit stays by decision, after the display font of the mock was tried in Step 1. Geist Mono only on `pre`, `code`, `samp` and `.code-block`; `frontend/scripts/check-font-lock.sh` and `frontend/census/rules/mono.census.ts` refuse it in any other place | Change the family in **four** places in one pull request: the strip list of the script, `allowedFamilies` in `frontend/census/rules/conformance.census.ts`, `--f-*` in `tokens.css` (pinned), and the `@fontsource` imports in `frontend/src/app.css` |
+| `check-font-lock.sh` + `frontend/census/rules/conformance.census.ts` + `frontend/census/rules/mono.census.ts` | Three font families only: Outfit, Geist, Geist Mono. Outfit stays by decision, after the display font of the mock was tried in Step 1. Geist Mono only on `pre`, `code`, `samp` and `.code-block`; `frontend/scripts/check-font-lock.sh` and `frontend/census/rules/mono.census.ts` refuse it in any other place | Change the family in one pull request: the strip list of the script, `allowedFamilies` in `frontend/census/rules/conformance.census.ts`, and the `--fontFamily*` tokens in `tokens.css` (pinned in `tokens.test.ts`). Change the `@font-face` rules in `frontend/src/fonts.css` and the family's `@fontsource` package in `frontend/package.json` with them; `frontend/src/fonts.test.ts` holds each rule to its package. Then change the font files that `startupStyles` asks for early in `frontend/vite.config.ts`: the build fails on one it cannot find |
 | `check-ds-spacing.sh` | No new `px` value in `padding`, `margin` or `gap` outside `design-system/` | Screen CSS uses `--space-*`; design-system CSS may keep a `px` value that looks right |
 | `check-ds-spacing-roles.sh` | No screen rule changes the spacing of a design-system part that the design system spaces. No screen rule changes the size of one it sizes (`font-size`, `line-height`, `letter-spacing`). The three named places take their role token: the gap of `*-actions` → `--gapActions`, the gap of `*-cards` → `--gapCards`, the padding of `*-card` or `*-panel` → `--padCard` or `--padPanel`. Whole tree | Change a role in `tokens.css`, where every screen moves with it. A screen that needs its own space or size sets it on its own element. Or it changes the part with a role token, or turns the check off in line with a reason |
 | `check-space-tokens.sh` | Every `var(--x)` is declared in some place | Rename a token only with all the places that use it |
@@ -37,7 +37,7 @@ Read this before you touch a stylesheet. Each gate checks one clear rule.
 | `native-controls.census.ts` | No `<select>` and no date or time input of the browser's own | Keep `Select`, `DateInput`, `TimeInput` and `MonthInput` |
 | `frontend/census/rules/table-scroll-coverage.census.ts` | Every table inside `TableScroll` | Keep it |
 | `frontend/census/rules/conformance.behaviour.census.ts` motion, focus, pending | `prefers-reduced-motion` answers come after their rule. Every outline is `--focus-ring`. One `ds-pulse` user. Three pinned outline rules that are only for looks | Add any new dashed outline to the allow list |
-| `e2e` `ac.spec.ts` | WCAG 2.2 AA with axe on every core screen; no scroll to the side at 390px; the 10 rail entries in order | Run it in both themes after the token pull request |
+| `e2e` `ac*.spec.ts` | WCAG 2.2 AA with axe on every core screen; no scroll to the side at 390px; the 10 rail entries in order | Run it in both themes after the token pull request |
 | `e2e` `company-record.spec.ts` | `"KPI strip above the tab strip"`, `"one Company 360 card"`, `"left rail carries the account's context as one panel of named sections"`, `"lifecycle control is a control, not a tag"`, `"logo not favicon"` | These checks are about the old shape. Write them again **in the company pull request**, in the same commit as the layout, to the new shape. That is readings under the tab strip, the 360 as the first pane, and the details panel on the right |
 | `e2e` `perf-mobile.spec.ts` | The record's `<h1>` draws from the router before any record read returns, `p95` under 300 ms on `Fast 3G` | The head keeps drawing from route state. Nothing in the head may wait on the 360 |
 | `history.spec.ts` | A record's tab is an address | Keep tabs in the URL; the deal's tabs move there (section 5) |
@@ -87,10 +87,6 @@ The shell comes last in this group: it is the part users see most, and the safes
    All three read `--r-sm`, 8px, which a chip also takes, so every box has the same corner.
    `--r-xs` is 4px for a key, and `--r-full` is for a pill or a monogram (`DESIGN.md` section 5).
 
-   Where a browser has `corner-shape: squircle`, every step but `--r-full` is twice its size. A superellipse of
-   radius `R` looks about as round as a round corner of `R/2`. One `@supports` block in `tokens.css` does this, and no
-   call site touches it.
-
    There are three shadow tokens. `--shadow-rest` is one 1px/2px layer, used by every surface at rest and every
    filled control. `--shadow-well` is the same layer turned `inset`, used by every field, because a field has a
    floor instead of a top. `--shadow-pop` is for each popover and the drawer. A control drops its layer on hover,
@@ -100,7 +96,7 @@ The shell comes last in this group: it is the part users see most, and the safes
    The gate holds that.
 
 The step is finished when `make fe-unit` is green with the new `canonical` table, and `make fe-ds-gates` is
-green. `ac.spec.ts` is green in both themes. Storybook shows every story on the new ground, and no reader would
+green. `ac*.spec.ts` is green in both themes. Storybook shows every story on the new ground, and no reader would
 say any of them looks wrong.
 
 ### Step 2: Small parts (`atoms.tsx`, `atoms.css`, `base.css`)
@@ -140,25 +136,25 @@ Stories: update every changed story. The catalog test needs no new rows unless a
 ### Step 4: The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
 
 1. **The ground.** `.app` draws `--bgPage`, one flat colour.
-2. **Rail.** `glass` (`--pane` and `blur`) over the ground, a hairline on the right, no dark ground.
+2. **Rail.** Above the phone layout it has no ground of its own, so `--bgPage` shows. It has no edge. Hover is the neutral `--railHover`.
    Closed, it is **56px**; open, 256px (`--railW` in `shell.css`). The tooltip rule in `shell.css`
    depends on the closed width.
 
    Rows are 34px, group labels are `.t-eyebrow` with only the first letter capital, and the orb sits
-   last. `rail.test.tsx` and `ac.spec.ts` pin the 10 rows and their order, and those do not change.
-3. **Top bar.** It stays 50px, `glass`, with a hairline under it.
-   The breadcrumb sits left, the account menu right, and the `⌘K` field between them.
-   **Nothing from a record sits in it.**
+   last. `rail.test.tsx` and `ac-shell.spec.ts` pin the 10 rows and their order, and those do not change.
+3. **Top bar.** It is 50px with no ground of its own and no hairline above the phone layout, beside the `--pageCard` card. At phone width it is `glass` with a hairline under it.
+   A record page's Back control comes first. The `⌘K` field follows, then the actions at the right.
+   Settings uses the same bar, and **nothing from a record sits in it.**
 4. **Settings second level.** On a settings route, the sidebar itself becomes the 210px column that carries the
    level (`SettingsRail`/`navlevel.tsx`).
-   It uses the same `glass`.
+   It uses the same surface.
 
    It still shows one level at a time. The rail's places step aside for the section's entries, with Back above
-   them. `rail.test.tsx` and `ac.spec.ts` hold one level in the sidebar. The two columns side by side in the mock
+   them. `rail.test.tsx` and `ac-shell.spec.ts` hold one level in the sidebar. The two columns side by side in the mock
    would change how users move through the app. So they are out of scope for a new style.
 5. **Agent chrome.** `agentrail` and `agent-edge` take the tokens; the orb stays where it is.
 
-The step is finished when `ac.spec.ts`, `rail.test.tsx`, `shell.test.tsx` and `shell.stories` pass in both
+The step is finished when `ac*.spec.ts`, `rail.test.tsx`, `shell.test.tsx` and `shell.stories` pass in both
 themes, with the 390px sweep.
 
 ## 3–9. The pages
@@ -174,10 +170,10 @@ records, and the other screens. The section numbers below point to those pages.
 
 | Pull request | Scope | Gate to watch | Status |
 |---|---|---|---|
-| 1 | Step 1: tokens, fonts (four places), type sizes, base | `tokens.test.ts`, font lock, `ac.spec.ts` in both themes | Landed in [#3835](https://github.com/margince/margince/pull/3835) |
+| 1 | Step 1: tokens, fonts (four places), type sizes, base | `tokens.test.ts`, font lock, `ac*.spec.ts` in both themes | Landed in [#3835](https://github.com/margince/margince/pull/3835) |
 | 2 | Step 2: small parts and stories | `frontend/census/rules/catalog.census.ts`, `onecard`, eyebrow baseline | Landed in [#3842](https://github.com/margince/margince/pull/3842) |
 | 3 | Step 3: `Panel`, `StatCard` and `StatStrip`, the `RecordView` head, the `trailing` slot of `RecordTabs`, `PageAside` on the right and closed, timeline, spine, 360 kit, `EvidenceMark` hover, trust rows, map colours, the width ladder (section 8a) | `company-record.spec.ts` goes red here. Keep the old checks until pull request 4 by putting the head layout behind a setting, or land 3 and 4 together | Landed in [#3872](https://github.com/margince/margince/pull/3872) |
-| 4 | Step 4: shell, top bar, settings second level, agent chrome | `rail.test.tsx`, `ac.spec.ts`, 390px sweep | Landed in [#3889](https://github.com/margince/margince/pull/3889) |
+| 4 | Step 4: shell, top bar, settings second level, agent chrome | `rail.test.tsx`, `ac*.spec.ts`, 390px sweep | Landed in [#3889](https://github.com/margince/margince/pull/3889) |
 | 5 | Section 3 Company, with its new `e2e` checks and state stories | `company-record.spec.ts`, `history.spec.ts`, `perf-mobile` | Landed in [#3929](https://github.com/margince/margince/pull/3929) |
 | 6 | Section 4 Contact | `contact-network.spec.ts`, `contactpage.test.tsx` | Open |
 | 7 | Section 5 Deal, tabs into the URL | `deals.test.tsx`, `history.spec.ts` | Open |

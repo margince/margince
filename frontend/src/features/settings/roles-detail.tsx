@@ -20,10 +20,18 @@ import {
   type RowScope,
   roleLabel,
   useMoveRole,
+  useRestoreRoleGrants,
   useSetRoleGrant,
   useUpdateRole,
 } from "../../lib/roles.queries";
-import { GrantMatrix, type GrantMatrixRow, grantOf } from "./grantmatrix";
+import {
+  CRUD,
+  type CrudAction,
+  GrantMatrix,
+  type GrantMatrixRow,
+  grantOf,
+  nextGrant,
+} from "./grantmatrix";
 import { AccessPreviewPanel } from "./users-access";
 
 // Every control writes as it is used, with the version the reader saw.
@@ -104,20 +112,26 @@ export function grantGroups(
   );
 }
 
-/** The three writes a role takes, and whether one of them is out. */
+/** The verbs each object offers a role, keyed by object. */
+export type ObjectVerbs = Readonly<Record<string, readonly CrudAction[]>>;
+
+/** The four writes a role takes, and whether one of them is out. */
 export function useRoleWrites() {
   const update = useUpdateRole();
   const setGrant = useSetRoleGrant();
   const move = useMoveRole();
+  const restoreGrants = useRestoreRoleGrants();
+  const writes = [update, setGrant, move, restoreGrants];
   return {
     update,
     setGrant,
     move,
-    failure: [update, setGrant, move].find((write) => write.isError),
+    restoreGrants,
+    failure: writes.find((write) => write.isError),
     // Every write carries the role's one version. A second write sent before
     // the first answers is refused as a concurrent edit. So one goes at a time,
     // with the version the last one returned.
-    busy: update.isPending || setGrant.isPending || move.isPending,
+    busy: writes.some((write) => write.isPending),
   };
 }
 
@@ -127,6 +141,7 @@ export function RoleDetail({
   role,
   directory,
   units,
+  verbs,
   canUpdate,
   canWiden,
   writes,
@@ -134,6 +149,8 @@ export function RoleDetail({
   role: Role;
   directory: readonly Role[];
   units: readonly ExtensionUnit[];
+  /** The verbs each object offers, from the role directory. */
+  verbs: ObjectVerbs;
   canUpdate: boolean;
   /** Whether this reader may turn a right on or widen the row scope. */
   canWiden: boolean;
@@ -189,6 +206,7 @@ export function RoleDetail({
         />
         <GrantSection
           groups={grantGroups(directory, units, t)}
+          verbs={verbs}
           role={role}
           name={name}
           editable={editable}
@@ -216,6 +234,7 @@ export function RoleDetail({
 // Not a hover tip on each name for the raw keys: touch and keyboard never raise it.
 function GrantSection({
   groups,
+  verbs,
   role,
   name,
   editable,
@@ -224,6 +243,7 @@ function GrantSection({
   setGrant,
 }: Readonly<{
   groups: readonly GrantGroup[];
+  verbs: ObjectVerbs;
   role: Role;
   name: string;
   editable: boolean;
@@ -244,11 +264,14 @@ function GrantSection({
   }
   const row = ({ object, name: label, known }: GrantObject): GrantMatrixRow => {
     const grant = grantOf(role, object);
+    // An object the server does not list is one it cannot name: all four verbs.
+    const offered: readonly CrudAction[] = verbs[object] ?? CRUD;
     return {
       key: object,
       name: label,
       code: showKeys || !known ? object : undefined,
       grant,
+      verbs: offered,
       cellLabel: (action) =>
         t("extAccess.cell", {
           role: name,
@@ -263,7 +286,7 @@ function GrantSection({
         setGrant.mutate({
           roleKey: role.key,
           object,
-          grant: { ...grant, [action]: next },
+          grant: nextGrant(grant, action, next, offered),
           version: role.version,
         }),
     };

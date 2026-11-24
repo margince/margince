@@ -3,16 +3,54 @@
 
 package storekit
 
-// The generation binds an opaque provider id to the account that supplied it.
-// Every argument is an internally derived SQL placeholder.
-func ProviderMessageKeysSQL(seat, provider, message string) string {
-	return ConnectionMessageKeysSQL("c.user_id = "+seat+" AND c.provider = "+provider, message)
+// MailboxMarkSQL names one capture connection over alias and the generation of
+// the account it is bound to: "<mailbox>:<generation>". A row made while a
+// member held one mailbox per provider uses the provider, so the keys it
+// stored still match. Every later row uses its id, so two mailboxes of one
+// provider never share a mark.
+func MailboxMarkSQL(alias string) string {
+	return "(" + MailboxSQL(alias) + " || ':' || " + alias + ".generation)"
+}
+
+// MailboxSQL is the mailbox half of MailboxMarkSQL.
+func MailboxSQL(alias string) string {
+	return "(CASE WHEN " + alias + ".keys_by_provider THEN " + alias + ".provider ELSE " + alias + ".id::text END)"
+}
+
+// ProviderMessageKeysSQL is the keys an opaque provider id has under the
+// seat's live connections of provider. A connection that is not NULL narrows
+// them to that one. Every argument is an internally derived SQL placeholder.
+func ProviderMessageKeysSQL(seat, provider, connection, message string) string {
+	return ConnectionMessageKeysSQL("c.user_id = "+seat+" AND c.provider = "+provider+
+		" AND ("+connection+"::uuid IS NULL OR c.id = "+connection+"::uuid)", message)
 }
 
 // ConnectionMessageKeysSQL is ProviderMessageKeysSQL for the live connection
 // match names over alias c, such as a shared mailbox by its id.
 func ConnectionMessageKeysSQL(match, message string) string {
-	return "ARRAY(SELECT c.provider || ':' || c.generation || ':' || " + message +
+	return "ARRAY(SELECT " + MailboxMarkSQL("c") + " || ':' || " + message +
 		" FROM capture_connection c WHERE " + match +
 		" AND c.archived_at IS NULL AND c.status IN ('connected','error') AND " + message + " <> '')"
+}
+
+// DeliveredBySQL tests, over connection alias conn, whether that mailbox
+// delivered the activity with id expression activity to its owner. The owner's
+// import row names each delivering mailbox in delivered_by, and the mailbox
+// half of a mark outlives a generation bump.
+func DeliveredBySQL(conn, activity string) string {
+	return "EXISTS (SELECT 1 FROM capture_import cmi, unnest(cmi.delivered_by) AS cmd(mark)" +
+		" WHERE cmi.activity_id = " + activity + " AND cmi.user_id = " + conn + ".user_id" +
+		" AND split_part(cmd.mark, ':', 1) = " + MailboxSQL(conn) + ")"
+}
+
+// CapturingMailboxSQL matches, over connection alias conn, the unarchived
+// mailboxes that captured activity alias act: the seat and provider its
+// connector stamp names, narrowed by DeliveredBySQL. An import that names no
+// mailbox predates delivered_by and keeps every row of that seat and provider.
+// Several rows can match; a caller applies the strictest answer among them.
+func CapturingMailboxSQL(conn, act string) string {
+	return "('connector:' || " + conn + ".provider || ':' || " + conn + ".user_id::text) = " + act + ".captured_by" +
+		" AND " + conn + ".archived_at IS NULL AND (" + DeliveredBySQL(conn, act+".id") +
+		" OR NOT EXISTS (SELECT 1 FROM capture_import cmn WHERE cmn.activity_id = " + act + ".id" +
+		" AND cmn.user_id = " + conn + ".user_id AND cardinality(cmn.delivered_by) > 0))"
 }

@@ -300,7 +300,6 @@ connector
 consent
 consolidation
 constant
-constellation
 construction
 consume
 contact
@@ -775,7 +774,6 @@ keyless
 keyset
 keyword
 kib
-kill
 kind
 know
 known
@@ -1072,7 +1070,6 @@ plant
 platform
 plural
 plus
-poc
 pod
 point
 policy

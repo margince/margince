@@ -1,38 +1,30 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ifMatch, requireVersion } from "../../api/version";
+import {
+  BulkChangeDialog,
+  type BulkChangeRequest,
+} from "../../components/bulkchange";
 import { BulkVerbs } from "../../components/bulkverbs";
 import { Button } from "../../design-system/atoms";
-import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { stable } from "../../format/collate";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import { dealRecordKeys } from "../../lib/activitykeys";
-import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
+import { useT } from "../../i18n";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
 
-/** One row's outcome in a fan-out: it went through, or it did not and why. */
-export type DealBulkOutcome = { id: string; name: string; error?: string };
-
 /**
  * Bulk verbs over selected deals: assign an owner, move to a stage, archive.
  *
- * Owner and archive are the shared `BulkVerbs`: one preview, then one change on
- * the server with each deal's own version. Moving a stage is a client-side
- * fan-out of the record's own advance, because a stage move is not a bulk verb
- * the server offers. Each row sends ITS OWN If-Match from the version the list
- * holds; a row that moved under the reader answers 409, is reported by name,
- * and can be retried once the list has refetched.
+ * All three are server bulk changes. Each opens the shared `BulkChangeDialog`.
+ * It previews what would change and what would be left alone, runs one audited
+ * change with each deal's own version, and offers Undo. A move keeps the rules
+ * of the single-record advance per deal, so a deal one refuses is listed in
+ * the preview and not moved.
  *
  * Only OPEN stages are offered. Closing a deal asks for a lost reason and
- * freezes an exchange rate, and doing that to a dozen deals behind one button
- * — with one reason standing for all of them — is not a thing this bar should
- * make easy.
+ * freezes an exchange rate. One reason standing for a dozen deals behind one
+ * button is not a thing this bar should make easy.
  */
 export function DealBulkBar({
   deals,
@@ -43,15 +35,14 @@ export function DealBulkBar({
   deals: readonly Deal[];
   /** The pipeline's stages; the terminal ones are filtered out here. */
   stages: readonly Stage[];
-  /** Called after any run — the caller refetches and clears the selection. */
-  onDone: (outcomes: readonly DealBulkOutcome[]) => void;
+  /** Called after any change ran, so the caller clears the selection. */
+  onDone: () => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const queryClient = useQueryClient();
   const [stageId, setStageId] = useState("");
-  const [outcomes, setOutcomes] = useState<readonly DealBulkOutcome[]>([]);
+  const [request, setRequest] = useState<BulkChangeRequest | null>(null);
   const openStages = stages.filter((stage) => stage.semantic === "open");
+  const stage = openStages.find((each) => each.id === stageId);
 
   // A stage chosen for one selection must not fire at another, so the picker
   // clears when the membership changes. `stable`, not the reader's collation:
@@ -64,86 +55,21 @@ export function DealBulkBar({
   if (armedFor !== selectionKey) {
     setArmedFor(selectionKey);
     setStageId("");
+    // An open dialog would otherwise describe the new selection with no stage.
+    setRequest(null);
   }
 
-  // Shown only for rows still in the selection. A run that partly failed
-  // narrows the selection to the rows that refused, and those messages are
-  // exactly what the reader needs; a message about a row they have since
-  // deselected is not.
-  const failed = outcomes.filter(
-    (outcome) => outcome.error && deals.some((deal) => deal.id === outcome.id),
-  );
-
-  const move = useMutation({
-    // The rows and the stage ride the VARIABLES, never the closure. React Query
-    // re-arms a mutation's options in a passive effect, so a verb pressed
-    // immediately after the selection changed would otherwise fan out over the
-    // PREVIOUS render's selection.
-    mutationFn: async ({
-      rows,
-      toStageId,
-    }: {
-      rows: readonly Deal[];
-      toStageId: string;
-    }): Promise<DealBulkOutcome[]> =>
-      // Sequential, not Promise.all: a burst of concurrent writes against one
-      // reader's own deals buys nothing but contention.
-      rows.reduce<Promise<DealBulkOutcome[]>>(async (acc, deal) => {
-        const done = await acc;
-        const name = deal.name;
-        try {
-          unwrap(
-            await api.POST("/deals/{id}/advance", {
-              params: {
-                path: { id: deal.id },
-                ...ifMatch(requireVersion(deal.version)),
-              },
-              body: { to_stage_id: toStageId },
-            }),
-            t,
-          );
-          done.push({ id: deal.id, name });
-        } catch (error) {
-          done.push({
-            id: deal.id,
-            name,
-            error:
-              error instanceof ProblemError
-                ? problemMessageOf(error, t)
-                : t("deals.bulkFailedRow"),
-          });
-        }
-        return done;
-      }, Promise.resolve([])),
-    onSuccess: async (result) => {
-      // Awaited: the rows that refused keep their selection so they can be
-      // retried, and a retry that fired before the refetch landed would
-      // resend the very version that just conflicted.
-      await queryClient.invalidateQueries({ queryKey: ["deals"] });
-      // Each row that moved carries reads derived from it — the deal status
-      // card says what its stage MEANS — and the list key does not reach them.
-      for (const outcome of result) {
-        if (outcome.error !== undefined) {
-          continue;
-        }
-        for (const queryKey of dealRecordKeys(outcome.id)) {
-          queryClient.invalidateQueries({ queryKey });
-        }
-      }
-      setOutcomes(result);
-      onDone(result);
-    },
-  });
-
-  const moveStage = () =>
-    move.mutate({
-      // A deal already in the target stage is left alone. The server treats
-      // every advance as a transition — it writes a stage-history row and
-      // emits deal.stage_changed without asking whether anything moved — so
-      // sending one for a row already there would record a move that never
-      // happened, in the table the velocity reports read.
-      rows: deals.filter((deal) => deal.stage_id !== stageId),
-      toStageId: stageId,
+  const moveTo = (target: Stage) =>
+    setRequest({
+      recordType: "deal",
+      verb: "move_stage",
+      rows: deals.map((deal) => ({
+        id: deal.id,
+        version: deal.version,
+        label: deal.name,
+      })),
+      stage: { id: target.id, name: target.name },
+      openId: crypto.randomUUID(),
     });
 
   return (
@@ -155,40 +81,42 @@ export function DealBulkBar({
           version: deal.version,
           label: deal.name,
         }))}
-        busy={move.isPending}
-        onDone={() => {
-          setOutcomes([]);
-          onDone([]);
-        }}
+        onDone={onDone}
+        childrenRequire={{ object: "deal", action: "update" }}
       >
-        <Select
-          aria-label={t("deals.bulkStage")}
-          value={stageId}
-          placeholder={t("deals.bulkStagePick")}
-          disabled={move.isPending}
-          onChange={setStageId}
-          options={openStages.map((stage) => ({
-            value: stage.id,
-            label: stage.name,
-          }))}
-        />
-        <Button
-          disabled={move.isPending || deals.length === 0 || stageId === ""}
-          onClick={moveStage}
-        >
-          {t("deals.bulkMove")}
-        </Button>
+        {(reasonId) => (
+          <>
+            <Select
+              aria-label={t("deals.bulkStage")}
+              value={stageId}
+              placeholder={t("deals.bulkStagePick")}
+              disabled={reasonId !== undefined}
+              aria-describedby={reasonId}
+              onChange={setStageId}
+              options={openStages.map((each) => ({
+                value: each.id,
+                label: each.name,
+              }))}
+            />
+            <Button
+              disabled={deals.length === 0 || stage === undefined}
+              reasonId={reasonId}
+              onClick={() => stage && moveTo(stage)}
+            >
+              {t("deals.bulkMove")}
+            </Button>
+          </>
+        )}
       </BulkVerbs>
-      {failed.length > 0 && (
-        <ErrorLine inline>
-          {t("deals.bulkFailed", {
-            count: formatNumber(failed.length, locale),
-          })}{" "}
-          {failed
-            .map((outcome) => `${outcome.name}: ${outcome.error}`)
-            .join(" · ")}
-        </ErrorLine>
-      )}
+      <BulkChangeDialog
+        request={request}
+        onClose={() => setRequest(null)}
+        onDone={() => {
+          setRequest(null);
+          setStageId("");
+          onDone();
+        }}
+      />
     </>
   );
 }

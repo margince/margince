@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useRef } from "react";
+import { useId, useRef, useState } from "react";
 import { Badge, Button, Modal } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { useToast } from "../../design-system/toast";
@@ -15,7 +16,12 @@ import {
   roleRefusalOf,
   useAssignableRoles,
 } from "../../lib/roles.queries";
-import { RoleDetail, type RoleWrites, useRoleWrites } from "./roles-detail";
+import {
+  type ObjectVerbs,
+  RoleDetail,
+  type RoleWrites,
+  useRoleWrites,
+} from "./roles-detail";
 
 /** A role's kind, and whether it is archived: the row and the drawer say both. */
 export function RoleBadges({ role }: Readonly<{ role: Role }>) {
@@ -39,6 +45,7 @@ export function RoleDrawer({
   returnFocusTo,
   directory,
   units,
+  verbs,
   canUpdate,
   canMove,
   canRestore,
@@ -50,6 +57,7 @@ export function RoleDrawer({
   returnFocusTo: () => HTMLElement | null;
   directory: readonly Role[];
   units: readonly ExtensionUnit[];
+  verbs: ObjectVerbs;
   canUpdate: boolean;
   canMove: boolean;
   canRestore: boolean;
@@ -60,6 +68,7 @@ export function RoleDrawer({
   const titleId = useId();
   const body = useRef<HTMLDivElement | null>(null);
   const writes = useRoleWrites();
+  const [confirmingRestore, setConfirmingRestore] = useState(false);
   const current = newest(role, writes);
   const name = roleLabel(t)(current.key, current.name);
   const moveVerb = moveOf(current, canMove, canRestore);
@@ -95,6 +104,14 @@ export function RoleDrawer({
             <span className="roles-drawer-badges">
               <RoleBadges role={current} />
             </span>
+            {current.is_system && !current.archived_at && canUpdate && (
+              <Button
+                disabled={writes.busy}
+                onClick={() => setConfirmingRestore(true)}
+              >
+                {t("roles.restoreGrants")}
+              </Button>
+            )}
             {moveVerb && (
               <Button
                 disabled={writes.busy}
@@ -134,11 +151,34 @@ export function RoleDrawer({
           )}
         </div>
       </DrawerHead>
+      <ConfirmModal
+        open={confirmingRestore}
+        onClose={() => setConfirmingRestore(false)}
+        title={t("roles.restoreGrantsTitle", { name })}
+        confirmLabel={t("roles.restoreGrants")}
+        confirmVariant="danger"
+        pending={writes.restoreGrants.isPending}
+        onConfirm={() =>
+          writes.restoreGrants.mutate(
+            { roleKey: current.key, version: current.version },
+            {
+              onSuccess: () => {
+                setConfirmingRestore(false);
+                toast.show(t("roles.restoredGrantsToast", { name }));
+              },
+              onError: () => setConfirmingRestore(false),
+            },
+          )
+        }
+      >
+        <p>{t("roles.restoreGrantsBody")}</p>
+      </ConfirmModal>
       <DrawerBody ref={body} className="roles-drawer-body">
         <RoleDetail
           role={current}
           directory={directory}
           units={units}
+          verbs={verbs}
           canUpdate={canUpdate}
           canWiden={canWiden}
           writes={writes}
@@ -155,6 +195,7 @@ function newest(role: Role, writes: RoleWrites): Role {
     writes.update.data,
     writes.setGrant.data,
     writes.move.data,
+    writes.restoreGrants.data,
   ].reduce<Role>(
     (best, answer) =>
       answer?.key === best.key && answer.version > best.version ? answer : best,

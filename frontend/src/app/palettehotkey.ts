@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useCallback, useState } from "react";
-import { liveDialogs } from "../design-system/dialogfocus";
-import { screenEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
+import { screenEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
+import { layerIsOpen } from "../lib/keyguard";
+import { useClosesWithPage } from "../lib/pageleave";
 import { navigateReplacing, type Route } from "../lib/router";
 import { useShortcutHandler } from "../lib/shortcuts";
 import { currentParams } from "../lib/urlstate";
@@ -22,12 +23,12 @@ export function usePaletteShortcuts(
   hide: () => void,
   route: Route,
 ): void {
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   useShortcutHandler("search", () => {
-    // An open dialog makes the app unreachable; only the palette's own layer may close it.
+    // An open dialog or menu makes the app unreachable; only the palette's own layer may close it.
     if (open) {
       hide();
-    } else if (liveDialogs().length === 0) {
+    } else if (!layerIsOpen(document.activeElement)) {
       show("all");
     }
   });
@@ -49,16 +50,27 @@ export function usePaletteShortcuts(
   });
 }
 
-/** The palette's state with its keys bound. `open` is null until first asked,
- *  so the palette's code loads only then. */
-export function useCommandPalette(route: Route) {
+/** The palette's state with its keys bound; its code loads on first ask. While
+ *  `available` is false it stays shut: every place it lists leads back. */
+export function useCommandPalette(route: Route, available = true) {
   const [open, setOpen] = useState<boolean | null>(null);
   const [mode, setMode] = useState<PaletteMode>("all");
-  const show = useCallback((next: PaletteMode) => {
-    setMode(next);
-    setOpen(true);
-  }, []);
+  const show = useCallback(
+    (next: PaletteMode) => {
+      if (!available) {
+        return;
+      }
+      setMode(next);
+      setOpen(true);
+    },
+    [available],
+  );
   const hide = useCallback(() => setOpen(false), []);
+  // Shut, not hidden, so it does not come back once setup lets the reader go.
+  if (!available && open === true) {
+    setOpen(false);
+  }
   usePaletteShortcuts(open === true, show, hide, route);
+  useClosesWithPage({ open: open === true, close: hide });
   return { open, mode, show, hide };
 }

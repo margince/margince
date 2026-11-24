@@ -156,7 +156,7 @@ func (h Handlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, httperr.Validation("token", "required", "the reset token is required"))
 		return
 	}
-	if err := passwordLengthError("new_password", req.NewPassword); err != nil {
+	if err := passwordRuleError("new_password", req.NewPassword); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -264,6 +264,9 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		if lookupErr != nil {
 			return lookupErr
 		}
+		if err := s.rejectEmailPassword(ctx, tx, userID, "new_password", newPassword); err != nil {
+			return err
+		}
 		// The reset also clears the §27 lockout state: the account owner
 		// just proved control of the mailbox, which outranks a stale
 		// brute-force streak. Zero rows means the account was archived or
@@ -313,6 +316,9 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		}
 		if tag.RowsAffected() != 1 {
 			return apperrors.ErrNotFound
+		}
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE auth_token SET used_at = now() WHERE id = $1`, tokenID); err != nil {
@@ -385,7 +391,7 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	// hand here it counted BYTES while saying "characters", so a short
 	// multi-byte password cleared a floor it was under — and it had no ceiling
 	// at all, which the KDF does care about.
-	if err := passwordLengthError("new_password", newPassword); err != nil {
+	if err := passwordRuleError("new_password", newPassword); err != nil {
 		return fmt.Errorf("identity: %w", err)
 	}
 	hash, err := password.Hash(newPassword)
@@ -394,11 +400,12 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	}
 	var userID ids.UserID
 	var isAgent bool
+	var storedEmail string
 	lookupErr := tx.QueryRow(ctx,
-		`SELECT u.id, u.is_agent FROM app_user u
+		`SELECT u.id, u.is_agent, u.email FROM app_user u
 		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$2")+` AND u.archived_at IS NULL
 		 `+storekit.SeatLoginPrefersTypedSQL("u", "$1"),
-		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &isAgent)
+		typedLoginAddress(email), owndomain.OfAddress(email)).Scan(&userID, &isAgent, &storedEmail)
 	if errors.Is(lookupErr, pgx.ErrNoRows) {
 		return fmt.Errorf("identity: no user with email %q", email)
 	}
@@ -426,6 +433,9 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	// permits an agent to hold a password; the product simply never writes one.
 	if isAgent {
 		return fmt.Errorf("identity: %q is an agent identity, which has no password to reset", email)
+	}
+	if err := passwordEmailError("new_password", newPassword, storedEmail); err != nil {
+		return fmt.Errorf("identity: %w", err)
 	}
 	// An operator-chosen password is exactly the state the forced rotation
 	// exists for: the subject did not pick this credential and the operator

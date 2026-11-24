@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -60,6 +61,10 @@ func (a reportingAuthority) visibleFacts(ctx context.Context, tx pgx.Tx, owners 
 		}
 		visible[key] = allowed
 	}
+	leads, err := a.visibleSourceLeads(ctx, tx, facts)
+	if err != nil {
+		return nil, false, err
+	}
 	out := make([]reporting.Fact, 0, len(facts))
 	projections := []reporting.Fact{}
 	withheld := false
@@ -68,7 +73,7 @@ func (a reportingAuthority) visibleFacts(ctx context.Context, tx pgx.Tx, owners 
 			projections = append(projections, fact)
 			continue
 		}
-		if !visible[factVisibilityKey(fact)][fact.SourceID] {
+		if !visible[factVisibilityKey(fact)][fact.SourceID] || !leadAdmits(fact, leads) {
 			withheld = true
 			continue
 		}
@@ -77,13 +82,36 @@ func (a reportingAuthority) visibleFacts(ctx context.Context, tx pgx.Tx, owners 
 	return a.visibleForecastProjections(ctx, tx, out, projections, withheld || lone)
 }
 
+// visibleSourceLeads answers, per metric, which of the leads that facts were
+// derived from this reader may see. A company fact is as visible as the lead
+// behind it, as it is on a live evaluation.
+func (reportingAuthority) visibleSourceLeads(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) (map[crmcontracts.ReportingMetricID]map[ids.UUID]bool, error) {
+	via := map[crmcontracts.ReportingMetricID][]ids.UUID{}
+	for _, fact := range facts {
+		if fact.ViaID != nil {
+			via[fact.Metric] = append(via[fact.Metric], *fact.ViaID)
+		}
+	}
+	out := map[crmcontracts.ReportingMetricID]map[ids.UUID]bool{}
+	for metric, leads := range via {
+		allowed, err := reportingVisibleSources(ctx, tx, reportingVisibilityKey{table: string(recordTypeLead), metric: metric}, leads)
+		if err != nil {
+			return nil, err
+		}
+		out[metric] = allowed
+	}
+	return out, nil
+}
+
 func reportingVisibleSources(ctx context.Context, tx pgx.Tx, key reportingVisibilityKey, sourceIDs []ids.UUID) (map[ids.UUID]bool, error) {
 	out := map[ids.UUID]bool{}
 	object := key.table
 	switch key.table {
-	case string(recordTypeDeal), string(recordTypeActivity):
+	case string(recordTypeDeal), string(recordTypeActivity), string(recordTypeLead), string(recordTypeCompany):
 	case "sdr_handoff":
 		object = reportingCreditObject
+	case introductions.Table:
+		object = introductions.Object
 	default:
 		return nil, apperrors.ErrInvalidArgument
 	}
@@ -136,8 +164,10 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 	switch key.table {
 	case string(recordTypeActivity):
 		clause, err = auth.ActivityContentClause(ctx, "source", b.arg)
-	case string(recordTypeDeal):
+	case string(recordTypeDeal), string(recordTypeLead), string(recordTypeCompany):
 		clause, err = auth.ScopeClauseFor(ctx, key.table, "source", b.arg)
+	case introductions.Table:
+		clause, err = introductions.ReadableSQL(ctx, "source", b.arg)
 	}
 	if err != nil {
 		return "", err
@@ -151,6 +181,17 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 			return "", err
 		}
 		clause += " AND " + fields
+	}
+	if key.table == string(recordTypeLead) || key.table == string(recordTypeCompany) {
+		fields := reportingLeadFields(key.metric)
+		if key.table == string(recordTypeCompany) {
+			fields = []string{companyDisplayName}
+		}
+		scoped, _, err := reportingFieldScope(ctx, key.table, "source", fields, b)
+		if err != nil {
+			return "", err
+		}
+		clause += " AND " + scoped
 	}
 	if key.table == string(recordTypeActivity) {
 		fields, _, err := reportingFieldScope(ctx, string(recordTypeActivity), "source", reportingMeetingFields(), b)
@@ -182,4 +223,13 @@ func markOwnerWithheld(owners reporting.MeasurableOwners, facts []reporting.Fact
 	for i := range facts {
 		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !owners.Includes(facts[i].OwnerID)
 	}
+}
+
+// leadAdmits holds a lead-derived fact to the lead it came from. A company
+// fact of account progression with no lead recorded fails closed.
+func leadAdmits(fact reporting.Fact, leads map[crmcontracts.ReportingMetricID]map[ids.UUID]bool) bool {
+	if fact.ViaID == nil {
+		return fact.Metric != reportingAccountProgression || fact.SourceType != string(recordTypeCompany)
+	}
+	return leads[fact.Metric][*fact.ViaID]
 }

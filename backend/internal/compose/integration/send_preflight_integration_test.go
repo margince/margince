@@ -87,11 +87,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(apptest.DiscardingMailer{})}, extra...)
-	// A marketing send derives a one-click unsubscribe link and refuses
-	// without a boot-configured base to build it from, so the fixture
-	// carries one — an install that can send at all has one.
-	opts = append(opts, compose.WithPublicBaseURL(preflightBaseURL))
+	opts := append([]compose.Option{compose.WithKeyvault(vault), compose.WithOperatorMail(apptest.DiscardingMailer{}), compose.WithPublicBaseURL(preflightBaseURL)}, extra...)
 	e := apptest.SetupAppWithOptions(t, opts...)
 	// This suite composes its OWN vault (a real local one, because the
 	// pre-flight it is about needs a credential custodian), and WithKeyvault
@@ -235,9 +231,9 @@ func (p *preflightEnv) connect(t *testing.T, providerScopes ...string) {
 	t.Helper()
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
-			INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes)
-			VALUES ('gmail', $1, '{}', 'connected', $2, $3)
-			ON CONFLICT (user_id, provider)
+			INSERT INTO capture_connection (provider, user_id, status, auth, provider_scopes)
+			VALUES ('gmail', $1, 'connected', $2, $3)
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL
 			DO UPDATE SET status = 'connected', provider_scopes = EXCLUDED.provider_scopes`,
 			p.user, []byte(`{"refresh_token":"r","granted":[]}`), providerScopes)
 		return err
@@ -252,11 +248,11 @@ func TestSendRefusesWhenNoMailboxIsConnected(t *testing.T) {
 
 	status, code, detail := p.send(t)
 
-	if status != http.StatusUnprocessableEntity || code != "mailbox_not_send_capable" {
-		t.Fatalf("send with no connected mailbox → %d %q, want 422 mailbox_not_send_capable", status, code)
+	if status != http.StatusUnprocessableEntity || code != "mailbox_not_connected" {
+		t.Fatalf("send with no connected mailbox → %d %q, want 422 mailbox_not_connected", status, code)
 	}
-	if !strings.Contains(detail, "reconnect") {
-		t.Fatalf("refusal detail %q does not tell the user what to do about it", detail)
+	if strings.Contains(detail, "reconnect") {
+		t.Fatalf("refusal detail %q sends the user to reconnect a mailbox they never connected", detail)
 	}
 	if n := p.stagedDeliveries(t); n != 0 {
 		t.Fatalf("%d deliveries staged behind a refused send, want 0", n)

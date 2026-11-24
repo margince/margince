@@ -52,9 +52,9 @@ export function revealOnceMounted(anchor: string, frames = 30): void {
 }
 
 /**
- * Takes the reader back to the top of the page pane, smoothly: for a tab
- * strip stuck under the top bar, where a reader deep in one tab's body
- * chooses another and would otherwise land part-way down the new one.
+ * Takes the reader back to the top of the page pane, smoothly. A door in one
+ * tab's body that opens another tab uses it, so the reader does not land
+ * part-way down the new one.
  *
  * `.scroll` is the shell's one scrolling pane (app/shell.css); the window
  * itself never scrolls. Motion follows the reader's own setting: a reduced-
@@ -63,6 +63,38 @@ export function revealOnceMounted(anchor: string, frames = 30): void {
 export function scrollPageToTop(): void {
   const pane = document.querySelector(".scroll");
   pane?.scrollTo?.({ top: 0, behavior: scrollBehavior() });
+}
+
+/**
+ * How far below the top bar `strip` stands in its page pane, and that pane.
+ * A strip above the screen counts as standing right under the bar.
+ */
+export function stripPlace(
+  strip: HTMLElement,
+): { pane: HTMLElement; below: number } | null {
+  const pane = strip.closest<HTMLElement>(".scroll");
+  if (!pane) return null;
+  const below = strip.getBoundingClientRect().top - visibleTop(pane);
+  return { pane, below: Math.max(0, below) };
+}
+
+/** The pane offset that stands `strip` `below` px under the top bar. */
+export function offsetShowingStrip(
+  pane: HTMLElement,
+  strip: HTMLElement,
+  below: number,
+): number {
+  const shift = strip.getBoundingClientRect().top - visibleTop(pane) - below;
+  return Math.max(0, pane.scrollTop + shift);
+}
+
+function visibleTop(pane: HTMLElement): number {
+  // The pane runs up behind the top bar by the bar's height (app/shell.css).
+  const underBar = Math.max(
+    0,
+    -Number.parseFloat(getComputedStyle(pane).marginTop) || 0,
+  );
+  return pane.getBoundingClientRect().top + underBar;
 }
 
 // Motion follows the reader's own setting: a reduced-motion preference makes

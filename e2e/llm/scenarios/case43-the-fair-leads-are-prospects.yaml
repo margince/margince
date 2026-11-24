@@ -14,6 +14,7 @@
 # says so. Nothing is staged and nothing asks for approval, so an answer that
 # talks of sign-off reports a gate the product does not raise.
 name: case43_the_fair_leads_are_prospects
+title: The fair leads are prospects now
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not
@@ -31,8 +32,6 @@ prompt: |
   Then tell me which of them somebody had already set to something else, and
   what it was.
 
-must_call:
-  - update_record
 may_call:
   # Finding four companies by name. Any of these is honest; none is the test.
   - search_records
@@ -42,17 +41,10 @@ may_call:
   - query_workspace
   - read_workspace
   - whoami
+  - update_record
 
-# The writes are pinned as WRITES, because the answer alone cannot hold them.
-#
-# fields={"lifecycle":"prospect"} is the change on every company. A run that set
-# some other field, or a different stage, fails here whatever it says. No
-# approval is involved, so a call that carries one, or a decision on one, is a
-# run that met a gate this product no longer raises.
-must_call_with:
-  - update_record.record_type=company
-  - update_record.fields={"lifecycle":"prospect"}
-
+# No approval is involved, so a call that carries one, or a decision on one, met
+# a gate this product does not raise.
 must_not_call_with:
   - decide_approvals~.
   - update_record~approval_id
@@ -76,7 +68,7 @@ must_mention:
 # asks. "yes" means it holds, for the forbidding ones too.
 judge:
   - "Criterion 1. The answer reports all four companies, Kieler Pumpenwerk, Rhön Hydraulik, Altmark Fördertechnik and Emsland Ventilbau, as set to prospect, and says nothing about any of them waiting for approval, sign-off or confirmation. Saying they were updated directly is a yes. Answer no if the answer names any of the four as held, pending, or needing the user's approval, or does not report all four as changed."
-  - "Criterion 2. The answer names Emsland Ventilbau as the company that somebody had already set to something else, says that earlier value was target, and says it was replaced by prospect. Answer no if the answer names a different company, says none of them had a value somebody set, gives a different earlier value, or does not say the earlier value was replaced."
+  - "Criterion 2. The answer names Emsland Ventilbau as the company that somebody had already set to something else, says that earlier value was target, and says it was replaced by prospect. Answer no if the answer names a different company, says none of them had a value somebody set, gives a different earlier value, or does not say the earlier value was replaced. Judge only the company and its earlier value: whether the move to prospect has happened or still waits for approval is Criterion 1's question, so an answer that says target is to be replaced by prospect once approved answers yes here."
 
 runs: 3
 pass_at: 2

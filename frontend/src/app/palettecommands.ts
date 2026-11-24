@@ -8,15 +8,16 @@ import { settingsPageKeywords } from "../features/settings/settingssearch";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCompanyContextShown } from "../lib/companycontextreach";
-import { screenEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
+import { screenEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
+import { useReadsTeamProgress } from "../lib/progressreader";
 import { settingsHref } from "../lib/settingsrouting";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
-import { CREATE_ID, CREATE_SCREENS, NAV } from "./nav";
+import { CREATE_ID, CREATE_SCREENS, NAV, navLabelKey } from "./nav";
 import type { Command } from "./palette";
 import { settingsCommandId } from "./paletteconfiguration";
 
@@ -35,11 +36,13 @@ export function useBuiltinCommands(): Command[] {
   const visible = useVisibleSettingsPages();
   const seesCompanyContext = useCompanyContextShown();
   const opensTab = useOpensSettingsTab();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
+  const readsTeam = useReadsTeamProgress();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
-      label: t(item.labelKey),
+      label: t(navLabelKey(item, readsTeam) ?? item.labelKey),
+      icon: item.icon,
       keywords: [item.screen, ...(item.aliases ?? [])],
       type: "screen",
       route: { screen: item.screen },
@@ -70,6 +73,13 @@ export function useBuiltinCommands(): Command[] {
         label: t("action.booking"),
         type: "action",
         route: { screen: "book" },
+      },
+      {
+        id: "action:shortcuts",
+        label: t("shell.help.shortcuts"),
+        keywords: ["shortcuts", "keyboard", "hotkeys", "help"],
+        type: "action",
+        presses: "shortcuts",
       },
     ];
     const settingsScreens: Command[] = visible.map((page) => ({
@@ -104,5 +114,5 @@ export function useBuiltinCommands(): Command[] {
       (command) =>
         !command.route || screenEnabled(command.route.screen, disabled),
     );
-  }, [t, visible, locale, seesCompanyContext, opensTab, disabled]);
+  }, [t, visible, locale, seesCompanyContext, opensTab, disabled, readsTeam]);
 }

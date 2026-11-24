@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -187,7 +188,7 @@ func (s *Store) UpdateForm(ctx context.Context, id ids.UUID, in UpdateInput) (Fo
 }
 
 func (s *Store) writeFormUpdate(ctx context.Context, id ids.UUID, in UpdateInput) (Form, error) {
-	if err := refuseAgentSecretChange(ctx, in); err != nil {
+	if err := refuseAgentSecret(ctx, in.SenderSecret != nil || slices.Contains(in.Clear, fieldSenderSecret)); err != nil {
 		return Form{}, err
 	}
 	newRef, err := s.replacementSecret(ctx, id, in.SenderSecret)
@@ -355,8 +356,8 @@ func (s *Store) RotateSecret(ctx context.Context, id ids.UUID) (Form, string, er
 	return out, secret, nil
 }
 
-// ArchiveForm retires a form: its address answers 404 from then on, and its
-// secret is destroyed, since nothing can verify against it again.
+// ArchiveForm retires a form: its address answers 404 and its handling plan is
+// switched off. Its secret is destroyed, since nothing can verify against it again.
 func (s *Store) ArchiveForm(ctx context.Context, id ids.UUID) (Form, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionDelete); err != nil {
 		return Form{}, err
@@ -378,17 +379,23 @@ func (s *Store) retireForm(ctx context.Context, id ids.UUID) (Form, error) {
 		return Form{}, err
 	}
 	var out Form
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		out, err = scanForm(tx.QueryRow(ctx,
-			"UPDATE web_form SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+formColumns, id))
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		} else if err != nil {
+	err := database.WithWorkspaceWriteTx(ctx, s.db.Pool(), func(bound context.Context) error {
+		err := s.db.Tx(bound, func(tx pgx.Tx) error {
+			var err error
+			out, err = scanForm(tx.QueryRow(bound,
+				"UPDATE web_form SET archived_at = now() WHERE id = $1 AND archived_at IS NULL RETURNING "+formColumns, id))
+			if errors.Is(err, pgx.ErrNoRows) {
+				return apperrors.ErrNotFound
+			} else if err != nil {
+				return err
+			}
+			_, err = storekit.Audit(bound, tx, "archive", auditEntity, id, nil, nil)
+			return err
+		})
+		if err != nil || out.HandlingAutomationID == nil || s.settings == nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "archive", auditEntity, id, nil, nil)
-		return err
+		return s.settings.SwitchOff(bound, *out.HandlingAutomationID)
 	})
 	if err != nil {
 		return Form{}, err
@@ -399,27 +406,29 @@ func (s *Store) retireForm(ctx context.Context, id ids.UUID) (Form, error) {
 
 const fieldSenderSecret = "sender_secret"
 
-// refuseAgentSecretChange keeps a form's secret with a user. An agent may change
-// the rest of a form, but a secret it chose would let it post leads as that form.
-func refuseAgentSecretChange(ctx context.Context, in UpdateInput) error {
+// actingAgent reports whether an agent makes this call. A form's secret and its
+// promises stay with a user, whichever door the agent comes through.
+func actingAgent(ctx context.Context) bool {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalAgent {
+	return ok && actor.Type == principal.PrincipalAgent
+}
+
+// refuseAgentSecret keeps a form's secret with a user. An agent may set up the
+// rest of a form, but a secret it chose would let it post leads as that form.
+func refuseAgentSecret(ctx context.Context, setsSecret bool) error {
+	if !setsSecret || !actingAgent(ctx) {
 		return nil
 	}
-	if in.SenderSecret != nil || slices.Contains(in.Clear, fieldSenderSecret) {
-		return &httperr.DetailedError{
-			Status: http.StatusForbidden, Code: "agent_sets_no_form_secret",
-			Detail: "an agent does not set or clear a form's secret; ask the user to do it in the app",
-		}
+	return &httperr.DetailedError{
+		Status: http.StatusForbidden, Code: "agent_sets_no_form_secret",
+		Detail: "an agent does not set or clear a form's secret; ask the user to do it in the app",
 	}
-	return nil
 }
 
 // refuseAgentPromiseChange keeps with a user what a form promises a visitor and
 // where it takes posts from. Each has legal weight, or lets a site post leads.
 func refuseAgentPromiseChange(ctx context.Context, current, next Form) error {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalAgent {
+	if !actingAgent(ctx) {
 		return nil
 	}
 	same := sameOrigins(current.AllowedOrigins, next.AllowedOrigins) &&

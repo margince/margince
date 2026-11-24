@@ -14,6 +14,7 @@ import { QueryGate } from "../../design-system/querystates";
 import {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
+  formatAnalyticsPercentPoints,
 } from "../../format/format";
 import {
   type Locale,
@@ -22,7 +23,10 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
-import { usePipelines } from "../../lib/pipelines.queries";
+import type { MessageKey } from "../../i18n/en";
+import { signalSentence } from "../../lib/forecastsignals";
+import { valueFor } from "../../lib/labelfor";
+import { stageNames, usePipelines } from "../../lib/pipelines.queries";
 import type { AnalyticsScope } from "./analytics.context";
 import {
   type ForecastContribution,
@@ -30,12 +34,8 @@ import {
   type ForecastReadings,
   useForecastContributions,
 } from "./forecast.queries";
-import { signalSentence } from "./forecast.signals";
 
 type T = ReturnType<typeof useT>;
-
-const percent = (value: number, locale: Locale) =>
-  `${formatAnalyticsNumber(value, locale)}%`;
 
 /** One line that says how a deal's weight was made. */
 export function chanceExplanation(
@@ -46,7 +46,10 @@ export function chanceExplanation(
 ): string {
   const parts = [
     t("forecast.deals.typed", {
-      percent: percent(row.typed_probability ?? row.chance_in_use, locale),
+      percent: formatAnalyticsPercentPoints(
+        row.typed_probability ?? row.chance_in_use,
+        locale,
+      ),
     }),
   ];
   // Evidence stops at the start of today, so a deal closed today counts tomorrow.
@@ -60,16 +63,55 @@ export function chanceExplanation(
     );
   }
   parts.push(
-    t("forecast.deals.uses", { percent: percent(row.chance_in_use, locale) }),
+    t("forecast.deals.uses", {
+      percent: formatAnalyticsPercentPoints(row.chance_in_use, locale),
+    }),
   );
   if (row.applied_probability !== row.chance_in_use) {
     parts.push(
       t("forecast.deals.afterRisk", {
-        percent: percent(row.applied_probability, locale),
+        percent: formatAnalyticsPercentPoints(row.applied_probability, locale),
       }),
     );
   }
   return parts.join(" · ");
+}
+
+const EXCLUSION_WORD: Readonly<
+  Record<NonNullable<ForecastContribution["exclusion_reason"]>, MessageKey>
+> = {
+  unpriced: "analytics.forecastNoAmount",
+  fx_missing: "forecast.fxMissing",
+};
+
+// A masked deal, or a reason this build does not know, keeps the absent figure.
+function exclusionWord(row: ForecastContribution): MessageKey | undefined {
+  return row.exclusion_reason
+    ? valueFor(EXCLUSION_WORD, row.exclusion_reason, undefined)
+    : undefined;
+}
+
+function amountCell(
+  row: ForecastContribution,
+  currency: string,
+  { t, locale }: Words,
+): string {
+  const word = exclusionWord(row);
+  if (word) return t(word);
+  return formatAnalyticsMoneyOrAbsent(row.base_minor ?? null, currency, locale);
+}
+
+// An excluded deal adds nothing, which is not the same as adding zero.
+function weightedCell(
+  row: ForecastContribution,
+  currency: string,
+  locale: Locale,
+): string {
+  return formatAnalyticsMoneyOrAbsent(
+    row.exclusion_reason ? null : row.weighted_minor,
+    currency,
+    locale,
+  );
 }
 
 type Words = Readonly<{
@@ -115,31 +157,24 @@ function dealColumns(
       key: "amount",
       header: t("forecast.deals.colAmount"),
       align: "end",
-      render: (row) =>
-        formatAnalyticsMoneyOrAbsent(row.base_minor ?? null, currency, locale),
+      render: (row) => amountCell(row, currency, words),
+      // The reason reads on its own, without the column name before it.
       folded: (row) =>
-        t("forecast.deals.foldedAmount", {
-          amount: formatAnalyticsMoneyOrAbsent(
-            row.base_minor ?? null,
-            currency,
-            locale,
-          ),
-        }),
+        exclusionWord(row)
+          ? undefined
+          : t("forecast.deals.foldedAmount", {
+              amount: amountCell(row, currency, words),
+            }),
     },
     {
       key: "weighted",
       header: t("forecast.deals.colWeighted"),
       align: "end",
       fold: "end",
-      render: (row) =>
-        formatAnalyticsMoneyOrAbsent(row.weighted_minor, currency, locale),
+      render: (row) => weightedCell(row, currency, locale),
       folded: (row) =>
         t("forecast.deals.foldedWeighted", {
-          amount: formatAnalyticsMoneyOrAbsent(
-            row.weighted_minor,
-            currency,
-            locale,
-          ),
+          amount: weightedCell(row, currency, locale),
         }),
     },
   ];
@@ -165,11 +200,7 @@ export function ForecastDeals({
   const { locale } = useLocale();
   const contributions = useForecastContributions(scope, period);
   const pipelines = usePipelines();
-  const stages = new Map(
-    (pipelines.data ?? []).flatMap((pipeline) =>
-      (pipeline.stages ?? []).map((stage) => [stage.id, stage.name] as const),
-    ),
-  );
+  const stages = stageNames(pipelines.data ?? []);
   const words: Words = {
     t,
     plural,

@@ -11,6 +11,7 @@ import { useLocale, useT } from "../../i18n";
 import { useProviderLabel } from "../../lib/channelproviders";
 import { valueFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
+import { FilingLine } from "./capture-filing";
 
 // Settings › Capture activity: one row per message in the window, each opening
 // the trace drawer that shows every step the pipeline took with it.
@@ -21,6 +22,7 @@ type TraceEntry = components["schemas"]["CaptureTraceEntry"];
 // to the key itself, so a reason outside the set renders nothing.
 const REASONS = [
   "internal_only",
+  "own_addresses_only",
   "deferral_capped",
   "noise_prior",
   "decided_prior",
@@ -202,6 +204,11 @@ function EntryOutcome({ entry }: Readonly<{ entry: TraceEntry }>) {
         />
       )}
       {caption && <span className="t-caption">{caption}</span>}
+      {entry.filing && (
+        <span className="t-caption">
+          <FilingLine filing={entry.filing} />
+        </span>
+      )}
     </CellStack>
   );
 }

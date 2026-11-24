@@ -16,6 +16,7 @@ var syntheticAuditFields = setOf(
 	"commitment_evidence_unavailable", "communication_basis", "confirm_submission",
 	"consent_records_carried", "corrected", "decided_by_level", "disposition", "domain", "filled",
 	"guest_answers_changed", "guest_links_added", "guests_added", "guests_left_out", "guests_retired",
+	"impersonation_warning_carried", "impersonation_warning_cleared",
 	"invitation_status", "legal_entity_id", "lifted_by", "lifted_by_level", "lifted_suppression",
 	"link_suggestion",
 	"meeting_documents_added", "meeting_guests_removed", "merged_from_id", "merged_into_id", "note",
@@ -51,12 +52,16 @@ var internalColumns = map[string]map[string]bool{
 	typeDeal: setOf(
 		"amount_minor_base", "arr_source_offer_id", "close_date_provisional", "closed_at",
 		"commercial_mode", "commercial_revision", "lost_reason_basis", "lost_reason_code",
+		"manager_request_reasons", "manager_requested_at", "manager_requested_by",
 		"pipeline_id", "priority_rank", "win_probability_set_by",
 		"won_without_contract_detail", "won_without_contract_reason",
 	),
 	typeContact: setOf(
 		"anonymized_address_hashes", "anonymized_address_key_id", "converted_from_lead_id", "created_from_activity_id",
-		"photo_object_key", "photo_origin", "relationship_mark_set_by",
+		"photo_object_key", "photo_origin", "quarantine_cleared_at", "quarantine_cleared_by", "quarantine_reason",
+		"relationship_mark_set_by",
+		"strength_folded", "strength_last_engaged_at", "strength_last_inbound_at", "strength_last_inbound_day",
+		"strength_last_interaction_at", "strength_last_outbound_at", "strength_last_outbound_day",
 	),
 	typeCompany: setOf(
 		"geocode_input_hash", "geocode_lat", "geocode_lon", "geocode_provider", "geocode_status",
@@ -65,7 +70,7 @@ var internalColumns = map[string]map[string]bool{
 	),
 	typeLead: setOf(
 		"arrival_owner_id", "company_id", "disqualify_note", "disqualify_reason_id",
-		"email_domain_folded", "first_response_at", "from_contact_id", "partner_accepted_at",
+		"email_domain_folded", "first_response_at", "first_response_marked_by", "from_contact_id", "partner_accepted_at",
 		"partner_accepted_by", "promoted_at", "promoted_contact_id", "qualified_deal_id", "routed_at",
 		"score_computed", "sla_breached_at", "status_set_by",
 	),
@@ -79,7 +84,7 @@ var internalColumns = map[string]map[string]bool{
 		"direction", "domain_evidence_version",
 		// The chosen local clocks surface as the due, remind and meeting intent objects.
 		"due_wall", "due_zone", "meeting_wall", "meeting_zone", "remind_wall", "remind_zone",
-		"done_at", "duration_seconds", "foreign_link", "has_calendar_part", "host_user_id",
+		"done_at", "duration_seconds", "foreign_link", "forwarded_to_self", "has_calendar_part", "host_user_id",
 		"inbound_sender_authenticated", "internal_mail_authorization", "invitation_sender", "kind",
 		"language", "legal_entity_id", "origin", "owed_ask", "owed_verdict_at", "owed_verdict_declined_at",
 		"owed_verdict_declined_ruleset", "raw", "raw_capture_id", "redacted_fields", "reply_settled_at", "reply_verdict_at",

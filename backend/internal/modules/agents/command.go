@@ -117,7 +117,7 @@ func DynamicTierInput(ctx context.Context, call GovernedCall, args json.RawMessa
 	dynamic, ok := call.(dynamicTierCall)
 	if !ok {
 		return mcp.TierResolverInput{}, fmt.Errorf(
-			"crmagents: this call resolves no invocation-time tier, so nothing can say whether it needs a "+
+			"this call resolves no invocation-time tier, so nothing can say whether it needs a "+
 				"human: %w", apperrors.ErrPermissionDenied)
 	}
 	return dynamic.tierInput(ctx, args)

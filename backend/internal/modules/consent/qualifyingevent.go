@@ -44,6 +44,9 @@ const kindInPerson = "in_person"
 // word is what stops the form and the store disagreeing about what was written.
 const KindRequestedBySubject = "requested_by_subject"
 
+// kindInboundMessage is the event derived from mail the contact wrote to us.
+const kindInboundMessage = "inbound_message"
+
 // handRecordedKinds are the kinds a user or their agent may assert. Every other kind is
 // derived from records, and a hand-written one would be a second, unbacked
 // answer to a question the data already settles.
@@ -444,5 +447,5 @@ func (e *InvalidQualifyingEventError) Error() string { return e.Field + ": " + e
 // FieldFault carries the verdict to every surface, as this module's other
 // refusals do.
 func (e *InvalidQualifyingEventError) FieldFault() (field, code, message string) {
-	return e.Field, "invalid", e.Reason
+	return e.Field, codeInvalid, e.Reason
 }

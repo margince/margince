@@ -31,9 +31,16 @@ type DealCandidates interface {
 	// OpenDealsWithStakeholders is the company's open deals on which one of
 	// contacts is a stakeholder.
 	OpenDealsWithStakeholders(ctx context.Context, tx pgx.Tx, companyID ids.UUID, contacts []ids.UUID) ([]ids.UUID, error)
+	// OpenDealsOfStakeholders is up to limit open deals, at any company, on
+	// which one of contacts is a stakeholder.
+	OpenDealsOfStakeholders(ctx context.Context, tx pgx.Tx, contacts []ids.UUID, limit int) ([]ids.UUID, error)
 	// OpenDealsOfCompanyUpTo is up to limit open deals of one company, the
 	// candidates a topic check weighs for an ambiguous mail.
 	OpenDealsOfCompanyUpTo(ctx context.Context, tx pgx.Tx, companyID ids.UUID, limit int) ([]ids.UUID, error)
+	// IsOpenDealOfCompanies and IsOpenDealOfProject answer membership, which
+	// the two-id reads above cannot: a deal is open on the company whatever its id.
+	IsOpenDealOfCompanies(ctx context.Context, tx pgx.Tx, deal ids.UUID, companies []ids.UUID) (bool, error)
+	IsOpenDealOfProject(ctx context.Context, tx pgx.Tx, deal, project ids.UUID) (bool, error)
 }
 
 // WhichDeal is a mail the rule could not place on one deal of the company or
@@ -44,6 +51,9 @@ type WhichDeal struct {
 	// came from a project with several open deals.
 	CompanyID ids.UUID
 	ProjectID ids.UUID
+	// StakeholderIDs are the mail's contacts when the question came from their
+	// seats on deals at other companies; CompanyID is then zero.
+	StakeholderIDs []ids.UUID
 }
 
 // AskWhichDeal raises the one disambiguation for a mail, in the rule's
@@ -59,6 +69,8 @@ type DealAttribution struct {
 	Ask        AskWhichDeal
 	Filer      DealFiler
 	Check      DealTopicCheck
+	// Hooks are the extension hooks. The zero value is none.
+	Hooks MailHooks
 }
 
 // WithDealAttribution returns a copy that files captured mail under its deal.
@@ -80,17 +92,24 @@ const (
 	DealNone             DealOutcome = "none"
 	DealAmbiguous        DealOutcome = "ambiguous"
 	DealConflictingFirms DealOutcome = "conflicting_companies"
+	// DealHookFailed is a mail an extension hook failed on. It decided nothing,
+	// so no link is written or taken back and a later pass asks again.
+	DealHookFailed DealOutcome = "hook_failed"
 )
 
 // DealVerdict is the rule's answer. Deal is set only for DealLinked, and
 // Question only for DealAmbiguous. Basis is the rung that decided, and
-// Candidates the deals a topic check weighs for a suggestion.
+// Candidates the deals a topic check weighs for a suggestion. Relevance is the
+// topic check's mark on a deal it confirmed, empty when no check answered.
 type DealVerdict struct {
 	Outcome    DealOutcome
 	Deal       ids.UUID
 	Question   WhichDeal
 	Basis      DealBasis
 	Candidates []ids.UUID
+	// Hooks are the extension changes behind this verdict, for the record.
+	Hooks     []HookChange
+	Relevance string
 }
 
 // dealFiling is who decides and who writes. Live capture is both. The repair
@@ -100,7 +119,10 @@ type dealFiling struct {
 	decider, writer context.Context
 	evidence        map[string]any
 	filer           DealFiler
+	hooks           MailHooks
 	topic           *dealTopicState
+	// admit is one closed deal the filing may still write to; zero for none.
+	admit ids.UUID
 }
 
 // fileOnDeal locks the activity row first, as the human relink locks it
@@ -110,12 +132,20 @@ type dealFiling struct {
 // A suggested deal still to be checked comes back as a question and writes
 // nothing; the caller asks it and files again (checkedFiling).
 func fileOnDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, candidates DealCandidates, ask AskWhichDeal) (DealVerdict, *topicQuestion, error) {
+	verdict, question, err := fileOnDealRule(f, tx, activityID, candidates, ask)
+	if err == nil && question == nil {
+		err = recordFiling(f.writer, tx, activityID, verdict, "")
+	}
+	return verdict, question, err
+}
+
+func fileOnDealRule(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, candidates DealCandidates, ask AskWhichDeal) (DealVerdict, *topicQuestion, error) {
 	if live, err := lockForDeal(f.writer, tx, activityID); err != nil || !live {
 		return DealVerdict{Outcome: DealNone}, nil, err
 	}
-	facts, err := readDealFacts(f.decider, tx, activityID, false)
+	facts, err := readDealFacts(f.decider, tx, activityID, false, f.hooks)
 	if err != nil || facts.outcome != "" {
-		return DealVerdict{Outcome: facts.outcome}, nil, err
+		return DealVerdict{Outcome: facts.outcome, Hooks: facts.hooks}, nil, err
 	}
 	verdict, question, err := decideFiling(f, tx, facts, candidates)
 	if err != nil || question != nil {

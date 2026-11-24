@@ -10,6 +10,7 @@ import { ErrorLine } from "../../../design-system/errorline";
 import { formatNumber } from "../../../format/format";
 import { useLocale, usePlural, useT } from "../../../i18n";
 import { unwrap } from "../../../lib/problem";
+import { lastReadFailed } from "../readfailed";
 
 /**
  * useContactCaptureGaps reads the colleagues who are on a contact's threads
@@ -26,6 +27,17 @@ function useContactCaptureGaps(id: string) {
 }
 
 /**
+ * Whether CaptureGapsNotice draws anything, for a host that must not frame
+ * nothing. It reads the notice's own query, so it asks the server nothing new.
+ */
+export function useCaptureGapsShown(contactId: string): boolean {
+  const network = useContactCaptureGaps(contactId);
+  return (
+    lastReadFailed(network) || (network.data?.capture_gaps ?? []).length > 0
+  );
+}
+
+/**
  * CaptureGapsNotice says that later mail may be missing because a colleague on
  * the threads has not connected a mailbox. It draws nothing when there is none,
  * and nothing while the read is in flight, because the routes above it do not
@@ -39,7 +51,7 @@ export function CaptureGapsNotice({
   const plural = usePlural();
   const { locale } = useLocale();
   const network = useContactCaptureGaps(contactId);
-  if (network.isError) {
+  if (lastReadFailed(network)) {
     return (
       <ErrorLine
         actions={

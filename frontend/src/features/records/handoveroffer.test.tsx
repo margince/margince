@@ -116,6 +116,25 @@ afterEach(() => {
 });
 
 describe("HandoverOffer", () => {
+  it("says who to hand over to is required on send, and sends nothing", async () => {
+    const sent = serve();
+    const user = userEvent.setup();
+    draw(ownCompany);
+
+    await user.click(
+      await screen.findByRole("button", { name: en["handover.offer"] }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["handover.offerSend"] }),
+    );
+
+    expect(screen.getByText("Hand over to is required.")).toBeTruthy();
+    expect(document.activeElement).toBe(
+      screen.getByRole("combobox", { name: /^Hand over to/ }),
+    );
+    expect(sent.some((call) => call.key.startsWith("POST"))).toBe(false);
+  });
+
   it("offers the record to a colleague the server names, then takes the offer back", async () => {
     const sent = serve();
     const user = userEvent.setup();

@@ -290,11 +290,13 @@ func mustParseActivity(raw string) ids.UUID {
 // still an answer. Scoping it would let a reading overwrite exactly the seats
 // its author was not allowed to know about. It discloses nothing: no name and
 // no role leaves this function, only the decision not to write.
+//
+// Blind to the End date: a seat somebody ended is an answer too, and a reading
+// must not seat that contact again.
 func seatedNow(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (map[string]bool, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT contact_id FROM relationship
-		 WHERE kind = 'deal_stakeholder' AND deal_id = $1
-		   AND archived_at IS NULL AND ended_at IS NULL
+		 WHERE kind = 'deal_stakeholder' AND deal_id = $1 AND archived_at IS NULL
 		   AND coalesce(role, '') <> ''`, dealID)
 	if err != nil {
 		return nil, fmt.Errorf("company360: re-reading the committee before writing: %w", err)

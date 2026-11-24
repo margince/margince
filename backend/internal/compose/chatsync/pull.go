@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -37,6 +38,9 @@ type Puller struct {
 	Store      *chatlinks.Store
 	Chats      chatlinks.Chats
 	Activities *activities.Store
+	// Contacts resolves a chat author's address to a contact, so a restricted or
+	// erased subject's talk is left out of the summary.
+	Contacts *contacts.Store
 	// Lane is the chat_summary lane; nil files nothing.
 	Lane ai.Completer
 	Now  func() time.Time
@@ -47,7 +51,8 @@ type Puller struct {
 
 // Pull reads every active link of the connection. ctx carries the job's
 // workspace; the pull acts as the chat engine's system actor. One link's gone
-// channel pauses that link and the others go on.
+// or archived channel pauses that link and the others go on. The archive is
+// read here because its notice may never arrive.
 func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
 	ctx = principal.WithActor(ctx, chatLinksPrincipal)
 	session, err := p.Chats.Open(ctx)
@@ -65,10 +70,12 @@ func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
 		return err
 	}
 	for _, link := range links {
-		var err error
-		if link.BackfillRequested {
+		_, err := chatlinks.LiveChannel(ctx, session.Chat, link.ChannelSlug)
+		switch {
+		case err != nil:
+		case link.BackfillRequested:
 			err = p.backfill(ctx, session, link)
-		} else {
+		default:
 			err = p.pullLink(ctx, session, link)
 		}
 		if err == nil {
@@ -78,6 +85,29 @@ func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
 			return nil
 		} else if stop != nil {
 			return stop
+		}
+	}
+	return p.unreadBackfill(ctx, connectionID, links)
+}
+
+// errPullAgain asks the worker to run the pull once more soon.
+var errPullAgain = errors.New("chat pull: a link asking for the talk so far came in during the pull")
+
+// unreadBackfill answers errPullAgain when a link that asks for the talk so far
+// was made after this pull read its links. Its own queued pull was then
+// folded into this one, which is unique per bot.
+func (p *Puller) unreadBackfill(ctx context.Context, connectionID ids.UUID, read []chatlinks.Link) error {
+	links, err := p.Store.PullLinks(ctx, connectionID)
+	if err != nil {
+		return err
+	}
+	seen := make(map[ids.UUID]bool, len(read))
+	for _, link := range read {
+		seen[link.ID] = true
+	}
+	for _, link := range links {
+		if link.BackfillRequested && !seen[link.ID] {
+			return errPullAgain
 		}
 	}
 	return nil
@@ -141,6 +171,11 @@ func cutByPageCap(episodes []episode, ended bool) {
 	}
 }
 
+// restricted answers which of the author addresses the summary must withhold.
+func (p *Puller) restricted(ctx context.Context, emails []string) (map[string]bool, error) {
+	return lookupRestricted(ctx, p.Pool, p.Contacts, emails)
+}
+
 // judge summarises one closed episode and files it when it matters. An
 // episode no model can judge, or whose answer was refused, is passed over.
 // The cursor moves on, so a channel never waits for a model.
@@ -149,10 +184,13 @@ func (p *Puller) judge(ctx context.Context, session chatlinks.Session, link chat
 	if err != nil {
 		return err
 	}
-	reply, err := summarise(ctx, p.Lane, link, record, ep.messages, false)
+	reply, err := summariser{lane: p.Lane, pool: p.Pool, restricted: p.restricted}.summarise(ctx, link, record, ep.messages, false)
 	switch {
 	case errors.Is(err, errNoModel):
 		p.Log.InfoContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "no_model")
+		return nil
+	case errors.Is(err, errUnmatchableAuthor):
+		p.Log.InfoContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "restricted_author")
 		return nil
 	case errors.Is(err, ai.ErrOutputRejected):
 		p.Log.WarnContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "answer_rejected")
@@ -177,7 +215,13 @@ func (p *Puller) judge(ctx context.Context, session chatlinks.Session, link chat
 // limit or a model deferral stops the pull until the next tick.
 func (p *Puller) answerFailure(ctx context.Context, link chatlinks.Link, err error) error {
 	var limited *connector.RateLimitedError
+	var bare *dispact.StatusError
 	switch {
+	case errors.As(err, &bare):
+		// A bare status may come from a proxy in front of the chat, and a paused
+		// link is never read again. Only the chat's own answer pauses a link.
+		p.Log.WarnContext(ctx, "chat pull: the chat answered a bare status; the link stays active", "link", link.ID.String(), "err", err)
+		return nil
 	case errors.Is(err, dispact.ErrTokenRejected):
 		return capture.StopPollingChannelConnection(ctx, p.Pool, link.ConnectionID,
 			capture.ChannelPollStoppedByBadToken, "the chat refused the bot token")

@@ -6,21 +6,109 @@
     3,
     4
   ],
-  "passed": 2,
-  "runs": 2,
+  "passed": 1,
+  "runs": 3,
   "pass_at": 2,
   "driver": "gpt:cli",
   "effort": "reasoning medium",
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "487ee84b288294dd",
+    "tools": "2fab8ff230a8b4aa",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T03:55:37Z",
+    "graded_commit": "43efe5d1f04ce6aea932838d625278cfa438cc2f",
+    "graded_at": "2026-11-22T15:31:40Z"
+  },
   "usage": {
-    "input_tokens": 149283,
-    "output_tokens": 9228,
+    "input_tokens": 182317,
+    "output_tokens": 11952,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 1260416,
-    "runs_measured": 2,
+    "cache_read_input_tokens": 1730048,
+    "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "describe_query_vocabulary",
+        "find_records",
+        "query_workspace",
+        "read_attention",
+        "read_record",
+        "read_relationships",
+        "read_reporting",
+        "read_reports",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "at_risk_relationships",
+        "describe_list_filters",
+        "describe_report_blocks",
+        "describe_report_vocabulary",
+        "find_records",
+        "list_records",
+        "read_attention",
+        "read_record",
+        "read_relationships",
+        "read_reporting",
+        "read_reports",
+        "read_workspace",
+        "search_context",
+        "search_records"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "at_risk_relationships",
+        "describe_list_filters",
+        "describe_report_vocabulary",
+        "find_records",
+        "list_records",
+        "read_attention",
+        "read_record",
+        "read_relationships",
+        "read_reporting",
+        "read_reports",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 24,
+      "min": 24,
+      "max": 26
+    },
+    "refused": {
+      "median": 6,
+      "min": 6,
+      "max": 7
+    },
+    "prompt_tokens": {
+      "median": 624567,
+      "min": 427509,
+      "max": 860289
+    },
+    "output_tokens": {
+      "median": 4057,
+      "min": 3325,
+      "max": 4570
+    }
   }
 }

@@ -83,6 +83,8 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   report_interpret: "working",
   report_setup: "working",
   rewrite: "working",
+  chat_task_reading: "working",
+  extension_task: "working",
   transcript_propose: "working",
   weekly_review: "working",
   weekly_learnings: "working",

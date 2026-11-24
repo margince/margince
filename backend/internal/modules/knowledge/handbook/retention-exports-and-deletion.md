@@ -25,7 +25,7 @@ Margince has an export of the whole company: a ZIP with one CSV for each record 
 Also called: full export, data handover, migrate away, leave Margince.
 
 ### How do I import contacts from a spreadsheet?
-To import contacts, companies or prospects, save them as CSV files, or as a ZIP of CSV files, and open **Settings → Data import**.
+To import contacts, companies or leads, save them as CSV files, or as a ZIP of CSV files, and open **Settings → Data import**.
 1. Drop the file on **Upload your data**, or fill in the file from **Download template** first.
 2. On **Check your files**, check **Import as** for each file, then choose **Next: map {count} files**.
 3. In **Map columns**, pick a **Field** for each column on each tab, or **Do not import**.
@@ -36,7 +36,7 @@ Also called: upload a CSV, bulk import, Excel import, import a ZIP.
 
 ### How do I undo an import?
 To undo an import in Margince, open **Settings → Data import** and choose **Undo** beside it in **Recent imports**, or **Undo this import** on its result.
-Undo goes in reverse order: deals first, then prospects, then contacts, then companies. It archives the records that import created (a prospect is disqualified), unless someone edited them since. A deal edited after the import stays. Those are listed under "Left in place by the undo:".
+Undo goes in reverse order: activities first, then deals, leads, contacts and companies. It archives the records that import created (a lead is disqualified), unless someone edited them since. A deal edited after the import stays. Those are listed under "Left in place by the undo:" by name.
 
 Records the import only updated keep their new values. New tags stay, because they may be in use. If the undo stops part of the way, choose **Continue undo**. When done it says **Import undone**.
 
@@ -53,7 +53,7 @@ To erase a contact on request, an admin opens **Settings → Privacy and retenti
 2. Set **Due**, then choose **Open request**.
 3. Choose the request in the list to open it. Leave **Resolution** empty: the erasure records its own answer.
 4. Fill **How the identity was checked** and choose **Fulfill**.
-5. Type ERASE in **Type ERASE to confirm** and choose **Erase and suppress**.
+5. Type ERASE in **Type this word to confirm: ERASE** and choose **Erase and suppress**.
 This cannot be undone. A contact that the law says you must still keep is refused with **Blocked by legal hold**.
 Also called: right to be forgotten, Art. 17, delete my data, data subject request, DSR.
 
@@ -113,7 +113,7 @@ Team lead, Management, Ops and Admin may archive a contact, company or deal. So 
 Also called: hide, remove, retire a record.
 
 ### How do I restore an archived record?
-An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags and pipelines have their own **Restore**; an archived team comes back with **Undo** on the "Team archived" notice.
+An archived contact, company or deal comes back with **Undo** on the entry that archived it, in the record's **History**. Open it with **Show archived** on its list. You cannot bring back a project from the app. You can also take back a single field change with **Undo** in the record's **History**. Tags, pipelines and teams have their own **Restore**; for a team, an Admin turns on **Show archived teams** first.
 Also called: unarchive, undelete, recover.
 
 ### How do I change how long Margince keeps data?
@@ -150,9 +150,9 @@ Some examples of the difference in the product's own words:
 
 - Archiving a project "removes this project from the active list and frees its key." The project is then read-only: "This project is archived and takes no changes."
 - Archiving a document set stops the set, and everything filed in it, from showing up in search. Nothing is destroyed.
-- Merging two records destroys nothing either: "Merge {source} into {target}?
-  This archives {source}." Both values are kept in a merge; choosing a side decides
-  which record stays and which value is shown first.
+- Merging two records destroys nothing either: the record merged away is archived, and
+  the one you keep takes over its history, tasks, tags and links. A merge cannot be undone.
+  Both values are kept; choosing a side decides which record stays and which value shows first.
 
 ## A new company starts with retention rules
 
@@ -167,13 +167,13 @@ A new company starts with these retention rules already in place. You can edit a
 | Stored message originals | 90 days | Erase |
 | Daily record of material deals at risk | 90 days | Erase |
 
-Margince does not destroy a record just because it is old. Each starting rule archives, which keeps the record so you can restore it. Or it erases only a second copy, or data made from your records. Those are the stored message originals, the AI call payloads and the daily deal-risk record.
+Margince does not destroy a record just because it is old. Each starting rule archives, which keeps the record so you can restore it. Why the archive keeps captured activity, and how an admin deletes what no longer serves that purpose, is in [The archive and its purpose](the-archive.md). Or it erases only a second copy, or data made from your records. Those are the stored message originals, the AI call payloads and the daily deal-risk record.
 
 **Won deals**, **Saved report editions**, **Call transcripts** and **Contacts with no consent and no deal** can also have a rule, but start with none. So can **Records kept by extensions**. Margince does not say when your company should stop keeping a won deal; that is your choice. A rule that erases call transcripts or anonymizes contacts destroys data for good, so only an admin who wants one adds it. To destroy one contact's data, an admin fulfills an erasure request (see "How do I delete a contact permanently?").
 
 **Stored message originals** are the copies that capture keeps of every message it filed, apart from the timeline entry made from each one. On a large mailbox they take the most storage. An original is never destroyed while the law still says its mail must be kept. The timeline entry stays, so the same message cannot be captured again.
 
-If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." One fixed time limit still runs with no rule: traces of AI embedding calls end after 90 days (below).
+If you delete every rule, the screen tells you what that means: "No retention policy yet. Nothing in this installation ages out." Four fixed time limits still run with no rule (below).
 
 ### What each retention window counts from
 Most records have two clocks, and a rule acts only once both are past its window. One clock is the date the record carries. The other is how long the record has been in Margince. So a record you import is not removed on the day it arrives because it was old somewhere else.
@@ -235,9 +235,9 @@ A rule can hold a **Lawful basis** if you like (the Article 6 reason for the tim
 
 Enabled rules act each time the retention pass runs, as the panel says: "Enabled policies act on the data retention schedule." The pass runs once a day by default. An Admin or Ops user can change that from hourly to weekly: in **Settings → System health**, open **All schedules** and set **Data retention**, in seconds. A rule shows a badge only when it is not acting: "Disabled" or "Paused by retain-only mode". Each pass works on up to 200 records for each rule, so years of old records take many passes to clear.
 
-### One window nobody can change
+### Windows nobody can change
 
-Traces of AI embedding calls are kept for **90 days**, fixed. This runs with or without a rule, and no admin can edit it.
+These four run with or without a rule, and no admin can edit them. Traces of AI embedding calls are kept for **90 days**, and traces of every other AI call for **400 days**. Error and skip entries of the system log are kept for **90 days**. Its sign-in, password reset and mailbox credential entries are kept for **400 days**, and every other entry of it is kept. Traces of AI answers that still have their stored content are kept past their window. Retain-only mode keeps all these system log entries, and it still removes old traces that have no stored content.
 
 ### Turning a retention policy off, versus deleting it
 
@@ -367,7 +367,7 @@ You can only add to the list: "A purpose cannot be renamed or removed once creat
 
 Your team cannot record a purpose that needs **double opt-in** at all. Only the contact can confirm one, by opening a link that works once, mailed to their own recorded address. Use **Ask them to confirm their details**. If a colleague could confirm it for the contact, it would not prove the contact agreed.
 
-The default is **deny**. A purpose with no record for a contact is not consent.
+The default is **deny**. A purpose with no record for a contact is not consent. Each mail you send names a purpose, and the kind of purpose decides if it needs consent: correspondence does not, marketing does. Margince checks the kind a mail claims against the record, yet some mail can still go out under the wrong purpose. To find it later, open **Consent purposes**, which counts the mail sent under each purpose in the last 30 days. It also counts the mail whose claimed kind the record did not support.
 
 Every consent change is written to a **Proof log**. It records who made the change and how: a Human, an Agent, the System, or a Connector. Where Margince has no record of it, it says "actor not recorded" and "source not recorded". You may one day have to prove consent, so Margince keeps the proof, not only the current state.
 
@@ -377,9 +377,9 @@ An agent can record consent for its user, and it asks them first. It cannot reco
 
 The audit trail, **Settings → Audit log**, records "Every action, attributed to a user, agent or connector."
 
-You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
+You can filter it by **Actor**, **Entity type**, **Entity ID**, **Action**, and a date range (**From**, **To**). Pick a member in **Actor** to see what they did, and what an AI assistant did for them. **Entity ID** takes a record's full ID: use **Copy record ID** on an entry. The address keeps your filters, so you can share the link. Choose **Show change detail** on any entry to see the change and the **Authorization rule** that allowed it. Where something was done for someone else, the entry says so.
 
-Only an admin can read the full trail: "Your role cannot read the full audit log. It records every actor and every record they accessed."
+Only an admin can read the full trail: "Your role cannot read the full audit log. It records every actor and every record they accessed." Margince keeps the trail for good: no retention rule removes an entry because it is old.
 
 It is also where a record's full ID is shown, which you need to pin a record under the retention floor by hand.
 

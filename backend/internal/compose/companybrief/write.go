@@ -132,10 +132,13 @@ func briefSystemFor(fence promptfence.Fence, lang string) string {
 // Write produces the brief. lane may be nil, which is not an error state:
 // it is the deployment saying this role runs no model, and the
 // deterministic floor is the answer.
-func Write(ctx context.Context, lane Completer, companyID string, in Input, lang string) ([]Section, crmcontracts.WrittenBy, error) {
+//
+// The third return says the lane failed rather than being absent, so the
+// caller does not cache a floor that only a transient outage wrote.
+func Write(ctx context.Context, lane Completer, companyID string, in Input, lang string) ([]Section, crmcontracts.WrittenBy, bool) {
 	deterministic := DeterministicSections(companyID, in, lang)
 	if lane == nil {
-		return deterministic, crmcontracts.WrittenByDeterministic, nil
+		return deterministic, crmcontracts.WrittenByDeterministic, false
 	}
 	written, err := writeWithModel(ctx, lane, companyID, in, lang)
 	if err != nil {
@@ -143,10 +146,9 @@ func Write(ctx context.Context, lane Completer, companyID string, in Input, lang
 		// is unavailable, over budget, or answering unparseable JSON must
 		// not take the card down with it: the reader gets the floor, and
 		// generated_by tells them which of the two they are reading.
-		//nolint:nilerr // on_budget_exhausted: degrade — the fallback IS the answer, and generated_by reports it
-		return deterministic, crmcontracts.WrittenByDeterministic, nil
+		return deterministic, crmcontracts.WrittenByDeterministic, true
 	}
-	return written, crmcontracts.WrittenByModel, nil
+	return written, crmcontracts.WrittenByModel, false
 }
 
 // accountEvidence cites the account itself: the company description is about
@@ -382,20 +384,13 @@ func ParseBriefSections(reply, companyID string, in Input) ([]Section, error) {
 	return out, nil
 }
 
-// keepGroundedSentences drops any sentence whose citations do not point at
-// records this input actually carried.
+// keepGroundedSentences is the one test both parsers apply, so the flat answer
+// and the sectioned brief never disagree about what counts as checkable.
 //
-// The reader's trust in the brief is the citation: a sentence pointing at an
-// id that was never in the input is either invented or points somewhere the
-// reader cannot go, and neither is worth showing. Dropping the sentence is
-// the honest response — the remaining ones still say true things.
-//
-// The ACCOUNT is pinned, not merely allowed by type. Accepting any
-// company citation would let a reply hand back an id this reader never
-// saw — rendered as a link they could click into a record their scope may
-// hide. The one company a brief may cite is the one it is about.
-// groundedSentence is the ONE test both parsers apply, so the flat answer and
-// the sectioned brief can never disagree about what counts as checkable.
+// It drops a sentence whose citations name a record this input did not carry.
+// The account is pinned, not merely allowed by type: the one company a brief
+// may cite is the one it is about. A sum of money must be in a cited record or
+// be one of the account's own totals, which the account row carries.
 func keepGroundedSentences(sentences []Sentence, companyID string, in Input) []Sentence {
 	return claims.Keep(sentences, knownRecords(companyID, in), knownNature, natureFact)
 }

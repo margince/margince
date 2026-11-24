@@ -6,7 +6,6 @@ import type { components } from "../api/schema";
 import { LocaleProvider, translate } from "../i18n";
 import {
   decidingRecipient,
-  SendMark,
   SendPermission,
   sendStatus,
 } from "./sendpermission";
@@ -134,25 +133,27 @@ describe("which state the engine's answer puts the composer in", () => {
   // The whole message is refused for one refused recipient, so the composer has
   // to choose WHICH refusal to show. Showing the liftable one first would send a
   // rep to write a justification that cannot help.
-  it("shows the refusal a rep cannot act on ahead of the one they can", () => {
+  // The server ranks the stop nobody lifts ahead of the one a rep can.
+  it("shows the refusal the server names first", () => {
     const { state, recipient } = decidingRecipient(
       preview(
+        answer({ address: "allowed@example.test", would_refuse: false }),
         answer({
-          address: "first@example.test",
-          would_refuse: true,
-          can_be_overruled: true,
-        }),
-        answer({
-          address: "second@example.test",
+          address: "objected@example.test",
           reason_code: "marketing_objection",
           decided_by: "subject",
           would_refuse: true,
           can_be_overruled: false,
         }),
+        answer({
+          address: "unproven@example.test",
+          would_refuse: true,
+          can_be_overruled: true,
+        }),
       ),
     );
     expect(state).toBe("refused");
-    expect(recipient?.address).toBe("second@example.test");
+    expect(recipient?.address).toBe("objected@example.test");
   });
 
   // A server that did not answer is not a server saying yes. Guessing
@@ -201,7 +202,7 @@ describe("what a rep is shown", () => {
     );
     expect(screen.getByText(/objected to marketing/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/a reply or a message they asked for can still go/i),
+      screen.getByText(/sending this email does not lift their objection/i),
     ).toBeInTheDocument();
     expect(screen.queryByText(/administrator/i)).not.toBeInTheDocument();
   });
@@ -559,14 +560,14 @@ describe("one status for the message", () => {
       refusal: {
         refusals: [
           {
-            address: "a@x.test",
-            reasonCode: "no_marketing_consent",
-            canBeOverruled: true,
-          },
-          {
             address: "b@x.test",
             reasonCode: "consent_withdrawn",
             canBeOverruled: false,
+          },
+          {
+            address: "a@x.test",
+            reasonCode: "no_marketing_consent",
+            canBeOverruled: true,
           },
         ],
       },
@@ -584,20 +585,6 @@ describe("one status for the message", () => {
     ).toBe("restricted");
   });
 
-  it("shows no ready mark beside a refused send", () => {
-    render(
-      <LocaleProvider initial="en">
-        <SendMark
-          preview={preview(answer({ decided_by: "machine", verdict: "allow" }))}
-          refusal={{ refusals: [] }}
-        />
-      </LocaleProvider>,
-    );
-    expect(
-      screen.queryByRole("button", { name: /recipients checked/i }),
-    ).toBeNull();
-  });
-
   // Distinct conditions get distinct titles, so a missing deal never reads as
   // a consent problem and a missing consent never reads as an objection.
   it.each([
@@ -607,7 +594,7 @@ describe("one status for the message", () => {
         resolved_category: "active_deal_followup",
       },
       "This message needs one more detail",
-      "Choose the deal for this follow-up.",
+      "No open deal with this recipient supports this follow-up.",
     ],
     [
       { reason_code: "no_marketing_consent" },
@@ -615,9 +602,19 @@ describe("one status for the message", () => {
       "Marketing needs the recipient’s consent, and none is on record.",
     ],
     [
+      { reason_code: "frequency_cap_reached", can_be_overruled: true },
+      "Sending needs your reason",
+      "The recipient has reached the marketing message limit for now. This clears automatically.",
+    ],
+    [
       { reason_code: "marketing_objection" },
       "Message cannot be sent",
-      "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+      "The recipient objected to marketing. Sending this email does not lift their objection.",
+    ],
+    [
+      { reason_code: "hard_bounce" },
+      "Message cannot be sent",
+      "This address does not accept mail. Correct the address; an override does not apply.",
     ],
   ] as const)("explains %o in its own words", (over, title, sentence) => {
     render(
@@ -647,7 +644,9 @@ describe("one status for the message", () => {
       screen.getByText("This message needs one more detail"),
     ).toBeInTheDocument();
     expect(
-      screen.getByText("Choose the deal for this follow-up."),
+      screen.getByText(
+        "No open deal with this recipient supports this follow-up.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("No recorded reason to contact this recipient"),
@@ -673,7 +672,9 @@ describe("one status for the message", () => {
       </LocaleProvider>,
     );
     expect(
-      screen.getByText("Choose the deal for this follow-up."),
+      screen.getByText(
+        "No open deal with this recipient supports this follow-up.",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -706,9 +707,10 @@ describe("one status for the message", () => {
   });
 });
 
-describe("one rule picks the deciding refusal before and after Send", () => {
-  // Mixed kinds and overrulability, in an order no single rule would pass by
-  // accident: the preview and the refused Send must explain the same address.
+describe("the server's order picks the deciding refusal before and after Send", () => {
+  // The server ranks refusals in the preview and in a refused Send alike, so
+  // both explain the first one it names. Rows in an order no client-side rule
+  // would pick: a liftable refusal leads, a stop nothing lifts follows.
   const wire = [
     {
       address: "e@x.test",
@@ -716,27 +718,22 @@ describe("one rule picks the deciding refusal before and after Send", () => {
       can_be_overruled: true,
     },
     {
-      address: "c@x.test",
-      reason_code: "unknown_purpose",
+      address: "r@x.test",
+      reason_code: "frequency_cap_reached",
       can_be_overruled: false,
     },
     {
-      address: "p@x.test",
-      reason_code: "no_marketing_consent",
-      can_be_overruled: true,
-    },
-    {
-      address: "r@x.test",
-      reason_code: "frequency_cap_reached",
+      address: "c@x.test",
+      reason_code: "unknown_purpose",
       can_be_overruled: false,
     },
   ] as const;
 
   it.each([
-    [wire, "r@x.test"],
-    [wire.filter((w) => w.address !== "r@x.test"), "c@x.test"],
-    [wire.filter((w) => w.can_be_overruled), "p@x.test"],
-  ])("picks the same recipient from %#", (rows, expected) => {
+    [wire, "e@x.test"],
+    [wire.slice(1), "r@x.test"],
+    [wire.slice(2), "c@x.test"],
+  ])("explains the first refusal it names from %#", (rows, expected) => {
     const before = sendStatus({
       preview: preview(
         ...rows.map((row) =>
@@ -760,43 +757,49 @@ describe("one rule picks the deciding refusal before and after Send", () => {
   });
 });
 
-describe("the mark makes no passed claim on a blocked form", () => {
-  it("draws nothing for an allowed message the form will still stop", () => {
-    render(
-      <LocaleProvider initial="en">
-        <SendMark
-          preview={preview(
-            answer({
-              decided_by: "machine",
-              verdict: "allow",
-              would_refuse: false,
-            }),
-          )}
-          blocked
-        />
-      </LocaleProvider>,
-    );
-    expect(
-      screen.queryByRole("button", { name: /recipients checked/i }),
-    ).toBeNull();
+describe("the law a refusal cites", () => {
+  const UWG = {
+    instrument: "UWG",
+    provision: "§ 7(2)",
+    source_url: "https://example.org/uwg",
+  };
+  const objected = (over: Partial<Recipient> = {}) =>
+    answer({
+      reason_code: "marketing_objection",
+      decided_by: "subject",
+      would_refuse: true,
+      can_be_overruled: false,
+      ...over,
+    });
+
+  it("links the cited law, opening in a tab that cannot reach back", () => {
+    draw(preview(objected({ provision: UWG })));
+    const link = screen.getByRole("link", { name: "UWG § 7(2)" });
+    expect(link).toHaveAttribute("href", UWG.source_url);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
 
-  it("draws the passed check once nothing on the form is in the way", () => {
-    render(
-      <LocaleProvider initial="en">
-        <SendMark
-          preview={preview(
-            answer({
-              decided_by: "machine",
-              verdict: "allow",
-              would_refuse: false,
-            }),
-          )}
-        />
-      </LocaleProvider>,
+  it("links a footer finding's law too", () => {
+    draw(
+      preview(
+        objected({
+          footer_findings: [
+            {
+              kind: "objection_route",
+              language: "",
+              missing_means: [],
+              provision: UWG,
+            },
+          ],
+        }),
+      ),
     );
-    expect(
-      screen.getByRole("button", { name: /recipients checked/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "UWG § 7(2)" })).toBeVisible();
+  });
+
+  it("shows no law where none is cited", () => {
+    draw(preview(objected()));
+    expect(screen.queryByRole("link")).toBeNull();
   });
 });

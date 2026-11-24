@@ -127,6 +127,8 @@ func toWire(items []Item) []crmcontracts.AiActivityItem {
 			SubjectLabel:  item.SubjectLabel,
 			SubjectType:   item.SubjectType,
 			SubjectId:     contractUUID(item.SubjectID),
+			Processed:     item.Processed,
+			Total:         item.Total,
 		})
 	}
 	return wire

@@ -2,23 +2,28 @@
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
-import { draftButton } from "../../testing/composedraft.testkit";
+import { pressDraft } from "../../testing/composedraft.testkit";
 import { contactDocuments } from "../../testing/contactdocuments";
-import { ComposeModal, RelinkModal } from "./compose";
 import {
   activity202,
   DISCLOSURE,
   emptyResponse,
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+import { RelinkModal } from "./composerelink";
+import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -28,6 +33,7 @@ afterEach(() => {
 
 describe("RelinkModal", () => {
   it("moves the message's files off the contact's Documents count", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const docs = contactDocuments(2);
     const onClose = vi.fn();
     stubRoutes({
@@ -57,16 +63,17 @@ describe("RelinkModal", () => {
     );
     await docs.shows(2);
 
-    await userEvent.type(screen.getByRole("searchbox"), "Acme");
-    await userEvent.click(
+    await user.type(screen.getByRole("searchbox"), "Acme");
+    await user.click(
       await screen.findByRole("button", { name: "Acme renewal" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Relink" }));
+    await user.click(screen.getByRole("button", { name: "Relink" }));
 
     await docs.shows(1);
   });
 
   it("relinks the search-picked target and closes on 200", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "GET /search": () =>
@@ -88,12 +95,12 @@ describe("RelinkModal", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "Acme");
+    await user.type(screen.getByRole("searchbox"), "Acme");
     const candidate = await screen.findByRole("button", {
       name: "Acme renewal",
     });
-    await userEvent.click(candidate);
-    await userEvent.click(screen.getByRole("button", { name: "Relink" }));
+    await user.click(candidate);
+    await user.click(screen.getByRole("button", { name: "Relink" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const relink = sent.find((r) => r.key === "POST /activities/act-1/relink");
@@ -119,6 +126,7 @@ describe("RelinkModal", () => {
   // reached the reader as the generic "something went wrong", on the very error
   // path the write leans on to say it did not go through.
   it("refuses in words when the activity was read without a version", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "GET /search": () =>
@@ -139,11 +147,11 @@ describe("RelinkModal", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "Acme");
-    await userEvent.click(
+    await user.type(screen.getByRole("searchbox"), "Acme");
+    await user.click(
       await screen.findByRole("button", { name: "Acme renewal" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Relink" }));
+    await user.click(screen.getByRole("button", { name: "Relink" }));
 
     expect(await screen.findByText(/loaded without a version/i)).toBeTruthy();
     // And nothing was sent: a refusal that still wrote would be the
@@ -155,6 +163,7 @@ describe("RelinkModal", () => {
   });
 
   it("sends replace_existing_of_type when the move toggle is on", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "GET /search": () =>
@@ -175,12 +184,10 @@ describe("RelinkModal", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "Globex");
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Globex" }),
-    );
-    await userEvent.click(screen.getByRole("checkbox"));
-    await userEvent.click(screen.getByRole("button", { name: "Relink" }));
+    await user.type(screen.getByRole("searchbox"), "Globex");
+    await user.click(await screen.findByRole("button", { name: "Globex" }));
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "Relink" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const relink = sent.find((r) => r.key === "POST /activities/act-1/relink");
@@ -193,6 +200,7 @@ describe("RelinkModal", () => {
   });
 
   it("moves the whole conversation through relinkThread when asked", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "GET /search": () =>
@@ -214,16 +222,16 @@ describe("RelinkModal", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "ERP");
-    await userEvent.click(
+    await user.type(screen.getByRole("searchbox"), "ERP");
+    await user.click(
       await screen.findByRole("button", { name: "ERP rollout" }),
     );
-    await userEvent.click(
+    await user.click(
       screen.getByRole("checkbox", {
         name: "Move rest of thread",
       }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Relink" }));
+    await user.click(screen.getByRole("button", { name: "Relink" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const thread = sent.find((r) => r.key === "POST /activities/relink-thread");
@@ -263,6 +271,7 @@ describe("RelinkModal", () => {
   });
 
   it("drops activity results — relink has no activity target", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "GET /search": () =>
         jsonResponse({
@@ -284,7 +293,7 @@ describe("RelinkModal", () => {
       />,
     );
 
-    await userEvent.type(screen.getByRole("searchbox"), "e");
+    await user.type(screen.getByRole("searchbox"), "e");
     expect(
       await screen.findByRole("button", { name: "Jane Doe" }),
     ).toBeTruthy();
@@ -292,8 +301,9 @@ describe("RelinkModal", () => {
   });
 });
 
-describe("ComposeModal", () => {
+describe("ComposeWindow", () => {
   it("fills To/Subject/Body from the AI draft", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
         jsonResponse({
@@ -303,7 +313,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -312,7 +322,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
     await waitFor(() =>
@@ -327,6 +337,7 @@ describe("ComposeModal", () => {
   // presence, its verbatim text, and its absence on human-written text.
   // Removing the banner from the composer fails all three.
   it("discloses a model-produced draft, rendering the server's line verbatim", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
         jsonResponse({
@@ -338,7 +349,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -347,7 +358,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(
@@ -356,6 +367,7 @@ describe("ComposeModal", () => {
   });
 
   it("still discloses when the server sends no disclosure line", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // ai_disclosure is contract-guaranteed alongside ai_generated, but a
     // client that trusts that would drop the disclosure entirely against an
     // older or misbehaving server. Absence of the line is not absence of the
@@ -371,7 +383,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -380,13 +392,14 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(screen.getByText(/This draft was written by AI/i)).toBeTruthy();
   });
 
   it("discloses nothing when no model produced the draft", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
         jsonResponse({
@@ -398,7 +411,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -407,7 +420,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     // The fill proves the draft landed, so the missing banner is the
     // disclosure being conditional rather than the response never arriving.
@@ -416,6 +429,7 @@ describe("ComposeModal", () => {
   });
 
   it("names the voice version that styled the draft and flags a provisional profile", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": () =>
@@ -429,7 +443,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -438,7 +452,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     expect(
       await screen.findByText("Built from your writing samples · v3"),
@@ -447,6 +461,7 @@ describe("ComposeModal", () => {
   });
 
   it("warns when the sender's voice could not be loaded for the draft", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
         jsonResponse({
@@ -460,7 +475,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -469,12 +484,13 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     expect(await screen.findByText(/does not use your voice/)).toBeTruthy();
   });
 
   it("stays quiet about the voice when a draft simply has no profile behind it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
         jsonResponse({
@@ -488,7 +504,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -497,13 +513,14 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     expect(await screen.findByDisplayValue("Re: Q3 numbers")).toBeTruthy();
     expect(screen.queryByText(/does not use your voice/)).toBeNull();
   });
 
   it("flags nothing provisional when the profile is past that band", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "GET /voice-profiles": () =>
         jsonResponse({
@@ -523,7 +540,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -532,7 +549,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     expect(
       await screen.findByText("Built from your writing samples · v3"),
@@ -541,11 +558,12 @@ describe("ComposeModal", () => {
   });
 
   it("shows an unavailable note on a 501 draft, keeping the form usable", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/draft-email": () => emptyResponse(501),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -554,7 +572,7 @@ describe("ComposeModal", () => {
       />,
     );
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     expect(await screen.findByText(/AI drafting is unavailable/i)).toBeTruthy();
     // Manual composing still works — Send is present.
@@ -565,9 +583,10 @@ describe("ComposeModal", () => {
   // them. Grey, it refused and said nothing about what for, which left the
   // reader comparing the form against a control that would not talk to them.
   it("names every field it is waiting for, and sends nothing", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -584,7 +603,7 @@ describe("ComposeModal", () => {
     // what is missing while they are still typing is scolding them.
     expect(screen.queryByText("Enter a subject.")).toBeNull();
 
-    await userEvent.click(send);
+    await user.click(send);
 
     expect(screen.getByText("Add at least one recipient.")).toBeTruthy();
     expect(screen.getByText("Enter a subject.")).toBeTruthy();
@@ -595,17 +614,18 @@ describe("ComposeModal", () => {
     ).toHaveLength(0);
 
     // And they stop being said as the fields are answered.
-    await fillSendableForm();
+    await fillSendableForm(user);
     expect(screen.queryByText("Enter a subject.")).toBeNull();
   });
 
-  it("sends the edited email with no approval token or idempotency key", async () => {
+  it("sends the edited email with no approval token and with an idempotency key", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -614,8 +634,8 @@ describe("ComposeModal", () => {
       />,
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await fillSendableForm(user);
+    await pressSend(user);
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const req = sent.find((r) => r.key === "POST /activities/act-1/send-email");
@@ -632,12 +652,14 @@ describe("ComposeModal", () => {
       to: ["a@x.com"],
       communication_context: "requested_followup",
     });
-    // ADR-0055: the human click is the approval — neither header rides along.
+    // ADR-0055: the human click is the approval, so no token rides along. The
+    // key only makes a retried click the same send.
     expect(req?.headers.get("X-Approval-Token")).toBeNull();
-    expect(req?.headers.get("Idempotency-Key")).toBeNull();
+    expect(req?.headers.get("Idempotency-Key")).toBeTruthy();
   });
 
   it("surfaces a refused send on 409 without closing", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     stubRoutes({
       "POST /activities/act-1/send-email": () =>
@@ -651,7 +673,7 @@ describe("ComposeModal", () => {
         ),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -661,25 +683,27 @@ describe("ComposeModal", () => {
       />,
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await fillSendableForm(user);
+    await pressSend(user);
 
-    // The refusal named no reason, so it names no cause, consent included.
-    expect(
-      await screen.findByText("This message cannot be sent as it stands."),
-    ).toBeTruthy();
+    // The refusal opened no review, so it names no cause, consent included.
+    const refused = await screen.findByText(
+      "This message was not sent. Your draft is kept. Ask an admin to update Margince, then send again.",
+    );
+    expect(refused.textContent).not.toMatch(/consent/i);
     // The server offered no move, so none is drawn, and the modal stays open.
     expect(screen.queryByRole("link", { name: "Open contact" })).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it("shows a sending-unavailable note on a 501 send, not an error", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     stubRoutes({
       "POST /activities/act-1/send-email": () => emptyResponse(501),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -688,14 +712,15 @@ describe("ComposeModal", () => {
       />,
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await fillSendableForm(user);
+    await pressSend(user);
 
     expect(await screen.findByText(/Sending is unavailable/i)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it("does not report a send on a bodiless non-2xx (gateway 5xx)", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     // openapi-fetch yields a falsy error for a bodiless response; success must
     // be the real 202, so an empty 503 stays an error and keeps the modal open
@@ -704,7 +729,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/send-email": () => emptyResponse(503),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -713,14 +738,15 @@ describe("ComposeModal", () => {
       />,
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await fillSendableForm(user);
+    await pressSend(user);
 
     expect(await screen.findByText(/The request failed/i)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
   });
 
   it("shows a draft error on a bodiless non-2xx without crashing the fill", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // The old !error success path would fabricate an undefined draft and crash
     // onSuccess reading its fields; a bodiless 502 must surface an error only.
     //
@@ -732,7 +758,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/draft-email": () => emptyResponse(502),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -741,7 +767,7 @@ describe("ComposeModal", () => {
       />,
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     expect(
       await screen.findByText(/did not finish the request in time/i),

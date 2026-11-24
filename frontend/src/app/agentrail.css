@@ -5,16 +5,9 @@
  * places to go; this is a report, and the panel it opens is the detail of that
  * report.
  *
- * Its geometry is the rail's own, to the pixel, because a block in a sidebar
- * that stands on a second grid reads as something bolted on. What makes it a
- * different KIND of row is its ink and the hairline above it, not its alignment.
- *
- * It has NO frame. Four closed sides around a centred figure with a caption
- * under it is the shape of a playing card whatever colour the border is, and a
- * card in a sidebar reads as an object resting on the rail rather than a part of
- * it. So the frame is gone: one hairline separates the section, the state's tone
- * lives in that line, and the light the orb spills on the rail floor has no edge
- * to stop it.
+ * It is one more row of the rail, on the rows' own geometry: the orb stands on
+ * the glyphs' axis, and the row takes the rows' hover, corner and focus ring.
+ * What makes it a different KIND of row is the live orb and the reading beside it.
  *
  * The panel is taken out of the flow, sideways: a 256px column cannot carry five
  * sections, and a panel that pushed the rail wider would move every destination
@@ -25,12 +18,38 @@
   flex: none;
   margin-top: var(--space-1);
 }
+/* How open the rail is, 0 to 1, read off the column's animated width. */
+.arblock,
+.arorb {
+  /* The ball's box open, and folded: at 44px its glow (1.39x, fading out by
+     74%) and the row's ring stay inside the 56px column. */
+  --arBall: 56px;
+  --arBallShut: 44px;
+  --arBallNow: calc(
+    var(--arBallShut) +
+    var(--arOpen) *
+    (var(--arBall) - var(--arBallShut))
+  );
+  /* A destination row's height folded, the ball's box open. */
+  --arRowH: calc(
+    var(--controlHeight) +
+    var(--arOpen) *
+    (var(--arBall) - var(--controlHeight))
+  );
+  --arOpen: clamp(0, tan(atan2(var(--arTravel), var(--arSpan))), 1);
+  --arTravel: calc(var(--railW) - var(--railWShut));
+  --arSpan: calc(var(--railWOpen) - var(--railWShut));
+}
+/* The orb's glass, which the trial's ring is measured against as well. */
+.arblock {
+  --arGlass: calc(var(--arBallNow) - 6px);
+}
 
 /* The state's leading colour, declared on the block so the row AND the panel
  * beside it inherit one tone.
  *
  * It cannot read the Core's own: `--coreC1` is declared on the `.core` element,
- * so it resolves inside the orb and nowhere else. The light under the orb and the
+ * so it resolves inside the orb and nowhere else. The phone well's light and the
  * panel's finding marks need the same tone, so the state maps to one token HERE,
  * and `agentrail.test.tsx` asserts every state the Core knows has a rule in this
  * file, so a sixth state cannot be added and silently draw green.
@@ -60,171 +79,111 @@
  * with the accessible name and the expanded state. The words stand beside the
  * button, not in it: the record a line names is a link, and a link inside a
  * button is a control inside a control. The area's own click is the pointer's
- * way in (agentrail.tsx `useHit`); the button is the keyboard's, and a chevron
- * that were its own control would be a second thing claiming one job.
- *
- * The orb LEADS, at a size no destination row could carry. It is the only object
- * in the chrome that is alive, and at nav-row scale it read as one more glyph in
- * a list of glyphs: the reader has to be able to tell what the agent is doing
- * from across the desk, without reading the line under it.
+ * way in (agentrail.tsx `useHit`); the button is the keyboard's.
  */
 .arhit {
   position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  /* No gap. The ball's own box already carries the air around it (the halo is
-     drawn inside it), so a gap here is a second helping of the same space and it
-     read as the caption belonging to something else. */
-  gap: 0;
+  gap: var(--space-2);
   width: 100%;
-  /* Tight. The ball is the biggest thing in the chrome and it needs room to be
-     read, not room around the room: with no card to hold, air above and below it
-     is just rail nobody uses. */
-  padding: 0 0 var(--space-1);
+  min-height: var(--arRowH);
+  padding: 0 var(--space-2) 0 var(--railRowInset);
   border: 0;
-  /* Nothing draws this corner. It is here for the focus ring, which is the one
-     time this control does take an outline and needs it to follow the shape a
-     reader expects. */
-  border-radius: var(--r-md);
-  /* The light the orb spills, and nothing under it. No panel fill, because a
-     fill needs an edge to end at, an edge needs a corner, and a corner around a
-     centred figure with a caption under it is a playing card. This wash fades
-     out before it reaches anything, so a reader sees the rail lit from within
-     rather than a lit object placed on the rail. */
-  background: radial-gradient(
-    88% 58% at 50% 32%,
-    color-mix(in srgb, var(--arTone) 6%, transparent),
-    transparent 62%
-  );
+  border-radius: var(--r-sm);
+  background: transparent;
   color: var(--textPrimary);
-  text-align: center;
+  text-align: start;
   cursor: pointer;
+  transition: background var(--dur-state) var(--ease-in-out);
 }
-/* Hover raises the light rather than filling a shape: a tinted rectangle
-   appearing under the pointer would put the card back for as long as the pointer
-   was there. */
 .arhit:hover {
-  background: radial-gradient(
-    88% 58% at 50% 32%,
-    color-mix(in srgb, var(--arTone) 12%, transparent),
-    transparent 62%
-  );
+  background: var(--railHover);
 }
-/* The button is the orb, so the ring follows the orb: a bare control with
-   nothing of its own to draw but the ball it wraps. */
+/* The ring is the row's, as on every rail row; the button inside is what holds focus. */
+.arhit:has(> .artoggle:focus-visible) {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+}
+/* The ball's box spills past a glyph's box, so the row lays it out as a glyph:
+   on the glyphs' axis folded, a --space-2 past it open, so the ball clears the
+   row's edge. The end margin takes back the row's gap, so the words' text starts
+   on the box's edge and no line or figure runs under the orb. */
 .artoggle {
   /* The trial's ring is drawn over the orb's box, so it is placed against it. */
   position: relative;
   display: block;
   flex: none;
+  margin-block: calc((var(--arRowH) - var(--arBallNow)) / 2);
+  margin-inline: calc(
+      (var(--railGlyph) - var(--arBallNow)) /
+      2 +
+      var(--arOpen) *
+      var(--space-2)
+    )
+    calc(-1 * var(--space-2));
   padding: 0;
   border: 0;
   border-radius: 50%;
-  corner-shape: round;
   background: none;
   cursor: pointer;
 }
 .artoggle:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
+  outline: none;
 }
 
-/* No line, and no frame either.
- *
- * A hairline here read as the top edge of something rather than as a divider:
- * with nothing else drawn, one horizontal rule above a lit ball is a lid. What
- * separates this section from the destinations is the space around it and the
- * light in it, and the state's tone lives in that light (`--arTone` above) and
- * in the screen's own margins (app/agent-edge.css), which is where the animation
- * went when it left this file.
- */
-
-/* The Core primitive at the size it deserves (WDS-CORE-1): sizing through its
-   own custom properties is the one thing a caller may do to it. The glass is
-   most of the box, because the halo outside it is the part a reader sees from
-   the corner of an eye. */
+/* The Core primitive (WDS-CORE-1): sizing through its own custom properties is
+   the one thing a caller may do to it. */
 .arorb {
-  /* The ball is as big as the rail can afford, and no bigger. Its width is the
-     card's; its height is a share of the VIEWPORT, because the destinations above
-     it have a fixed cost and whatever is left over is what the orb may take. On a
-     laptop the width wins and it fills the card; on a short window the height
-     wins and it shrinks rather than pushing the rail into a scroll.
-     A rail that scrolls hides the agent, which is the one thing in the chrome
-     that has to be visible without being looked for. */
-  /* One length, and never a percentage: a size that resolves against the card's
-     width in one axis and the viewport in the other would give the ball two
-     different diameters. 172px is a step under the width the card could give
-     it — the ball leads the rail without crowding the destinations above it —
-     and 18vh is what a short window can, whichever is smaller.
-     Named, because the short-window ladder below moves it and the reduced foot
-     (`.rail.leveled`) has to stay SMALLER than it at every step: a second rule
-     that spelled its own length would be drawing the reduction larger than the
-     ball it reduces on any window where the ladder had already fired. */
-  --arBall: min(172px, 18vh);
-  --coreSize: var(--arBall);
-  --coreGlass: calc(var(--coreSize) - 6px);
-  /* The viewport cap is for a hero standing in a content column; the rail's own
-     width and height are the only caps this one needs. */
+  --coreSize: var(--arBallNow);
+  --coreGlass: var(--arGlass);
+  /* The viewport cap is for a hero standing in a content column. */
   --coreCap: 100%;
-  /* Nearly all of the halo off. At this size the ball IS the signal: a bloom
-     wide enough to suit a hero reaches the destinations above it, and with no
-     card edge to contain it there is nothing to stop it either. */
-  --coreHalo: 0.08;
+  /* Open, the halo would light the destinations above and the words beside it. */
+  --coreHalo: calc(0.5 + var(--arOpen) * (0.08 - 0.5));
   flex: none;
 }
 
+/* The line and the figure, one block centred on the orb, at the open width:
+   the column clips the words, never re-wraps them. */
 .arwords {
   position: relative;
   z-index: 1;
   display: flex;
+  flex: 1 0 0;
   flex-direction: column;
-  align-items: center;
-  gap: 1px; /* ds:ignore two lines of one reading, not spaced content */
-  width: 100%;
+  align-items: flex-start;
   min-width: 0;
-  /* The ball takes the rail's full width; the words take a margin back, or a
-     long line runs into the edge of the rail. */
-  padding: 0 var(--space-2);
+  /* The padding is the reach of a link's focus ring, which the clip would cut. */
+  margin: calc(-1 * var(--space-1)) calc(var(--railW) - var(--railWOpen))
+    calc(-1 * var(--space-1)) calc(-1 * var(--space-1));
+  padding: var(--space-1) 0 var(--space-1) var(--space-1);
+  /* Folds on the column's curve; 8em clears the line and the figure. */
+  max-height: calc(var(--arOpen) * 8em);
+  overflow: hidden;
 }
-/* The room the sentence changes inside.
- *
- * The line under the orb changes on its own — one reading every IDLE_HOLD_MS at
- * rest, several a second while the agent works — and swapping the words in place
- * reads as flicker rather than as news. So the two sentences overlap for one
- * `--dur-enter`: the outgoing fades out while the incoming fades in, and the
- * slot is never empty.
- *
- * OPACITY ONLY, and the outgoing layer is taken out of the flow. The two-line
- * room below is what holds this block's height, and a second sentence in the
- * flow — or a transform on either — would move the figure and the chevron under
- * it every time a name is long, which is the thing that room exists to prevent.
- */
+/* The old sentence fades out before the new one fades in, in one grid cell:
+   two half-faded sentences read as one smeared one, and a move shifts the figure. */
 .arswap {
-  position: relative;
+  display: grid;
   /* The full column, rather than the width of whichever sentence is showing:
      both layers are measured against the same box, or the outgoing one re-wraps
-     against the incoming one's width while it fades. The text keeps the
-     alignment it already had from `.arhit`. */
+     against the incoming one's width while it fades. */
   width: 100%;
 }
 .arline,
 .argone {
-  max-width: 100%;
+  grid-area: 1 / 1;
+  align-self: center;
+  max-width: calc(100% + 2 * var(--space-1));
+  /* Room for a link's focus ring inside the clamp's clip. */
+  margin: calc(-1 * var(--space-1));
+  padding: var(--space-1);
   color: var(--textPrimary);
-  /* Two lines, always. Not "up to two": the line changes several times a second
-     while the agent works, and a box that is one line tall for "Idle" and two for
-     "Ingesting KoreaPartner Co., Ltd." moves the card, the badge and the figure
-     under it every time a name is long. So the room for the second line is held
-     open whether or not it is used. The text sits at the TOP of that room, not
-     centred in it: centring put half a line of air between the ball and a
-     one-line reading, which read as distance from the thing it names. */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  min-height: 2.6em;
   overflow: hidden;
-  align-content: start;
 }
 /* The incoming sentence. It replays because the layer is a new element every
    time the words change (agentrail.tsx keys it on the words), which is the same
@@ -237,18 +196,18 @@
    Nothing to click and nothing to read: the live layer under it is what a
    screen reader announces, once. */
 .argone {
-  position: absolute;
-  inset: 0;
   pointer-events: none;
   animation: arsayout var(--dur-enter) var(--ease-out) forwards;
 }
 @keyframes arsayin {
-  from {
+  0%,
+  40% {
     opacity: 0;
   }
 }
 @keyframes arsayout {
-  to {
+  40%,
+  100% {
     opacity: 0;
   }
 }
@@ -256,35 +215,13 @@
    so nothing takes the code face: a figure lines up through `tabular-nums` on
    the body face, and a button label or a word takes the body face alone. */
 
-/* The block's last line: the money, the scope it was spent in and the
-   disclosure, on ONE line. Two pieces of chrome at two heights read as two
-   rows in a column this narrow, so the chevron shares the figure's line and
-   its vertical centre. The row survives the figure — see `.archev` — because
-   whether the panel is open is a fact about the block rather than about the
-   spend. */
-.arlast {
-  position: relative;
-  z-index: 1;
+/* The figure and the scope it was spent in, on one baseline. */
+.arspend {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: baseline;
   gap: var(--space-1);
   width: 100%;
   min-width: 0;
-  /* The words' own margin, for the words' own reason: the ball takes the rail's
-     full width and a long line runs into its edge without one. */
-  padding: 0 var(--space-2);
-  margin-top: 1px; /* ds:ignore two lines of one reading, not spaced content */
-}
-/* The figure leads, because it is the thing being watched. Baseline INSIDE the
-   row while the row itself centres: the money and its scope are one reading and
-   sit on one baseline, and the chevron is a glyph rather than a word.
-   The TYPE is the row's own (`.t-caption .t-num` on `.arlast`), so nothing here
-   sizes it: this rule places the two readings and nothing else. */
-.arspend {
-  /* The figure, scope and chevron are the row's own flex items; only the
-     scope shrinks. */
-  display: contents;
   white-space: nowrap;
 }
 /* The figure is never the thing that gets shortened: the scope beside it is. */
@@ -301,7 +238,8 @@
   display: flex;
   justify-content: center;
   width: 100%;
-  margin-top: var(--space-1);
+  margin-top: calc(var(--arOpen) * var(--space-1));
+  max-height: calc(var(--arOpen) * 8em);
 }
 
 /* What the report is ABOUT, and it is a label rather than a thing to read on its
@@ -314,150 +252,35 @@
   text-overflow: ellipsis;
 }
 
-/* In the flow, at the end of the row it shares with the figure. It is drawn
-   whether or not there is a figure: a seat that may not read the spend, and a
-   month that priced nothing, both still get a block that says whether it is
-   open. */
-.archev {
-  flex: none;
-  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.archev.open {
-  transform: rotate(180deg);
+/* The row's tip: a sentence, so it wraps where a destination's label does not. */
+.artip {
+  display: flex;
+  flex-direction: column;
+  max-width: 18rem;
+  white-space: normal;
 }
 
-/* ===== A short window =====
- *
- * The destinations have a fixed cost (about 530px of rows and headings on a full
- * workspace), so on a short window the agent card is what has to give, and it
- * gives in stages rather than by scrolling. A rail that scrolls hides the agent,
- * which is the one thing in the chrome that has to be found without looking.
- *
- * First the air goes. Then the card turns on its side: the ball beside its line
- * instead of over it, which is worth roughly a hundred pixels and still reads as
- * the same object. Last the words go and the orb reports alone, exactly as it
- * does on the collapsed rail.
- */
-@media (max-height: 860px) {
-  .arblock {
-    margin-top: var(--space-1);
-  }
-  .arhit {
-    gap: 2px; /* ds:ignore the last of the air between the ball and its line */
-    padding: 0 0 var(--space-1);
-  }
+/* ===== The collapsed rail: the orb alone, the rest fading on the rail's clock */
+.arwords,
+.artrial {
+  transition: var(--railWords);
 }
-@media (max-height: 780px) {
-  .arhit {
-    flex-direction: row;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-1) var(--space-2);
-    text-align: left;
-  }
-  .arorb {
-    /* The glass is derived from the ball at the top of this file, and its
-       56px less 6px is the 50px this step used to spell for itself. */
-    --arBall: 56px;
-  }
-  .arwords {
-    align-items: flex-start;
-    padding: 0;
-  }
-  /* Turned on its side with everything else: the line takes the middle and the
-     figure and its disclosure end the row, still on the one line they share.
-     The scope is what gives way when there is no room for all three — the rule
-     `.arspend > .arscope` already declares that the figure never shortens. */
-  .arlast {
-    width: auto;
-    margin-top: 0;
-    margin-left: auto;
-    padding: 0;
-  }
-}
-@media (max-height: 620px) {
-  /* The reading goes and the figure goes with it — they are the same words.
-     The chevron is not a reading: it is the only thing left saying whether the
-     panel is open, and a block that opens with no sign that it does is a block
-     nobody opens. */
-  .arwords,
-  .arspend {
-    display: none;
-  }
-  .arhit {
-    justify-content: center;
-  }
-}
-
-/* ===== The collapsed rail =====
- *
- * At 56px the orb IS the report, and it keeps as much of that width as the rail
- * will give it. The words, the chevron and the CTA go; the count stays, because a
- * number waiting for a contact is the one thing that still has to get through at
- * this width. The button keeps its accessible name, so nothing is lost to a
- * screen reader. */
 .rail.collapsed .arwords,
-.rail.collapsed .arlast,
 .rail.collapsed .artrial {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
 }
-.rail.collapsed .arhit {
-  padding: var(--space-2) 0;
-}
-.rail.collapsed .arorb {
-  --coreSize: 56px;
-  --coreGlass: 48px;
-  --coreHalo: 0.5;
-}
-
-/* ===== The rail showing one section's entries =====
- *
- * The agent belongs to the SESSION rather than to a destination, so walking into
- * settings does not put it away: an amber orb is the same fact on every screen,
- * and a report that goes quiet on the screens where somebody would go to fix it
- * is a report nobody acts on. What changes is its WEIGHT. The level above it is
- * one section's own pages, and a ball at the size that leads the workspace rail
- * would read as the thing that list is about.
- *
- * So the foot is reduced to the orb, which is the whole report at every width
- * the words are gone at. The panel it opens is where the line and the month's
- * spend are said, and the button keeps its accessible name, so nothing here is
- * lost to a screen reader.
- */
-.rail.leveled .arwords,
-.rail.leveled .arlast,
-.rail.leveled .artrial {
-  display: none;
-}
-/* `:not(.collapsed)` rather than source order: the collapsed rail reduces the
-   same ball further, the two selectors weigh the same, and a tie decided by
-   which rule this file prints last is a tie the next edit re-decides. */
-.rail.leveled:not(.collapsed) .arhit {
-  /* Centred in both directions the block can run: it is a column of one thing
-     here, and the short-window step above turns it into a ROW whose only other
-     cell — the words — this level has just dropped. */
-  justify-content: center;
-  padding: var(--space-2) 0;
-}
-.rail.leveled:not(.collapsed) .arorb {
-  /* Against the rail's OWN ball rather than a length of its own, so this is a
-     reduction at every window height: the short-window ladder above already
-     takes that ball to 56px, and a flat 72px there would draw the reduced foot
-     larger than the full one it reduces. */
-  --coreSize: min(72px, var(--arBall));
-  /* The collapsed rail's halo, for the collapsed rail's reason: below the size
-     where the ribbons inside the ball can be read, the bloom is what makes the
-     foot read as lit from within rather than as a marble set on the rail. */
-  --coreHalo: 0.4;
+/* Clipped only while it folds: open, the pill's focus ring stands outside it. */
+.rail.collapsed .artrial {
+  overflow: hidden;
 }
 
 /* ===== The phone bar's centre cell =====
  *
  * At phone width the rail is a bottom bar of destinations, and the agent is the
  * one cell on it that is not a place to go. So it does not dress as one: it
- * RISES out of the bar's top edge on the bar's own material, which is the same
- * claim the sidebar makes with a hairline and a lit floor, made in the one
- * currency a five-cell bar has left — position.
+ * RISES out of the bar's top edge on the bar's own material: the one currency a
+ * five-cell bar has left to set it apart is position.
  *
  * Nothing here is a second Core. The block is the same component in the same
  * document; only its box changes (app/shell.tsx renders it in the bar's middle
@@ -465,6 +288,7 @@
  */
 @media (max-width: 700px) {
   .rail .arblock {
+    --arGlass: 38px; /* ds:ignore the glass inside the well's ball */
     /* The cell's own height, so the bar's row is the destinations' 48px whatever
        the circle above does. The circle is taken out of the flow below: sized in
        it, it would make the agent's cell taller than every other one and stand
@@ -491,7 +315,6 @@
     padding: 0;
     border: 1px solid var(--borderSubtle);
     border-radius: 50%;
-    corner-shape: round;
     /* The bar's ground, not the page's: the well is the bar rising, and a
        different fill would read as an object resting on it. Solid where the bar
        is glass, because a translucent circle over the content it floats above
@@ -503,7 +326,7 @@
         color-mix(in srgb, var(--arTone) 14%, transparent),
         transparent 72%
       ),
-      var(--bgElevated);
+      var(--bgField);
     box-shadow: var(--shadow-pop);
   }
   /* Around the well rather than the ball inside it: the well is the control's
@@ -516,22 +339,22 @@
   .rail .artoggle:focus-visible {
     outline: none;
   }
+  .rail .artoggle {
+    margin: 0;
+  }
   /* No line and no figure under it. The bar carries no captions at all
      (app/shell.css drops every `.navlabel`), and a reading under the one cell
      that has room for one would be the only words on the bar — which reads as a
      label for the bar rather than for the agent. The button keeps its accessible
      name, so nothing is lost to a screen reader, and the panel it opens is where
      the line and the month's spend are said. */
-  .rail .arwords,
-  .rail .arlast {
+  .rail .arwords {
     display: none;
   }
   .rail .arorb {
-    /* Sized to the well, not to the rail: the sidebar gives the ball 196px and
-       this gives it the inside of a 56px circle. Still twice a destination's
-       20px glyph, which is the point — the one live object in the bar. */
+    /* The inside of a 56px circle. Still twice a destination's 20px glyph,
+       which is the point: the one live object in the bar. */
     --coreSize: 44px; /* ds:ignore the ball's diameter inside the well */
-    --coreGlass: 38px; /* ds:ignore the glass inside that ball */
     /* More halo than the rail's, less than a hero's: here the ball has an edge
        to bloom against, and the bloom is what makes the well read as lit from
        the inside rather than as a grey disc with a marble in it. */
@@ -548,28 +371,35 @@
  * in this file.
  *
  * `.arloose` is the portalled wrapper, and it exists to carry the state tone: an
- * element moved to the body inherits nothing from the block it belongs to, so
- * without it every finding mark in the panel would draw the resting green.
+ * element moved to the body inherits nothing from the block it belongs to.
  */
 .arloose {
-  --arTone: var(--accent);
+  --arTone: var(--orbBody);
+  /* The head's wash is the orb's light, which at rest is its glow. */
+  --arWash: var(--orbGlow);
 }
 .arloose[data-core-state="ingest"] {
   --arTone: var(--orbMid);
+  --arWash: var(--arTone);
 }
 .arloose[data-core-state="working"] {
   --arTone: var(--orbBright);
+  --arWash: var(--arTone);
 }
 .arloose[data-core-state="warning"] {
   --arTone: var(--orbAmber);
+  --arWash: var(--arTone);
 }
 .arloose[data-core-state="error"] {
   --arTone: var(--orbRed);
+  --arWash: var(--arTone);
 }
 
 .arpanel {
   position: fixed;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   /* No padding of its own: the head is a full-bleed band, and a panel that
      insets it would put a white margin around the one part of this surface that
      is meant to look like glass. */
@@ -635,7 +465,7 @@
     border-right: 1px solid var(--borderSubtle);
     border-bottom: 1px solid var(--borderSubtle);
     border-bottom-right-radius: var(--r-xs); /* the notch's own tip */
-    background: var(--bgElevated);
+    background: var(--bgField);
     z-index: 28;
     /* Opacity alone. The notch already carries `rotate` and `translate` of its
        own, and `transform` composes AFTER both — so the panel's 6px rise would
@@ -674,23 +504,31 @@
  * of the orb across the band, so the panel is visibly the same object as the
  * ball that opened it.
  *
- * Three rows of one grid, in the order they are asked for. The state and the
- * month's figure share the meta line; the agent's NAME is the title under it,
- * because the one thing here that does not change every few seconds is whose
- * report this is; the live sentence stands under both as the status.
+ * Three rows of one grid beside the orb, in the order they are asked for. The
+ * state and the month's figure share the meta line; the agent's NAME is the
+ * title under it, because the one thing here that does not change every few
+ * seconds is whose report this is; the live sentence stands under both as the
+ * status.
  */
 .arphead {
+  /* The head's anchor: the Core's box, the ball drawn in the middle of it. */
+  --arHeadBall: 128px;
+  /* The box's rim of glow on each side: the ball is 62.7% of its glass. */
+  --arHeadHalo: var(--space-6);
   position: relative;
+  flex: none;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns:
+    calc(var(--arHeadBall) - 2 * var(--arHeadHalo))
+    minmax(0, 1fr);
   align-items: baseline;
   gap: var(--space-1) var(--space-4);
-  padding: var(--space-4);
+  padding: var(--space-5) var(--space-4);
   overflow: hidden;
   border-radius: calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px) 0 0;
   background: linear-gradient(
     165deg,
-    color-mix(in srgb, var(--arTone) 7%, var(--ground)),
+    color-mix(in srgb, var(--arWash, var(--arTone)) 7%, var(--ground)),
     var(--ground) 70%
   );
   border-bottom: 1px solid var(--borderSubtle);
@@ -704,17 +542,11 @@
   position: absolute;
   inset: -50% -25% auto -25%;
   height: 260px;
-  background:
-    radial-gradient(
-      55% 55% at 28% 22%,
-      color-mix(in srgb, var(--arTone) 30%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(
-      45% 45% at 82% 45%,
-      color-mix(in srgb, var(--orbAmber) 18%, transparent),
-      transparent 70%
-    );
+  background: radial-gradient(
+    55% 55% at 28% 22%,
+    color-mix(in srgb, var(--arWash, var(--arTone)) 30%, transparent),
+    transparent 70%
+  );
   filter: blur(14px);
   animation: ardriftwash 16s ease-in-out infinite;
   pointer-events: none;
@@ -738,21 +570,46 @@
   margin: 0;
 }
 
+/* The box hangs its rim of glow past the track on every side, so the ball
+   itself stands on the body's --space-4 edge and the words line up with it. */
+.arphead .arporb {
+  --coreSize: var(--arHeadBall);
+  --coreGlass: calc(var(--arHeadBall) - 6px);
+  /* Not 100%: the negative margins below hang the box past its track. */
+  --coreCap: var(--arHeadBall);
+  --coreHalo: 0.5;
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  align-self: center;
+  margin: calc(-1 * var(--arHeadHalo));
+}
+
+/* The state and the month's figure on one line, the figure dropping under the
+   state where both do not fit. */
+.arpmeta {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--space-4);
+}
+.arpmeta > p {
+  margin: 0;
+}
 /* The state, in its own word, with the orb's own tone as its mark. It is the
    only place the vocabulary is written out, and it is written out because the
    sentence below it says what is HAPPENING rather than what the agent is. */
 .arpstate {
-  grid-column: 1;
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  white-space: nowrap;
 }
 .arpstate i {
   flex: none;
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--arTone);
   box-shadow: 0 0 6px -1px var(--arTone);
 }
@@ -761,7 +618,6 @@
    at the head's edge, which gave the second-most-important fact the most
    emphatic slot on the surface. */
 .arpmoney {
-  grid-column: 2;
   white-space: nowrap;
 }
 /* The figure itself, in the panel's head and on the rail's last line: ONE
@@ -773,14 +629,27 @@
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
 }
-/* The one title. It takes the whole width whatever stands beside the state. */
+/* The one title, and where focus lands when the panel opens. */
 .arptitle {
-  grid-column: 1 / -1;
+  grid-column: 2;
   color: var(--textPrimary);
 }
+.arptitle:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
 .arpsaying {
-  grid-column: 1 / -1;
+  grid-column: 2;
   color: var(--textPrimary);
+}
+
+/* What the head reports on, and the only part that scrolls. */
+.arpbody {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* ===== The body =====
@@ -885,7 +754,6 @@
   height: 6px;
   margin-top: 5px; /* ds:ignore drops the 6px mark onto the first line's baseline */
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--info);
 }
 .armark[data-tone="success"] {
@@ -975,7 +843,6 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 /* Only the sources it CANNOT reach are listed, so the dot is the danger tone
    and there is no second state for it to be in. Every mark in the panel's body
@@ -994,7 +861,6 @@
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--danger);
 }
 

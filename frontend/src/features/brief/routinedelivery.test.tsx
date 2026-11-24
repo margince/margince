@@ -1,9 +1,10 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
-import { en } from "../../i18n/en";
+import { en, type MessageKey } from "../../i18n/en";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { BriefDeliveryPanel } from "./briefdelivery";
@@ -123,11 +124,91 @@ async function teamChoices(teamWeek: string, myTeams: string[]) {
 }
 
 it("offers a team lead only the teams they are on", async () => {
-  expect(await teamChoices("teams_led", [ledTeam.id])).toEqual(["Berlin"]);
+  expect(await teamChoices("teams_led", [ledTeam.id])).toEqual([
+    en["delivery.noTeam"],
+    "Berlin",
+  ]);
 });
 
 it("offers management every team", async () => {
-  expect(await teamChoices("every_team", [])).toEqual(["Berlin", "Hanoi"]);
+  expect(await teamChoices("every_team", [])).toEqual([
+    en["delivery.noTeam"],
+    "Berlin",
+    "Hanoi",
+  ]);
+});
+
+it("clears a chosen team and falls back to my work", async () => {
+  const calls = stubApi({
+    "GET /me": () =>
+      jsonResponse({ ...meFixture(), team_week: "every_team", teams: [] }),
+    "GET /teams": () =>
+      jsonResponse({ data: [ledTeam, otherTeam], page: { has_more: false } }),
+    "GET /me/brief-delivery": () =>
+      jsonResponse({
+        routine_mail_scope: "team",
+        routine_mail_team_id: ledTeam.id,
+      }),
+    "PUT /me/brief-delivery": () =>
+      jsonResponse({ routine_mail_scope: "personal" }),
+  });
+  render(<Page />);
+  const user = userEvent.setup();
+  const row = await screen.findByTestId("delivery-team");
+  await user.click(await within(row).findByRole("combobox"));
+  await user.click(
+    await screen.findByRole("option", { name: en["delivery.noTeam"] }),
+  );
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(
+      calls.filter((call) => call.method === "PUT").map((call) => call.body),
+    ).toEqual([
+      { clear_routine_mail_team: true, routine_mail_scope: "personal" },
+    ]),
+  );
+});
+
+it("says a team that is gone in the reader's words", async () => {
+  stubApi({
+    "GET /me": () =>
+      jsonResponse({ ...meFixture(), team_week: "every_team", teams: [] }),
+    "GET /teams": () =>
+      jsonResponse({ data: [ledTeam], page: { has_more: false } }),
+    "GET /me/brief-delivery": () =>
+      jsonResponse({ routine_mail_scope: "team" }),
+    "PUT /me/brief-delivery": () =>
+      jsonResponse(
+        {
+          title: "Unprocessable",
+          status: 422,
+          code: "validation_error",
+          detail: "this team no longer exists; choose another",
+          details: {
+            errors: [
+              {
+                field: "routine_mail_team_id",
+                code: "delivery_team_gone",
+                message: "this team no longer exists; choose another",
+              },
+            ],
+          },
+        },
+        422,
+      ),
+  });
+  render(<Page />);
+  const user = userEvent.setup();
+  const row = await screen.findByTestId("delivery-team");
+  await user.click(await within(row).findByRole("combobox"));
+  await user.click(await screen.findByRole("option", { name: "Berlin" }));
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  const alerts = await screen.findAllByRole("alert");
+  expect(
+    alerts.some((alert) =>
+      alert.textContent?.includes(en["delivery.teamGone"]),
+    ),
+  ).toBe(true);
 });
 
 it("says the team list failed instead of offering an empty choice", async () => {
@@ -144,3 +225,39 @@ it("says the team list failed instead of offering an empty choice", async () => 
   expect(await within(row).findByRole("alert")).toBeTruthy();
   expect(within(row).queryByRole("combobox")).toBeNull();
 });
+
+it("gives every summaries control one width and a description of its own", async () => {
+  stubApi({
+    "GET /me": () =>
+      jsonResponse({ ...meFixture(), team_week: "every_team", teams: [] }),
+    "GET /teams": () =>
+      jsonResponse({ data: [ledTeam], page: { has_more: false } }),
+    "GET /me/brief-delivery": () =>
+      jsonResponse({ routine_mail_scope: "team" }),
+  });
+  render(<Page />);
+  const team = await screen.findByTestId("delivery-team");
+  await within(team).findByRole("combobox");
+  const controls = screen.getAllByRole("combobox");
+  expect(controls).toHaveLength(SUMMARY_HELP.length);
+  for (const control of controls) {
+    expect(control.className).toContain("settingrow-measure");
+  }
+  for (const [label, help] of SUMMARY_HELP) {
+    expect(
+      screen.getByRole("combobox", { name: en[label] }),
+    ).toHaveAccessibleDescription(en[help]);
+  }
+});
+
+// Each summaries control, by its label, and the help that describes it.
+const SUMMARY_HELP: ReadonlyArray<readonly [MessageKey, MessageKey]> = [
+  ["delivery.morningLabel", "delivery.morningHelp"],
+  ["delivery.weeklyLabel", "delivery.weeklyHelp"],
+  ["delivery.hourLabel", "delivery.scheduleHelp"],
+  ["delivery.weekdayLabel", "delivery.weekdayHelp"],
+  ["delivery.quietLabel", "delivery.quietHelp"],
+  ["delivery.combineLabel", "delivery.combineHelp"],
+  ["delivery.scopeLabel", "delivery.scopeHelp"],
+  ["teamweekly.pickTeam", "delivery.teamHelp"],
+];

@@ -105,9 +105,9 @@ func seedMeetingAt(ctx context.Context, tx pgx.Tx, address, at, precision string
 		return err
 	}
 	_, err := tx.Exec(ctx, `
-		INSERT INTO activity_participant (activity_id,address,role,user_id,roster_seat,response)
- VALUES (@activity,@address,'attendee',NULL,@owner,'accepted'),
- (@activity,@owner_address,'organizer',@owner,@owner,'accepted')`, pgx.NamedArgs{
+		INSERT INTO activity_participant (activity_id,address,role,user_id,roster_seats,response)
+ VALUES (@activity,@address,'attendee',NULL,ARRAY[@owner::uuid],'accepted'),
+ (@activity,@owner_address,'organizer',@owner,ARRAY[@owner::uuid],'accepted')`, pgx.NamedArgs{
 		"activity": activityID, "address": address, "owner": ownerID, "owner_address": "owner-" + ownerID.String() + "@example.test"})
 	return err
 }

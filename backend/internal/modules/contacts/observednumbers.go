@@ -117,6 +117,9 @@ func applyObservedNumberList(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		if n.outcome != observedApplied && n.outcome != observedReplaced {
 			continue
 		}
+		if err := touchChildSetParent(ctx, tx, contactEntity, contactID.UUID); err != nil {
+			return nil, err
+		}
 		if _, err := writeContactProfileField(ctx, tx, contactID, contactProfileFieldRow{
 			Field: fieldPhone, Value: n.phone.String(), EvidenceSnippet: n.Evidence,
 			SourceRef: s.SourceRef, Source: s.Source, CapturedBy: s.CapturedBy,
@@ -205,8 +208,8 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		}
 	}
 
-	// is_primary only when this type has no live primary left: the partial
-	// unique index permits exactly one, and claiming it from a number this
+	// is_primary only when the contact has no live primary number left. The
+	// partial unique index permits one, and claiming it from a number this
 	// statement said nothing about would silently re-rank the record.
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO contact_phone
@@ -214,7 +217,7 @@ func applyObservedPhone(ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
 		SELECT $1, $2, $3,
 		  NOT EXISTS (
 			SELECT 1 FROM contact_phone
-			WHERE contact_id = $1 AND phone_type = $3 AND is_primary AND archived_at IS NULL),
+			WHERE contact_id = $1 AND is_primary AND archived_at IS NULL),
 		  COALESCE((SELECT MAX(position) + 1 FROM contact_phone
 			WHERE contact_id = $1 AND archived_at IS NULL), 0),
 		  $4, $5, $6, $7

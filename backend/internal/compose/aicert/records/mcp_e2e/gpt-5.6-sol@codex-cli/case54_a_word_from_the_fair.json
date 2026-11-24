@@ -11,13 +11,74 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "a5155caba87bc1e9",
+    "tools": "b5c8835ea37cb420",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "53246e5fe328e22058409bea6b0b93e8a29005ee",
+    "ran_at": "2026-11-22T03:31:59Z",
+    "graded_commit": "c7d8c959b7e859b9765ae0637afffe55d0de36a2",
+    "graded_at": "2026-11-22T14:06:08Z"
+  },
   "usage": {
-    "input_tokens": 65876,
-    "output_tokens": 2827,
+    "input_tokens": 58620,
+    "output_tokens": 2631,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 357888,
+    "cache_read_input_tokens": 346240,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "get_record_tags",
+        "list_tags",
+        "read_tags",
+        "read_workspace",
+        "resolve_entities"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "describe_record_fields",
+        "find_records",
+        "get_record_tags",
+        "read_tags",
+        "read_workspace",
+        "resolve_entities"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 6.5,
+      "min": 4,
+      "max": 9
+    },
+    "refused": {
+      "median": 1,
+      "min": 0,
+      "max": 2
+    },
+    "prompt_tokens": {
+      "median": 202430,
+      "min": 172863,
+      "max": 231997
+    },
+    "output_tokens": {
+      "median": 1315.5,
+      "min": 1031,
+      "max": 1600
+    }
   }
 }

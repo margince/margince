@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useId, useState } from "react";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -10,12 +11,14 @@ import {
 } from "../../design-system/clipboardcopy";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { TokenInput } from "../../design-system/tokeninput";
+import { TokenInput, type TokenParse } from "../../design-system/tokeninput";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useConnectorState } from "../../lib/connector-state";
 import { faultSentenceFor, problemFieldErrorsOf } from "../../lib/problem";
+import { acceptsRedirectURI } from "./agent-client-redirect";
 import {
+  REGISTER_AGENT_CLIENT_KEY,
   type RegisteredAgentClient,
   useRegisterAgentClient,
 } from "./agent-clients.queries";
@@ -43,6 +46,19 @@ const FIELD_PROBLEM_COPY: Readonly<Record<string, MessageKey>> = {
   invalid_name: "agentClients.register.nameInvalid",
   invalid_redirect_uri: "agentClients.register.redirectInvalid",
   redirect_uri_count: "agentClients.register.redirectCount",
+};
+
+// Space, tab and newline split a paste, since none belongs in a URI. Comma does
+// not: a query may hold one.
+const REDIRECT_PARSE: Omit<TokenParse, "onRefuse"> = {
+  keys: [],
+  read: (raw) => {
+    const parts = raw.split(/\s+/).filter((part) => part !== "");
+    return {
+      values: parts.filter(acceptsRedirectURI),
+      refused: parts.filter((part) => !acceptsRedirectURI(part)),
+    };
+  },
 };
 
 function useFieldProblem(error: unknown) {
@@ -93,15 +109,22 @@ function RegisterForm({
   const t = useT();
   const headingId = useId();
   const formId = useId();
+  const queryClient = useQueryClient();
   const register = useRegisterAgentClient();
   const fieldProblem = useFieldProblem(register.error);
   const [name, setName] = useState("");
   const [redirects, setRedirects] = useState<readonly string[]>([]);
+  const [refusedRedirects, setRefusedRedirects] = useState<readonly string[]>(
+    [],
+  );
   const nameProblem = fieldProblem("name");
-  const redirectProblem = fieldProblem("redirect_uris");
+  const redirectProblem =
+    refusedRedirects.length > 0
+      ? t("agentClients.register.redirectInvalid")
+      : fieldProblem("redirect_uris");
   const otherProblem =
     register.error && !nameProblem && !redirectProblem ? register.error : null;
-  const missing = missingAnswer(name, redirects);
+  const missing = missingAnswer(name, redirects, refusedRedirects);
   // An edit answers the server's refusal, so the refusal stops showing.
   function edited<T>(set: (value: T) => void) {
     return (value: T) => {
@@ -114,7 +137,12 @@ function RegisterForm({
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (register.isPending || missing !== undefined) {
+    // The cache, not `register.isPending`: a second press can land before the
+    // render that would carry the first one's pending state.
+    const out = queryClient.isMutating({
+      mutationKey: REGISTER_AGENT_CLIENT_KEY,
+    });
+    if (out > 0 || missing !== undefined) {
       return;
     }
     register.mutate(
@@ -162,6 +190,8 @@ function RegisterForm({
               values={redirects}
               onChange={edited(setRedirects)}
               suggestions={REDIRECT_PRESETS}
+              parse={{ ...REDIRECT_PARSE, onRefuse: setRefusedRedirects }}
+              removeLabel={(item) => t("tokenInput.remove", { value: item })}
             />
           )}
         </Field>
@@ -188,9 +218,13 @@ function RegisterForm({
 function missingAnswer(
   name: string,
   redirects: readonly string[],
+  refused: readonly string[],
 ): MessageKey | undefined {
   if (name.trim() === "") {
     return "agentClients.register.needName";
+  }
+  if (refused.length > 0) {
+    return "agentClients.register.fixRedirect";
   }
   if (redirects.length === 0) {
     return "agentClients.register.needRedirect";
@@ -244,8 +278,16 @@ export function AgentClientValuesDialog({
           { label: "agentClients.value.mcpUrl" as const, text: mcpUrl },
         ]),
   ];
+  // Done is the only way out: Escape, the backdrop or the X would drop a
+  // secret that no read can show again.
   return (
-    <Modal open onClose={onClose} labelledBy={headingId} intent="form">
+    <Modal
+      open
+      onClose={onClose}
+      closeDisabled
+      labelledBy={headingId}
+      intent="form"
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t(titleKey)}
       </Heading>

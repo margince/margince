@@ -84,7 +84,8 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 		Code string `json:"code"`
 	}
 	status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Should not exist", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Should not exist", "source": "manual",
 	}, bearer, &problem)
 	if status != 403 || problem.Code != "scope_exceeds_grantor" {
 		t.Fatalf("read-scope write → %d %q, want 403 scope_exceeds_grantor", status, problem.Code)
@@ -130,13 +131,15 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		CapturedBy string `json:"captured_by"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Governed Green Write", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Governed Green Write", "source": "manual",
 	}, bearer, &created); status != 201 {
 		t.Fatalf("write-scope 🟢 REST mutation → %d, want 201 (ADR-0055 admits governed agent writes)", status)
 	}
 	// A body that claims its own author is refused, not obeyed and not ignored.
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Forged Author", "source": "manual", "captured_by": "human:forged",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Forged Author", "source": "manual", "captured_by": "human:forged",
 	}, bearer, nil); status != 422 {
 		t.Fatalf("a body naming captured_by → %d, want 422", status)
 	}
@@ -164,7 +167,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 
 	// 🟡 still exists on the calls that reach outside the workspace: an
 	// enrichment reads the company's website, so it asks a human first.
-	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Governed Yellow GmbH", "source": "manual", "domains": []AnyMap{{"domain": "example.com", "is_primary": true}}})
+	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Governed Yellow GmbH", "source": "manual", "domains": []AnyMap{{"domain": "example.test", "is_primary": true}}})
 	enrichPath := "/v1/companies/" + companyID + "/enrich"
 	var problem struct {
 		Code   string `json:"code"`
@@ -225,7 +228,8 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Full Seat Made", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Full Seat Made", "source": "manual",
 	}, nil, &created); status != 201 {
 		t.Fatalf("full-seat create → %d", status)
 	}
@@ -243,7 +247,8 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 		Code string `json:"code"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Read Seat Blocked", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Read Seat Blocked", "source": "manual",
 	}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
 		t.Fatalf("read-seat create → %d %q, want 403 seat_tier_insufficient", status, problem.Code)
 	}

@@ -47,7 +47,7 @@ func TestInviteAnswersWhileTheRelayIsStillSending(t *testing.T) {
 	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
 	body := `{"email":"slow@acme.test","display_name":"Slow Relay","role":"rep"}`
 	rec := httptest.NewRecorder()
-	h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx))
+	h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx), crmcontracts.InviteUserParams{})
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("invite status = %d, want 201: %s", rec.Code, rec.Body)
 	}
@@ -76,7 +76,7 @@ func TestAnAgentSendsNoNewLinkToAnInvitedAdministrator(t *testing.T) {
 		t.Helper()
 		rec := httptest.NewRecorder()
 		body := `{"email":"` + email + `","display_name":"Invited","role":"` + role + `"}`
-		h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx))
+		h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx), crmcontracts.InviteUserParams{})
 		if rec.Code != http.StatusCreated {
 			t.Fatalf("inviting %s → %d: %s", email, rec.Code, rec.Body)
 		}
@@ -87,14 +87,14 @@ func TestAnAgentSendsNoNewLinkToAnInvitedAdministrator(t *testing.T) {
 		return ids.UserID{UUID: ids.UUID(member.Id)}
 	}
 	admin := invite("boss@acme.test", "admin")
-	_, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, admin)
+	_, _, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, admin)
 	if detailed, ok := errors.AsType[*httperr.DetailedError](err); !ok || detailed.Code != "agent_member_limit" {
 		t.Errorf("an agent's resend to an invited administrator answered %v", err)
 	}
-	if _, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, invite("rep@acme.test", "rep")); err != nil {
+	if _, _, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, invite("rep@acme.test", "rep")); err != nil {
 		t.Errorf("an agent's resend to an invited colleague answered %v", err)
 	}
-	if _, err := e.svc.ResendInvite(ctx, e.admin, admin); err != nil {
+	if _, _, err := e.svc.ResendInvite(ctx, e.admin, admin); err != nil {
 		t.Errorf("the administrator's own resend answered %v", err)
 	}
 }
@@ -168,7 +168,7 @@ func TestARefusedInviteMailShowsOnTheRosterUntilAResendGoesOut(t *testing.T) {
 	ctx := withIdentity(e.wsCtx(e.admin), e.admin)
 	rec := httptest.NewRecorder()
 	body := `{"email":"` + email + `","display_name":"New Member","role":"rep"}`
-	refusing.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx))
+	refusing.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).WithContext(ctx), crmcontracts.InviteUserParams{})
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("invite status = %d, want 201: %s", rec.Code, rec.Body)
 	}
@@ -187,7 +187,7 @@ func TestARefusedInviteMailShowsOnTheRosterUntilAResendGoesOut(t *testing.T) {
 	working, sent := mailingHandlers(e, mail)
 	rec = httptest.NewRecorder()
 	working.ResendUserInvite(rec, httptest.NewRequest(http.MethodPost, "/v1/users/"+row.Id.String()+"/resend-invite", nil).
-		WithContext(ctx), row.Id)
+		WithContext(ctx), row.Id, crmcontracts.ResendUserInviteParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("resend status = %d, want 200: %s", rec.Code, rec.Body)
 	}
@@ -237,7 +237,7 @@ func TestAResendIsRefusedWhereNoInvitationIsWaiting(t *testing.T) {
 		},
 	} {
 		rec := httptest.NewRecorder()
-		tc.h.ResendUserInvite(rec, httptest.NewRequest(http.MethodPost, "/v1/users/x/resend-invite", nil).WithContext(ctx), member)
+		tc.h.ResendUserInvite(rec, httptest.NewRequest(http.MethodPost, "/v1/users/x/resend-invite", nil).WithContext(ctx), member, crmcontracts.ResendUserInviteParams{})
 		if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), tc.code) {
 			t.Errorf("%s: resend answered %d %s, want 409 %s", name, rec.Code, rec.Body, tc.code)
 		}
@@ -250,7 +250,7 @@ func inviteThrough(t *testing.T, e *revocationEnv, h Handlers, email string) crm
 	rec := httptest.NewRecorder()
 	body := `{"email":"` + email + `","display_name":"New Member","role":"rep"}`
 	h.InviteUser(rec, httptest.NewRequest(http.MethodPost, "/v1/users", strings.NewReader(body)).
-		WithContext(withIdentity(e.wsCtx(e.admin), e.admin)))
+		WithContext(withIdentity(e.wsCtx(e.admin), e.admin)), crmcontracts.InviteUserParams{})
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("invite status = %d, want 201: %s", rec.Code, rec.Body)
 	}
@@ -296,7 +296,7 @@ func TestEveryInvitedMemberCanBeSentANewInvitation(t *testing.T) {
 			}
 			rec := httptest.NewRecorder()
 			resend.ResendUserInvite(rec, httptest.NewRequest(http.MethodPost, "/v1/users/x/resend-invite", nil).
-				WithContext(ctx), member.id)
+				WithContext(ctx), member.id, crmcontracts.ResendUserInviteParams{})
 			if rec.Code != http.StatusOK {
 				t.Fatalf("a resend of a %s invitation answered %d %s, want 200", state, rec.Code, rec.Body)
 			}
@@ -366,7 +366,7 @@ func TestAnInvitationIsMailedOnlyWhileItsLinkAndMemberStillStand(t *testing.T) {
 	ctx := e.wsCtx(e.admin)
 	mint := func() string {
 		t.Helper()
-		raw, err := e.svc.ResendInvite(ctx, e.admin, id)
+		_, raw, err := e.svc.ResendInvite(ctx, e.admin, id)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -377,7 +377,7 @@ func TestAnInvitationIsMailedOnlyWhileItsLinkAndMemberStillStand(t *testing.T) {
 	send := func(raw string) {
 		t.Helper()
 		req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(withIdentity(ctx, e.admin))
-		if !h.sendInvite(req, "stale@acme.test", raw, e.admin) {
+		if !h.sendInvite(req, raw, e.admin) {
 			t.Fatal("the send was not handed over on an installation that can mail")
 		}
 		<-done
@@ -437,7 +437,7 @@ func TestAResendQueuedBehindARedemptionMintsNothing(t *testing.T) {
 
 	resent := make(chan error, 1)
 	go func() {
-		_, err := e.svc.ResendInvite(e.wsCtx(e.admin), e.admin, id)
+		_, _, err := e.svc.ResendInvite(e.wsCtx(e.admin), e.admin, id)
 		resent <- err
 	}()
 	waitForABlockedBackend(t, redemption, `locktype = 'transactionid'`)

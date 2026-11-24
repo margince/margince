@@ -3,9 +3,10 @@ import type { StandingPeek } from "../../design-system/standingdims";
 import { DEAL_STATUS_LABEL } from "../../format/dealstatus";
 import { formatMoney } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
+import { attachmentTitle } from "../../lib/attachmentlink";
 import { labelFor } from "../../lib/labelfor";
 import { routeHash } from "../../lib/router";
-import { type PeekWords, partialFoot } from "../../lib/standingpeeks";
+import { dueOnDay, type PeekWords, partialFoot } from "../../lib/standingpeeks";
 import type { Project360 } from "./projectsections";
 import { commitmentsReading, dealsReading, timeUsed } from "./projectstanding";
 
@@ -20,7 +21,7 @@ export function commitmentsPeek(
   words: PeekWords,
   open: () => void,
 ): PeekContent | undefined {
-  const { t, locale, zone } = words;
+  const { t, locale } = words;
   const rows = view.commitments?.data ?? [];
   const reading = commitmentsReading(view);
   if (rows.length === 0 || !reading) {
@@ -28,24 +29,29 @@ export function commitmentsPeek(
   }
   return {
     head: t("project.standing.peek.commitments"),
-    items: rows.map((row) => ({
-      key: row.activity_id,
-      title: row.subject,
-      sub: [
-        row.assignee_name,
-        row.due_at
-          ? t(
-              row.overdue
-                ? "standing.next.peek.overdue"
-                : "project.standing.nextDue",
-              { date: formatDayMonth(row.due_at, locale, zone) },
-            )
-          : t("standing.next.peek.undated"),
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      onOpen: open,
-    })),
+    items: rows.map((row) => {
+      const due = row.due_at
+        ? dueOnDay(words, row.due_at, row.due_has_time, row.due_intent)
+        : undefined;
+      return {
+        key: row.activity_id,
+        title: row.subject,
+        sub: [
+          row.assignee_name,
+          due
+            ? t(
+                row.overdue
+                  ? "standing.next.peek.overdue"
+                  : "project.standing.nextDue",
+                { date: formatDayMonth(due.at, locale, due.zone) },
+              )
+            : t("standing.next.peek.undated"),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        onOpen: open,
+      };
+    }),
     foot: partialFoot(rows.length, reading.open, words),
   };
 }
@@ -131,7 +137,7 @@ export function documentsPeek(
     head: t("project.standing.peek.documents"),
     items: rows.map((file) => ({
       key: file.id,
-      title: file.title || file.filename,
+      title: attachmentTitle(file),
       sub: file.title ? file.filename : undefined,
     })),
     foot: view.documents?.page.has_more

@@ -96,7 +96,7 @@ func (ie *ingestEnv) attempt(t *testing.T, documentID ids.UUID) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	body, err := ie.store.OpenDocument(ie.ctx, src.StorageKey)
+	body, err := ie.store.OpenDocument(ie.ctx, src)
 	if err != nil {
 		return 0, err
 	}
@@ -110,10 +110,10 @@ func (ie *ingestEnv) attempt(t *testing.T, documentID ids.UUID) (int, error) {
 		return 0, err
 	}
 	chunks := knowledge.ChunkText(string(raw))
-	if err := ie.store.WriteChunks(ie.ctx, documentID, src.CorpusID, chunks); err != nil {
+	if err := ie.store.WriteChunks(ie.ctx, documentID, src, chunks); err != nil {
 		return 0, err
 	}
-	return len(chunks), ie.store.FinishIngest(ie.ctx, documentID, len(chunks))
+	return len(chunks), ie.store.FinishIngest(ie.ctx, documentID, src, len(chunks))
 }
 
 // prose is a body long enough to cut into several passages, so a doubling is
@@ -182,7 +182,7 @@ func TestAnAttemptThatDiedMidFlightLeavesTheNextOneClean(t *testing.T) {
 		t.Fatalf("begin: %v", err)
 	}
 	half := knowledge.ChunkText(prose(3))
-	if err := ie.store.WriteChunks(ie.ctx, docID, src.CorpusID, half); err != nil {
+	if err := ie.store.WriteChunks(ie.ctx, docID, src, half); err != nil {
 		t.Fatalf("write chunks: %v", err)
 	}
 
@@ -237,10 +237,8 @@ func TestAPDFIsRefusedNamingTheAcceptedTypes(t *testing.T) {
 	if !errors.As(err, &unsupported) {
 		t.Fatalf("upload of a PDF = %v, want UnsupportedTypeError", err)
 	}
-	for _, accepted := range []string{"text/plain", "text/markdown", "text/csv", "application/json"} {
-		if !strings.Contains(unsupported.Error(), accepted) {
-			t.Fatalf("the refusal does not name %s: %q", accepted, unsupported.Error())
-		}
+	if !strings.Contains(unsupported.Error(), "plain text, Markdown, CSV or JSON") {
+		t.Fatalf("the refusal does not name the accepted kinds: %q", unsupported.Error())
 	}
 	// Refused before anything was written: a rejected file leaves no row for a
 	// screen to list and no object for a sweep to find.
@@ -288,7 +286,7 @@ func TestADocumentArchivedMidIngestLeavesNoLiveChunk(t *testing.T) {
 	if err := ie.store.ArchiveCorpus(ie.ctx, ie.corpus); err != nil {
 		t.Fatalf("archive: %v", err)
 	}
-	err = ie.store.WriteChunks(ie.ctx, docID, src.CorpusID, knowledge.ChunkText(prose(2)))
+	err = ie.store.WriteChunks(ie.ctx, docID, src, knowledge.ChunkText(prose(2)))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("writing chunks under an archived document = %v, want ErrNotFound", err)
 	}
@@ -297,9 +295,9 @@ func TestADocumentArchivedMidIngestLeavesNoLiveChunk(t *testing.T) {
 	}
 }
 
-// An empty file is not a failure: it is a document with nothing in it, and
-// saying so is more useful than a refusal the uploader cannot act on.
-func TestAnEmptyDocumentIngestsToNoPassagesAndSucceeds(t *testing.T) {
+// A file of only blank lines is a document with nothing in it, not a failure.
+// Saying so helps more than a refusal the uploader cannot act on.
+func TestABlankDocumentIngestsToNoPassagesAndSucceeds(t *testing.T) {
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "empty.md", "text/markdown", "   \n\n  ")
 
@@ -312,6 +310,25 @@ func TestAnEmptyDocumentIngestsToNoPassagesAndSucceeds(t *testing.T) {
 	}
 	if docs[0].IngestStatus != "done" {
 		t.Fatalf("ingest_status = %q, want done", docs[0].IngestStatus)
+	}
+}
+
+// A file of no bytes is refused before anything is stored: filed, it would read
+// like success and answer nothing.
+func TestAZeroByteFileIsRefusedBeforeAnythingIsStored(t *testing.T) {
+	ie := newIngestEnv(t)
+	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
+		CorpusID:    ie.corpus,
+		Filename:    "empty.md",
+		ContentType: "text/markdown",
+		Content:     strings.NewReader(""),
+	}, ie.queue)
+
+	if _, ok := errors.AsType[*knowledge.EmptyDocumentError](err); !ok {
+		t.Fatalf("a zero-byte upload = %v, want EmptyDocumentError", err)
+	}
+	if n := liveDocumentCount(t, ie.env, ie.corpus); n != 0 || len(ie.queued) != 0 {
+		t.Fatalf("a refused upload left %d row(s) and queued %v", n, ie.queued)
 	}
 }
 
@@ -489,12 +506,12 @@ func TestTwoAttemptsAtOneDocumentCannotBothWriteItsPassages(t *testing.T) {
 		t.Fatalf("second begin: %v", err)
 	}
 	chunks := knowledge.ChunkText(prose(3))
-	if err := ie.store.WriteChunks(ie.ctx, docID, first.CorpusID, chunks); err != nil {
+	if err := ie.store.WriteChunks(ie.ctx, docID, first, chunks); err != nil {
 		t.Fatalf("first write: %v", err)
 	}
 	// The second attempt is REFUSED rather than doubling the corpus. Which
 	// error it is does not matter — what matters is that it does not succeed.
-	if err := ie.store.WriteChunks(ie.ctx, docID, second.CorpusID, chunks); err == nil {
+	if err := ie.store.WriteChunks(ie.ctx, docID, second, chunks); err == nil {
 		t.Fatal("a second attempt wrote the same passages again")
 	}
 	if live := liveChunkCount(t, ie.env, ie.corpus); live != len(chunks) {
@@ -566,12 +583,12 @@ func TestTheCeilingHoldsAcrossTwoDocumentsInOneCorpus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("begin second: %v", err)
 	}
-	if err := ie.store.WriteChunks(ie.ctx, first, firstSrc.CorpusID, knowledge.ChunkText(prose(2))); err != nil {
+	if err := ie.store.WriteChunks(ie.ctx, first, firstSrc, knowledge.ChunkText(prose(2))); err != nil {
 		t.Fatalf("first write: %v", err)
 	}
 	// The second is refused: the corpus is full, whichever document is asking.
 	var full *knowledge.CorpusFullError
-	if err := ie.store.WriteChunks(ie.ctx, second, secondSrc.CorpusID, knowledge.ChunkText(prose(3))); !errors.As(err, &full) {
+	if err := ie.store.WriteChunks(ie.ctx, second, secondSrc, knowledge.ChunkText(prose(3))); !errors.As(err, &full) {
 		t.Fatalf("second write = %v, want CorpusFullError", err)
 	}
 	if live := liveChunkCount(t, ie.env, ie.corpus); live > knowledgePassageCeiling {
@@ -648,10 +665,8 @@ func TestASweepLeavesAnIngestThatIsMerelySlowAlone(t *testing.T) {
 
 // A client that sent no type at all is read by its filename.
 //
-// A platform with no registry entry for `.md` makes the browser report an EMPTY
-// content type, and this route's flagship file would otherwise be refused with
-// "` ` cannot be read as text" — a refusal naming nothing, for exactly the file
-// the route wants. A curl caller omitting the part header hits the same wall.
+// A platform with no registry entry for `.md` sends an EMPTY content type. The
+// route's flagship file would then be refused, and so would a curl upload with no part header.
 func TestAnUploadWithNoContentTypeIsReadByItsFilename(t *testing.T) {
 	ie := newIngestEnv(t)
 	for _, c := range []struct{ filename, want string }{
@@ -675,9 +690,9 @@ func TestAnUploadWithNoContentTypeIsReadByItsFilename(t *testing.T) {
 	}
 }
 
-// A STATED type stands, wrong extension or not: it is the client's claim, and
-// a filename is only a name.
-func TestAStatedContentTypeIsNotOverriddenByTheExtension(t *testing.T) {
+// A readable ending names the type, so a PDF renamed .md is refused by its
+// bytes, which contradict the type its name claims.
+func TestAPDFNamedAsMarkdownIsRefusedByItsBytes(t *testing.T) {
 	ie := newIngestEnv(t)
 	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
 		CorpusID:    ie.corpus,

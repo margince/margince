@@ -9,9 +9,10 @@ import {
 import { useState } from "react";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { useToast } from "../design-system/toast";
+import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { type RequiredGrant, useGrantRefused } from "../lib/capability";
+import { type Departure, fromHere } from "../lib/navigatefrom";
 import { problemMessageOf } from "../lib/problem";
 import "../design-system/querystates.css";
 
@@ -20,13 +21,8 @@ import "../design-system/querystates.css";
 // flip to status=disqualified). Mirrors useUpdateRecord/EditAction (edit.tsx):
 // the screen supplies the transport, this stays resource-agnostic.
 //
-// It is the ARCHIVE half only — never wire a restore control against this hook.
-// That used to be because no resource had a restore endpoint at all; pipelines
-// now do (`POST /pipelines/{id}/restore`), and the reason survives the change:
-// what this hook owns is the confirm, the invalidation and a toast that states
-// a record is gone, and a restore is none of those. A screen with an undo puts
-// the verb where the archived record is, which is where a reader looking for it
-// will be.
+// The restore itself is the screen's: a screen that can take the archive back
+// hands `undo`, and the confirmation carries it as its Undo.
 
 export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   archive,
@@ -34,6 +30,7 @@ export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   recordKey,
   archivedMessage,
   onDone,
+  undo,
 }: Readonly<{
   // Takes the caller's own variables, so a form's value reaches the request as
   // an argument rather than through a closure the render decides. A caller with
@@ -54,30 +51,40 @@ export function useArchiveRecord<Archived extends { id: string }, Vars = void>({
   // showing — so a message composed before the call could name the wrong one,
   // and telling somebody the wrong domain is refused is worse than telling
   // them nothing.
-  //
-  // No `action` here: for most resources the contract has no restore endpoint,
-  // and an Undo with nothing behind it is worse than none. A resource that DOES
-  // have one (pipelines) offers the undo where the archived record is listed
-  // rather than in a toast that has already gone — see the top of this file.
   archivedMessage: string | ((archived: Archived) => string);
-  onDone: (archived: Archived) => void;
+  // `from` is where the reader confirmed, for a caller that moves them on.
+  onDone: (archived: Archived, from: Departure) => void;
+  // Takes the archive back. Absent, the confirmation offers no Undo, because
+  // an Undo with nothing behind it is worse than none.
+  undo?: (archived: Archived) => Promise<void>;
 }>) {
+  const t = useT();
   const queryClient = useQueryClient();
   const toast = useToast();
   return useMutation({
     mutationFn: archive,
-    onSuccess: (archived) => {
+    onMutate: fromHere,
+    onSuccess: (archived, _vars, from) => {
       for (const queryKey of typeof invalidate === "string"
         ? [[invalidate]]
         : invalidate) {
         queryClient.invalidateQueries({ queryKey });
       }
       queryClient.invalidateQueries({ queryKey: [recordKey, archived.id] });
-      onDone(archived);
+      onDone(archived, from);
       toast.show(
         typeof archivedMessage === "string"
           ? archivedMessage
           : archivedMessage(archived),
+        undo && {
+          // The page that drew the verb is gone by now, so a refusal is said
+          // here.
+          action: undoAction(t("common.undo"), () => {
+            undo(archived).catch((error: unknown) =>
+              toast.show(problemMessageOf(error, t), { tone: "danger" }),
+            );
+          }),
+        },
       );
     },
   });
@@ -99,6 +106,7 @@ export function ArchiveAction<Archived extends { id: string }>({
   requires,
   archivable,
   refusedReason,
+  undo,
 }: Readonly<{
   label: string;
   confirmText: string;
@@ -107,7 +115,7 @@ export function ArchiveAction<Archived extends { id: string }>({
   recordKey: string;
   // What the reader is told once it is gone. See `useArchiveRecord`.
   archivedMessage: string;
-  onArchived: () => void;
+  onArchived: (from: Departure) => void;
   // Why this action is unavailable, when it is. STATE-4a settles the
   // absent-vs-disabled question by CAUSE: a control blocked by STATE
   // rather than permission — an archived record — stays visible and
@@ -124,6 +132,8 @@ export function ArchiveAction<Archived extends { id: string }>({
   archivable?: boolean;
   // What a refused reader is told, where the generic role sentence is wrong.
   refusedReason?: string;
+  // See `useArchiveRecord`.
+  undo?: (archived: Archived) => Promise<void>;
 }>) {
   const t = useT();
   const grantRefused = useGrantRefused(requires);
@@ -134,10 +144,11 @@ export function ArchiveAction<Archived extends { id: string }>({
     invalidate,
     recordKey,
     archivedMessage,
-    onDone: () => {
+    onDone: (_archived, from) => {
       setConfirming(false);
-      onArchived();
+      onArchived(from);
     },
+    undo,
   });
 
   return (

@@ -1,15 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
+import { BULK_CONFIRM_ABOVE } from "../../components/bulkchangeapi";
 import { RosterFailedLine } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useLeadDisqualifyReasons } from "../../lib/leaddisqualifyreasons";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import {
   ProblemError,
@@ -17,7 +20,6 @@ import {
   throwProblem,
   unwrap,
 } from "../../lib/problem";
-import { useLeadDisqualifyReasons } from "./leadhandling";
 import { leadIdentityName } from "./leadname";
 
 type Lead = components["schemas"]["Lead"];
@@ -62,6 +64,21 @@ function assignOutcomeMessage(
     default:
       return t("lead.bulkOutcomeNotFound");
   }
+}
+
+/** The sentence a run that moved rows ends with, naming how many and what. */
+export function useBulkDoneMessage() {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (moved: number, action: BulkAction) => {
+    const count = formatNumber(moved, locale);
+    return action.kind === "assign"
+      ? plural("lead.bulkAssignedDone", moved, {
+          count,
+          owner: action.ownerName,
+        })
+      : plural("lead.bulkDisqualifiedDone", moved, { count });
+  };
 }
 
 /**
@@ -114,6 +131,10 @@ export function LeadBulkBar({
   // a refused batch leaves the bar showing what failed, with the dialog
   // already gone.
   const [confirming, setConfirming] = useState(false);
+  const [confirmingAssign, setConfirmingAssign] = useState(false);
+  // The reason is asked for once Disqualify is pressed without one, not before.
+  const [reasonAsked, setReasonAsked] = useState(false);
+  const reasonHintId = useId();
   const reasons = useLeadDisqualifyReasons();
   const [outcomes, setOutcomes] = useState<readonly BulkOutcome[]>([]);
 
@@ -238,11 +259,18 @@ export function LeadBulkBar({
 
   const ownerName =
     owners.options.find((option) => option.value === ownerId)?.label ?? ownerId;
-  const assign = () =>
+  const assign = () => {
+    setConfirmingAssign(false);
     run.mutate({
       action: { kind: "assign", ownerId, ownerName },
       rows: leads,
     });
+  };
+  const largeChange = leads.length > BULK_CONFIRM_ABOVE && (
+    <Callout tone="warning" title={t("bulk.largeTitle")}>
+      {t("bulk.largeBody")}
+    </Callout>
+  );
   // The reason list is administered (Settings › Data model); only its ACTIVE
   // rows may be applied, and a payload that is not the contract's array is
   // read as nothing rather than crashing the bar that renders it.
@@ -259,6 +287,7 @@ export function LeadBulkBar({
   const reasonLabel =
     activeReasons.find((reason) => reason.id === reasonId)?.label ?? "";
 
+  const needsReason = reasonAsked && reasonId === "";
   const failed = outcomes.filter((o) => o.error);
   return (
     <>
@@ -276,7 +305,7 @@ export function LeadBulkBar({
       <Button
         variant="primary"
         disabled={run.isPending || ownerId === "" || leads.length === 0}
-        onClick={assign}
+        onClick={() => setConfirmingAssign(true)}
       >
         {t("lead.bulkAssign")}
       </Button>
@@ -293,15 +322,24 @@ export function LeadBulkBar({
         }))}
       />
       <Button
-        disabled={run.isPending || leads.length === 0}
+        disabled={
+          leads.length === 0 ||
+          (run.isPending && run.variables?.action.kind !== "disqualify")
+        }
+        pending={run.isPending && run.variables?.action.kind === "disqualify"}
         // The same requirement, and the same sentence, as the single-lead
         // dialog: a batch closed with no reason is exactly what the
         // administered list exists to prevent.
-        reason={reasonId ? undefined : t("lead.disqualify.reasonRequired")}
-        onClick={() => setConfirming(true)}
+        aria-describedby={needsReason ? reasonHintId : undefined}
+        onClick={() => (reasonId ? setConfirming(true) : setReasonAsked(true))}
       >
         {t("lead.bulkDisqualify")}
       </Button>
+      {needsReason && (
+        <ErrorLine inline id={reasonHintId}>
+          {t("lead.disqualify.reasonRequired")}
+        </ErrorLine>
+      )}
       {/* Closing one lead opens a dialog; closing forty from a toolbar used to
           fire on the press. The batch is the LESS reversible of the two — the
           reader cannot see the rows they are about to close, only a count —
@@ -318,7 +356,21 @@ export function LeadBulkBar({
         onConfirm={disqualify}
         pending={run.isPending}
       >
+        {largeChange}
         <p>{t("lead.bulkDisqualifyBody", { reason: reasonLabel })}</p>
+      </ConfirmModal>
+      <ConfirmModal
+        open={confirmingAssign}
+        onClose={() => setConfirmingAssign(false)}
+        title={plural("lead.bulkAssignTitle", leads.length, {
+          count: formatNumber(leads.length, locale),
+          owner: ownerName,
+        })}
+        confirmLabel={t("lead.bulkAssign")}
+        onConfirm={assign}
+        pending={run.isPending}
+      >
+        {largeChange}
       </ConfirmModal>
       {/* A run refused as a WHOLE says so on its own. The per-row list below
           reads `outcomes`, which only fills on success — so a destination the

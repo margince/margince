@@ -12,6 +12,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,7 +23,10 @@ type TaskWindow struct {
 	// window [From, Until).
 	From, Until time.Time
 	Scope       TaskScope
-	Owner       ids.UUID
+	// Zone is the IANA zone a chosen due date is judged in. Empty is the
+	// installation's zone; only the reader's own list sets it.
+	Zone  string
+	Owner ids.UUID
 	// Team is the seats a team view keeps, plus unassigned work. Nil reads the
 	// scope unnarrowed.
 	Team []ids.UUID
@@ -42,6 +46,12 @@ type TaskBacklog interface {
 	// TasksOnDeals reads every task of the window filed under any of these
 	// deals, drawn as the lane draws them.
 	TasksOnDeals(ctx context.Context, window TaskWindow, deals []ids.UUID) ([]Task, error)
+	// FollowUpPromises names the reader's own open tasks derived from any of
+	// these emails, with their due dates.
+	FollowUpPromises(ctx context.Context, emails []ids.UUID) ([]activities.FollowUpPromise, error)
+	// TasksIn reads these tasks of the window, drawn as the lane draws them. A
+	// task the lane would not draw is not answered.
+	TasksIn(ctx context.Context, window TaskWindow, tasks []ids.UUID) ([]Task, error)
 }
 
 // Positioned is one row a backlog read returned, with the position that
@@ -147,7 +157,7 @@ func (s *Service) readingBacklog(ctx context.Context, day crmcontracts.Attention
 // taskWindows are the two task windows a page draws, by the category each
 // window's rows carry: today's under tasks, the later ones under upcoming.
 func (s *Service) taskWindows(asOf, until time.Time) map[totalKey]TaskWindow {
-	today := TaskWindow{AsOf: asOf, Until: until, Scope: s.taskScope, Owner: s.taskOwner, Team: s.rosterSeats()}
+	today := TaskWindow{AsOf: asOf, Until: until, Scope: s.taskScope, Zone: dayZoneOf(s.taskScope, s.backlog.zone), Owner: s.taskOwner, Team: s.rosterSeats()}
 	later := today
 	later.From, later.Until = until, until.AddDate(0, 0, upcomingHorizonDays)
 	return map[totalKey]TaskWindow{

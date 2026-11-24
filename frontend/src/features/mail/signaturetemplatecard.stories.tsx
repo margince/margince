@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, userEvent } from "storybook/test";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import {
   installFetchStub,
   jsonResponse,
@@ -37,7 +39,10 @@ function story(allow: Parameters<typeof meRoute>[0]) {
     });
     return (
       <StoryProviders>
-        <SignatureTemplateCard />
+        <SavePageProvider>
+          <SignatureTemplateCard />
+          <PageSaveBar />
+        </SavePageProvider>
       </StoryProviders>
     );
   };
@@ -56,7 +61,17 @@ export const Editable: Story = {
   render: story({ installation_settings: ["read", "update"] }),
 };
 
-// The template stays readable; Save is absent and the panel says why once.
+// A typed layout is an unsaved change: the page's save bar offers Save and Discard.
+export const EditedOnSaveBar: Story = {
+  render: story({ installation_settings: ["read", "update"] }),
+  play: async () => {
+    const box = await screen.findByRole("textbox", { name: "Template (HTML)" });
+    await userEvent.type(box, " Gradion");
+    await expect(await screen.findByText("Unsaved changes")).toBeTruthy();
+  },
+};
+
+// The template stays readable, and the panel says once why it cannot change.
 export const ReadOnly: Story = {
   render: story({ installation_settings: ["read"] }),
 };

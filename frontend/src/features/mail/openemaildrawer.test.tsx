@@ -5,7 +5,7 @@
 
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { emailDetailKey } from "../../design-system/emailmessage";
 import { threadOrder } from "../../design-system/emailthread";
@@ -17,13 +17,17 @@ import { browserZone } from "../../format/timezone";
 import { meFixture } from "../../testing/mefixture";
 import {
   activity202,
+  installComposeClock,
   jsonResponse,
+  pressSend,
   render,
   stubRoutes,
 } from "./compose.testkit";
 import { OpenEmailDrawer } from "./openemaildrawer";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -119,7 +123,7 @@ function drawer(
 
 describe("the email drawer's verbs", () => {
   it("opens a new latest message on refresh without reopening folded messages", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let current = PRESENTATION;
     const latest: EmailPresentation = {
       ...PRESENTATION,
@@ -189,7 +193,7 @@ describe("the email drawer's verbs", () => {
   });
 
   it("keeps a newer withheld message and its actions private", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const newest = {
       ...PRESENTATION.summary,
       activity_id: LATEST,
@@ -235,7 +239,7 @@ describe("the email drawer's verbs", () => {
   it.each(["newest", "older"])(
     "sends a reply to the %s message from that message's actions",
     async (target) => {
-      const user = userEvent.setup();
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       const latest: EmailPresentation = {
         ...PRESENTATION,
         id: LATEST,
@@ -294,7 +298,7 @@ describe("the email drawer's verbs", () => {
       await user.type(screen.getByLabelText("To"), "buyer@example.test");
       await user.tab();
       writeMessage("Body", "Let us pick this up next week.");
-      await user.click(screen.getByRole("button", { name: "Send" }));
+      await pressSend(user);
       const repliedTo = target === "older" ? MESSAGE : LATEST;
       await waitFor(() =>
         expect(
@@ -311,7 +315,7 @@ describe("the email drawer's verbs", () => {
   );
 
   it("steps aside for a reply in the thread, and comes back when it closes", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     drawer();
 
     await user.click(await screen.findByRole("button", { name: "Reply" }));
@@ -331,8 +335,8 @@ describe("the email drawer's verbs", () => {
   });
 
   it("forwards the message as a new email carrying its words", async () => {
-    const user = userEvent.setup();
-    drawer();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const { sent } = drawer();
 
     await user.click(await screen.findByRole("button", { name: "Forward" }));
 
@@ -342,11 +346,52 @@ describe("the email drawer's verbs", () => {
       expect(messageText("Body")).toContain("Forwarded message"),
     );
     expect(messageText("Body")).toContain("Können wir Dienstag kurz sprechen?");
+    // Its draft is kept on the message it carries, apart from the record's.
+    const read = new URLSearchParams(
+      sent.find((call) => call.key === "GET /mail-drafts")?.query,
+    );
+    expect(read.get("anchor_type")).toBe("forward");
+    expect(read.get("anchor_id")).toBe(MESSAGE);
   });
 });
 
+it("says a mail without text has none, and offers no translation of it", async () => {
+  drawer({
+    ...PRESENTATION,
+    body: "",
+    summary: { ...PRESENTATION.summary, preview: "" },
+  });
+
+  expect(await screen.findByText("This message has no text.")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Show in my language" }),
+  ).toBeNull();
+});
+
+it("offers a mail with text in the reader's language", async () => {
+  drawer();
+
+  expect(
+    await screen.findByRole("button", { name: "Show in my language" }),
+  ).toBeTruthy();
+  expect(screen.queryByText("This message has no text.")).toBeNull();
+});
+
+it("leaves the To line out of a forwarded header when the mail had no recipient", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  drawer({ ...PRESENTATION, to: [] });
+
+  await user.click(await screen.findByRole("button", { name: "Forward" }));
+
+  await waitFor(() =>
+    expect(messageText("Body")).toContain("Forwarded message"),
+  );
+  expect(messageText("Body")).toContain("From: Ana Sommer");
+  expect(messageText("Body")).not.toContain("To:");
+});
+
 it("books with the sender of an incoming email and carries the message as context", async () => {
-  const user = userEvent.setup();
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   drawer(
     {
       ...PRESENTATION,

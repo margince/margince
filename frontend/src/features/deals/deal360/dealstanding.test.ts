@@ -3,14 +3,12 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../../../api/schema";
-import { UTC_ZONE } from "../../../format/timezone";
 import { deal, offer } from "../deals.testkit";
 import {
   closeTone,
   committeeOf,
   committeeTone,
   dealVerdictTone,
-  lastInbound,
   momentumOf,
   momentumTone,
   nextStepOf,
@@ -110,13 +108,36 @@ describe("momentum", () => {
     [{ stalled: false, last_activity_at: "2026-08-11" }, "active", "success"],
     [{ stalled: false }, "quiet", "neutral"],
   ] as const)("%o reads %s on 20 Aug", (fields, state, tone) => {
-    const momentum = momentumOf(
-      fields,
-      UTC_ZONE,
-      new Date("2026-08-20T12:00:00Z"),
-    );
+    const momentum = momentumOf(fields, new Date("2026-08-20T12:00:00Z"));
     expect(momentum.state).toBe(state);
     expect(momentumTone(momentum)).toBe(tone);
+  });
+});
+
+describe("a pause is read at the server's instant", () => {
+  // Wait until 21 Aug, owned by an Auckland user: the server ends it at 21 Aug
+  // 00:00 NZST, which is 20 Aug 12:00 UTC. A Los Angeles viewer's own midnight
+  // of 21 Aug comes 19 hours later and must not extend it.
+  const fields = {
+    stalled: false,
+    wait_until: "2026-08-21",
+    wait_ends_at: "2026-08-20T12:00:00Z",
+  } as const;
+
+  it("is over at the owner's midnight whatever zone the viewer is in", () => {
+    expect(momentumOf(fields, new Date("2026-08-20T11:59:00Z")).state).toBe(
+      "on_hold",
+    );
+    expect(momentumOf(fields, new Date("2026-08-20T13:00:00Z")).state).toBe(
+      "quiet",
+    );
+  });
+
+  it("falls back to the date at UTC midnight when the server sends no instant", () => {
+    const bare = { stalled: false, wait_until: "2026-08-21" } as const;
+    expect(momentumOf(bare, new Date("2026-08-20T23:00:00Z")).state).toBe(
+      "on_hold",
+    );
   });
 });
 
@@ -151,6 +172,18 @@ describe("the committee", () => {
     );
     expect(committee).toEqual({ state: "read", named: 2, engaged: 1, gaps: 1 });
     expect(committeeTone(committee)).toBe("warning");
+  });
+
+  it("counts a contact in two roles once", () => {
+    const committee = committeeOf(
+      coverage([
+        seat("c1"),
+        { ...seat("c1"), role: "user" },
+        seat("c2", false),
+      ]),
+      false,
+    );
+    expect(committee).toEqual({ state: "read", named: 2, engaged: 1, gaps: 0 });
   });
 
   it.each([
@@ -244,6 +277,25 @@ describe("time in each stage", () => {
     expect(stageEntries(rows, created, false).has("s1")).toBe(false);
   });
 
+  it("dates the stage of a deal that never moved by the deal's creation", () => {
+    const created = deal({
+      created_at: "2026-06-01T00:00:00Z",
+      stage_id: "s1",
+    });
+    const entries = stageEntries([], created, true);
+    expect(entries.get("s1")).toBe("2026-06-01T00:00:00Z");
+    expect(
+      stageTimes({
+        stages,
+        currentId: "s1",
+        entries,
+        asOf: AS_OF,
+        zone: "UTC",
+      }).get("s1"),
+    ).toEqual({ days: 73, current: true });
+    expect(stageEntries([], created, false).size).toBe(0);
+  });
+
   it("keeps the latest arrival at a stage visited twice", () => {
     const entries = stageEntries(
       [
@@ -288,6 +340,49 @@ describe("the offer that stands", () => {
   it("is none when every offer was replaced", () => {
     expect(standingOffer([offer({ status: "superseded" })])).toBeUndefined();
     expect(standingOffer(undefined)).toBeUndefined();
+  });
+
+  it("is the accepted offer, whatever drafts came after it", () => {
+    const offers = [
+      offer({
+        id: "later-draft",
+        offer_number: "A-1002",
+        created_at: "2026-06-05T00:00:00Z",
+      }),
+      offer({
+        id: "accepted",
+        offer_number: "A-1001",
+        status: "accepted",
+        accepted_at: "2026-06-03T00:00:00Z",
+      }),
+    ];
+    expect(standingOffer(offers)?.id).toBe("accepted");
+  });
+
+  it("is never a rejected or expired offer", () => {
+    const offers = [
+      offer({ id: "rejected", revision: 2, status: "rejected" }),
+      offer({ id: "expired", status: "expired" }),
+    ];
+    expect(standingOffer(offers)).toBeUndefined();
+  });
+
+  it("is the latest made of several offers in progress", () => {
+    const offers = [
+      offer({ id: "older", offer_number: "A-1018" }),
+      offer({
+        id: "newer",
+        offer_number: "A-1020",
+        status: "sent",
+        created_at: "2026-06-04T00:00:00Z",
+      }),
+      offer({
+        id: "archived",
+        created_at: "2026-06-09T00:00:00Z",
+        archived_at: "2026-06-10T00:00:00Z",
+      }),
+    ];
+    expect(standingOffer(offers)?.id).toBe("newer");
   });
 });
 
@@ -354,142 +449,4 @@ describe("the next step", () => {
   it("is none when nothing is dated ahead", () => {
     expect(nextStepOf([activity({})], AS_OF, "UTC")).toBeUndefined();
   });
-});
-
-const buyer = {
-  author: { kind: "contact_record", display_name: "Dana", is_reader: false },
-} as const;
-
-it("finds the buyer's newest message, never one of ours", () => {
-  const newest = lastInbound([
-    activity({
-      id: "in1",
-      direction: "inbound",
-      voice: buyer,
-      occurred_at: "2026-07-01T00:00:00Z",
-    }),
-    activity({
-      id: "in2",
-      direction: "inbound",
-      voice: buyer,
-      occurred_at: "2026-08-01T00:00:00Z",
-    }),
-    activity({
-      id: "out",
-      direction: "outbound",
-      voice: {
-        author: { kind: "colleague", display_name: "Rep", is_reader: true },
-      },
-      occurred_at: "2026-08-05T00:00:00Z",
-    }),
-  ]);
-  expect(newest?.id).toBe("in2");
-});
-
-it("passes over an inbound row the server says no human wrote", () => {
-  const newest = lastInbound([
-    activity({
-      id: "human",
-      direction: "inbound",
-      voice: buyer,
-      occurred_at: "2026-07-01T00:00:00Z",
-    }),
-    activity({
-      id: "accepted",
-      direction: "inbound",
-      occurred_at: "2026-08-01T00:00:00Z",
-      automatic_kind: "calendar",
-    }),
-    activity({
-      id: "bounce",
-      direction: "inbound",
-      occurred_at: "2026-08-02T00:00:00Z",
-      automatic_kind: "sending_system",
-    }),
-  ]);
-  expect(newest?.id).toBe("human");
-});
-
-// A colleague's invitation and a system notice arrive inbound; neither is the
-// buyer speaking.
-it("does not count an inbound row a colleague or a machine wrote", () => {
-  const newest = lastInbound([
-    activity({
-      id: "buyer",
-      direction: "inbound",
-      voice: buyer,
-      occurred_at: "2026-07-01T00:00:00Z",
-    }),
-    activity({
-      id: "colleague-invite",
-      direction: "inbound",
-      voice: {
-        author: { kind: "colleague", display_name: "Carla", is_reader: false },
-      },
-      occurred_at: "2026-08-01T00:00:00Z",
-    }),
-    activity({
-      id: "notice",
-      direction: "inbound",
-      voice: {
-        author: {
-          kind: "machine",
-          address: "noreply@tool.example",
-          is_reader: false,
-        },
-      },
-      occurred_at: "2026-08-02T00:00:00Z",
-    }),
-    activity({
-      id: "withheld",
-      direction: "inbound",
-      occurred_at: "2026-08-03T00:00:00Z",
-    }),
-  ]);
-  expect(newest?.id).toBe("buyer");
-});
-
-// An imported note naming a historical author and an upcoming meeting an
-// outsider organised are not the buyer writing.
-it("does not count a note or a meeting as the buyer's last word", () => {
-  const outsider = {
-    author: { kind: "unresolved", display_name: "Old CRM", is_reader: false },
-  } as const;
-  const newest = lastInbound([
-    activity({
-      id: "buyer",
-      kind: "email",
-      direction: "inbound",
-      voice: buyer,
-      occurred_at: "2026-07-01T00:00:00Z",
-    }),
-    activity({
-      id: "imported-note",
-      kind: "note",
-      voice: outsider,
-      occurred_at: "2026-08-01T00:00:00Z",
-    }),
-    activity({
-      id: "future-meeting",
-      kind: "meeting",
-      direction: "inbound",
-      voice: outsider,
-      occurred_at: "2026-12-01T00:00:00Z",
-    }),
-    activity({
-      id: "unknown-sender",
-      kind: "email",
-      direction: "inbound",
-      voice: {
-        author: {
-          kind: "unresolved",
-          address: "x@else.example",
-          is_reader: false,
-        },
-      },
-      occurred_at: "2026-07-15T00:00:00Z",
-    }),
-  ]);
-  // A sender not on record who mailed in still counts.
-  expect(newest?.id).toBe("unknown-sender");
 });

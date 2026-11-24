@@ -150,10 +150,8 @@ func TestASubjectAccessExportListsAHeldActivityWithoutItsText(t *testing.T) {
 	}
 
 	// The package renders a uuid column as the string a contact receiving the
-	// document can read, so the id keys these assertions directly. It used to
-	// arrive as the driver's own [16]byte and this loop converted it — which
-	// was the export handing a data subject sixteen numbers where an id
-	// belongs (privacy.readableValue).
+	// document can read, so the id keys these assertions directly. The driver's
+	// own [16]byte would hand a data subject sixteen numbers (rowvalue.Document).
 	rows := map[string]map[string]any{}
 	for _, row := range pkg.Activities {
 		id, ok := row["id"].(string)
@@ -546,9 +544,9 @@ func TestNarrowingLeavesAFieldAContactCorrected(t *testing.T) {
 	// The verdict a correction leaves behind, keyed the way refuseIfCorrected
 	// reads it.
 	if _, err := e.Owner.Exec(ctx, `
-		INSERT INTO ai_feedback (subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, captured_by, source)
+		INSERT INTO ai_feedback (subject_type, subject_id, claim_kind, claim_key, verdict, corrected_value, captured_by)
 		VALUES ('contact', $1, 'profile_field',
-		        encode(sha256(('profile_field:title')::bytea), 'hex'), 'corrected', 'Justiziarin', 'human:someone', 'manual')`,
+		        encode(sha256(('profile_field:title')::bytea), 'hex'), 'corrected', 'Justiziarin', 'human:someone')`,
 		contact); err != nil {
 		t.Fatal(err)
 	}

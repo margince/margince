@@ -68,6 +68,66 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/companies/companystanding.events.test.ts",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/privacy/legalreviewpack.tasks.test.tsx",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/projects/partners.nextstep.order.test.ts",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/projects/projectstanding.test.ts",
+    why: "A task with only a date must read as its picked day for readers east and west of the picker and the company; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "lib/standingpeeks.test.ts",
+    why: "A task with only a date must print its picked day for readers east and west of the picker; only named zones apart from the runner's tell that from the instant's own day.",
+  },
+  {
+    file: "features/mail/directsendmodal.stories.tsx",
+    why: "Draws Send anyway at a later time for a held message set in a named zone, so the picker reads that zone rather than the viewer's.",
+  },
+  {
+    file: "features/mail/directsendwhen.test.tsx",
+    why: "Pins the held message's zone so the later moment the dialog sends is checked as picked in that zone, not the runner's.",
+  },
+  {
+    file: "features/worklist/worklist.row.stories.tsx",
+    why: "Draws a task agreed on another zone's clock, so the row shows the reader's time beside the agreed clock and zone.",
+  },
+  {
+    file: "features/analytics/analytics.decisions.test.tsx",
+    why: "Serves an installation zone far east of UTC so the Review on field's earliest day is checked against the installation's today, not the runner's.",
+  },
+  {
+    file: "app/palettestanding.test.ts",
+    why: "Pins the reader's zone so a hit's close and due dates read the same on every runner: the lines under test print a day.",
+  },
+  {
+    file: "components/relationships.edges.test.ts",
+    why: "dateRange takes the record zone as an argument; the tests pass one so a day-precision career date prints the same day on every runner.",
+  },
+  {
+    file: "components/relationships.test.tsx",
+    why: "Passes dateRange a zone so the company list's current-role words are checked without the runner's own zone.",
+  },
+  {
+    file: "components/relationships.stories.tsx",
+    why: "The career-date story passes dateRange a zone so its dates read the same on every runner.",
+  },
+  {
+    file: "features/deals/dealfilters.census.test.ts",
+    why: "Pins the zone so the date chips build the same options on every runner: the census compares requests, and the runner's own zone could move a date bound.",
+  },
+  {
+    file: "features/deals/deals.handbook.test.ts",
+    why: "Builds the date chips only to read their labels against the handbook; any fixed zone serves, and the runner's own zone is not a reader's.",
+  },
+  {
     file: "features/companies/evidencesource.test.ts",
     why: "Pins the record zone so the meeting's date reads the same on every runner: the line under test prints a day, and the runner's own zone could move it.",
   },
@@ -78,6 +138,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/mail/schedulededit.test.ts",
     why: "Pins the zones a scheduled send was chosen in, so a reopened send proves it keeps the chosen clock and zone, not the runner's.",
+  },
+  {
+    file: "features/mail/composeschedule.test.tsx",
+    why: "Pins the zone the dialog schedules in, so which hours are past and the day the picker opens on read the same on every runner.",
   },
   {
     file: "format/dueintent.test.ts",
@@ -110,6 +174,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "components/websiteinquiry.fixtures.ts",
     why: "The inquiry policy fixture pins Berlin so its deadline example covers a change to daylight saving time independently of the reader's zone.",
+  },
+  {
+    file: "features/sign-in/magic.records.test.tsx",
+    why: "Pins a reader zone apart from any runner's, so a done line's records are dated on the reader's stored clock and not the browser's.",
   },
   {
     file: "features/worklist/worklist.happened.test.ts",
@@ -228,6 +296,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The close column draws its day in the zone it is given; the fixture pins UTC so the expected day does not move with the test machine.",
   },
   {
+    file: "features/lists/filterresults.test.tsx",
+    why: "Pins a reader west of UTC, where a date column sent as midnight UTC would read as the day before; the test proves it keeps its day.",
+  },
+  {
     file: "features/deals/deal360/dealstanding.test.ts",
     why: "Days in a stage are counted in the record zone; the fixture pins UTC so the expected count does not move with the test machine.",
   },
@@ -337,8 +409,12 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The reader's zone is the subject: the suite names a reader zone, a company zone that disagrees with it by a calendar day, and a fixed offset the formatters refuse.",
   },
   {
-    file: "features/worklist/taskactions.test.tsx",
+    file: "features/worklist/taskdetail.testkit.tsx",
     why: "The task dialog renders its logged and due dates; the suite names the reader's zone so a snapshot of the dialog does not move with the machine it runs on.",
+  },
+  {
+    file: "features/contacts/employmentcurrency.test.ts",
+    why: "A departure day is judged in the installation zone; the suite names zones west and east of UTC so the day a job ends does not move with the machine it runs on.",
   },
   {
     file: "features/worklist/taskactions.due.test.tsx",
@@ -391,6 +467,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/records/recordconversations.test.tsx",
     why: "The component takes the zone as a required prop and these cases assert which GROUPS render and which badges they carry — no date rendering is asserted. The zone is the shape being satisfied, not a rendering under test.",
+  },
+  {
+    file: "design-system/pipelineboard.percent.test.tsx",
+    why: "The deal board takes the zone as a required prop. The case asserts how a stage's chance is written, and no date on the card is under test.",
   },
   {
     file: "design-system/composed.thread.test.tsx",
@@ -502,6 +582,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The zone IS the input under test: the whole case is that a record's date and the count beside it name the same day, which only shows up where the reader's calendar and UTC's disagree — so it needs one named zone east of UTC, one west, and UTC itself to count against. A zone read off the runner would decide whether the defect can appear at all, and the suite would pass over code that is wrong for half the world.",
   },
   {
+    file: "format/formatters.test.ts",
+    why: "Tests the formatter cache. It must pin named zones to prove the cache key holds the zone: one instant read in Auckland and in Los Angeles gives two days.",
+  },
+  {
     file: "format/format.test.ts",
     why: "formatDate's whole contract is that it attaches the zone it is given, which needs a named zone on both sides of the assertion.",
   },
@@ -510,7 +594,15 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins browserZone()'s answer and its UTC fallback by pretending to be in a named zone.",
   },
   {
-    file: "features/voice-knowledge/adddocument.test.tsx",
+    file: "format/timezoneoptions.ts",
+    why: "The table of renamed IANA zones names each zone as data, so the list shows today's city and still finds the old name.",
+  },
+  {
+    file: "design-system/timezoneselect.test.tsx",
+    why: "Finds zones in the list by their IANA id and a former name, which needs both names spelled out.",
+  },
+  {
+    file: "components/adddocument.test.tsx",
     why: "Installation-settings fixture: the company timezone the document form reads back.",
   },
   {
@@ -556,6 +648,10 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "features/sign-in/installation-settings.stories.tsx",
     why: "The Admin settings card DISPLAYS the configured company timezone; the story needs a configured value.",
+  },
+  {
+    file: "features/sign-in/installation-settings.profile.stories.tsx",
+    why: "The dialog EDITS the company time zone; the story types a zone name into it as an admin would.",
   },
   {
     file: "features/sign-in/installation-settings.test.tsx",
@@ -640,6 +736,22 @@ const pinnedZones: { file: string; why: string }[] = [
   {
     file: "components/meetingsheld.stories.tsx",
     why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the table dates a held meeting by the date it names.",
+  },
+  {
+    file: "components/relationships.edges.test.ts",
+    why: "Pins the record zone so a relationship's start and end days print the same on every runner.",
+  },
+  {
+    file: "components/relationships.test.tsx",
+    why: "Pins the record zone so the company list's role dates print the same on every runner.",
+  },
+  {
+    file: "components/relationships.stories.tsx",
+    why: "Pins the record zone so the story's current and former role dates read the same in every browser.",
+  },
+  {
+    file: "design-system/dealcard.test.tsx",
+    why: "Pins the record zone so the day a closed card names is the same on every runner.",
   },
 ];
 

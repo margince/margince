@@ -10,9 +10,12 @@ const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([
   "oauth-consent",
 ]);
 
-// Settings > Account holds Sign out, so a reader mid-onboarding can always
-// leave. Every other settings page stays behind the gate.
+// The onboarding band links to Settings > Account, so a reader mid-setup can
+// fix their language, password or name. Every other settings page waits.
 const ONBOARDING_GATE_EXEMPT_ROUTE = settingsHref("account");
+
+// Where the gate sends a held reader; the onboarding screen opens their step.
+export const ONBOARDING_ENTRY: Route = { screen: "onboarding", id: "company" };
 
 export function passesOnboardingGate(route: Route): boolean {
   return (

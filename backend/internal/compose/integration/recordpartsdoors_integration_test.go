@@ -121,7 +121,7 @@ func TestProjectCompaniesAndStakeholdersAnswerAsTheirRoutes(t *testing.T) {
 	d := newTwoDoors(t, "project-part-doors", "read", "write")
 	customer := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Part Customer"})
 	partner := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Part Partner"})
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Petra Sponsor"})
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Petra Sponsor"})
 	viaREST := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Part rollout REST", "company_id": customer, "source": "manual"})
 	viaTool := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Part rollout tool", "company_id": customer, "source": "manual"})
 
@@ -240,7 +240,7 @@ func TestListRecordsNarrowsCompaniesAndLeadsToAListsMembers(t *testing.T) {
 // activities route's entity pair and waiting_reply do.
 func TestListRecordsNarrowsTheTimelineToARecordsUnansweredMail(t *testing.T) {
 	d := newTwoDoors(t, "timeline-doors", "read")
-	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Wanda Waiting", "source": "manual"})
+	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Wanda Waiting", "source": "manual"})
 	waiting := createdID(t, d.e, "/v1/activities", AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Contract?", "body": "Where is the contract", "source": "manual",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
@@ -282,7 +282,7 @@ func namesCode(refusal, code string) bool {
 func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
 	d := newTwoDoors(t, "part-refusal-doors", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Refusal Works"})
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Rafa Refused"})
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Rafa Refused"})
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Refusal rollout", "company_id": company, "source": "manual"})
 	deal := openDeal(t, d.e, apptest.DiscoverSeededPipeline(t, d.e), "Refusal renewal")
 	offer := recordIDOf(t, d.toolSeed(t, "create_record", map[string]any{"record_type": "offer", "fields": map[string]any{
@@ -387,10 +387,36 @@ func TestChangeRecordPartsRefusesWhatItsRoutesRefuse(t *testing.T) {
 	}
 }
 
-// Both doors refuse a list narrowed by a list that does not exist, or sorted by
-// a column the timeline lacks. Both refuse a commission nobody accrued.
+// Both doors answer no rows for a list, tag or owner id that names nothing.
+func TestRecordListsNarrowedByAnIDThatNamesNothingAnswerNoRows(t *testing.T) {
+	d := newTwoDoorsWith(t, "list-nowhere-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
+	nowhere := ids.NewV7().String()
+	contact := func() AnyMap {
+		return AnyMap{"source": "manual", "full_name": "Unlisted contact", "linkedin_url": apptest.ContactProfile()}
+	}
+	for _, c := range []struct {
+		kind, route, filter string
+		body                AnyMap
+	}{
+		{"company", "companies", "list_id", AnyMap{"source": "manual", "display_name": "Unlisted company"}},
+		{"lead", "leads", "list_id", AnyMap{"source": "manual", "full_name": "Unlisted lead"}},
+		{"contact", "contacts", "list_id", contact()},
+		{"contact", "contacts", "tag_id", contact()},
+		{"contact", "contacts", "owner_id", contact()},
+	} {
+		record := createdRecord(t, d.e, "/v1/"+c.route, c.body)
+		rest := d.rest(t, "GET", "/v1/"+c.route+"?"+c.filter+"="+nowhere+"&limit=10", nil)
+		tool := d.tool(t, "list_records", map[string]any{"record_type": c.kind, "limit": 10, "filters": map[string]any{c.filter: nowhere}})
+		if slices.Contains(documentRecords(rest), record) || slices.Contains(documentRecords(tool), record) {
+			t.Errorf("%s by an unknown %s named a record outside it:\nroute: %s\ntool: %s", c.route, c.filter, rest, tool)
+		}
+	}
+}
+
+// Both doors refuse a list sorted by a column the timeline lacks. Both refuse a
+// commission nobody accrued.
 func TestRecordListsRefuseWhatTheirRoutesRefuse(t *testing.T) {
-	d := newTwoDoorsWith(t, "list-refusal-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
+	d := newTwoDoors(t, "list-refusal-doors", "read")
 	nowhere := ids.NewV7().String()
 	for _, c := range []struct {
 		what, path string
@@ -398,21 +424,6 @@ func TestRecordListsRefuseWhatTheirRoutesRefuse(t *testing.T) {
 		args       map[string]any
 		status     int
 	}{
-		{
-			"companies of a list that does not exist", "/v1/companies?list_id=" + nowhere, "list_records",
-			map[string]any{"record_type": "company", "filters": map[string]any{"list_id": nowhere}},
-			404,
-		},
-		{
-			"leads of a list that does not exist", "/v1/leads?list_id=" + nowhere, "list_records",
-			map[string]any{"record_type": "lead", "filters": map[string]any{"list_id": nowhere}},
-			404,
-		},
-		{
-			"contacts of a list that does not exist", "/v1/contacts?list_id=" + nowhere, "list_records",
-			map[string]any{"record_type": "contact", "filters": map[string]any{"list_id": nowhere}},
-			404,
-		},
 		{
 			"the timeline in an order it has no column for", "/v1/activities?sort=shoe_size", "list_records",
 			map[string]any{"record_type": "activity", "filters": map[string]any{"sort": "shoe_size"}},

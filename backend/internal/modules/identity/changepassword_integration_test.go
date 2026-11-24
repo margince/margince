@@ -112,6 +112,26 @@ func TestChangePasswordHoldsTheLengthFloor(t *testing.T) {
 	}
 }
 
+func TestChangePasswordRefusesBlankRepeatedAndEmailPasswords(t *testing.T) {
+	e := setupRevocationEnv(t, "changepw-weak")
+	ctx := memberCtx(t, e)
+
+	for code, weak := range map[string]string{
+		"blank":    strings.Repeat(" ", 12),
+		"repeated": strings.Repeat("x", 12),
+		"email":    e.member.Email,
+	} {
+		var parseErr *values.ParseError
+		_, err := e.svc.ChangePassword(ctx, memberPassword, weak)
+		if !errors.As(err, &parseErr) || parseErr.Field != "new_password" || parseErr.Code != code {
+			t.Errorf("change to %q gave %v, want a new_password/%s refusal", weak, err, code)
+		}
+	}
+	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); err != nil {
+		t.Fatalf("the original password stopped working after refused changes: %v", err)
+	}
+}
+
 func TestChangePasswordEndsEveryPriorSessionAndIssuesAFreshOne(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-revoke")
 	wsCtx := e.wsOnlyCtx()
@@ -541,6 +561,27 @@ func TestAnOperatorResetHoldsTheSameLengthFloorAsEveryOtherRoute(t *testing.T) {
 	}
 }
 
+func TestAnOperatorResetRefusesBlankAndEmailPasswords(t *testing.T) {
+	e := setupRevocationEnv(t, "operator-reset-weak")
+	for code, weak := range map[string]string{"blank": strings.Repeat(" ", 12), "email": e.member.Email} {
+		err := withOperatorTx(t, e, func(tx pgx.Tx) error {
+			return OperatorResetPassword(context.Background(), tx, e.ws, e.member.Email, weak)
+		})
+		var parseErr *values.ParseError
+		if !errors.As(err, &parseErr) || parseErr.Code != code {
+			t.Errorf("an operator reset to %q gave %v, want a %s refusal", weak, err, code)
+		}
+	}
+	// The operator types the address in another spelling than the one stored.
+	err := withOperatorTx(t, e, func(tx pgx.Tx) error {
+		return OperatorResetPassword(context.Background(), tx, e.ws, strings.ToUpper(e.member.Email), e.member.Email)
+	})
+	var parseErr *values.ParseError
+	if !errors.As(err, &parseErr) || parseErr.Code != "email" {
+		t.Errorf("a reset to the stored address, typed in capitals, gave %v, want an email refusal", err)
+	}
+}
+
 func TestAnOperatorResetRefusesAnAgentIdentity(t *testing.T) {
 	// An agent identity carries an address, so it is reachable by the email
 	// lookup, but it holds no password. Refused by name — letting the write
@@ -602,7 +643,7 @@ func TestAPassportStopsWorkingWhileItsHumanOwesARotation(t *testing.T) {
 	// does not have to remember the cascade to be safe.
 	e := setupRevocationEnv(t, "forced-passport")
 	ctx := e.wsOnlyCtx()
-	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
+	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Label: new(testPassportLabel), Scopes: []string{"read"}})
 	if err != nil {
 		t.Fatalf("issue passport: %v", err)
 	}

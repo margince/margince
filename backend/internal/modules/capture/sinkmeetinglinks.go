@@ -59,9 +59,9 @@ const meetingKind = "meeting"
 const maxDerivedMeetingLinks = 25
 
 // projectLinkReservation is the seat a meeting keeps for the project
-// ladder, which files it after the capture commits and reads no budget. The
-// ladder retries on every replay, so a meeting filled to 25 here would refuse
-// its project link forever.
+// ladder, which files it after these links and reads no budget. The ladder
+// retries on every replay, so a meeting filled to 25 here would refuse its
+// project link forever.
 const projectLinkReservation = 1
 
 // linkResolvedMeetingParticipants files a captured meeting under each attendee

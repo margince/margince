@@ -22,6 +22,8 @@ const (
 	TaskCertJudge Task = "cert_judge"
 	// TaskChatSummary is read one closed stretch of a linked chat channel's talk (the episode site): a run of messages that ended in 30 minutes of quiet or at the end of the day. It is read again from the chat when it closes and never stored. The model answers whether the talk matters to the record and, when it does, a title of at most 120 characters, a summary of at most 800, the decisions and the open questions. A relevant answer is filed as one note on the deal or project, keyed on the channel and the episode's first message, so a replay files nothing. An irrelevant answer files nothing and the channel's cursor moves past it. With no lane the episode is passed over the same way, so a channel never waits for a model. no_payload because the prompt carries the team's own chat messages.
 	TaskChatSummary Task = "chat_summary"
+	// TaskChatTaskReading is read one chat screenshot a user just filed on a contact, lead or deal (the chat_tasks site) against at most ten open tasks on that record that the user holds and may change. Margince's own tasks, a task the user reopened after an automatic answer, and a task this chat already changed are not asked about. Per task the model answers done, new_date with a day after today and within a year, or none, quoting the one chat line the answer rests on. A change needs confidence 0.8 or more and a quote the chat holds; anything else is unsure and changes nothing. A change is written by the chat task reader on the user's behalf, with the chat and the quote as evidence, so Done for you shows it with Undo, and the same chat never changes that task again. With no lane the chat is filed and no task changes. no_payload because the prompt carries the customer's own chat messages.
+	TaskChatTaskReading Task = "chat_task_reading"
 	// TaskColdStart is Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074. The two company conversations think at low: they share one prompt whose gate decides whether a yes authorizes a change, and gemini-3.1-flash-lite at its own default proposed a change after a plain question in five of six runs and in no run at low, for about 0.3s more at p50. acts and field_extract measured clean without it, so they keep the binding's level.
 	TaskColdStart Task = "cold_start"
 	// TaskCorpusAsk is corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung.
@@ -36,9 +38,11 @@ const (
 	TaskDraftReply Task = "draft_reply"
 	// TaskEnrich is Read a contact's own mail signature into contact fields - title, phone, linkedin, company_name, address, website - each quoting the signature line it was read from; a quote not in the signature is dropped in code. Floor 0.6. phone is a list: the reply carries one phone entry per number the signature lists, and each number is its own evidence row. A newer signature replaces only the older number of the same country and type; a number it leaves out is kept, because a trimmed signature is not a retired number.
 	TaskEnrich Task = "enrich"
+	// TaskExtensionTask is the one task every extension AI call rides, so an extension never holds a provider client or key. The extension's declared task (its prompt, answer schema and whether it takes documents) is data on its declaration; the unit and the declared task name are stamped on every ai_call row the call writes. no_payload BY CONTRACT: an extension's input is whatever the unit chooses to send, and none of it may be kept in ai_call_payload. The request must name the contacts it carries, or say it carries none, so a restriction of processing holds for an extension as it does for core.
+	TaskExtensionTask Task = "extension_task"
 	// TaskGrowthFit is How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it.
 	TaskGrowthFit Task = "growth_fit"
-	// TaskNlSearch is A list described in plain words, read into filter clauses the builder shows for a human to edit and save. The model is handed the record type, the sentence, the caller's own filter vocabulary, today's date and the reader's language, and never a record: it proposes a predicate tree and the deterministic engine decides membership, exactly as for a hand-built filter. Every proposed clause is checked in code before it is answered - a field the caller cannot filter on, an operator its type refuses, a value outside a picklist's options or of the wrong type is dropped and named back as unsupported rather than failing the proposal, and so is a phrase the model could not express. The company context is our own offer and market, so 'companies in our target market' has something to be read against; it is conditional because reading it needs company read, and a caller filtering contacts without that grant still gets a proposal, just without it. Nothing is saved: Save stays a human's press. With no model bound the endpoint answers 409 ai_not_configured, because there is no deterministic reading of a sentence to fall back to.
+	// TaskNlSearch is A list described in plain words, read into filter clauses the builder shows for a human to edit and save. The model is handed the record type, the sentence, the caller's own filter vocabulary, today's date and the reader's language, and never a record: it proposes a predicate tree and the deterministic engine decides membership, exactly as for a hand-built filter. Every proposed clause is checked in code before it is answered - a field the caller cannot filter on, an operator its type refuses, a value outside a picklist's options or of the wrong type is dropped and named back as unsupported rather than failing the proposal, and so is a phrase the model could not express. The company context is our own offer and market, so 'companies in our target market' has something to be read against; it is conditional because reading it needs company read, and a caller filtering contacts without that grant still gets a proposal, just without it. search_data_plan translates a search question into one read-only reporting, analytics or record plan from the caller's vocabulary. It sends no record values to the planner, executes through the shared readers and uses the handbook for unsupported questions. Nothing is saved: Save stays a human's press. With no model bound filter_propose answers 409 ai_not_configured; search_data_plan reports unsupported so the search box can ask the handbook.
 	TaskNlSearch   Task = "nl_search"
 	TaskOfferDraft Task = "offer_draft"
 	// TaskOwedVerdict is Whether an unanswered inbound message actually asks its recipient side for something — asks_us or informs_us. The waiting queue can prove somebody wrote and nobody replied; it cannot tell a question from a report, a receipt or a monthly statement, which is most of what a rep wanted to know. Judged over what SURVIVES the queue's own rules rather than over all unjudged mail, so the pass costs one call per ten messages a rep would otherwise have read. The prompt carries the recipient line and whether a calendar part came with it, because a report sent to a desk address with the reader merely copied reads exactly like a direct request without them. Below the confidence floor after a solo re-ask the message stays UNJUDGED, and unjudged is a real answer: the queue ranks such a row exactly as it did before this pass existed, so there is never a reason to guess. An informs_us verdict ends the obligation and hides the row from the queue, never deletes or archives it, and every row it hides is counted and listed under its own figure in /worklist/hidden. It never outranks a human: a request somebody accepted stays owed whatever the verdict says. The figure is what keeps this safe: this is one model call's opinion about a customer's mail, so a wrong verdict has to be visible to the lead who reads that figure. No cost_unit, and the omission is a decision rather than a gap: cost_unit names a task the connect-time backfill prices, and this pass deliberately does not run at backfill. Its candidates are the LIVE waiting queue, so judging a mailbox's history would spend a call per message on years of mail nobody will ever be shown — the hourly pass reaches everything the queue can surface, and reaches it when a rep is actually looking at it.
@@ -90,7 +94,7 @@ const (
 // Generated from the same declaration as the constants, so a task cannot
 // be added without a name and the two cannot drift.
 var taskDisplayNames = map[Task]string{
-	TaskAccountScan:                   "Reading what an account needs",
+	TaskAccountScan:                   "Reading what a company needs",
 	TaskAgentLoop:                     "Agent reasoning loop",
 	TaskBriefRanking:                  "Morning brief ranking",
 	TaskCaptureClassify:               "Message classification",
@@ -98,6 +102,7 @@ var taskDisplayNames = map[Task]string{
 	TaskCaptureCounterpartyVerdict:    "First-time sender check",
 	TaskCertJudge:                     "Certification judging",
 	TaskChatSummary:                   "Chat channel summary",
+	TaskChatTaskReading:               "Chat and open tasks",
 	TaskColdStart:                     "Onboarding read",
 	TaskCorpusAsk:                     "Document corpus question",
 	TaskDealHealth:                    "Deal status card",
@@ -105,6 +110,7 @@ var taskDisplayNames = map[Task]string{
 	TaskDocumentExtract:               "Document extraction",
 	TaskDraftReply:                    "Reply drafting",
 	TaskEnrich:                        "Signature enrichment",
+	TaskExtensionTask:                 "Extension AI task",
 	TaskGrowthFit:                     "Company fit assessment",
 	TaskNlSearch:                      "Natural-language search",
 	TaskOfferDraft:                    "Offer drafting",
@@ -138,7 +144,7 @@ func DisplayName(t Task) string { return taskDisplayNames[t] }
 // taskSummaries say in plain words what each task does, for a reader
 // deciding which model should serve it.
 var taskSummaries = map[Task]string{
-	TaskAccountScan:                   "Reads an account's recent emails and pipeline to find what it needs from you.",
+	TaskAccountScan:                   "Reads a company's recent emails and pipeline to find what it needs from you.",
 	TaskAgentLoop:                     "Runs the scheduled AI agents that act on your behalf with the tools they are given.",
 	TaskBriefRanking:                  "Orders the morning brief so the most important items come first.",
 	TaskCaptureClassify:               "Sorts each incoming email and meeting into what it is about, so it lands on the right record.",
@@ -146,6 +152,7 @@ var taskSummaries = map[Task]string{
 	TaskCaptureCounterpartyVerdict:    "Decides who a first-time sender is — an individual, a company mailbox, a newsletter, spam — before a contact is created.",
 	TaskCertJudge:                     "Grades model answers when a model is certified for a task. Used only in testing.",
 	TaskChatSummary:                   "Reads one stretch of talk in a deal's or project's chat channel and writes a short note when it matters.",
+	TaskChatTaskReading:               "Reads a filed chat screenshot against the open tasks on its record and finishes or moves the task it settles.",
 	TaskColdStart:                     "Runs the onboarding conversation that sets up your company profile.",
 	TaskCorpusAsk:                     "Answers questions from the documents your company filed, citing where each answer comes from.",
 	TaskDealHealth:                    "Writes the deal page's status card: where the deal stands and what could lose it.",
@@ -153,6 +160,7 @@ var taskSummaries = map[Task]string{
 	TaskDocumentExtract:               "Reads an attached document, such as an invoice or order, for deal facts you can accept.",
 	TaskDraftReply:                    "Drafts emails and replies for you to review before sending.",
 	TaskEnrich:                        "Fills in a contact's title, phone and other details from their own email signature.",
+	TaskExtensionTask:                 "Runs an AI task that an installed extension declared, on the same models, region limit and call log as the product's own tasks.",
 	TaskGrowthFit:                     "Judges how well a company fits what we sell.",
 	TaskNlSearch:                      "Turns a list described in plain words into filters you can check and save.",
 	TaskOfferDraft:                    "Drafts offers and quotes from a deal's details.",
@@ -191,7 +199,7 @@ const (
 	ExecutionModeBackground  ExecutionMode = "background"
 )
 
-// Tier is a capability tier (§1.1); ai-routing.yaml binds each to a
+// Tier is a capability tier (§1.1); the routing setting binds each to a
 // provider+model per deployment.
 type Tier string
 
@@ -206,7 +214,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "2af95039d9fa6eda5e9f6a91d538392472a93d28f2448005d33bbfaebc9581f5"
+const TaskContractHash = "c76eff0073403541424e47cb3c145fb35a882036cbe6990cb7a1b22b4a1f3e4b"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -221,6 +229,7 @@ func AllTasks() []Task {
 		TaskCaptureCounterpartyVerdict,
 		TaskCertJudge,
 		TaskChatSummary,
+		TaskChatTaskReading,
 		TaskColdStart,
 		TaskCorpusAsk,
 		TaskDealHealth,
@@ -228,6 +237,7 @@ func AllTasks() []Task {
 		TaskDocumentExtract,
 		TaskDraftReply,
 		TaskEnrich,
+		TaskExtensionTask,
 		TaskGrowthFit,
 		TaskNlSearch,
 		TaskOfferDraft,
@@ -265,6 +275,7 @@ var taskLadders = map[Task][]Tier{
 	TaskCaptureCounterpartyVerdict:    {TierLocalSmall},
 	TaskCertJudge:                     {TierPremium, TierCheapCloud},
 	TaskChatSummary:                   {TierCheapCloud, TierPremium},
+	TaskChatTaskReading:               {TierLocalSmall, TierCheapCloud},
 	TaskColdStart:                     {TierCheapCloud, TierPremium},
 	TaskCorpusAsk:                     {TierPremium},
 	TaskDealHealth:                    {TierCheapCloud, TierPremium},
@@ -272,6 +283,7 @@ var taskLadders = map[Task][]Tier{
 	TaskDocumentExtract:               {TierPremium},
 	TaskDraftReply:                    {TierCheapCloud, TierPremium},
 	TaskEnrich:                        {TierLocalSmall, TierCheapCloud},
+	TaskExtensionTask:                 {TierCheapCloud, TierPremium},
 	TaskGrowthFit:                     {TierCheapCloud, TierPremium},
 	TaskNlSearch:                      {TierCheapCloud, TierPremium},
 	TaskOfferDraft:                    {TierCheapCloud, TierPremium},
@@ -318,6 +330,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskCaptureCounterpartyVerdict:    ExecutionModeBackground,
 	TaskCertJudge:                     ExecutionModeBackground,
 	TaskChatSummary:                   ExecutionModeBackground,
+	TaskChatTaskReading:               ExecutionModeInteractive,
 	TaskColdStart:                     ExecutionModeInteractive,
 	TaskCorpusAsk:                     ExecutionModeInteractive,
 	TaskDealHealth:                    ExecutionModeInteractive,
@@ -325,6 +338,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskDocumentExtract:               ExecutionModeBackground,
 	TaskDraftReply:                    ExecutionModeInteractive,
 	TaskEnrich:                        ExecutionModeBackground,
+	TaskExtensionTask:                 ExecutionModeBackground,
 	TaskGrowthFit:                     ExecutionModeInteractive,
 	TaskNlSearch:                      ExecutionModeInteractive,
 	TaskOfferDraft:                    ExecutionModeInteractive,
@@ -390,6 +404,7 @@ var taskStatus = map[Task]string{
 	TaskCaptureCounterpartyVerdict:    "shipped",
 	TaskCertJudge:                     "shipped",
 	TaskChatSummary:                   "shipped",
+	TaskChatTaskReading:               "shipped",
 	TaskColdStart:                     "shipped",
 	TaskCorpusAsk:                     "shipped",
 	TaskDealHealth:                    "shipped",
@@ -397,6 +412,7 @@ var taskStatus = map[Task]string{
 	TaskDocumentExtract:               "shipped",
 	TaskDraftReply:                    "shipped",
 	TaskEnrich:                        "shipped",
+	TaskExtensionTask:                 "shipped",
 	TaskGrowthFit:                     "shipped",
 	TaskNlSearch:                      "shipped",
 	TaskOfferDraft:                    "shipped",
@@ -471,6 +487,9 @@ var taskSites = map[Task][]Site{
 	TaskChatSummary: {
 		{Name: "episode", Kind: "one_shot"},
 	},
+	TaskChatTaskReading: {
+		{Name: "chat_tasks", Kind: "one_shot"},
+	},
 	TaskColdStart: {
 		{Name: "company_message", Kind: "multi_turn", Thinking: "low"},
 		{Name: "sitereadmessage", Kind: "multi_turn", Thinking: "low"},
@@ -501,11 +520,15 @@ var taskSites = map[Task][]Site{
 	TaskEnrich: {
 		{Name: "signature", Kind: "one_shot"},
 	},
+	TaskExtensionTask: {
+		{Name: "run", Kind: "one_shot"},
+	},
 	TaskGrowthFit: {
 		{Name: "growth_fit", Kind: "one_shot"},
 	},
 	TaskNlSearch: {
 		{Name: "filter_propose", Kind: "one_shot"},
+		{Name: "search_data_plan", Kind: "one_shot"},
 	},
 	TaskOfferDraft: {
 		{Name: "draft", Kind: "one_shot"},
@@ -608,7 +631,7 @@ var taskAgents = map[Task][]Agent{
 // task that schedules none returns none.
 func AgentsFor(t Task) []Agent { return taskAgents[t] }
 
-// noPayloadTasks are the tasks whose content must NEVER reach
+// noPayloadTasks are the tasks, and the embed workload, whose content must NEVER reach
 // ai_call_payload, whatever the deployment's capture posture says. The
 // contract pins the prohibition as a hard property, not a default.
 var noPayloadTasks = map[Task]bool{
@@ -617,8 +640,10 @@ var noPayloadTasks = map[Task]bool{
 	TaskCaptureConfidentialityVerdict: true,
 	TaskCaptureCounterpartyVerdict:    true,
 	TaskChatSummary:                   true,
+	TaskChatTaskReading:               true,
 	TaskDealVerdict:                   true,
 	TaskDocumentExtract:               true,
+	TaskExtensionTask:                 true,
 	TaskOwedVerdict:                   true,
 	TaskReaderRendering:               true,
 	TaskReportInterpret:               true,
@@ -626,10 +651,23 @@ var noPayloadTasks = map[Task]bool{
 	TaskSignalExtract:                 true,
 	TaskStageEvidenceExtract:          true,
 	TaskTagSuggest:                    true,
+	TaskEmbeddings:                    true,
 }
 
 // NoPayload reports the contract's payload prohibition for a task.
 func NoPayload(t Task) bool { return noPayloadTasks[t] }
+
+// inputScaledTasks take longer the larger their input, so certified latency
+// over fixed fixtures sets no time limit for them.
+var inputScaledTasks = map[Task]bool{
+	TaskCorpusAsk:       true,
+	TaskReaderRendering: true,
+	TaskSummarize:       true,
+	TaskTranscript:      true,
+}
+
+// LatencyScalesWithInput reports the contract's latency_scales_with_input for a task.
+func LatencyScalesWithInput(t Task) bool { return inputScaledTasks[t] }
 
 // taskSubjectRestriction is each task's declared restriction posture.
 var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
@@ -641,6 +679,7 @@ var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
 	TaskCaptureCounterpartyVerdict:    {Posture: "honour", Reason: ""},
 	TaskCertJudge:                     {Posture: "none", Reason: "grades certification corpus answers, never live records"},
 	TaskChatSummary:                   {Posture: "honour", Reason: ""},
+	TaskChatTaskReading:               {Posture: "honour", Reason: ""},
 	TaskColdStart:                     {Posture: "none", Reason: "reads our own company's website and what the admin types about our company"},
 	TaskCorpusAsk:                     {Posture: "none", Reason: "reads the documents our company filed in its knowledge base, not contact records or mail"},
 	TaskDealHealth:                    {Posture: "honour", Reason: ""},
@@ -648,6 +687,7 @@ var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
 	TaskDocumentExtract:               {Posture: "honour", Reason: ""},
 	TaskDraftReply:                    {Posture: "honour", Reason: ""},
 	TaskEnrich:                        {Posture: "honour", Reason: ""},
+	TaskExtensionTask:                 {Posture: "honour", Reason: ""},
 	TaskGrowthFit:                     {Posture: "none", Reason: "reads the company's own recorded facts and our offering, never a contact's record or mail"},
 	TaskNlSearch:                      {Posture: "none", Reason: "is handed a sentence and the caller's filter vocabulary, never a record"},
 	TaskOfferDraft:                    {Posture: "honour", Reason: ""},
@@ -724,6 +764,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskCaptureCounterpartyVerdict:    {TokenBudget: 0, Conditional: false},
 	TaskCertJudge:                     {TokenBudget: 0, Conditional: false},
 	TaskChatSummary:                   {TokenBudget: 0, Conditional: false},
+	TaskChatTaskReading:               {TokenBudget: 0, Conditional: false},
 	TaskColdStart:                     {TokenBudget: 0, Conditional: false},
 	TaskCorpusAsk:                     {TokenBudget: 0, Conditional: false},
 	TaskDealHealth:                    {TokenBudget: 0, Conditional: false},
@@ -731,6 +772,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskDocumentExtract:               {TokenBudget: 0, Conditional: false},
 	TaskDraftReply:                    {Scopes: []string{"positioning", "sales", "proof", "market"}, TokenBudget: 1400, Conditional: false},
 	TaskEnrich:                        {TokenBudget: 0, Conditional: false},
+	TaskExtensionTask:                 {TokenBudget: 0, Conditional: false},
 	TaskGrowthFit:                     {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1200, Conditional: false, OfferingSelectable: true},
 	TaskNlSearch:                      {Scopes: []string{"offer", "market"}, TokenBudget: 600, Conditional: true},
 	TaskOfferDraft:                    {Scopes: []string{"offer", "positioning", "proof"}, TokenBudget: 1600, Conditional: false},

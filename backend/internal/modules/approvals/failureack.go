@@ -26,12 +26,15 @@ import (
 )
 
 // stillFailing is the row half of "this failure is still news to its decider".
+// A lapsed staging no sweep has marked counts, as it does on the wire.
 //
 // A run that completes clears the mark (recordEffectRan), so a mark that stands
 // is a failure nothing has fixed. The acknowledgement holds a copy of the
 // failure it saw, so a newer mark differs from it.
-const stillFailing = `effect_failed_at IS NOT NULL
-	AND acknowledged_effect_failed_at IS DISTINCT FROM effect_failed_at`
+func stillFailing(cutoff string) string {
+	return `((effect_failed_at IS NOT NULL
+	AND acknowledged_effect_failed_at IS DISTINCT FROM effect_failed_at) OR ` + lapsedUnmarkedSQL(cutoff) + `)`
+}
 
 // Absolute stage moves can satisfy an older identical request; relative advances
 // and repeatable sends cannot. The later decision must belong to the same decider.
@@ -117,6 +120,14 @@ func (s *Service) AcknowledgeEffectFailure(ctx context.Context, id ids.ApprovalI
 		return apperrors.ErrPermissionDenied
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The reader may be acknowledging a lapse the sweep has not written
+		// yet. Writing it now, at the same instant, makes the two one failure.
+		if _, err := tx.Exec(ctx, `UPDATE approval
+			   SET effect_failed_at = decided_at + make_interval(secs => $5), effect_failure = $3
+			 WHERE id = $1 AND decided_by = $2 AND `+lapsedUnmarkedSQL("$4"),
+			id, p.UserID, failureLapsed.sentence, s.now().UTC().Add(-redemptionTTL), redemptionTTL.Seconds()); err != nil {
+			return err
+		}
 		var decidedBy *ids.UUID
 		var failedAt, acknowledged *time.Time
 		var kind string

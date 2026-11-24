@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -13,7 +14,9 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
+import { meFixture, seedWriter } from "../../testing/mefixture";
 import {
   CARD_PHOTO_EXTENSIONS,
   isCardPhoto,
@@ -33,15 +36,21 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function render(ui: ReactNode) {
+function render(ui: ReactNode, seeded = true) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
-    </QueryClientProvider>,
-  );
+  if (seeded) {
+    seedWriter(client);
+  }
+  return {
+    client,
+    ...rtlRender(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{ui}</LocaleProvider>
+      </QueryClientProvider>,
+    ),
+  };
 }
 
 function vcardFile() {
@@ -60,6 +69,17 @@ async function upload(user: ReturnType<typeof userEvent.setup>) {
     throw new Error("the page rendered no file input");
   }
   await user.upload(input, vcardFile());
+}
+
+// The page reads /me first; the call that matters is the import's.
+function importCall(spy: ReturnType<typeof vi.fn>): [string, RequestInit] {
+  const call = spy.mock.calls.find(
+    ([url]) => typeof url === "string" && url.startsWith("/v1/contacts/"),
+  );
+  if (!call) {
+    throw new Error("the page sent no import");
+  }
+  return [call[0], call[1]];
 }
 
 function UnsavedProbe() {
@@ -89,15 +109,74 @@ describe("VCardImport", () => {
     );
   });
 
-  it("leads back to the contact list", () => {
+  // The top bar's Back leads to the contact list, so the page draws no second one.
+  it("opens on its title with no way back of its own", () => {
     render(<VCardImportPage />);
     const title = screen.getByRole("heading", { level: 1 });
     expect(title).toHaveTextContent("Import business cards");
     // The link that opened the page is gone, so the title holds focus.
     expect(title).toHaveFocus();
-    expect(
-      screen.getByRole("link", { name: "Back to contacts" }),
-    ).toHaveAttribute("href", "/#/contacts");
+    expect(screen.queryByRole("link", { name: /back/i })).toBeNull();
+  });
+
+  describe("for one company", () => {
+    beforeEach(() => {
+      window.location.hash = "#/contacts/import?company=co-acme";
+    });
+
+    it("names the company and draws no way back of its own", () => {
+      render(<VCardImportPage />);
+      expect(screen.getByTestId("vcard-import-company")).toHaveTextContent(
+        en["vcardImport.forCompany"],
+      );
+      expect(screen.queryByRole("link", { name: /back/i })).toBeNull();
+    });
+
+    it("names the company in the import request", async () => {
+      const user = userEvent.setup();
+      const fetchSpy = vi.fn(
+        async (_url: string, _init: RequestInit): Promise<Response> =>
+          jsonResponse({ results: [] }),
+      );
+      vi.stubGlobal("fetch", fetchSpy);
+
+      render(<VCardImportPage />);
+      await upload(user);
+
+      await screen.findByText("The file contains no cards.");
+      const [url] = importCall(fetchSpy);
+      expect(url).toBe("/v1/contacts/vcard-import?company_id=co-acme");
+    });
+
+    it("sends a card photo nowhere, because it files under no company", async () => {
+      const user = userEvent.setup();
+      const fetchSpy = vi.fn(
+        async (_url: string, _init: RequestInit): Promise<Response> =>
+          jsonResponse({ results: [] }),
+      );
+      vi.stubGlobal("fetch", fetchSpy);
+
+      render(<VCardImportPage />);
+      const input = screen
+        .getByTestId("vcard-import-file")
+        .querySelector("input[type=file]");
+      if (!(input instanceof HTMLInputElement)) {
+        throw new Error("the page rendered no file input");
+      }
+      await user.upload(
+        input,
+        new File(["x"], "card.jpg", { type: "image/jpeg" }),
+      );
+
+      expect(
+        await screen.findByText(en["vcardImport.companyPhoto"]),
+      ).toBeVisible();
+      expect(
+        fetchSpy.mock.calls.some(
+          ([url]) => typeof url === "string" && url.startsWith("/v1/contacts/"),
+        ),
+      ).toBe(false);
+    });
   });
 
   // Leaving does not stop the write, so the guard holds exactly the window in
@@ -320,6 +399,55 @@ describe("VCardImport", () => {
     expect(field.querySelector("input[type=file]")).toHaveFocus();
   });
 
+  // A file picked is sent at once, so no field shows before the seat's access
+  // is read.
+  it("offers no file field while the seat's access is on its way", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    render(<VCardImportPage />, false);
+
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByTestId("vcard-import-file")).toBeNull();
+  });
+
+  // An import already sent keeps its report when /me later refuses the seat:
+  // only the file field gives way to the refusal.
+  it("keeps the report of a sent import when the seat loses the right", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ results: [] })),
+    );
+    const { client } = render(<VCardImportPage />);
+    await upload(user);
+    expect(
+      await screen.findByText("The file contains no cards."),
+    ).toBeVisible();
+
+    act(() => {
+      client.setQueryData(["me"], meFixture({ allow: { contact: ["read"] } }));
+    });
+    expect(await screen.findByText(en["record.actionRefused"])).toBeVisible();
+    expect(screen.getByText("The file contains no cards.")).toBeVisible();
+  });
+
+  // Reached by its address, a seat that may not add contacts sees why and no
+  // file field. The import would be refused after the file was chosen.
+  it("shows a refused seat why, and no file field", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse(meFixture({ allow: { contact: ["read"] } })),
+      ),
+    );
+    render(<VCardImportPage />, false);
+
+    expect(await screen.findByText(en["record.actionRefused"])).toBeVisible();
+    expect(document.querySelector("input[type=file]")).toBeNull();
+  });
+
   it("sends the file as the part the endpoint takes", async () => {
     const user = userEvent.setup();
     const fetchSpy = vi.fn(
@@ -334,7 +462,7 @@ describe("VCardImport", () => {
     expect(
       await screen.findByText("The file contains no cards."),
     ).toBeVisible();
-    const [url, init] = fetchSpy.mock.calls[0];
+    const [url, init] = importCall(fetchSpy);
     expect(url).toBe("/v1/contacts/vcard-import");
     expect(init.method).toBe("POST");
     // The endpoint takes a multipart part named `file`; a JSON body or a
@@ -414,7 +542,7 @@ describe("VCardImport", () => {
     );
 
     expect(await screen.findByText("Waiting for approval")).toBeVisible();
-    expect(fetchSpy.mock.calls[0][0]).toBe("/v1/contacts/card-photos");
+    expect(importCall(fetchSpy)[0]).toBe("/v1/contacts/card-photos");
   });
 
   it("accepts vCards and photos in the picker", () => {

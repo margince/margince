@@ -76,6 +76,9 @@ var audienceScopeMarkers = []string{
 	// unrelated frames away, which is the file-scope looseness both censuses
 	// were tightened away from.
 	"visibleParentClause",
+	// The owed-reply and settlement passes' audience test (activities/owedaudience.go):
+	// WorkspaceAudienceSQL, or participants mail private for a routine reason.
+	"judgeableAudienceSQL", "JudgeableAudienceTx", "ShareableAudience", "ShareableAudienceTx",
 }
 
 // audienceLiteralMarkers are the inline spellings that COMPARE the column, not
@@ -117,9 +120,13 @@ const credentialRepairReader = "the credential repair, which reads every mail be
 const qualifyTaskTextReader = "a system data task adds display metadata to qualify tasks; it shows no row to anyone and leaves the subject unchanged"
 
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/compose/proposalstage/proposalstage.go:proposalNamedFile": "reads one outbound mail's attachments through dealscout.WorkspaceEvidence, which composes auth.WorkspaceAudienceSQL, so only a mail the whole workspace may read can announce a proposal. The gate sees the audience test only when it is spelled in the statement.",
+	"internal/compose/proposalstage/proposalstage.go:proposalFirstFile": "the same read for a mail the model's reading named, through dealscout.WorkspaceEvidence; only the attachment's id and file name leave it.",
+	"internal/modules/contacts/promisekept.go:lockKeptPromise":          "System-only decision on one claim. It reads a linked task only for its assignee and returns nothing to a user. The evidence is found afterwards under the owner's own scope.",
+
 	"internal/modules/activities/legacysystemtext.go:LegacySystemTasksTx": "System-only bounded repair reads native task text to recover its catalog descriptor. No row is returned to a user; archived and held rows are excluded.",
 
-	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupFrom":             mailCopyGroupReader,
+	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupBoundedFrom":      mailCopyGroupReader,
 	"internal/compose/credentialrepair/credentialrepair.go:estimateMaskableMailText": credentialRepairReader,
 	"internal/compose/credentialrepair/credentialrepair.go:maskMailTextBatch":        credentialRepairReader,
 	"internal/modules/activities/credentialrepair.go:MaskStoredMailTextTx":           credentialRepairReader,

@@ -1,15 +1,18 @@
-import { useId } from "react";
+import { useContext, useId } from "react";
 import type { components } from "../../api/schema";
 import { ChannelPanel } from "../../components/channelpanel";
 import { Badge, Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import {
   OverviewCard,
   OverviewList,
   OverviewRow,
 } from "../../design-system/overviewcard";
+import { taskDueOnDay, taskDueZone } from "../../format/calendarday";
 import { formatMoney } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { useCompanyZone } from "../../lib/companyzone";
 import { navigate } from "../../lib/router";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -19,14 +22,16 @@ import { DealBrief } from "./deal360/dealbrief";
 import { DealCommitmentsCard } from "./deal360/dealcommitments";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
-import { useDealLines } from "./deal360/deallines";
+import { useDealLines } from "./deal360/deallinestotal";
 import { DealLinksCard } from "./deal360/deallinkscard";
 import { DealMarginceChangesCard } from "./deal360/dealmarginchanges";
 import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";
 import { DealProductsCard } from "./deal360/dealproducts";
 import { DealRoomCard } from "./deal360/dealroomcard";
 import type { DealStandingInputs } from "./deal360/dealstanding";
-import type { Offer } from "./deals";
+import { DealEditContext } from "./dealedit";
+import { StartDeliveryPrompt } from "./dealproject";
+import type { Deal, Offer } from "./deals";
 import { DealStatusCardPanel, unreadHead } from "./dealstatus";
 import "./deal360/deal360.css";
 
@@ -37,6 +42,7 @@ type Approval = components["schemas"]["Approval"];
 export function OffersPanel({
   offers,
   creating,
+  refusal,
   locale,
   dealCurrency,
   refusedReasonId,
@@ -45,6 +51,7 @@ export function OffersPanel({
 }: Readonly<{
   offers: readonly Offer[] | undefined;
   creating: boolean;
+  refusal?: string;
   locale: Locale;
   // An offer is written in the deal's currency, so a deal nobody has priced
   // has nothing to write one in. Null refuses the control and says why. It
@@ -75,10 +82,10 @@ export function OffersPanel({
         onCreate && (
           <Button
             variant="link"
-            // A refused control points at its reason. Passing `disabled` beside
-            // it would cancel the refusal, so only the in-flight case uses it.
+            // A refused control points at its reason, which outranks `pending`.
+            // `pending` holds a second press until the first create is drawn.
             // An empty code is as absent as a null one: Intl throws on it.
-            disabled={!needsCurrency && creating}
+            pending={creating}
             reasonId={
               refusedReasonId ?? (needsCurrency ? currencyReasonId : undefined)
             }
@@ -100,6 +107,8 @@ export function OffersPanel({
               ? t("deal.offerNeedsCompleteLines")
               : t("deal.offerNeedsCurrency")}
           </span>
+        ) : refusal ? (
+          <ErrorLine>{refusal}</ErrorLine>
         ) : undefined
       }
     >
@@ -136,13 +145,13 @@ export function OffersPanel({
 export function DealOverviewPane({
   inputs,
   creatingOffer,
+  createRefusal,
   locale,
   onCreateOffer,
   readOnly,
   refusedReasonId,
   onOpenEmail,
   onOpenTab,
-  onEditDetails,
   threadComplete,
   dealApprovals,
   onDecide,
@@ -150,6 +159,8 @@ export function DealOverviewPane({
   // What How it stands reads, and the ladder's write path.
   inputs: DealStandingInputs;
   creatingOffer: boolean;
+  // Why the last New offer failed, until the next one is pressed.
+  createRefusal?: string;
   locale: Locale;
   onCreateOffer: (currency: string, fromRevision?: number) => void;
   /** Whether the deal takes no field write at all: archived, or not this
@@ -164,8 +175,6 @@ export function DealOverviewPane({
   onOpenEmail?: (activityId: string) => void;
   // Switches the page to another of the deal's tabs.
   onOpenTab: (tab: "room" | "history") => void;
-  // Opens the drawer that holds the deal's fields.
-  onEditDetails: () => void;
   // Whether the thread read holds every row. A count of tasks off a page
   // with more behind it would be a floor the bar cannot mark. So it is left
   // out until then.
@@ -180,6 +189,7 @@ export function DealOverviewPane({
   const t = useT();
   const plural = usePlural();
   const zone = useViewerZone();
+  const companyZone = useCompanyZone();
   const { deal, offers, coverage, activities, card } = inputs;
   // A reader the server would refuse every change to is offered none of them.
   const canWrite = useCanWriteRecord("deal", deal);
@@ -198,11 +208,20 @@ export function DealOverviewPane({
             id: row.id,
             subject: row.subject ?? t("task.untitled"),
             dueAt: row.due_at,
+            dueHasTime: row.due_has_time,
+            dueIntent: row.due_intent,
             overdue: row.due_at
-              ? Date.parse(row.due_at) < Date.parse(inputs.asOf)
+              ? Date.parse(
+                  taskDueOnDay(
+                    row.due_at,
+                    row.due_has_time,
+                    row.due_intent,
+                    taskDueZone(row.due_has_time, zone, companyZone),
+                  ),
+                ) < Date.parse(inputs.asOf)
               : false,
           })),
-          { t, plural, locale, zone },
+          { t, plural, locale, zone, companyZone },
           others.length,
           () => onOpenTab("history"),
         ),
@@ -210,6 +229,9 @@ export function DealOverviewPane({
     : undefined;
   return (
     <>
+      {/* A won deal's hand-over to delivery sits where the deal opens, so
+          the reader who just won it meets the offer first. */}
+      <StartDeliveryPrompt deal={deal} />
       {/* The server refuses an archived deal's status card, so its reading
           is the records' own and nothing model-written is claimed. */}
       {deal.archived_at ? (
@@ -238,6 +260,7 @@ export function DealOverviewPane({
           <OffersPanel
             offers={offers}
             creating={creatingOffer}
+            refusal={createRefusal}
             locale={locale}
             dealCurrency={deal.currency ?? null}
             refusedReasonId={refusedReasonId}
@@ -270,11 +293,7 @@ export function DealOverviewPane({
           <DealLinksCard deal={deal} />
         </div>
         <div className="deal-overview-column">
-          <DealBrief
-            brief={deal.description}
-            // The record's own write refusal, not the advance verb's.
-            onEdit={readOnly ? undefined : onEditDetails}
-          />
+          <DealBriefCard deal={deal} readOnly={readOnly} />
           {!deal.archived_at && (
             <DealProductsCard
               dealId={deal.id}
@@ -298,5 +317,21 @@ export function DealOverviewPane({
         </div>
       </div>
     </>
+  );
+}
+
+// The brief writes through the page's own deal edit. `readOnly` is the
+// record's write refusal, not the advance verb's.
+function DealBriefCard({
+  deal,
+  readOnly,
+}: Readonly<{ deal: Deal; readOnly: boolean }>) {
+  const edit = useContext(DealEditContext);
+  return (
+    <DealBrief
+      brief={deal.description}
+      byModel={deal.ai_written_fields?.includes("description")}
+      edit={readOnly ? undefined : edit}
+    />
   );
 }

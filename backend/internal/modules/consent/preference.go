@@ -42,6 +42,10 @@ const PurposeTransactional = "transactional"
 // literal in either would drift from the seed without anything failing.
 const PurposeMarketingEmail = "marketing_email"
 
+// PurposeBusinessCorrespondence is the seeded purpose of ordinary business
+// mail, which the privacy page names when nothing else is on record.
+const PurposeBusinessCorrespondence = "business_correspondence"
+
 // LockedPurpose reports whether a purpose may not be changed from the
 // public preference surface. Locked purposes also carry no unsubscribe
 // header — there is nothing to unsubscribe from.
@@ -163,7 +167,7 @@ func resolvePreferenceTokenTx(ctx context.Context, tx pgx.Tx, token string) (Pre
 	var survivorRow ids.UUID
 	err = tx.QueryRow(ctx, `
 		SELECT id FROM contact_email
-		 WHERE contact_id = $1 AND lower(email) = lower($2) AND archived_at IS NULL
+		 WHERE contact_id = $1 AND `+sameAddressSQL("email", "$2")+` AND archived_at IS NULL
 		 LIMIT 1`, ref.ContactID, *address).Scan(&survivorRow)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ref, nil
@@ -273,7 +277,7 @@ func liveAddressHolderTx(ctx context.Context, tx pgx.Tx, email string) (addresse
 		SELECT DISTINCT pe.contact_id, pe.id
 		FROM contact_email pe
 		JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
-		WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL
+		WHERE pe.email = $1 AND pe.archived_at IS NULL
 		LIMIT 2`, email)
 	if err != nil {
 		return addressedContact{}, false, err
@@ -286,7 +290,7 @@ func liveAddressHolderTx(ctx context.Context, tx pgx.Tx, email string) (addresse
 		return addressedContact{}, false, nil // not a known recipient in this workspace: no token, no header
 	}
 	if len(matches) > 1 {
-		return addressedContact{}, false, fmt.Errorf("consent: the recipient address is live on more than one contact, so no unsubscribe link can name which: %w",
+		return addressedContact{}, false, fmt.Errorf("the recipient address is live on more than one contact, so no unsubscribe link can name which: %w",
 			apperrors.ErrConflict)
 	}
 	return matches[0], true, nil

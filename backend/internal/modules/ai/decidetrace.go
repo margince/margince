@@ -38,7 +38,7 @@ func answerTrace(answer decision.Answer) *DecisionAnswer {
 func (r *Router) newDecisionTrace(ctx context.Context, task Task, lane routeMeta) Call {
 	trace := Call{
 		Task: task, Kind: callKindDecision, Tier: TierDecideLane,
-		Provider: lane.provider, ModelID: lane.model, CacheOff: r.cacheOff,
+		Provider: lane.provider, ModelID: lane.model,
 	}
 	withAmbientIdentity(ctx, &trace)
 	return trace
@@ -75,7 +75,7 @@ func (r *Router) finalizeDecisionAttempt(ctx context.Context, lc *logicalCall, t
 // document then passes the stripper again, as buildPayload's does, because
 // the questions are text too.
 func (r *Router) buildDecisionPayload(ctx context.Context, dreq decision.Request, resp decision.Response) (*Payload, error) {
-	budget := captureBudget{remaining: maxCapturedRequestRunes}
+	budget := r.newCaptureBudget()
 	reqDoc, err := json.Marshal(struct {
 		State     string                          `json:"state"`
 		Questions map[string]decisionWireQuestion `json:"questions"`

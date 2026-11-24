@@ -69,16 +69,16 @@ func (l *spendLedger) rate(usdPerMTok string) {
 // call meters one terminal call at the ledger's current instant.
 func (l *spendLedger) call(task Task, tier Tier, model string, tokensIn, tokensOut int, cacheHit bool) {
 	l.t.Helper()
-	fingerprint := "fp-" + ids.NewV7().String()
+	logical := ids.NewV7()
 	if err := l.calls.Record(l.ctx, []Call{{
-		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: callKindCompletion,
+		LogicalCallID: logical, Attempt: 1, IsTerminal: true, Kind: callKindCompletion,
 		Task: task, Tier: tier, Provider: providerOpenAICompatible, ModelID: model,
-		RequestFingerprint: fingerprint, TokensIn: tokensIn, TokensOut: tokensOut, CacheHit: cacheHit,
+		TokensIn: tokensIn, TokensOut: tokensOut, CacheHit: cacheHit,
 	}}); err != nil {
 		l.t.Fatalf("recording a call: %v", err)
 	}
 	if _, err := l.env.owner.Exec(context.Background(),
-		`UPDATE ai_call SET occurred_at = $1 WHERE request_fingerprint = $2`, l.clock, fingerprint); err != nil {
+		`UPDATE ai_call SET occurred_at = $1 WHERE logical_call_id = $2`, l.clock, logical); err != nil {
 		l.t.Fatalf("dating the call: %v", err)
 	}
 	if err := l.meter.Record(l.ctx, Usage{Task: task, Tier: tier, TokensIn: tokensIn, TokensOut: tokensOut, Cached: cacheHit}); err != nil {

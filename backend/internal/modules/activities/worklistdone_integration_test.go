@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -177,6 +178,21 @@ func TestDoneRefusesAnUnknownLaneAndAnAgent(t *testing.T) {
 	}
 }
 
+// A row with no id names no row the queue drew. Nor does a follow-up row whose
+// id is not an activity id. Both are refused as malformed.
+func TestDoneRefusesARowIdNoRowCouldCarry(t *testing.T) {
+	e := setupLoad(t)
+	s := handledStore(e)
+	for name, row := range map[string]WorklistRowRef{
+		"an empty id":           {Source: "deal_at_risk", RowID: ""},
+		"a follow-up not by id": {Source: string(crmcontracts.WorklistItemSourceAwaitingReply), RowID: "not-an-id"},
+	} {
+		if err := s.MarkWorklistRowsDone(e.followUpReader(), []WorklistRowRef{row}); !errors.Is(err, apperrors.ErrInvalidArgument) {
+			t.Errorf("Done on %s answered %v, want an invalid argument", name, err)
+		}
+	}
+}
+
 // Undo of a Done takes back the Done alone. A snooze the reader set after it
 // stays, so a late Undo cannot bring back what they put off.
 func TestUndoOfDoneLeavesALaterSnooze(t *testing.T) {
@@ -218,5 +234,40 @@ func TestDoneTwiceOnOneMessageWritesItOnce(t *testing.T) {
 	if audited, announced := handledTrail(t, e, message); audited != 1 || announced != 1 {
 		t.Errorf("two presses naming the message twice wrote %d audit rows and %d events, want 1 and 1",
 			audited, announced)
+	}
+}
+
+// Which rows a reader has put down, wherever each kind keeps its Done. A
+// follow-up keeps it on the activity, any other row in the Done set. A
+// colleague's Done and a row nobody marked are not the reader's.
+func TestAlreadyDoneReadsBothPlacesADoneIsKept(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	rep := e.followUpReader()
+	sent, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
+	met := e.metWith(t, e.customerAt(t, "customer"), e.rep, "held", 3*24*time.Hour)
+	reply := WorklistRowRef{Source: "awaiting_reply", RowID: sent.String()}
+	meeting := WorklistRowRef{Source: "meeting_follow_up", RowID: met.String()}
+	deal := WorklistRowRef{Source: "deal_at_risk", RowID: ids.NewV7().String()}
+	untouched := WorklistRowRef{Source: "bounce", RowID: ids.NewV7().String()}
+	if err := s.MarkWorklistRowsDone(rep, []WorklistRowRef{reply, deal}); err != nil {
+		t.Fatalf("marking the rows done: %v", err)
+	}
+	alreadyDone := func(ctx context.Context) map[WorklistRowRef]bool {
+		t.Helper()
+		out, err := s.WorklistRowsAlreadyDone(ctx, []WorklistRowRef{reply, meeting, deal, untouched})
+		if err != nil {
+			t.Fatalf("reading the rows already done: %v", err)
+		}
+		return out
+	}
+	got := alreadyDone(rep)
+	if !got[reply] || !got[deal] || got[meeting] || got[untouched] {
+		t.Errorf("already done = %v, want the follow-up and the deal only", got)
+	}
+	for row, done := range alreadyDone(e.asSeat(e.other)) {
+		if done {
+			t.Errorf("a colleague reads the rep's Done on %+v", row)
+		}
 	}
 }

@@ -14,10 +14,51 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
+// mfaAlwaysRequired is the admission reader with require-MFA on, which a stored
+// row would turn on for every test sharing this database.
+func mfaAlwaysRequired(ctx context.Context, tx pgx.Tx) (AdmissionSettings, error) {
+	allowed, err := IndividualPerformanceTx(ctx, tx)
+	return AdmissionSettings{IndividualPerformance: allowed, RequireMFA: true}, err
+}
+
 func (e *revocationEnv) requireMFAOn() {
-	e.svc.requireMFA = func(context.Context) (bool, error) { return true, nil }
+	e.svc.admissionSettings = mfaAlwaysRequired
+}
+
+// The stored policy, read through the production reader, confines a password
+// session of a member with no factor.
+func TestAStoredRequireMFAConfinesAFactorlessPasswordSession(t *testing.T) {
+	e := setupRevocationEnv(t, "require-mfa-stored")
+	e.withVault()
+	cfg := unlockedConfig(t, e.pool)
+	store := NewInstallationSettings(e.svc.db, settings.New(e.pool, settings.NewRegistry(append(Definitions(), cfg.StoredDefinitions()...)...)), cfg)
+	e.svc.WithAdmissionSettings(store.AdmissionSettings)
+	if err := config.Save(e.wsCtx(e.admin), cfg, RequireMFA, true); err != nil {
+		t.Fatalf("turning require-MFA on: %v", err)
+	}
+	// The setting row has no workspace column, so it would outlive this test.
+	t.Cleanup(func() {
+		if err := config.Save(e.wsCtx(e.admin), cfg, RequireMFA, false); err != nil {
+			t.Errorf("turning require-MFA off again: %v", err)
+		}
+	})
+
+	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+	if err != nil {
+		t.Fatalf("login: %v", err)
+	}
+	id, err := e.svc.Authenticate(e.wsOnlyCtx(), login.Token)
+	if err != nil {
+		t.Fatalf("authenticate: %v", err)
+	}
+	if !id.MustEnrolMFA {
+		t.Fatal("a stored require-MFA did not confine a member with no factor")
+	}
 }
 
 func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
@@ -73,7 +114,7 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 	e.enrolMemberMFA(t)
 
 	bare := NewServiceFor(e.svc.db)
-	bare.requireMFA = func(context.Context) (bool, error) { return true, nil }
+	bare.admissionSettings = mfaAlwaysRequired
 
 	// Password login never answers the 202 challenge state: a challenge this
 	// service could not verify would be a lockout, not a factor.
@@ -176,7 +217,7 @@ func TestRequireMFATrustsTheProviderAndAsksThePasswordPath(t *testing.T) {
 func TestRequireMFAOffLeavesTheMemberUnconfined(t *testing.T) {
 	e := setupRevocationEnv(t, "require-mfa-off")
 	e.withVault()
-	// requireMFA left nil: no enforcement, and no per-request enrolment check.
+	// admissionSettings left nil: no enforcement, and no per-request enrolment check.
 	_, login, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
 	if err != nil {
 		t.Fatalf("login: %v", err)

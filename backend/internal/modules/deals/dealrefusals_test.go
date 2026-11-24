@@ -6,12 +6,14 @@ package deals
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -79,6 +81,14 @@ func TestAnOfferPastItsDateIsRefusedFromTheDayAfter(t *testing.T) {
 func TestAnOfferWithoutADateIsNeverLapsed(t *testing.T) {
 	if err := (&Store{}).refuseLapsedOffer(context.Background(), nil, crmcontracts.Offer{}); err != nil {
 		t.Errorf("an offer with no valid_until was refused: %v", err)
+	}
+}
+
+func TestAStageMismatchSentenceNeverShowsTheStageId(t *testing.T) {
+	stage := ids.New[ids.StageKind]()
+	_, _, message := (&StagePipelineMismatchError{StageID: stage}).FieldFault()
+	if strings.Contains(message, stage.String()) {
+		t.Errorf("the refusal shows the raw stage id: %q", message)
 	}
 }
 

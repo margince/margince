@@ -33,8 +33,7 @@ function Example({ multiline = false }: { multiline?: boolean }) {
       placeholder="Not set"
       value={value}
       multiline={multiline}
-      type={multiline ? "text" : "number"}
-      step="any"
+      type={multiline ? "text" : "decimal"}
       canEdit
       onSave={async (next) => setValue(next)}
     />
@@ -61,7 +60,7 @@ export const FormattedReading: Story = {
       await canvas.findByRole("button", { name: "Change Budget €48,000.00" }),
     );
     const dialog = await screen.findByRole("dialog", { name: "Budget" });
-    await expect(within(dialog).getByRole("spinbutton")).toHaveValue(48000);
+    await expect(within(dialog).getByRole("textbox")).toHaveValue("48000");
   },
 };
 export const Paragraph: Story = { render: () => <Example multiline /> };

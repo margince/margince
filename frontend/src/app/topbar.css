@@ -1,63 +1,34 @@
 /* ===== the top bar =====
- * The session's own strip: the sidebar control, the trail, the search, and the
- * contact. It is the application's one bar and every screen has it (DESIGN.md
- * §6); nothing that belongs to a record sits in it. It stands on the same glass
- * as the sidebar with one hairline under it, so the two halves of the chrome
- * are one pane wrapped around the content rather than two panels meeting at a
- * corner.
+ * The session's own strip: the search, and the contact. It is the
+ * application's one bar and every screen has it (DESIGN.md §6); nothing that
+ * belongs to a record sits in it.
  *
  * It never scrolls: it is the first row of the content column's flex box and
  * the scroller is its sibling, which is cheaper than `position: sticky` and
- * cannot be defeated by a screen that establishes its own scroll container. The
- * page passes UNDER it all the same — the scroller reaches up behind the strip
- * and pads its content clear of it (app/shell.css) — so the strip is
- * translucent with a blur behind it and shows what is sliding past. */
-/* The search is centred on the content column while the trail fits its half;
-   a longer trail grows into the room the end controls leave, up to its cap. */
+ * cannot be defeated by a screen that establishes its own scroll container. */
 .topbar {
-  --topbarSearchW: min(420px, 34vw);
-  display: grid;
-  grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
-  /* The query container `.topbar-lead` measures its cap against. */
-  container-type: inline-size;
+  --topbarSearchW: min(640px, 34vw);
+  display: flex;
   align-items: center;
   gap: var(--space-3);
   /* The gap between the bar's glyphs, which a thumb's targets split (below). */
   --topbarGlyphGap: var(--space-2);
   flex: none;
-  /* One number for the strip's height, read by the sidebar too: the head that
-     carries the logomark is sized against it so the first destination's row
-     begins exactly where this bar's rule ends. */
+  /* The sidebar's head reads it too, so the two share one centre line. */
   height: var(--topbarH);
   /* The gutter, and no vertical padding: the strip's height is the token above
-     and its children centre in it, so vertical padding only narrows the box the
-     40px search already stands taller than. */
+     and its children centre in it. */
   padding: 0 var(--pageGutter);
-  /* Translucent over the page that scrolls beneath, with the blur that makes
-     text readable through it. `position: relative` + a z-index because the
-     scroller reaches up behind this strip: in flow but pulled up, it would
-     otherwise paint over the bar. Below the phone nav (30) and the modal
-     overlay (50), which may both cover the strip. */
+  /* Over the phone scroller pulled up behind it; under the phone nav (30) and
+     the modal overlay (50). */
   position: relative;
   z-index: 20;
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--groundEdge);
 }
-/* Where you are, beside the control that widens the room you are in. */
 .topbar-lead {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  /* The row less the search, its two gaps, and the bell and account control:
-     a trail longer than this ellipses rather than pushing them off the bar. */
-  max-width: calc(
-    100cqw -
-    var(--topbarSearchW) -
-    var(--space-2) -
-    2 *
-    (var(--space-3) + var(--controlHeight))
-  );
 }
 .topbar-trail {
   display: flex;
@@ -65,65 +36,30 @@
   justify-content: flex-end;
   gap: var(--topbarGlyphGap);
   min-width: 0;
+  margin-inline-start: auto;
 }
 
-/* The sidebar control lives HERE rather than in the sidebar, so the affordance
-   that opens the panel does not travel with the panel — collapsed, it used to
-   hide under the logomark and reveal on hover, which is a control you have to
-   already know about to find. */
-.topbar-toggle {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: var(--controlHeight);
-  height: var(--controlHeight);
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  /* The cursor says which way the panel will move, the way a pane divider does:
-     expanded this control narrows the sidebar, collapsed it widens it. `pointer`
-     said only "pressable", which every control in the bar already is. */
-  cursor: w-resize;
-}
-.topbar-toggle[aria-expanded="false"] {
-  cursor: e-resize;
-}
-.topbar-toggle:hover {
-  background: var(--groundHover);
-  color: var(--textPrimary);
-}
-.topbar-toggle:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 1px;
-}
-
-/* ===== search =====
- * Centred on the content column, which is what the bar spans. It glides with the
- * column when the sidebar collapses — `--railW` animates as a registered length
- * (shell.css), so the grid beside it moves rather than snapping. */
+/* ===== search ===== */
 .topbar-searchslot {
   width: var(--topbarSearchW);
 }
-/* This is a BUTTON that opens the palette, and it is drawn as the field the
-   palette opens with — so it takes the field's box and the field's type, not a
-   control's. A reader reads the shape: something shaped like a search box that
-   stands 8px shorter than the one it opens, in type a rung off it, reads as a
-   different object mid-gesture. `font: inherit` because the app reset hands a
-   button the body FAMILY and nothing else, and root type at the root weight is
-   what a field wears. */
+/* A BUTTON that opens the palette, drawn as a search pill at a control's height
+   so it sits in the strip's row of controls. `font: inherit` because the app
+   reset hands a button the body FAMILY and nothing else. */
 .topbar-search {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  min-block-size: var(--inputHeight);
-  padding-inline: var(--inputPaddingX);
+  block-size: var(--controlHeight);
+  /* The page's gutter, so the glyph starts where the content in the card does. */
+  padding-inline: var(--pageGutter);
   font: inherit;
   /* One more pane on the glass, with the pane's own edge: a field drawn in the
      page's ground sat in the strip as a hole. */
   border: 1px solid var(--groundEdge);
-  border-radius: var(--r-sm);
-  background: var(--pane);
+  border-radius: var(--r-full);
+  background: var(--bgControl);
   text-align: left;
   cursor: pointer;
   /* What is drawn as a field takes a field's depth: this is a button, but it
@@ -158,12 +94,9 @@
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-/* One cap per KEY. Two small squares read as keys because they are shaped like
-   keys; the single wide box they replace read as a label. This rule only PLACES
-   them in the strip — the cap itself is `Kbd`, the one key cap
-   (design-system/atoms.css `.kbd`), so the strip cannot draw a second key.
-   Each cap is still sized to its own character: ⌘ and K are different widths
-   and two caps forced to one width read as a pair of buttons. */
+/* One cap per KEY: two small squares read as keys, one wide box as a label.
+   This rule only PLACES them; the cap itself is `Kbd` (design-system/atoms.css
+   `.kbd`), so the strip cannot draw a second key. */
 .topbar-keys {
   display: flex;
   align-items: center;
@@ -183,21 +116,15 @@
   color: var(--textPrimary);
 }
 
-/* Below this width a centred field and the trail beside it are competing for
-   the same pixels, and the trail is the half that cannot be recovered from a
-   keyboard shortcut. The search keeps its place in the row and drops to its
-   glyph — never off the bar, because on touch there is no ⌘K to fall back on. */
+/* Below this width the search drops to its glyph, never off the bar: on touch
+   there is no ⌘K to fall back on. */
 @media (max-width: 1100px) {
   .topbar {
-    display: flex;
-    /* One gap for the whole strip: the three glyphs at the end sit the same
-       distance apart as the collapse control and the trail at the start, so the
-       row reads as one rhythm rather than two. */
+    /* One gap for the whole strip, so the row reads as one rhythm. */
     gap: var(--topbarGlyphGap);
   }
   .topbar-lead {
     flex: 1;
-    max-width: none;
   }
   .topbar-searchslot {
     width: auto;
@@ -212,7 +139,6 @@
      left one of three icons in a box. */
   .topbar-search {
     width: var(--controlHeight);
-    min-block-size: var(--controlHeight);
     justify-content: center;
     padding: 0;
     border-color: transparent;
@@ -260,29 +186,17 @@
   }
 }
 
-/* Below 1024px a long trail has no room beside the end controls, so the bar
-   draws the current page alone. */
-@media (width < 1024px) {
-  .topbar .crumbs > ol > li:not(:last-child),
-  .topbar .crumbs > ol > li:last-child > .crumbs-sep {
-    display: none;
-  }
-}
-
-/* At phone width the sidebar is the bottom bar, so there is no panel to collapse
-   and no control for it. What stays is what a phone reader cannot get any other
-   way: where they are, how to search, and who they are. */
+/* At phone width the page scrolls under the strip (app/shell.css). */
 @media (max-width: 700px) {
   .topbar {
     --topbarGlyphGap: var(--space-1);
-  }
-  .topbar-toggle {
-    display: none;
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--groundEdge);
   }
 }
 
-/* The company's mark in the trail's place at phone width (topbar.tsx). The
-   lead grows, so the controls after it stay at the end of the bar. */
+/* The company's mark at phone width (topbar.tsx). The lead grows, so the
+   controls after it stay at the end of the bar. */
 .topbar-home {
   display: grid;
   place-items: center;
@@ -419,11 +333,8 @@
   white-space: nowrap;
   min-width: 0;
 }
-/* The words give way, never the count. The strip squeezes this chip before the
-   bell and the account chip, and German asks about a third more room for the
-   same sentence, so something has to yield at 1440px that does not at 1280.
-   The count is the whole point of the chip; the words repeat what the panel
-   says when it opens. */
+/* Where the strip has to squeeze this chip, the words give way and never the
+   count: the words repeat what the panel says when it opens. */
 .setup-reminder-word {
   min-width: 0;
   overflow: hidden;

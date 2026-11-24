@@ -56,13 +56,12 @@ func (s *Store) previewActorDealCreation(ctx context.Context, in CreateDealInput
 	if err != nil {
 		return CreateDealInput{}, err
 	}
-	active, err := s.activeColumns(ctx)
-	if err != nil {
-		return CreateDealInput{}, err
-	}
 	var out CreateDealInput
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		active, err := s.activeColumnsIn(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if terminal != nil {
 			in.StageID, err = s.RefuseImportBirth(ctx, tx, in, terminal)
 			if err != nil {
@@ -70,7 +69,10 @@ func (s *Store) previewActorDealCreation(ctx context.Context, in CreateDealInput
 			}
 			born.pastCloseAllowed = true
 		}
-		out, err = s.clearedForBirthWithOwner(ctx, tx, in, born.pastCloseAllowed, storekit.OwnerOrActor(creatorCtx))
+		if out, err = s.clearedForBirthWithOwner(ctx, tx, in, born.pastCloseAllowed, storekit.OwnerOrActor(creatorCtx)); err != nil {
+			return err
+		}
+		out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields)
 		return err
 	})
 	if err != nil {
@@ -80,6 +82,5 @@ func (s *Store) previewActorDealCreation(ctx context.Context, in CreateDealInput
 	if terminal != nil {
 		out.StageID = terminal.StageID
 	}
-	out.CustomFields, err = storekit.CreateFieldValues(active, in.CustomFields)
-	return out, err
+	return out, nil
 }

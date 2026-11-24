@@ -66,6 +66,10 @@ func (s *recordingReadStore) FinishTranscriptReadTx(
 	return s.finishErr
 }
 
+func (*recordingReadStore) ReleaseTranscriptRead(context.Context, ids.UUID, time.Time) error {
+	return nil
+}
+
 func transcriptJob(args TranscriptProposeArgs) *river.Job[TranscriptProposeArgs] {
 	return &river.Job[TranscriptProposeArgs]{Args: args}
 }

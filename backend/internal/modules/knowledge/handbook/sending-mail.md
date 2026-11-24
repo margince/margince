@@ -8,7 +8,7 @@ To send an email to a contact in Margince, open the contact's page and choose **
 2. Check **To** (at least one recipient). Press **Cc and Bcc** if you need copies.
 3. Fill in **Subject** and the message **Body**.
 4. Pick a **Reason for contact**.
-5. Read the warning bar above **Send**, if there is one. Then press **Send** once.
+5. Press **Send** once. Margince checks the email when you press it, not while you write.
 
 "No address and no thread to reply to." means the contact has no address to write to. Also called: write an email, email a customer, message a client.
 
@@ -41,7 +41,7 @@ Rest the mouse on **Preview** to see a message's text, and press **Read full ema
 To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER]`, at the start of the **Subject**, so the client's answer is filed under the project too.
 The switch **Add project key to subject (helps filing)** under the subject is on. Turn it off to send this email without the key; the next email starts with it on. Choosing **No project** also takes the key out; deleting it from the text does not.
 
-The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the project list is hidden. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
+The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the project list is hidden. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. When the company has no live project and no open deal, the list is hidden. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
 
 ### What do the composer's error messages mean?
 The composer in Margince does not send until four things are filled in, and names each one under its field.
@@ -54,7 +54,7 @@ A channel reply, such as Telegram, has no subject, so Margince checks only the b
 Also called: validation error, why is Send not working.
 
 ### Can I use an email template?
-Margince has no email templates, snippets or canned replies in the composer. To start from something ready, press **Draft email**, which drafts in your own writing voice. Margince also keeps what you type as a draft, so you can come back to it. Margince adds your **Email signature** for you.
+Margince has no email templates, snippets or canned replies in the composer. To start from something ready, press **Draft email**, which drafts in your own writing voice. Margince also keeps what you type as a draft, so you can come back to it. Only you can open your draft. If you leave and an admin hands over your work, your drafts go to the colleague who takes over. Margince adds your **Email signature** for you.
 
 Offer templates are a different thing: they shape an offer, not an email. See [Offers and the rate card](offers-and-products.md).
 Also called: canned response, saved reply, mail template, snippet.
@@ -80,11 +80,11 @@ text is only for you to read; it is not sent.
 Anything that stops the send shows in a warning bar above **Send**, with what
 you can do about it there.
 
-To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
-what it means: other recipients cannot see these addresses, or that anyone else
-has a copy. A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
+To is on the form. **Cc and Bcc** is a link until you press it. Under **Bcc** the composer says: "Other recipients do not see these addresses." A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
 
-Type a name or an address in **To**, **Cc** or **Bcc** to pick a recipient. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Your own colleagues in Margince come last. You only see contacts you can open in Margince.
+Click in **To**, **Cc** or **Bcc** to see up to eight contacts of the record. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Type a name or an address to find more. Once you type two letters, your own colleagues in Margince show under **Colleagues**.
+
+Your own address is never offered, and you only see contacts you can open in Margince. The list closes once a recipient is added. An address is on a message only once. Type or paste one already on it, even in capital letters, and the composer keeps your text and names its field: "Already in To." When **To** is empty as the composer opens, you start in **To**; else you start in the message.
 
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
@@ -152,59 +152,40 @@ Once you pick a language, **Draft email**, **Redraft**, the rewrites and a saved
 Also called: draft in another language, write the email in German, change the email language.
 
 ### Why are you writing?
-The **Reason for contact** field says why you are writing. The composer explains
-it:
+The **Reason for contact** field says why you are writing. The line beside it says what your answer does to the email. The answers are:
 
-> The record determines what is allowed; the reason lets the send be checked
-> against it.
+- **Met in person**: you were with them in person, for example at an event or a visit, and have their card. **Send** saves the meeting on the contact, then sends. This covers personal mail for a year after the meeting, never marketing.
+- **They asked for it**: they asked you to write, or asked for a quote. Their request must be on record.
+- **Open deal**: the email is about a deal they are on. Pick it in **Deal this follow-up is about**.
+- **Existing customer**: support, an invoice, a contract or their account.
+- **Marketing**: an offer or a newsletter. Only this answer adds an unsubscribe link and the full company footer. It needs their consent or a past purchase.
 
-The answers are:
+A reply to their own message needs no reason. When you ask the assistant to move a meeting, such as "Termin verschieben", the draft picks **They asked for it**. **Met in person** shows only when you write from a contact or a lead, to their own address alone.
 
-- Follow-up they requested
-- Active deal
-- Quote or proposal they requested
-- Support for a purchase
-- Invoice or payment
-- Their contract
-- Their customer relationship
-- Marketing
+Margince checks the email once, when you press **Send**. Nothing is checked while you write. The check reads your reason, the record and two laws. Rules on marketing follow the law where each recipient lives. Your reason to contact someone must hold there and where your own company is based.
 
-Margince does not ask for a reason when you reply to their own message. On a contact's page,
-**Active deal** adds **Deal this follow-up is about**: pick their open deal before **Send**.
-
-The consent check reads the reason, and it runs *before* you send. Beside
-**Send** the composer shows **Recipients checked** once the check allows it and
-nothing on the form is missing. The mailbox is still checked when you send.
-
-When the check does not allow it, the warning bar above **Send** shows one answer for the message, with its fix: see the list below. With one refused recipient among several, the bar names that address. With two or more, it gives each refused address its own line and reason, so you can fix them together. A check with no answer never counts as permission: "The send check did not complete. Send waits until it does." Press **Check again** to ask once more.
-
-**Send** follows the check for the message as it is now:
-- While the check runs, or when it did not complete, **Send** is off. The line under it says "Send waits for the send check."
-- When a refusal cannot be lifted, **Send** is off. Examples are a recipient who asked for no more mail, or an address that does not take mail. The line under it says to fix what the bar names, or to remove that recipient.
-- When a reason can lift every refusal, the button reads **Send with a reason…**. Pressing it opens the form for **Send with a recorded exception** (below).
-- When the check allows every recipient, **Send** is the plain **Send**.
-- Changing a recipient, the reason or the deal asks the check again, and **Send** waits for the new answer. Cmd+Enter or Ctrl+Enter and the **Other ways to send** menu wait with it.
-
-When **Send** is refused, the refusal takes the place of the earlier answer in the same bar. It goes away when you change anything in the message, or when a new check allows the message.
+When the check allows every recipient, the email is queued and the composer closes. When it does not, the email is not sent, and the bar above **Send** says why (below). Your text, recipients and attachments stay.
 
 Some purposes that Margince knows, such as a security notice, are not offered here. A sender who could pick one could send marketing that looks like a security notice.
 
 ### Why can't I send an email to this contact?
-When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
-- **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
-- **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route. A staff exception cannot replace them.
-- **No recorded reason to contact this recipient**: Margince first uses a request or meeting it already holds. Where a fact is missing, press **Record what happened**. Say what was agreed and when. This records the exchange for that recipient and sending company, and for a deal when one is picked. It does not send the email, record marketing consent or make a standing exception. Margince checks again; any stop that remains still blocks the message.
-- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Press **Send with a reason…**, or this button in the bar after a refused send. Pick why the message may go, say why in your own words and confirm that you take responsibility. Your name and reason stay on record.
+When Margince does not send an email, the bar above **Send** names the first reason. An example is "{address} objected to marketing.". When Margince has the law behind it on file, the bar names that law, with a link to its text. When the reason rests on both laws, it names both, the recipient's first: "(GDPR Art. 6(1); Law 91/2025/QH15 Art. 9)". A marketing rule names only the law where the recipient lives.
 
-  The exception covers this one message, and grants no consent for later mail. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
+Below the reason, the bar says where Margince takes the recipient to live, and where it read that, such as their employer's address. When that is wrong, open the place on the recipient in **To** and pick the right one for this message.
 
-  If that approved send fails, open its review and choose **Correct spelling or punctuation**. You must own the message, have approved it yourself and still hold permission to edit and approve mail. Confirm that its meaning and facts stay the same, then choose **Save correction**. The original approval stays on record; the message stays held until you retry. A change in meaning, recipients, sender, purpose or attachments needs a new message and approval. Later stops still block it.
-- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail. No exception is offered, and **Send** stays off until you remove that recipient.
+With more than one reason, "{count} more findings" lists the other recipients and reasons. The recipients it names are marked in **To**, **Cc** and **Bcc**.
+
+- **Send anyway**: when your reason may lift every refusal, the bar asks **Why send this one message anyway?**. Write your reason and press **Send anyway**. This sends only this message and grants no permission for later ones. The recipient's choice stays as it is: the next message is refused again. Your name, your reason and the message are kept in a record that cannot be edited. Reps hold this right by default.
+- When the refusal cannot be lifted with a reason, the bar says "Edit the message or remove this recipient to send it." Examples are an address that does not take mail, or one on several records or none. Correct the address, merge the records or remove that recipient.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 
-The lead stays a lead when you record an exchange. When you make it a contact later, that exchange keeps its original addresses and sending company.
+Changing the message, a recipient or the subject puts the warning away. Press **Send** again: Margince checks the new version, and your reason stays in the box. Removing an offer from the text can make the refusal go away.
 
-Margince no longer makes a standing exception. One that already exists covers its named sending company and purpose until someone takes it back on the contact's page. It records a staff decision and grants no consent. A recorded request is a fact that Margince checks for the message you are writing. A one-message exception covers only the message you read and approved.
+Only you can press **Send anyway** for your own message, in the composer. An agent cannot, and neither can a colleague or an admin: the message goes from your mailbox, with your name and signature.
+
+If that approved send fails, open its review and choose **Correct spelling or punctuation**. You must own the message, have approved it yourself and still hold permission to edit and approve mail. Confirm that its meaning and facts stay the same, then choose **Save correction**. The original approval stays on record; the message stays held until you retry. A change in meaning, recipients, sender, purpose or attachments needs a new message and approval. A later stop needs a new decision.
+
+Margince no longer makes a standing exception. One that already exists covers its named sending company and purpose until someone takes it back on the contact's page. It records a staff decision and grants no consent.
 
 ## What a send refuses, and what it only warns about
 
@@ -213,7 +194,7 @@ A marketing send without consent is refused:
 > **Permission needed for this message**
 > Marketing needs the recipient's consent, and none is on record.
 
-An administrator cannot send marketing after the recipient objected.
+Nobody can send marketing after the recipient objected, an administrator included.
 Correct an address that does not take mail. If several records share one address,
 merge them so Margince can tell who the recipient is.
 
@@ -234,9 +215,11 @@ connected only to read mail, without permission to send. Reconnect it and allow
 sending. A mailbox you connected before Margince could send cannot be changed in
 place. The **Reconnect your mailbox** link opens Settings → Connections.
 
-**One recipient per unsubscribe link.** A message with an unsubscribe link goes
-to one recipient at a time, because that link is the recipient's own consent
-record. Send it once per recipient, with no Cc.
+**No mailbox connected.** The composer says "No mailbox is connected" above the fields. **Connect a mailbox** opens Settings → Connections. Until you connect one, Send is refused with the same line.
+
+**Company footer.** Business mail carries the company name, address and privacy contact. When one is missing, the bar says so. An admin fills them in once under **Settings → Company**, and every later email carries the footer.
+
+Mail to several contacts keeps To, Cc and Bcc as written and leaves out private links. Read and confirm this with your reason. A contact's private link is never shared.
 
 **Chat channel limits.** A channel such as Telegram may carry no files at all.
 Or it may limit how many files, how large each one is, and how large they are in total. It may also limit how long the text under them is. When a message goes past one of these, the
@@ -303,13 +286,17 @@ reason says which, and what to do:
 - **Your seat or mailbox changed**, so it cannot be sent as you.
 - **Its send time passed** while the system was not running, and it is now too late to send. Reschedule or withdraw it.
 - **The send job ran out of attempts.** Reschedule it to try again.
-- **A check blocked it when it was due.** Nothing was sent.
+- **A check blocked it when it was due.** Nothing was sent. This includes a "Send anyway" approval that no longer matches the message because the recipients, the wording or the checks changed. Open the review and approve the message again.
+
+When a check blocked a held message and you may still send it, the row offers **Send with a recorded exception**. The dialog asks when to send. **Send now** sends it at once. **At a later time** records your decision now and keeps the message waiting for the date and time you pick. The checks run again then, and your decision is used once.
+
+If the message already went from another tab, Margince says "This message was already sent."
 
 A held message also adds an approval card that never runs out. See [Approvals](approvals.md). After reading a recipient's reply, accept the card or reschedule the message to send it again. Another reply received after that review pauses it again. Only mail you can read counts.
 
 ## What the recipient controls
 
-Every marketing message carries a footer with two links: unsubscribe, and manage preferences. Both are the recipient's own private links.
+Marketing email normally includes unsubscribe and manage-preferences links. Both belong to the recipient. An email sent with a recorded exception may leave out links the send warning named.
 
 **The preference centre** says that each purpose is separate. The recipient
 cannot switch off messages they need for something they did, such as an order note. All other purposes are theirs to control.
@@ -364,7 +351,7 @@ If the details come from the contact, the review ends. Data from someone else ma
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.
 
-This mail never goes through your connected Gmail or Outlook. It carries a private link to the contact's own record, which must not sit in your sent mail. Ask your administrator to set up the installation's own mail. Until then, tell the contact another way and press **End the duty…**.
+This mail never goes through your connected mailbox. It carries a private link to the contact's own record, which must not sit in your sent mail. Ask your administrator to set up the installation's own mail. Until then, tell the contact another way and press **End the duty…**.
 Also called: privacy notice not sent, cannot send notice.
 
 ### Which mailbox does Margince send from?

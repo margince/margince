@@ -129,8 +129,8 @@ The rule, and the gate that holds it:
 ### Use the app in tests in a way that does not cost clock time
 
 `userEvent` moves on real timers. Its `delay` is `0` by default, which is still a number. So `wait()`
-schedules a real `setTimeout`, and every typed key and click gives up a macrotask (`user-event`
-14.6.3, `utils/misc/wait.js:9`). The cost of a test goes up with its count of clicks and keys, on a
+schedules a real `setTimeout`, and every typed key and click gives up a macrotask (`user-event`'s
+`wait()` in `utils/misc/wait.js`). The cost of a test goes up with its count of clicks and keys, on a
 queue it shares with every other jsdom test file. That pushes the screen test files with many clicks
 past the 5-second default of vitest when the machine is slow.
 
@@ -148,8 +148,18 @@ When you write or touch a screen test:
 - A test that passes only when it has the machine to itself is not ready. Run the file by itself and
   inside `make fe-unit`, and check the two against each other.
 - Test files split at 1000 lines, the same limit the Go test trees hold. `make fe-file-length` holds
-  it: a file already over the limit keeps its fixed count in `scripts/fe-file-length-waivers.txt`,
+  it: a file already over the limit keeps its fixed count in `../scripts/fe-file-length-waivers.txt`,
   and that count may only go down.
+
+## Build for the browsers in `.browserslistrc`
+
+`.browserslistrc` is the one list of supported browsers. The build lowers the bundle to it, and
+`pnpm exec browserslist` prints its versions.
+
+Use a web feature freely only when every browser on that list has it. Otherwise put it behind
+`@supports` or a feature test, with a working page for the browsers without it. The TypeScript `lib`
+holds the same line for built-ins. `scripts/browser-targets.test.ts` holds the list and the build
+target; nothing checks the features you use. The rules: [browser-support.md](../docs/reference/browser-support.md).
 
 ## Storybook is documentation, and it goes out of date without a sign
 

@@ -22,6 +22,17 @@ func (s *Service) exactSources(day crmcontracts.Attention, scope string, conside
 	for key := range s.backlog.whole {
 		exact[key] = 0
 	}
+	// A later task its follow-up pulled into today is counted where it is drawn.
+	today := totalKey{sourceTask, crmcontracts.WorklistCountCategory(categoryOfSource(sourceTask))}
+	later := totalKey{sourceTask, crmcontracts.WorklistCountCategory(categoryUpcoming)}
+	for _, row := range considered {
+		if _, counted := s.backlog.exact[later]; counted && row.pulledForward {
+			exact[later]--
+		}
+		if _, counted := s.backlog.exact[today]; counted && row.pulledForward {
+			exact[today]++
+		}
+	}
 	for _, row := range considered {
 		key := totalKey{row.item.Source, crmcontracts.WorklistCountCategory(row.item.Category)}
 		if s.backlog.whole[key] {
@@ -73,9 +84,16 @@ func withTotals(
 	}
 	// Keyed by the row's own category, which countsOf counts under; a bounded
 	// source with no row left is filed by categoryOfSource, as countsOf files it.
+	// A decisions row the reader cannot settle is seen and not counted, so the
+	// source stays in the map and its bound still holds.
 	read := map[totalKey]int{}
 	for _, row := range considered {
-		read[totalKey{row.item.Source, crmcontracts.WorklistCountCategory(row.item.Category)}]++
+		at := totalKey{row.item.Source, crmcontracts.WorklistCountCategory(row.item.Category)}
+		counted := 0
+		if row.item.Category != categoryDecisions || readerSettles(row.item) {
+			counted = 1
+		}
+		read[at] += counted
 	}
 	for source := range bounds {
 		at := totalKey{source, crmcontracts.WorklistCountCategory(categoryOfSource(source))}

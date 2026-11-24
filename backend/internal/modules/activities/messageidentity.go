@@ -244,7 +244,7 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 		   AND ((@provider_attested AND echo.body_completeness = 'complete' AND echo.subject = @provider_subject AND echo.body = @provider_body)
  OR EXISTS (SELECT 1 FROM capture_import ci JOIN comms_outbound sent ON sent.activity_id = survivor.id
  WHERE ci.activity_id = echo.id AND ci.user_id = sent.user_id
- AND ci.provider_message_ids && `+storekit.ProviderMessageKeysSQL("sent.user_id", "sent.provider", "sent.provider_message_id")+`))
+ AND ci.provider_message_ids && `+storekit.ProviderMessageKeysSQL("sent.user_id", "sent.provider", "sent.connection_id", "sent.provider_message_id")+`))
 		   -- A held row is nobody's echo: the guard would refuse the fold, and a
 		   -- restricted record must not be folded into a live one anyway.
 		   AND echo.restricted_at IS NULL
@@ -309,10 +309,10 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_link
-		  (activity_id, entity_type, contact_id, company_id, deal_id, lead_id, project_id)
+		  (activity_id, entity_type, contact_id, company_id, deal_id, lead_id, project_id, deal_relevance, relevance_source)
 		SELECT $1, echo_link.entity_type,
 		       echo_link.contact_id, echo_link.company_id, echo_link.deal_id,
-		       echo_link.lead_id, echo_link.project_id
+		       echo_link.lead_id, echo_link.project_id, echo_link.deal_relevance, echo_link.relevance_source
 		  FROM activity_link echo_link
 		 WHERE echo_link.activity_id = $2
 		   AND NOT EXISTS (

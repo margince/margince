@@ -29,6 +29,8 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # database nobody is looking at. An explicit API_BASE still wins.
 # shellcheck source=scripts/lib-devstate.sh
 . "$(git rev-parse --show-toplevel)/scripts/lib-devstate.sh"
+# shellcheck source=scripts/lib-devready.sh
+. "$(git rev-parse --show-toplevel)/scripts/lib-devready.sh"
 API_BASE="${API_BASE:-$(dev_app_base_url)}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
@@ -42,6 +44,10 @@ fail() {
 
 workdir="$(mktemp -d -t verify-boot.XXXXXX)"
 trap 'rm -rf "$workdir"' EXIT
+
+# A stack started a moment ago gets a bounded wait, and a miss says whether the
+# api or the frontend proxy in front of it is the one not answering.
+dev_require_app "$API_BASE" || exit 1
 
 # A transport failure (refused, timeout) makes curl print status 000 and
 # exit non-zero; `|| true` keeps set -e from eating the fail() message,

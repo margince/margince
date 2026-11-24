@@ -9,6 +9,7 @@ package project360
 
 import (
 	"errors"
+	"slices"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -34,7 +35,10 @@ import (
 // which this page's transaction tolerates for one short catalog read.
 func (a *assembly) readCompany() error {
 	if a.out.Project.CompanyId == nil {
-		return apperrors.ErrPermissionDenied
+		if a.companyIsMasked() {
+			return apperrors.ErrPermissionDenied
+		}
+		return nil
 	}
 	companyID := ids.From[ids.CompanyKind](ids.UUID(*a.out.Project.CompanyId))
 	// The catalog comes from ABOVE the transaction, like the project's and the
@@ -49,6 +53,12 @@ func (a *assembly) readCompany() error {
 		Name: company.DisplayName,
 	}
 	return nil
+}
+
+// companyIsMasked tells a customer the caller may not read from a project that
+// has none: the store names company_id in masked_fields only for the first.
+func (a *assembly) companyIsMasked() bool {
+	return a.out.Project.MaskedFields != nil && slices.Contains(*a.out.Project.MaskedFields, "company_id")
 }
 
 // readPhaseHistory carries every transition and the fold over them. Its

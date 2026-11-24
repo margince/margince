@@ -205,7 +205,7 @@ func fullRegistry(t *testing.T, opts ...RegistryOption) *Registry {
 	})
 	RegisterProject360Tool(r, func(context.Context, ids.UUID) (crmcontracts.Project360, error) {
 		return crmcontracts.Project360{}, nil
-	})
+	}, func(crmcontracts.Activity) string { return "" })
 	RegisterNetworkTools(r,
 		func(context.Context, ids.UUID) (WhoKnowsReading, error) { return WhoKnowsReading{}, nil },
 		func(context.Context, ids.UUID) (DealCoverageAnswer, error) { return DealCoverageAnswer{}, nil },
@@ -776,7 +776,8 @@ var probeReportCatalog = []ReportCatalogEntry{{
 	GroupBy:    []string{"pipeline_id", "stage_id", "status"},
 	Filters:    []string{"owner_id", "pipeline_id", "status"},
 	Aggregates: []string{"amount_minor"},
-	Defaults:   "count as deals grouped by stage_id",
+	Measures:   "count",
+	DefaultBy:  []string{"stage_id"},
 }}
 
 // probeReportPlan stands in for the engine's plan vocabulary, and carries the

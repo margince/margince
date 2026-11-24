@@ -41,6 +41,10 @@ func selectLocalBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, err
 		httpc.Transport = googleFixture{base: cfg.BaseURL}
 		cfg.BaseURL, cfg.Location = "", "eu"
 	}
+	if cfg.Provider == providerAzureOpenAI {
+		httpc.Transport = azureFixture{base: cfg.BaseURL}
+		cfg.BaseURL, cfg.Location = azureTestEndpoint, azureTestRegion
+	}
 	return selectBrainOn(cfg, keys, httpc)
 }
 
@@ -67,6 +71,20 @@ func (g googleFixture) RoundTrip(req *http.Request) (*http.Response, error) {
 		return fixtureTransport.RoundTrip(req)
 	}
 	target, err := url.Parse(g.base)
+	if err != nil {
+		return nil, err
+	}
+	routed := req.Clone(req.Context())
+	routed.URL.Scheme, routed.URL.Host, routed.Host = target.Scheme, target.Host, target.Host
+	return fixtureTransport.RoundTrip(routed)
+}
+
+// azureFixture sends every request for the Azure resource host to base.
+// That is how an httptest server stands in for a host the placement rule pins.
+type azureFixture struct{ base string }
+
+func (a azureFixture) RoundTrip(req *http.Request) (*http.Response, error) {
+	target, err := url.Parse(a.base)
 	if err != nil {
 		return nil, err
 	}

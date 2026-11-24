@@ -5,10 +5,8 @@ import { formatDateAbbrev } from "../../format/format";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
-import {
-  disqualifyReasonLabel,
-  type LeadDisqualifyReason,
-} from "./leadhandling";
+import type { LeadDisqualifyReason } from "../../lib/leaddisqualifyreasons";
+import { disqualifyReasonLabel } from "./leadhandling";
 import { leadIdentityName } from "./leadname";
 
 type Lead = components["schemas"]["Lead"];
@@ -20,6 +18,8 @@ export type LeadStanding = Readonly<{
   word: string;
   // The one sentence the call rests on.
   sentence: string;
+  // What a rep wrote about the call, drawn under the sentence.
+  note?: string;
   tone: ReadingTone;
 }>;
 
@@ -126,6 +126,7 @@ export function leadStanding(
       sentence: reason
         ? t("lead.standing.closedFor", { reason })
         : t("lead.standing.closedUnreasoned"),
+      note: lead.disqualify_note?.trim() || undefined,
       tone: "neutral",
     };
   }

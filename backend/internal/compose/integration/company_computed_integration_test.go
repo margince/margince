@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -58,16 +59,13 @@ func directOpenPipelineReadPriced(
 	ctx context.Context, t *testing.T, e *Env, companyID ids.UUID,
 ) (minor *int64, count, priced int, found bool) {
 	t.Helper()
-	// The same day the reader binds (contacts.rollupAsOf): the rollup is asked for
-	// a date, and a test that let the database pick its own CURRENT_DATE would
-	// be reading a rollup at a date the product never asks for — a whole day
-	// apart at midnight in the database's zone, which is the divergence binding
-	// the date removed.
-	asOf := time.Now().UTC().Truncate(24 * time.Hour)
+	// The same instant the reader binds (contacts.rollupAsOf), cut to the
+	// installation's day the way the reader cuts it.
+	asOf := time.Now()
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
-			 FROM company_open_pipeline_rollup($2) WHERE company_id = $1`,
+			 FROM company_open_pipeline_rollup(`+occurredday.TodaySQL("$2::timestamptz")+`) WHERE company_id = $1`,
 			companyID, asOf).Scan(&minor, &count, &priced)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -281,14 +279,11 @@ func TestCompanyComputed_SomeDealsUnpriceable_RefusesTheShortTotal(t *testing.T)
 	}
 	assertDetailOpenDealCount(t, company, 2)
 	got := computedFieldByKey(*company.ComputedFields, "open_pipeline")
-	if got.Computable {
-		t.Fatalf("a total covering 1 of 2 open deals was reported as computable: %+v", got)
+	if !got.Computable || got.ValueMinor == nil || *got.ValueMinor != 75_000 {
+		t.Fatalf("open_pipeline = %+v, want the 75000 that converts", got)
 	}
-	if got.ValueMinor != nil {
-		t.Errorf("open_pipeline.value_minor = %v, want absent — 75000 is real but it is not the pipeline", got.ValueMinor)
-	}
-	if got.Reason == nil || *got.Reason != "partial_pipeline" {
-		t.Errorf("open_pipeline.reason = %v, want \"partial_pipeline\"", got.Reason)
+	if c := got.Coverage; c == nil || !c.Partial || c.NoRateDeals != 1 || len(c.MissingCurrencies) != 1 || c.MissingCurrencies[0] != "JPY" {
+		t.Errorf("coverage = %+v, want partial with one deal with no rate, in JPY", c)
 	}
 }
 
@@ -527,17 +522,11 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 	// because "some deals could not be priced" and "none could" are different
 	// sentences on the page.
 	open0 := computedFieldByKey(*company.ComputedFields, "open_pipeline")
-	if open0.Computable {
-		t.Errorf("open_pipeline reads computable with one of two deals priced: %+v — a short total is "+
-			"worse than no total", open0)
+	if !open0.Computable || open0.ValueMinor == nil {
+		t.Errorf("open_pipeline = %+v, want the priced part as a value", open0)
 	}
-	if open0.Reason == nil || *open0.Reason != "partial_pipeline" {
-		t.Errorf("open_pipeline.reason = %v, want \"partial_pipeline\" — one deal reached the sum and "+
-			"one could not be represented, which is a short figure rather than no figure", open0.Reason)
-	}
-	if open0.ValueMinor != nil {
-		t.Errorf("open_pipeline.value_minor = %v, want absent — a short sum is not published as a total",
-			open0.ValueMinor)
+	if c := open0.Coverage; c == nil || !c.Partial || c.NoRateDeals != 1 {
+		t.Errorf("coverage = %+v, want partial with the deal that cannot be represented", c)
 	}
 }
 

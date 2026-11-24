@@ -34,11 +34,13 @@ const StalledThresholdDays = 60
 // "quiet 19 days" and "stalled" are different claims about the same deal.
 const QuietThresholdDays = 19
 
-// IsStalled evaluates §8.1 at one instant. Idle is an absolute-duration
-// comparison on UTC instants, never a calendar-day count — stable under
-// a fixed test clock, identical across zones.
-// meetingAhead is MeetingAheadSQL's answer for the deal, read in the same
-// statement as lastActivityAt.
+// IsStalled evaluates the stalled rule at one instant. A deal is stalled when it
+// is open, has no meeting ahead, has been idle longer than the threshold and is
+// not paused. waitUntil is the instant the pause ends (PauseEndsSQL), never the
+// picked date. Idle is an absolute-duration comparison on UTC instants, never a
+// calendar-day count, so it is stable under a fixed test clock and identical
+// across zones. meetingAhead is MeetingAheadSQL's answer for the deal, read in
+// the same statement as lastActivityAt.
 func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *time.Time, meetingAhead bool, now time.Time) bool {
 	return IsQuietFor(StalledThresholdDays, status, createdAt, lastActivityAt, waitUntil, meetingAhead, now)
 }
@@ -54,16 +56,24 @@ func IsQuietFor(days int, status string, createdAt time.Time, lastActivityAt, wa
 	if DealStatus(status) != DealOpen {
 		return false // closed deals never stall
 	}
-	if meetingAhead {
-		return false // the next contact is already booked
-	}
 	if now.Sub(idlebase.Since(createdAt, lastActivityAt)) <= time.Duration(days)*24*time.Hour {
 		return false
 	}
-	if waitUntil != nil && now.Before(*waitUntil) {
-		return false // respecting an explicit deferral
-	}
-	return true
+	return !QuietSuppressed(waitUntil, meetingAhead, now)
+}
+
+// QuietSuppressed says a running pause or a meeting booked ahead silences every
+// "gone quiet" rule at now, whatever its window. waitUntil is PauseEndsSQL's
+// instant; meetingAhead is MeetingAheadSQL's answer.
+func QuietSuppressed(waitUntil *time.Time, meetingAhead bool, now time.Time) bool {
+	return meetingAhead || (waitUntil != nil && now.Before(*waitUntil))
+}
+
+// QuietSuppressedSQL is QuietSuppressed judged at the SQL instant named. It is
+// never NULL, so a caller may scan it into a bool.
+func QuietSuppressedSQL(alias, instant string) string {
+	return fmt.Sprintf(`(%[1]s OR (%[2]swait_until IS NOT NULL AND %[3]s < %[4]s))`,
+		MeetingAheadSQL(alias), columnPrefix(alias), instant, PauseEndsSQL(alias))
 }
 
 // StalledSQL is the list-filter spelling of IsStalled (true branch);
@@ -90,17 +100,29 @@ func QuietSQL(alias string, days int) string {
 // quietAtSQL is QuietSQL judged at the instant the SQL expression instant names.
 func quietAtSQL(alias string, days int, instant string) string {
 	return fmt.Sprintf(`(%[1]sstatus = 'open'
-		AND %[3]s < %[5]s - interval '%[2]d days'
-		AND (%[1]swait_until IS NULL OR %[1]swait_until <= %[5]s)
-		AND NOT %[4]s)`,
-		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant)
+		AND %[3]s < %[4]s - interval '%[2]d days'
+		AND NOT %[5]s)`,
+		columnPrefix(alias), days, idlebase.SQL(alias), instant, QuietSuppressedSQL(alias, instant))
+}
+
+// PauseEndsSQL is the instant a deal's pause ends. That is the start of the
+// picked wait_until day in the owner's own time zone. The installation's zone
+// applies when the owner has none. The function deal_pause_ends_at holds the rule.
+// Every reader compares this instant, so none cuts the day at UTC midnight.
+// The zone is the owner's, not the viewer's, so all readers judge one deal alike.
+func PauseEndsSQL(alias string) string {
+	if alias == "" {
+		alias = dealTable
+	}
+	return "deal_pause_ends_at(" + alias + ")"
 }
 
 // MeetingAheadSQL is true when the deal has a meeting nobody called off that
 // its stored clock has not reached. That is a meeting still to come, or one
 // that started before the refold job moved the clock to it. The
 // audience is spelled as in last_activity_of_deal, so a meeting only some
-// colleagues may see changes no number everyone reads.
+// colleagues may see changes no number everyone reads. A personal meeting
+// defers nothing (relstrength.DealEvidenceSQL).
 func MeetingAheadSQL(alias string) string {
 	deal := "deal"
 	if alias != "" {
@@ -110,7 +132,7 @@ func MeetingAheadSQL(alias string) string {
 		JOIN activity ahead ON ahead.id = ahead_link.activity_id
 		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
 		  AND ahead.kind = 'meeting' AND ` + relstrength.MeetingNotCalledOffSQL("ahead") +
-		auth.OriginIsEngagement("ahead") + ` AND ` + auth.WorkspaceAudienceSQL("ahead") + `
+		auth.OriginIsEngagement("ahead") + ` AND ` + auth.WorkspaceAudienceSQL("ahead") + ` AND ` + relstrength.DealEvidenceSQL("ahead", "ahead_link.deal_id") + `
 		  AND coalesce(` + deal + `.last_activity_at, '-infinity') < ahead.occurred_at -- occurred_at raw: the stored clock holds an occurred_at
 		)`
 }

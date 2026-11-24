@@ -30,9 +30,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// AuditFilter narrows the audit page. The actor filter matches the
-// stored typed principal id (`human:<uuid>`, `agent:<passport>`,
-// `system:*`) verbatim — the column already carries the typed spelling.
+// AuditFilter narrows the audit page. The actor filter takes the stored
+// typed principal id (`human:<uuid>`, `agent:<passport>`, `system:*`). A
+// human also matches the rows an agent wrote on their behalf. An agent acts
+// with its user's permission, so its rows belong to that user's history.
 type AuditFilter struct {
 	Actor      *string
 	EntityType *string
@@ -319,6 +320,11 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 		return AuditPage{}, err
 	}
 
+	chatSummary, err := auth.ActivityChatSummaryArm(ctx, auditActivityAlias, argN)
+	if err != nil {
+		return AuditPage{}, err
+	}
+
 	var page AuditPage
 	err = db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
@@ -327,7 +333,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 			        a.evidence, a.occurred_at, a.batch_id,
 			        `+auditattribution.ActorNameColumn+`, obo.display_name, oc.client_name,
 			        (NOT (a.entity_type = ANY(`+arg(auditGovernedTypes)+`) AND coalesce(aud_route.governed, true))
-			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`))) AS content_readable,
+			          OR (`+auditActivityAlias+`.id IS NOT NULL AND (`+audience+`) AND `+chatSummary+`)) AS content_readable,
 			        `+UnscrubbedImageSQL("a", arg(ScrubVerbs()))+` AS images_readable
 			 FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+auditActivityJoin+`
 			 WHERE `+where+`
@@ -353,7 +359,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 	if len(page.Entries) > limit {
 		page.Entries = page.Entries[:limit]
 		last := page.Entries[len(page.Entries)-1]
-		next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+		next, err := storekit.EncodeCursor("audit_log", last.OccurredAt, last.ID)
 		if err != nil {
 			return AuditPage{}, err
 		}
@@ -379,7 +385,13 @@ func buildAuditWhere(f AuditFilter) (string, []any, error) {
 		return "$" + strconv.Itoa(len(args))
 	}
 	if f.Actor != nil {
-		where += " AND a.actor_id = " + arg(*f.Actor)
+		// Each row still names who acted, so the member's own rows and their
+		// agent's stay apart on the page.
+		actor := "a.actor_id = " + arg(*f.Actor)
+		if user, human := principal.HumanUserID(*f.Actor); human {
+			actor = "(" + actor + " OR a.on_behalf_of = " + arg(user) + ")"
+		}
+		where += " AND " + actor
 	}
 	if f.EntityType != nil {
 		where += " AND a.entity_type = " + arg(*f.EntityType)
@@ -400,7 +412,7 @@ func buildAuditWhere(f AuditFilter) (string, []any, error) {
 		where += " AND a.occurred_at <= " + arg(*f.To)
 	}
 	if f.Cursor != nil && *f.Cursor != "" {
-		c, err := storekit.DecodeCursor(*f.Cursor)
+		c, err := storekit.DecodeCursor("audit_log", *f.Cursor)
 		if err != nil {
 			return "", nil, err
 		}

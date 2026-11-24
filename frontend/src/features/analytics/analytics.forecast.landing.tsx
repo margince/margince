@@ -46,6 +46,25 @@ type Money = (minor: number) => string;
  * added to what is won; a call beside a projection is named, not added.
  * Without a landing the basis is unknown and said so, never guessed.
  */
+// The line a landing's caveat adds, or none. The Forecast page and Progress
+// both print it, so a withheld call reads alike on both.
+export function landingCaveatLine(
+  landing: Landing,
+  money: Money,
+  t: Translator,
+): string | undefined {
+  switch (landing.caveat) {
+    case "call_below_actual":
+      return t("forecast.callBelowLine", { won: money(landing.won_minor) });
+    case "call_absent":
+      return t("forecast.callAbsentLine");
+    case "call_withheld":
+      return t("forecast.callWithheldLine");
+    default:
+      return undefined;
+  }
+}
+
 export function landingBasisLines(
   landing: Landing | undefined,
   callMinor: number | undefined,
@@ -54,14 +73,13 @@ export function landingBasisLines(
 ): Readonly<{ basis: string; beside?: string; warning: boolean }> {
   if (!landing) return { basis: t("forecast.basis.unknown"), warning: false };
   const basis = t(`forecast.basis.${landing.measure}`);
-  if (landing.caveat === "call_below_actual")
+  const caveat = landingCaveatLine(landing, money, t);
+  if (caveat)
     return {
       basis,
-      beside: t("forecast.callBelowLine", { won: money(landing.won_minor) }),
-      warning: true,
+      beside: caveat,
+      warning: landing.caveat === "call_below_actual",
     };
-  if (landing.caveat === "call_absent")
-    return { basis, beside: t("forecast.callAbsentLine"), warning: false };
   if (landing.measure === "manager_call")
     return {
       basis,
@@ -200,16 +218,21 @@ export function ModelRangeCard({
               high: money(range.highMinor),
             })
       }
+      // The detail holds two lines, one fact each. What the range leaves out
+      // takes both, and what the range is and holds stays in the basis.
       detail={
-        <>
-          <span>{t("forecast.model.detail")}</span>
-          <span>
-            {left[0] ??
-              (wonMinor == null
-                ? undefined
-                : t("forecast.model.includes", { won: money(wonMinor) }))}
-          </span>
-        </>
+        left.length > 0 ? (
+          left.map((line) => <span key={line}>{line}</span>)
+        ) : (
+          <>
+            <span>{t("forecast.model.detail")}</span>
+            {wonMinor != null && (
+              <span>
+                {t("forecast.model.includes", { won: money(wonMinor) })}
+              </span>
+            )}
+          </>
+        )
       }
       basis={
         <>
@@ -263,6 +286,7 @@ export function SufficiencyCard({
   locale,
 }: Readonly<{ sufficiency: Sufficiency; currency: string; locale: Locale }>) {
   const t = useT();
+  const plural = usePlural();
   if (sufficiency.absent) {
     return (
       // It stands WHERE a stat card would, so it is the shaped instructional
@@ -302,6 +326,12 @@ export function SufficiencyCard({
       formatAnalyticsMoney,
     );
   const percent = Math.round(coverage / BASIS_POINTS_PER_PERCENT);
+  // Won deals the comparable periods leave out, which makes their median a
+  // partial one.
+  const leftOut = (sufficiency.comparable_unpriced ?? []).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
 
   return (
     <StatCard
@@ -331,7 +361,18 @@ export function SufficiencyCard({
           </span>
         </>
       }
-      basis={<p>{t(`forecast.pipelineBasisWhy.${sufficiency.basis}`)}</p>}
+      basis={
+        <>
+          <p>{t(`forecast.pipelineBasisWhy.${sufficiency.basis}`)}</p>
+          {leftOut > 0 && (
+            <p>
+              {plural("forecast.pipelineBasisLeftOut", leftOut, {
+                count: formatAnalyticsNumber(leftOut, locale),
+              })}
+            </p>
+          )}
+        </>
+      }
       // The bar is the share of what this needs that the open deals actually
       // hold, clamped at the track: a book at three times its requirement
       // would otherwise draw a bar three times the width of its own card.

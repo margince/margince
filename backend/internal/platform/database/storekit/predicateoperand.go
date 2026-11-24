@@ -17,8 +17,9 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/geocode"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // comparisonSQL is closed over the operator constants above; compileLeaf
@@ -71,6 +72,8 @@ func inOperand(p Predicate, field Field) (any, error) {
 		return inCurrencyOperand(raw, field, p.Field)
 	case FieldDomain:
 		return inDomainOperand(raw, p.Field)
+	case FieldCompanyKey:
+		return inCompanyKeyOperand(raw, p.Field)
 	default: // text, picklist, id — string-valued types (dates take no `in`).
 		return inStringOperand(raw, field, p.Field)
 	}
@@ -152,6 +155,9 @@ func scalarOperand(value any, field Field, name, op string) (any, error) {
 		return scalarStringOperand(value, invalid, field.FoldCase)
 	case FieldDomain:
 		return scalarDomainOperand(value, invalid)
+	case FieldCompanyKey:
+		text, err := scalarStringOperand(value, invalid, true)
+		return strings.ToLower(owndomain.KeyForm(text)), err
 	case FieldID:
 		return scalarUUIDOperand(value, invalid)
 	case FieldNumber:
@@ -304,9 +310,8 @@ func scalarBoolOperand(value any, invalid func(string) error) (any, error) {
 // scalarDomainOperand folds a domain operand to the host the column stores.
 //
 // `https://www.acme.example/careers`, `WWW.Acme.Example` and `acme.example` are
-// one question, and values.ParseDomain is the answer the company list
-// already gives it — the same function on both surfaces, so the two answer the
-// same rows.
+// one question. owndomain.ParseDomain answers it for the company list too, so
+// both surfaces answer the same rows.
 //
 // Held by: TestADomainFilterAnswersTheSameAccountOnBothSurfaces
 // (backend/internal/compose/integration/domainleafparity_integration_test.go)
@@ -321,7 +326,7 @@ func scalarDomainOperand(value any, invalid func(string) error) (any, error) {
 	if !ok {
 		return nil, invalid("a domain")
 	}
-	parsed, err := values.ParseDomain(text)
+	parsed, err := owndomain.ParseDomain(text)
 	if err != nil {
 		return nil, invalid("a domain, or a URL one can be read from")
 	}
@@ -341,7 +346,7 @@ func inDomainOperand(raw []any, name string) ([]string, error) {
 				Message: "in on a domain field takes strings",
 			}
 		}
-		parsed, err := values.ParseDomain(text)
+		parsed, err := owndomain.ParseDomain(text)
 		if err != nil {
 			return nil, &PredicateError{
 				Field: name, Code: CodeFilterValueInvalid,
@@ -396,7 +401,7 @@ func relativeDateOperand(relative map[string]any, invalid func(string) error) (R
 //craft:ignore naked-any value is a validated operand from scalarOperand, which spans the SQL scalar types
 func operandSQL(value any, arg func(any) int) string {
 	if days, ok := value.(RelativeDays); ok {
-		return fmt.Sprintf("(CURRENT_DATE - $%d::integer)", arg(int(days)))
+		return fmt.Sprintf("(%s - $%d::integer)", occurredday.TodaySQL("now()"), arg(int(days)))
 	}
 	return fmt.Sprintf("$%d", arg(value))
 }
@@ -440,4 +445,39 @@ func compileDistanceLeaf(p Predicate, field Field, arg func(any) int) (string, e
 	}
 	_, where := geocode.Within(field.Expr, cols, center, *operand.RadiusKM, arg)
 	return "(" + strings.Join(where, " AND ") + ")", nil
+}
+
+// inCompanyKeyOperand flattens every member to the spellings a stored key may
+// carry, so one `in` list finds a key written in either form.
+func inCompanyKeyOperand(raw []any, name string) ([]string, error) {
+	var out []string
+	for _, member := range raw {
+		text, ok := member.(string)
+		if !ok {
+			return nil, &PredicateError{
+				Field: name, Code: CodeFilterValueInvalid,
+				Message: "in on a company key field takes strings",
+			}
+		}
+		out = append(out, owndomain.KeySpellings(text)...)
+	}
+	return out, nil
+}
+
+// compileCompanyKeyLeaf compiles eq and neq on a company key against every
+// spelling of the operand. neq keeps an unset key, as IS DISTINCT FROM does
+// for the other text fields.
+func compileCompanyKeyLeaf(p Predicate, field Field, arg func(any) int) (string, error) {
+	text, ok := p.Value.(string)
+	if !ok {
+		return "", &PredicateError{
+			Field: p.Field, Code: CodeFilterValueInvalid,
+			Message: fmt.Sprintf("operator %q on company key field %q takes a string", p.Op, p.Field),
+		}
+	}
+	member := fmt.Sprintf("COALESCE(%s = ANY($%d), false)", comparedExpr(field), arg(owndomain.KeySpellings(text)))
+	if p.Op == OpNeq {
+		return "NOT " + member, nil
+	}
+	return member, nil
 }

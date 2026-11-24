@@ -28,10 +28,13 @@
 // Saying "writes nothing" without that caveat would be the kind of small
 // inaccuracy that costs a reader trust in the rest of the sentence.
 //
-// **It is written per viewer, from the caller's own 360.** The composite read
-// runs inside the normal gates, so a draft can only mention records the caller
-// could open themselves. A rep who cannot see a deal gets a draft that does
-// not know about it, rather than one that mentions it.
+// **It is written per viewer, from the caller's own 360, plus the company
+// profile.** The composite read runs inside the normal gates, so a draft can
+// only mention account records the caller could open themselves. A rep who
+// cannot see a deal gets a draft that does not know about it, rather than one
+// that mentions it. The model also receives the installation's own company
+// profile, which every member may read. A first email to a company has to know
+// what we sell.
 //
 // **It degrades rather than failing.** With no model lane configured, or the
 // workspace's budget spent, the deterministic floor writes the draft and

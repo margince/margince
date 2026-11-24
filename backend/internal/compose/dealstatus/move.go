@@ -106,8 +106,14 @@ func nextMove(f facts) crmcontracts.DealStatusCardMove {
 			untimed(&activityID, task.Subject))
 	}
 	if request, current, ok := requestForMove(f); ok {
+		if reply := ourReplyOn(request); current && reply != nil && reply.ReminderId != nil {
+			return repliedMove(said, f, request, *reply)
+		}
 		if request.EmailSummary != nil && request.EmailSummary.RequestHasReminder != nil && *request.EmailSummary.RequestHasReminder {
 			reason := said.Say(statusWords.Reminder)
+			if reply := ourReplyOn(request); current && reply != nil {
+				reason = said.repliedReason(f, *reply)
+			}
 			if !current {
 				reason = fmt.Sprintf(said.Say(statusWords.ReviewReply), said.subjectOf(request))
 			}
@@ -319,11 +325,10 @@ func (said statusCopy) openingReason(seat Seat, seats int) string {
 		seats, said.seatWords(seat))
 }
 
-// roleWord is a stakeholder role as a sentence says it. An unknown role is
-// returned as it is stored rather than dropped: the card would otherwise write
-// "Open with Maria Schmidt, the ." for a role added after this build.
+// roleWord is a stakeholder role as a sentence says it. Seats reach it only
+// through bestSeat, so the role is always one of openingRoles and has a label.
 func (said statusCopy) roleWord(role string) string {
-	return dealrole.Word(role, string(said.Lang()))
+	return dealrole.Label(role, string(said.Lang()))
 }
 
 func move(action, reason string, args map[string]any, evidence ...crmcontracts.DealNextBestActionEvidence) crmcontracts.DealStatusCardMove {
@@ -358,11 +363,6 @@ func upcomingMeeting(f facts) (activities.BookedMeeting, bool) {
 		return activities.BookedMeeting{}, false
 	}
 	return *f.nextMeeting, true
-}
-
-// The activities owner admits current requests before limiting the result.
-func unansweredInbound(f facts) (crmcontracts.Activity, bool) {
-	return readableRequest(f.currentRequests)
 }
 
 // lastContact is the newest exchange that has already happened. The timeline's

@@ -28,6 +28,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The citable record types. A brief may only point at things the reader can
@@ -121,9 +122,9 @@ func Deterministic(in Input) []Section {
 		{Kind: crmcontracts.MeetingBriefSectionKindWhatChanged, Sentences: whatChangedSection(in, ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindAttendees, Sentences: attendeesSection(in)},
 		{Kind: crmcontracts.MeetingBriefSectionKindRisks, Sentences: risksSection(in, ranked)},
-		{Kind: crmcontracts.MeetingBriefSectionKindCommitments, Sentences: briefCopyFor(in.Language).commitmentsSection(ranked)},
+		{Kind: crmcontracts.MeetingBriefSectionKindCommitments, Sentences: append(in.words().commitmentsSection(ranked), looksKeptLines(in)...)},
 		{Kind: crmcontracts.MeetingBriefSectionKindDealState, Sentences: dealStateSection(in, ranked)},
-		{Kind: crmcontracts.MeetingBriefSectionKindTalkingPoints, Sentences: briefCopyFor(in.Language).talkingPointsSection(ranked)},
+		{Kind: crmcontracts.MeetingBriefSectionKindTalkingPoints, Sentences: in.words().talkingPointsSection(ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindCompanyContext, Sentences: companyContextSection(in)},
 	}
 	// Rendered in the spec's order whatever order they were filled in.
@@ -143,11 +144,11 @@ func headerSection(in Input) []Sentence {
 	// work the project is what tells the reader they are in the right room, and
 	// a deal line alone leaves that to be inferred from the deal's name.
 	if in.Project != nil {
-		out = append(out, Sentence{Text: briefCopyFor(in.Language).projectHeaderLine(*in.Project), Evidence: self})
+		out = append(out, Sentence{Text: in.words().projectHeaderLine(*in.Project), Evidence: self})
 	}
 	if in.Deal != nil {
 		out = append(out, Sentence{
-			Text:     briefCopyFor(in.Language).dealHeaderLine(*in.Deal),
+			Text:     in.words().dealHeaderLine(*in.Deal),
 			Evidence: []Evidence{{EntityType: citeDeal, EntityID: in.Deal.ID}},
 		})
 	}
@@ -166,7 +167,7 @@ func (said briefCopy) dealHeaderLine(deal DealIn) string {
 		parts = append(parts, deal.Stage)
 	}
 	if deal.CloseDate != nil {
-		parts = append(parts, fmt.Sprintf(said.Say(headerWords.Close), deal.CloseDate.Format(time.DateOnly)))
+		parts = append(parts, fmt.Sprintf(said.Say(headerWords.Close), said.dates.CalendarDay(*deal.CloseDate)))
 	}
 	return strings.Join(parts, " · ") + "."
 }
@@ -175,7 +176,7 @@ func (said briefCopy) dealHeaderLine(deal DealIn) string {
 // the reader is deciding whether to open with an apology, and "eleven days"
 // answers that where a date makes them do the arithmetic.
 func lastTouchLine(in Input) string {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	if in.LastTouchAt == nil {
 		return said.Say(touchWords.None)
 	}
@@ -194,7 +195,7 @@ func lastTouchLine(in Input) string {
 func goalSection(in Input, ranked *rankedClaims) []Sentence {
 	if ask, ok := ranked.take(openOfKind(kindCommitmentOurs, kindOpenQuestion, kindDecision)); ok {
 		return []Sentence{{
-			Text:     briefCopyFor(in.Language).goalLine(ask, in.Now),
+			Text:     in.words().goalLine(ask, in.Now),
 			Nature:   natureRecommendation,
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: ask.SourceID}},
 		}}
@@ -203,7 +204,7 @@ func goalSection(in Input, ranked *rankedClaims) []Sentence {
 	// the meeting because project is not an admitted evidence type.
 	if in.Project != nil {
 		return []Sentence{{
-			Text:     briefCopyFor(in.Language).projectGoalLine(*in.Project),
+			Text:     in.words().projectGoalLine(*in.Project),
 			Nature:   natureRecommendation,
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.ActivityID}},
 		}}
@@ -219,7 +220,7 @@ func (said briefCopy) goalLine(ask ClaimIn, now time.Time) string {
 		return fmt.Sprintf(said.Say(sectionWords.GetDecision), said.whom(ask), ask.Body)
 	default:
 		if deadline.Passed(ask.DueAt, now) {
-			return fmt.Sprintf(said.Say(sectionWords.CloseOverdue), said.whom(ask), ask.DueAt.UTC().Format(time.DateOnly), ask.Body)
+			return fmt.Sprintf(said.Say(sectionWords.CloseOverdue), said.whom(ask), said.dates.Day(*ask.DueAt), ask.Body)
 		}
 		return fmt.Sprintf(said.Say(sectionWords.ClosePromise), said.whom(ask), ask.Body)
 	}
@@ -236,7 +237,7 @@ func attendeesSection(in Input) []Sentence {
 	out := make([]Sentence, 0, len(in.Attendees))
 	for _, attendee := range in.Attendees {
 		out = append(out, Sentence{
-			Text:     briefCopyFor(in.Language).attendeeLine(attendee, in.Now, in.Zone),
+			Text:     in.words().attendeeLine(attendee, in.Now, in.Zone),
 			Evidence: []Evidence{{EntityType: citeContact, EntityID: attendee.ContactID}},
 		})
 	}
@@ -248,8 +249,8 @@ func (said briefCopy) attendeeLine(attendee AttendeeIn, now time.Time, loc *time
 	if attendee.Title != "" {
 		parts = append(parts, attendee.Title)
 	}
-	if attendee.DealRole != "" {
-		parts = append(parts, strings.ReplaceAll(dealrole.Word(attendee.DealRole, string(said.Lang())), "_", " "))
+	if role := dealrole.Label(attendee.DealRole, string(said.Lang())); role != "" {
+		parts = append(parts, role)
 	}
 	line := strings.Join(parts, ", ")
 	// FirstTime and a nil LastTouch are ONE fact with two spellings: the
@@ -308,7 +309,7 @@ func (said briefCopy) commitmentLine(claim ClaimIn) string {
 	}
 	line := fmt.Sprintf(said.Say(phrase), said.whom(claim), claim.Body)
 	if claim.DueAt != nil {
-		line += fmt.Sprintf(said.Say(headerWords.Due), claim.DueAt.UTC().Format(time.DateOnly))
+		line += fmt.Sprintf(said.Say(headerWords.Due), said.dates.Day(*claim.DueAt))
 	}
 	if source := commitmentSource(claim); source != "" {
 		line += fmt.Sprintf(said.Say(headerWords.Source), source)
@@ -326,14 +327,27 @@ func commitmentSource(claim ClaimIn) string {
 	return fmt.Sprintf("%q", claim.SourceLabel)
 }
 
+// lastConversation is the newest recent row that has taken place and is not
+// this meeting. A brief never names the meeting it prepares as the last word.
+func lastConversation(in Input) (ActIn, bool) {
+	for _, act := range in.Recent {
+		if act.ID != in.ActivityID && occurredday.Happened(act.Kind, occurredday.Moment{At: act.At, DateOnly: act.DateOnly}, in.Now, in.Zone) {
+			return act, true
+		}
+	}
+	return ActIn{}, false
+}
+
 // dealStateSection (M) is where the deal stands: what was last said, what was
 // objected to, and what nobody has decided.
 func dealStateSection(in Input, ranked *rankedClaims) []Sentence {
+	if in.Deal == nil {
+		return nil
+	}
 	out := make([]Sentence, 0, dealStateCap)
-	if len(in.Recent) > 0 {
-		last := in.Recent[0]
+	if last, ok := lastConversation(in); ok {
 		out = append(out, Sentence{
-			Text:     briefCopyFor(in.Language).lastConversationLine(last),
+			Text:     in.words().lastConversationLine(last),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: last.ID}},
 		})
 	}
@@ -342,7 +356,7 @@ func dealStateSection(in Input, ranked *rankedClaims) []Sentence {
 	// matters is what they will raise, so it is a talking point.
 	for _, claim := range ranked.takeAll(ofKind(kindDecision), dealStateCap-len(out)) {
 		out = append(out, Sentence{
-			Text:     briefCopyFor(in.Language).dealStateLine(claim),
+			Text:     in.words().dealStateLine(claim),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 		})
 	}
@@ -376,11 +390,11 @@ func (said briefCopy) dealStateLine(claim ClaimIn) string {
 // rather than inferred. A risks heading over nothing reads as "we looked and
 // found none", which is a claim this floor cannot make.
 func risksSection(in Input, ranked *rankedClaims) []Sentence {
-	isRisk := func(c ClaimIn) bool { _, ok := briefCopyFor(in.Language).riskLine(c, in.Now); return ok }
+	isRisk := func(c ClaimIn) bool { _, ok := in.words().riskLine(c, in.Now); return ok }
 	claims := ranked.takeAll(isRisk, riskCap)
 	out := make([]Sentence, 0, len(claims))
 	for _, claim := range claims {
-		text, _ := briefCopyFor(in.Language).riskLine(claim, in.Now)
+		text, _ := in.words().riskLine(claim, in.Now)
 		out = append(out, Sentence{
 			Text:     text,
 			Nature:   natureAssessment,
@@ -453,11 +467,18 @@ func (said briefCopy) talkingPointLine(claim ClaimIn) string {
 // companyContextSection recalls earlier meetings with this room; no history
 // means no background section.
 func companyContextSection(in Input) []Sentence {
-	out := make([]Sentence, 0, len(in.PriorMeetings))
+	out := make([]Sentence, 0, len(in.PriorMeetings)+len(in.CompanyHistory))
 	for _, prior := range in.PriorMeetings {
 		out = append(out, Sentence{
-			Text:     briefCopyFor(in.Language).priorMeetingLine(prior, in.Now, in.Zone),
+			Text:     in.words().priorMeetingLine(prior, in.Now, in.Zone),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: prior.ID}},
+		})
+	}
+	said := in.words()
+	for _, topic := range in.CompanyHistory {
+		out = append(out, Sentence{
+			Text:     fmt.Sprintf(said.Say(touchWords.EarlierAt), in.Company, topic.Contact, topic.Subject, said.occurredDay(topic.At)),
+			Evidence: []Evidence{{EntityType: citeActivity, EntityID: topic.ID}},
 		})
 	}
 	return out

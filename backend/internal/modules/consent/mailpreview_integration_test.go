@@ -21,7 +21,7 @@ func confirmRequestWith(e *channelConsentEnv, h Handlers, body string) *httptest
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/contacts/x/consent/confirm-request", strings.NewReader(body)).
 		WithContext(e.ctx)
-	h.RequestDetailsConfirmation(rec, req, crmcontracts.Id(e.contact.UUID))
+	h.RequestDetailsConfirmation(rec, req, crmcontracts.Id(e.contact.UUID), crmcontracts.RequestDetailsConfirmationParams{})
 	return rec
 }
 

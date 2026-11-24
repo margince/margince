@@ -14,7 +14,7 @@ import {
   offeredModels,
   useAvailableModels,
 } from "../../lib/ai-models";
-import type { NamedProvider } from "../../lib/ai-provider-names";
+import { type NamedProvider, providerName } from "../../lib/ai-provider-names";
 import { isOpenRouter } from "./ai-provider-links";
 import "./ai-settings.css";
 import {
@@ -22,6 +22,7 @@ import {
   VERTEX_PROVIDER,
   VertexLocationField,
 } from "../../components/vertex-location";
+import { AZURE_PROVIDER } from "./ai-azure-region";
 import { useVertexModelProbe } from "./vertex-model-probe";
 
 type Routing = components["schemas"]["AiRouting"];
@@ -34,6 +35,7 @@ type ProviderSettings = components["schemas"]["AiProviderSettings"];
 export const PROVIDERS = [
   "gemini",
   "gemini_vertex",
+  "azure_openai",
   "anthropic",
   "openai",
   "openai_compatible",
@@ -69,8 +71,20 @@ export const OPENROUTER_DECISION_PRESET = {
 // refusal stays the hard check, so a drift here costs only the early notice.
 const NEEDS_HOST: ReadonlySet<string> = new Set([
   "openai_compatible",
+  "azure_openai",
   "jev_compatible",
 ]);
+
+// Whether a provider cannot be dialled for want of a host. Settings that are
+// not read yet are unknown, which is no fault to report.
+export function hostMissing(
+  provider: string,
+  settings: ProviderSettings | undefined,
+): boolean {
+  return (
+    NEEDS_HOST.has(provider) && settings !== undefined && !settings.base_url
+  );
+}
 
 // The providers whose embeddings model may run on a server of its own: a
 // self-hosted vLLM serves one model per process, so the embedder is often not
@@ -214,9 +228,7 @@ export function AdapterFields<B extends TierBindingLike>({
   // An embeddings server of its own is where that lane is reached, whatever its
   // provider holds.
   const unhosted =
-    NEEDS_HOST.has(binding.provider) &&
-    providerSettings !== undefined &&
-    !providerSettings.base_url &&
+    hostMissing(binding.provider, providerSettings) &&
     !(ownServer && binding.base_url);
   // A Vertex list is asked of the location model by model, which takes a
   // moment; until it answers, the price sheet is not offered in its place,
@@ -243,7 +255,10 @@ export function AdapterFields<B extends TierBindingLike>({
               {...control}
               value={binding.provider}
               disabled={disabled}
-              options={providers.map((p) => ({ value: p, label: p }))}
+              options={providers.map((p) => ({
+                value: p,
+                label: providerName(p, t),
+              }))}
               onChange={(provider) => {
                 probe.forget();
                 onChange(withProvider(binding, provider, vertexLocation));
@@ -257,7 +272,9 @@ export function AdapterFields<B extends TierBindingLike>({
       {providerAside?.note}
       {unhosted && (
         <p className="t-caption">
-          {t("aiRouting.provider.noHost", { provider: binding.provider })}
+          {t("aiRouting.provider.noHost", {
+            provider: providerName(binding.provider, t),
+          })}
         </p>
       )}
       {vertex && ownServer && (
@@ -283,6 +300,9 @@ export function AdapterFields<B extends TierBindingLike>({
         label={t("aiRouting.model.label")}
         hint={
           hint?.text ??
+          (binding.provider === AZURE_PROVIDER
+            ? t("aiRouting.model.help.azure")
+            : undefined) ??
           (asking
             ? t("aiRouting.models.askingLocation", { location })
             : undefined) ??

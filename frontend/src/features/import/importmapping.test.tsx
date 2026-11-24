@@ -138,10 +138,22 @@ describe("the map step", () => {
     await toTheMap(user);
     const strip = screen.getByRole("group", { name: "Files to map" });
     const tabs = within(strip).getAllByRole("button");
-    expect(tabs.map((tab) => tab.textContent)).toEqual([
-      "Contacts",
-      "Companies, 1",
+    expect(tabs.map((tab) => tab.dataset.tab)).toEqual([
+      "contacts.csv",
+      "companies.csv",
     ]);
+    // The badge says what it counts, to a screen reader and on hover.
+    expect(
+      within(strip).getByRole("button", {
+        name: /^Companies\s*, 1 column not imported$/,
+      }),
+    ).toBeVisible();
+    expect(within(strip).getByTitle("1 column not imported")).toHaveTextContent(
+      "1",
+    );
+    expect(
+      within(strip).getByRole("button", { name: "Contacts" }),
+    ).toBeVisible();
   });
 
   it("starts a file's mapping again from its new type's proposal", async () => {
@@ -157,14 +169,43 @@ describe("the map step", () => {
         name: "Record type for contacts.csv",
       }),
     );
-    await user.click(screen.getByRole("option", { name: "Prospects" }));
+    await user.click(screen.getByRole("option", { name: "Leads" }));
     await user.click(screen.getByRole("button", { name: /Next: map 2 files/ }));
-    await user.click(screen.getByRole("button", { name: /Prospects/ }));
+    await user.click(screen.getByRole("button", { name: /Leads/ }));
     expect(
       screen.getByRole("combobox", { name: "Field for company_ref" }),
     ).toHaveTextContent("Do not import");
     expect(
       screen.getByRole("combobox", { name: "Field for email" }),
     ).toHaveTextContent("email");
+  });
+
+  // The background test run stored the refusal's code: the map words it.
+  it("words a refused test run from its code, not the stored sentence", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "POST /imports/sources": () => jsonResponse(zipProfile),
+      "GET /imports/019ff-run": () =>
+        jsonResponse({
+          ...run,
+          id: "019ff-run",
+          status: "pending",
+          error: "The server's own sentence.",
+          error_refusal: {
+            field: "file",
+            code: "unreadable",
+            params: { reason: "field_count", line: "7", file: "leads.csv" },
+          },
+        }),
+    });
+    await toTheMap(user);
+    await user.click(screen.getByRole("button", { name: "Run test" }));
+
+    expect(
+      await screen.findByText(
+        "In “leads.csv”: Line 7 has more or fewer fields than the header row. Fix that line and upload the file again.",
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText("The server's own sentence.")).toBeNull();
   });
 });

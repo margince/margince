@@ -14,11 +14,20 @@ include scripts/composition-profile.mk
 # one target here that invokes the compiler directly instead of delegating.
 GO ?= go
 
+# Local go commands build with -trimpath so worktrees share one build cache; see
+# the same lines in backend/Makefile. CI and release builds keep the paths.
+ifeq ($(CI),)
+ifeq (,$(findstring -trimpath,$(GOFLAGS)))
+override GOFLAGS += -trimpath
+export GOFLAGS
+endif
+endif
+
 # The deterministic script gates `check-root-gates` fans out. One list, one
 # consumer — see the comment on check-root-gates for why they are not that
 # target's prerequisites.
 ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-env-local test-api-entrypoint \
-  test-dev-cleanup test-disk-headroom \
+  test-dev-cleanup test-disk-headroom test-dev-ready test-compose-recreate-guard \
   test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict \
   test-review-coverage test-home-budget-compare test-repeat-changed-tests \
   test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts check-image-pins check-host-ports ci-doc-parity \
@@ -29,10 +38,12 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   check-extension-modules go-work-sum \
   no-jurisdiction test-no-jurisdiction \
   pkg-freeze test-pkg-freeze \
-  test-dev-postgres-container test-e2e-llm-check \
+  test-dev-postgres-container test-e2e-llm-check test-gate-slot \
   test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-dist-version test-release-license-stamped \
+  test-release-policy-sources-fresh \
+  test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy \
   test-release-notes test-release-bundle test-release-compose test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
 
@@ -70,9 +81,9 @@ MINIO_PORT ?= 29000
 # answer lands in its own assignment so `set -e` sees the refusal — a helper
 # called inside another command's argument would fail unnoticed.
 
-.PHONY: gate-timings
+.PHONY: gate-timings preflight
 .PHONY: repeat-changed-tests test-repeat-changed-tests
-.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe test-gate-slot dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards e2e-llm-report fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-dev-ready test-compose-recreate-guard test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift policy-refresh contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-policy-sources-fresh test-release-version-file test-build-revision test-release-tag-on-main test-release-tag-go-proxy test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -142,6 +153,7 @@ install: fe-install tools hooks
 ## one of them running these is enough.
 CHECK_TREE_GATES ?= on
 check-backend:
+	@bash scripts/gate-slot.sh acquire $@
 	@bash scripts/phase-timer.sh reset
 ifneq ($(CHECK_TREE_GATES),off)
 	@bash scripts/phase-timer.sh start "frontend contract types (gen:api)"
@@ -151,6 +163,12 @@ ifneq ($(CHECK_TREE_GATES),off)
 endif
 	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
 	@bash scripts/phase-timer.sh report
+
+## preflight — the gates a few added lines turn red, in seconds: the file-length
+## caps, the comment budget and density, and the root compose size ceiling.
+## Optional, before a gate run; `make check` runs every one of them again.
+preflight:
+	$(MAKE) -k go-file-length fe-file-length comment-budget comment-density preflight-gates
 
 ## check-root-gates — the root deterministic script gates, side by side.
 ##
@@ -172,7 +190,7 @@ endif
 check-root-gates:
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "root script gates (x$(words $(ROOT_SCRIPT_GATES)), -j$(GATE_JOBS))"
-	$(MAKE) -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
+	$(MAKE) -k -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
 	@bash scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
@@ -207,6 +225,7 @@ CHECK_LANE_LOGS ?= .tmp/check-lanes
 ## ledger, and a prerequisite would record a phase before the reset. check-fe
 ## needs `make install` first.
 check:
+	@bash scripts/gate-slot.sh acquire $@
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "writers ($(CHECK_WRITERS))"
 	$(MAKE) -j1 $(CHECK_WRITERS)
@@ -265,6 +284,7 @@ check-q:
 ## + fitness tests, contract drift). A scope-aware per-task gate for backend-only
 ## work; the full `make check` adds the deterministic script gates.
 check-go:
+	@bash scripts/gate-slot.sh acquire $@
 	$(MAKE) -C backend check
 
 ## check-gates — the meta-gate lane: the waiver census, the obligations derived
@@ -282,7 +302,7 @@ check-gates:
 ## so an optimization starts from a reading rather than from a guess.
 gate-timings:
 	@mkdir -p backend/.tmp
-	@cd backend && $(GO) test ./gates/ -count=1 -v > .tmp/gate-timings.log 2>&1 || true
+	@cd backend && CHECK_BASE_REF="$(CHECK_BASE_REF)" $(GO) test ./gates/ -count=1 -v > .tmp/gate-timings.log 2>&1 || true
 	@GATE_TIMING_CORES="$$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)" \
 		bash scripts/gate-timings.sh backend/.tmp/gate-timings.log
 
@@ -327,6 +347,18 @@ dev-fresh:
 ## stack on the machine, including other worktrees', use `make dev-sweep`.
 dev-stop:
 	@bash scripts/dev.sh stop "$(DEV_SLUG)" $(if $(filter 1,$(DROP)),--drop,)
+
+## prod — run this checkout as a customer runs a release: production mode
+## and the 14-day trial, through the release's Compose folder with images built
+## here. Not for working on the code; that is `make dev`. scripts/prod.sh
+## has the details.
+prod:
+	@bash scripts/prod.sh up
+
+## prod-stop — stop the `make prod` stack. DROP=1 also deletes its
+## data and the settings under .tmp/production/.
+prod-stop:
+	@bash scripts/prod.sh stop $(if $(filter 1,$(DROP)),--drop,)
 
 ## dev-snapshot — copy THIS stack's database to `<db>_tmpl`, so `dev-restore`
 ## can put the world back in about a second instead of a migrate and a reseed.
@@ -380,6 +412,7 @@ scripts/composition-profile.mk: ;
 ## fails loudly if they are still missing after that. The CI frontend job runs
 ## this too.
 check-fe: fe-typecheck-composed
+	@bash scripts/gate-slot.sh acquire $@
 	@[ -d frontend/node_modules ] || { echo "check-fe: frontend/node_modules missing — run 'make install' (or 'make fe-install') first" >&2; exit 1; }
 	@bash scripts/phase-timer.sh start "frontend: core suite (ds-gates, drift, lint, unit, build)"
 	$(MAKE) frontend-check
@@ -578,15 +611,12 @@ verify-boot:
 ## same thing. A leg added here reaches CI through the `fe-quality` /
 ## `fe-unit` / `fe-bundle` aggregates; a leg added only to a CI job would run
 ## in no local gate at all.
+##
+## One sub-make under -k, so a red leg does not hide the legs after it: a run
+## names every finding. -j1 keeps the legs one at a time under a parallel
+## caller, because several of them install into one frontend/node_modules.
 frontend-check:
-	$(MAKE) fe-ds-gates
-	$(MAKE) fe-drift
-	$(MAKE) fe-file-length
-	$(MAKE) fe-lint
-	$(MAKE) fe-compiler-lint
-	$(MAKE) fe-unit
-	$(MAKE) fe-census
-	$(MAKE) fe-build
+	$(MAKE) -k -j1 fe-ds-gates fe-drift fe-file-length fe-lint fe-compiler-lint fe-unit fe-census fe-build
 
 ## fe-ds-gates — the frontend's cheap grep gates on their own, so the CI job that
 ## wants only them does not also pull a vitest run behind them. Most are
@@ -970,6 +1000,12 @@ e2e-llm: SHELL := /bin/bash
 e2e-llm:
 	@bash scripts/e2e-llm.sh
 
+## e2e-llm-report — which committed MCP use-case verdicts still describe the
+## product: each verdict's stamp held against the scenario, tool copy, server
+## instructions, judge and harness of this tree. Free, and always exits 0.
+e2e-llm-report:
+	@cd backend && go run ./internal/compose/mcpe2e/mcpe2ecmd report
+
 ## e2e-llm-guards — put the SCENARIOS' regex guards on trial rather than the
 ## product. A real model writes answers a good assistant would give and answers
 ## carrying the defect the scenario forbids, and e2e/llm/probe.py judges every
@@ -1078,7 +1114,7 @@ fe-edge-padding:
 ## BLOCKER and MAJOR findings both fail it. The code checks judge every
 ## hand-written Go file, and they are green because the backlog was cleared to
 ## arm them. The comment checks read Go and TypeScript and judge only the lines
-## added since CHECK_BASE_REF (origin/main unless set), so old comments improve as
+## added since CHECK_BASE_REF (the branch this one was cut from, unless set), so old comments improve as
 ## files are touched; with no such ref the gate fails instead of judging nothing. `make check` runs
 ## it locally.
 ##
@@ -1265,6 +1301,19 @@ test-dev-isolation:
 test-disk-headroom:
 	@bash scripts/lib-diskspace.test.sh
 
+## test-dev-ready — prove `make dev` refuses a machine without Docker or its
+## Compose plugin by name, and that a stack is called ready, seeded and verified
+## only once its app port reaches the api, naming the api or the frontend proxy
+## when it does not.
+test-dev-ready:
+	@bash scripts/lib-devready.test.sh
+
+## test-compose-recreate-guard — prove `make db-up` refuses to recreate a running
+## shared dev container whose config differs from this checkout's, and lets
+## DB_RECREATE=1, a stopped container or a first start through.
+test-compose-recreate-guard:
+	@bash scripts/compose-recreate-guard.test.sh
+
 ## test-dev-cleanup — prove a failed `make dev` leaves nothing running: the EXIT
 ## trap is armed for every `up` rather than only for a stack that claims a port,
 ## it follows TERM with KILL, and it spares a stack that was already up. The
@@ -1399,12 +1448,23 @@ test-make-target-parity:
 	@./scripts/check-make-target-parity.test.sh
 
 ## contract-breaking-check — strict compatibility against CHECK_BASE_REF
-## (origin/main by default). Set origin/develop when that is the target branch.
+## (the branch this one was cut from, by default: scripts/check-base-ref.sh).
 ## A deliberate spec resync uses CONTRACT_STABILITY=pre-live.
-CHECK_BASE_REF ?= origin/main
+CHECK_BASE_REF ?= $(shell ./scripts/check-base-ref.sh)
 contract-breaking-check:
 	@bash scripts/check-contract-breaking.test.sh
 	@CONTRACT_BREAKING_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(CONTRACT_BREAKING_REQUIRE_BASE),1)" ./scripts/check-contract-breaking.sh "$(CHECK_BASE_REF)"
+
+## messaging-rules-drift — every pack's policy/ folder compiles, and its
+## messagingrules_gen.go is what the folder compiles to. backend drift runs it.
+messaging-rules-drift:
+	$(MAKE) -C backend messaging-rules-drift
+
+## policy-refresh — compare each messaging policy pack with its official
+## sources, stamp the layers it read, and regenerate the rules. A release step:
+## it fetches from the publishers, so no lane runs it. REPORT=1 writes nothing.
+policy-refresh:
+	$(MAKE) -C backend policy-refresh REPORT=$(REPORT)
 
 ## contract-frontend-drift — the THIRD regeneration a crm.yaml change owes.
 ## `make gen` covers the Go artifacts and a unit test covers the MCP surface
@@ -1421,7 +1481,7 @@ test-contract-frontend-drift:
 	@./scripts/check-contract-frontend-drift.test.sh
 
 ## migration-versions — a migration this branch adds claims a version no
-## migration on CHECK_BASE_REF (origin/main by default) already claims, and sorts
+## migration on CHECK_BASE_REF (the branch this one was cut from) already claims, and sorts
 ## after all of them. Two
 ## PRs numbering against the same main is how core 0240 (and then 0248) ended
 ## up claimed twice, which the per-tree loader test cannot see.
@@ -1440,6 +1500,17 @@ test-migration-versions:
 ## one does not, so Go's test cache never replays a stale result.
 test-keep-unchanged-mtimes:
 	@bash scripts/keep-unchanged-mtimes.test.sh
+
+## gate-slot.sh gives check, check-backend, check-go, check-fe and (in backend/)
+## test-integration one of the machine's gate slots for the whole run: two by
+## default, GATE_SLOTS=N to change, 0 to switch off, never taken when CI is set.
+## The make running the recipe is the holder, so the slot frees itself when that
+## make ends, and a sub-make under it takes none.
+##
+## test-gate-slot — gate-slot.sh's own test: a third run waits, a dead
+## holder's slot is reclaimed, and CI, GATE_SLOTS=0 and a nested call take none.
+test-gate-slot:
+	@bash scripts/gate-slot.test.sh
 
 ## test-phase-timer — phase-timer.sh's own test: phases in one lane do not
 ## nest, lanes overlap, and the report gives the wall time next to the sum.
@@ -1538,7 +1609,8 @@ test-input-census-judge:
 	@set -e; logs="$(TESTLOG_DIR)"; \
 	[ -d "$$logs" ] || { echo "test-input-census-judge: TESTLOG_DIR must name the logs a testlog-exec.sh pass wrote" >&2; exit 2; }; \
 	./scripts/ci-stable-mtimes.sh --names > "$$logs/names.tsv"; \
-	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv" -minimum "$(TESTLOG_MINIMUM)"
+	git -c core.quotepath=off ls-files > "$$logs/tracked.txt"; \
+	cd backend && GOWORK="$(CURDIR)/go.work" go run ./tools/check-test-inputs -logs "$$logs" -names "$$logs/names.tsv" -tracked "$$logs/tracked.txt" -minimum "$(TESTLOG_MINIMUM)"
 
 ## test-test-budget — the budget gate's own test, run by check-backend because
 ## the gate itself runs only on CI, where a refusal that stopped firing reads green.
@@ -1555,11 +1627,11 @@ test-fe-file-length:
 	@./scripts/check-fe-file-length.test.sh
 
 ## comment-budget — a change may not add more comment lines than the code they
-## explain. Diff-scoped against origin/main, Go and TypeScript; `doc.go` and generated
+## explain. Diff-scoped against CHECK_BASE_REF, Go and TypeScript; `doc.go` and generated
 ## files are exempt. The counterweight to the function ceiling, which does not
 ## count comment lines at all.
 comment-budget:
-	@./scripts/check-comment-budget.sh
+	@CHECK_BASE_REF="$(CHECK_BASE_REF)" ./scripts/check-comment-budget.sh
 
 ## comment-density — backend's comment-to-code ratio may fall and never rise,
 ## pinned in scripts/comment-density-baseline.txt. The aggregate counterpart to
@@ -1609,8 +1681,11 @@ rls-store-path:
 ## one, and a genuinely bad answer is still a finding. It also holds the judged
 ## half offline, against verdicts a real judge gave the committed fixtures: a
 ## judge that agreed with everything fails every defect fixture, and a judge that
-## cannot be reached is a stop rather than a pass.
+## cannot be reached is a stop rather than a pass. The aicert sweep wrapper
+## waits out a judge limit or an outage and stops on any other failure.
 test-e2e-llm-check:
+	@./scripts/test-e2e-llm-sweep.sh
+	@./scripts/test-aicert-sweep.sh
 	@./scripts/test-e2e-llm-check.sh
 
 ## test-dev-postgres-container — prove the dev tooling names ONE database: the
@@ -1672,8 +1747,8 @@ test-release-changelog:
 test-release-tag-version:
 	@./scripts/release-tag-version.test.sh
 
-## test-release-dist-version — the dist version rule's own test: each planted
-## tag maps to its year, edition and patch, and a pre-release drafts nothing.
+## test-release-dist-version — the dist version rule's own test: a plain tag
+## loses its v, a pre-release tag drafts nothing, and a typed x.y.z needs main.
 test-release-dist-version:
 	@./scripts/release-dist-version.test.sh
 
@@ -1682,6 +1757,33 @@ test-release-dist-version:
 ## refuses. Its one caller is a tag push, like the tag reader's.
 test-release-license-stamped:
 	@./scripts/release-license-stamped.test.sh
+
+## test-release-policy-sources-fresh — the policy source check's own test:
+## how old a layer's source-checked may be at a plain tag, and what is no layer.
+test-release-policy-sources-fresh:
+	@./scripts/release-policy-sources-fresh.test.sh
+
+## test-release-version-file — the VERSION release check's own test: the one
+## spelling of the tag's version it accepts, and the near misses it refuses.
+test-release-version-file:
+	@./scripts/release-version-file.test.sh
+
+## test-release-tag-on-main — the on-main check both release lanes run: a commit
+## on main passes, a commit off main and a checkout without origin/main are
+## refused, each with its own message.
+test-release-tag-on-main:
+	@./scripts/release-tag-on-main.test.sh
+
+## test-release-tag-go-proxy — the Go proxy check both release lanes run: a
+## version Go has not recorded, or recorded at the tagged commit, passes; a
+## version recorded at another commit, or with no commit, is refused.
+test-release-tag-go-proxy:
+	@./scripts/release-tag-go-proxy.test.sh
+
+## test-build-revision — the build revision reader's own test: a checkout, a
+## source download and a tree that knows neither each name the right commit.
+test-build-revision:
+	@./scripts/build-revision.test.sh
 
 ## test-release-notes — the release notes builder's own test: which merge
 ## subjects a release lists, in which section, and what the size budget cuts.

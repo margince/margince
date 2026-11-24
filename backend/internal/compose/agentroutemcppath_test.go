@@ -19,10 +19,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// A passport has the same functionality on both doors. So each path and query
-// parameter of an agent route is an argument of its x-mcp-tool verb, top level
-// or under filters. Paging is the one exception: MCP keeps smaller pages, and
-// a cursor reaches the same records.
+// A passport has the same functionality on both doors. Each path and query parameter
+// of an agent route is an argument of its x-mcp-tool verb, top level or under filters.
+// Paging is the one exception: MCP keeps smaller pages, and a cursor reaches the same records.
 func TestEveryAgentRouteParameterIsAnArgumentOfItsVerb(t *testing.T) {
 	registry := NewRegistry(nil, SendPath{})
 	arguments := map[string]map[string]bool{}
@@ -227,9 +226,10 @@ func routeParameters(t *testing.T) map[string][]routeParameter {
 		t.Fatalf("reading the contract: %v", err)
 	}
 	type parameter struct {
-		Ref  string `yaml:"$ref"`
-		Name string `yaml:"name"`
-		In   string `yaml:"in"`
+		Ref    string `yaml:"$ref"`
+		Name   string `yaml:"name"`
+		In     string `yaml:"in"`
+		Hidden bool   `yaml:"x-agent-hidden"` //nolint:tagliatelle // the contract's extension key, not ours to rename
 	}
 	var doc struct {
 		Paths      map[string]map[string]yaml.Node `yaml:"paths"`
@@ -275,7 +275,7 @@ func routeParameters(t *testing.T) map[string][]routeParameter {
 			byRoute[route] = []routeParameter{}
 			for _, p := range append(slices.Clone(shared.Parameters), op.Parameters...) {
 				p = resolve(p)
-				if (p.In == "path" || p.In == "query") && !slices.Contains(pagingParameters, p.Name) {
+				if (p.In == "path" || p.In == "query") && !p.Hidden && !slices.Contains(pagingParameters, p.Name) {
 					byRoute[route] = append(byRoute[route], routeParameter{name: p.Name, in: p.In})
 				}
 			}

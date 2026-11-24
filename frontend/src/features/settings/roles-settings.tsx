@@ -22,6 +22,7 @@ import {
 } from "../../design-system/panel";
 import { useLastSubject } from "../../design-system/presence";
 import { QueryGate } from "../../design-system/querystates";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { Switch } from "../../design-system/switch";
 import { useToast } from "../../design-system/toast";
@@ -29,6 +30,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan, useCanWrite, useHoldsAdminRole } from "../../lib/capability";
 import { useExtensions } from "../../lib/extensions.queries";
+import { blankRequired } from "../../lib/problem";
 import {
   type Role,
   roleLabel,
@@ -36,8 +38,13 @@ import {
   roleRefusalOf,
   useCreateRole,
   useRoles,
+  useRoleVerbs,
 } from "../../lib/roles.queries";
-import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import {
+  replaceDial,
+  useAddressWriters,
+  useUrlParams,
+} from "../../lib/urlstate";
 import { RoleBadges, RoleDrawer } from "./roles-drawer";
 import "./roles-settings.css";
 
@@ -68,6 +75,7 @@ export function RolesSettings() {
   const openRole = (key: string | undefined) => replaceDial(ROLE_PARAM, key);
   const readsMembers = useCan("user_admin", "read");
   const roles = useRoles(readsRoles, showArchived);
+  const verbs = useRoleVerbs(readsRoles, showArchived);
   const linked = useLinkedRole(roles, openKey, readsRoles && !showArchived);
   const roster = useRosterWalk("user", readsRoles && readsMembers);
   const units = useExtensions(readsRoles && readsUnits);
@@ -123,6 +131,7 @@ export function RolesSettings() {
           returnFocusTo={() => document.getElementById(rowId(shown.key))}
           directory={roles.data ?? []}
           units={units.data ?? []}
+          verbs={verbs.data ?? {}}
           canUpdate={mayUpdate}
           canMove={mayMove}
           canRestore={mayMove && isAdmin}
@@ -151,11 +160,12 @@ function useLinkedRole(
     !roles.isFetching &&
     searched.isSuccess &&
     !searched.isFetching;
+  const writers = useAddressWriters();
   useEffect(() => {
     if (unknown) {
-      replaceDial(ROLE_PARAM, undefined);
+      writers.replaceDial(ROLE_PARAM, undefined);
     }
-  }, [unknown]);
+  }, [unknown, writers]);
   return linked;
 }
 
@@ -287,21 +297,26 @@ function NewRoleAction({
   onCreated,
 }: Readonly<{ roles: readonly Role[]; onCreated: (key: string) => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const toast = useToast();
   const titleId = useId();
   const formId = useId();
+  const [faults, faultsRoot] = useFieldFaults();
+  const labels = { copyFrom: t("roles.newFrom"), name: t("roles.newName") };
   const [open, setOpen] = useState(false);
   const live = roles.filter((role) => !role.archived_at);
   const [copyFrom, setCopyFrom] = useState(live[0]?.key ?? "");
   const [name, setName] = useState("");
   const create = useCreateRole();
-  const ready = copyFrom !== "" && name.trim() !== "" && !create.isPending;
   return (
     <>
       <Button onClick={() => setOpen(true)}>{t("roles.new")}</Button>
       <Modal
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          faults.show(new Map());
+        }}
         labelledBy={titleId}
         intent="form"
       >
@@ -310,10 +325,16 @@ function NewRoleAction({
         </Heading>
         <form
           id={formId}
+          ref={faultsRoot}
           className="form-stack"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
-            if (!ready) {
+            const blank = blankRequired(locale, {
+              copyFrom: [labels.copyFrom, copyFrom],
+              name: [labels.name, name],
+            });
+            if (faults.show(blank) || create.isPending) {
               return;
             }
             create.mutate(
@@ -329,24 +350,35 @@ function NewRoleAction({
             );
           }}
         >
-          <Field label={t("roles.newFrom")} hint={t("roles.newFromHint")}>
+          <Field
+            label={labels.copyFrom}
+            hint={t("roles.newFromHint")}
+            required
+            error={faults.of("copyFrom")}
+          >
             {(control) => (
               <Select
                 {...control}
                 value={copyFrom}
-                onChange={setCopyFrom}
+                onChange={(next) => {
+                  setCopyFrom(next);
+                  faults.edited("copyFrom");
+                }}
                 options={roleOptions(t, live)}
               />
             )}
           </Field>
-          <Field label={t("roles.newName")} required>
+          <Field label={labels.name} required error={faults.of("name")}>
             {(control) => (
               <TextInput
                 {...control}
                 value={name}
                 maxLength={120}
                 disabled={create.isPending}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => {
+                  setName(event.target.value);
+                  faults.edited("name");
+                }}
               />
             )}
           </Field>
@@ -361,7 +393,7 @@ function NewRoleAction({
             type="submit"
             form={formId}
             variant="primary"
-            disabled={!ready}
+            pending={create.isPending}
           >
             {t("roles.newSubmit")}
           </Button>

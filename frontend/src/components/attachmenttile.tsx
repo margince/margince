@@ -9,8 +9,9 @@ import { activityDay } from "../format/activitywhen";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { attachmentAnchor } from "../lib/attachmentlink";
+import { attachmentAnchor, attachmentTitle } from "../lib/attachmentlink";
 import { labelFor } from "../lib/labelfor";
+import { linkKind } from "../lib/linkkind";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useViewerZone } from "../lib/viewerzone";
 import { FileOrigin } from "./fileorigin";
@@ -30,6 +31,34 @@ export const CATEGORY_LABELS: Record<DocumentCategory, MessageKey> = {
   other: "docs.category.other",
   link: "docs.category.link",
 };
+
+const CATEGORY_ORDER: readonly string[] = Object.keys(CATEGORY_LABELS);
+
+/**
+ * The category chips over a list of files. The `steady` ones always show; any
+ * other category shows while a file holds it. So the chips add up to "All".
+ * The `selected` chip stays while it filters, so the reader can see and clear it.
+ */
+export function categoryCuts(
+  files: readonly Attachment[],
+  steady: readonly DocumentCategory[],
+  selected: DocumentCategory | "",
+): DocumentCategory[] {
+  const rank = (category: string) => {
+    const at = CATEGORY_ORDER.indexOf(category);
+    return at === -1 ? CATEGORY_ORDER.length : at;
+  };
+  const held = new Set<DocumentCategory>();
+  if (selected !== "" && !steady.includes(selected)) {
+    held.add(selected);
+  }
+  for (const file of files) {
+    if (file.category && !steady.includes(file.category)) {
+      held.add(file.category);
+    }
+  }
+  return [...steady, ...[...held].sort((a, b) => rank(a) - rank(b))];
+}
 
 type DocumentsView = "grid" | "list";
 const VIEWS: readonly DocumentsView[] = ["grid", "list"];
@@ -77,10 +106,11 @@ export function AttachmentTile({
   const zone = useViewerZone();
   const view = useContext(DocumentsViewContext);
   const superseded = file.doc_state === "superseded";
-  const title = file.title || file.filename;
+  const title = attachmentTitle(file);
   return (
     <DocumentTile
       filename={file.filename}
+      kind={file.url ? t(linkKind(file.url)) : undefined}
       title={title}
       anchor={attachmentAnchor(file)}
       lapsed={superseded || receded}
@@ -107,9 +137,7 @@ export function AttachmentTile({
               formatDateAbbrev,
             )
           : formatDateAbbrev(file.created_at, locale, zone),
-      ]
-        .filter(Boolean)
-        .join(" · ")}
+      ]}
       body={
         <>
           <FileOrigin origin={file.origin} onOpenEmail={onOpenEmail} />

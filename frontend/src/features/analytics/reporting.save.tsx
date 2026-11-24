@@ -8,11 +8,15 @@ import { Button, Field, Textarea, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
+import { useSinglePress } from "../../design-system/presslatch";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
+import { scopeName } from "./analytics.context";
 import { ReportComposition, useComposition } from "./reporting.composition";
+import { useCreateReport } from "./reporting.create";
 import { blocksOf } from "./reporting.layout";
 import type { ReportingReport, ReportingSelection } from "./reporting.model";
 import { reportRevisionsKey } from "./reporting.versions";
@@ -29,7 +33,8 @@ export function SaveReportingDialog({
   // What saving does not change, said where the reader decides to save.
   note?: string;
   onClose: () => void;
-  onSaved: (report: ReportingReport) => void;
+  // `from` is where the reader pressed Save, for a caller that moves them on.
+  onSaved: (report: ReportingReport, from: Departure) => void;
 }>) {
   const t = useT();
   const title = useId();
@@ -43,6 +48,8 @@ export function SaveReportingDialog({
   );
   const composition = useComposition(initialSelection);
   const { metrics, kept } = composition;
+  const createReport = useCreateReport();
+  const singlePress = useSinglePress();
   const write = useMutation({
     mutationFn: async ({
       body,
@@ -61,19 +68,19 @@ export function SaveReportingDialog({
           }),
         );
       }
-      const response = existing
-        ? await api.PATCH("/analytics/reports/{id}", {
-            params: {
-              path: { id: existing.id },
-              ...ifMatch(existing.version),
-            },
-            body,
-          })
-        : await api.POST("/analytics/reports", { body });
+      if (!existing) return createReport(body);
+      const response = await api.PATCH("/analytics/reports/{id}", {
+        params: {
+          path: { id: existing.id },
+          ...ifMatch(existing.version),
+        },
+        body,
+      });
       if (response.error) throwProblem(response.error);
       return response.data;
     },
-    onSuccess: async (report) => {
+    onMutate: fromHere,
+    onSuccess: async (report, _vars, from) => {
       await queryClient.invalidateQueries({ queryKey: ["reporting-reports"] });
       await queryClient.invalidateQueries({
         queryKey: ["reporting-report", report.id],
@@ -84,7 +91,7 @@ export function SaveReportingDialog({
       await queryClient.invalidateQueries({
         queryKey: reportRevisionsKey(report.id),
       });
-      onSaved(report);
+      onSaved(report, from);
     },
   });
   // An open draft takes every edit until it is published or discarded, so a
@@ -113,8 +120,18 @@ export function SaveReportingDialog({
     description,
     audience,
   });
-  const incomplete =
-    write.isPending || !name.trim() || unsaveable(selection, metrics);
+  // Save stays pressable; a press with something missing names it instead.
+  const [attempted, setAttempted] = useState(false);
+  const nameMissing = name.trim() === "";
+  const refusal = saveRefusal(selection, metrics);
+  const submit = (asDraft: boolean) => {
+    if (write.isPending) return;
+    if (nameMissing || refusal !== undefined) {
+      setAttempted(true);
+      return;
+    }
+    save(asDraft);
+  };
   return (
     <Modal open onClose={onClose} labelledBy={title} intent="form">
       <Heading size="large" id={title} className="t-h2 modal-title">
@@ -125,12 +142,20 @@ export function SaveReportingDialog({
       <form
         id={formId}
         className="form-stack"
-        onSubmit={(event) => {
+        // The press names a missing name itself; a native bubble would pre-empt it.
+        noValidate
+        onSubmit={singlePress((event) => {
           event.preventDefault();
-          save(draftOpen);
-        }}
+          submit(draftOpen);
+        })}
       >
-        <Field label={t("reporting.name")} required>
+        <Field
+          label={t("reporting.name")}
+          required
+          error={
+            attempted && nameMissing ? t("record.fieldRequired") : undefined
+          }
+        >
           {(field) => (
             <TextInput
               {...field}
@@ -153,7 +178,7 @@ export function SaveReportingDialog({
           )}
         </Field>
         <p className="t-caption">
-          {selection.scope.label} · {t(`reporting.${selection.period}`)}
+          {scopeName(selection.scope, t)} · {t(`reporting.${selection.period}`)}
         </p>
         <Field label={t("reporting.audience")}>
           {(field) => (
@@ -197,6 +222,9 @@ export function SaveReportingDialog({
         {metadataChanged && !draftOpen && (
           <p className="t-caption">{t("reporting.draftKeepsName")}</p>
         )}
+        {attempted && refusal !== undefined && (
+          <ErrorLine inline>{t(refusal)}</ErrorLine>
+        )}
         <ErrorLine error={write.error} />
       </form>
       <div className="actions">
@@ -206,13 +234,13 @@ export function SaveReportingDialog({
         {report && !draftOpen && (
           <Button
             variant="ghost"
-            disabled={incomplete || metadataChanged}
-            onClick={() => save(true)}
+            disabled={write.isPending || metadataChanged}
+            onClick={() => submit(true)}
           >
             {t("reporting.saveDraft")}
           </Button>
         )}
-        <Button type="submit" form={formId} disabled={incomplete}>
+        <Button type="submit" form={formId} disabled={write.isPending}>
           {t(draftOpen ? "reporting.saveDraft" : "reporting.save")}
         </Button>
       </div>
@@ -238,10 +266,18 @@ export function unsaveable(
   selection: ReportingSelection,
   metrics: readonly unknown[],
 ): boolean {
-  if (metrics.length === 0) return true;
-  if (selection.period !== "custom") return false;
-  return (
-    !selection.interval ||
+  return saveRefusal(selection, metrics) !== undefined;
+}
+
+// Why a report cannot be saved as it stands, or nothing when it can.
+function saveRefusal(
+  selection: ReportingSelection,
+  metrics: readonly unknown[],
+): "reporting.needsChart" | "reporting.needsInterval" | undefined {
+  if (metrics.length === 0) return "reporting.needsChart";
+  if (selection.period !== "custom") return undefined;
+  return !selection.interval ||
     selection.interval.start_at >= selection.interval.end_at
-  );
+    ? "reporting.needsInterval"
+    : undefined;
 }

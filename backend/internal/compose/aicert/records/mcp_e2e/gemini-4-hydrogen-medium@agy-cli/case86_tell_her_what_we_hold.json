@@ -4,20 +4,129 @@
     1
   ],
   "passed": 2,
-  "runs": 2,
+  "runs": 3,
   "pass_at": 2,
   "driver": "gemini:cli",
   "effort": "reasoning medium",
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "92d778d1da3a10e0",
+    "tools": "90c67b7411dbee7c",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "7298bf32321832a612835d4cf164580ffabfeb92",
+    "ran_at": "2026-11-22T09:44:11Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:55:20Z"
+  },
   "usage": {
-    "input_tokens": 75484,
-    "output_tokens": 20892,
+    "input_tokens": 164995,
+    "output_tokens": 28983,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 292410,
-    "runs_measured": 2,
+    "cache_read_input_tokens": 495268,
+    "runs_measured": 3,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": false,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent_guard",
+        "get_controller_particulars",
+        "get_notice_case_review",
+        "get_notice_source_evidence",
+        "list_notice_case_reviews",
+        "list_notice_cases",
+        "preview_notice_source",
+        "read_context",
+        "read_details",
+        "read_installation_jurisdiction",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "get_controller_particulars",
+        "get_notice_case_review",
+        "get_notice_source_evidence",
+        "list_notice_case_reviews",
+        "list_notice_cases",
+        "preview_notice_source",
+        "read_context",
+        "read_details",
+        "read_installation_jurisdiction",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "catch_me_up_on",
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "get_controller_particulars",
+        "get_notice_case_review",
+        "get_notice_source_evidence",
+        "list_notice_case_reviews",
+        "list_notice_cases",
+        "preview_notice_source",
+        "read_context",
+        "read_details",
+        "read_installation_jurisdiction",
+        "read_record",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 21,
+      "min": 20,
+      "max": 22
+    },
+    "turns": {
+      "median": 9,
+      "min": 8,
+      "max": 9
+    },
+    "refused": {
+      "median": 6,
+      "min": 1,
+      "max": 7
+    },
+    "prompt_tokens": {
+      "median": 229212,
+      "min": 194326,
+      "max": 236725
+    },
+    "output_tokens": {
+      "median": 9664,
+      "min": 8457,
+      "max": 10862
+    }
   }
 }

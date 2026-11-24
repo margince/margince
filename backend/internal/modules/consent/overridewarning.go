@@ -27,6 +27,13 @@ package consent
 // changing the sentence without moving the version would silently rewrite what
 // every past acknowledgement claims to have said. A gate holds it.
 
+import (
+	"context"
+	"slices"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+)
+
 // OverrideWarning is the caution a human reads before directing a refused
 // send, and the version their acknowledgement will name.
 type OverrideWarning struct {
@@ -63,15 +70,34 @@ const overrideWarningTextV1 = "The engine refused this message, and that refusal
 	"message are written to a record that cannot be edited afterwards. This covers this message " +
 	"alone — the next one to the same recipient is judged from scratch."
 
+// InlineWarningVersion is the composer's words beside its Send anyway button.
+// It is its own version because a client that shows these words must not
+// record that the modal's longer ones were shown.
+//
+// MOVE IT WHENEVER inlineWarningText CHANGES, in the same commit.
+const InlineWarningVersion = "inline-v2"
+
+// inlineWarningText is the question the composer puts over the reason field.
+// The finding and its law stand above it; nothing else is shown.
+const inlineWarningText = "Why send this one message anyway?"
+
+// inlineWarningTextV1 is the text inline-v1 named. Kept word for word, because
+// an instruction recorded under it says somebody read these words.
+const inlineWarningTextV1 = "The send check still blocks this message. Send anyway sends only this message " +
+	"and grants no permission for later ones. Your name, your reason and the message are kept in a " +
+	"record that cannot be edited."
+
 // overrideWarnings holds the versions this build has served, with their words.
 // A version is added and never edited or removed. A record naming any of them
-// can then be read back with what its director was shown. Only the current one is
-// accepted for a new instruction (servedWarningVersion).
+// can then be read back with what its director was shown. Only the current two
+// are accepted for a new instruction (servedWarningVersion).
 //
-// Held by: TestEveryServedWarningVersionReadsBackAndOnlyTheCurrentOneIsAccepted (backend/internal/modules/consent/overridewarning_test.go)
+// Held by: TestEveryServedWarningVersionReadsBackAndOnlyTheCurrentOnesAreAccepted (backend/internal/modules/consent/overridewarning_test.go)
 var overrideWarnings = map[string]string{
 	"override-v1":          overrideWarningTextV1,
 	OverrideWarningVersion: overrideWarningText,
+	"inline-v1":            inlineWarningTextV1,
+	InlineWarningVersion:   inlineWarningText,
 }
 
 // OverrideWarningFor answers the words a version named, and false for a
@@ -86,4 +112,21 @@ func OverrideWarningFor(version string) (OverrideWarning, bool) {
 // different version.
 func TheOverrideWarning() OverrideWarning {
 	return OverrideWarning{Version: OverrideWarningVersion, Text: overrideWarnings[OverrideWarningVersion]}
+}
+
+// warningsServed are the warnings a review is served with to this caller. The
+// modal's warning is served on every review. The composer's short one is served
+// only to the sender of a held message, because the composer shows it to them.
+func warningsServed(ctx context.Context, initiatedBy, intentID ids.UUID) []OverrideWarning {
+	served := []OverrideWarning{TheOverrideWarning()}
+	if seat := initiatingSeat(ctx); !seat.IsZero() && seat == initiatedBy && !intentID.IsZero() {
+		inline, _ := OverrideWarningFor(InlineWarningVersion)
+		served = append(served, inline)
+	}
+	return served
+}
+
+// servesWarning reports whether version is among the warnings served.
+func servesWarning(served []OverrideWarning, version string) bool {
+	return slices.ContainsFunc(served, func(w OverrideWarning) bool { return w.Version == version })
 }

@@ -121,14 +121,14 @@ func pathRecordKind(pattern, param string) string {
 
 func (c toolRoleCall) args(pool *recordPool) map[string]any {
 	args := fillSchema(c.input, c.route.Pattern, pool)
-	if _, takesBody := args["request_body"]; takesBody && len(c.route.Body) > 0 {
-		args["request_body"] = fillSchema(c.route.Body, "", pool)
+	if _, takesBody := args[routeBodyArgument]; takesBody && len(c.route.Body) > 0 {
+		args[routeBodyArgument] = fillSchema(c.route.Body, "", pool)
 	}
 	if fixture, ok := fixtureOf(c.verb); ok {
 		for name, value := range fixture(pool) {
-			if body, isBody := value.(map[string]any); isBody && name == "request_body" {
-				merged, _ := args["request_body"].(map[string]any)
-				args["request_body"] = mergedBody(merged, body)
+			if body, isBody := value.(map[string]any); isBody && name == routeBodyArgument {
+				merged, _ := args[routeBodyArgument].(map[string]any)
+				args[routeBodyArgument] = mergedBody(merged, body)
 				continue
 			}
 			args[name] = value
@@ -208,7 +208,7 @@ func fillSchema(raw json.RawMessage, pattern string, pool *recordPool) map[strin
 //
 // gatekit:fixture a valid value for each well-known field name: expected data, not a waived cost
 var namedValues = map[string]string{
-	"country": "de", "currency": "EUR", "locale": "en", "content_type": "application/pdf",
+	"country": "de", "jurisdiction": "zq", "currency": "EUR", "locale": "en", "content_type": "application/pdf",
 	"content_base64": base64.StdEncoding.EncodeToString([]byte("%PDF-1.4 role sweep")), "filename": "role-sweep.pdf",
 	"scheduled_tz": "Europe/Berlin", "timezone": "Europe/Berlin", "source": "manual",
 	"text_hash": strings.Repeat("0", 32), "url": "https://example.test/role-sweep",

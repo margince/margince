@@ -12,7 +12,7 @@ import (
 )
 
 // CreateReportingReport decodes a definition before the service records its first revision.
-func (h Handlers) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) CreateReportingReport(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateReportingReportParams) {
 	var body crmcontracts.ReportingReportInput
 	if !httperr.Decode(w, r, &body) {
 		return

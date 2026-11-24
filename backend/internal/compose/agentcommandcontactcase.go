@@ -42,6 +42,10 @@ func contactCaseCall(deps restCommandDeps, r *http.Request, body []byte, preview
 	if err != nil {
 		return nil, err
 	}
+	// Which values to keep is a human choice; an agent's merge keeps the survivor's.
+	if in.Prefer != nil && *in.Prefer != (crmcontracts.ContactCasePreference{}) {
+		return nil, httperr.Validation("prefer", "prefer_needs_a_human", "only a human can choose which values to keep")
+	}
 	survivorID := ids.UUID(in.SurvivorId)
 	if err := httperr.RequireBodyID("survivor_id", survivorID); err != nil {
 		return nil, err

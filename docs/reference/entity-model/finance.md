@@ -6,19 +6,17 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_connection
 
-15 columns · primary key `(id)` · referenced by 4 foreign keys
+13 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `capabilities` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `credential_ref` | `text` | yes |  |
 | `last_attempt_at` | `timestamp with time zone` |  |  |
 | `last_error_code` | `text` |  |  |
 | `last_success_at` | `timestamp with time zone` |  |  |
-| `provider` | `text` | yes |  |
+| `provider` | `text` | yes | The source's key. |
 | `status` | `text`, default `'connecting'::text` | yes | `connecting` until the first sync finishes; `error` when the last one failed. |
-| `sync_cursor` | `text` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -37,8 +35,8 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "sync_cursor": 20000, "credential_ref": 20000, "last_error_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000,"sync_cursor":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "sync_cursor": 20000, "credential_ref": 20000, "last_error_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000,"sync_cursor":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "credential_ref": 20000, "last_error_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "status": 20000, "provider": 20000, "captured_by": 20000, "credential_ref": 20000, "last_error_code": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"credential_ref":20000,"last_error_code":20000,"provider":20000,"source":20000,"status":20000}')`
 - `trg_finance_connection_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_customer_link
@@ -184,6 +182,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 - `finance_invoice_dunning_level_range`: `CHECK (((dunning_level >= 0) AND (dunning_level <= 99)))`
 - `finance_invoice_fx_pair`: `CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))`
 - `finance_invoice_gross_minor_js_safe`: `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
+- `finance_invoice_names_its_customer_link`: `CHECK ((customer_link_id IS NOT NULL)) NOT VALID`
 - `finance_invoice_net_minor_js_safe`: `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_open_minor_js_safe`: `CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_owner_key`: `UNIQUE (id, connection_id, company_id)`
@@ -198,7 +197,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 - `finance_invoice_account_ix`: `btree (company_id, issued_at DESC)`
 - `finance_invoice_connection_id_external_id_key`: `unique, btree (connection_id, external_id)`
 - `finance_invoice_credit_owner_idx`: `btree (credits_invoice_id, connection_id, company_id)`
-- `finance_invoice_credits_ix`: `btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL)`
 - `finance_invoice_customer_owner_idx`: `btree (customer_link_id, connection_id, company_id)`
 - `finance_invoice_open_ix`: `btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL))`
 - `finance_invoice_owner_key`: `unique, btree (id, connection_id, company_id)`
@@ -248,6 +246,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 - `finance_payment_amount_minor_js_safe`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `finance_payment_connection_id_external_id_key`: `UNIQUE (connection_id, external_id)`
+- `finance_payment_names_its_customer_link`: `CHECK ((customer_link_id IS NOT NULL)) NOT VALID`
 - `finance_payment_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

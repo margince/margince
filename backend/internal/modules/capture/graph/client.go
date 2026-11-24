@@ -229,6 +229,8 @@ type OAuthConfig struct {
 	// the NAME, or its own failures would read as the mail connector's in the
 	// logs and in the connection roster.
 	Provider string
+	// Tokens keeps access tokens for their lifetime; nil redeems on every call.
+	Tokens *oauthflow.TokenCache
 }
 
 // NewOAuth builds the OAuth client, applying Microsoft's default endpoints
@@ -270,6 +272,7 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		ScopeInTokenForms: true,
 		AuthRejected:      ErrAuthRejected,
 		Unreachable:       ErrUnreachable,
+		Tokens:            cfg.Tokens,
 	})
 }
 
@@ -285,6 +288,8 @@ type httpAPI struct {
 	// maxPageSize caps the entries a listing page holds; zero asks for
 	// Graph's own page size.
 	maxPageSize int
+	// now closes an anchor's window; a field so tests date mail against it.
+	now func() time.Time
 }
 
 // personalMailbox is the signed-in user's own mailbox. It is the one place the
@@ -306,7 +311,7 @@ func newHTTPAPI(client *http.Client, base, mailbox string) *httpAPI {
 	if base == "" {
 		base = graphAPIBase
 	}
-	return &httpAPI{client: client, base: base, mailbox: mailbox}
+	return &httpAPI{client: client, base: base, mailbox: mailbox, now: time.Now}
 }
 
 // root is the absolute URL of the mailbox this client reads.

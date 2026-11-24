@@ -6,7 +6,12 @@ import { afterEach, expect, it, vi } from "vitest";
 import { handledForYouOptions } from "../lib/handled";
 import { homeDayOptions } from "../lib/worklistday";
 import { quietRun, readingsDay } from "../testing/brief.fixtures";
-import { prefetchHome } from "./homeprefetch";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
+import {
+  mayReadHomeDeals,
+  prefetchHome,
+  prefetchHomeDeals,
+} from "./homeprefetch";
 import { createQueryClient, liveOnMount } from "./queryclient";
 
 afterEach(() => vi.restoreAllMocks());
@@ -66,6 +71,7 @@ it("keeps the mount refetch for an answer already cached before the prefetch", a
 it("prefetches nothing for the weekly view", () => {
   const fetched = vi.spyOn(globalThis, "fetch");
   prefetchHome(createQueryClient(), new Map([["view", "weekly"]]));
+  prefetchHomeDeals(createQueryClient(), new Map([["view", "weekly"]]));
   expect(fetched).not.toHaveBeenCalled();
 });
 
@@ -125,4 +131,30 @@ it("lets go of the day's Worklist once its read answers", async () => {
   await vi.waitFor(() => expect(day()?.state.fetchStatus).toBe("idle"));
   expect(day()?.state.status).toBe("success");
   expect(day()?.getObserversCount()).toBe(0);
+});
+
+it("reads the brief and the done-for-you receipt only through the deal prefetch", async () => {
+  const fetched = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async () => Response.json({}));
+  const paths = () =>
+    fetched.mock.calls.map(
+      ([input]) =>
+        new URL(input instanceof Request ? input.url : String(input)).pathname,
+    );
+  const client = createQueryClient();
+  prefetchHome(client, new Map());
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(paths().some((path) => /\/(brief|magic)$/.test(path))).toBe(false);
+  prefetchHomeDeals(client, new Map());
+  await vi.waitFor(() => {
+    expect(paths().some((path) => path.endsWith("/brief"))).toBe(true);
+    expect(paths().some((path) => path.endsWith("/magic"))).toBe(true);
+  });
+});
+
+it("starts the deal-only reads only once the grant is known", () => {
+  expect(mayReadHomeDeals(undefined)).toBe(false);
+  expect(mayReadHomeDeals(meFixture({}))).toBe(false);
+  expect(mayReadHomeDeals(meFixture({ allow: READS_RECORDS }))).toBe(true);
 });

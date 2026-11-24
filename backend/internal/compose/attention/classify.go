@@ -20,6 +20,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -109,6 +110,7 @@ func base(
 		DomainReasonCode:  item.DomainReasonCode,
 		DomainNote:        item.DomainNote,
 		RunReasonCode:     item.RunReasonCode,
+		EffectFailureCode: item.EffectFailureCode,
 		DomainContext:     item.DomainContext,
 		CauseRef:          item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the
@@ -217,14 +219,20 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 
 // dropDealsAlreadyInHand removes the at-risk row for a deal somebody is
 // already waiting on, or that has a task about it due within nearTaskDays.
+// waitingPastScan names deals whose waiting card the lane's scan did not reach.
+// Such a deal loses its at-risk facts, as in the tail: its card is not here to
+// carry them.
 //
 // One job must not become two rows. The waiting row names the message to reply
 // to, and the near task names the step already planned, so either one wins.
 // The drifting row's ground rides along as a reason rather than as a second
 // obligation. A task due later, or undated, leaves the deal at risk, so a deal
 // cannot hide behind a step nobody means to take soon.
-func dropDealsAlreadyInHand(rows []ranked, asOf time.Time) []ranked {
+func dropDealsAlreadyInHand(rows []ranked, asOf time.Time, waitingPastScan map[ids.UUID]bool) []ranked {
 	inHand := map[string]bool{}
+	for deal := range waitingPastScan {
+		inHand[deal.String()] = true
+	}
 	for _, row := range rows {
 		if absorbsRisk(row, asOf) {
 			inHand[row.item.Subject.Id.String()] = true
@@ -287,7 +295,13 @@ func nearTaskCutoff(asOf time.Time) time.Time { return asOf.AddDate(0, 0, nearTa
 func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	level := levelAgreed
 	websiteInquiry := item.Kind != nil && *item.Kind == provenance.WebsiteInquirySource
-	late := taskLateAt(item.DueAt, asOf, item.MayBeDone)
+	pastDue := overdueAt(item.DueAt, asOf)
+	if item.DueGroup != nil && item.DueHasTime != nil && !*item.DueHasTime && item.DueIntent != nil {
+		// A date without a time is late by its calendar day, which the item's
+		// group already counted; the instant it resolves to is another zone's.
+		pastDue = *item.DueGroup == crmcontracts.AttentionItemDueGroupOverdue
+	}
+	late := pastDue && item.MayBeDone == nil
 	// A due customer obligation needs attention even if its deal is small.
 	// Prospecting follow-ups retain their dates without claiming an external
 	// response deadline; that clock belongs to the lead-response lane.
@@ -305,7 +319,7 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	}
 	if late {
 		row.Because = append(row.Because, reason("overdue", nil))
-	} else if item.DueAt != nil && !overdueAt(item.DueAt, asOf) && !isUpcoming(item.DueGroup) {
+	} else if item.DueAt != nil && !pastDue && !isUpcoming(item.DueGroup) {
 		// Only work that IS due today says so. The lane now also carries what
 		// is coming, and a task due next week telling the reader it is due
 		// today contradicts the group on the same row.

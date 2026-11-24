@@ -46,6 +46,18 @@
   border: 0;
 }
 
+/* Focusable only so a page can hand the reader here (`useArrivalFocus`): no
+   ring after a click, which would mark a control that is not one. */
+.arrival-focus:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.arrival-focus:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
 .btn {
   /* The body's own size and leading, so a verb is set in the same type as the
      sentence that asked for it. The weight comes AFTER: `font` is a shorthand
@@ -223,7 +235,7 @@
    ink. Not transparent: a see-through button reads as a label, and four of
    them as a sentence. */
 .btn-ghost {
-  background: var(--pane);
+  background: var(--bgControl);
   /* The hairline, not the control boundary: an outlined verb is a pane with
      a word on it, and the darker edge drew a row of them as a strip of
      cartoon buttons. The word is what identifies the control (WCAG 1.4.11
@@ -291,7 +303,7 @@
      and this is one of the two places such a label arrives. */
   border-radius: var(--r-control);
   border-color: var(--borderControl);
-  background: var(--bgElevated);
+  background: var(--bgField);
   color: var(--textPrimary);
 }
 /* The mark is another company's logo rather than one of our icons, so it keeps
@@ -461,6 +473,13 @@
    the row it sits in. */
 .btn-shell {
   display: contents;
+}
+/* A row's rules for its items (`.overflow-menu-items > * { flex-shrink: 0 }`)
+   land on the shell, which draws no box, so the button takes them from it. At
+   zero specificity, so a rule on the button itself still wins. */
+:where(.btn-shell) > * {
+  flex: inherit;
+  align-self: inherit;
 }
 .busy-mark {
   /* `transform: rotate()` rather than the standalone `rotate` property, which
@@ -694,4 +713,24 @@ kbd {
     transform: none;
     filter: brightness(0.96);
   }
+}
+
+/* A floating layer lifted into the top layer (toplayer.ts) carries
+   popover="manual". The browser's own popover box (inset 0, auto margin,
+   border, padding, Canvas colours, scrolling, fit-content size) is put back
+   to the initial values at zero specificity, so each component's rules place
+   and paint it as they did before. Such a layer is mounted only while it is
+   open, so it is laid out from its first render: a placement that measures it
+   before showPopover() runs reads its real box. */
+:where([popover]) {
+  display: block;
+  inset: auto;
+  inline-size: auto;
+  block-size: auto;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  overflow: visible;
+  color: inherit;
+  background: none;
 }

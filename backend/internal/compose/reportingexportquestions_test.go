@@ -5,11 +5,14 @@ package compose
 
 import (
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportdoc"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 // questionEdition is an edition with two question cards, the second placed
@@ -68,7 +71,7 @@ func TestAnEditionExportGuardsAQuestionsAlias(t *testing.T) {
 // A kept money measure is written with its unit and its one currency. Without
 // a single currency it has no value and says why.
 func TestAKeptMoneyMeasureStatesItsUnitAndCurrency(t *testing.T) {
-	native := answerMoney{spec: reportSpec{nativeMeasures: nativeMoney(fieldAmountMinor)}, base: "EUR"}
+	native := answerMoney{spec: prebuiltReports["open-deals-per-company"], base: "EUR"}
 	noBase := answerMoney{spec: native.spec}
 	sum := func(field string) analyticsquery.Measure {
 		return analyticsquery.Measure{Fn: analyticsquery.Sum, Field: field}
@@ -79,11 +82,13 @@ func TestAKeptMoneyMeasureStatesItsUnitAndCurrency(t *testing.T) {
 		row     map[string]any
 		want    [3]string
 	}{
-		"a native amount in its row's currency":    {native, sum(fieldAmountMinor), map[string]any{fieldCurrency: "USD"}, [3]string{"minor_units", "USD", "ok"}},
+		"a native amount in its row's currency":    {native, sum(fieldAmountMinor), map[string]any{fieldCurrency: "USD"}, [3]string{"money", "USD", "ok"}},
 		"a native amount over several currencies":  {native, sum(fieldAmountMinor), map[string]any{}, [3]string{"", "", "mixed_currency"}},
-		"a converted amount in the base currency":  {native, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"minor_units", "EUR", "ok"}},
+		"a converted amount in the base currency":  {native, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"money", "EUR", "ok"}},
 		"a converted amount with no base currency": {noBase, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"", "", "no_base_currency"}},
+		"a partial sum read back from JSON":        {native, sum(fieldAmountBaseMinor), partialRow([]any{sum(fieldAmountBaseMinor).Column()}), [3]string{"money", "EUR", reportingPartial}},
 		"a count of a money field":                 {native, analyticsquery.Measure{Fn: analyticsquery.CountAll, Field: fieldAmountMinor}, map[string]any{}, [3]string{"", "", "ok"}},
+		"a money-named measure with no coverage":   {noBase, sum("retired_minor"), map[string]any{}, [3]string{"", "", "ok"}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			unit, currency, coverage := tc.money.of(tc.measure, tc.row)
@@ -101,5 +106,28 @@ func TestAnEditionWhoseAnswersWereRemovedWritesNoQuestionRows(t *testing.T) {
 	edition.Questions = nil
 	if rows := questionCSVRows(edition); len(rows) != 0 {
 		t.Fatalf("an edition with its answers removed wrote %q", rows)
+	}
+}
+
+// The page writes the assessment, so the file records the card without its sentences.
+func TestAnEditionNamesItsAssessmentCardAsNotExported(t *testing.T) {
+	edition := questionEdition("deals")
+	without, err := editionCSV(edition, langcopy.For("en"))
+	layout := append(*edition.Evaluation.Selection.Layout, crmcontracts.ReportingSection{Cards: []crmcontracts.ReportingCard{{Id: "summary", Kind: crmcontracts.ReportingCardKindAssessment}}})
+	edition.Evaluation.Selection.Layout = &layout
+	with, withErr := editionCSV(edition, langcopy.For("en"))
+	const row = "assessment,assessment,Assessment,,,,,,,,not_exported,false,,2026-09-24T13:00:00Z\n"
+	if err != nil || withErr != nil || !strings.Contains(string(with), row) || strings.Contains(string(without), "assessment") {
+		t.Fatalf("with the card the file is %q (%v), without it %q (%v)", with, withErr, without, err)
+	}
+}
+
+func partialRow(named []any) map[string]any {
+	return map[string]any{analyticsquery.CoverageColumnName: map[string]any{"partial": true, "aggregates": named}, "base": 5000}
+}
+
+func TestAReportCellOverAPartialSumKeepsItsValueAndIsMarkedPartial(t *testing.T) {
+	if got := valueFromAnswer(AnalyticsAnswer{Rows: []map[string]any{partialRow([]any{"base"})}}, reportdoc.Cell{Column: "base"}); got.Value != 5000 || got.Coverage == nil || got.Coverage.Status != reportingPartial {
+		t.Errorf("cell = %+v, want the value kept and marked partial", got)
 	}
 }

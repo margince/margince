@@ -20,7 +20,7 @@ import (
 func TestARecordCreateWithoutASourceIsRefusedOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	contact := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Origin Contact", "source": "manual"})
+	contact := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Origin Contact", "source": "manual"})
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Origin Co", "source": "manual"})
 
 	stages := apptest.DiscoverSeededPipeline(t, e)

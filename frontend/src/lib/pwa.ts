@@ -8,13 +8,14 @@ export const SERVICE_WORKER_URL = "/sw.js";
 
 export type InstallOutcome = "accepted" | "dismissed";
 
-/** iOS sends no install offer, so `manual-ios` means Add to Home Screen by hand;
- *  `installed` and `dismissed` count what the reader decided on this visit. */
+/** Safari makes no install offer, so `manual-*` installs by hand; `installed`
+ *  and `dismissed` count what the reader decided on this visit. */
 export type InstallState =
   | Readonly<{ kind: "installed" }>
   | Readonly<{ kind: "available"; prompt: () => Promise<InstallOutcome> }>
   | Readonly<{ kind: "dismissed" }>
   | Readonly<{ kind: "manual-ios" }>
+  | Readonly<{ kind: "manual-macos" }>
   | Readonly<{ kind: "unavailable" }>;
 
 /** Chromium's install offer; no standard names it yet. */
@@ -57,6 +58,28 @@ function appleTouchDevice(): boolean {
   );
 }
 
+// An app's own browser cannot add to the home screen: most leave `Safari/` out
+// of the agent, and the Google app keeps it but names itself `GSA/`.
+function addsToHomeScreen(): boolean {
+  const agent = navigator.userAgent;
+  return /Safari\//.test(agent) && !/GSA\//.test(agent);
+}
+
+// Add to Dock needs macOS 14, which Safari 26 requires; Safari reports every macOS as 10.15.7.
+const DOCK_SAFARI_MAJOR = 26;
+
+function macSafari(): boolean {
+  const agent = navigator.userAgent;
+  const major = Number(/Version\/(\d+)/.exec(agent)?.[1] ?? 0);
+  return (
+    /Macintosh/.test(agent) &&
+    navigator.maxTouchPoints <= 1 &&
+    /Safari\//.test(agent) &&
+    major >= DOCK_SAFARI_MAJOR &&
+    !/Chrome|Chromium|Edg|OPR|Firefox/.test(agent)
+  );
+}
+
 function offer(event: BeforeInstallPromptEvent): InstallState {
   return {
     kind: "available",
@@ -94,7 +117,10 @@ function currentState(): InstallState {
   if (dismissed) {
     return { kind: "dismissed" };
   }
-  return { kind: appleTouchDevice() ? "manual-ios" : "unavailable" };
+  if (appleTouchDevice()) {
+    return { kind: addsToHomeScreen() ? "manual-ios" : "unavailable" };
+  }
+  return { kind: macSafari() ? "manual-macos" : "unavailable" };
 }
 
 function refresh(): void {
@@ -117,8 +143,8 @@ function getSnapshot(): InstallState {
 }
 
 /**
- * Keeps the browser's install offer for the app to present later. Called before
- * the first render, because the browser may make the offer before React mounts.
+ * Keeps the browser's install offer for the app to present later. Called from the
+ * entry script, because the browser may make the offer before main.tsx has loaded.
  */
 export function listenForInstall(): () => void {
   const listening = new AbortController();
@@ -152,15 +178,16 @@ export function registerServiceWorker(): void {
   if (!import.meta.env.PROD || !("serviceWorker" in navigator)) {
     return;
   }
-  window.addEventListener(
-    "load",
-    () => {
-      navigator.serviceWorker
-        .register(SERVICE_WORKER_URL, { scope: "/", updateViaCache: "none" })
-        .catch((reason: unknown) => {
-          console.warn("service worker registration failed", reason);
-        });
-    },
-    { once: true },
-  );
+  const register = () => {
+    navigator.serviceWorker
+      .register(SERVICE_WORKER_URL, { scope: "/", updateViaCache: "none" })
+      .catch((reason: unknown) => {
+        console.warn("service worker registration failed", reason);
+      });
+  };
+  if (document.readyState === "complete") {
+    register();
+    return;
+  }
+  window.addEventListener("load", register, { once: true });
 }

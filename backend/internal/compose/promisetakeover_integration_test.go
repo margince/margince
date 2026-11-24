@@ -43,10 +43,17 @@ type takeOverFixture struct {
 
 func setupTakeOver(t *testing.T) takeOverFixture {
 	t.Helper()
+	return setupTakeOverAbout(t, "Questions about the offer")
+}
+
+// setupTakeOverAbout is setupTakeOver with a promise made in a message with
+// the given subject.
+func setupTakeOverAbout(t *testing.T, subject string) takeOverFixture {
+	t.Helper()
 	e := integration.Setup(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya Raman' WHERE id = $1`, e.Rep2)
 	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
-	claim := ids.UUID(seedWorklistPromise(t, e, contact, "Send the signed contract by Friday").Id)
+	claim := ids.UUID(seedClaimAbout(t, e, contact, subject, "Send the signed contract by Friday", "commitment_ours").Id)
 	source := ids.MustParse(e.WsScalar(t, `SELECT source_activity_id::text FROM conversation_claim WHERE id = $1`, claim))
 	return takeOverFixture{
 		e: e, h: newPromiseTakeOverHandlers(e.Pool), contact: contact, claim: claim, source: source,
@@ -338,5 +345,29 @@ func TestAPromiseAnAgentRecordedIsOpenOnItsContact(t *testing.T) {
 	f.e.WsExec(t, `UPDATE conversation_claim SET captured_by = 'agent:deal-scout' WHERE id = $1`, ids.UUID(claim.Id))
 	if isOpen() {
 		t.Error("a claim a product pass stamped was admitted as an agent acting for its user")
+	}
+}
+
+// A source subject with quote marks is named in the language's own marks with
+// no backslash. A second press still finds the first task.
+func TestAPromiseFromAQuotedSubjectIsTakenOverOnceWithoutBackslashes(t *testing.T) {
+	subject := `Re: „Angebot“ "Q4"`
+	f := setupTakeOverAbout(t, subject)
+	first, err := f.h.TakeOver(f.priya, f.claim)
+	if err != nil {
+		t.Fatalf("taking over the promise: %v", err)
+	}
+	if _, err := f.h.TakeOver(f.priya, f.claim); err != nil {
+		t.Fatalf("pressing a second time: %v", err)
+	}
+	if n := f.tasks(t); n != 1 {
+		t.Fatalf("two presses wrote %d tasks, want 1", n)
+	}
+	body := f.e.WsScalar(t, `SELECT body FROM activity WHERE id = $1`, ids.UUID(first.TaskActivityId))
+	if want := "Promise taken over from “" + subject + "”. Nobody was asked to keep it."; body != want {
+		t.Errorf("the task body reads %s, want %s", body, want)
+	}
+	if bound := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND system_text ? 'body'`, ids.UUID(first.TaskActivityId)); bound != 1 {
+		t.Error("the task body lost its descriptor, so a German reader would read it in English")
 	}
 }

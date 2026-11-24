@@ -47,20 +47,11 @@ func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID)
 // thing that confirms one is the subject spending a single-use link that was
 // mailed to their own live primary address. Non-DOI paths return nil.
 //
-// The round trip is contact-keyed, so a DOI grant on a lead subject is refused
-// rather than recorded unconfirmed — the lead promotes first, then confirms.
+// A contact and a lead confirm the same way: by spending the link mailed to
+// their own address.
 func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, requiresDOI bool) (*time.Time, error) {
 	if ConsentState(in.NewState) != StateGranted || !requiresDOI {
 		return nil, nil
-	}
-	if sub.entityType != entityContact {
-		return nil, &ValidationError{
-			// The subject, not the purpose: the purpose is fine and the caller
-			// cannot fix it. What they must change is which subject they named,
-			// which is the field consentSubject's own refusals already use.
-			Field:  "subject",
-			Reason: "a double opt-in purpose needs a contact subject; promote the lead before granting it",
-		}
 	}
 	// A mailbox already proven by the single-use link that carried the subject
 	// here answers what the round trip would ask, so the grant confirms on the
@@ -136,11 +127,11 @@ func upsertConsentWithProof(
 	err := tx.QueryRow(ctx, `
 		INSERT INTO consent_event (`+sub.column+`, purpose_id, new_state, lawful_basis, source,
 		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by,
-		                           issuance_trigger, consent_text_version_id, kept_until)
-		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12, $13)
+		                           issuance_trigger, consent_text_version_id, subject_request_id, kept_until)
+		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		RETURNING id`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, in.Source,
 		text, version, doiConfirmedAt, capturedAt, actorID, trigger,
-		zeroUUIDAsNull(in.TextVersionID), keptUntil).Scan(&proofID)
+		zeroUUIDAsNull(in.TextVersionID), zeroUUIDAsNull(in.SubjectRequest), keptUntil).Scan(&proofID)
 	return proofID, err
 }

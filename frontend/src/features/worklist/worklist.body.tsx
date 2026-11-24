@@ -1,10 +1,11 @@
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { rosterOwnerNaming } from "../../components/entityref";
 import { Badge, Button } from "../../design-system/atoms";
 import { PageZones } from "../../design-system/pagezones";
 import { Panel } from "../../design-system/panel";
 import { ScrollSentinel } from "../../design-system/scrollsentinel";
 import { useT } from "../../i18n";
+import { lazy } from "../../i18n/lazy";
 import { useMemberNames } from "../../lib/membernames";
 import type { WorklistView } from "../../lib/worklistviews";
 import {
@@ -14,11 +15,9 @@ import {
 } from "./worklist.bands";
 import { TeamBoard } from "./worklist.board";
 import { useWorklistPicks, WorklistBulkBar } from "./worklist.bulkdone";
-import { clearSentence } from "./worklist.clear";
-import { TeamExceptionsPanel } from "./worklist.exceptions";
+import { clearSentence, offersDecisions } from "./worklist.clear";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
-import { HiddenBacklogPanel } from "./worklist.hidden";
 import { LinkSuggestionsPanel } from "./worklist.linksuggestions";
 import { CoachControl } from "./worklist.manager";
 import { hasPane, WorklistPane } from "./worklist.pane";
@@ -43,7 +42,20 @@ import { rowIdentity } from "./worklist.rowidentity";
 import { TeamMarginceChangesPanel } from "./worklist.teamchanges";
 import { DayUnread, dayPartlyRead } from "./worklist.unread";
 import { UpcomingSection } from "./worklist.upcoming";
+import { decisionsWaiting } from "./worklist.views";
 import { WalkNotice } from "./worklist.walknotice";
+
+// A lead's guardrail below the day, loaded only for a reader who opens "all",
+// so Home's first load does not carry it.
+const HiddenBacklogPanel = lazy(async () => ({
+  default: (await import("./worklist.hidden")).HiddenBacklogPanel,
+}));
+
+// Only a lead sees the team oversight, below the day, so Home's first paint
+// does not carry it.
+const TeamOversight = lazy(async () => ({
+  default: (await import("./worklist.gap")).TeamOversight,
+}));
 
 export function WorklistBody({
   embedded = false,
@@ -153,6 +165,7 @@ export function WorklistBody({
       <div className="worklist-columns">
         <div className="worklist-lanes">
           <WorklistHeader
+            embedded={embedded}
             day={day}
             loaded={queue}
             scope={scope}
@@ -220,7 +233,15 @@ export function WorklistBody({
                 t,
                 hasMore,
                 view,
+                decisionsWaiting(day),
               )}
+              onOpenDecisions={decisionsOffer(day, queue, {
+                hasMore,
+                filter,
+                colleague,
+                view,
+                onView,
+              })}
             />
           ) : (
             // The queue, and beside it what the selected row is about.
@@ -270,9 +291,11 @@ export function WorklistBody({
                   band holding nothing can say so. Ranks are still counted over
                   the whole queue, so a row's number is its place on the page
                   and not its place within its heading. */}
-                    {bandSections(day, queue).map((section) => (
+                    {bandSections(day, queue).map((section, at, all) => (
                       <QueueBand
-                        key={section.band}
+                        // The band and how often it opened before, which a
+                        // row leaving the run does not change.
+                        key={`${section.band}:${all.slice(0, at).filter((earlier) => earlier.band === section.band).length}`}
                         section={section}
                         canReportEmpty={canReportEmptyBands(hasMore)}
                         rows={QueueRows}
@@ -332,16 +355,52 @@ export function WorklistBody({
   );
 }
 
+// The way from an empty Today to the decisions waiting, or nothing to offer.
+function decisionsOffer(
+  day: Worklist,
+  queue: readonly WorklistItem[],
+  at: {
+    hasMore: boolean;
+    filter: WorklistFilter;
+    colleague: string | null;
+    view: WorklistView;
+    onView: (next: WorklistView) => void;
+  },
+): (() => void) | undefined {
+  return offersDecisions(
+    dayPartlyRead(day, queue),
+    at.hasMore,
+    at.filter,
+    at.colleague,
+    at.view,
+    decisionsWaiting(day),
+  )
+    ? () => at.onView("decisions")
+    : undefined;
+}
+
 // A view with no rows says so in one line. An empty Decisions view keeps its
 // domain review launcher.
 function EmptyView({
   view,
   rows,
   sentence,
-}: Readonly<{ view: WorklistView; rows: RowContext; sentence: string }>) {
+  onOpenDecisions,
+}: Readonly<{
+  view: WorklistView;
+  rows: RowContext;
+  sentence: string;
+  onOpenDecisions?: () => void;
+}>) {
+  const t = useT();
   return (
     <>
       <p className="t-body worklist-clear">{sentence}</p>
+      {onOpenDecisions && (
+        <Button onClick={onOpenDecisions}>
+          {t("worklist.clearDecisionsOpen")}
+        </Button>
+      )}
       {view !== "today" && <ViewPanel view={view} items={[]} rows={rows} />}
     </>
   );
@@ -369,11 +428,17 @@ function ScopePanels({
   const wide = scope !== "mine" && scope !== "unassigned" && leads;
   return (
     <>
-      {wide && <TeamExceptionsPanel enabled={leads} onOwner={onOwnerDay} />}
+      {wide && (
+        <Suspense fallback={null}>
+          <TeamOversight scope={scope} enabled={leads} onOwner={onOwnerDay} />
+        </Suspense>
+      )}
       {wide && <TeamMarginceChangesPanel enabled={leads} />}
       {wide && <TeamBoard onOwner={onOwnerDay} onUnassigned={onUnassigned} />}
       {scope === "all" && (
-        <HiddenBacklogPanel enabled={leads} onOpenEmail={onOpenEmail} />
+        <Suspense fallback={null}>
+          <HiddenBacklogPanel enabled={leads} onOpenEmail={onOpenEmail} />
+        </Suspense>
       )}
     </>
   );

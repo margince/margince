@@ -15,6 +15,8 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -36,9 +38,10 @@ var gradingRuleOwners = []struct {
 	{"score.go", []string{
 		"Verdict", "caseOf", "passVetoed", "runLeaked", "leaked", "judgeUpper", "underFloor", "rowCase", "verdictOver", "mechanicalBand",
 		"judgeBand", "marginsOver", "lowerVerdict", "verdictRank", "majorityOf", "judgeMedianAndMin", "medianOf",
+		"caseVerdict", "caseMechanicalBand", "caseJudgeBand",
 	}},
 	{"stats.go", []string{"wilsonBounds", "meanBounds", "meanAndSD", "tQuantile"}},
-	{"adaptive.go", []string{"runRounds", "roundsOf", "firstRunCounts", "nextRunCounts", "caseBorderline", "poolUndecided"}},
+	{"adaptive.go", []string{"runRounds", "roundsOf", "firstRunCounts", "nextRunCounts", "caseBorderline", "poolUndecided", "extendsCase"}},
 	{"run.go", []string{"runEntry"}},
 	{"taskdriver.go", []string{"caseSeeds"}},
 	{"judge.go", []string{"judgeScore", "wantsAnotherOpinion", "nearABand", "absDiff", "foldOpinions", "judgeVerdict"}},
@@ -47,16 +50,38 @@ var gradingRuleOwners = []struct {
 		"certifiedPassPercent", "certifiedPassBoundPercent", "casePassPercent", "vetoPassPercent",
 		"majorityNumerator", "majorityDenominator", "confidenceZ", "tQuantile90", "adaptiveRound", "adaptiveMaxRuns",
 		"reaskBandMargin", "reaskDisagreement", "maxJudgeOpinions", "judgeScoreSDFloor", "privacyMinRuns",
+		"certifiedMinRuns", "minJudgeScores",
 	}},
 }
 
 // gradingRuleDigest hashes each owner's gofmt'd source with comments and blank
 // lines dropped, so rewording a doc comment does not demand a new rule version.
+// Beyond the named owners it hashes what they call, however deep. That means a
+// function called by name, a method called through a selector, and each
+// constant they name. Variables are not walked. The site checks live in one,
+// and they are stamped beside the rule.
 func gradingRuleDigest(t *testing.T) string {
 	t.Helper()
+	digest, _ := gradingRuleClosure(t)
+	return digest
+}
+
+// gradingRuleClosure is the digest and the sorted names it covers.
+func gradingRuleClosure(t *testing.T) (digest string, names []string) {
+	t.Helper()
+	fset := token.NewFileSet()
+	index := indexPackage(t, fset)
 	var material strings.Builder
+	hashed := map[string]bool{}
+	var pending []*ast.FuncDecl
+	write := func(label string, node ast.Node) {
+		var src bytes.Buffer
+		if err := format.Node(&src, fset, node); err != nil {
+			t.Fatalf("formatting %s: %v", label, err)
+		}
+		fmt.Fprintf(&material, "%s\n%s\n", label, dropBlankLines(src.String()))
+	}
 	for _, owner := range gradingRuleOwners {
-		fset := token.NewFileSet()
 		file, err := parser.ParseFile(fset, owner.file, nil, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", owner.file, err)
@@ -67,15 +92,117 @@ func gradingRuleDigest(t *testing.T) string {
 				t.Fatalf("%s no longer declares %s; move it in gradingRuleOwners to where it lives now, "+
 					"or bump gradingRule if the grading rule lost it", owner.file, name)
 			}
-			var src bytes.Buffer
-			if err := format.Node(&src, fset, node); err != nil {
-				t.Fatalf("formatting %s.%s: %v", owner.file, name, err)
+			write(owner.file+"."+name, node)
+			hashed[name] = true
+			if fn, ok := node.(*ast.FuncDecl); ok && !strings.HasPrefix(owner.file, "..") {
+				pending = append(pending, fn)
 			}
-			fmt.Fprintf(&material, "%s.%s\n%s\n", owner.file, name, dropBlankLines(src.String()))
 		}
 	}
+	take := func(label, name, key string, decls []*ast.FuncDecl) {
+		hashed[key] = true
+		for i, decl := range decls {
+			write(fmt.Sprintf("%s.%s.%d", label, name, i), decl)
+			pending = append(pending, decl)
+		}
+	}
+	for len(pending) > 0 {
+		fn := pending[0]
+		pending = pending[1:]
+		ast.Inspect(fn, func(n ast.Node) bool {
+			switch node := n.(type) {
+			case *ast.CallExpr:
+				switch callee := node.Fun.(type) {
+				case *ast.Ident:
+					if !hashed[callee.Name] && index.funcs[callee.Name] != nil {
+						take("callee", callee.Name, callee.Name, index.funcs[callee.Name])
+					}
+				case *ast.SelectorExpr:
+					if !hashed["."+callee.Sel.Name] && index.methods[callee.Sel.Name] != nil {
+						take("method", callee.Sel.Name, "."+callee.Sel.Name, index.methods[callee.Sel.Name])
+					}
+				}
+			case *ast.Ident:
+				if spec := index.consts[node.Name]; spec != nil && !hashed[node.Name] {
+					hashed[node.Name] = true
+					write("const."+node.Name, spec)
+				}
+			}
+			return true
+		})
+	}
+	for name := range hashed {
+		names = append(names, name)
+	}
+	slices.Sort(names)
 	sum := sha256.Sum256([]byte(material.String()))
-	return hex.EncodeToString(sum[:])
+	return hex.EncodeToString(sum[:]), names
+}
+
+// packageIndex is this package's non-test declarations by name, for the walk
+// from the owners to what they use.
+type packageIndex struct {
+	funcs, methods map[string][]*ast.FuncDecl
+	consts         map[string]ast.Node
+}
+
+func indexPackage(t *testing.T, fset *token.FileSet) packageIndex {
+	t.Helper()
+	paths, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatalf("listing the package: %v", err)
+	}
+	index := packageIndex{funcs: map[string][]*ast.FuncDecl{}, methods: map[string][]*ast.FuncDecl{}, consts: map[string]ast.Node{}}
+	for _, path := range paths {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		for _, decl := range file.Decls {
+			switch d := decl.(type) {
+			case *ast.FuncDecl:
+				if d.Recv == nil {
+					index.funcs[d.Name.Name] = append(index.funcs[d.Name.Name], d)
+				} else {
+					index.methods[d.Name.Name] = append(index.methods[d.Name.Name], d)
+				}
+			case *ast.GenDecl:
+				for _, spec := range d.Specs {
+					if value, ok := spec.(*ast.ValueSpec); ok && d.Tok == token.CONST {
+						for _, ident := range value.Names {
+							index.consts[ident.Name] = value
+						}
+					}
+				}
+			}
+		}
+	}
+	return index
+}
+
+// The walk follows calls, not mentions. A built-in that shares a method's name
+// then cannot drag the runner, the journal or the report into the grading rule.
+// A change to any of those would otherwise ask for a bump, and a bump stales
+// every record.
+func TestTheGradingRuleDigestCoversWhatGradingCallsAndNothingMore(t *testing.T) {
+	_, names := gradingRuleClosure(t)
+	for _, want := range []string{"shortOnlyOfScores", "asFloats", "VerdictCertified"} {
+		if !slices.Contains(names, want) {
+			t.Errorf("the digest does not cover %s, which grading uses", want)
+		}
+	}
+	for _, unrelated := range []string{"Run", "LoadRecords", "WriteRecord", "Readiness", "scenarioStampsUnder", "main"} {
+		if slices.Contains(names, unrelated) {
+			t.Errorf("the digest covers %s, so editing it would stale every record", unrelated)
+		}
+	}
+	if len(names) > 150 {
+		t.Errorf("the digest covers %d declarations; the walk has grown past the grading code", len(names))
+	}
+	t.Logf("the digest covers %d declarations", len(names))
 }
 
 // findTopLevelDecl answers the function or the single const/var/type spec named
@@ -151,43 +278,7 @@ type ruleExtension struct {
 	rule, from, to, reason string
 }
 
-var gradingRuleExtensions = []ruleExtension{{
-	rule: "grading-rule-10",
-	from: "539b61f18ec18e023ba919a2a905bf16287c6fd51f0b893d4516eb80539a398f",
-	to:   "4c0bc17b36bbc1b3981e35d1e2bab3918468320d3e63febafcff39ac9fd706e9",
-	reason: "runEntry scores an answer the upstream broke off as invalid; before it, such a run " +
-		"stopped its task with no record, so no committed record holds one",
-}, {
-	rule: "grading-rule-10",
-	from: "4c0bc17b36bbc1b3981e35d1e2bab3918468320d3e63febafcff39ac9fd706e9",
-	to:   "24f40de72b17dcb6aa8127eb322982402bad1bc23bb17bfa463c52dd710b7fdf",
-	reason: "runRounds hands each round to roundsOf whole so its runs can be scored concurrently; " +
-		"the runs each round asks for, and the order their results join a case, are unchanged",
-}, {
-	rule: "grading-rule-10",
-	from: "24f40de72b17dcb6aa8127eb322982402bad1bc23bb17bfa463c52dd710b7fdf",
-	to:   "003b33363e9f7ff49dffd05019c3b075bc0fecefdaf02ade420501349af2fba5",
-	reason: "leaked fails a privacy case on any failed run and reads only the row's privacy flag; " +
-		"no committed row carries one, and setting it moves the case stamp, so the old row reads stale",
-}, {
-	rule: "grading-rule-10",
-	from: "003b33363e9f7ff49dffd05019c3b075bc0fecefdaf02ade420501349af2fba5",
-	to:   "5908d46ee2b29fa1a3e8a853a0aaacde3fc8cb527a23e2a88ff419fd9d34e645",
-	reason: "firstRunCounts gives a privacy case privacyMinRuns runs and every other case the runs it had; " +
-		"a privacy case's stamp now carries privacyMinRuns, so its records measured under fewer runs read stale",
-}, {
-	rule: "grading-rule-10",
-	from: "5908d46ee2b29fa1a3e8a853a0aaacde3fc8cb527a23e2a88ff419fd9d34e645",
-	to:   "7f51f81520416188d4661ac0f1b22b2bc625d929b3980ef1a0778a87811253da",
-	reason: "runLeaked vetoes a privacy case only on a run that broke a privacy check, counted into a row's leaks; " +
-		"no committed row has that count, and leaked reads a row without it by the rule it was graded under",
-}, {
-	rule: "grading-rule-10",
-	from: "7f51f81520416188d4661ac0f1b22b2bc625d929b3980ef1a0778a87811253da",
-	to:   "312f8259bbf93c5fe44d0eb86faa7f98d014a23be89d4f36d800b314c7a8861c",
-	reason: "runLeaked excuses an abstained run as it does a refused one, since neither reaches a reader; " +
-		"no committed row counts an abstained run in its leaks",
-}}
+var gradingRuleExtensions = []ruleExtension{}
 
 // extendedDigest is the digest the golden's version accepts once every
 // extension recorded for that version is applied in order.

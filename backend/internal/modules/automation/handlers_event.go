@@ -311,6 +311,8 @@ func (stageChangeNotify) Spec() workflow.Spec {
 		Name:    stageChangeNotifyName,
 		Trigger: workflow.Trigger{EventType: eventDealStageChanged},
 		Tier:    mcp.TierAutoExecute,
+		// The notice carries the handler's idempotency key as its dedupe key.
+		ReplaysAfterFailedApply: true,
 	}
 }
 

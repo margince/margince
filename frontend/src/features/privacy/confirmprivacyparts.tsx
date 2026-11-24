@@ -29,7 +29,7 @@ export const BASIS_LABEL: Readonly<
   legal_obligation: "privacynotice.basis.legalObligation",
   vital_or_security_interest: "privacynotice.basis.vitalOrSecurity",
   existing_customer_exception: "privacynotice.basis.existingCustomer",
-  vn_subject_agreement: "privacynotice.basis.vnAgreement",
+  none: "privacynotice.basis.none",
 };
 
 const CATEGORY_LABEL: Readonly<
@@ -141,10 +141,12 @@ export function HeldCard({ card }: Readonly<{ card: PrivacyInformationPage }>) {
   );
 }
 
-/** The retention rules that act on the reader's data, then the rest. */
+/** The retention rules that act on the reader's data, then the rest. The
+ * archive names the installation's stated purpose, or the default one. */
 export function RetentionCard({
   retention,
-}: Readonly<{ retention: readonly Retention[] }>) {
+  archivePurpose,
+}: Readonly<{ retention: readonly Retention[]; archivePurpose?: string }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -175,6 +177,8 @@ export function RetentionCard({
               {t(labelFor(ACTION_LABEL, rule.action), {
                 scope: t(scope),
                 days: windowOf(rule.retain_days),
+                purpose:
+                  archivePurpose ?? t("privacynotice.retention.archivePurpose"),
               })}
             </li>
           ))}

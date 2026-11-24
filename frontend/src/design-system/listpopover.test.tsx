@@ -11,6 +11,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "./debouncedsearch";
 import { ListPopover, type ListPopoverOption } from "./listpopover";
@@ -407,6 +408,25 @@ describe("ListPopover on a desktop", () => {
     expect(screen.getByText("Ask an admin to add one.")).toBeTruthy();
   });
 
+  it("says an empty vocabulary has nothing yet until a term is typed", async () => {
+    const user = userEvent.setup();
+    render(
+      <ListPopover
+        label="Add tag"
+        title="Tags"
+        searchLabel="Search tags"
+        options={[]}
+        empty="No tag with that name."
+        none="No tags yet."
+        onPick={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Add tag" }));
+    expect(liveRegion()?.textContent).toBe("No tags yet.");
+    await user.type(screen.getByRole("combobox"), "vip");
+    expect(liveRegion()?.textContent).toBe("No tag with that name.");
+  });
+
   it("follows a caller that holds the open state", async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
@@ -636,5 +656,68 @@ describe("ListPopover on a phone", () => {
     render(owners(vi.fn()));
     await user.click(screen.getByRole("button", { name: "Assign owner" }));
     expect(screen.getByRole("dialog").getAttribute("aria-modal")).toBe("true");
+  });
+});
+
+// The section's Edit link stands in for the trigger.
+function OpenedByCaller({ onPick }: Readonly<{ onPick: () => void }>) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        Edit Ownership
+      </button>
+      <ListPopover
+        opener="caller"
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Change owner"
+        searchLabel="Search colleagues"
+        options={OWNERS}
+        onPick={(_, done) => {
+          onPick();
+          done();
+        }}
+      />
+    </>
+  );
+}
+
+describe("ListPopover opened by a caller", () => {
+  it("draws no trigger, opens as a sheet on a desktop, and hands focus back after a pick", async () => {
+    stubWidth(1440);
+    const onPick = vi.fn();
+    const user = userEvent.setup();
+    render(<OpenedByCaller onPick={onPick} />);
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+
+    const edit = screen.getByRole("button", { name: "Edit Ownership" });
+    await user.click(edit);
+    const sheet = screen.getByRole("dialog", { name: "Change owner" });
+    expect(sheet.getAttribute("aria-modal")).toBe("true");
+    expect(document.activeElement).toBe(screen.getByRole("combobox"));
+
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(onPick).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(edit);
+  });
+
+  it("closes on Escape through the caller, handing focus back to its control", async () => {
+    stubWidth(390);
+    const user = userEvent.setup();
+    render(<OpenedByCaller onPick={vi.fn()} />);
+    const edit = screen.getByRole("button", { name: "Edit Ownership" });
+    await user.click(edit);
+    expect(
+      screen
+        .getByRole("dialog", { name: "Change owner" })
+        .getAttribute("aria-modal"),
+    ).toBe("true");
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(edit);
   });
 });

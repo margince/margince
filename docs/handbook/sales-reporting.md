@@ -196,7 +196,14 @@ Select an edition in the history to see the values, targets, graphs and records 
 
 ## How do I set targets or export figures?
 
-Open **Targets** and choose a figure that takes a target: sales won, qualified pipeline created, meetings held, accepted opportunities, leads qualified or partner pipeline. Select the owner or team, and month or fiscal quarter. A sales or partner figure can also be held to one pipeline; a lead or SDR figure counts every pipeline.
+Open **Targets** and choose a figure that takes a target. Sales won, qualified pipeline created, meetings held, accepted opportunities and leads qualified take one. So do partner pipeline, introductions made and meetings booked for colleagues. Select the owner or team, and month or fiscal quarter. A sales or partner pipeline figure can also be held to one pipeline. Every other figure counts every pipeline.
+
+Two of these figures count work done for colleagues:
+
+- **Introductions made**: the introductions a colleague made between another colleague and a contact. An asked introduction counts on the day it was completed. One recorded afterwards counts on the day it was recorded, not on the date it names. Permission to mention a name does not count.
+- **Meetings booked for colleagues**: the meetings a colleague booked, or had an agent book, for another colleague to host. They count for the colleague who booked them, on the day of booking. A meeting you host yourself does not count. Neither does a meeting entered after it took place, an imported one, or one from a transcript, a calendar sync or a public booking page. A booking cancelled later still counts.
+
+An introduction someone asked for is visible only to the two colleagues in it. For anyone else it is left out of these figures.
 
 Choose a year and a first month; only months that can start a fiscal quarter are offered. Each new version needs a reason. Filter the list by active or retired status and by first month. The team target stays apart from the targets of each member; the difference shows as **Unallocated** or **Overallocated**. A member with no target of their own counts with their published sales goals.
 
@@ -204,7 +211,11 @@ Published sales goals show in the list as one row per team member. **Open sales 
 
 A team lead, management or an admin sets targets. Every other seat with access to **Targets** sees its own targets, the targets of its teams and the company targets. It sees no button to add one. When none is set yet, the list says who sets them. Your own progress shows under **Analytics** → **My outcomes**.
 
-Use **Export CSV**, next to **Save report**, for the report's numbers of today. Export a fixed edition for the numbers and question answers it stored. The `label` column names each figure as the screen does, in your language. The `metric` column keeps a fixed id that stays the same in every language. An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
+Use **Export CSV**, next to **Save report**, for the report's numbers of today. Export a fixed edition for the numbers and question answers it stored. The `label` column names each figure as the screen does, in your language. The `metric` column keeps a fixed id that stays the same in every language. Amounts are in whole currency units with the currency beside them, such as `17100.55` and `EUR`. The file is named for the scope, period and day, such as `reporting-team-this-quarter-2026-11-18.csv`.
+
+An edition with the **Assessment** card has one row for it, with `assessment` in the `metric` column and `not_exported` as its coverage. The file holds the figures the summary is written from, and the summary itself is on the page.
+
+An export follows the same permissions and the same limits as the screen. For a report you build yourself, open **Reports** → **New custom report** or ask your connected AI to report through Margince.
 
 Any user who reads a report can see the definitions of its numbers. Admins open **Reporting setup** on its own to set up qualifying stages and the daily history of the pipeline.
 

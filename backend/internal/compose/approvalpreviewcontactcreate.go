@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -31,6 +32,15 @@ func contactCreationRequest(approval crmcontracts.Approval) (contacts.CreateCont
 
 func (r approvalPreviewReader) contactCreationPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
 	in, err := contactCreationRequest(approval)
+	if detailed, ok := errors.AsType[*httperr.DetailedError](err); ok {
+		for _, field := range detailed.Fields {
+			if field.Code == "contact_channel_required" {
+				out.State = previewIncompleteState
+				out.Conflicts = &[]crmcontracts.ApprovalPreviewConflict{{Kind: field.Code, Summary: field.Message, BlocksApproval: true}}
+				return out, nil
+			}
+		}
+	}
 	if previewUnavailable(err) {
 		return out, nil
 	}

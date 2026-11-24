@@ -36,6 +36,11 @@
   overflow-wrap: anywhere;
 }
 
+/* A help mark after a term keeps a gap from its last word. */
+.factlist-term .info-tip {
+  margin-inline-start: var(--space-1);
+}
+
 .factlist-value {
   /* The UA gives `dd` a 40px inline start margin. In a grid it is not an
    * indent, it is a second gutter nobody asked for. */
@@ -97,12 +102,15 @@
 .factlist-flat .factlist-row:not(.factlist-row-block) .factlist-value {
   overflow-wrap: anywhere;
 }
-/* An inline glyph or an edit pill's fill overhangs the value; keep it unclipped. */
+/* An inline glyph, an edit pill's fill or a button's focus ring overhangs the
+   value; keep it unclipped. */
 .factlist-flat
 .factlist-value:has(
   .icon-action-inline,
   .overflow-menu-inline,
-  .editable-value
+  .editable-value,
+  .btn,
+  .link-button
 ) {
   overflow: visible;
 }
@@ -118,6 +126,8 @@
 .factlist-flat .factlist-row-block .factlist-term {
   padding-block: 0;
 }
+/* A block value is prose someone wrote, so its line breaks are kept. */
 .factlist-flat .factlist-row-block .factlist-value {
   overflow: visible;
+  white-space: pre-line;
 }

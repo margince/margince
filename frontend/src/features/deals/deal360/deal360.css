@@ -85,11 +85,12 @@
 /* The Overview's cards in the design's two columns. Each column stacks on
    its own, so a tall card on one side leaves no gap on the other. The column
    floor is what the committee's picture needs to name a seat without cutting
-   it, so a narrower sheet stacks the columns instead. */
+   it, so a narrower sheet stacks the columns instead, each as wide as the sheet. */
 .deal-overview-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
   align-items: start;
 }
 

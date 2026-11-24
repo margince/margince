@@ -203,41 +203,45 @@ class ToolGuardCase(unittest.TestCase):
 
     scenario = ""
 
+    def assert_held_by_the_end_state(self, *entries):
+        """The outcome is pinned on the records the run leaves, not on the call
+        that wrote them, so a value saved wrong fails there."""
+        declared = check.parse_scenario(os.path.join(SCENARIOS, self.scenario)).get("must_end_with", [])
+        for entry in entries:
+            self.assertIn(entry, declared)
+
     def problems(self, calls, answer="Done."):
         with tempfile.NamedTemporaryFile("w", suffix=".jsonl", delete=False, encoding="utf-8") as stream:
             path = stream.name
         self.addCleanup(os.unlink, path)
         with transcript.Transcript(path) as out:
             out.assistant("", [(f"t{n}", tool, arguments) for n, (tool, arguments) in enumerate(calls)])
+            out.tool_results([(f"t{n}", "{}", False) for n in range(len(calls))])
             out.assistant(answer)
             out.finish(False, answer, 1)
         return check.check(guards(self.scenario), path)
 
 
 class MyHoursAndMyLanguageTest(ToolGuardCase):
-    scenario = "case115-my-hours-and-my-language.yaml"
+    scenario = "case109-my-hours-zone-and-language.yaml"
+    zone = ("change_my_settings", {"action": "save_timezone", "request_body": {
+        "timezone": "Europe/Lisbon", "source": "agent"}})
     hours = ("change_my_settings", {"action": "save_working_hours", "request_body": {
         "days": [1, 2, 3, 4], "start_time": "09:00", "end_time": "17:00"}})
     german = ("change_my_settings", {"action": "save_locale", "request_body": {"locale": "de"}})
 
     def test_saving_both_for_this_user_passes(self):
-        self.assertEqual(self.problems([self.hours, self.german]), [])
+        self.assertEqual(self.problems([self.zone, self.hours, self.german]), [])
 
-    def test_another_language_fails(self):
-        french = ("change_my_settings", {"action": "save_locale", "request_body": {"locale": "fr"}})
-        self.assertTrue(self.problems([self.hours, french]))
-
-    def test_friday_left_in_fails(self):
-        five = ("change_my_settings", {"action": "save_working_hours", "request_body": {
-            "days": [1, 2, 3, 4, 5], "start_time": "09:00", "end_time": "17:00"}})
-        self.assertTrue(self.problems([five, self.german]))
-
-    def test_only_one_of_the_two_fails(self):
-        self.assertTrue(self.problems([self.german]))
-        self.assertTrue(self.problems([self.hours]))
-
+    def test_another_language_is_held_by_the_end_state(self):
+        self.assert_held_by_the_end_state('me "admin@demo.test" locale=de')
+    def test_friday_left_in_is_held_by_the_end_state(self):
+        self.assert_held_by_the_end_state('me "admin@demo.test" working_days=1,2,3,4')
+    def test_each_of_the_three_is_held_by_the_end_state(self):
+        self.assert_held_by_the_end_state('me "admin@demo.test" timezone=Europe/Lisbon', 'me "admin@demo.test" locale=de',
+                                          'me "admin@demo.test" working_hours=09:00-17:00')
     def test_the_whole_company_setting_fails(self):
-        self.assertTrue(self.problems([self.hours, self.german, ("change_settings", {"action": "x"})]))
+        self.assertTrue(self.problems([self.zone, self.hours, self.german, ("change_settings", {"action": "x"})]))
 
 
 class CountThatStageAsWonTest(ToolGuardCase):

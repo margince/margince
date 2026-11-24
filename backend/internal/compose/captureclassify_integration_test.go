@@ -345,9 +345,8 @@ func TestCaptureClassifyPass(t *testing.T) {
 	})
 
 	t.Run("a batch that cannot clear the floor ends the pass, not the worker", func(t *testing.T) {
-		// Every verdict — batch and solo — stays below the floor: nothing
-		// commits, and Run must still terminate instead of refetching the
-		// same rows forever.
+		// Every verdict (batch and solo) stays below the floor: no label
+		// commits, the row is stamped, and Run terminates.
 		brain.budgetOut = false
 		brain.soloStaysLow = true
 		stuck := seedUnlabeledEmail(t, e, "???")
@@ -359,9 +358,8 @@ func TestCaptureClassifyPass(t *testing.T) {
 		if l := labelOf(t, e, stuck); l != nil {
 			t.Fatal("a below-floor row must stay unlabeled")
 		}
-		// One pass over the leftover backlog labels what it can, then the
-		// stuck row's batch+solo repeat once and the loop breaks — a
-		// bounded handful of calls, never an unbounded refetch spin.
+		// One pass over the leftover backlog labels what it can. It asks the
+		// stuck row in its batch and once alone, a bounded handful of calls.
 		if brain.calls-before > 4 {
 			t.Fatalf("model calls = %d for one no-progress pass — the loop is refetching", brain.calls-before)
 		}
@@ -684,5 +682,59 @@ func TestAVerdictAboutAnEditedMessageStoresNeitherLabelNorReply(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND capture_label IS NULL`, edited); n != 1 {
 		t.Error("the edited message was labelled from the text the model read")
+	}
+}
+
+func TestABatchOfOnlyBadAnswersDoesNotStarveTheMessagesBehindIt(t *testing.T) {
+	e := integration.Setup(t)
+	confidence := map[string]float64{}
+	var bad []ids.UUID
+	for i := range classifyBatchSize {
+		subject := fmt.Sprintf("ninety percent %d", i)
+		confidence[subject] = 90
+		bad = append(bad, seedUnlabeledEmail(t, e, subject))
+	}
+	later := seedUnlabeledEmail(t, e, "after the bad batch")
+	brain := &scriptedClassifyBrain{confidence: confidence}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("a bad confidence failed the pass: %v", err)
+	}
+	if labelOf(t, e, later) == nil {
+		t.Error("the message behind a batch of bad answers was never reached")
+	}
+	for _, id := range bad {
+		if l := labelOf(t, e, id); l != nil {
+			t.Errorf("an out-of-range answer was stored as %q", *l)
+		}
+	}
+	calls := brain.calls
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("next pass: %v", err)
+	}
+	if brain.calls != calls {
+		t.Errorf("the next pass made %d model calls; a message already retried alone must leave the backlog", brain.calls-calls)
+	}
+}
+
+func TestOneBadAnswerKeepsTheOtherLabelsInItsBatch(t *testing.T) {
+	e := integration.Setup(t)
+	first := seedUnlabeledEmail(t, e, "first")
+	percent := seedUnlabeledEmail(t, e, "ninety percent")
+	third := seedUnlabeledEmail(t, e, "third")
+	brain := &scriptedClassifyBrain{confidence: map[string]float64{"ninety percent": 90}}
+	classifier := NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
+
+	if err := classifier.RunWorkspace(asClassifyPass(e), 0); err != nil {
+		t.Fatalf("a bad confidence failed the pass: %v", err)
+	}
+	for name, id := range map[string]ids.UUID{"first": first, "third": third} {
+		if labelOf(t, e, id) == nil {
+			t.Errorf("%s lost its label to its neighbour's bad confidence", name)
+		}
+	}
+	if l := labelOf(t, e, percent); l != nil {
+		t.Errorf("the out-of-range answer was stored as %q", *l)
 	}
 }

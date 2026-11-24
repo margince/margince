@@ -27,7 +27,9 @@ it("asks for customer payments only once the day's own reads have answered", asy
   const calls = stubApi({
     "GET /me": () =>
       jsonResponse(
-        meFixture({ allow: { company: ["read"], finance: ["read"] } }),
+        meFixture({
+          allow: { company: ["read"], deal: ["read"], finance: ["read"] },
+        }),
       ),
     "GET /magic": () =>
       new Promise<Response>((resolve) => {

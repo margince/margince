@@ -4,7 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { removeStored, STORAGE_KEYS } from "../lib/storage";
-import { meFixture } from "../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
 import { recordNamesRoutes } from "../testing/recordnames.testkit";
 import {
   installFetchStub,
@@ -67,7 +67,9 @@ const COMMANDS: Command[] = [
   },
 ];
 
-function palette(hits: () => Response | Promise<Response>) {
+function palette(
+  hits: (body: unknown, url: URL) => Response | Promise<Response>,
+) {
   removeStored(STORAGE_KEYS.paletteRecents);
   installFetchStub({ "GET /search": hits, "GET /me": meRoute({}) });
   return (
@@ -87,7 +89,7 @@ const type =
   (query: string) =>
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByRole("searchbox"), query);
+    await userEvent.type(canvas.getByRole("combobox"), query);
   };
 
 // Opened, nothing typed: the whole command list, which is what ⌘K shows first.
@@ -122,7 +124,10 @@ function CreatePalette() {
 export const CreateOnly: Story = {
   render: () => {
     removeStored(STORAGE_KEYS.paletteRecents);
-    installFetchStub({ "GET /search": noHits, "GET /me": meRoute({}) });
+    installFetchStub({
+      "GET /search": noHits,
+      "GET /me": meRoute(READS_RECORDS),
+    });
     return (
       <StoryProviders>
         <CreatePalette />
@@ -139,7 +144,7 @@ export const CreateOnly: Story = {
       "New project",
     ]) {
       await expect(
-        await canvas.findByRole("button", { name: new RegExp(label) }),
+        await canvas.findByRole("option", { name: new RegExp(label) }),
       ).toBeInTheDocument();
     }
     await expect(canvas.queryByText("Ask your documents")).toBeNull();
@@ -156,6 +161,42 @@ export const CreateOnlyDark: Story = {
 // however much higher it ranked: relevance does not compare across kinds, and
 // a short list ranked across them used to be all mail and no company. A
 // contact found only through the account says so, under the record's mark.
+const DEAL_HITS = [
+  {
+    type: "deal",
+    id: "d1",
+    title: "Fleet renewal 2027",
+    standing: {
+      state: "open",
+      stage: "Negotiation",
+      amount_minor: 42_000_000,
+      currency: "EUR",
+      due_on: "2026-12-12",
+    },
+  },
+  {
+    type: "deal",
+    id: "d2",
+    title: "Service contract 2026",
+    standing: {
+      state: "won",
+      stage: "Closed won",
+      amount_minor: 6_400_000,
+      currency: "EUR",
+    },
+  },
+  {
+    type: "deal",
+    id: "d3",
+    title: "Scrubber pilot, Hall 4",
+    standing: {
+      state: "open",
+      stage: "Proposal",
+      masked_fields: ["amount_minor", "currency"],
+    },
+  },
+];
+
 export const WithRecordHits: Story = {
   render: () =>
     palette(() =>
@@ -172,7 +213,15 @@ export const WithRecordHits: Story = {
               counterparty: "Dana Buyer",
             },
           },
-          { type: "contact", id: "p1", title: "Dana Buyer" },
+          {
+            type: "contact",
+            id: "p1",
+            title: "Dana Buyer",
+            standing: {
+              job_title: "Chief financial officer",
+              last_activity_at: "2026-09-01T09:15:00Z",
+            },
+          },
           {
             type: "contact",
             id: "p2",
@@ -187,6 +236,21 @@ export const WithRecordHits: Story = {
               "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='8' width='48' height='48' rx='10' fill='%230e7490'/%3E%3C/svg%3E",
           },
           { type: "company", id: "o2", title: "Brandt GmbH", is_partner: true },
+          ...DEAL_HITS,
+          {
+            type: "lead",
+            id: "l1",
+            title: "Acme Robotics",
+            snippet: "Acme Robotics AG",
+            standing: { state: "new" },
+          },
+          {
+            type: "project",
+            id: "j1",
+            title: "Scrubber rollout",
+            snippet: "ACME-12 · Acme GmbH",
+            standing: { state: "delivering", due_on: "2027-01-30" },
+          },
           {
             type: "product",
             id: "pr1",
@@ -200,6 +264,32 @@ export const WithRecordHits: Story = {
       }),
     ),
   play: type("acme"),
+};
+
+export const WithRecordHitsDark: Story = {
+  ...WithRecordHits,
+  globals: { theme: "dark" },
+};
+
+// Narrowed to one type, the list asks for more of it and holds nothing else.
+// The strip keeps every type's count from the whole answer.
+export const NarrowedToDeals: Story = {
+  render: () =>
+    palette((_, url) =>
+      jsonResponse({
+        data: url.searchParams.has("types")
+          ? DEAL_HITS
+          : [{ type: "contact", id: "p1", title: "Dana Buyer" }, ...DEAL_HITS],
+        page: { next_cursor: null, has_more: false },
+        types_with_more: url.searchParams.has("types") ? [] : ["deal"],
+      }),
+    ),
+  play: async (context) => {
+    await type("acme")(context);
+    const canvas = within(context.canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: /Deals/ }));
+    await canvas.findByText("Fleet renewal 2027");
+  },
 };
 
 // The wait, which is held back 300ms before it draws: a placeholder that
@@ -244,7 +334,7 @@ export const IdentifierBestMatch: Story = {
     ),
   play: async ({ canvasElement }) => {
     await userEvent.type(
-      within(canvasElement).getByRole("searchbox"),
+      within(canvasElement).getByRole("combobox"),
       "lena@exam",
     );
     await within(canvasElement).findByText("Best match");

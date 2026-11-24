@@ -10,5 +10,6 @@ func fixedPrivacyReasons() []string {
 		"retention", "test", "dsr_request", restrictionExpiredCause,
 		untoldLeadReason, subjectRedactionReason, aLegalHoldEnded.collateralReason,
 		theClockRanOut.collateralReason, aControllerDecided.collateralReason, aNoiseVerdictHid.collateralReason,
+		aControllerReviewedArchive.collateralReason,
 	}
 }

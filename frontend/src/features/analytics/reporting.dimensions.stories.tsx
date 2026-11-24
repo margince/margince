@@ -122,3 +122,17 @@ export const ChipForAProductTheCatalogCannotName: Story = {
     );
   },
 };
+
+/** With no product or initiative, the profile chip names the scope it reads. */
+export const ProfileChipForEachScope: Story = {
+  render: () => {
+    catalog(PRODUCTS);
+    return (
+      <StoryProviders>
+        <Chips initial={{ ...base, scope: { kind: "workspace" } }} />
+        <Chips initial={{ ...base, scope: { kind: "team", id: "t-north" } }} />
+        <Chips initial={{ ...base, scope: { kind: "owner", id: "maya" } }} />
+      </StoryProviders>
+    );
+  },
+};

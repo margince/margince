@@ -1,14 +1,48 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/modules/assurance/rules.go backend/internal/compose/assurancebundle.go backend/internal/compose/viabilitytasks/viabilitytasks.go backend/internal/compose/dealcloselost.go frontend/src/features/deals/deal360/dealmarginceline.tsx backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts backend/internal/modules/activities/dealrelevance.go frontend/src/features/records/dealdecline.tsx backend/internal/modules/deals/closereoffer.go backend/internal/compose/jobs_dealbackfill.go backend/internal/modules/deals/proposalstage.go -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
 anything lately? It counts the days since the customer last wrote to you, or
 since your last meeting with them took place. Mail you sent, a field you changed
 and a task do not count. A reply that turns the deal down does not count either.
+Mail on a thread Margince holds as personal does not count either, and does
+not keep the deal open. A meeting marked private in your calendar still counts.
 
 Margince asks nobody to review such a deal. It closes the deal itself, as
 below, and you can undo that.
+
+## When an activity is not about the deal
+
+A mail or a meeting can be on a deal and still not be about it. Think of a
+visit to a friend who works at the customer. On the deal's **History**, open
+**More actions** on that row and choose **Not about this deal**.
+
+The row stays on the deal and shows the mark **Not about this deal**. It no
+longer counts for the deal's last activity date or for a quiet or stalled deal.
+A coming meeting marked so does not hold the deal open, and it is not customer
+progress. To make it count again, choose **Undo** in the message that follows,
+or **About this deal** on the row.
+
+Margince may not be sure that an older mail it filed by itself is about the
+deal. It then marks the row **Maybe not about this deal**. That row does not
+count either, until you choose **About this deal**. On its own, it never closes
+a deal. Margince never changes a mark you set, and a new import keeps
+it. You decide each row by itself, even for a meeting that repeats.
+
+## When the close date or the next step does not hold
+
+The check also asks whether the deal has a close date and a next step the
+customer backs. A close date does not hold when it is missing or has passed,
+when nobody confirmed it, or when the customer has gone quiet. A wait the customer
+asked for counts as the next step. So does a meeting they accepted.
+
+The forecast checks may still list a past close date, one nobody confirmed, or
+a missing next step, so you can see why. Margince files no task for them. Fix the
+date or plan the next step on the deal, and the next check clears them. An
+open task Margince filed earlier for nothing but these is marked done once. When
+Margince could not read the mailboxes on the deal, it cannot judge the
+customer's side. The check then files its task as before.
 
 ## When the customer stops answering for 120 days
 
@@ -29,22 +63,33 @@ Margince closes a deal only when all of these hold:
   a colleague's included.
 - The deal is not on legal hold.
 - No wait the customer asked for, and no meeting they accepted, is still to come.
-- No message on the deal is still waiting for your reply. This is the same
-  check that shows **Team reply owed** on the deal.
+- No customer request on the deal is still open. A request stays open after
+  you reply, until its reminder is marked done.
 
 A message from the customer that only its participants can see also keeps the
 deal open. Margince reads only its date.
 
-Margince closes the deal for its owner. The close shows on the owner's **Home**
-under **Done for you**, with the reason and **Undo**. When the customer said no,
-it also links the message Margince read as the no, for each reader who may open
-that message. It stays there for 7 days unless the owner undoes it. The deal's
-timeline gets a note about the close, which points to **Done for you** for that
-message.
+Margince closes no quiet deal until it has checked, once, the mail of the
+deal's stakeholders from the last 120 days (the value of `deals.silent_close_days`).
+That mail may never have reached the deal, for example because the contact
+joined the deal after it arrived. Margince files it by the rules in [Why was my
+email not linked to a deal?](capture.md#why-was-my-email-not-linked-to-a-deal).
+
+That mail may show that a close from the last 120 days was wrong. The
+close then comes back under **Done for you** with **Undo**, even after its 7
+days. A note on the deal says why. A refusal from the customer still closes the deal at once.
+
+Margince closes the deal for its owner. A line under the deal's header says
+that Margince closed it, why, and offers **Undo**. When the customer said no, the
+line also links the message Margince read as the no, for each reader who may
+open that message. The close also shows on the owner's **Home** under
+**Done for you** for 7 days, and the deal's History note about the close carries
+**Undo** too. All three press the same Undo.
 
 **Undo** puts the deal back in the stage it was closed from. Changes made to the
-deal since the close stay as they are. Undo is refused when someone moved the
-deal to another stage after the close.
+deal since the close stay as they are. It stays possible until someone moves the
+deal to another stage or edits a field the close changed. After that, the line
+under the header offers **Reopen** instead.
 
 After an Undo, add a note on why the deal is still open. A note, a logged call
 or a meeting after the Undo starts the 120 days again. With none, Margince
@@ -54,8 +99,14 @@ To stop it for your own deals, turn off **Close silent deals as lost** among
 the automatic changes. [Approvals](approvals.md) says where the switches are.
 
 ### Why did Margince close my deal as lost, and how do I undo it?
-Margince closes an open deal as lost, with the reason **Stopped responding**, after 120 days with no word from the customer. To undo it, open **Home**, find the deal under **Done for you** and choose **Undo** within 7 days. To stop it for your own deals, turn off **Close silent deals as lost** among the automatic changes.
+Margince closes an open deal as lost, with the reason **Stopped responding**, after 120 days with no word from the customer. To undo it, open the deal and choose **Undo** in the line under its header, or on the close note in **History**. It works until someone moves the deal or edits a field the close changed; after that the line offers **Reopen**. Home lists the close for 7 days with the same **Undo**. To stop it for your own deals, turn off **Close silent deals as lost** among the automatic changes.
 Also called: deal closed automatically, auto-lost, reopen a deal Margince closed, why is my deal lost.
+
+### What does "You replied" on a deal mean?
+A customer's request on a deal stays open after you reply. A reply such as "Thanks, I will check" may not answer it. While your reply is the newest message on the request's thread, the deal says **You replied** with the date, not **Your move**. When a colleague replied, it says **Your team replied**. A reply that never reached them, or came back, does not count.
+
+**Team reply owed** does not show then, and History no longer marks the request **Needs reply**. If Margince found that the request still asks for something, the deal quotes it. If you may change the request's reminder, the **Next** bar offers **Done**, which marks it done and closes the request. A new message from the customer on that thread makes it your move again. A deal that has gone quiet still says so first.
+Also called: already answered, reply sent, close the reminder.
 
 ## When the customer names a date, a price or a decision
 
@@ -128,7 +179,7 @@ as confirmed. **Undo** marks it as an estimate again.
 Each change shows on the owner's **Home** under **Done for you**, with the
 old and new value, the reason and **Undo**. It stays there for 7 days unless
 the owner undoes it. The deal's timeline gets one note for the night's
-changes.
+changes, and the note carries **Undo** while it works.
 
 **Undo** puts the old value back. It is refused when someone changed the field
 since. After an Undo, Margince does not make that change on the deal again.
@@ -146,13 +197,18 @@ criteria. A message, meeting or note on the deal must show each of the
 criteria of each stage the deal leaves. **Undo** moves the deal back, unless someone moved it since. An admin
 can stop all stage moves in the installation settings.
 
+A proposal that goes out does not move the deal this way. Margince asks the deal's
+owner instead, and the owner's answer moves it. See
+[When a proposal goes out](offers-and-products.md#when-a-proposal-goes-out).
+
 ## When the customer asks for an offer
 
 Margince looks for a company with no open deal where a customer asked for an
 offer or a proposal. If the company has an owner, Margince opens the
 deal for that owner at the first stage. It sets an amount only when the
 customer wrote a number and a currency. Home, the morning mail and the deal show
-what it read, and when.
+what it read, and when. A line under the header and the note on the timeline
+carry **Undo**.
 
 **Undo** archives the deal. Margince then does not open a deal on the same
 evidence; a new request opens one again. If your team added notes or tasks to
@@ -185,7 +241,8 @@ Margince reopens a deal only when all of these hold:
 
 The reopen shows on the owner's **Home**, in the morning mail and on the deal,
 with the reason and **Undo**. Only the owner reads the reason. The deal's
-timeline gets a note about the reopen.
+timeline gets a note about the reopen. A line under the header and the note
+both carry **Undo** while it works.
 
 **Undo** closes the deal as lost again, with the reason and the close date it
 had. Undo is refused when someone moved the deal to another stage since. If

@@ -2,11 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { day, renderWorklist, stub } from "../../testing/worklist.testkit";
+import { WorklistScreen } from "./worklist";
 
 afterEach(() => {
   cleanup();
@@ -43,4 +46,26 @@ it("lets the scope dial leave the unassigned address", async () => {
     screen.getByRole("button", { name: en["worklist.scope.team"] }),
   );
   await waitFor(() => expect(scopes).toContain("team"));
+});
+
+// Home's drawer draws the view tabs first on the line and whose day after them,
+// so Tab must reach them in that order.
+it("tabs through the drawer's views before its scope dial", async () => {
+  stub(day({ scope_options: ["mine", "unassigned", "team", "all"] }));
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <WorklistScreen embedded />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const mine = await screen.findByRole("button", {
+    name: en["worklist.scope.mine"],
+  });
+  const today = screen.getByRole("button", {
+    name: new RegExp(`^${en["worklist.view.today"]}`),
+  });
+  expect(
+    today.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 });

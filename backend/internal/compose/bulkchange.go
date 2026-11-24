@@ -18,9 +18,7 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"net/http"
 	"slices"
 	"strings"
 	"time"
@@ -31,13 +29,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -62,6 +58,8 @@ type bulkChange struct {
 	note   *string
 	tagID  *ids.UUID
 	task   *crmcontracts.BulkTask
+	// stageID is move_stage's target stage.
+	stageID *ids.UUID
 	// writers are the stores the verb's rows are written through, set when
 	// the change is admitted.
 	writers      bulkWriters
@@ -249,6 +247,9 @@ func (e *bulkEngine) admit(ctx context.Context, change *bulkChange) (bulkRecords
 	if err != nil {
 		return bulkRecords{}, err
 	}
+	if err := admitStage(ctx, target, *change); err != nil {
+		return bulkRecords{}, err
+	}
 	// A Worklist item is a task or a promise, two objects; each row's own
 	// writer asks the grant of the one it is.
 	if _, worklist := target.(worklistBulkTarget); worklist {
@@ -299,7 +300,7 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 	}
 	items := slices.Clone(change.items)
 	slices.SortFunc(items, func(a, b crmcontracts.BulkItem) int { return strings.Compare(a.Id.String(), b.Id.String()) })
-	held, err := holdBulkRows(ctx, tx, target, items, change.previewed)
+	held, refused, err := holdBulkRows(ctx, tx, target, items, change.previewed)
 	if err != nil {
 		return bulkRun{}, err
 	}
@@ -307,13 +308,13 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 	var links bulkLinks
 	var restored []ids.UUID
 	for _, item := range items {
-		if skip, refused := held[ids.UUID(item.Id)]; refused {
+		if skip, isRefused := refused[ids.UUID(item.Id)]; isRefused {
 			run.skipped = append(run.skipped, skip)
 			continue
 		}
 		rowChange := change
 		rowChange.pendingLinks = links.pending
-		applied, skip, err := applyOneInSavepoint(ctx, tx, target, rowChange, item)
+		applied, skip, err := applyOneInSavepoint(ctx, tx, target, rowChange, item, held[ids.UUID(item.Id)])
 		switch {
 		case err != nil:
 			return bulkRun{}, err
@@ -341,13 +342,13 @@ func (e *bulkEngine) apply(ctx context.Context, tx pgx.Tx, target bulkTarget, ch
 // applyOneInSavepoint changes one row, or rolls its savepoint back and says why
 // the row was left alone.
 func applyOneInSavepoint(
-	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem,
+	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem, held bulkRow,
 ) (bulkApplied, *crmcontracts.BulkSkip, error) {
 	savepoint, err := tx.Begin(ctx)
 	if err != nil {
 		return bulkApplied{}, nil, fmt.Errorf("open a savepoint for %s: %w", item.Id, err)
 	}
-	applied, skip, err := applyOne(ctx, savepoint, target, change, item)
+	applied, skip, err := applyOne(ctx, savepoint, target, change, item, held)
 	if err == nil && skip.Reason == "" {
 		if err := savepoint.Commit(ctx); err != nil {
 			return bulkApplied{}, nil, fmt.Errorf("release the savepoint for %s: %w", item.Id, err)
@@ -369,10 +370,10 @@ func skipped(reason crmcontracts.BulkSkipReason) crmcontracts.BulkSkip {
 	return crmcontracts.BulkSkip{Reason: reason}
 }
 
-// applyOne is one row's change. A row a rule refuses answers why it was left
-// alone; an error nobody classified aborts the whole change.
+// applyOne is one row's change, from row as holdBulkRows found it under its lock.
+// A refused row answers why; an error nobody classified aborts the change.
 func applyOne(
-	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem,
+	ctx context.Context, tx pgx.Tx, target bulkTarget, change bulkChange, item crmcontracts.BulkItem, row bulkRow,
 ) (bulkApplied, crmcontracts.BulkSkip, error) {
 	if change.previewed != nil && !change.previewed[item.Id] {
 		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNotPreviewed), nil
@@ -390,12 +391,13 @@ func applyOne(
 		return applyTagging(ctx, tx, target, change, item, change.verb == crmcontracts.BulkVerbAddTag)
 	case change.verb == crmcontracts.BulkVerbCreateTask:
 		return applyTask(ctx, tx, target, change, item)
+	case change.verb == crmcontracts.BulkVerbMoveStage:
+		return applyStageMove(ctx, tx, target, change, item)
 	}
 	id := ids.UUID(item.Id)
-	row, err := target.lock(ctx, tx, id)
-	if err != nil {
-		skip, classifyErr := bulkSkipFor(err)
-		return bulkApplied{}, skip, classifyErr
+	// A forward change refuses an archived row, as a live-only lock would.
+	if row.archived {
+		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNotFound), nil
 	}
 	if row.version != item.Version {
 		return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonChangedSincePreview), nil
@@ -405,15 +407,19 @@ func applyOne(
 		Before: crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID)},
 		After:  crmcontracts.BulkRecordState{OwnerId: wireOwner(row.ownerID)},
 	}
+	var err error
 	switch change.verb {
 	case crmcontracts.BulkVerbReassignOwner:
 		if row.ownerID != nil && *row.ownerID == *change.ownerID {
 			return bulkApplied{}, skipped(crmcontracts.BulkSkipReasonNoChange), nil
 		}
 		sample.After.OwnerId = wireOwner(change.ownerID)
+		owner := ids.From[ids.UserKind](*change.ownerID)
 		var reassigner bulkReassigner
-		if reassigner, err = reassignerOf(target); err == nil {
-			err = reassigner.reassign(ctx, tx, id, ids.From[ids.UserKind](*change.ownerID), item.Version)
+		if held, ok := target.(bulkHeldReassigner); ok {
+			err = held.reassignHeld(ctx, tx, row.lock, owner, item.Version)
+		} else if reassigner, err = reassignerOf(target); err == nil {
+			err = reassigner.reassign(ctx, tx, id, owner, item.Version)
 		}
 	case crmcontracts.BulkVerbArchive:
 		sample.After.Archived = true
@@ -442,56 +448,4 @@ func appliedAt(
 		sample:  sample,
 		outcome: bulkOutcome{ID: sample.Id, Version: version, OwnerBefore: sample.Before.OwnerId},
 	}, crmcontracts.BulkSkip{}, nil
-}
-
-// bulkSkipFor turns a row's refusal into why it is left alone. A refusal a
-// single-record rule answers carries that rule's own code, so a client can say
-// it in the reader's language; the English message stays beside it for a code
-// the client does not know. An error that is no refusal — a lost connection, a
-// bug — is answered as itself, and aborts the change rather than being
-// reported as one row's fault.
-func bulkSkipFor(err error) (crmcontracts.BulkSkip, error) {
-	var anchor *contacts.AnchorProtectedError
-	if restore, ok := errors.AsType[*storekit.RestoreRefusal](err); ok {
-		return restoreSkip(restore), nil
-	}
-	switch {
-	case errors.Is(err, apperrors.ErrNotFound):
-		return skipped(crmcontracts.BulkSkipReasonNotFound), nil
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		return skipped(crmcontracts.BulkSkipReasonNotWritable), nil
-	case errors.Is(err, apperrors.ErrVersionSkew):
-		return skipped(crmcontracts.BulkSkipReasonChangedSincePreview), nil
-	case errors.As(err, &anchor):
-		return skipped(crmcontracts.BulkSkipReasonAnchorCompany), nil
-	}
-	fault, classified := httperr.Classify(err)
-	if !classified || fault.Transient() || fault.Status < http.StatusBadRequest || fault.Status >= http.StatusInternalServerError {
-		return crmcontracts.BulkSkip{}, err
-	}
-	code := fault.Code
-	if len(fault.Fields) > 0 {
-		code = fault.Fields[0].Code
-	}
-	skip := crmcontracts.BulkSkip{Reason: crmcontracts.BulkSkipReasonRefused, Code: &code, Message: &fault.Detail}
-	if len(fault.Details) > 0 {
-		skip.Params = &fault.Details
-	}
-	return skip, nil
-}
-
-func affectedIDs(changed []crmcontracts.BulkSampleRow) []openapi_types.UUID {
-	out := make([]openapi_types.UUID, len(changed))
-	for i, row := range changed {
-		out[i] = row.Id
-	}
-	return out
-}
-
-func wireOwner(id *ids.UUID) *openapi_types.UUID {
-	if id == nil {
-		return nil
-	}
-	wire := openapi_types.UUID(*id)
-	return &wire
 }

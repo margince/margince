@@ -86,7 +86,7 @@ type RecordFieldsReader interface {
 // cannot see.
 func (r RecordFieldsResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != RecordFieldsURI {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	body, err := r.RecordFieldsDocument(ctx)
 	if err != nil {
@@ -229,17 +229,16 @@ func socialNote(shapes map[datasource.EntityType]reflect.Type, patch bool) []str
 // sourceNote says what naming `source` does on this write.
 //
 // Only where the shapes actually carry the field. On create it is accepted and
-// then overwritten, so believing it took effect would be wrong. On update the
-// one record type that carries it is the lead, where `source` is the
-// administered "where did this come from" value and a patch genuinely
-// corrects it — the opposite of the create advice, so the two sentences are
-// kept apart by which write this is rather than by one shared note.
+// then overwritten, so believing it took effect would be wrong. On update only
+// the lead carries it. There a changed `source` is refused, and `origin` is the
+// field a caller means to correct.
 func sourceNote(shapes map[datasource.EntityType]reflect.Type, patch bool) []string {
 	if !describesField(shapes, "source") {
 		return nil
 	}
 	if patch {
-		return []string{"`source` on a lead is the administered lead-source key (see Settings › Data model); a patch corrects it, and the score follows."}
+		return []string{"`source` on a lead says how the row reached Margince and is read-only: any value but the stored one is refused, and it never scores. " +
+			"Where the lead came from is `origin`, an active key from `/lead-origins` (Settings › Leads); while the lead is open (new, contacted or engaged), a patch to it rescores the lead."}
 	}
 	return []string{"`source` is accepted but overwritten — this surface stamps its own provenance."}
 }
@@ -272,7 +271,9 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 		// The patch half still owes the reader the pointer, because a contact's
 		// employer is the field they will look for first and not find.
 		return "A contact's employer is NOT a field here: employment is a relationship, created and " +
-			"archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched."
+			"archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched. " +
+			"To correct a wrong employer, find the edge with read_view view=relationships (contact_id, kind=employment), " +
+			"end it with update_record on that relationship (employment_status=former, ended_at), then create the right one."
 	}
 	// REQUIRES, not "and rejects any other". The schema's shape CHECKs pin the
 	// pair each kind must have and forbid the endpoints that would contradict it,

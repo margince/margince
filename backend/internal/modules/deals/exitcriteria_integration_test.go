@@ -89,6 +89,107 @@ func TestACriterionKeyIsUniqueWithinItsStage(t *testing.T) {
 	addCriterion(t, e, other, "buyer_confirmed")
 }
 
+// A criterion added without a key gets one made from its label. A clash in the
+// same stage adds a number, and a label with no a-z letters gets the fallback.
+func TestACriterionWithoutAKeyGetsOneFromItsLabel(t *testing.T) {
+	e := setupConfigEnv(t)
+	stageID := openStage(t, e, SemanticOpen)
+	add := func(label string) crmcontracts.StageExitCriterion {
+		c, err := e.store.CreateStageExitCriterion(e.as(), CreateCriterionInput{
+			StageID: stageID, MintKey: true, Label: label, Kind: string(CriterionCustom),
+		})
+		if err != nil {
+			t.Fatalf("adding %q: %v", label, err)
+		}
+		return c
+	}
+	first := add("Budget confirmed")
+	second := add("Budget  confirmed!")
+	fallback := add("決裁者")
+	third := add("Budget confirmed?")
+	for got, want := range map[string]string{
+		third.Key: "budget_confirmed_3",
+		first.Key: "budget_confirmed", second.Key: "budget_confirmed_2", fallback.Key: "criterion",
+	} {
+		if got != want {
+			t.Errorf("minted key %q, want %q", got, want)
+		}
+	}
+}
+
+// A key the caller sent as empty is refused, not minted.
+func TestAnEmptyCriterionKeyIsRefusedNotMinted(t *testing.T) {
+	e := setupConfigEnv(t)
+	stageID := openStage(t, e, SemanticOpen)
+	_, err := e.store.CreateStageExitCriterion(e.as(), CreateCriterionInput{
+		StageID: stageID, Key: "", Label: "Budget", Kind: string(CriterionCustom),
+	})
+	if field, code, _ := fieldFault(t, err); field != criterionKeyField || code != "invalid_criterion_key" {
+		t.Fatalf("an empty key answered %v, want invalid_criterion_key on the key field", err)
+	}
+}
+
+// The live-key index backs the pre-check. Losing a race on it answers
+// criterion_key_taken for a chosen key and takes the next number for a minted one.
+func TestALostRaceOnTheLiveKeyIndexIsRecoverable(t *testing.T) {
+	e := setupConfigEnv(t)
+	stageID := openStage(t, e, SemanticOpen)
+	addCriterion(t, e, stageID, "budget")
+	insert := func(in CreateCriterionInput, mint func() (string, error)) (string, error) {
+		var key string
+		err := e.store.Tx(e.as(), func(tx pgx.Tx) error {
+			id, err := insertCriterionKeyed(e.as(), tx, in, CriterionCustom, 9, mint)
+			if err != nil {
+				return err
+			}
+			return tx.QueryRow(e.as(), `SELECT key FROM stage_exit_criterion WHERE id = $1`, id).Scan(&key)
+		})
+		return key, err
+	}
+
+	_, err := insert(CreateCriterionInput{StageID: stageID, Key: "budget", Label: "Budget"}, nil)
+	if _, code, _ := fieldFault(t, err); code != codeCriterionKeyTaken {
+		t.Fatalf("a chosen key that lost the race answered %v, not %s", err, codeCriterionKeyTaken)
+	}
+
+	candidates := []string{"budget", "budget", "budget_2"}
+	next := 0
+	key, err := insert(CreateCriterionInput{StageID: stageID, MintKey: true, Label: "Budget"},
+		func() (string, error) { next++; return candidates[next-1], nil })
+	if err != nil || key != "budget_2" {
+		t.Fatalf("a minted key that lost the race got %q, %v; want budget_2", key, err)
+	}
+}
+
+// Minting has no ceiling: the next number is read from the highest in use.
+func TestMintingTakesTheNumberAfterTheHighestInUse(t *testing.T) {
+	e := setupConfigEnv(t)
+	stageID := openStage(t, e, SemanticOpen)
+	addCriterion(t, e, stageID, "budget")
+	addCriterion(t, e, stageID, "budget_1500")
+	c, err := e.store.CreateStageExitCriterion(e.as(), CreateCriterionInput{
+		StageID: stageID, MintKey: true, Label: "Budget", Kind: string(CriterionCustom),
+	})
+	if err != nil || c.Key != "budget_1501" {
+		t.Fatalf("minted %q, %v; want budget_1501", c.Key, err)
+	}
+}
+
+// The key is fixed at creation: an edit of label, kind, requiredness or hint
+// leaves it alone.
+func TestEditingACriterionNeverChangesItsKey(t *testing.T) {
+	e := setupConfigEnv(t)
+	stageID := openStage(t, e, SemanticOpen)
+	criterion := addCriterion(t, e, stageID, "buyer_confirmed")
+	label, required := "A completely different label", false
+	edited, err := e.store.UpdateStageExitCriterion(e.as(), stageID,
+		ids.From[ids.ExitCriterionKind](ids.UUID(criterion.Id)),
+		UpdateCriterionInput{Label: &label, Required: &required, IfVersion: criterion.Version})
+	if err != nil || edited.Key != "buyer_confirmed" {
+		t.Fatalf("after an edit the key is %q (%v), want buyer_confirmed", edited.Key, err)
+	}
+}
+
 // Won and lost are where a deal stops, so there is nothing it takes to leave
 // them. No CHECK can see the stage row from the criterion, so the store owns
 // this and this test is what holds it.
@@ -418,7 +519,8 @@ func seedDealInStage(t *testing.T, e *configEnv, stageID ids.StageID) ids.DealID
 	}
 	owner := ids.From[ids.UserKind](e.admin)
 	deal, err := e.store.CreateDeal(e.asDealWriter(), CreateDealInput{
-		Name: "Warehouse rollout", PipelineID: pipelineID, StageID: stageID,
+		Source: "manual",
+		Name:   "Warehouse rollout", PipelineID: pipelineID, StageID: stageID,
 		OwnerID: &owner, OwnerExact: true,
 	})
 	if err != nil {

@@ -1,3 +1,15 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { Locale, Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import {
+  ambiguousReadings,
+  decimalSign,
+  parseTypedDecimal,
+  writtenDecimal,
+} from "./decimalinput";
+
 // The scale between an amount as a human types it and the integer this
 // product stores.
 //
@@ -6,7 +18,8 @@
 // direction, where locale must never reach, and format.ts's own header says
 // locale never flows back into storage. These functions take no locale
 // deliberately — a currency's minor-unit count is a property of the currency,
-// not of who is reading.
+// not of who is reading. typedMinorUnits is the one exception, and its locale
+// only refuses an ambiguous text; it never changes the number stored.
 //
 // It exists because the write direction had no owner at all. Eleven call sites
 // spelled `Math.round(Number(amount) * 100)` and `valueMinor / 100`, which is
@@ -154,4 +167,121 @@ function roundHalfAwayFromZero(value: number): number {
 // that says it has one.
 export function toMajorUnits(amountMinor: number, currency: string): number {
   return amountMinor / 10 ** minorUnitDigits(currency);
+}
+
+/** Why typed text is not an amount, as the message the field shows. */
+export type AmountRefusal = Readonly<{
+  key: MessageKey;
+  params: Record<string, string>;
+}>;
+
+export type TypedMinor =
+  | Readonly<{ minor: number }>
+  | Readonly<{ refused: AmountRefusal }>;
+
+/**
+ * The one converter from an amount the reader typed to the minor units the
+ * API stores. Every money box reads its text here, so a typed "12,5" means
+ * the same amount in every form, and "1.500" is refused in every form.
+ */
+export function typedMinorUnits(
+  text: string,
+  currency: string,
+  locale: Locale,
+): TypedMinor {
+  // A blank code would scale at the two-digit default, and the amount would
+  // move a hundredfold once the real currency is known.
+  if (currency.trim() === "") {
+    return { refused: { key: "amount.refused.noCurrency", params: {} } };
+  }
+  const digits = minorUnitDigits(currency);
+  const parsed = parseTypedDecimal(text, locale);
+  if ("refused" in parsed) {
+    return { refused: unreadAmount(parsed.refused, text, digits, locale) };
+  }
+  const minor = toMinorUnits(parsed.value, currency);
+  if (!Number.isNaN(minor)) {
+    return { minor };
+  }
+  // toMinorUnits refuses for precision or for size; precision is the one
+  // whose rounding moves the value.
+  if (Number(parsed.value.toFixed(digits)) !== parsed.value) {
+    return {
+      refused: { key: "record.amountTooPrecise", params: { currency } },
+    };
+  }
+  return { refused: { key: "amount.refused.tooLarge", params: {} } };
+}
+
+/**
+ * The minor units of a text a field's validate has already accepted, or NaN.
+ * For a request mapper: NaN serialises to null, and the API decides.
+ */
+export function typedMinorOrNaN(
+  text: string,
+  currency: string,
+  locale: Locale,
+): number {
+  const typed = typedMinorUnits(text, currency, locale);
+  return "minor" in typed ? typed.minor : Number.NaN;
+}
+
+/** The message under a money field, or undefined for an amount or no text. */
+export function typedAmountFault(
+  text: string,
+  currency: string,
+  locale: Locale,
+  t: Translator,
+): string | undefined {
+  if (text.trim() === "") {
+    return undefined;
+  }
+  const typed = typedMinorUnits(text, currency, locale);
+  return "refused" in typed
+    ? t(typed.refused.key, typed.refused.params)
+    : undefined;
+}
+
+/**
+ * A stored amount as the text a money box opens on. Written with the reader's
+ * decimal sign: a dinar's "1.234" in German would read as grouped and be
+ * refused when saved back unchanged.
+ */
+export function typedAmountText(
+  amountMinor: number,
+  currency: string,
+  locale: Locale,
+): string {
+  const digits = minorUnitDigits(currency);
+  return writtenDecimal(
+    toMajorUnits(amountMinor, currency).toFixed(digits),
+    locale,
+  );
+}
+
+function unreadAmount(
+  refusal: "ambiguousGrouping" | "grouping" | "notNumber",
+  text: string,
+  digits: number,
+  locale: Locale,
+): AmountRefusal {
+  const sign = decimalSign(locale);
+  if (refusal === "ambiguousGrouping") {
+    const { whole } = ambiguousReadings(text, locale);
+    return digits === 0
+      ? { key: "amount.refused.ambiguousWhole", params: { whole } }
+      : {
+          key: "amount.refused.ambiguous",
+          params: { whole, decimal: `${whole}${sign}${"0".repeat(digits)}` },
+        };
+  }
+  const example =
+    digits === 0 ? "1234" : `1234${sign}${"5678".slice(0, digits)}`;
+  return {
+    key:
+      refusal === "grouping"
+        ? "amount.refused.grouping"
+        : "amount.refused.notNumber",
+    params: { example },
+  };
 }

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // pricedByFor is the provider whose sheet prices provider's unpriced models,
@@ -49,7 +51,7 @@ func rateMatch(provider, model, day string, fromArg, toArg int) string {
 // the sheet does not price yet still prices the call. Every SQL reader that
 // prices a call joins it LATERAL as r, the alias callCostMicroUSD reads.
 func pricedRate(alias string, fromArg, toArg int) string {
-	day := alias + ".occurred_at::date"
+	day := callDaySQL(alias)
 	return fmt.Sprintf(`SELECT ranked.* FROM (
 		  SELECT 0 AS match_rank, answered.* FROM (%[1]s) answered WHERE %[3]s
 		  UNION ALL
@@ -60,4 +62,11 @@ func pricedRate(alias string, fromArg, toArg int) string {
 		rateMatch(alias+".provider", alias+".served_model", day, fromArg, toArg),
 		rateMatch(alias+".provider", alias+".model_id", day, fromArg, toArg),
 		answeredModelSQL(alias)+" <> "+alias+".model_id")
+}
+
+// callDaySQL is the installation's day the ai_call row aliased alias took place
+// on. Pricing, grouping and the reported day all read it, so a call is never
+// priced on one day and listed under another.
+func callDaySQL(alias string) string {
+	return occurredday.TodaySQL(alias + ".occurred_at")
 }

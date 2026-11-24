@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 import { runCoreLoop, type Wanted } from "./margince-core-engine";
 import type { CoreFrame, CoreRenderer } from "./margince-core-gl";
 import { rowFor } from "./margince-core-motion";
-import { CORE_FRAG } from "./margince-core-shader";
+import { CORE_FRAG, CORE_POINTS_VERT } from "./margince-core-shader";
 
 // The regression this guards: a shader that holds its palette as GLSL
 // literals cannot be repainted by tokens.css at all, and the shader alone
@@ -26,15 +26,18 @@ describe("the Core's palette, as uniforms", () => {
   it("declares uWork and uBody rather than holding the palette as literals", () => {
     expect(CORE_FRAG).toMatch(/uniform\s+vec3\s+uWork\s*\[\s*5\s*\]/);
     expect(CORE_FRAG).toMatch(/uniform\s+vec3\s+uBody\s*\[\s*2\s*\]/);
+    expect(CORE_POINTS_VERT).toMatch(/uniform\s+vec3\s+uWork\s*\[\s*5\s*\]/);
   });
 
-  it("assigns BASE from uWork rather than from a literal colour", () => {
-    const baseBlock = /vec3 BASE\[5\];[\s\S]*?(?=\n\n)/.exec(CORE_FRAG)?.[0];
-    if (!baseBlock) {
-      throw new Error("the shader has no BASE[5] assignment block to check");
+  it("colours the ribbons from uWork rather than from a literal colour", () => {
+    const tone = /vec3 tone\(float x\)\{[\s\S]*?\n\}/.exec(
+      CORE_POINTS_VERT,
+    )?.[0];
+    if (!tone) {
+      throw new Error("the points shader has no tone() to check");
     }
-    expect(baseBlock).not.toMatch(/vec3\(0\./);
-    expect(baseBlock).toContain("uWork");
+    expect(tone).not.toMatch(/vec3\(0\./);
+    expect(tone).toContain("uWork");
   });
 
   it("mixes the ball's body from uBody rather than from a literal colour", () => {
@@ -52,6 +55,7 @@ describe("the tokens the palette reads", () => {
   const tokens = [
     "--ai",
     "--orbGlow",
+    "--orbMid",
     "--orbAmber",
     "--orbBright",
     "--orbDeep",
@@ -98,6 +102,7 @@ describe("the palette reaching the renderer", () => {
   it("hands the renderer five work stops and two body stops, matching the tokens", () => {
     setToken("--ai", "#112233");
     setToken("--orbGlow", "#445566");
+    setToken("--orbMid", "#667788");
     setToken("--orbAmber", "#778899");
     setToken("--orbBright", "#aabbcc");
     setToken("--orbDeep", "#0a0b0c");
@@ -122,11 +127,11 @@ describe("the palette reaching the renderer", () => {
 
     expect(frame.work).toHaveLength(5);
     expect(frame.body).toHaveLength(2);
-    // uAi, uOrbGlow, uOrbAmber, uOrbGlow, uOrbBright, in that order.
+    // The ribbon stops A to D, then the highlight tint.
     expect(frame.work[0]).toEqual(hexToRgb("#112233"));
     expect(frame.work[1]).toEqual(hexToRgb("#445566"));
-    expect(frame.work[2]).toEqual(hexToRgb("#778899"));
-    expect(frame.work[3]).toEqual(hexToRgb("#445566"));
+    expect(frame.work[2]).toEqual(hexToRgb("#667788"));
+    expect(frame.work[3]).toEqual(hexToRgb("#778899"));
     expect(frame.work[4]).toEqual(hexToRgb("#aabbcc"));
     expect(frame.body[0]).toEqual(hexToRgb("#0a0b0c"));
     expect(frame.body[1]).toEqual(hexToRgb("#0d0e0f"));

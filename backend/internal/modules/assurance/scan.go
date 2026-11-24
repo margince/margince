@@ -114,7 +114,7 @@ func (w walked) contributions() Contributions {
 //
 // A rule whose sources were not read tonight is not asked. Its finding would be
 // a claim about what nobody looked at: an unread mailbox shows silence on every
-// deal.
+// deal. Nor is a rule the deal's viability decision answered otherwise.
 func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []SourceCoverage) walked {
 	var out walked
 	askable := sourcesRead(coverage)
@@ -123,7 +123,7 @@ func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []Sour
 		out.owners = append(out.owners, subject.Owner)
 		out.eligible++
 		for _, rule := range Rules() {
-			if !askable(rule) {
+			if !askable(rule) || answeredOtherwise(rule, subject) {
 				continue
 			}
 			found := rule.Ask(now, subject, cfg)
@@ -143,8 +143,7 @@ func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []Sour
 // incomplete and its readiness `checks_incomplete` — it does not make the run
 // absent. Refusing would produce no record in exactly the case this pass exists
 // to report, and the brief waiting on it would run without ever learning why.
-// requestedBy names the seat that asked, and nil is the nightly cadence.
-func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) (Result, error) {
+func (s *Scanner) Scan(ctx context.Context, now time.Time) (Result, error) {
 	var out Result
 	err := s.store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		// ONE pass at a time, and the lock is the whole reason a human may ask
@@ -161,7 +160,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		if err := storekit.LockWriteIdentity(ctx, tx, "assurance", "pass"); err != nil {
 			return err
 		}
-		runID, err := s.store.StartRun(ctx, tx, now, requestedBy)
+		runID, err := s.store.StartRun(ctx, tx, now)
 		if err != nil {
 			return err
 		}
@@ -212,7 +211,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 				return err
 			}
 		}
-		if err := s.store.RecordReceipts(ctx, tx, runID, now, s.cfg.ReceiptLifetime, subjects); err != nil {
+		if err := s.store.RecordReceipts(ctx, tx, runID, subjects); err != nil {
 			return err
 		}
 		// Which findings THIS run saw, before the clearing below removes the

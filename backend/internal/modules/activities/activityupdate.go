@@ -66,6 +66,8 @@ type UpdateActivityInput struct {
 	// doneAtAnyVersion lets a caller's Done land on a task already done at any
 	// version. A machine completion leaves it off: its skew says it did not flip the task.
 	doneAtAnyVersion bool
+	// confirmedDue admits a due date outside the window that a human kept when asked.
+	confirmedDue bool
 }
 
 // UpdateActivity keeps an authorized edit and its audit in one transaction.
@@ -78,11 +80,11 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 	}
 	at := s.now()
 	in.recordedAt, in.recordZone = &at, s.recordZone
-	if err := s.readPatchColumns(ctx, &in); err != nil {
-		return crmcontracts.Activity{}, err
-	}
 	var out crmcontracts.Activity
 	err := s.txRetryingLockCycles(ctx, pgx.ReadCommitted, func(tx pgx.Tx) error {
+		if err := s.readPatchColumns(ctx, tx, &in); err != nil {
+			return err
+		}
 		var err error
 		out, err = updateActivityInTx(ctx, tx, id, in)
 		if err == nil {

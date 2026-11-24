@@ -26,6 +26,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturepurgebind"
+	"github.com/margince/margince/backend/internal/compose/personalsweep"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -34,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -49,19 +50,15 @@ type PurgeOutcome struct {
 	// claim on them is gone; the message stayed.
 	Released int `json:"released"`
 	// Skipped is how many are under a statutory hold or an open erasure
-	// request. Reported rather than silently passed over: an owner told their
-	// mail is gone must not find it still there.
+	// request. They are reported so that "gone" can be trusted.
 	Skipped int `json:"skipped"`
 	// Anonymised is how many contacts the purge stripped: those this seat's
 	// mail is the only reason the CRM knows, whom nothing else holds.
 	Anonymised int `json:"anonymised"`
 	// Preview reports that nothing was actually done.
 	Preview bool `json:"preview"`
-	// Kept says WHY the skipped messages were skipped. Skipped alone tells an
-	// owner that something survived their deletion and not what would have to
-	// change for it to go — and the three reasons answer differently: a hold
-	// lifts when somebody lifts it, a statutory window expires on a date, an
-	// open request closes when it is finished.
+	// Kept says why the skipped messages were skipped: a hold lifts when
+	// somebody lifts it, a statutory window on a date, a request when closed.
 	Kept KeptBreakdown `json:"kept"`
 }
 
@@ -78,19 +75,17 @@ func NewCapturePurger(pool *pgxpool.Pool, retention *privacy.RetentionService) *
 
 // Purge destroys the mail one exclusion rule matched.
 //
-// Two scopes, two authorities. A seat's OWN rule destroys what that seat
-// imported, and the authority is the owner being the one asking. A WORKSPACE
-// rule destroys what the workspace captured, across every seat, and takes the
-// admin role — destroying every colleague's matching mail is the workspace's own
-// act, not one seat's.
+// A seat's own rule destroys what that seat imported, and the owner asking is
+// the authority. A workspace rule destroys what the workspace captured across
+// every seat and takes the admin role.
 //
-// Human-only either way. Destroying mail is not something a background pass does
-// on somebody's behalf, which is why this takes a human principal even though
-// the sibling personal-mail sweep runs unattended: that sweep acts on a verdict
-// about one sender, and this acts on a rule somebody wrote.
+// Human-only either way: destroying mail is not something a background pass does
+// on somebody's behalf, although the personal-mail sweep runs unattended. That
+// sweep acts on a verdict about one sender; this acts on a rule somebody wrote.
 //
-// preview answers the same question and changes nothing, so the counts a caller
-// is shown before they confirm are the counts they get.
+// preview changes nothing, so the counts a caller is shown before they confirm
+// are the counts they get. Counts confirmed on the context (capturepurgebind)
+// bind the destroy to that preview.
 func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview bool) (PurgeOutcome, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
@@ -129,10 +124,8 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	}); err != nil {
 		return PurgeOutcome{}, err
 	}
-	// Seat-scoped, and not run for a workspace rule: a contact every seat can
-	// see is held by more than the mail one rule matched.
-	// Anonymising workspace-wide is the erasure lane's job and takes a subject
-	// request, not an exclusion rule.
+	// Seat-scoped only: a contact every seat can see is held by more than one
+	// rule's mail, and anonymising workspace-wide is the erasure lane's job.
 	var minted []ids.UUID
 	if !workspaceScoped {
 		if minted, err = p.purgeableContacts(ctx, actor.UserID, rule); err != nil {
@@ -155,27 +148,27 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 	if preview {
 		return outcome, nil
 	}
+	if err := capturepurgebind.Check(ctx, outcome.Destroyed, outcome.Released, outcome.Anonymised); err != nil {
+		return PurgeOutcome{}, err
+	}
+	return p.destroy(ctx, exclusionID, actor.UserID, rule, workspaceScoped, subject, minted, outcome)
+}
+
+// destroy runs the cascade for a selection the caller confirmed and then
+// writes the receipt.
+func (p *CapturePurger) destroy(ctx context.Context, exclusionID, seat ids.UUID, rule capture.Exclusion, workspaceScoped bool, subject capture.PurgeSubject, minted []ids.UUID, outcome PurgeOutcome) (PurgeOutcome, error) {
 	reason := privacy.PurgeOwnerRule
 	if workspaceScoped {
 		reason = privacy.PurgeWorkspaceRule
 	}
-	anonymised, err := p.carryOut(ctx, subject, minted, p.stillPurgeable(actor.UserID, rule), actor.UserID, reason)
+	anonymised, err := p.carryOut(ctx, subject, minted, p.stillPurgeable(seat, rule), seat, reason)
 	if err != nil {
 		return PurgeOutcome{}, err
 	}
 	outcome.Anonymised = anonymised // the recheck inside the cascade can skip some
-	// AFTER the cascade, deliberately. Written first it would certify a plan
-	// rather than an act: carryOut commits per item, so a run that failed
-	// halfway would leave a receipt claiming everything went. Written here it
-	// records a cascade that finished.
-	//
-	// The residue is the opposite order's: this write can fail after the
-	// destruction committed, and then the purge answers an error with no
-	// summary row. That is the better failure of the two — the per-activity
-	// rows the cascade wrote are still there, so the trail is short a summary
-	// rather than carrying a false one, and a caller told it failed is told
-	// something true. Making neither possible needs a durable pending receipt
-	// finalized after the cascade, which is #6378.
+	// After the cascade: carryOut commits per item, so a receipt written first
+	// would certify a plan and not an act. If this write fails, the
+	// per-activity rows still hold the trail and the caller is told it failed.
 	if err := p.auditPurgeReceipt(ctx, exclusionID, outcome); err != nil {
 		return PurgeOutcome{}, err
 	}
@@ -335,27 +328,17 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 		return 0, fmt.Errorf("verdict: finding seats with personal mail due: %w", err)
 	}
 	destroyed := 0
-	for _, seat := range seats {
-		var subject capture.PurgeSubject
-		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	sweeper := personalsweep.Sweeper{
+		Pool: p.pool, Batch: personalSweepBatch, Destroy: p.purgePersonalSelection,
+		Floor: func(ctx context.Context, tx pgx.Tx) (capture.StatutoryFloor, error) {
 			floor, _, err := purgeFloorTx(ctx, tx)
-			if err != nil {
-				return err
-			}
-			subject, err = capture.SelectPersonalPurgeTx(ctx, tx, seat, windows, floor, personalSweepBatch)
-			return err
-		}); err != nil {
-			return destroyed, fmt.Errorf("verdict: selecting personal mail for one seat: %w", err)
-		}
-		// No contacts are anonymised here. A `personal` verdict creates NO
-		// counterparty record in the first place — captureverdict's KindPersonal
-		// arm returns without one — so there is nothing this sweep could match,
-		// and passing a selector that looked for one would either find a contact
-		// somebody made for another reason or find nothing while implying it had
-		// looked.
-		n, err := p.purgePersonalSelection(ctx, subject, seat, windows)
+			return floor, err
+		},
+	}
+	for _, seat := range seats {
+		n, err := sweeper.Seat(ctx, seat, windows)
 		if err != nil {
-			return destroyed, fmt.Errorf("verdict: destroying personal mail: %w", err)
+			return destroyed, err
 		}
 		destroyed += n
 	}
@@ -424,11 +407,11 @@ func noSuchRule() error {
 // the rows naming an attachment and left its bytes in the bucket would report
 // mail as gone while it is not, so a role that cannot reach the blobs does not
 // purge at all.
-func capturePurgerFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger, vault keyvault.Vault) *CapturePurger {
+func capturePurgerFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger) *CapturePurger {
 	if blob == nil {
 		return nil
 	}
-	return NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), blob, log).WithPayloadVault(privacyPayloads(vault)))
+	return NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), blob, log))
 }
 
 // PurgeRemoved applies a provider deletion under the caller's maintenance authority.

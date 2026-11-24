@@ -3,13 +3,13 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p879ddf32892272eb60cceffe70c45a39",
+  "prompt_version": "p07789dacde34ef6402a4c822118baaa2",
   "corpus_version": "v1",
-  "verdict": "certified",
-  "runs": 93,
-  "passed": 93,
+  "verdict": "supported_degraded",
+  "runs": 96,
+  "passed": 96,
   "reliability": 1,
-  "reported_accepted": 93,
+  "reported_accepted": 96,
   "reported_wrong_answer": 0,
   "reported_invalid": 0,
   "reported_abstained": 0,
@@ -19,43 +19,44 @@
     "identity"
   ],
   "judge_score_p50": 90,
-  "judge_score_min": 55,
-  "latency_p50": 3598,
-  "latency_p95": 9509,
-  "mean_tokens": 2015,
-  "mean_tokens_in": 1583,
-  "mean_tokens_out": 432,
+  "judge_score_min": 32,
+  "latency_p50": 3371,
+  "latency_p95": 8840,
+  "mean_tokens": 1941,
+  "mean_tokens_in": 1666,
+  "mean_tokens_out": 274,
   "mean_cached_tokens": 0,
   "mean_cache_write_tokens": 0,
-  "est_cost_microusd": 2807,
+  "est_cost_microusd": 2277,
   "judge_served_model": "claude-sonnet-5-5",
   "judge_provider": "claude_cli",
   "self_judged": false,
   "served_identity_source": "response",
+  "wire_rule": "gemini-wire-5",
   "thinking_level": "low",
-  "ran_at": "2026-11-16T02:26:04Z",
+  "ran_at": "2026-11-22T23:02:27Z",
   "scenarios": [
     {
       "scenario": "ask_meeting_prep_stays_silent_about_a_withheld_section",
       "site": "company_ask",
-      "stamp": "216409853b0b18ec506506b33b139fe8ef646cc637a70a5f9f5e41048a8c2cb1c1448c54d8cb2af7b21f73c7521dc630f92e90abcf6dea77f77aa0f8e3e9d81006c920b35c4a0c3d5373284325001fea27a5d89b20afb93b0e0d937c6d479c42",
+      "stamp": "216409853b0b18ec506506b33b139fe8ef646cc637a70a5f9f5e41048a8c2cb1c1448c54d8cb2af7b21f73c7521dc630f92e90abcf6dea77f77aa0f8e3e9d8101f1da80828ed6b67d3f56c0c98e23dc1d0038c4ccc8c10d077dc7d4c46830732",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
       "passed": 15,
       "judge_scores": [
-        96,
         97,
         97,
         97,
         96,
         97,
-        97,
-        96,
-        96,
         96,
         96,
         97,
+        96,
+        97,
+        96,
+        96,
         96,
         96,
         97
@@ -75,15 +76,15 @@
     {
       "scenario": "ask_whats_open_answers_the_pipeline_not_the_history",
       "site": "company_ask",
-      "stamp": "f26b36025165dcaf20b93cea153906434f1dc1e1a84a396bb71311c30b4eb7f93b044205fb2caaef8afc5b81f471cae579f3d72969a362207fa658275a534dd829a9a6daec06dbc947353d1858523790ec0c821cbf6b678f5a73992e46e7ad9a",
+      "stamp": "f26b36025165dcaf20b93cea153906434f1dc1e1a84a396bb71311c30b4eb7f962ffa7f04997c5038939244ec80236017360efdb1b7b3fd108aee4429c9dbcf17d5747422ff41d376bb2fd7f1f212c578c5341d4c09637bfecaff21d748fae69",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
+        93,
         96,
-        88,
-        90
+        88
       ],
       "bands": {
         "certified_min": 70,
@@ -98,14 +99,14 @@
     {
       "scenario": "ask_whats_open_names_the_promise_each_side_owes",
       "site": "company_ask",
-      "stamp": "6a32dd5ec5a2fd043e6f35358a3d7f6daee424f82525d1a33d43193c2ed66fe23c0979dbe87c493fe3c4b221ddc6367c346e221c6ce7d40512294a4e0e2434a3a63fded6fa88804e67bfe4b699c0bd16bd094debe11ef1d25bb6c0cf2600ae72",
+      "stamp": "6a32dd5ec5a2fd043e6f35358a3d7f6daee424f82525d1a33d43193c2ed66fe2f9b1e8cc1c46edd36d6b7bc728aba2dc3e2f6b2bed761430b5f0680e7569fa1f733bcca90d655e86fd02c04ebeada02ffa8f60d1166b00218d30cc69c3b4038e",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        88,
-        80,
+        78,
+        82,
         82
       ],
       "bands": {
@@ -121,15 +122,15 @@
     {
       "scenario": "contact_brief_reads_what_was_said",
       "site": "contact_brief",
-      "stamp": "254a0bb3d24a0cb291062b5c8e5a8064b4c679969840d501ba23df3ff10cb61822a761ef5eb9d61f4fc4d41654b11097eddafa4c9faf55c059c38ce3baec32d03d62105f82a680dd4f0d4176b3d1ed6bd47502b28908f509a91e6b430f10aade",
+      "stamp": "254a0bb3d24a0cb291062b5c8e5a8064b4c679969840d501ba23df3ff10cb61889e20d69cb3e415dcb87503c9175f6005e33bfbe7be74cc9de2c3fba0ad60a0248f31292477659f1deb128ed41794639f93345a1f3d5a4fbb4b9e6e970f1dfe8",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        81,
-        88,
-        88
+        80,
+        82,
+        81
       ],
       "bands": {
         "certified_min": 70,
@@ -144,15 +145,15 @@
     {
       "scenario": "contact_brief_states_the_promised_date",
       "site": "contact_brief",
-      "stamp": "e89a8abfeb4efb093a570497e998c8b0c4a9a909c8491b2aa1b5843c994d64fdf6e9ff3fcd139418337a04624e17bd36af353c1d87a0ec7a2c5fcc5f26a7b270a1324086b2f23f1c095b0345459cc554f9819b7d7bb39191e29dcd6a742af04b",
+      "stamp": "e89a8abfeb4efb093a570497e998c8b0c4a9a909c8491b2aa1b5843c994d64fdf92cce888ab7e636992da2cb3c99e34d81a5574b91a93184dfec3b5ecf88528bd3e8888f887be769f342fa203a21610831e3eeb45c205907fa6a43ef3046ef50",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        85,
-        85,
-        88
+        88,
+        88,
+        90
       ],
       "bands": {
         "certified_min": 70,
@@ -167,27 +168,27 @@
     {
       "scenario": "contact_brief_stays_silent_about_what_the_reader_may_not_see",
       "site": "contact_brief",
-      "stamp": "c57dea3a660e55db3e1409b29028e8c96d99949860f1997c56ba1c5f2d1dc1796dd315565b2634b90f2d66d29b4041396818438b3019fa2f15495fc1fe56caf58887f1d7cc1f5ce9d5063737db1fa4fa5e51ae7af89c9032397f0da88483e029",
+      "stamp": "c57dea3a660e55db3e1409b29028e8c96d99949860f1997c56ba1c5f2d1dc179511e6a3fabf28e9e5322ce8d8df768294efefc4a8a715f5982db57d07827579fc8863ec93856aeba590a2504381907320f8fed5997acb7e1b136bb3ed7ce6e98",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
       "passed": 15,
       "judge_scores": [
         90,
+        88,
+        90,
+        90,
+        88,
+        88,
+        85,
+        88,
         90,
         90,
         85,
-        88,
-        88,
-        90,
-        90,
-        85,
-        82,
         90,
         88,
         88,
-        90,
-        85
+        90
       ],
       "bands": {
         "certified_min": 70,
@@ -204,14 +205,14 @@
     {
       "scenario": "deal_room_brief_names_the_buyer_who_set_it",
       "site": "deal_room_brief",
-      "stamp": "e3bcc04ff5fd63e8dbbd4196246d4fb995fcc051a1eddfeb5266b8798b447136ff2fafa6ceba77a9fc2da338e2221a1859670881d432583bdd718ce6f680d2d8039a4e52f705225930be812fa6688636674925bac3caf1caa09872ad25bb26c0",
+      "stamp": "e3bcc04ff5fd63e8dbbd4196246d4fb995fcc051a1eddfeb5266b8798b447136cf0e182cdb1219036fc161a95f5e081450be572b288143fdffb3ff5fe9b9c6db09f63233bb36cce9110253fa93ce28a741229f6de1054e3ba67abc716d62de6d",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        96,
         90,
+        95,
         93
       ],
       "bands": {
@@ -227,15 +228,15 @@
     {
       "scenario": "deal_room_brief_only_routine_asks",
       "site": "deal_room_brief",
-      "stamp": "125a9758f408f786021de041deb881e2089db88193ebe7d3e8d7e6cf6afdd0ca157de531cd1b9418cafaf2739a9f1e44f703ec6288bf5cb508eda5011f7e57d01c3d429c88bfba169f4e0ab286721753e320819a454ffc495755721246c84f18",
+      "stamp": "125a9758f408f786021de041deb881e2089db88193ebe7d3e8d7e6cf6afdd0ca73ece6ad3071b9f056eca1d16ab7fbc4073be4906b5a5f2cf2b2cee777fa74ce01ab59ce9668ca3056c375cc835f9fd96edc256c8c814956f026c97c9ca2d7cf",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        93,
-        93,
-        93
+        90,
+        92,
+        90
       ],
       "bands": {
         "certified_min": 70,
@@ -250,15 +251,15 @@
     {
       "scenario": "deal_room_brief_reads_the_blocker",
       "site": "deal_room_brief",
-      "stamp": "e600136afe994feb5055fcdb3d8617756770eb34740602f71041ec6251c6585a7fb70d7b13a2546e40672d7240e46e342b742da185a1f5ae5733fbfa3bc750f30e716925a96c44368f1d5d865edcaac2ae29e54dc90289d0ca9ae6ac1ed0c328",
+      "stamp": "e600136afe994feb5055fcdb3d8617756770eb34740602f71041ec6251c6585acb636ff131ab09f1bdcea1e722f70e232e0533b92c238b155acb873932e9b33cb88604f1899e3fd79df216be3d76e77bc79f362252315ea2c4d56e00b010d9f4",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        90,
-        90,
-        91
+        80,
+        91,
+        93
       ],
       "bands": {
         "certified_min": 70,
@@ -273,15 +274,15 @@
     {
       "scenario": "deal_room_brief_resolved_condition",
       "site": "deal_room_brief",
-      "stamp": "c93006605d5e9d3dbe78ab285bf53cba17469f96a2b2e8c585db852005997cfb46171447ad0a8929dce4ba5fc85457e810a8fd5ebc7e6d369b1c8a6da9a10715be414b599cd0fb2df3b2030a69af474a2deb696f349d4f40957f42d711e422ed",
+      "stamp": "c93006605d5e9d3dbe78ab285bf53cba17469f96a2b2e8c585db852005997cfb7c549f6601713f8631b083d7bff98869c01132d5f8718ee8ab1d3f65f72de0352edc7bb621f97af4937395676c185b2654ab51b2d176aaea2b4eaeb0b25eaa76",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        90,
         88,
-        90
+        93,
+        88
       ],
       "bands": {
         "certified_min": 70,
@@ -296,14 +297,14 @@
     {
       "scenario": "deal_room_brief_seller_wrote_the_condition",
       "site": "deal_room_brief",
-      "stamp": "99722777c70acc8e484bf0d94426da688290598966e089f505667bc39686a4b27f23ee9c70ae9ffb7c994c18561a75b4434c4596bec0e1f3ce4b6d29bdcfcce6b95bb719b029380a724e41b5363388a80e170e1ce2d46efaf3d19ec17ba91ac6",
+      "stamp": "99722777c70acc8e484bf0d94426da688290598966e089f505667bc39686a4b25e11dced0fc8a7b631110d5045f906229b5e5430f946e1b883dc71b07cd031fd010757173de4377349421b6ae9c0e665ac0dbb65c79c7544f59bf9480c882e8f",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        95,
-        93,
+        90,
+        90,
         88
       ],
       "bands": {
@@ -319,15 +320,15 @@
     {
       "scenario": "dossier_describes_the_company_not_the_relationship",
       "site": "company_dossier",
-      "stamp": "1e8127bc8b1742898698b80a8235ad643c8a813e3bced174f317de60236fa7b611bca717bf6e15850df13fbe66802a43338fa7de62a67d2c6e96e0c587663bbeffaa5f4de58b5b30273f75443641ea5eda44df70f824c02ce868867493e7864d",
+      "stamp": "1e8127bc8b1742898698b80a8235ad643c8a813e3bced174f317de60236fa7b647d05ceb8dd48714f4580af1b95807f0bd9e30bd3a02b572fd9d8f6bd70d77a0633530620eada0d317695469e363a6e016522680802213d26dbc8b06e4f6ebf0",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        88,
-        82,
-        88
+        90,
+        90,
+        90
       ],
       "bands": {
         "certified_min": 70,
@@ -342,15 +343,15 @@
     {
       "scenario": "meeting_brief_reads_the_thread_that_matters",
       "site": "meeting_brief",
-      "stamp": "a1807122f025496aa7fe96ec9a7da528754a554e02d1f300e39aa6c8838d90a085cbd9081cae905f438848204a00ab4e75284f576360d71177023f95e300f64cd2d0d21d6ab697fe56827f5bb4e65cb62ce6e77fb8b254f702b15d01193f4173",
+      "stamp": "a1807122f025496aa7fe96ec9a7da528754a554e02d1f300e39aa6c8838d90a09439ac0184dea4bb02536683adc6e75139a257604c485cdc9c47f9539bd0747a500d310a455b18f7f6e6605cfcb63756a13e1d6e267056f17e1810352ebb9af1",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        81,
-        88,
-        88
+        90,
+        80,
+        90
       ],
       "bands": {
         "certified_min": 70,
@@ -365,15 +366,15 @@
     {
       "scenario": "meeting_plan_reads_the_thread_that_matters",
       "site": "meeting_plan",
-      "stamp": "60e703f24b4644941ba6c2aefbdbbe2394765deb8229db0bf96c0ffcbafb1832332bf8e2f7b177af97ab3de5bd3d7784ac1e4f8d48a2c36c96d90af009984750509cf8b097c904a5fac28e19bbef8d3ccc4d730d859df1ff57c5624f37906c5f",
+      "stamp": "60e703f24b4644941ba6c2aefbdbbe2394765deb8229db0bf96c0ffcbafb18322e43167ad63fe3c49ab4d4b6cfee13dcbd23566bac8b8af84f215006718f8a10c9637c57261f98cb8b241008ff977ebe4cab22f3bb4aaeb8b61a7e2de6bc4a3c",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
         80,
-        80,
-        80
+        82,
+        81
       ],
       "bands": {
         "certified_min": 70,
@@ -388,7 +389,7 @@
     {
       "scenario": "meeting_plan_serves_the_meetings_deal",
       "site": "meeting_plan",
-      "stamp": "024722e0fd5b4e4bb6bc4696082ea6d4709662a56b7a6c8c179592a9869f808397ea03f130047c788ac7d4d3b1a81553a7be6c3cc8b120864efc258a6e88ea42d69236ee4673a9f5028d84fd4f99a9d34f58b1719ebb42c72556a16a94b73135",
+      "stamp": "024722e0fd5b4e4bb6bc4696082ea6d4709662a56b7a6c8c179592a9869f80838d39711369abfed43af6e8f46ebdd8967e9ba8b5dee09b89d5276302289d3b99c8a6389fe653dd51d9f08a721820029c8d2214a9c5ae0389e3ae79f70bdc5d12",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -396,7 +397,7 @@
       "judge_scores": [
         95,
         95,
-        93
+        92
       ],
       "bands": {
         "certified_min": 70,
@@ -411,27 +412,27 @@
     {
       "scenario": "brief_stays_silent_about_a_withheld_section",
       "site": "company_brief",
-      "stamp": "5c2888a5387af338f45baede573ccf21f943654ada3629db15534956971375977a271cab86c2aa085f40770e21ab99f2a56ffbebad028bafa9fd62e20fe934916d72f54e4f87672479071a15dcbfed2d509ddc5db0338c9d2bc8d5ffb360802f",
+      "stamp": "5c2888a5387af338f45baede573ccf21f943654ada3629db1553495697137597e871fcb28f109fb7851a4f4a59f2775b5d843cfc851484480f3cdee0b7da4637eb0da64ef2490b0fabce88cf93b1760219f403d1aff8490723c7093c7603c53b",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 15,
       "passed": 15,
       "judge_scores": [
-        95,
-        95,
-        95,
-        95,
+        90,
+        90,
         95,
         88,
+        93,
+        90,
+        90,
         96,
+        82,
         90,
         93,
-        95,
-        90,
         92,
-        94,
-        95,
-        95
+        88,
+        93,
+        90
       ],
       "bands": {
         "certified_min": 70,
@@ -448,28 +449,31 @@
     {
       "scenario": "brief_names_the_stalled_deal_and_the_last_touch",
       "site": "company_brief",
-      "stamp": "1e07b2fa67ce36a71d72b04812e210fc4946968c1cbde6cadf6ee996a285aa01b22459a8e0cef97581cb78e5756050565def9fb2dc2ba6ad0304fa4f66ef24d372700674eaf7dfe7494f08b7e07c412602374d90652034485ff6535c7d5b111d",
-      "verdict": "certified",
-      "judge_band": "certified",
-      "runs": 9,
-      "passed": 9,
+      "stamp": "1e07b2fa67ce36a71d72b04812e210fc4946968c1cbde6cadf6ee996a285aa01f8d0fb5377842a6c08674714e9b67d111c27b82e87501cf9031a483b53d05596c19b4c6c458bfd853539756f592d6cd8cbf8f4f410c178011a7ba20753f36c80",
+      "verdict": "supported_degraded",
+      "judge_band": "supported_degraded",
+      "runs": 12,
+      "passed": 12,
       "judge_scores": [
-        82,
-        75,
-        64,
-        80,
-        55,
-        78,
+        72,
+        74,
+        40,
+        40,
         86,
         72,
-        86
+        62,
+        82,
+        80,
+        32,
+        80,
+        47
       ],
       "bands": {
         "certified_min": 70,
         "degraded_min": 50,
         "floor": 40
       },
-      "reported_accepted": 9,
+      "reported_accepted": 12,
       "reported_wrong_answer": 0,
       "reported_invalid": 0,
       "reported_abstained": 0

@@ -26,6 +26,10 @@ The executor supplies a system actor and durable run ID for audit attribution. K
 A reviewed task rebuilds its operator from current authority before using ordinary domain writers.
 Keep raw causes and record content out of progress, job arguments, metrics and notices.
 
+A record the step cannot finish without a human is not a failure. Return it in `BatchOut.Action`
+with a reason code and a record reference, and add the reason's sentence and remedy as
+`datatask.action.<reason>.sentence` and `.remedy` in `backend/internal/shared/kernel/systemtext/operatorcopy.go`.
+
 ## Check failures
 
 | Failure | What to change |
@@ -82,8 +86,9 @@ It prints a verdict before the steps:
   estimate that counts input the step keeps would name it on every run.
 - `nothing_inspected`: each finished step that inspected no rows. Such a step proves nothing about
   rows it never saw.
+- `needs_action`: each finished step that left records for someone to act on, with their count.
 
-The command fails unless every step finished and none left rows in its scope.
+The command fails unless every step finished, none left rows in its scope and none needs action.
 
 ## Require a reviewed scope
 
@@ -125,3 +130,20 @@ The task registry gate compares released task IDs on `origin/main` with the work
 catalog. Keep IDs as static literals so the source census can read them. Removing a registration
 fails even if its constant remains in the code. Retirement requires a declared minimum upgrade-from
 release and is not supported yet.
+
+## Keep each transaction under the lock budget
+
+A row written to `activity`, `activity_participant`, `activity_link` or `contact_email` fires the
+`settlement_evidence_share` trigger. The trigger takes one shared advisory lock for each
+conversation the row belongs to: its thread, its correspondent's address or its contact. The lock
+is held until commit, so a settlement verdict and a new answer cannot interleave.
+
+Each lock uses a slot in the server's shared lock table. The table holds
+`max_locks_per_transaction × (max_connections + max_prepared_transactions)` locks for all sessions
+together. A transaction that touches more distinct conversations than that fails with
+`out of shared memory` (SQLSTATE 53200). While it runs, every other session has fewer slots left.
+
+So no single transaction writes more than a few thousand rows to these four tables. A data task
+stays under that through its step's `Limit`; keep it at a few hundred records. An import commits
+each source record on its own. A correction that must touch more rows is a data task, never one
+migration statement.

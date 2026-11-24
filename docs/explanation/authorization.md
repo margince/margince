@@ -19,7 +19,7 @@ module code is reached by:
 
 - the REST surface (`internal/compose/server.go`),
 - the MCP tool surface (`/mcp` on the api),
-- agent runs (the runner of Surface B, acting under a passport; see [agent-surface.md](agent-surface.md)),
+- agent runs (the runner of the night helpers, acting under a passport; see [agent-surface.md](agent-surface.md)),
 - workers (retention, the job that checks data still agrees, the close date sweep, the readers of the
   outbox relay),
 - compose flows (briefs, reports, exports, enrich).
@@ -256,7 +256,9 @@ below the transport, so REST and MCP act the same:
 
 - **🟢 `auto_execute`**: the default, for what the passport's holder could already do with no help.
   - A passport holds the granting human's own seat, grants and row scope. So to ask that same human to
-    confirm a second time would make the agent surface weaker than the human behind it, and no safer.
+    confirm a direct instruction a second time adds work. The send scope grants permission,
+    but does not approve messages with nobody there. The runner marks its context as having nobody there;
+    `auth.TierFor` makes every send wait for approval, including after a run resumes.
   - It is audited, with provenance that marks the agent. The same reason already settles who may
     *decide* an approval (below).
 - **🟡 `confirmation_required`**: kept for the calls where the holder of the credential did not choose
@@ -264,6 +266,8 @@ below the transport, so REST and MCP act the same:
   - `enrich` is the standing case. The model names the URL the server fetches. So a prompt that changes
     what the model says reaches an address that nobody with the credential picked. That is a question about
     data leaving, not about rights.
+  - Filing activities under a project waits too, even for a user's own agent. It sets a retention floor that
+    only a member can undo, so a call naming up to 500 activities does not set it with nobody looking.
   - An installation can also set a verb back to confirm first, per record type, by declaring
     `tier: confirmation_required` on the operation. Every verb still has the staging code that sends
     such a call to a human's inbox, so it does not just end as a refusal.

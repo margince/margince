@@ -62,7 +62,7 @@ func TestAReviewQuestionNamesItsCatalogKeyWhileItReadsAsShipped(t *testing.T) {
 			edited = append(edited, q)
 		}
 		updated, err := e.Activities.UpdateReviewTemplate(ctx, ids.UUID(template.Id),
-			crmcontracts.UpdateActivityReviewTemplateRequest{Version: version, Questions: edited})
+			crmcontracts.UpdateActivityReviewTemplateRequest{Version: version, Questions: &edited})
 		if err != nil {
 			t.Fatal(err)
 		}

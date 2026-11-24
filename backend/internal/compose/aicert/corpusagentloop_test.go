@@ -4,6 +4,7 @@
 package aicert_test
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -12,15 +13,11 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
-// agentLoopFirstStepOnly is the phrase every agent_loop rubric carries: the case
-// grades one step of a multi-step turn, and a judge not told so marks a right
-// first call down for the steps it never saw.
-const agentLoopFirstStepOnly = "FIRST step only"
-
-// An agent_loop case grades one step of a multi-step turn, so a rubric that does
-// not say so lets the judge mark a right first call down for the steps it never saw.
-// A case its mechanical check grades alone has no rubric to say it in.
-func TestEveryAgentLoopRubricGradesTheFirstStepOnly(t *testing.T) {
+// An agent_loop case is graded on the run's writes. A judge shown the whole run
+// (every read, observation and answer) grades whatever it notices, unless the
+// rubric names what is graded. So a judged rubric names the write tool its
+// scenario expects. A case graded by its mechanical check alone has no rubric.
+func TestEveryAgentLoopRubricNamesTheWriteItGrades(t *testing.T) {
 	census, err := compose.NewTaskCensus()
 	if err != nil {
 		t.Fatalf("building the task census: %v", err)
@@ -38,9 +35,14 @@ func TestEveryAgentLoopRubricGradesTheFirstStepOnly(t *testing.T) {
 		if !sc.Expect.Judged() {
 			continue
 		}
-		if rubric := strings.Join(strings.Fields(sc.Expect.Rubric), " "); !strings.Contains(rubric, agentLoopFirstStepOnly) {
-			t.Errorf("agent_loop scenario %s: its rubric never says it grades the turn's %q; "+
-				"open it with the sentence its siblings carry", sc.Name, agentLoopFirstStepOnly)
+		var write string
+		if err := json.Unmarshal(sc.Expect.Answer, &write); err != nil {
+			t.Errorf("agent_loop scenario %s: its answer is not a step name: %v", sc.Name, err)
+			continue
+		}
+		if rubric := strings.Join(strings.Fields(sc.Expect.Rubric), " "); !strings.Contains(rubric, "Grade the") || !strings.Contains(rubric, write) {
+			t.Errorf("agent_loop scenario %s: its rubric never says it grades what %s wrote; "+
+				"open it with \"Grade the ... the run wrote with %s\"", sc.Name, write, write)
 		}
 	}
 	if found == 0 {

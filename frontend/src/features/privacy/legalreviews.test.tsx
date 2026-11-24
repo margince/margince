@@ -91,6 +91,29 @@ describe("one review", () => {
     expect(
       screen.getByText(en["legalReview.docUnavailable"]),
     ).toBeInTheDocument();
+    // The agreements, latest contact and open tasks come with the pack, and the
+    // current offer links to its PDF.
+    expect(screen.getByText("Master services agreement")).toBeInTheDocument();
+    expect(screen.getByText("60 days")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["legalReview.contractAutoRenews"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Liability cap call")).toBeInTheDocument();
+    // An entry that knows only its day is drawn as a date, never as noon UTC.
+    expect(
+      screen.getByText(
+        (text) => text.startsWith("Note, ") && !text.includes(":"),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Send the data processing terms"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: en["offer.viewPdf"] }),
+    ).toHaveAttribute(
+      "href",
+      "/v1/offers/019f7e65-0000-7000-8000-0000000000f1/pdf",
+    );
     await user.click(
       await screen.findByRole("radio", {
         name: new RegExp(en["legalReview.outcomeChanges"]),
@@ -99,17 +122,96 @@ describe("one review", () => {
     const record = screen.getByRole("button", {
       name: en["legalReview.decide"],
     });
-    expect(record).toBeDisabled();
-    await user.type(
-      screen.getByLabelText(en["legalReview.commentsLabel"]),
-      "Cap the liability.",
+    await user.click(record);
+    const comments = screen.getByLabelText(
+      new RegExp(`^${en["legalReview.commentsLabel"]}`),
     );
+    expect(screen.getByText("Comments is required.")).toBeInTheDocument();
+    expect(comments).toHaveFocus();
+    expect(posted).toHaveLength(0);
+    await user.type(comments, "Cap the liability.");
     await user.click(record);
     await vi.waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toEqual({
       outcome: "changes_needed",
       comments: "Cap the liability.",
     });
+  });
+
+  it("says a pack made before the new sections predates them", async () => {
+    const older = review();
+    delete older.packet.contracts;
+    delete older.packet.touches;
+    delete older.packet.tasks;
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        [`GET /legal-reviews/${REVIEW_ID}`]: () => jsonResponse(older),
+      },
+      REVIEWER,
+    );
+    mount(REVIEW_ID);
+
+    expect(
+      await screen.findByText(en["legalReview.packOlder"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Master services agreement")).toBeNull();
+  });
+
+  it("states auto-renewal on a contract that has no renewal date", async () => {
+    const undated = review();
+    for (const contract of undated.packet.contracts ?? []) {
+      delete contract.renewal_on;
+    }
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        [`GET /legal-reviews/${REVIEW_ID}`]: () => jsonResponse(undated),
+      },
+      REVIEWER,
+    );
+    mount(REVIEW_ID);
+
+    expect(
+      await screen.findByText(en["legalReview.contractAutoRenews"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText(en["legalReview.contractRenewal"])).toBeVisible();
+  });
+
+  it("shows each offer line as the buyer reads it, and the note as written", async () => {
+    const shown = review({ note: "Check the cap.\nAnd the venue." });
+    const offer = shown.packet.offer;
+    if (!offer) throw new Error("the fixture carries an offer");
+    offer.lines[0] = { ...offer.lines[0], discount_pct: "12.50" };
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        [`GET /legal-reviews/${REVIEW_ID}`]: () => jsonResponse(shown),
+      },
+      { ...REVIEWER, deal: ["read"] },
+    );
+    mount(REVIEW_ID);
+
+    expect(
+      await screen.findByText(/^2 × Implementation at €37,815\.13/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Discount 12.5%")).toBeInTheDocument();
+    expect(screen.getAllByText("Tax 19%")).toHaveLength(2);
+    expect(screen.getAllByText(en["legalReview.offerTotal"])).not.toHaveLength(
+      0,
+    );
+    // The deal links only for a reader who may open deals, once that is known.
+    await vi.waitFor(() =>
+      expect(screen.getByRole("radio", { name: /Approve/ })).toBeEnabled(),
+    );
+    expect(
+      screen.getByRole("link", { name: "Warehouse rollout" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Note: Check the cap.\nAnd the venue.", {
+        normalizer: (text) => text,
+      }),
+    ).toHaveClass("legalreview-note");
   });
 
   it("does not let the requester answer their own review", async () => {

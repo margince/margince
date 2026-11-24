@@ -1,5 +1,5 @@
 import { Button, EmptyState } from "../../design-system/atoms";
-import { DataTable } from "../../design-system/datatable";
+import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { BarList } from "../../design-system/readings";
 import {
   BulletChart,
@@ -132,14 +132,11 @@ export function ChartBody({
       return (
         <>
           <BulletChart {...shared} targetLabel={t("reporting.target")} />
-          {chart.points.map((point) => (
-            <TargetProgress
-              key={point.key}
-              value={point.value}
-              target={point.target}
-              format={format}
-            />
-          ))}
+          <TargetProgress
+            chart={chart}
+            evaluation={evaluation}
+            format={format}
+          />
         </>
       );
     case "stage_distribution":
@@ -165,6 +162,8 @@ export function ChartBody({
       );
     case "stage_cohort":
     case "lead_cohort":
+    case "account_cohort":
+    case "source_quality":
       return (
         <CohortTable
           chart={chart}
@@ -282,6 +281,7 @@ export function ChartBody({
                 },
                 {
                   key: "value",
+                  align: "end",
                   header: t("reporting.actual"),
                   render: (point) => format(point.value),
                 },
@@ -363,6 +363,20 @@ function GroupedBars({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const countColumns: DataTableColumn<ChartPoint>[] =
+    countHeader == null
+      ? []
+      : [
+          {
+            key: "count",
+            header: countHeader,
+            align: "end",
+            render: (point) =>
+              point.observations == null
+                ? MONEY_ABSENT
+                : formatAnalyticsNumber(point.observations, locale),
+          },
+        ];
   return (
     <>
       <BarList
@@ -398,21 +412,11 @@ function GroupedBars({
             },
             {
               key: "value",
+              align: "end",
               header: t("reporting.actual"),
               render: (point) => format(point.value),
             },
-            ...(countHeader == null
-              ? []
-              : [
-                  {
-                    key: "count",
-                    header: countHeader,
-                    render: (point: ChartPoint) =>
-                      point.observations == null
-                        ? MONEY_ABSENT
-                        : formatAnalyticsNumber(point.observations, locale),
-                  },
-                ]),
+            ...countColumns,
           ]}
         />
       </ChartTableDoor>

@@ -37,7 +37,7 @@ import (
 func waitingContactRank(contact string) string {
 	return `CASE WHEN ` + contact + ` = sender.contact_id THEN 0
 	   WHEN EXISTS (SELECT 1 FROM contact_email seat_mail
-	         JOIN app_user seat ON lower(seat.email) = lower(seat_mail.email)
+	         JOIN app_user seat ON lower(seat.email) = seat_mail.email
 	        WHERE seat_mail.contact_id = ` + contact + ` AND seat_mail.archived_at IS NULL) THEN 2
 	   ELSE 1 END`
 }
@@ -217,7 +217,10 @@ var waitingSelectSQL = `
 	       coalesce(a.thread_key, ''), coalesce(a.channel_provider, ''),
 	       ` + bookedMeetingSQL("$%[1]d", "%[19]s") + `,
 	       ` + strangerMailSQL + `,
-	       a.sender_is_machine
+	       a.sender_is_machine,
+	       -- Slot 23 is withheldColumns: whether no model will judge a, and who
+	       -- of ours wrote on its thread first.
+	       %[23]s
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,

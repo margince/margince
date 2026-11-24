@@ -472,9 +472,9 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // a row falling, so the two kinds of progress are told apart by which number
 // moved and whether the tree moved with it.
 var shapeCensus = map[string]int{
-	"cannot-drift":   145,
+	"cannot-drift":   143,
 	"once":           152,
-	"one-of-a-kind":  142,
+	"one-of-a-kind":  138,
 	"is-every-named": 81,
 	"only-noun":      9,
 	"no-second":      10,

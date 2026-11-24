@@ -583,6 +583,45 @@ func (e ActivityDealFilingRecordType) Valid() bool {
 	}
 }
 
+// Defines values for ActivityDealRelevanceDealRelevance.
+const (
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceRelevant  ActivityDealRelevanceDealRelevance = "relevant"
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceUncertain ActivityDealRelevanceDealRelevance = "uncertain"
+	ActivityDealRelevanceDealRelevanceMarkDealRelevanceUnrelated ActivityDealRelevanceDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealRelevanceDealRelevance enum.
+func (e ActivityDealRelevanceDealRelevance) Valid() bool {
+	switch e {
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceRelevant:
+		return true
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceUncertain:
+		return true
+	case ActivityDealRelevanceDealRelevanceMarkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityDealRelevanceRelevanceSource.
+const (
+	ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceClassifier ActivityDealRelevanceRelevanceSource = "classifier"
+	ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceHuman      ActivityDealRelevanceRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityDealRelevanceRelevanceSource enum.
+func (e ActivityDealRelevanceRelevanceSource) Valid() bool {
+	switch e {
+	case ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceClassifier:
+		return true
+	case ActivityDealRelevanceRelevanceSourceMarkRelevanceSourceHuman:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityEmailTargetEntityType.
 const (
 	ActivityEmailTargetEntityTypeCompany ActivityEmailTargetEntityType = "company"
@@ -625,6 +664,27 @@ func (e ActivityEmailTargetRefusal) Valid() bool {
 	}
 }
 
+// Defines values for ActivityLinkDealRelevance.
+const (
+	ActivityLinkDealRelevanceLinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
+	ActivityLinkDealRelevanceLinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
+	ActivityLinkDealRelevanceLinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkDealRelevance enum.
+func (e ActivityLinkDealRelevance) Valid() bool {
+	switch e {
+	case ActivityLinkDealRelevanceLinkDealRelevanceRelevant:
+		return true
+	case ActivityLinkDealRelevanceLinkDealRelevanceUncertain:
+		return true
+	case ActivityLinkDealRelevanceLinkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -646,6 +706,24 @@ func (e ActivityLinkEntityType) Valid() bool {
 	case ActivityLinkEntityTypeLead:
 		return true
 	case ActivityLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityLinkRelevanceSource.
+const (
+	ActivityLinkRelevanceSourceLinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
+	ActivityLinkRelevanceSourceLinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkRelevanceSource enum.
+func (e ActivityLinkRelevanceSource) Valid() bool {
+	switch e {
+	case ActivityLinkRelevanceSourceLinkRelevanceSourceClassifier:
+		return true
+	case ActivityLinkRelevanceSourceLinkRelevanceSourceHuman:
 		return true
 	default:
 		return false
@@ -868,6 +946,60 @@ func (e ActivityVoiceContactRole) Valid() bool {
 	case ActivityVoiceContactRoleOrganizer:
 		return true
 	case ActivityVoiceContactRoleOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AddAttachmentLinkRequestCategory.
+const (
+	AddAttachmentLinkRequestCategoryContract AddAttachmentLinkRequestCategory = "contract"
+	AddAttachmentLinkRequestCategoryLegal    AddAttachmentLinkRequestCategory = "legal"
+	AddAttachmentLinkRequestCategoryOffer    AddAttachmentLinkRequestCategory = "offer"
+	AddAttachmentLinkRequestCategoryOther    AddAttachmentLinkRequestCategory = "other"
+)
+
+// Valid indicates whether the value is a known member of the AddAttachmentLinkRequestCategory enum.
+func (e AddAttachmentLinkRequestCategory) Valid() bool {
+	switch e {
+	case AddAttachmentLinkRequestCategoryContract:
+		return true
+	case AddAttachmentLinkRequestCategoryLegal:
+		return true
+	case AddAttachmentLinkRequestCategoryOffer:
+		return true
+	case AddAttachmentLinkRequestCategoryOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AddAttachmentLinkRequestEntityType.
+const (
+	AddAttachmentLinkRequestEntityTypeActivity AddAttachmentLinkRequestEntityType = "activity"
+	AddAttachmentLinkRequestEntityTypeCompany  AddAttachmentLinkRequestEntityType = "company"
+	AddAttachmentLinkRequestEntityTypeContact  AddAttachmentLinkRequestEntityType = "contact"
+	AddAttachmentLinkRequestEntityTypeDeal     AddAttachmentLinkRequestEntityType = "deal"
+	AddAttachmentLinkRequestEntityTypeLead     AddAttachmentLinkRequestEntityType = "lead"
+	AddAttachmentLinkRequestEntityTypeProject  AddAttachmentLinkRequestEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the AddAttachmentLinkRequestEntityType enum.
+func (e AddAttachmentLinkRequestEntityType) Valid() bool {
+	switch e {
+	case AddAttachmentLinkRequestEntityTypeActivity:
+		return true
+	case AddAttachmentLinkRequestEntityTypeCompany:
+		return true
+	case AddAttachmentLinkRequestEntityTypeContact:
+		return true
+	case AddAttachmentLinkRequestEntityTypeDeal:
+		return true
+	case AddAttachmentLinkRequestEntityTypeLead:
+		return true
+	case AddAttachmentLinkRequestEntityTypeProject:
 		return true
 	default:
 		return false
@@ -1207,6 +1339,7 @@ const (
 	AiActivityKindCaptureCounterpartyVerdict    AiActivityKind = "capture_counterparty_verdict"
 	AiActivityKindCertJudge                     AiActivityKind = "cert_judge"
 	AiActivityKindChatSummary                   AiActivityKind = "chat_summary"
+	AiActivityKindChatTaskReading               AiActivityKind = "chat_task_reading"
 	AiActivityKindColdStart                     AiActivityKind = "cold_start"
 	AiActivityKindCorpusAsk                     AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                    AiActivityKind = "deal_health"
@@ -1214,6 +1347,7 @@ const (
 	AiActivityKindDocumentExtract               AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                    AiActivityKind = "draft_reply"
 	AiActivityKindEnrich                        AiActivityKind = "enrich"
+	AiActivityKindExtensionTask                 AiActivityKind = "extension_task"
 	AiActivityKindGrowthFit                     AiActivityKind = "growth_fit"
 	AiActivityKindMorningBrief                  AiActivityKind = "morning_brief"
 	AiActivityKindNlSearch                      AiActivityKind = "nl_search"
@@ -1259,6 +1393,8 @@ func (e AiActivityKind) Valid() bool {
 		return true
 	case AiActivityKindChatSummary:
 		return true
+	case AiActivityKindChatTaskReading:
+		return true
 	case AiActivityKindColdStart:
 		return true
 	case AiActivityKindCorpusAsk:
@@ -1272,6 +1408,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindDraftReply:
 		return true
 	case AiActivityKindEnrich:
+		return true
+	case AiActivityKindExtensionTask:
 		return true
 	case AiActivityKindGrowthFit:
 		return true
@@ -1633,6 +1771,7 @@ func (e AiProfileName) Valid() bool {
 // Defines values for AiProfileProviders.
 const (
 	AiProfileProvidersAnthropic        AiProfileProviders = "anthropic"
+	AiProfileProvidersAzureOpenai      AiProfileProviders = "azure_openai"
 	AiProfileProvidersGemini           AiProfileProviders = "gemini"
 	AiProfileProvidersGeminiVertex     AiProfileProviders = "gemini_vertex"
 	AiProfileProvidersOllama           AiProfileProviders = "ollama"
@@ -1645,6 +1784,8 @@ const (
 func (e AiProfileProviders) Valid() bool {
 	switch e {
 	case AiProfileProvidersAnthropic:
+		return true
+	case AiProfileProvidersAzureOpenai:
 		return true
 	case AiProfileProvidersGemini:
 		return true
@@ -1808,6 +1949,7 @@ const (
 	AiTaskCaptureCounterpartyVerdict    AiTask = "capture_counterparty_verdict"
 	AiTaskCertJudge                     AiTask = "cert_judge"
 	AiTaskChatSummary                   AiTask = "chat_summary"
+	AiTaskChatTaskReading               AiTask = "chat_task_reading"
 	AiTaskColdStart                     AiTask = "cold_start"
 	AiTaskCorpusAsk                     AiTask = "corpus_ask"
 	AiTaskDealHealth                    AiTask = "deal_health"
@@ -1815,6 +1957,7 @@ const (
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
+	AiTaskExtensionTask                 AiTask = "extension_task"
 	AiTaskGrowthFit                     AiTask = "growth_fit"
 	AiTaskNlSearch                      AiTask = "nl_search"
 	AiTaskOfferDraft                    AiTask = "offer_draft"
@@ -1859,6 +2002,8 @@ func (e AiTask) Valid() bool {
 		return true
 	case AiTaskChatSummary:
 		return true
+	case AiTaskChatTaskReading:
+		return true
 	case AiTaskColdStart:
 		return true
 	case AiTaskCorpusAsk:
@@ -1872,6 +2017,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskDraftReply:
 		return true
 	case AiTaskEnrich:
+		return true
+	case AiTaskExtensionTask:
 		return true
 	case AiTaskGrowthFit:
 		return true
@@ -2026,6 +2173,24 @@ func (e AnalyticsCustomFieldType) Valid() bool {
 	case AnalyticsCustomFieldTypeBoolean:
 		return true
 	case AnalyticsCustomFieldTypePicklist:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AnalyticsEntityMoney.
+const (
+	AnalyticsEntityMoneyBaseCurrency AnalyticsEntityMoney = "base_currency"
+	AnalyticsEntityMoneyRowCurrency  AnalyticsEntityMoney = "row_currency"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsEntityMoney enum.
+func (e AnalyticsEntityMoney) Valid() bool {
+	switch e {
+	case AnalyticsEntityMoneyBaseCurrency:
+		return true
+	case AnalyticsEntityMoneyRowCurrency:
 		return true
 	default:
 		return false
@@ -2338,6 +2503,33 @@ func (e ApprovalPreviewImportRowOutcome) Valid() bool {
 	}
 }
 
+// Defines values for ArchiveKeptReason.
+const (
+	ArchiveKeptReasonKeptByLaw    ArchiveKeptReason = "kept_by_law"
+	ArchiveKeptReasonLegalHold    ArchiveKeptReason = "legal_hold"
+	ArchiveKeptReasonNotArchived  ArchiveKeptReason = "not_archived"
+	ArchiveKeptReasonNotFound     ArchiveKeptReason = "not_found"
+	ArchiveKeptReasonOptOutRecord ArchiveKeptReason = "opt_out_record"
+)
+
+// Valid indicates whether the value is a known member of the ArchiveKeptReason enum.
+func (e ArchiveKeptReason) Valid() bool {
+	switch e {
+	case ArchiveKeptReasonKeptByLaw:
+		return true
+	case ArchiveKeptReasonLegalHold:
+		return true
+	case ArchiveKeptReasonNotArchived:
+		return true
+	case ArchiveKeptReasonNotFound:
+		return true
+	case ArchiveKeptReasonOptOutRecord:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AssemblyServedFrom.
 const (
 	AssemblyServedFromCache     AssemblyServedFrom = "cache"
@@ -2464,6 +2656,7 @@ func (e AssignmentSubjectKind) Valid() bool {
 // Defines values for AssistantConfiguredModelProvider.
 const (
 	AssistantConfiguredModelProviderAssistantModelProviderAnthropic        AssistantConfiguredModelProvider = "anthropic"
+	AssistantConfiguredModelProviderAssistantModelProviderAzureOpenAI      AssistantConfiguredModelProvider = "azure_openai"
 	AssistantConfiguredModelProviderAssistantModelProviderGemini           AssistantConfiguredModelProvider = "gemini"
 	AssistantConfiguredModelProviderAssistantModelProviderGeminiVertex     AssistantConfiguredModelProvider = "gemini_vertex"
 	AssistantConfiguredModelProviderAssistantModelProviderOllama           AssistantConfiguredModelProvider = "ollama"
@@ -2476,6 +2669,8 @@ const (
 func (e AssistantConfiguredModelProvider) Valid() bool {
 	switch e {
 	case AssistantConfiguredModelProviderAssistantModelProviderAnthropic:
+		return true
+	case AssistantConfiguredModelProviderAssistantModelProviderAzureOpenAI:
 		return true
 	case AssistantConfiguredModelProviderAssistantModelProviderGemini:
 		return true
@@ -2581,6 +2776,7 @@ func (e AssistantProfileName) Valid() bool {
 // Defines values for AssistantProfileProviders.
 const (
 	AssistantProfileProvidersAnthropic        AssistantProfileProviders = "anthropic"
+	AssistantProfileProvidersAzureOpenai      AssistantProfileProviders = "azure_openai"
 	AssistantProfileProvidersGemini           AssistantProfileProviders = "gemini"
 	AssistantProfileProvidersGeminiVertex     AssistantProfileProviders = "gemini_vertex"
 	AssistantProfileProvidersOllama           AssistantProfileProviders = "ollama"
@@ -2593,6 +2789,8 @@ const (
 func (e AssistantProfileProviders) Valid() bool {
 	switch e {
 	case AssistantProfileProvidersAnthropic:
+		return true
+	case AssistantProfileProvidersAzureOpenai:
 		return true
 	case AssistantProfileProvidersGemini:
 		return true
@@ -3136,6 +3334,7 @@ func (e AttentionItemActions) Valid() bool {
 // Defines values for AttentionItemDueGroup.
 const (
 	AttentionItemDueGroupLater    AttentionItemDueGroup = "later"
+	AttentionItemDueGroupNone     AttentionItemDueGroup = "none"
 	AttentionItemDueGroupOverdue  AttentionItemDueGroup = "overdue"
 	AttentionItemDueGroupThisWeek AttentionItemDueGroup = "this_week"
 	AttentionItemDueGroupToday    AttentionItemDueGroup = "today"
@@ -3146,6 +3345,8 @@ const (
 func (e AttentionItemDueGroup) Valid() bool {
 	switch e {
 	case AttentionItemDueGroupLater:
+		return true
+	case AttentionItemDueGroupNone:
 		return true
 	case AttentionItemDueGroupOverdue:
 		return true
@@ -4247,6 +4448,7 @@ func (e BlockedDomainAdmission) Valid() bool {
 const (
 	BlockedDomainReasonCodeBulkSender        BlockedDomainReasonCode = "bulk_sender"
 	BlockedDomainReasonCodeCompanyCreated    BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeForeignSite       BlockedDomainReasonCode = "foreign_site"
 	BlockedDomainReasonCodeForwardedIdentity BlockedDomainReasonCode = "forwarded_identity"
 	BlockedDomainReasonCodeKeptAsCompany     BlockedDomainReasonCode = "kept_as_company"
 	BlockedDomainReasonCodeNearDuplicate     BlockedDomainReasonCode = "near_duplicate"
@@ -4264,6 +4466,8 @@ func (e BlockedDomainReasonCode) Valid() bool {
 	case BlockedDomainReasonCodeBulkSender:
 		return true
 	case BlockedDomainReasonCodeCompanyCreated:
+		return true
+	case BlockedDomainReasonCodeForeignSite:
 		return true
 	case BlockedDomainReasonCodeForwardedIdentity:
 		return true
@@ -4312,6 +4516,7 @@ func (e BlockedDomainSenderKind) Valid() bool {
 // Defines values for BlockedDomainSource.
 const (
 	BlockedDomainSourceAgent             BlockedDomainSource = "agent"
+	BlockedDomainSourceForeignSite       BlockedDomainSource = "foreign_site"
 	BlockedDomainSourceForwardedIdentity BlockedDomainSource = "forwarded_identity"
 	BlockedDomainSourceHeuristic         BlockedDomainSource = "heuristic"
 	BlockedDomainSourceHuman             BlockedDomainSource = "human"
@@ -4327,6 +4532,8 @@ const (
 func (e BlockedDomainSource) Valid() bool {
 	switch e {
 	case BlockedDomainSourceAgent:
+		return true
+	case BlockedDomainSourceForeignSite:
 		return true
 	case BlockedDomainSourceForwardedIdentity:
 		return true
@@ -4559,6 +4766,7 @@ const (
 	BulkVerbArchive        BulkVerb = "archive"
 	BulkVerbComplete       BulkVerb = "complete"
 	BulkVerbCreateTask     BulkVerb = "create_task"
+	BulkVerbMoveStage      BulkVerb = "move_stage"
 	BulkVerbReassignOwner  BulkVerb = "reassign_owner"
 	BulkVerbRemoveFromList BulkVerb = "remove_from_list"
 	BulkVerbRemoveTag      BulkVerb = "remove_tag"
@@ -4576,6 +4784,8 @@ func (e BulkVerb) Valid() bool {
 	case BulkVerbComplete:
 		return true
 	case BulkVerbCreateTask:
+		return true
+	case BulkVerbMoveStage:
 		return true
 	case BulkVerbReassignOwner:
 		return true
@@ -4984,6 +5194,60 @@ func (e CaptureTraceEntryOutcomeNow) Valid() bool {
 	case CaptureTraceEntryOutcomeNowInternal:
 		return true
 	case CaptureTraceEntryOutcomeNowSuppressed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureTraceFilingHook.
+const (
+	CaptureTraceFilingHookDeal    CaptureTraceFilingHook = "deal"
+	CaptureTraceFilingHookParties CaptureTraceFilingHook = "parties"
+)
+
+// Valid indicates whether the value is a known member of the CaptureTraceFilingHook enum.
+func (e CaptureTraceFilingHook) Valid() bool {
+	switch e {
+	case CaptureTraceFilingHookDeal:
+		return true
+	case CaptureTraceFilingHookParties:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CaptureTraceFilingResult.
+const (
+	CaptureTraceFilingResultAmbiguous      CaptureTraceFilingResult = "ambiguous"
+	CaptureTraceFilingResultFailed         CaptureTraceFilingResult = "failed"
+	CaptureTraceFilingResultIgnored        CaptureTraceFilingResult = "ignored"
+	CaptureTraceFilingResultLinked         CaptureTraceFilingResult = "linked"
+	CaptureTraceFilingResultMoved          CaptureTraceFilingResult = "moved"
+	CaptureTraceFilingResultNone           CaptureTraceFilingResult = "none"
+	CaptureTraceFilingResultPartiesChanged CaptureTraceFilingResult = "parties_changed"
+	CaptureTraceFilingResultRetracted      CaptureTraceFilingResult = "retracted"
+)
+
+// Valid indicates whether the value is a known member of the CaptureTraceFilingResult enum.
+func (e CaptureTraceFilingResult) Valid() bool {
+	switch e {
+	case CaptureTraceFilingResultAmbiguous:
+		return true
+	case CaptureTraceFilingResultFailed:
+		return true
+	case CaptureTraceFilingResultIgnored:
+		return true
+	case CaptureTraceFilingResultLinked:
+		return true
+	case CaptureTraceFilingResultMoved:
+		return true
+	case CaptureTraceFilingResultNone:
+		return true
+	case CaptureTraceFilingResultPartiesChanged:
+		return true
+	case CaptureTraceFilingResultRetracted:
 		return true
 	default:
 		return false
@@ -5842,6 +6106,24 @@ func (e Company360ContactConsent) Valid() bool {
 	}
 }
 
+// Defines values for Company360ContactGreetingRegister.
+const (
+	Company360ContactGreetingRegisterFamiliar Company360ContactGreetingRegister = "familiar"
+	Company360ContactGreetingRegisterFormal   Company360ContactGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the Company360ContactGreetingRegister enum.
+func (e Company360ContactGreetingRegister) Valid() bool {
+	switch e {
+	case Company360ContactGreetingRegisterFamiliar:
+		return true
+	case Company360ContactGreetingRegisterFormal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for Company360ContactTitleSource.
 const (
 	Company360ContactTitleSourceCanonical Company360ContactTitleSource = "canonical"
@@ -6094,6 +6376,7 @@ func (e Company360SuggestionActionKind) Valid() bool {
 // Defines values for Company360SuggestionKind.
 const (
 	Company360SuggestionKindCommitmentUnmet    Company360SuggestionKind = "commitment_unmet"
+	Company360SuggestionKindGoneDormant        Company360SuggestionKind = "gone_dormant"
 	Company360SuggestionKindLifecycleConflict  Company360SuggestionKind = "lifecycle_conflict"
 	Company360SuggestionKindNeedRaised         Company360SuggestionKind = "need_raised"
 	Company360SuggestionKindNoNextStep         Company360SuggestionKind = "no_next_step"
@@ -6107,6 +6390,8 @@ const (
 func (e Company360SuggestionKind) Valid() bool {
 	switch e {
 	case Company360SuggestionKindCommitmentUnmet:
+		return true
+	case Company360SuggestionKindGoneDormant:
 		return true
 	case Company360SuggestionKindLifecycleConflict:
 		return true
@@ -7792,6 +8077,27 @@ func (e ConsentPurposeClass) Valid() bool {
 	}
 }
 
+// Defines values for ConsentPurposeFrequency.
+const (
+	ConsentPurposeFrequencyMonthly   ConsentPurposeFrequency = "monthly"
+	ConsentPurposeFrequencyQuarterly ConsentPurposeFrequency = "quarterly"
+	ConsentPurposeFrequencyWeekly    ConsentPurposeFrequency = "weekly"
+)
+
+// Valid indicates whether the value is a known member of the ConsentPurposeFrequency enum.
+func (e ConsentPurposeFrequency) Valid() bool {
+	switch e {
+	case ConsentPurposeFrequencyMonthly:
+		return true
+	case ConsentPurposeFrequencyQuarterly:
+		return true
+	case ConsentPurposeFrequencyWeekly:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConsentQualifyingEventKind.
 const (
 	ConsentQualifyingEventKindActiveDeal         ConsentQualifyingEventKind = "active_deal"
@@ -7879,6 +8185,24 @@ func (e ConsumerMailDomainKind) Valid() bool {
 	case ConsumerMailDomainKindExtra:
 		return true
 	case ConsumerMailDomainKindNever:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactGreetingRegister.
+const (
+	ContactGreetingRegisterFamiliar ContactGreetingRegister = "familiar"
+	ContactGreetingRegisterFormal   ContactGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the ContactGreetingRegister enum.
+func (e ContactGreetingRegister) Valid() bool {
+	switch e {
+	case ContactGreetingRegisterFamiliar:
+		return true
+	case ContactGreetingRegisterFormal:
 		return true
 	default:
 		return false
@@ -8218,6 +8542,24 @@ func (e ContactCaseOwnerSeat) Valid() bool {
 	case ContactCaseOwnerSeatFull:
 		return true
 	case ContactCaseOwnerSeatRead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactCaseOwnerStatus.
+const (
+	ContactCaseOwnerStatusActive  ContactCaseOwnerStatus = "active"
+	ContactCaseOwnerStatusInvited ContactCaseOwnerStatus = "invited"
+)
+
+// Valid indicates whether the value is a known member of the ContactCaseOwnerStatus enum.
+func (e ContactCaseOwnerStatus) Valid() bool {
+	switch e {
+	case ContactCaseOwnerStatusActive:
+		return true
+	case ContactCaseOwnerStatusInvited:
 		return true
 	default:
 		return false
@@ -8659,6 +9001,45 @@ func (e ContactGraphRouteType) Valid() bool {
 	}
 }
 
+// Defines values for ContactImpersonationWarningReason.
+const (
+	ContactImpersonationWarningReasonDisplayNameOtherDomain ContactImpersonationWarningReason = "display_name_other_domain"
+	ContactImpersonationWarningReasonPunycodeDomain         ContactImpersonationWarningReason = "punycode_domain"
+)
+
+// Valid indicates whether the value is a known member of the ContactImpersonationWarningReason enum.
+func (e ContactImpersonationWarningReason) Valid() bool {
+	switch e {
+	case ContactImpersonationWarningReasonDisplayNameOtherDomain:
+		return true
+	case ContactImpersonationWarningReasonPunycodeDomain:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactMeans.
+const (
+	ContactMeansEmail ContactMeans = "email"
+	ContactMeansPhone ContactMeans = "phone"
+	ContactMeansWeb   ContactMeans = "web"
+)
+
+// Valid indicates whether the value is a known member of the ContactMeans enum.
+func (e ContactMeans) Valid() bool {
+	switch e {
+	case ContactMeansEmail:
+		return true
+	case ContactMeansPhone:
+		return true
+	case ContactMeansWeb:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactMomentConfidence.
 const (
 	ContactMomentConfidenceHigh         ContactMomentConfidence = "high"
@@ -8683,6 +9064,7 @@ func (e ContactMomentConfidence) Valid() bool {
 // Defines values for ContactMomentActionKind.
 const (
 	ContactMomentActionKindAskColleague     ContactMomentActionKind = "ask_colleague"
+	ContactMomentActionKindCall             ContactMomentActionKind = "call"
 	ContactMomentActionKindCompleteTask     ContactMomentActionKind = "complete_task"
 	ContactMomentActionKindDraftReply       ContactMomentActionKind = "draft_reply"
 	ContactMomentActionKindLogActivity      ContactMomentActionKind = "log_activity"
@@ -8696,6 +9078,8 @@ const (
 func (e ContactMomentActionKind) Valid() bool {
 	switch e {
 	case ContactMomentActionKindAskColleague:
+		return true
+	case ContactMomentActionKindCall:
 		return true
 	case ContactMomentActionKindCompleteTask:
 		return true
@@ -8981,6 +9365,7 @@ func (e ContactPhoneInputPhoneType) Valid() bool {
 const (
 	ContactProfileFieldFieldAddress     ContactProfileFieldField = "address"
 	ContactProfileFieldFieldCompanyName ContactProfileFieldField = "company_name"
+	ContactProfileFieldFieldEmail       ContactProfileFieldField = "email"
 	ContactProfileFieldFieldFirstName   ContactProfileFieldField = "first_name"
 	ContactProfileFieldFieldLastName    ContactProfileFieldField = "last_name"
 	ContactProfileFieldFieldLinkedin    ContactProfileFieldField = "linkedin"
@@ -8996,6 +9381,8 @@ func (e ContactProfileFieldField) Valid() bool {
 	case ContactProfileFieldFieldAddress:
 		return true
 	case ContactProfileFieldFieldCompanyName:
+		return true
+	case ContactProfileFieldFieldEmail:
 		return true
 	case ContactProfileFieldFieldFirstName:
 		return true
@@ -9256,6 +9643,33 @@ func (e ContactResearchRunState) Valid() bool {
 	case ContactResearchRunStateNotConnected:
 		return true
 	case ContactResearchRunStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactStatedSource.
+const (
+	ContactStatedSourceBusinessCard ContactStatedSource = "business_card"
+	ContactStatedSourceMetInPerson  ContactStatedSource = "met_in_person"
+	ContactStatedSourceOther        ContactStatedSource = "other"
+	ContactStatedSourceReferral     ContactStatedSource = "referral"
+	ContactStatedSourceWebsite      ContactStatedSource = "website"
+)
+
+// Valid indicates whether the value is a known member of the ContactStatedSource enum.
+func (e ContactStatedSource) Valid() bool {
+	switch e {
+	case ContactStatedSourceBusinessCard:
+		return true
+	case ContactStatedSourceMetInPerson:
+		return true
+	case ContactStatedSourceOther:
+		return true
+	case ContactStatedSourceReferral:
+		return true
+	case ContactStatedSourceWebsite:
 		return true
 	default:
 		return false
@@ -9724,6 +10138,24 @@ func (e CreateActivityRequestMeetingStatus) Valid() bool {
 	}
 }
 
+// Defines values for CreateActivityReviewTemplateRequestOutcome.
+const (
+	CreateActivityReviewTemplateRequestOutcomeLost CreateActivityReviewTemplateRequestOutcome = "lost"
+	CreateActivityReviewTemplateRequestOutcomeWon  CreateActivityReviewTemplateRequestOutcome = "won"
+)
+
+// Valid indicates whether the value is a known member of the CreateActivityReviewTemplateRequestOutcome enum.
+func (e CreateActivityReviewTemplateRequestOutcome) Valid() bool {
+	switch e {
+	case CreateActivityReviewTemplateRequestOutcomeLost:
+		return true
+	case CreateActivityReviewTemplateRequestOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateCaptureCounterpartyHoldRequestKind.
 const (
 	CreateCaptureCounterpartyHoldRequestKindAddress CreateCaptureCounterpartyHoldRequestKind = "address"
@@ -9890,6 +10322,7 @@ const (
 	CreateCustomFieldRequestTypePicklist    CreateCustomFieldRequestType = "picklist"
 	CreateCustomFieldRequestTypeRecord      CreateCustomFieldRequestType = "record"
 	CreateCustomFieldRequestTypeText        CreateCustomFieldRequestType = "text"
+	CreateCustomFieldRequestTypeUrl         CreateCustomFieldRequestType = "url"
 )
 
 // Valid indicates whether the value is a known member of the CreateCustomFieldRequestType enum.
@@ -9910,6 +10343,8 @@ func (e CreateCustomFieldRequestType) Valid() bool {
 	case CreateCustomFieldRequestTypeRecord:
 		return true
 	case CreateCustomFieldRequestTypeText:
+		return true
+	case CreateCustomFieldRequestTypeUrl:
 		return true
 	default:
 		return false
@@ -10664,6 +11099,7 @@ const (
 	CustomFieldTypePicklist    CustomFieldType = "picklist"
 	CustomFieldTypeRecord      CustomFieldType = "record"
 	CustomFieldTypeText        CustomFieldType = "text"
+	CustomFieldTypeUrl         CustomFieldType = "url"
 )
 
 // Valid indicates whether the value is a known member of the CustomFieldType enum.
@@ -10684,6 +11120,8 @@ func (e CustomFieldType) Valid() bool {
 	case CustomFieldTypeRecord:
 		return true
 	case CustomFieldTypeText:
+		return true
+	case CustomFieldTypeUrl:
 		return true
 	default:
 		return false
@@ -10771,6 +11209,21 @@ func (e DataSubjectRequestSubjectKind) Valid() bool {
 	case DataSubjectRequestSubjectKindContact:
 		return true
 	case DataSubjectRequestSubjectKindLead:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DataTaskActionNeededReason.
+const (
+	DataTaskActionNeededReasonPrivacyReviewerMissing DataTaskActionNeededReason = "privacy_reviewer_missing"
+)
+
+// Valid indicates whether the value is a known member of the DataTaskActionNeededReason enum.
+func (e DataTaskActionNeededReason) Valid() bool {
+	switch e {
+	case DataTaskActionNeededReasonPrivacyReviewerMissing:
 		return true
 	default:
 		return false
@@ -11311,6 +11764,27 @@ func (e DealCoverageRiskKind) Valid() bool {
 	case DealCoverageRiskKindSingleThreadedTheirs:
 		return true
 	case DealCoverageRiskKindStakeholderLeft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealCoverageSeatReach.
+const (
+	DealCoverageSeatReachNotReached DealCoverageSeatReach = "not_reached"
+	DealCoverageSeatReachReached    DealCoverageSeatReach = "reached"
+	DealCoverageSeatReachUnknown    DealCoverageSeatReach = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the DealCoverageSeatReach enum.
+func (e DealCoverageSeatReach) Valid() bool {
+	switch e {
+	case DealCoverageSeatReachNotReached:
+		return true
+	case DealCoverageSeatReachReached:
+		return true
+	case DealCoverageSeatReachUnknown:
 		return true
 	default:
 		return false
@@ -11941,6 +12415,30 @@ func (e DealViabilityReviewDeliveryState) Valid() bool {
 	}
 }
 
+// Defines values for DealWinChanceEffectSignal.
+const (
+	DealWinChanceEffectSignalClosePushed DealWinChanceEffectSignal = "close_pushed"
+	DealWinChanceEffectSignalNoNextStep  DealWinChanceEffectSignal = "no_next_step"
+	DealWinChanceEffectSignalQuiet       DealWinChanceEffectSignal = "quiet"
+	DealWinChanceEffectSignalStuck       DealWinChanceEffectSignal = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the DealWinChanceEffectSignal enum.
+func (e DealWinChanceEffectSignal) Valid() bool {
+	switch e {
+	case DealWinChanceEffectSignalClosePushed:
+		return true
+	case DealWinChanceEffectSignalNoNextStep:
+		return true
+	case DealWinChanceEffectSignalQuiet:
+		return true
+	case DealWinChanceEffectSignalStuck:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DecideCommissionRequestDecision.
 const (
 	DecideCommissionRequestDecisionApprove DecideCommissionRequestDecision = "approve"
@@ -12229,6 +12727,51 @@ func (e DomainQuestionSuggestionBasis) Valid() bool {
 	}
 }
 
+// Defines values for DormancyRung.
+const (
+	DormancyRungActive  DormancyRung = "active"
+	DormancyRungCooling DormancyRung = "cooling"
+	DormancyRungDormant DormancyRung = "dormant"
+	DormancyRungStale   DormancyRung = "stale"
+)
+
+// Valid indicates whether the value is a known member of the DormancyRung enum.
+func (e DormancyRung) Valid() bool {
+	switch e {
+	case DormancyRungActive:
+		return true
+	case DormancyRungCooling:
+		return true
+	case DormancyRungDormant:
+		return true
+	case DormancyRungStale:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DraftContentFindingRequirement.
+const (
+	DraftContentFindingRequirementAdvertisingLanguageFirst DraftContentFindingRequirement = "advertising_language_first"
+	DraftContentFindingRequirementClaimWithoutProof        DraftContentFindingRequirement = "claim_without_proof"
+	DraftContentFindingRequirementForeignAdvertiser        DraftContentFindingRequirement = "foreign_advertiser"
+)
+
+// Valid indicates whether the value is a known member of the DraftContentFindingRequirement enum.
+func (e DraftContentFindingRequirement) Valid() bool {
+	switch e {
+	case DraftContentFindingRequirementAdvertisingLanguageFirst:
+		return true
+	case DraftContentFindingRequirementClaimWithoutProof:
+		return true
+	case DraftContentFindingRequirementForeignAdvertiser:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DraftSteeringLanguage.
 const (
 	DraftSteeringLanguageDe DraftSteeringLanguage = "de"
@@ -12244,6 +12787,48 @@ func (e DraftSteeringLanguage) Valid() bool {
 	case DraftSteeringLanguageEn:
 		return true
 	case DraftSteeringLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EditAccessRequestRecordType.
+const (
+	EditAccessRequestRecordTypeCompany EditAccessRequestRecordType = "company"
+	EditAccessRequestRecordTypeContact EditAccessRequestRecordType = "contact"
+	EditAccessRequestRecordTypeDeal    EditAccessRequestRecordType = "deal"
+	EditAccessRequestRecordTypeLead    EditAccessRequestRecordType = "lead"
+	EditAccessRequestRecordTypeProject EditAccessRequestRecordType = "project"
+)
+
+// Valid indicates whether the value is a known member of the EditAccessRequestRecordType enum.
+func (e EditAccessRequestRecordType) Valid() bool {
+	switch e {
+	case EditAccessRequestRecordTypeCompany:
+		return true
+	case EditAccessRequestRecordTypeContact:
+		return true
+	case EditAccessRequestRecordTypeDeal:
+		return true
+	case EditAccessRequestRecordTypeLead:
+		return true
+	case EditAccessRequestRecordTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EditAccessRequestStatus.
+const (
+	EditAccessRequestStatusPending EditAccessRequestStatus = "pending"
+)
+
+// Valid indicates whether the value is a known member of the EditAccessRequestStatus enum.
+func (e EditAccessRequestStatus) Valid() bool {
+	switch e {
+	case EditAccessRequestStatusPending:
 		return true
 	default:
 		return false
@@ -12331,6 +12916,24 @@ func (e EmailAccessStatus) Valid() bool {
 	case EmailAccessStatusWithheld:
 		return true
 	case EmailAccessStatusWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EmailAttachmentSummaryWithheldReason.
+const (
+	EmailAttachmentSummaryWithheldReasonNotAddressed EmailAttachmentSummaryWithheldReason = "not_addressed"
+	EmailAttachmentSummaryWithheldReasonPrivate      EmailAttachmentSummaryWithheldReason = "private"
+)
+
+// Valid indicates whether the value is a known member of the EmailAttachmentSummaryWithheldReason enum.
+func (e EmailAttachmentSummaryWithheldReason) Valid() bool {
+	switch e {
+	case EmailAttachmentSummaryWithheldReasonNotAddressed:
+		return true
+	case EmailAttachmentSummaryWithheldReasonPrivate:
 		return true
 	default:
 		return false
@@ -13094,6 +13697,7 @@ const (
 	FilterVocabularyFieldTypePicklist    FilterVocabularyFieldType = "picklist"
 	FilterVocabularyFieldTypeRecord      FilterVocabularyFieldType = "record"
 	FilterVocabularyFieldTypeText        FilterVocabularyFieldType = "text"
+	FilterVocabularyFieldTypeUrl         FilterVocabularyFieldType = "url"
 )
 
 // Valid indicates whether the value is a known member of the FilterVocabularyFieldType enum.
@@ -13120,6 +13724,8 @@ func (e FilterVocabularyFieldType) Valid() bool {
 	case FilterVocabularyFieldTypeRecord:
 		return true
 	case FilterVocabularyFieldTypeText:
+		return true
+	case FilterVocabularyFieldTypeUrl:
 		return true
 	default:
 		return false
@@ -13480,10 +14086,53 @@ func (e ForecastContributionProbabilitySource) Valid() bool {
 	}
 }
 
+// Defines values for ForecastFocusRequestedReasons.
+const (
+	ForecastFocusRequestedReasonsBigDeal       ForecastFocusRequestedReasons = "big_deal"
+	ForecastFocusRequestedReasonsSingleContact ForecastFocusRequestedReasons = "single_contact"
+	ForecastFocusRequestedReasonsStuck         ForecastFocusRequestedReasons = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the ForecastFocusRequestedReasons enum.
+func (e ForecastFocusRequestedReasons) Valid() bool {
+	switch e {
+	case ForecastFocusRequestedReasonsBigDeal:
+		return true
+	case ForecastFocusRequestedReasonsSingleContact:
+		return true
+	case ForecastFocusRequestedReasonsStuck:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastFocusTeamStatus.
+const (
+	ForecastFocusTeamStatusBehind   ForecastFocusTeamStatus = "behind"
+	ForecastFocusTeamStatusNoGoal   ForecastFocusTeamStatus = "no_goal"
+	ForecastFocusTeamStatusOnTarget ForecastFocusTeamStatus = "on_target"
+)
+
+// Valid indicates whether the value is a known member of the ForecastFocusTeamStatus enum.
+func (e ForecastFocusTeamStatus) Valid() bool {
+	switch e {
+	case ForecastFocusTeamStatusBehind:
+		return true
+	case ForecastFocusTeamStatusNoGoal:
+		return true
+	case ForecastFocusTeamStatusOnTarget:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastLandingCaveat.
 const (
 	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
 	ForecastLandingCaveatLandingCaveatCallBelowActual ForecastLandingCaveat = "call_below_actual"
+	ForecastLandingCaveatLandingCaveatCallWithheld    ForecastLandingCaveat = "call_withheld"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingCaveat enum.
@@ -13492,6 +14141,8 @@ func (e ForecastLandingCaveat) Valid() bool {
 	case ForecastLandingCaveatLandingCaveatCallAbsent:
 		return true
 	case ForecastLandingCaveatLandingCaveatCallBelowActual:
+		return true
+	case ForecastLandingCaveatLandingCaveatCallWithheld:
 		return true
 	default:
 		return false
@@ -13601,6 +14252,7 @@ func (e ForecastMovementBucketName) Valid() bool {
 const (
 	ForecastMovementDealCausesAmount             ForecastMovementDealCauses = "amount"
 	ForecastMovementDealCausesCategory           ForecastMovementDealCauses = "category"
+	ForecastMovementDealCausesFocusActions       ForecastMovementDealCauses = "focus_actions"
 	ForecastMovementDealCausesFx                 ForecastMovementDealCauses = "fx"
 	ForecastMovementDealCausesLost               ForecastMovementDealCauses = "lost"
 	ForecastMovementDealCausesNew                ForecastMovementDealCauses = "new"
@@ -13619,6 +14271,8 @@ func (e ForecastMovementDealCauses) Valid() bool {
 		return true
 	case ForecastMovementDealCausesCategory:
 		return true
+	case ForecastMovementDealCausesFocusActions:
+		return true
 	case ForecastMovementDealCausesFx:
 		return true
 	case ForecastMovementDealCausesLost:
@@ -13636,6 +14290,27 @@ func (e ForecastMovementDealCauses) Valid() bool {
 	case ForecastMovementDealCausesStageWeight:
 		return true
 	case ForecastMovementDealCausesWon:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ForecastMovementFocusActionKind.
+const (
+	ForecastMovementFocusActionKindMailSent    ForecastMovementFocusActionKind = "mail_sent"
+	ForecastMovementFocusActionKindMeetingHeld ForecastMovementFocusActionKind = "meeting_held"
+	ForecastMovementFocusActionKindTaskDone    ForecastMovementFocusActionKind = "task_done"
+)
+
+// Valid indicates whether the value is a known member of the ForecastMovementFocusActionKind enum.
+func (e ForecastMovementFocusActionKind) Valid() bool {
+	switch e {
+	case ForecastMovementFocusActionKindMailSent:
+		return true
+	case ForecastMovementFocusActionKindMeetingHeld:
+		return true
+	case ForecastMovementFocusActionKindTaskDone:
 		return true
 	default:
 		return false
@@ -13773,6 +14448,7 @@ func (e ForecastSnapshotRefTrigger) Valid() bool {
 
 // Defines values for ForecastSufficiencyAbsent.
 const (
+	ForecastSufficiencyAbsentSufficiencyAbsenceCallWithheld        ForecastSufficiencyAbsent = "call_withheld"
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis   ForecastSufficiencyAbsent = "insufficient_basis"
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientHistory ForecastSufficiencyAbsent = "insufficient_history"
 )
@@ -13780,6 +14456,8 @@ const (
 // Valid indicates whether the value is a known member of the ForecastSufficiencyAbsent enum.
 func (e ForecastSufficiencyAbsent) Valid() bool {
 	switch e {
+	case ForecastSufficiencyAbsentSufficiencyAbsenceCallWithheld:
+		return true
 	case ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis:
 		return true
 	case ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientHistory:
@@ -13972,6 +14650,7 @@ const (
 	HealthActionDestinationConnections   HealthActionDestination = "connections"
 	HealthActionDestinationDiagnostics   HealthActionDestination = "diagnostics"
 	HealthActionDestinationModels        HealthActionDestination = "models"
+	HealthActionDestinationRegional      HealthActionDestination = "regional"
 	HealthActionDestinationSearch        HealthActionDestination = "search"
 	HealthActionDestinationUpdates       HealthActionDestination = "updates"
 )
@@ -13986,6 +14665,8 @@ func (e HealthActionDestination) Valid() bool {
 	case HealthActionDestinationDiagnostics:
 		return true
 	case HealthActionDestinationModels:
+		return true
+	case HealthActionDestinationRegional:
 		return true
 	case HealthActionDestinationSearch:
 		return true
@@ -14218,6 +14899,7 @@ func (e HealthSourceAvailability) Valid() bool {
 // Defines values for HealthSourceCondition.
 const (
 	HealthSourceConditionClear        HealthSourceCondition = "clear"
+	HealthSourceConditionInformation  HealthSourceCondition = "information"
 	HealthSourceConditionProcessing   HealthSourceCondition = "processing"
 	HealthSourceConditionRecovered    HealthSourceCondition = "recovered"
 	HealthSourceConditionRetrying     HealthSourceCondition = "retrying"
@@ -14231,6 +14913,8 @@ const (
 func (e HealthSourceCondition) Valid() bool {
 	switch e {
 	case HealthSourceConditionClear:
+		return true
+	case HealthSourceConditionInformation:
 		return true
 	case HealthSourceConditionProcessing:
 		return true
@@ -14482,6 +15166,24 @@ func (e HomeRepairTaskSource) Valid() bool {
 	}
 }
 
+// Defines values for ImapSmtpSettingsSecurity.
+const (
+	ImapSmtpSettingsSecurityStarttls ImapSmtpSettingsSecurity = "starttls"
+	ImapSmtpSettingsSecurityTls      ImapSmtpSettingsSecurity = "tls"
+)
+
+// Valid indicates whether the value is a known member of the ImapSmtpSettingsSecurity enum.
+func (e ImapSmtpSettingsSecurity) Valid() bool {
+	switch e {
+	case ImapSmtpSettingsSecurityStarttls:
+		return true
+	case ImapSmtpSettingsSecurityTls:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportDraftStep.
 const (
 	ImportDraftStepFiles ImportDraftStep = "files"
@@ -14610,14 +15312,15 @@ func (e ImportPresetLinkType) Valid() bool {
 
 // Defines values for ImportProblemKind.
 const (
-	ImportProblemKindBrokenLink   ImportProblemKind = "broken_link"
-	ImportProblemKindDroppedLink  ImportProblemKind = "dropped_link"
-	ImportProblemKindDuplicate    ImportProblemKind = "duplicate"
-	ImportProblemKindInvalidValue ImportProblemKind = "invalid_value"
-	ImportProblemKindNewTag       ImportProblemKind = "new_tag"
-	ImportProblemKindPermission   ImportProblemKind = "permission"
-	ImportProblemKindUnknownOwner ImportProblemKind = "unknown_owner"
-	ImportProblemKindUnusableRow  ImportProblemKind = "unusable_row"
+	ImportProblemKindBrokenLink         ImportProblemKind = "broken_link"
+	ImportProblemKindDroppedLink        ImportProblemKind = "dropped_link"
+	ImportProblemKindDuplicate          ImportProblemKind = "duplicate"
+	ImportProblemKindIncompleteIdentity ImportProblemKind = "incomplete_identity"
+	ImportProblemKindInvalidValue       ImportProblemKind = "invalid_value"
+	ImportProblemKindNewTag             ImportProblemKind = "new_tag"
+	ImportProblemKindPermission         ImportProblemKind = "permission"
+	ImportProblemKindUnknownOwner       ImportProblemKind = "unknown_owner"
+	ImportProblemKindUnusableRow        ImportProblemKind = "unusable_row"
 )
 
 // Valid indicates whether the value is a known member of the ImportProblemKind enum.
@@ -14628,6 +15331,8 @@ func (e ImportProblemKind) Valid() bool {
 	case ImportProblemKindDroppedLink:
 		return true
 	case ImportProblemKindDuplicate:
+		return true
+	case ImportProblemKindIncompleteIdentity:
 		return true
 	case ImportProblemKindInvalidValue:
 		return true
@@ -14667,10 +15372,12 @@ const (
 	ImportReasonCodeCannotWriteType              ImportReasonCode = "cannot_write_type"
 	ImportReasonCodeCloseDateFuture              ImportReasonCode = "close_date_future"
 	ImportReasonCodeCloseDatePast                ImportReasonCode = "close_date_past"
+	ImportReasonCodeCompanyDomainMatched         ImportReasonCode = "company_domain_matched"
 	ImportReasonCodeCompanyDuplicateFound        ImportReasonCode = "company_duplicate_found"
 	ImportReasonCodeCompanyDuplicateSkipped      ImportReasonCode = "company_duplicate_skipped"
 	ImportReasonCodeCompanyLinkOnMeeting         ImportReasonCode = "company_link_on_meeting"
 	ImportReasonCodeCompanyNameEmpty             ImportReasonCode = "company_name_empty"
+	ImportReasonCodeContactChannelMissing        ImportReasonCode = "contact_channel_missing"
 	ImportReasonCodeContactDuplicateFound        ImportReasonCode = "contact_duplicate_found"
 	ImportReasonCodeContactDuplicateSkipped      ImportReasonCode = "contact_duplicate_skipped"
 	ImportReasonCodeContactEmailHeld             ImportReasonCode = "contact_email_held"
@@ -14703,8 +15410,10 @@ const (
 	ImportReasonCodeFieldInactive                ImportReasonCode = "field_inactive"
 	ImportReasonCodeFxRateMissing                ImportReasonCode = "fx_rate_missing"
 	ImportReasonCodeIdNotACompanyId              ImportReasonCode = "id_not_a_company_id"
+	ImportReasonCodeIdNotARecordId               ImportReasonCode = "id_not_a_record_id"
 	ImportReasonCodeIdNotVisible                 ImportReasonCode = "id_not_visible"
 	ImportReasonCodeIdOnNonCompany               ImportReasonCode = "id_on_non_company"
+	ImportReasonCodeIdRecordNotVisible           ImportReasonCode = "id_record_not_visible"
 	ImportReasonCodeLeadNotFound                 ImportReasonCode = "lead_not_found"
 	ImportReasonCodeLeadNotFoundDropped          ImportReasonCode = "lead_not_found_dropped"
 	ImportReasonCodeLeadStatusNotImportable      ImportReasonCode = "lead_status_not_importable"
@@ -14748,12 +15457,14 @@ const (
 	ImportReasonCodePipelineUnnamed              ImportReasonCode = "pipeline_unnamed"
 	ImportReasonCodeRecordArchived               ImportReasonCode = "record_archived"
 	ImportReasonCodeRefTakenByAnotherCompany     ImportReasonCode = "ref_taken_by_another_company"
+	ImportReasonCodeRefTakenByAnotherRecord      ImportReasonCode = "ref_taken_by_another_record"
 	ImportReasonCodeRowKeyEmpty                  ImportReasonCode = "row_key_empty"
 	ImportReasonCodeRowKeyRepeated               ImportReasonCode = "row_key_repeated"
 	ImportReasonCodeRunInFlight                  ImportReasonCode = "run_in_flight"
 	ImportReasonCodeSizeBandInvalid              ImportReasonCode = "size_band_invalid"
 	ImportReasonCodeStageUnknown                 ImportReasonCode = "stage_unknown"
 	ImportReasonCodeStageUnnamed                 ImportReasonCode = "stage_unnamed"
+	ImportReasonCodeStoredValuesKept             ImportReasonCode = "stored_values_kept"
 	ImportReasonCodeTagCreated                   ImportReasonCode = "tag_created"
 	ImportReasonCodeTagNameInvalid               ImportReasonCode = "tag_name_invalid"
 	ImportReasonCodeTagNew                       ImportReasonCode = "tag_new"
@@ -14816,6 +15527,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeCloseDatePast:
 		return true
+	case ImportReasonCodeCompanyDomainMatched:
+		return true
 	case ImportReasonCodeCompanyDuplicateFound:
 		return true
 	case ImportReasonCodeCompanyDuplicateSkipped:
@@ -14823,6 +15536,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCompanyLinkOnMeeting:
 		return true
 	case ImportReasonCodeCompanyNameEmpty:
+		return true
+	case ImportReasonCodeContactChannelMissing:
 		return true
 	case ImportReasonCodeContactDuplicateFound:
 		return true
@@ -14888,9 +15603,13 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeIdNotACompanyId:
 		return true
+	case ImportReasonCodeIdNotARecordId:
+		return true
 	case ImportReasonCodeIdNotVisible:
 		return true
 	case ImportReasonCodeIdOnNonCompany:
+		return true
+	case ImportReasonCodeIdRecordNotVisible:
 		return true
 	case ImportReasonCodeLeadNotFound:
 		return true
@@ -14978,6 +15697,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeRefTakenByAnotherCompany:
 		return true
+	case ImportReasonCodeRefTakenByAnotherRecord:
+		return true
 	case ImportReasonCodeRowKeyEmpty:
 		return true
 	case ImportReasonCodeRowKeyRepeated:
@@ -14989,6 +15710,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeStageUnknown:
 		return true
 	case ImportReasonCodeStageUnnamed:
+		return true
+	case ImportReasonCodeStoredValuesKept:
 		return true
 	case ImportReasonCodeTagCreated:
 		return true
@@ -15127,6 +15850,24 @@ func (e ImportRunStatus) Valid() bool {
 	case ImportRunStatusUndone:
 		return true
 	case ImportRunStatusValidating:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportSourceProfileObjectChosenBy.
+const (
+	ImportSourceProfileObjectChosenByColumns ImportSourceProfileObjectChosenBy = "columns"
+	ImportSourceProfileObjectChosenByNone    ImportSourceProfileObjectChosenBy = "none"
+)
+
+// Valid indicates whether the value is a known member of the ImportSourceProfileObjectChosenBy enum.
+func (e ImportSourceProfileObjectChosenBy) Valid() bool {
+	switch e {
+	case ImportSourceProfileObjectChosenByColumns:
+		return true
+	case ImportSourceProfileObjectChosenByNone:
 		return true
 	default:
 		return false
@@ -15946,6 +16687,24 @@ func (e LatestInboundKind) Valid() bool {
 	}
 }
 
+// Defines values for LawfulBasisConfirmationSubjectEntityType.
+const (
+	LawfulBasisConfirmationSubjectEntityTypeContact LawfulBasisConfirmationSubjectEntityType = "contact"
+	LawfulBasisConfirmationSubjectEntityTypeLead    LawfulBasisConfirmationSubjectEntityType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the LawfulBasisConfirmationSubjectEntityType enum.
+func (e LawfulBasisConfirmationSubjectEntityType) Valid() bool {
+	switch e {
+	case LawfulBasisConfirmationSubjectEntityTypeContact:
+		return true
+	case LawfulBasisConfirmationSubjectEntityTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LeadIndustry.
 const (
 	LeadIndustryAerospaceDefense          LeadIndustry = "aerospace_defense"
@@ -16366,6 +17125,33 @@ func (e LegalReviewOutcome) Valid() bool {
 	}
 }
 
+// Defines values for LegalReviewPacketContractStatus.
+const (
+	LegalReviewPacketContractStatusActive     LegalReviewPacketContractStatus = "active"
+	LegalReviewPacketContractStatusCancelled  LegalReviewPacketContractStatus = "cancelled"
+	LegalReviewPacketContractStatusDraft      LegalReviewPacketContractStatus = "draft"
+	LegalReviewPacketContractStatusExpired    LegalReviewPacketContractStatus = "expired"
+	LegalReviewPacketContractStatusSuperseded LegalReviewPacketContractStatus = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketContractStatus enum.
+func (e LegalReviewPacketContractStatus) Valid() bool {
+	switch e {
+	case LegalReviewPacketContractStatusActive:
+		return true
+	case LegalReviewPacketContractStatusCancelled:
+		return true
+	case LegalReviewPacketContractStatusDraft:
+		return true
+	case LegalReviewPacketContractStatusExpired:
+		return true
+	case LegalReviewPacketContractStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LegalReviewPacketDocumentCategory.
 const (
 	LegalReviewPacketDocumentCategoryContract LegalReviewPacketDocumentCategory = "contract"
@@ -16402,6 +17188,33 @@ func (e LegalReviewPacketDocumentDocState) Valid() bool {
 	case LegalReviewPacketDocumentDocStateDraft:
 		return true
 	case LegalReviewPacketDocumentDocStateFinal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalReviewPacketTouchKind.
+const (
+	LegalReviewPacketTouchKindCall    LegalReviewPacketTouchKind = "call"
+	LegalReviewPacketTouchKindEmail   LegalReviewPacketTouchKind = "email"
+	LegalReviewPacketTouchKindMeeting LegalReviewPacketTouchKind = "meeting"
+	LegalReviewPacketTouchKindMessage LegalReviewPacketTouchKind = "message"
+	LegalReviewPacketTouchKindNote    LegalReviewPacketTouchKind = "note"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketTouchKind enum.
+func (e LegalReviewPacketTouchKind) Valid() bool {
+	switch e {
+	case LegalReviewPacketTouchKindCall:
+		return true
+	case LegalReviewPacketTouchKindEmail:
+		return true
+	case LegalReviewPacketTouchKindMeeting:
+		return true
+	case LegalReviewPacketTouchKindMessage:
+		return true
+	case LegalReviewPacketTouchKindNote:
 		return true
 	default:
 		return false
@@ -17110,6 +17923,7 @@ const (
 	MailDraftAnchorTypeCompany  MailDraftAnchorType = "company"
 	MailDraftAnchorTypeContact  MailDraftAnchorType = "contact"
 	MailDraftAnchorTypeDeal     MailDraftAnchorType = "deal"
+	MailDraftAnchorTypeForward  MailDraftAnchorType = "forward"
 	MailDraftAnchorTypeLead     MailDraftAnchorType = "lead"
 	MailDraftAnchorTypeProject  MailDraftAnchorType = "project"
 )
@@ -17124,6 +17938,8 @@ func (e MailDraftAnchorType) Valid() bool {
 	case MailDraftAnchorTypeContact:
 		return true
 	case MailDraftAnchorTypeDeal:
+		return true
+	case MailDraftAnchorTypeForward:
 		return true
 	case MailDraftAnchorTypeLead:
 		return true
@@ -19097,10 +19913,10 @@ const (
 	PrivacyInformationPagePurposeBasesExistingCustomerException      PrivacyInformationPagePurposeBases = "existing_customer_exception"
 	PrivacyInformationPagePurposeBasesLegalObligation                PrivacyInformationPagePurposeBases = "legal_obligation"
 	PrivacyInformationPagePurposeBasesLegitimateInterests            PrivacyInformationPagePurposeBases = "legitimate_interests"
+	PrivacyInformationPagePurposeBasesNone                           PrivacyInformationPagePurposeBases = "none"
 	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
 	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
 	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
-	PrivacyInformationPagePurposeBasesVnSubjectAgreement             PrivacyInformationPagePurposeBases = "vn_subject_agreement"
 )
 
 // Valid indicates whether the value is a known member of the PrivacyInformationPagePurposeBases enum.
@@ -19116,13 +19932,13 @@ func (e PrivacyInformationPagePurposeBases) Valid() bool {
 		return true
 	case PrivacyInformationPagePurposeBasesLegitimateInterests:
 		return true
+	case PrivacyInformationPagePurposeBasesNone:
+		return true
 	case PrivacyInformationPagePurposeBasesPrecontractRequest:
 		return true
 	case PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence:
 		return true
 	case PrivacyInformationPagePurposeBasesVitalOrSecurityInterest:
-		return true
-	case PrivacyInformationPagePurposeBasesVnSubjectAgreement:
 		return true
 	default:
 		return false
@@ -19882,6 +20698,27 @@ func (e ReceiptActorType) Valid() bool {
 	}
 }
 
+// Defines values for RecipientCountryReadingSource.
+const (
+	RecipientCountryReadingSourceContactAddress     RecipientCountryReadingSource = "contact_address"
+	RecipientCountryReadingSourceEmployerAddress    RecipientCountryReadingSource = "employer_address"
+	RecipientCountryReadingSourceLeadCompanyAddress RecipientCountryReadingSource = "lead_company_address"
+)
+
+// Valid indicates whether the value is a known member of the RecipientCountryReadingSource enum.
+func (e RecipientCountryReadingSource) Valid() bool {
+	switch e {
+	case RecipientCountryReadingSourceContactAddress:
+		return true
+	case RecipientCountryReadingSourceEmployerAddress:
+		return true
+	case RecipientCountryReadingSourceLeadCompanyAddress:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordAccessVisibility.
 const (
 	RecordAccessVisibilityOwner     RecordAccessVisibility = "owner"
@@ -20296,6 +21133,33 @@ const (
 func (e RefreshAcceptedStatus) Valid() bool {
 	switch e {
 	case RefreshAcceptedStatusEnqueued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RefusedRecipientCountrySource.
+const (
+	RefusedRecipientCountrySourceContactAddress     RefusedRecipientCountrySource = "contact_address"
+	RefusedRecipientCountrySourceEmployerAddress    RefusedRecipientCountrySource = "employer_address"
+	RefusedRecipientCountrySourceLeadCompanyAddress RefusedRecipientCountrySource = "lead_company_address"
+	RefusedRecipientCountrySourceSenderCleared      RefusedRecipientCountrySource = "sender_cleared"
+	RefusedRecipientCountrySourceSenderOverride     RefusedRecipientCountrySource = "sender_override"
+)
+
+// Valid indicates whether the value is a known member of the RefusedRecipientCountrySource enum.
+func (e RefusedRecipientCountrySource) Valid() bool {
+	switch e {
+	case RefusedRecipientCountrySourceContactAddress:
+		return true
+	case RefusedRecipientCountrySourceEmployerAddress:
+		return true
+	case RefusedRecipientCountrySourceLeadCompanyAddress:
+		return true
+	case RefusedRecipientCountrySourceSenderCleared:
+		return true
+	case RefusedRecipientCountrySourceSenderOverride:
 		return true
 	default:
 		return false
@@ -20722,7 +21586,9 @@ func (e ReportSetupRequestSite) Valid() bool {
 // Defines values for ReportSetupSelectionPeriod.
 const (
 	ReportSetupSelectionPeriodLastMonth   ReportSetupSelectionPeriod = "last_month"
+	ReportSetupSelectionPeriodLastQuarter ReportSetupSelectionPeriod = "last_quarter"
 	ReportSetupSelectionPeriodLastWeek    ReportSetupSelectionPeriod = "last_week"
+	ReportSetupSelectionPeriodLastYear    ReportSetupSelectionPeriod = "last_year"
 	ReportSetupSelectionPeriodThisMonth   ReportSetupSelectionPeriod = "this_month"
 	ReportSetupSelectionPeriodThisQuarter ReportSetupSelectionPeriod = "this_quarter"
 	ReportSetupSelectionPeriodThisWeek    ReportSetupSelectionPeriod = "this_week"
@@ -20733,7 +21599,11 @@ func (e ReportSetupSelectionPeriod) Valid() bool {
 	switch e {
 	case ReportSetupSelectionPeriodLastMonth:
 		return true
+	case ReportSetupSelectionPeriodLastQuarter:
+		return true
 	case ReportSetupSelectionPeriodLastWeek:
+		return true
+	case ReportSetupSelectionPeriodLastYear:
 		return true
 	case ReportSetupSelectionPeriodThisMonth:
 		return true
@@ -20811,6 +21681,7 @@ func (e ReportSetupUnsupportedCode) Valid() bool {
 
 // Defines values for ReportingBlockKind.
 const (
+	ReportingBlockKindAccountCohort     ReportingBlockKind = "account_cohort"
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
 	ReportingBlockKindBreakdown         ReportingBlockKind = "breakdown"
 	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
@@ -20819,6 +21690,7 @@ const (
 	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
 	ReportingBlockKindPipelineMovement  ReportingBlockKind = "pipeline_movement"
 	ReportingBlockKindSdrOutcomes       ReportingBlockKind = "sdr_outcomes"
+	ReportingBlockKindSourceQuality     ReportingBlockKind = "source_quality"
 	ReportingBlockKindStageAge          ReportingBlockKind = "stage_age"
 	ReportingBlockKindStageCohort       ReportingBlockKind = "stage_cohort"
 	ReportingBlockKindStageDistribution ReportingBlockKind = "stage_distribution"
@@ -20828,6 +21700,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingBlockKind enum.
 func (e ReportingBlockKind) Valid() bool {
 	switch e {
+	case ReportingBlockKindAccountCohort:
+		return true
 	case ReportingBlockKindBookingsTrend:
 		return true
 	case ReportingBlockKindBreakdown:
@@ -20843,6 +21717,8 @@ func (e ReportingBlockKind) Valid() bool {
 	case ReportingBlockKindPipelineMovement:
 		return true
 	case ReportingBlockKindSdrOutcomes:
+		return true
+	case ReportingBlockKindSourceQuality:
 		return true
 	case ReportingBlockKindStageAge:
 		return true
@@ -20877,6 +21753,7 @@ func (e ReportingCardWidth) Valid() bool {
 
 // Defines values for ReportingCardKind.
 const (
+	ReportingCardKindAccountCohort     ReportingCardKind = "account_cohort"
 	ReportingCardKindAssessment        ReportingCardKind = "assessment"
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
 	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
@@ -20887,6 +21764,7 @@ const (
 	ReportingCardKindPipelineMovement  ReportingCardKind = "pipeline_movement"
 	ReportingCardKindQuestion          ReportingCardKind = "question"
 	ReportingCardKindSdrOutcomes       ReportingCardKind = "sdr_outcomes"
+	ReportingCardKindSourceQuality     ReportingCardKind = "source_quality"
 	ReportingCardKindStageAge          ReportingCardKind = "stage_age"
 	ReportingCardKindStageCohort       ReportingCardKind = "stage_cohort"
 	ReportingCardKindStageDistribution ReportingCardKind = "stage_distribution"
@@ -20896,6 +21774,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingCardKind enum.
 func (e ReportingCardKind) Valid() bool {
 	switch e {
+	case ReportingCardKindAccountCohort:
+		return true
 	case ReportingCardKindAssessment:
 		return true
 	case ReportingCardKindBookingsTrend:
@@ -20915,6 +21795,8 @@ func (e ReportingCardKind) Valid() bool {
 	case ReportingCardKindQuestion:
 		return true
 	case ReportingCardKindSdrOutcomes:
+		return true
+	case ReportingCardKindSourceQuality:
 		return true
 	case ReportingCardKindStageAge:
 		return true
@@ -21082,11 +21964,13 @@ func (e ReportingMetricDefinitionTemporalBasis) Valid() bool {
 // Defines values for ReportingMetricID.
 const (
 	ReportingMetricIDAcceptedOpportunities         ReportingMetricID = "accepted_opportunities"
+	ReportingMetricIDAccountProgression            ReportingMetricID = "account_progression"
 	ReportingMetricIDBookingsMix                   ReportingMetricID = "bookings_mix"
 	ReportingMetricIDBookingsWon                   ReportingMetricID = "bookings_won"
 	ReportingMetricIDClosedWinRate                 ReportingMetricID = "closed_win_rate"
 	ReportingMetricIDForecastLanding               ReportingMetricID = "forecast_landing"
 	ReportingMetricIDInitiativePipeline            ReportingMetricID = "initiative_pipeline"
+	ReportingMetricIDIntroductionsMade             ReportingMetricID = "introductions_made"
 	ReportingMetricIDLeadCohortOutcomes            ReportingMetricID = "lead_cohort_outcomes"
 	ReportingMetricIDLeadFirstResponse             ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves               ReportingMetricID = "lead_status_moves"
@@ -21095,6 +21979,7 @@ const (
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
 	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
+	ReportingMetricIDMeetingsBookedForColleagues   ReportingMetricID = "meetings_booked_for_colleagues"
 	ReportingMetricIDMeetingsHeld                  ReportingMetricID = "meetings_held"
 	ReportingMetricIDOpenPipeline                  ReportingMetricID = "open_pipeline"
 	ReportingMetricIDPartnerActivity               ReportingMetricID = "partner_activity"
@@ -21103,6 +21988,7 @@ const (
 	ReportingMetricIDPartnerWon                    ReportingMetricID = "partner_won"
 	ReportingMetricIDQualifiedOpportunitiesCreated ReportingMetricID = "qualified_opportunities_created"
 	ReportingMetricIDQualifiedPipelineCreated      ReportingMetricID = "qualified_pipeline_created"
+	ReportingMetricIDSourceQuality                 ReportingMetricID = "source_quality"
 	ReportingMetricIDStageAge                      ReportingMetricID = "stage_age"
 	ReportingMetricIDStageConversion               ReportingMetricID = "stage_conversion"
 )
@@ -21111,6 +21997,8 @@ const (
 func (e ReportingMetricID) Valid() bool {
 	switch e {
 	case ReportingMetricIDAcceptedOpportunities:
+		return true
+	case ReportingMetricIDAccountProgression:
 		return true
 	case ReportingMetricIDBookingsMix:
 		return true
@@ -21121,6 +22009,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDForecastLanding:
 		return true
 	case ReportingMetricIDInitiativePipeline:
+		return true
+	case ReportingMetricIDIntroductionsMade:
 		return true
 	case ReportingMetricIDLeadCohortOutcomes:
 		return true
@@ -21138,6 +22028,8 @@ func (e ReportingMetricID) Valid() bool {
 		return true
 	case ReportingMetricIDLeadsQualified:
 		return true
+	case ReportingMetricIDMeetingsBookedForColleagues:
+		return true
 	case ReportingMetricIDMeetingsHeld:
 		return true
 	case ReportingMetricIDOpenPipeline:
@@ -21153,6 +22045,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDQualifiedOpportunitiesCreated:
 		return true
 	case ReportingMetricIDQualifiedPipelineCreated:
+		return true
+	case ReportingMetricIDSourceQuality:
 		return true
 	case ReportingMetricIDStageAge:
 		return true
@@ -21332,7 +22226,9 @@ func (e ReportingSelectionCloseWindow) Valid() bool {
 const (
 	ReportingSelectionPeriodCustom      ReportingSelectionPeriod = "custom"
 	ReportingSelectionPeriodLastMonth   ReportingSelectionPeriod = "last_month"
+	ReportingSelectionPeriodLastQuarter ReportingSelectionPeriod = "last_quarter"
 	ReportingSelectionPeriodLastWeek    ReportingSelectionPeriod = "last_week"
+	ReportingSelectionPeriodLastYear    ReportingSelectionPeriod = "last_year"
 	ReportingSelectionPeriodThisMonth   ReportingSelectionPeriod = "this_month"
 	ReportingSelectionPeriodThisQuarter ReportingSelectionPeriod = "this_quarter"
 	ReportingSelectionPeriodThisWeek    ReportingSelectionPeriod = "this_week"
@@ -21345,7 +22241,11 @@ func (e ReportingSelectionPeriod) Valid() bool {
 		return true
 	case ReportingSelectionPeriodLastMonth:
 		return true
+	case ReportingSelectionPeriodLastQuarter:
+		return true
 	case ReportingSelectionPeriodLastWeek:
+		return true
+	case ReportingSelectionPeriodLastYear:
 		return true
 	case ReportingSelectionPeriodThisMonth:
 		return true
@@ -21529,6 +22429,27 @@ func (e ReportingValueBasis) Valid() bool {
 	case ReportingValueBasisImplementation:
 		return true
 	case ReportingValueBasisSoftware:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RequestDealManagerRequestReasons.
+const (
+	RequestDealManagerRequestReasonsBigDeal       RequestDealManagerRequestReasons = "big_deal"
+	RequestDealManagerRequestReasonsSingleContact RequestDealManagerRequestReasons = "single_contact"
+	RequestDealManagerRequestReasonsStuck         RequestDealManagerRequestReasons = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the RequestDealManagerRequestReasons enum.
+func (e RequestDealManagerRequestReasons) Valid() bool {
+	switch e {
+	case RequestDealManagerRequestReasonsBigDeal:
+		return true
+	case RequestDealManagerRequestReasonsSingleContact:
+		return true
+	case RequestDealManagerRequestReasonsStuck:
 		return true
 	default:
 		return false
@@ -21880,6 +22801,30 @@ func (e RoleRowScope) Valid() bool {
 	case RoleRowScopeOwn:
 		return true
 	case RoleRowScopeTeam:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RoleDirectoryVerbs.
+const (
+	RoleDirectoryVerbsCreate RoleDirectoryVerbs = "create"
+	RoleDirectoryVerbsDelete RoleDirectoryVerbs = "delete"
+	RoleDirectoryVerbsRead   RoleDirectoryVerbs = "read"
+	RoleDirectoryVerbsUpdate RoleDirectoryVerbs = "update"
+)
+
+// Valid indicates whether the value is a known member of the RoleDirectoryVerbs enum.
+func (e RoleDirectoryVerbs) Valid() bool {
+	switch e {
+	case RoleDirectoryVerbsCreate:
+		return true
+	case RoleDirectoryVerbsDelete:
+		return true
+	case RoleDirectoryVerbsRead:
+		return true
+	case RoleDirectoryVerbsUpdate:
 		return true
 	default:
 		return false
@@ -22621,6 +23566,7 @@ const (
 	SchedulingProfileBlockerCalendarUnavailable SchedulingProfileBlocker = "calendar_unavailable"
 	SchedulingProfileBlockerNoCalendar          SchedulingProfileBlocker = "no_calendar"
 	SchedulingProfileBlockerNone                SchedulingProfileBlocker = "none"
+	SchedulingProfileBlockerTeamNotReady        SchedulingProfileBlocker = "team_not_ready"
 )
 
 // Valid indicates whether the value is a known member of the SchedulingProfileBlocker enum.
@@ -22633,6 +23579,8 @@ func (e SchedulingProfileBlocker) Valid() bool {
 	case SchedulingProfileBlockerNoCalendar:
 		return true
 	case SchedulingProfileBlockerNone:
+		return true
+	case SchedulingProfileBlockerTeamNotReady:
 		return true
 	default:
 		return false
@@ -22654,6 +23602,66 @@ func (e SchedulingProfileProvider) Valid() bool {
 	case SchedulingProfileProviderGcal:
 		return true
 	case SchedulingProfileProviderGraphcal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamAnswerState.
+const (
+	SchedulingTeamAnswerStateConfirmed SchedulingTeamAnswerState = "confirmed"
+	SchedulingTeamAnswerStateLeft      SchedulingTeamAnswerState = "left"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamAnswerState enum.
+func (e SchedulingTeamAnswerState) Valid() bool {
+	switch e {
+	case SchedulingTeamAnswerStateConfirmed:
+		return true
+	case SchedulingTeamAnswerStateLeft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamMemberState.
+const (
+	SchedulingTeamMemberStateConfirmed   SchedulingTeamMemberState = "confirmed"
+	SchedulingTeamMemberStateLeft        SchedulingTeamMemberState = "left"
+	SchedulingTeamMemberStatePending     SchedulingTeamMemberState = "pending"
+	SchedulingTeamMemberStateUnavailable SchedulingTeamMemberState = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamMemberState enum.
+func (e SchedulingTeamMemberState) Valid() bool {
+	switch e {
+	case SchedulingTeamMemberStateConfirmed:
+		return true
+	case SchedulingTeamMemberStateLeft:
+		return true
+	case SchedulingTeamMemberStatePending:
+		return true
+	case SchedulingTeamMemberStateUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SchedulingTeamRequestState.
+const (
+	SchedulingTeamRequestStateConfirmed SchedulingTeamRequestState = "confirmed"
+	SchedulingTeamRequestStatePending   SchedulingTeamRequestState = "pending"
+)
+
+// Valid indicates whether the value is a known member of the SchedulingTeamRequestState enum.
+func (e SchedulingTeamRequestState) Valid() bool {
+	switch e {
+	case SchedulingTeamRequestStateConfirmed:
+		return true
+	case SchedulingTeamRequestStatePending:
 		return true
 	default:
 		return false
@@ -22843,6 +23851,24 @@ func (e SdrUpcomingMeetingStartsPrecision) Valid() bool {
 	case SdrUpcomingMeetingStartsPrecisionDay:
 		return true
 	case SdrUpcomingMeetingStartsPrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SearchDataAnswerOutcome.
+const (
+	SearchDataAnswerOutcomeAnswered    SearchDataAnswerOutcome = "answered"
+	SearchDataAnswerOutcomeUnsupported SearchDataAnswerOutcome = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the SearchDataAnswerOutcome enum.
+func (e SearchDataAnswerOutcome) Valid() bool {
+	switch e {
+	case SearchDataAnswerOutcomeAnswered:
+		return true
+	case SearchDataAnswerOutcomeUnsupported:
 		return true
 	default:
 		return false
@@ -23143,6 +24169,24 @@ const (
 func (e ServiceStatusStatus) Valid() bool {
 	switch e {
 	case ServiceStatusStatusOk:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SetActivityDealRelevanceRequestDealRelevance.
+const (
+	SetActivityDealRelevanceRequestDealRelevanceRelevant  SetActivityDealRelevanceRequestDealRelevance = "relevant"
+	SetActivityDealRelevanceRequestDealRelevanceUnrelated SetActivityDealRelevanceRequestDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the SetActivityDealRelevanceRequestDealRelevance enum.
+func (e SetActivityDealRelevanceRequestDealRelevance) Valid() bool {
+	switch e {
+	case SetActivityDealRelevanceRequestDealRelevanceRelevant:
+		return true
+	case SetActivityDealRelevanceRequestDealRelevanceUnrelated:
 		return true
 	default:
 		return false
@@ -24888,6 +25932,7 @@ const (
 	UndoabilityReasonNotWritableByCaller     UndoabilityReason = "not_writable_by_caller"
 	UndoabilityReasonNullUnwritableByModule  UndoabilityReason = "null_unwritable_by_module"
 	UndoabilityReasonRecordArchived          UndoabilityReason = "record_archived"
+	UndoabilityReasonRestoreArchiverRequired UndoabilityReason = "restore_archiver_required"
 	UndoabilityReasonSuperseded              UndoabilityReason = "superseded"
 	UndoabilityReasonUnsupportedRecordType   UndoabilityReason = "unsupported_record_type"
 )
@@ -24918,6 +25963,8 @@ func (e UndoabilityReason) Valid() bool {
 	case UndoabilityReasonNullUnwritableByModule:
 		return true
 	case UndoabilityReasonRecordArchived:
+		return true
+	case UndoabilityReasonRestoreArchiverRequired:
 		return true
 	case UndoabilityReasonSuperseded:
 		return true
@@ -25168,6 +26215,24 @@ func (e UpdateCompanyRequestVisibility) Valid() bool {
 	case UpdateCompanyRequestVisibilityOwner:
 		return true
 	case UpdateCompanyRequestVisibilityWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateContactRequestGreetingRegister.
+const (
+	UpdateContactRequestGreetingRegisterFamiliar UpdateContactRequestGreetingRegister = "familiar"
+	UpdateContactRequestGreetingRegisterFormal   UpdateContactRequestGreetingRegister = "formal"
+)
+
+// Valid indicates whether the value is a known member of the UpdateContactRequestGreetingRegister enum.
+func (e UpdateContactRequestGreetingRegister) Valid() bool {
+	switch e {
+	case UpdateContactRequestGreetingRegisterFamiliar:
+		return true
+	case UpdateContactRequestGreetingRegisterFormal:
 		return true
 	default:
 		return false
@@ -27503,6 +28568,7 @@ func (e WorklistView) Valid() bool {
 const (
 	WorklistBandBandBuildPipeline WorklistBandBand = "build_pipeline"
 	WorklistBandBandKeepMomentum  WorklistBandBand = "keep_momentum"
+	WorklistBandBandMore          WorklistBandBand = "more"
 	WorklistBandBandNow           WorklistBandBand = "now"
 	WorklistBandBandReview        WorklistBandBand = "review"
 )
@@ -27513,6 +28579,8 @@ func (e WorklistBandBand) Valid() bool {
 	case WorklistBandBandBuildPipeline:
 		return true
 	case WorklistBandBandKeepMomentum:
+		return true
+	case WorklistBandBandMore:
 		return true
 	case WorklistBandBandNow:
 		return true
@@ -27749,6 +28817,7 @@ func (e WorklistItemActions) Valid() bool {
 const (
 	WorklistItemBandBuildPipeline WorklistItemBand = "build_pipeline"
 	WorklistItemBandKeepMomentum  WorklistItemBand = "keep_momentum"
+	WorklistItemBandMore          WorklistItemBand = "more"
 	WorklistItemBandNow           WorklistItemBand = "now"
 	WorklistItemBandReview        WorklistItemBand = "review"
 )
@@ -27759,6 +28828,8 @@ func (e WorklistItemBand) Valid() bool {
 	case WorklistItemBandBuildPipeline:
 		return true
 	case WorklistItemBandKeepMomentum:
+		return true
+	case WorklistItemBandMore:
 		return true
 	case WorklistItemBandNow:
 		return true
@@ -27955,6 +29026,7 @@ func (e WorklistItemDispositions) Valid() bool {
 // Defines values for WorklistItemDueGroup.
 const (
 	WorklistItemDueGroupWorklistDueGroupLater    WorklistItemDueGroup = "later"
+	WorklistItemDueGroupWorklistDueGroupNone     WorklistItemDueGroup = "none"
 	WorklistItemDueGroupWorklistDueGroupOverdue  WorklistItemDueGroup = "overdue"
 	WorklistItemDueGroupWorklistDueGroupThisWeek WorklistItemDueGroup = "this_week"
 	WorklistItemDueGroupWorklistDueGroupToday    WorklistItemDueGroup = "today"
@@ -27965,6 +29037,8 @@ const (
 func (e WorklistItemDueGroup) Valid() bool {
 	switch e {
 	case WorklistItemDueGroupWorklistDueGroupLater:
+		return true
+	case WorklistItemDueGroupWorklistDueGroupNone:
 		return true
 	case WorklistItemDueGroupWorklistDueGroupOverdue:
 		return true
@@ -28122,6 +29196,7 @@ func (e WorklistItemSource) Valid() bool {
 
 // Defines values for WorklistMoveAction.
 const (
+	WorklistMoveActionBringInManager   WorklistMoveAction = "bring_in_manager"
 	WorklistMoveActionCreateTask       WorklistMoveAction = "create_task"
 	WorklistMoveActionDraftEmail       WorklistMoveAction = "draft_email"
 	WorklistMoveActionDraftReply       WorklistMoveAction = "draft_reply"
@@ -28134,6 +29209,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistMoveAction enum.
 func (e WorklistMoveAction) Valid() bool {
 	switch e {
+	case WorklistMoveActionBringInManager:
+		return true
 	case WorklistMoveActionCreateTask:
 		return true
 	case WorklistMoveActionDraftEmail:
@@ -28619,6 +29696,7 @@ func (e CapturedByKind) Valid() bool {
 const (
 	ContactProfileFieldKeyAddress     ContactProfileFieldKey = "address"
 	ContactProfileFieldKeyCompanyName ContactProfileFieldKey = "company_name"
+	ContactProfileFieldKeyEmail       ContactProfileFieldKey = "email"
 	ContactProfileFieldKeyFirstName   ContactProfileFieldKey = "first_name"
 	ContactProfileFieldKeyLastName    ContactProfileFieldKey = "last_name"
 	ContactProfileFieldKeyLinkedin    ContactProfileFieldKey = "linkedin"
@@ -28634,6 +29712,8 @@ func (e ContactProfileFieldKey) Valid() bool {
 	case ContactProfileFieldKeyAddress:
 		return true
 	case ContactProfileFieldKeyCompanyName:
+		return true
+	case ContactProfileFieldKeyEmail:
 		return true
 	case ContactProfileFieldKeyFirstName:
 		return true
@@ -29129,7 +30209,9 @@ func (e EvaluateReportingParamsScopeKind) Valid() bool {
 const (
 	EvaluateReportingParamsPeriodCustom      EvaluateReportingParamsPeriod = "custom"
 	EvaluateReportingParamsPeriodLastMonth   EvaluateReportingParamsPeriod = "last_month"
+	EvaluateReportingParamsPeriodLastQuarter EvaluateReportingParamsPeriod = "last_quarter"
 	EvaluateReportingParamsPeriodLastWeek    EvaluateReportingParamsPeriod = "last_week"
+	EvaluateReportingParamsPeriodLastYear    EvaluateReportingParamsPeriod = "last_year"
 	EvaluateReportingParamsPeriodThisMonth   EvaluateReportingParamsPeriod = "this_month"
 	EvaluateReportingParamsPeriodThisQuarter EvaluateReportingParamsPeriod = "this_quarter"
 	EvaluateReportingParamsPeriodThisWeek    EvaluateReportingParamsPeriod = "this_week"
@@ -29142,7 +30224,11 @@ func (e EvaluateReportingParamsPeriod) Valid() bool {
 		return true
 	case EvaluateReportingParamsPeriodLastMonth:
 		return true
+	case EvaluateReportingParamsPeriodLastQuarter:
+		return true
 	case EvaluateReportingParamsPeriodLastWeek:
+		return true
+	case EvaluateReportingParamsPeriodLastYear:
 		return true
 	case EvaluateReportingParamsPeriodThisMonth:
 		return true
@@ -29219,7 +30305,9 @@ func (e ExportReportingEvaluationParamsScopeKind) Valid() bool {
 const (
 	ExportReportingEvaluationParamsPeriodCustom      ExportReportingEvaluationParamsPeriod = "custom"
 	ExportReportingEvaluationParamsPeriodLastMonth   ExportReportingEvaluationParamsPeriod = "last_month"
+	ExportReportingEvaluationParamsPeriodLastQuarter ExportReportingEvaluationParamsPeriod = "last_quarter"
 	ExportReportingEvaluationParamsPeriodLastWeek    ExportReportingEvaluationParamsPeriod = "last_week"
+	ExportReportingEvaluationParamsPeriodLastYear    ExportReportingEvaluationParamsPeriod = "last_year"
 	ExportReportingEvaluationParamsPeriodThisMonth   ExportReportingEvaluationParamsPeriod = "this_month"
 	ExportReportingEvaluationParamsPeriodThisQuarter ExportReportingEvaluationParamsPeriod = "this_quarter"
 	ExportReportingEvaluationParamsPeriodThisWeek    ExportReportingEvaluationParamsPeriod = "this_week"
@@ -29232,7 +30320,11 @@ func (e ExportReportingEvaluationParamsPeriod) Valid() bool {
 		return true
 	case ExportReportingEvaluationParamsPeriodLastMonth:
 		return true
+	case ExportReportingEvaluationParamsPeriodLastQuarter:
+		return true
 	case ExportReportingEvaluationParamsPeriodLastWeek:
+		return true
+	case ExportReportingEvaluationParamsPeriodLastYear:
 		return true
 	case ExportReportingEvaluationParamsPeriodThisMonth:
 		return true
@@ -29309,7 +30401,9 @@ func (e GetReportingEvidenceParamsScopeKind) Valid() bool {
 const (
 	GetReportingEvidenceParamsPeriodCustom      GetReportingEvidenceParamsPeriod = "custom"
 	GetReportingEvidenceParamsPeriodLastMonth   GetReportingEvidenceParamsPeriod = "last_month"
+	GetReportingEvidenceParamsPeriodLastQuarter GetReportingEvidenceParamsPeriod = "last_quarter"
 	GetReportingEvidenceParamsPeriodLastWeek    GetReportingEvidenceParamsPeriod = "last_week"
+	GetReportingEvidenceParamsPeriodLastYear    GetReportingEvidenceParamsPeriod = "last_year"
 	GetReportingEvidenceParamsPeriodThisMonth   GetReportingEvidenceParamsPeriod = "this_month"
 	GetReportingEvidenceParamsPeriodThisQuarter GetReportingEvidenceParamsPeriod = "this_quarter"
 	GetReportingEvidenceParamsPeriodThisWeek    GetReportingEvidenceParamsPeriod = "this_week"
@@ -29322,7 +30416,11 @@ func (e GetReportingEvidenceParamsPeriod) Valid() bool {
 		return true
 	case GetReportingEvidenceParamsPeriodLastMonth:
 		return true
+	case GetReportingEvidenceParamsPeriodLastQuarter:
+		return true
 	case GetReportingEvidenceParamsPeriodLastWeek:
+		return true
+	case GetReportingEvidenceParamsPeriodLastYear:
 		return true
 	case GetReportingEvidenceParamsPeriodThisMonth:
 		return true
@@ -29574,10 +30672,12 @@ func (e GetSdrTeamReviewParamsScopeKind) Valid() bool {
 
 // Defines values for GetSdrTeamReviewParamsPeriod.
 const (
-	GetSdrTeamReviewParamsPeriodLastMonth GetSdrTeamReviewParamsPeriod = "last_month"
-	GetSdrTeamReviewParamsPeriodLastWeek  GetSdrTeamReviewParamsPeriod = "last_week"
-	GetSdrTeamReviewParamsPeriodThisMonth GetSdrTeamReviewParamsPeriod = "this_month"
-	GetSdrTeamReviewParamsPeriodThisWeek  GetSdrTeamReviewParamsPeriod = "this_week"
+	GetSdrTeamReviewParamsPeriodLastMonth   GetSdrTeamReviewParamsPeriod = "last_month"
+	GetSdrTeamReviewParamsPeriodLastQuarter GetSdrTeamReviewParamsPeriod = "last_quarter"
+	GetSdrTeamReviewParamsPeriodLastWeek    GetSdrTeamReviewParamsPeriod = "last_week"
+	GetSdrTeamReviewParamsPeriodLastYear    GetSdrTeamReviewParamsPeriod = "last_year"
+	GetSdrTeamReviewParamsPeriodThisMonth   GetSdrTeamReviewParamsPeriod = "this_month"
+	GetSdrTeamReviewParamsPeriodThisWeek    GetSdrTeamReviewParamsPeriod = "this_week"
 )
 
 // Valid indicates whether the value is a known member of the GetSdrTeamReviewParamsPeriod enum.
@@ -29585,7 +30685,11 @@ func (e GetSdrTeamReviewParamsPeriod) Valid() bool {
 	switch e {
 	case GetSdrTeamReviewParamsPeriodLastMonth:
 		return true
+	case GetSdrTeamReviewParamsPeriodLastQuarter:
+		return true
 	case GetSdrTeamReviewParamsPeriodLastWeek:
+		return true
+	case GetSdrTeamReviewParamsPeriodLastYear:
 		return true
 	case GetSdrTeamReviewParamsPeriodThisMonth:
 		return true
@@ -32285,7 +33389,7 @@ type AccessPreview struct {
 		Object    string                           `json:"object"`
 	} `json:"field_masks"`
 
-	// IdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+	// IdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 	IdentityRead *AccessPreviewIdentityRead `json:"identity_read,omitempty"`
 
 	// MemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -32305,7 +33409,7 @@ type AccessPreview struct {
 // AccessPreviewFieldMasksCondition defines model for AccessPreview.FieldMasks.Condition.
 type AccessPreviewFieldMasksCondition string
 
-// AccessPreviewIdentityRead Customer identity (contact, company, lead, deal) is readable by every seat that holds the object grant; row scope governs projects and writes.
+// AccessPreviewIdentityRead Customer identity and the work done for it (contact, company, lead, deal, project) is readable by every seat that holds the object grant; row scope governs writes.
 type AccessPreviewIdentityRead string
 
 // AccessPreviewMemberStatus The member's own status, present on `GET /users/{id}/access` and absent on the preview, which computes access for nobody yet.
@@ -32327,7 +33431,7 @@ type AccountCoverage struct {
 	// Scope One population an answer can be about. `label` is written by the server, because a client resolving an id into a name would be naming a subject it may not read.
 	Scope AnalyticsScope `json:"scope"`
 
-	// Thresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	// Thresholds What the coverage section counts as at risk. Absent fields take the defaults the answer prints.
 	Thresholds AccountCoverageThresholds `json:"thresholds"`
 
 	// Truncated True when a view had more candidates than the read judges, so its count covers the largest ones and not every one.
@@ -32383,7 +33487,10 @@ type AccountCoverageRow struct {
 	// NamedSeats Contacts named on the deal, engaged or not.
 	NamedSeats *int `json:"named_seats,omitempty"`
 
-	// OpenAmountMinor Their amounts, in the installation currency, when every one carries a rate.
+	// OpenAmountCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	OpenAmountCoverage *ReportRowCoverage `json:"open_amount_coverage,omitempty"`
+
+	// OpenAmountMinor Their amounts that convert, in the installation currency. Absent when none converts. A deal with no rate is left out and counted in `open_amount_coverage`.
 	OpenAmountMinor *int64 `json:"open_amount_minor,omitempty"`
 
 	// OpenDeals Open deals on the account, for an untouched row.
@@ -32391,18 +33498,18 @@ type AccountCoverageRow struct {
 	WonDeal   *AccountCoverageDeal `json:"won_deal,omitempty"`
 }
 
-// AccountCoverageThresholds What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+// AccountCoverageThresholds What the coverage section counts as at risk. Absent fields take the defaults the answer prints.
 type AccountCoverageThresholds struct {
-	// MaxEngagedSeats A deal with this many contacts engaged on it, or fewer, is single-threaded. Default 1.
+	// MaxEngagedSeats A deal someone has been in touch with, with this many contacts engaged on it or fewer, is single-threaded. The coverage section and the deal page both judge by it. Default 1.
 	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" maximum:"10" minimum:"0"`
 
-	// SilentDays A won account with no exchange within this many days is silent. Default 30.
+	// SilentDays A won company with no exchange within this many days is silent. Default 30.
 	SilentDays *int `json:"silent_days,omitempty" maximum:"365" minimum:"1"`
 
-	// UntouchedDays An account with an open deal and no exchange within this many days is untouched. Default 21.
+	// UntouchedDays A company with an open deal and no exchange within this many days is untouched. Default 21.
 	UntouchedDays *int `json:"untouched_days,omitempty" maximum:"365" minimum:"1"`
 
-	// WonWithinDays How far back a won deal still makes an account a won account. Default 180.
+	// WonWithinDays How far back a won deal still makes a company a won one. Default 180.
 	WonWithinDays *int `json:"won_within_days,omitempty" maximum:"730" minimum:"1"`
 }
 
@@ -32663,7 +33770,7 @@ type Activity struct {
 	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
-	// ReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
@@ -32743,7 +33850,7 @@ type ActivityMeetingStatus string
 // a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
 
-// ActivityReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+// ActivityReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 type ActivityReplyChannel string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
@@ -32771,6 +33878,9 @@ type ActivityDealDecline struct {
 	// DeclinedDealIds The deals this call declined on the message. A deal declined before is not listed again.
 	DeclinedDealIds []openapi_types.UUID `json:"declined_deal_ids"`
 
+	// MarkedUnrelated A deal link of the message is now marked `unrelated` by a human.
+	MarkedUnrelated bool `json:"marked_unrelated"`
+
 	// ProjectKept A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project.
 	ProjectKept bool `json:"project_kept"`
 
@@ -32780,7 +33890,8 @@ type ActivityDealDecline struct {
 	// QuestionsClosed The open deal questions of the conversation this call marked done.
 	QuestionsClosed int `json:"questions_closed" minimum:"0"`
 
-	// Unlinked A deal link came off the message.
+	// Unlinked Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Unlinked bool `json:"unlinked"`
 }
 
@@ -32805,6 +33916,34 @@ type ActivityDealFilingOptions struct {
 
 // ActivityDealFilingRecordType defines model for ActivityDealFilingRecordType.
 type ActivityDealFilingRecordType string
+
+// ActivityDealRelevance defines model for ActivityDealRelevance.
+type ActivityDealRelevance struct {
+	// Changed The call changed the mark.
+	Changed bool               `json:"changed"`
+	DealId  openapi_types.UUID `json:"deal_id"`
+
+	// DealRelevance The link's mark after the call.
+	DealRelevance ActivityDealRelevanceDealRelevance `json:"deal_relevance"`
+
+	// ProjectFiled The activity was filed on the deal's project again.
+	ProjectFiled bool `json:"project_filed"`
+
+	// ProjectKept A project link came from the deal and stays, because a retention rule keeps it or the caller cannot read the project.
+	ProjectKept bool `json:"project_kept"`
+
+	// ProjectUnfiled The project link that came from the deal came off the activity.
+	ProjectUnfiled bool `json:"project_unfiled"`
+
+	// RelevanceSource Who set the mark. Always `human` after this call.
+	RelevanceSource ActivityDealRelevanceRelevanceSource `json:"relevance_source"`
+}
+
+// ActivityDealRelevanceDealRelevance The link's mark after the call.
+type ActivityDealRelevanceDealRelevance string
+
+// ActivityDealRelevanceRelevanceSource Who set the mark. Always `human` after this call.
+type ActivityDealRelevanceRelevanceSource string
 
 // ActivityEmailTarget The record an email about this call, meeting, note or task goes to. It is the row's one linked contact. A task with no single contact goes on to its one live linked lead, and then to its one linked company; two live leads name nobody. A task whose only lead is closed and that names no company gets that lead, refused. Absent where the row names no target, on the same rows `offers_email` is always false for, and for a record this caller may not read. A client offers Write email or Draft email when this is present without `refusal`, and says the refusal otherwise.
 type ActivityEmailTarget struct {
@@ -32835,14 +33974,30 @@ type ActivityFollowUpTask struct {
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
-	ActivityId *openapi_types.UUID    `json:"activity_id,omitempty"`
-	EntityId   openapi_types.UUID     `json:"entity_id"`
-	EntityType ActivityLinkEntityType `json:"entity_type"`
-	Id         *openapi_types.UUID    `json:"id,omitempty"`
+	ActivityId *openapi_types.UUID `json:"activity_id,omitempty"`
+
+	// DealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+	// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+	// it; only `unrelated` also leaves it out of the silent close.
+	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
+	EntityId      openapi_types.UUID         `json:"entity_id"`
+	EntityType    ActivityLinkEntityType     `json:"entity_type"`
+	Id            *openapi_types.UUID        `json:"id,omitempty"`
+
+	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
 }
+
+// ActivityLinkDealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+// it; only `unrelated` also leaves it out of the silent close.
+type ActivityLinkDealRelevance string
 
 // ActivityLinkEntityType defines model for ActivityLink.EntityType.
 type ActivityLinkEntityType string
+
+// ActivityLinkRelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+type ActivityLinkRelevanceSource string
 
 // ActivityLinkInput One record an activity is filed under, as a caller supplies it. The read shape
 // (ActivityLink) carries the ids the server assigned; this carries only the target.
@@ -33018,8 +34173,34 @@ type ActivityVoice struct {
 // ActivityVoiceContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
 type ActivityVoiceContactRole string
 
+// AddAttachmentLinkRequest defines model for AddAttachmentLinkRequest.
+type AddAttachmentLinkRequest struct {
+	// Category What the document is. Absent leaves it uncategorised, as an upload is.
+	Category *AddAttachmentLinkRequestCategory `json:"category,omitempty"`
+
+	// ContractId The agreement this document is about, as on the upload.
+	ContractId *openapi_types.UUID                `json:"contract_id,omitempty"`
+	EntityId   openapi_types.UUID                 `json:"entity_id"`
+	EntityType AddAttachmentLinkRequestEntityType `json:"entity_type"`
+
+	// Title What a reader looks for. Absent or blank lists the link under its host.
+	Title *string `json:"title,omitempty"`
+
+	// Url An http or https address, without user info.
+	Url string `json:"url"`
+}
+
+// AddAttachmentLinkRequestCategory What the document is. Absent leaves it uncategorised, as an upload is.
+type AddAttachmentLinkRequestCategory string
+
+// AddAttachmentLinkRequestEntityType defines model for AddAttachmentLinkRequest.EntityType.
+type AddAttachmentLinkRequestEntityType string
+
 // AddConsumerMailDomainRequest defines model for AddConsumerMailDomainRequest.
 type AddConsumerMailDomainRequest struct {
+	// Confirm Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.
+	Confirm *bool `json:"confirm,omitempty"`
+
 	// Domain A mail domain; normalized to its registrable form before it is stored.
 	Domain string                           `json:"domain"`
 	Kind   AddConsumerMailDomainRequestKind `json:"kind"`
@@ -33741,6 +34922,12 @@ type AiActivityItem struct {
 	// edits one.
 	Kind AiActivityKind `json:"kind"`
 
+	// Processed How much of its work a LIVE occurrence has finished so far, in the unit its source
+	// counts (a website read counts pages). Null while unknown, which is not zero: most
+	// kinds report no position, and a client then draws an unmeasured ring. A settled
+	// item carries none.
+	Processed *int `json:"processed,omitempty" minimum:"0"`
+
 	// StartedAt When the current attempt became current — its claim, or its enqueue while queued.
 	// An occurrence can start on one day and settle on the next, so this is NOT what
 	// `recent` is bounded by.
@@ -33786,6 +34973,11 @@ type AiActivityItem struct {
 	// optional by construction: nothing validates that a finishing occurrence produced one,
 	// and it is never the status line — the reader's locale decides those words.
 	Summary *string `json:"summary,omitempty"`
+
+	// Total How much the occurrence expects to finish in all, in the unit of `processed`. A
+	// client draws a measured arc only when both counts are present; with `processed`
+	// alone the ring stays unmeasured, and no percentage is ever derived from elapsed time.
+	Total *int `json:"total,omitempty" minimum:"1"`
 }
 
 // AiActivityItemState `done` is a clean finish; `degraded` kept partial state and MUST NOT read as done.
@@ -33955,7 +35147,7 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	// AttemptReason Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, or decision_uncertified on a row stored before the decision lane stopped reading certification — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
 	AttemptReason string `json:"attempt_reason"`
 
 	// DecisionChoice The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer.
@@ -34134,8 +35326,9 @@ type AiDecisionSummary struct {
 
 // AiDecisionsBinding The decision-model lane: a model that answers a typed question with calibrated
 // probabilities, asked before a decision site's ladder. Absent means no task uses
-// one. It serves a task only when certified for that site and when its endpoint
-// reaches no further than the task's own bindings.
+// one. Bound, it answers every task that declares a decision form, with or without
+// a certification record; each site keeps an answer only at its own floor and
+// otherwise falls back to its ladder.
 type AiDecisionsBinding struct {
 	// BaseUrl The decision provider's endpoint as resolved from `providers` (the FULL URL, posted to as written; jev defaults to https://api.typesafe.ai/v1/systemone). On write it is accepted only when empty or equal to the provider's; a different one is a 422 `moved_to_provider`.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -34176,18 +35369,18 @@ type AiEmbeddingsBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// Location On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
 	// it is accepted only when empty or equal to the provider's, and a different one is a 422
 	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
 	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-	// Refused on every provider but `gemini_vertex`.
+	// Refused on every provider but `gemini_vertex` and `azure_openai`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini | gemini_vertex. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
@@ -34224,6 +35417,12 @@ type AiEmbeddingsBindingThinkingLevel string
 // AiFeatureRoute defines model for AiFeatureRoute.
 type AiFeatureRoute struct {
 	BudgetExempt bool `json:"budget_exempt"`
+
+	// Certification The certification grade of the model that answers this feature first (the lead of
+	// `normal_candidates`), read from the committed certification records by the readiness
+	// report's rule: the worst grade over every site the feature ships, and not measured when
+	// any site has no record for that model. Absent when no model is bound, and for embeddings.
+	Certification *AiTaskCertification `json:"certification,omitempty"`
 
 	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
 	Decides           *bool             `json:"decides,omitempty"`
@@ -34762,13 +35961,15 @@ type AiProviderKeyTestResultReason string
 // AiProviderSettings One provider's configuration. An entry no lane binds is held to its shape only, so a
 // host can be set before anything is bound to it.
 type AiProviderSettings struct {
-	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`.
+	// BaseUrl Where the provider is reached. Required on `openai_compatible` while a lane binds it, and on `jev_compatible` while the decisions lane binds it (the FULL decision endpoint, posted to as written). Optional elsewhere; empty means the adapter's compiled default. Refused on `gemini_vertex`, whose host follows from `location`. On `azure_openai` it is required while a lane binds it and is the resource endpoint, `https://<resource>.openai.azure.com`.
 	BaseUrl *string `json:"base_url,omitempty"`
 
-	// Location The Vertex AI location a `gemini_vertex` provider is served from, which is where Google
-	// processes the call: `eu`, `us`, `global`, or a region such as `europe-west4`. Required
-	// while a lane binds `gemini_vertex`, and refused on every other provider. Moving it asks
-	// Google about each bound model at the new location first; one it does not serve is a 422.
+	// Location Where the provider processes the call. On `gemini_vertex` the Vertex AI location: `eu`,
+	// `us`, `global`, or a region such as `europe-west4`. Moving it asks Google about each
+	// bound model at the new location first; one it does not serve is a 422. On `azure_openai`
+	// the Azure region of the resource, such as `swedencentral`; a region this build does not
+	// know is a 422, and under the `eu_hosted` profile so is a region outside the EU.
+	// Required while a lane binds either provider, and refused on every other provider.
 	Location *string `json:"location,omitempty"`
 
 	// Upstream Which OpenRouter hosts may serve this provider's requests, for every lane on it: a
@@ -34779,10 +35980,21 @@ type AiProviderSettings struct {
 
 // AiRouteCandidate defines model for AiRouteCandidate.
 type AiRouteCandidate struct {
-	Model      string `json:"model"`
-	Processing string `json:"processing"`
-	Provider   string `json:"provider"`
-	Tier       string `json:"tier"`
+	// Certification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+	Certification *AiRouteCertification `json:"certification,omitempty"`
+	Model         string                `json:"model"`
+	Processing    string                `json:"processing"`
+	Provider      string                `json:"provider"`
+	Tier          string                `json:"tier"`
+}
+
+// AiRouteCertification What the certification records say about this model for this task. Absent on a candidate no record measured, which the screen reads as not certified.
+type AiRouteCertification struct {
+	// Current Every record behind the verdict still describes the prompts this build sends.
+	Current bool `json:"current"`
+
+	// Verdict The worst verdict across the task's sites and across the records of this model.
+	Verdict string `json:"verdict"`
 }
 
 // AiRouting The installation's tier-to-model binding. `tiers` is keyed by tier name; the closed set
@@ -34792,8 +36004,9 @@ type AiRouteCandidate struct {
 type AiRouting struct {
 	// Decisions The decision-model lane: a model that answers a typed question with calibrated
 	// probabilities, asked before a decision site's ladder. Absent means no task uses
-	// one. It serves a task only when certified for that site and when its endpoint
-	// reaches no further than the task's own bindings.
+	// one. Bound, it answers every task that declares a decision form, with or without
+	// a certification record; each site keeps an answer only at its own floor and
+	// otherwise falls back to its ladder.
 	Decisions  *AiDecisionsBinding `json:"decisions,omitempty"`
 	Embeddings AiEmbeddingsBinding `json:"embeddings"`
 
@@ -34803,8 +36016,10 @@ type AiRouting struct {
 
 	// Profile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 	// provider on any tier is refused, and so is a local provider pointed at another host.
-	// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-	// connection's and the location's to say.
+	// `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+	// `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+	// Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+	// the location's to say.
 	Profile AiRoutingProfile `json:"profile"`
 
 	// Providers Provider name to what that provider is configured with, independent of any lane: its
@@ -34813,14 +36028,22 @@ type AiRouting struct {
 	// the map, so an entry it leaves out is removed.
 	Providers *map[string]AiProviderSettings `json:"providers,omitempty"`
 
+	// TaskLadders A task name to the order its rungs are walked in under this binding, for a task this
+	// binding walks otherwise than the task contract does. The order must name exactly the
+	// task's own rungs; anything else is refused with a 422. A task left out keeps its
+	// contract order.
+	TaskLadders *map[string][]string `json:"task_ladders,omitempty"`
+
 	// Tiers Tier name to the model bound on it. Empty means no models are bound.
 	Tiers map[string]AiTierBinding `json:"tiers"`
 }
 
 // AiRoutingProfile The location ladder (§4). `sovereign` means zero egress by construction: a cloud
 // provider on any tier is refused, and so is a local provider pointed at another host.
-// `eu_hosted` and `cloud_frontier` refuse no binding on residency grounds: where a lane is served is the
-// connection's and the location's to say.
+// `cloud_frontier` refuses no binding on residency grounds. `eu_hosted` refuses an
+// `azure_openai` binding whose Azure region is outside the EU; the United Kingdom, Norway and
+// Switzerland count as outside it. Elsewhere, where a lane is served is the connection's and
+// the location's to say.
 type AiRoutingProfile string
 
 // AiRoutingEffective What each tier will send OpenRouter once saved, the connection's keys and the product default merged in. Only tiers whose binding sends a block.
@@ -34936,6 +36159,21 @@ type AiStatus struct {
 // AiTask AI task key from the task catalog, used to localize its display name.
 type AiTask string
 
+// AiTaskCertification The certification grade of the model that answers this feature first (the lead of
+// `normal_candidates`), read from the committed certification records by the readiness
+// report's rule: the worst grade over every site the feature ships, and not measured when
+// any site has no record for that model. Absent when no model is bound, and for embeddings.
+type AiTaskCertification struct {
+	// Grade ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.
+	Grade string `json:"grade"`
+
+	// Model The model the grade is for.
+	Model string `json:"model"`
+
+	// RecheckPending The product has changed since the grade was measured: the grade is the last one there is, and a re-run replaces it.
+	RecheckPending bool `json:"recheck_pending"`
+}
+
 // AiTaskFlow defines model for AiTaskFlow.
 type AiTaskFlow struct {
 	// Steps The decision model first, then each tier in ladder order.
@@ -35003,18 +36241,18 @@ type AiTierBinding struct {
 	// the adapter already has and can never widen it. Omit for the provider's own answer.
 	Input *[]string `json:"input,omitempty"`
 
-	// Location On a tier, the `gemini_vertex` provider's location as resolved from `providers`; on write
+	// Location On a tier, the `gemini_vertex` or `azure_openai` provider's location as resolved from `providers`; on write
 	// it is accepted only when empty or equal to the provider's, and a different one is a 422
 	// `moved_to_provider`. On the embeddings lane it is a live override: Vertex serves an
 	// embedding model at fewer locations than a chat model, so the lane may sit elsewhere.
-	// Refused on every provider but `gemini_vertex`.
+	// Refused on every provider but `gemini_vertex` and `azure_openai`.
 	Location *string `json:"location,omitempty"`
 
 	// Model The provider-native model id.
 	Model string `json:"model"`
 
 	// Provider The adapter serving this tier: fake | anthropic | ollama | vllm | openai_compatible
-	// | openai | gemini | gemini_vertex. The credential is never part of this document.
+	// | openai | gemini | gemini_vertex | azure_openai. The credential is never part of this document.
 	Provider string `json:"provider"`
 
 	// Routing How an openai_compatible binding pointed at OpenRouter serves its model, in OpenRouter's
@@ -35129,7 +36367,7 @@ type AnalyticsAnswer struct {
 	// RateDate Reference instant used to select conversion rates for this answer.
 	RateDate *time.Time `json:"rate_date,omitempty"`
 
-	// Rows One object per group, marked `_withheld` when the floor kept it back. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+	// Rows One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// RunId Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
@@ -35230,9 +36468,18 @@ type AnalyticsEntity struct {
 	// Measures The fields this population can be aggregated over.
 	Measures []string `json:"measures"`
 
+	// Money The measures that are amounts in minor units, and the currency each is in:
+	// `row_currency` in each record's own currency, which a sum across currencies
+	// refuses, or `base_currency` converted to the installation's base currency. A
+	// measure not named here is a plain number, whatever its name.
+	Money map[string]AnalyticsEntityMoney `json:"money"`
+
 	// Name The population, by name.
 	Name string `json:"name"`
 }
+
+// AnalyticsEntityMoney defines model for AnalyticsEntity.Money.
+type AnalyticsEntityMoney string
 
 // AnalyticsExplainRequest One cell of an answer, named by the question and its group keys.
 type AnalyticsExplainRequest struct {
@@ -35461,8 +36708,14 @@ type AppliedDealChangeReview struct {
 	CanAccept bool                        `json:"can_accept"`
 	CanUndo   bool                        `json:"can_undo"`
 	Kind      AppliedDealChangeReviewKind `json:"kind"`
-	Reversed  bool                        `json:"reversed"`
-	Version   int64                       `json:"version"`
+
+	// NoteActivityId The History note that reports this change. Null for a change made before notes were linked.
+	NoteActivityId *openapi_types.UUID `json:"note_activity_id,omitempty"`
+	Reversed       bool                `json:"reversed"`
+
+	// StageHistoryId The stage-history row this change wrote, for a change that moved the stage. It equals the deal's `closing_occurrence_id` while the deal is on the close Margince made.
+	StageHistoryId *openapi_types.UUID `json:"stage_history_id,omitempty"`
+	Version        int64               `json:"version"`
 
 	// Writable Whether this reader may write this deal.
 	Writable bool `json:"writable"`
@@ -35515,6 +36768,12 @@ type Approval struct {
 	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
 	AssigneeInactive *bool `json:"assignee_inactive,omitempty"`
 
+	// AwaitingAgent True on an approved proposal that an agent staged and has not yet redeemed. The decision
+	// only lets the agent repeat its call within the redemption window; nothing has changed on
+	// any record until it does. Absent on every other row, including one whose effect ran
+	// during the decision.
+	AwaitingAgent *bool `json:"awaiting_agent,omitempty"`
+
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
 	// bundle entity, and every member keeps its own diff hash, version pin, expiry and
 	// verdict (ADR-0036 — the staged row IS the authority object). Decide the whole set with
@@ -35540,6 +36799,11 @@ type Approval struct {
 	// EffectFailure The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is.
 	EffectFailure *string `json:"effect_failure,omitempty"`
 
+	// EffectFailureCode `effect_failure` as a code a client words in the reader's language: approval_lapsed,
+	// effect_not_run, effect_unconfirmed, follow_up_failed or window_not_widened. Absent when
+	// the sentence has no code; the client then shows `effect_failure`.
+	EffectFailureCode *string `json:"effect_failure_code,omitempty"`
+
 	// Evidence Per-claim evidence (snippet + source id) backing the proposal.
 	Evidence *[]ApprovalEvidence `json:"evidence,omitempty"`
 
@@ -35548,8 +36812,13 @@ type Approval struct {
 	Id        openapi_types.UUID `json:"id"`
 
 	// Kind Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task.
-	Kind       string              `json:"kind"`
-	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
+	Kind string `json:"kind"`
+
+	// MailboxSendCapable `false` on a pending mail proposal whose sender, the account the release runs as, has no
+	// connected mailbox that can transmit, so approving could only be refused. Absent
+	// otherwise.
+	MailboxSendCapable *bool               `json:"mailbox_send_capable,omitempty"`
+	OnBehalfOf         *openapi_types.UUID `json:"on_behalf_of,omitempty"`
 
 	// Preview A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision. An agent's proposal is explained as the agent whose retry runs it. When that effect touches a record the reader cannot open, the state is needs_wider_sight, nothing of the plan is shown, and an approval attempt returns 403 with approval_needs_wider_sight.
 	Preview *ApprovalPreview `json:"preview,omitempty"`
@@ -35820,6 +37089,70 @@ type ApproveRequest struct {
 	Reason *string `json:"reason,omitempty"`
 }
 
+// ArchiveDeletionRequest defines model for ArchiveDeletionRequest.
+type ArchiveDeletionRequest struct {
+	// ActivityIds The archived activity to delete, at most 100 per request.
+	ActivityIds []openapi_types.UUID `json:"activity_ids" unique:"items"`
+}
+
+// ArchiveDeletionResult defines model for ArchiveDeletionResult.
+type ArchiveDeletionResult struct {
+	// Deleted The activity whose content was erased.
+	Deleted []openapi_types.UUID `json:"deleted"`
+
+	// Failed The activity whose deletion failed and is left as it was. The other records in the request still ran, so a retry names only these.
+	Failed []openapi_types.UUID `json:"failed"`
+
+	// Kept The activity left as it was, each with the reason.
+	Kept []ArchiveKeptActivity `json:"kept"`
+}
+
+// ArchiveKeptActivity defines model for ArchiveKeptActivity.
+type ArchiveKeptActivity struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Reason Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+	// `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+	// `kept_by_law`: business correspondence inside its statutory retention period.
+	// `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+	Reason ArchiveKeptReason `json:"reason"`
+}
+
+// ArchiveKeptReason Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+// `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+// `kept_by_law`: business correspondence inside its statutory retention period.
+// `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+type ArchiveKeptReason string
+
+// ArchivedActivity One archived activity, as the controller reviews it. `kept` says why a deletion would keep
+// it; absent means a deletion would erase it.
+type ArchivedActivity struct {
+	ActivityId openapi_types.UUID      `json:"activity_id"`
+	ArchivedAt time.Time               `json:"archived_at"`
+	Companies  []ArchivedActivityParty `json:"companies"`
+	Contacts   []ArchivedActivityParty `json:"contacts"`
+
+	// Kept Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+	// `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+	// `kept_by_law`: business correspondence inside its statutory retention period.
+	// `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+	Kept       *ArchiveKeptReason `json:"kept,omitempty"`
+	Kind       string             `json:"kind"`
+	OccurredAt time.Time          `json:"occurred_at"`
+
+	// OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+
+	// Subject The subject line. Absent when the activity has none, or when the reader may not read its content.
+	Subject *string `json:"subject,omitempty"`
+}
+
+// ArchivedActivityParty defines model for ArchivedActivityParty.
+type ArchivedActivityParty struct {
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+}
+
 // AssemblyServedFrom How this request got its answer. `cache` is the reader's stored assembly, still
 // matching the record, read in well under a second. `generated` is an assembly
 // written for this request, which is where the model's seconds go. A refresh the AI
@@ -36060,7 +37393,7 @@ type AtRiskRelationships struct {
 type Attachment struct {
 	ByteSize *int64 `json:"byte_size,omitempty"`
 
-	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes.
+	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for any row with a `url`, which is a pointer and has no bytes.
 	BytesWithheld *bool `json:"bytes_withheld,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
@@ -36071,7 +37404,9 @@ type Attachment struct {
 	//
 	// `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
 	// Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-	// and the category cannot be set or changed through a metadata patch.
+	// and the category cannot be set or changed through a metadata patch. A link a user
+	// added (`POST /attachments/links`) holds an address the same way under the category
+	// they chose, never `link`; its `source` is `link`.
 	//
 	// `email_attachment` and `message_attachment` record PROVENANCE rather than
 	// content: capture derives them from the transport the file arrived on, so a
@@ -36114,7 +37449,7 @@ type Attachment struct {
 	// Title A display name distinct from the filename, showing what a reader looks for rather than what arrived.
 	Title *string `json:"title,omitempty"`
 
-	// Url The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download.
+	// Url The address of a document that lives elsewhere: a `link` row a mail carried, or a link a user added. Null for a stored file. It is an http or https address. The reader renders it as an outbound link to open in a new tab, never as a download.
 	Url *string `json:"url,omitempty"`
 }
 
@@ -36123,7 +37458,9 @@ type Attachment struct {
 //
 // `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
 // Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-// and the category cannot be set or changed through a metadata patch.
+// and the category cannot be set or changed through a metadata patch. A link a user
+// added (`POST /attachments/links`) holds an address the same way under the category
+// they chose, never `link`; its `source` is `link`.
 //
 // `email_attachment` and `message_attachment` record PROVENANCE rather than
 // content: capture derives them from the transport the file arrived on, so a
@@ -36154,9 +37491,9 @@ type AttachmentExtraction struct {
 	Id      openapi_types.UUID       `json:"id"`
 	Omitted []OmittedExtractionField `json:"omitted"`
 
-	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact: the name or
-	// number the chat header shows when neither agrees with that contact. Null when
-	// they agree, when the header shows neither, and for every other reading.
+	// OtherCounterparty For a finished `chat_capture` reading of a screenshot on a contact or lead: the
+	// name or number the chat header shows when neither agrees with that record. Null
+	// when they agree, when the header shows neither, on a deal, and for every other reading.
 	// `fileChatCapture` refuses such a chat until `confirm_other_counterparty` is set.
 	OtherCounterparty *string `json:"other_counterparty,omitempty"`
 
@@ -36191,6 +37528,24 @@ type AttachmentExtractionStatus string
 type AttachmentExtractionAcceptResponse struct {
 	Accepted []AcceptedExtractionField `json:"accepted"`
 	DealId   openapi_types.UUID        `json:"deal_id"`
+}
+
+// AttachmentLinkPreview defines model for AttachmentLinkPreview.
+type AttachmentLinkPreview struct {
+	// Host The lowercased host the address names.
+	Host string `json:"host"`
+
+	// Read False when the page was not fetched or did not answer.
+	Read bool `json:"read"`
+
+	// SiteName The page's Open Graph site name. Absent when it gave none.
+	SiteName *string `json:"site_name,omitempty"`
+
+	// Title The page's Open Graph title, else its <title>. Absent when it gave none.
+	Title *string `json:"title,omitempty"`
+
+	// Url The address as it will be stored.
+	Url string `json:"url"`
 }
 
 // AttachmentListResponse defines model for AttachmentListResponse.
@@ -36892,7 +38247,7 @@ type AttentionItem struct {
 	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
 	DueGroup *AttentionItemDueGroup `json:"due_group,omitempty"`
 
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
@@ -36900,6 +38255,10 @@ type AttentionItem struct {
 
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
+	// EffectFailureCode On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+	// language. `detail` keeps the English sentence.
+	EffectFailureCode *string `json:"effect_failure_code,omitempty"`
 
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`. It moves to the organizer, whichever calendar
@@ -37068,7 +38427,7 @@ type AttentionItem struct {
 type AttentionItemActions string
 
 // AttentionItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
 type AttentionItemDueGroup string
 
 // AttentionItemSource Which producer raised it, and therefore which endpoint its verbs go to.
@@ -37225,9 +38584,9 @@ type AuditAction string
 // masked to the viewer's readable fields — an absent key was hidden, not null.
 // `summary` is server-composed plain language in English. A client that
 // renders the line in its reader's language builds it from `action` and the
-// actor fields. It falls back to `summary` for an edge row, whose role
-// travels only in the sentence, and for an action or actor kind it does
-// not know.
+// actor fields. For an edge row it builds from `edge.role` and
+// `edge.changed_fields`, and falls back to `summary` when an older server
+// omits them, and for an action or actor kind it does not know.
 // Field-level detail lives in before/after for the client to render.
 type AuditHistoryEntry struct {
 	// Action The verb of one audit row, as both the audit log and a record's history
@@ -37497,6 +38856,15 @@ type AuthorizationRowScope string
 
 // AuthorizationSeatType The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
 type AuthorizationSeatType string
+
+// AutoApplyInstallation defines model for AutoApplyInstallation.
+type AutoApplyInstallation struct {
+	Enabled bool `json:"enabled"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+}
 
 // AutomaticWorkColleague defines model for AutomaticWorkColleague.
 type AutomaticWorkColleague struct {
@@ -37787,6 +39155,9 @@ type AutomationRetryResultRefusal string
 // EVERY outcome are first-class — including errored/blocked/skipped — so the designer's run history is
 // honest, not success-only (ADR-0035 Am.1). Read-only: produced by the engine, never created via API.
 type AutomationRun struct {
+	// ActionKinds The action kinds the run applied, or for a run queued for approval the kinds it queued, in order. A create another rule had already made is left out. Empty when the run did nothing.
+	ActionKinds *[]string `json:"action_kinds,omitempty"`
+
 	// ActionResult What happened (e.g. "created task", "queued to approval inbox").
 	ActionResult     *string `json:"action_result,omitempty"`
 	ApprovalRequired *bool   `json:"approval_required,omitempty"`
@@ -37794,7 +39165,13 @@ type AutomationRun struct {
 	// AuditId Link into the audit_log row for this run.
 	AuditId      *string            `json:"audit_id,omitempty"`
 	AutomationId openapi_types.UUID `json:"automation_id"`
-	Id           openapi_types.UUID `json:"id"`
+
+	// Created A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label is the task's subject, present only when the reader may read the task itself.
+	Created *AutomationRunCreatedRecord `json:"created,omitempty"`
+
+	// EventId The event that fired the run, for technical details. A clock rule's run names its scan.
+	EventId *openapi_types.UUID `json:"event_id,omitempty"`
+	Id      openapi_types.UUID  `json:"id"`
 
 	// OccurredAt Maps to automation_run.ran_at.
 	OccurredAt time.Time `json:"occurred_at"`
@@ -37810,26 +39187,51 @@ type AutomationRun struct {
 	// not_completed or blocked. A code a client does not know reads as not_completed.
 	ReasonCode *string `json:"reason_code,omitempty"`
 
+	// Target The record the run acted on. Its label is absent when the reader may not see the record.
+	Target *MagicEntityRef `json:"target,omitempty"`
+
 	// TargetRef Record the run acted on (type + id or label).
 	TargetRef *string `json:"target_ref,omitempty"`
 
-	// Tier The tier that fired for this run.
+	// Tier The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
 	Tier AutomationRunTier `json:"tier"`
+
+	// TriggerEventType What fires the rule, in the catalog's trigger vocabulary, e.g. deal.stage_changed or clock:renewal_scan.
+	TriggerEventType *string `json:"trigger_event_type,omitempty"`
 
 	// TriggerEvidence What matched (e.g. "no activity 14d on deal BÄR Pharma") — the "why did this fire?" line.
 	TriggerEvidence *string `json:"trigger_evidence,omitempty"`
+
+	// TriggerStageName For a run a stage move fired, the stage the deal moved to. Absent once the event is no longer on record, and when the reader may not see the run's target.
+	TriggerStageName *string `json:"trigger_stage_name,omitempty"`
 }
 
 // AutomationRunOutcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 type AutomationRunOutcome string
 
-// AutomationRunTier The tier that fired for this run.
+// AutomationRunTier The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
 type AutomationRunTier string
+
+// AutomationRunCreatedRecord A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label is the task's subject, present only when the reader may read the task itself.
+type AutomationRunCreatedRecord struct {
+	Id    *openapi_types.UUID `json:"id,omitempty"`
+	Label *string             `json:"label,omitempty"`
+
+	// Type The record type, e.g. activity for a task.
+	Type string `json:"type"`
+}
 
 // AutonomySettings What the reader has decided about answering their own queue: one row per kind
 // that is eligible to apply automatically, whether or not they have ever met it.
 type AutonomySettings struct {
-	Data []KindAutonomy `json:"data"`
+	// AutoApplyEnabled The installation's switch over every row. False means nothing applies
+	// itself for anybody; the modes in `data` stay as the reader set them.
+	AutoApplyEnabled bool           `json:"auto_apply_enabled"`
+	Data             []KindAutonomy `json:"data"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
 // AvailableModel One model a vendor says it serves.
@@ -37953,13 +39355,19 @@ type BackfillStatus struct {
 	OfferedWindows *[]BackfillStatusOfferedWindows `json:"offered_windows,omitempty"`
 
 	// Resumable The run ended on an error and kept the page it stopped at, so a start without start_over continues it instead of reading the window again.
-	Resumable *bool               `json:"resumable,omitempty"`
-	StartedAt *time.Time          `json:"started_at,omitempty"`
-	State     BackfillStatusState `json:"state"`
+	Resumable *bool `json:"resumable,omitempty"`
+
+	// RetryAttempts Pages in a row that failed and will be tried again; 0 once a page succeeds. The committed counts are kept across a retry, and only the unfinished page is read again.
+	RetryAttempts *int                `json:"retry_attempts,omitempty"`
+	StartedAt     *time.Time          `json:"started_at,omitempty"`
+	State         BackfillStatusState `json:"state"`
 
 	// UpdatedAt Staleness stamp — a killed worker leaves this honest ("last updated Xs ago").
 	UpdatedAt *time.Time            `json:"updated_at,omitempty"`
 	Window    *BackfillStatusWindow `json:"window,omitempty"`
+
+	// WindowRestarts How many times the scan began again from the newest message because the provider no longer accepted its place. `counts.messages_scanned`, `captured` and `skipped` start again from zero each time; the contacts and companies already created stay counted. A client says so rather than showing the lower count as lost work.
+	WindowRestarts *int `json:"window_restarts,omitempty"`
 }
 
 // BackfillStatusOfferedWindows defines model for BackfillStatus.OfferedWindows.
@@ -38081,7 +39489,7 @@ type BlockedDomain struct {
 	//   as a company.
 	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 	//   company this business works with. `sender_kind` says which, when it is known.
-	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 	//   domain's open question, as `source` describes each one.
 	// - `unknown`: the row records a reason this server has no word for. `reason` still
 	//   carries its stored sentence.
@@ -38097,7 +39505,9 @@ type BlockedDomain struct {
 	// old to mint one from today's site; `near_duplicate` means more than one company
 	// here already carries the name it resolved to, and which of them this domain belongs
 	// to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-	// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+	// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+	// `foreign_site` means the site names a different business than the domain, which may
+	// have changed hands.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -38114,7 +39524,7 @@ type BlockedDomainAdmission string
 //     as a company.
 //   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 //     company this business works with. `sender_kind` says which, when it is known.
-//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 //     domain's open question, as `source` describes each one.
 //   - `unknown`: the row records a reason this server has no word for. `reason` still
 //     carries its stored sentence.
@@ -38130,7 +39540,9 @@ type BlockedDomainSenderKind string
 // old to mint one from today's site; `near_duplicate` means more than one company
 // here already carries the name it resolved to, and which of them this domain belongs
 // to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+// `foreign_site` means the site names a different business than the domain, which may
+// have changed hands.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -38197,6 +39609,9 @@ type BoughtField struct {
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
 // on a read means they have never chosen, absent on a write means leave it alone.
 type BriefDelivery struct {
+	// ClearRoutineMailTeam True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422.
+	ClearRoutineMailTeam *bool `json:"clear_routine_mail_team,omitempty"`
+
 	// CombineRoutineEmail Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective.
 	CombineRoutineEmail *bool `json:"combine_routine_email,omitempty"`
 
@@ -38218,7 +39633,7 @@ type BriefDelivery struct {
 	// RoutineMailScope Optional chosen scope; team content is checked against live team-review authority at delivery.
 	RoutineMailScope *BriefDeliveryRoutineMailScope `json:"routine_mail_scope,omitempty"`
 
-	// RoutineMailTeamId The selected live team for team or combined scope. Personal scope ignores a retained selection.
+	// RoutineMailTeamId The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
 	RoutineMailTeamId *openapi_types.UUID `json:"routine_mail_team_id,omitempty"`
 
 	// WeeklyDelivery The same, for the weekly review.
@@ -38277,11 +39692,15 @@ type BulkChangeExecuteRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-	// no bulk verb.
+	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+	// `complete`.
 	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
+
+	// StageId The open stage to move the deals to. Required for `move_stage` and refused for every other verb.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 
 	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
 	TagId *openapi_types.UUID `json:"tag_id,omitempty"`
@@ -38295,7 +39714,10 @@ type BulkChangeExecuteRequest struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
@@ -38319,8 +39741,9 @@ type BulkChangePreview struct {
 	ExpiresAt *time.Time `json:"expires_at,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-	// no bulk verb.
+	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+	// `complete`.
 	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
@@ -38335,7 +39758,10 @@ type BulkChangePreview struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
@@ -38355,11 +39781,15 @@ type BulkChangePreviewRequest struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-	// no bulk verb.
+	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+	// `complete`.
 	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
+
+	// StageId The open stage to move the deals to. Required for `move_stage` and refused for every other verb.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 
 	// TagId The tag. Required for `add_tag` and `remove_tag` and refused for every other verb.
 	TagId *openapi_types.UUID `json:"tag_id,omitempty"`
@@ -38373,7 +39803,10 @@ type BulkChangePreviewRequest struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
@@ -38433,12 +39866,16 @@ type BulkOperation struct {
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// RecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-	// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-	// no bulk verb.
+	// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+	// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+	// `complete`.
 	// A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 	// named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 	RecordType BulkRecordType `json:"record_type"`
 	Skipped    []BulkSkip     `json:"skipped"`
+
+	// StageId The stage a stage move named.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
 
 	// TagId The tag a tag verb named.
 	TagId *openapi_types.UUID `json:"tag_id,omitempty"`
@@ -38458,7 +39895,10 @@ type BulkOperation struct {
 	// `addListMember` and `removeListMember` do, and change nothing on the record itself.
 	// `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 	// as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-	// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+	// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+	// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+	// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+	// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 	// a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 	// `settleConversationClaim` with `outcome: done` does.
 	Verb BulkVerb `json:"verb"`
@@ -38475,6 +39915,9 @@ type BulkRecordState struct {
 	Listed  *bool               `json:"listed,omitempty"`
 	OwnerId *openapi_types.UUID `json:"owner_id"`
 
+	// StageId For `move_stage`, the stage the deal stands on.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
+
 	// Tagged For a tag verb, whether the record carries the tag.
 	Tagged *bool `json:"tagged,omitempty"`
 
@@ -38483,8 +39926,9 @@ type BulkRecordState struct {
 }
 
 // BulkRecordType The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
-// verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
-// no bulk verb.
+// verb but `archive`, `move_stage` and `complete`: a lead leaves the queue by being
+// disqualified, which has no bulk verb. A contact and a company take neither `move_stage` nor
+// `complete`.
 // A `worklist_item` is a task or a promise (a conversation claim) as the Worklist lists it,
 // named by the id its row carries; `complete` is its only verb, and no other kind takes it.
 type BulkRecordType string
@@ -38529,6 +39973,10 @@ type BulkSkip struct {
 	// `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 	// each task the change created, and skips one completed or edited since as `changed_since_batch`.
 	// Undoing `complete` opens each task or promise again, and skips one changed since the same way.
+	// Undoing `move_stage` moves each deal back to the stage it stood on, as a new move that
+	// writes its own stage history row (marked as the reversal of the first) and its own
+	// `deal.stage_changed` event. The first move's row and event stay, and whatever reacted to
+	// them is not taken back. A deal that changed after the batch is skipped as `changed_since_batch`.
 	Reason BulkSkipReason `json:"reason"`
 }
 
@@ -38546,6 +39994,10 @@ type BulkSkip struct {
 // `no_previous_owner`: it had no owner before the reassignment. Undoing `create_task` archives
 // each task the change created, and skips one completed or edited since as `changed_since_batch`.
 // Undoing `complete` opens each task or promise again, and skips one changed since the same way.
+// Undoing `move_stage` moves each deal back to the stage it stood on, as a new move that
+// writes its own stage history row (marked as the reversal of the first) and its own
+// `deal.stage_changed` event. The first move's row and event stay, and whatever reacted to
+// them is not taken back. A deal that changed after the batch is skipped as `changed_since_batch`.
 type BulkSkipReason string
 
 // BulkTask The task `create_task` files under every record of the selection.
@@ -38575,7 +40027,10 @@ type BulkUndoRequest struct {
 // `addListMember` and `removeListMember` do, and change nothing on the record itself.
 // `add_tag` and `remove_tag` put the tag `tag_id` names on the record or take it off, exactly
 // as `applyTag` and `removeTag` do. `create_task` files one new task, described by `task`,
-// under each record, exactly as `createTask` does. `complete` marks a `worklist_item` done:
+// under each record, exactly as `createTask` does. `move_stage` moves each deal to the open
+// stage `stage_id` names, exactly as `advanceDeal` does, and only deals take it. A deal that is
+// won or lost, or whose pipeline does not hold the stage, is left alone; closing a deal asks for
+// its own reason and stays a single-record move. `complete` marks a `worklist_item` done:
 // a task exactly as `updateActivity` with `is_done: true` does, a promise exactly as
 // `settleConversationClaim` with `outcome: done` does.
 type BulkVerb string
@@ -38807,6 +40262,11 @@ type CaptureConnection struct {
 	ContextTag *ConnectorContextTag `json:"context_tag,omitempty"`
 	CreatedAt  *time.Time           `json:"created_at,omitempty"`
 
+	// DefaultSender True on the mailbox the member marked for new mail
+	// (`PUT /connectors/{provider}/mail-posture` with `default_sender`). Without a mark, new
+	// mail goes out from the first connected mailbox that can send.
+	DefaultSender *bool `json:"default_sender,omitempty"`
+
 	// HistoryBaseline The local date this mailbox's automatic commitment suggestions start from. Absent when the
 	// owner chose none, which keeps the normal policy. Set and cleared through
 	// PUT /connectors/{provider}/history-baseline.
@@ -39005,7 +40465,9 @@ type CaptureCounterpartyHoldListResponse struct {
 
 // CaptureExclusion defines model for CaptureExclusion.
 type CaptureExclusion struct {
-	CreatedAt time.Time `json:"created_at"`
+	// ConnectionId The mailbox a container rule matches in. Null for every other rule.
+	ConnectionId *openapi_types.UUID `json:"connection_id,omitempty"`
+	CreatedAt    time.Time           `json:"created_at"`
 
 	// CreatedByName The display name of the member who added the rule. Null when no member added it (a
 	// system or connector rule) and when that member has been deactivated.
@@ -39148,7 +40610,7 @@ type CaptureMailboxHealth struct {
 	// ThreadsAwaitingVerdict Threads whose confidentiality question is still open, so their messages stay held.
 	ThreadsAwaitingVerdict int `json:"threads_awaiting_verdict"`
 
-	// UnreadPeriod A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+	// UnreadPeriod A period no sync read: a first sync failed for longer than the point it had held, or the mailbox held more mail than one round can read. A finished history import over it clears it. Absent when there is none, which is the ordinary case.
 	// It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
 	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
 
@@ -39347,6 +40809,11 @@ type CaptureSettings struct {
 	// without a restart. Default 500.
 	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap" maximum:"20000" minimum:"1"`
 
+	// ClassifyPassCap How many captured messages one labelling run settles per run, answered or not. The messages beyond the cap stay unlabelled until the next run.
+	// Read at the start of every run, so a change applies without a restart.
+	// Default 500.
+	ClassifyPassCap int `json:"classify_pass_cap" maximum:"2500" minimum:"1"`
+
 	// ConfidentialityPassCap How many held mail threads one confidentiality pass asks the model about, per run,
 	// answered or not. The threads beyond the cap wait for the next run, so
 	// the cap sets how fast a backlog drains and never whether a thread is judged. Raise it
@@ -39380,6 +40847,11 @@ type CaptureSettings struct {
 	// Applies from each mailbox's next sync. Default 120.
 	MailSyncIntervalSeconds int `json:"mail_sync_interval_seconds" maximum:"3600" minimum:"30"`
 
+	// OwedClassifyPassCap How many new messages one owed-reply run judges per run, answered or not. The messages beyond the cap wait for the next run. The re-judge of older mail has its own budget.
+	// Read at the start of every run, so a change applies without a restart.
+	// Default 500.
+	OwedClassifyPassCap int `json:"owed_classify_pass_cap" maximum:"2500" minimum:"1"`
+
 	// SharedPostureAllowed Whether a seat may put their mailbox in the `shared` posture at all — colleagues
 	// reading a captured message the moment it lands, before anything has judged it.
 	//
@@ -39410,6 +40882,11 @@ type CaptureSettings struct {
 	// SiteRead What one website read may fetch. Read when a read starts, so a change applies to the next
 	// one. An automatic read also runs under its own lower page ceiling.
 	SiteRead SiteReadLimits `json:"site_read"`
+
+	// VerdictPassCap How many unresolved senders one counterparty verdict run asks the model about per run, answered or not. The senders beyond the cap wait for the next run.
+	// Read at the start of every run, so a change applies without a restart.
+	// Default 200.
+	VerdictPassCap int `json:"verdict_pass_cap" maximum:"1000" minimum:"1"`
 }
 
 // CaptureSharedMailboxConcern A shared mailbox with an active concern. No member owns it, so `account_label` names it.
@@ -39495,9 +40972,12 @@ type CaptureTraceEntry struct {
 	Connector string `json:"connector"`
 
 	// Counterparty Only when payload_capture_enabled, and never for an erased subject.
-	Counterparty *string            `json:"counterparty,omitempty"`
-	Id           openapi_types.UUID `json:"id"`
-	OccurredAt   time.Time          `json:"occurred_at"`
+	Counterparty *string `json:"counterparty,omitempty"`
+
+	// Filing Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+	Filing     *CaptureTraceFiling `json:"filing,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
+	OccurredAt time.Time           `json:"occurred_at"`
 
 	// Outcome What the pipeline did with this message AT THE TIME. It never changes; `outcome_now` is what to count and to filter on.
 	Outcome CaptureTraceEntryOutcome `json:"outcome"`
@@ -39505,7 +40985,7 @@ type CaptureTraceEntry struct {
 	// OutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
 	OutcomeNow CaptureTraceEntryOutcomeNow `json:"outcome_now"`
 
-	// Reason A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
+	// Reason A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `own_addresses_only` (every party was the mailbox owner's own address and no forwarded customer mail was found), `no_granting_human`, `invisible_incumbent`, `derivation_failed`.
 	Reason *string `json:"reason,omitempty"`
 
 	// Resolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
@@ -39521,6 +41001,24 @@ type CaptureTraceEntryOutcome string
 // CaptureTraceEntryOutcomeNow The bucket this message counts under today. Equal to `outcome` unless the message was deferred and the sender has since been judged: a `real` verdict reads as captured and a noise, rejected or suppressed one as suppressed, because the question that made the outcome provisional has been answered. The funnel counts are grouped by this same expression, so a list filtered on it agrees with the counters above it — they disagreed, and the screen said `SENT FOR A VERDICT 49` over forty-nine rows each reading `judged noise`.
 type CaptureTraceEntryOutcomeNow string
 
+// CaptureTraceFiling Who last decided which deal this mail is filed on, when anyone did. The actor is `core` for the installation's own rule, or the name of the extension whose hook changed or failed the decision. A hook that failed decided nothing: the mail keeps the link it had and is tried again later.
+type CaptureTraceFiling struct {
+	Actor string `json:"actor"`
+
+	// Hook Which hook point, for an extension actor. Absent for `core`.
+	Hook *CaptureTraceFilingHook `json:"hook,omitempty"`
+
+	// Reason For `core`, the rung that decided (`project`, `thread`, `sole_open_deal` and the rest). For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations.
+	Reason *string                  `json:"reason,omitempty"`
+	Result CaptureTraceFilingResult `json:"result"`
+}
+
+// CaptureTraceFilingHook Which hook point, for an extension actor. Absent for `core`.
+type CaptureTraceFilingHook string
+
+// CaptureTraceFilingResult defines model for CaptureTraceFiling.Result.
+type CaptureTraceFilingResult string
+
 // CaptureTraceResolution What later became of a DEFERRED message's sender, read from the disposition ledger rather than copied into the trace: the ledger is keyed by sender and the trace by message, and one sender's answer covers several messages.
 type CaptureTraceResolution struct {
 	// Kind Who wrote, when the verdict said: contact | role_mailbox | company_sender | newsletter | transactional | spam | personal | advisor. The last two belong to the mailbox owner rather than to the business: personal is a private correspondent, advisor a professional they engage personally.
@@ -39532,7 +41030,7 @@ type CaptureTraceResolution struct {
 // CaptureTraceResolutionStatus defines model for CaptureTraceResolution.Status.
 type CaptureTraceResolutionStatus string
 
-// CaptureUnreadPeriod The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again.
+// CaptureUnreadPeriod The span between where a first sync was to read from and where it had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again.
 type CaptureUnreadPeriod struct {
 	// From The first moment nobody read.
 	From time.Time `json:"from"`
@@ -39785,10 +41283,32 @@ type ChatEpisode struct {
 	Url string `json:"url"`
 }
 
+// CitedProvision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+// for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+// data-protection law settles. Shown beside the engine's sentence; it decides nothing.
+// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+// pack's next review is overdue, or the law has not taken effect or has expired. On a
+// review it is the citation shown when the refusal was assessed, never today's.
+type CitedProvision struct {
+	// Instrument The law or decree, as a regulator cites it. Not translated.
+	Instrument string `json:"instrument"`
+
+	// Provision The part of the instrument, such as "§ 7(2)".
+	Provision string `json:"provision"`
+
+	// SourceUrl The official published text, over https.
+	SourceUrl string `json:"source_url"`
+}
+
 // ClaimEvidence The receipt behind one cited record (DOSS-WIRE-3). Each `source_kind` owes its own
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
 // names the gap in `gaps` rather than substituting a plausible value.
 type ClaimEvidence struct {
+	// ClaimVersion The version of the stored claim this receipt was built from, the same number the claim's
+	// list read carries. A verdict sent with it as `If-Match` answers for exactly what the
+	// receipt shows.
+	ClaimVersion *int64 `json:"claim_version,omitempty"`
+
 	// Confidence The model's confidence. ABSENT for the `connector`, `human` and `migration` kinds — none
 	// of them carries a model confidence, and printing one would fabricate a number
 	// (DOSS-AC-16).
@@ -40127,6 +41647,9 @@ type CommunicationEvidenceSubjectEntityType string
 // given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
 // what the consent rows say today.
 type CommunicationReview struct {
+	// AssessmentRevision Revision of the displayed refusal and footer details, echoed when confirming.
+	AssessmentRevision *string `json:"assessment_revision,omitempty"`
+
 	// DeliveryIntentId The held message this review can resume. A refused send freezes the message into a held
 	// `scheduled_send` — subject, body, recipients, attachments and the claimed purpose — so
 	// resolving the review fires what the rep wrote rather than something retyped from memory.
@@ -40155,6 +41678,12 @@ type CommunicationReview struct {
 	// it. Both together, because a surface that could get one without the other would show words
 	// while naming a different version.
 	Warning *OverrideWarning `json:"warning,omitempty"`
+
+	// Warnings Every warning this review is served with to this reader; a decision may name any of their
+	// versions and no other. `warning` is always among them. The sender of a held message is
+	// also served the composer's short warning (`inline-v2`), which a decision from any other
+	// reader is refused for naming.
+	Warnings *[]OverrideWarning `json:"warnings,omitempty"`
 
 	// WordingCorrection The current approved wording, visible only to its original human approver while the
 	// decision is unspent. The original reason remains on the instruction.
@@ -40511,9 +42040,12 @@ type Company360Contact struct {
 	ContactId openapi_types.UUID                  `json:"contact_id"`
 
 	// DealRoles This contact's stakeholder roles on the account's deals (champion, economic_buyer, …).
-	DealRoles    []Company360DealRole `json:"deal_roles"`
-	FullName     string               `json:"full_name"`
-	PrimaryEmail *string              `json:"primary_email,omitempty"`
+	DealRoles []Company360DealRole `json:"deal_roles"`
+	FullName  string               `json:"full_name"`
+
+	// GreetingRegister The register a rep set for opening a message to this contact; null when none is set.
+	GreetingRegister *Company360ContactGreetingRegister `json:"greeting_register,omitempty"`
+	PrimaryEmail     *string                            `json:"primary_email,omitempty"`
 
 	// ProviderTitle A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed.
 	ProviderTitle *string `json:"provider_title,omitempty"`
@@ -40544,6 +42076,9 @@ type Company360Contact struct {
 
 // Company360ContactConsent defines model for Company360Contact.Consent.
 type Company360ContactConsent string
+
+// Company360ContactGreetingRegister The register a rep set for opening a message to this contact; null when none is set.
+type Company360ContactGreetingRegister string
 
 // Company360ContactTitleSource Which title the roster is showing — the installation's own record, or the provider fallback. Null when there is no title at all.
 type Company360ContactTitleSource string
@@ -40659,7 +42194,7 @@ type Company360Health struct {
 	// ReplyBalance Of the interactions in the strength window, the share that came from them. 0.5 is an even exchange; near 0 is us talking to ourselves. Null when nothing was captured.
 	ReplyBalance *float32 `json:"reply_balance,omitempty" maximum:"1" minimum:"0"`
 
-	// SingleThreaded The whole relationship rests on one contact. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
+	// SingleThreaded The relationship rests on no more contacts in touch than the published `account_coverage.max_engaged_seats` allows, the rule a deal's single-threaded finding follows too. Named as a fact rather than scored, because it is the one shape a rep can fix before it costs them the account.
 	SingleThreaded *bool `json:"single_threaded,omitempty"`
 }
 
@@ -40750,7 +42285,9 @@ type Company360NextStep struct {
 	// `POST /contacts/{contact_id}/moment/dismiss` with `claim_key` and `evidence_fingerprint`, and holds on both surfaces until we write again.
 	MayBeDone *WorklistMayBeDone `json:"may_be_done,omitempty"`
 	Overdue   bool               `json:"overdue"`
-	Subject   string             `json:"subject"`
+
+	// Subject The task's subject. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written.
+	Subject string `json:"subject"`
 
 	// Version The task's version, carried so the tick and the snooze beside this row can write with
 	// `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
@@ -40874,6 +42411,9 @@ type Company360StateStrip struct {
 		TotalBasisValueMinorBase *int `json:"total_basis_value_minor_base,omitempty"`
 	} `json:"contracts,omitempty"`
 
+	// Dormancy How cold the account has gone, read from its stored `last_activity_at`.
+	Dormancy *DormancyReading `json:"dormancy,omitempty"`
+
 	// Engagement Null when the caller has no activity grant — not assessed, as distinct from never contacted.
 	Engagement *struct {
 		LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
@@ -40885,7 +42425,7 @@ type Company360StateStrip struct {
 		// LastOutboundPrecision How to read `last_outbound_at`, from the activity it names. Absent when that is null.
 		LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
-		// State PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
+		// State PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting. `dormant` is the dormancy ladder's `dormant` or `stale` rung, so the strip and `dormancy` cannot disagree either.
 		State Company360StateStripEngagementState `json:"state"`
 	} `json:"engagement,omitempty"`
 
@@ -40906,7 +42446,7 @@ type Company360StateStripAccountLifecycle string
 // Company360StateStripAccountRelationshipTypes defines model for Company360StateStrip.Account.RelationshipTypes.
 type Company360StateStripAccountRelationshipTypes string
 
-// Company360StateStripEngagementState PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting.
+// Company360StateStripEngagementState PO-F-4, evaluated in the order the spec fixes so the states stay mutually exclusive. `waiting_on_them` shares its threshold and its inputs with the `no_reply` suggestion by construction, so the strip and the nudge below it cannot disagree about whether an account is waiting. `dormant` is the dormancy ladder's `dormant` or `stale` rung, so the strip and `dormancy` cannot disagree either.
 type Company360StateStripEngagementState string
 
 // Company360StateStripSignalSeverity defines model for Company360StateStrip.Signal.Severity.
@@ -40983,7 +42523,7 @@ type Company360Suggestion struct {
 	// suggestions to recognize it, so a value it cannot match stores nothing.
 	Fingerprint string `json:"fingerprint"`
 
-	// Kind The four RULE kinds, computed from the account's records with no model:
+	// Kind The five RULE kinds, computed from the account's records with no model:
 	//
 	// `no_reply` — an outbound message on a thread nobody answered.
 	// `stalled_deal` — an open deal idle past the 60-day stall window.
@@ -40992,6 +42532,11 @@ type Company360Suggestion struct {
 	// filed under: a `contract_ended` signal stands while the record still reads as a live
 	// customer or an open opportunity. The page states the conflict rather than resolving
 	// it, because which of the two is wrong is a judgment only the reader can make.
+	// `gone_dormant` — the account is on the `dormant` or `stale` rung of the dormancy ladder
+	// and has an owner. Its `add_task` action prepares a follow-up task for that owner. One
+	// silent stretch raises it once: its fingerprint is the stored `last_activity_at`, so a
+	// dismissal holds until new activity starts a new stretch. An installation switches it
+	// off with `contacts.dormancy_follow_up_enabled`.
 	//
 	// The four READ kinds, which only the account scan raises — each from words the
 	// model read in the account's own exchanges, quoted on the citation so the reader
@@ -41032,7 +42577,7 @@ type Company360Suggestion struct {
 // `add_task` — write the step named in `task`, through `POST /tasks`.
 type Company360SuggestionActionKind string
 
-// Company360SuggestionKind The four RULE kinds, computed from the account's records with no model:
+// Company360SuggestionKind The five RULE kinds, computed from the account's records with no model:
 //
 // `no_reply` — an outbound message on a thread nobody answered.
 // `stalled_deal` — an open deal idle past the 60-day stall window.
@@ -41041,6 +42586,11 @@ type Company360SuggestionActionKind string
 // filed under: a `contract_ended` signal stands while the record still reads as a live
 // customer or an open opportunity. The page states the conflict rather than resolving
 // it, because which of the two is wrong is a judgment only the reader can make.
+// `gone_dormant` — the account is on the `dormant` or `stale` rung of the dormancy ladder
+// and has an owner. Its `add_task` action prepares a follow-up task for that owner. One
+// silent stretch raises it once: its fingerprint is the stored `last_activity_at`, so a
+// dismissal holds until new activity starts a new stretch. An installation switches it
+// off with `contacts.dormancy_follow_up_enabled`.
 //
 // The four READ kinds, which only the account scan raises — each from words the
 // model read in the account's own exchanges, quoted on the citation so the reader
@@ -41103,9 +42653,10 @@ type CompanyAnswer struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Question The prepared questions. Fixed, because each one names the records its answer is
@@ -41116,7 +42667,7 @@ type CompanyAnswer struct {
 	// approval is not a citable record type here, and an answer that named one could
 	// not be checked the way every other sentence can.
 	// `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
-	// `whats_changed` — what has moved on this account recently.
+	// `whats_changed` — what has moved on this company recently.
 	Question CompanyQuestion `json:"question"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
@@ -41143,9 +42694,10 @@ type CompanyBrief struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
@@ -41589,9 +43141,10 @@ type CompanyDossier struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// NeedsRefresh The newest contributing source was retrieved more than thirty days ago
@@ -41652,13 +43205,19 @@ type CompanyEmailDraft struct {
 	// Body Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar.
 	Body string `json:"body"`
 
+	// CommunicationContext What the drafting instruction says this message is, for the composer to send with it:
+	// `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+	// check still needs an agreed appointment with the recipient.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
 	// DraftRef Opaque reference identifying this served draft. Null here: recording a draft for voice learning is a WRITE, and this operation performs none.
 	DraftRef *string `json:"draft_ref,omitempty"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the record's correspondence. The model draft and the deterministic floor report it alike. Absent on an introduction request or note, which reads its language on its own and says so through `language_undetermined`.
@@ -41807,8 +43366,11 @@ type CompanyFinanceSummary struct {
 	// Absent under the same sample floor the median observes: a shape drawn from one invoice would state a payment habit the number beside it refuses to.
 	PaymentBehaviour *[]int `json:"payment_behaviour,omitempty"`
 
-	// Provider Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected.
+	// Provider Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected.
 	Provider *string `json:"provider,omitempty"`
+
+	// ProviderName The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 
 	// RecentInvoices The five most recent invoices (FIN-LIM-4); `truncated` says whether there are more.
 	RecentInvoices *[]FinanceInvoice `json:"recent_invoices,omitempty"`
@@ -42098,9 +43660,10 @@ type CompanyGrowthFit struct {
 	GeneratedAt      time.Time        `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// NegativeFactors What argues against it.
@@ -42150,9 +43713,9 @@ type CompanyGrowthFit struct {
 //
 // `weighted_pipeline` is the open deals as they stand at `pipeline_state_at`, each
 // weighted by its stage's win probability, and never a past period's pipeline.
-// `closed_won` is the deals won in `closed_won_period`; a null amount means at least
-// one of them has no base value on file, so the total is incomplete rather than
-// smaller. `activity_count_30d` counts the activities that reached a counted account
+// `closed_won` is the deals won in `closed_won_period` that have a base value on file.
+// `closed_won_coverage` counts the others by cause, for the deals this reader may read, and
+// its `partial` flag is true when any deal is left out. A null amount means none converts. `activity_count_30d` counts the activities that reached a counted account
 // in `activity_window`, the 30 days before the read, which no period parameter moves.
 type CompanyHierarchyRollup struct {
 	ActivityCount30d int             `json:"activity_count_30d"`
@@ -42163,6 +43726,9 @@ type CompanyHierarchyRollup struct {
 
 	// ClosedWon Money as integer minor-units + ISO-4217 currency. Never a float.
 	ClosedWon Money `json:"closed_won"`
+
+	// ClosedWonCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	ClosedWonCoverage *ReportRowCoverage `json:"closed_won_coverage,omitempty"`
 
 	// ClosedWonPeriod The period `closed_won` sums: one bucket of the period reports, cut in the
 	// installation's reporting zone and fiscal calendar. A period still under way holds
@@ -42399,7 +43965,7 @@ type CompanyProfileInput struct {
 	CustomerPains    *string `json:"customer_pains,omitempty"`
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
 
-	// DisplayName The installation's name too, so it carries the installation name's rule: `422 required` when blank, `422 too_long` past 200 characters.
+	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.
 	DisplayName string  `json:"display_name"`
 	History     *string `json:"history,omitempty"`
 	Icp         *string `json:"icp,omitempty"`
@@ -42439,7 +44005,7 @@ type CompanyProfileInput struct {
 // approval is not a citable record type here, and an answer that named one could
 // not be checked the way every other sentence can.
 // `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
-// `whats_changed` — what has moved on this account recently.
+// `whats_changed` — what has moved on this company recently.
 type CompanyQuestion string
 
 // CompanyRollupPeriodLabels The year, quarter and month under way at the read, in the period reports' spelling, so a caller can name one without spelling a fiscal label itself.
@@ -42545,7 +44111,7 @@ type CompanyScan struct {
 
 // CompanyScanRequest What an ensure may ask beyond "make it current".
 type CompanyScanRequest struct {
-	// Force Read the account again even though the stored findings' fingerprint matches or
+	// Force Read the company again even though the stored findings' fingerprint matches or
 	// the rescan floor has not passed. A scan already in flight is still returned as
 	// it stands rather than started twice.
 	Force *bool `json:"force,omitempty"`
@@ -42916,6 +44482,9 @@ type ComposedExtension struct {
 	// Name The unit name — its `extensions/<name>` directory, and the namespace token in `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry here to a grant in `Role.objects`.
 	Name string `json:"name"`
 
+	// Needs The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none.
+	Needs *[]ComposedExtensionNeed `json:"needs,omitempty"`
+
 	// RbacObjects The `ext_<name>_<object>` names this unit's operations gate on, registered into the vocabulary at boot — exactly the objects `setRoleObjectGrant` will accept for this unit. Sorted, and empty for a unit that owns no records (the common case).
 	RbacObjects []string `json:"rbac_objects"`
 
@@ -42924,6 +44493,15 @@ type ComposedExtension struct {
 
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
+}
+
+// ComposedExtensionNeed One core capability a unit declares it uses.
+type ComposedExtensionNeed struct {
+	// Capability What the unit uses. `models` is the installation's AI models; `objects` is a key prefix of its own in the object store.
+	Capability string `json:"capability"`
+
+	// Reason One sentence from the unit's author saying what it does with the capability.
+	Reason string `json:"reason"`
 }
 
 // ComposedExtensionRoute One published extension operation.
@@ -42940,8 +44518,11 @@ type ComposedExtensionRoute struct {
 // `reason` is the honest floor for a field with no backend data model yet — the row is
 // still returned, never omitted or fabricated.
 type ComputedField struct {
-	Computable   bool     `json:"computable"`
-	Dependencies []string `json:"dependencies"`
+	Computable bool `json:"computable"`
+
+	// Coverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	Coverage     *ReportRowCoverage `json:"coverage,omitempty"`
+	Dependencies []string           `json:"dependencies"`
 
 	// FormulaSql The literal GENERATED-column/view SQL definition; empty string when computable=false.
 	FormulaSql string            `json:"formula_sql"`
@@ -42949,7 +44530,7 @@ type ComputedField struct {
 	Kind       ComputedFieldKind `json:"kind"`
 	Label      string            `json:"label"`
 
-	// Reason Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx".
+	// Reason Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx", "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked.
 	Reason *string `json:"reason,omitempty"`
 
 	// Value Present (and non-null) only when kind is count/duration_months/percent and computable=true.
@@ -43138,7 +44719,7 @@ type ConfirmSubmissionReceipt struct {
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
 type ConnectChannelRequest struct {
-	// Address The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram.
+	// Address The chat's web address, such as `https://chat.example.com`; a bare host means https. Required for Dispact, which every team hosts itself; refused for Telegram.
 	Address *string `json:"address,omitempty"`
 
 	// BotToken The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back.
@@ -43167,6 +44748,12 @@ type ConnectConnectorRequest struct {
 	// now, or the request answers exactly as a direct connect to it would. A declined or
 	// failed calendar leaves the mail grant in place.
 	AlsoConnect *ConnectConnectorRequestAlsoConnect `json:"also_connect,omitempty"`
+
+	// ConnectionId The caller's mailbox this consent repairs (Reconnect). The consent must name the same
+	// account: a different one is refused, because it is another mailbox. Absent adds the
+	// account the consent names as another mailbox, or repairs the one that account already
+	// has. Ignored by credential providers.
+	ConnectionId *openapi_types.UUID `json:"connection_id,omitempty"`
 
 	// Imap Direct IMAP credentials (the `imap` provider only).
 	Imap *ImapCredentials `json:"imap,omitempty"`
@@ -43422,7 +45009,10 @@ type ConsentPurpose struct {
 	// Class What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
 	Class     *ConsentPurposeClass `json:"class,omitempty"`
 	CreatedAt time.Time            `json:"created_at"`
-	Id        openapi_types.UUID   `json:"id"`
+
+	// Frequency How often the purpose's mail goes out, roughly. The subscription question states it.
+	Frequency *ConsentPurposeFrequency `json:"frequency,omitempty"`
+	Id        openapi_types.UUID       `json:"id"`
 
 	// Key Stable machine key (e.g. transactional, marketing_email, profiling). Referenced by send_email.consent_purpose.
 	Key   string `json:"key"`
@@ -43432,8 +45022,26 @@ type ConsentPurpose struct {
 	RequiresDoubleOptIn *bool `json:"requires_double_opt_in,omitempty"`
 }
 
-// ConsentPurposeClass What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
+// ConsentPurposeClass Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
 type ConsentPurposeClass string
+
+// ConsentPurposeFrequency How often the purpose's mail goes out, roughly. The subscription question states it.
+type ConsentPurposeFrequency string
+
+// ConsentPurposeSendCount defines model for ConsentPurposeSendCount.
+type ConsentPurposeSendCount struct {
+	// Class The purpose's class. Absent under `unknown`.
+	Class *ConsentPurposeClass `json:"class,omitempty"`
+
+	// Disputed Of those, the messages whose claimed kind differs from the kind the record bore out.
+	Disputed int `json:"disputed"`
+
+	// PurposeKey The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none.
+	PurposeKey string `json:"purpose_key"`
+
+	// Sends Messages staged under this purpose in the window.
+	Sends int `json:"sends"`
+}
 
 // ConsentQualifyingEvent A recorded exchange that may support a scoped message. The send check also
 // uses its sending company, request or deal context, current stops and source
@@ -43569,8 +45177,14 @@ type Contact struct {
 	FirstName *string          `json:"first_name,omitempty"`
 
 	// FullName Always present (display name).
-	FullName string             `json:"full_name"`
-	Id       openapi_types.UUID `json:"id"`
+	FullName string `json:"full_name"`
+
+	// GreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+	GreetingRegister *ContactGreetingRegister `json:"greeting_register,omitempty"`
+	Id               openapi_types.UUID       `json:"id"`
+
+	// ImpersonationWarning Set while the sender check holds an unanswered sign that this sender pretends to be someone else. Absent when there is none, and after a user cleared it (`clearContactImpersonationWarning`).
+	ImpersonationWarning *ContactImpersonationWarning `json:"impersonation_warning,omitempty"`
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
@@ -43631,6 +45245,9 @@ type Contact struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ContactGreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+type ContactGreetingRegister string
 
 // ContactRelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 type ContactRelationshipMark string
@@ -43748,6 +45365,11 @@ type Contact360 struct {
 		Page PageInfo   `json:"page"`
 	} `json:"next_steps,omitempty"`
 
+	// PrivacyConfirmedSource The source a reviewer last confirmed for this contact, from the newest confirmed
+	// privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+	// privacy_notice_duties section.
+	PrivacyConfirmedSource *ContactConfirmedSource `json:"privacy_confirmed_source,omitempty"`
+
 	// PrivacyNoticeDuties Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
 	PrivacyNoticeDuties *[]ContactNoticeDuty `json:"privacy_notice_duties,omitempty"`
 
@@ -43860,7 +45482,7 @@ type Contact360DealRole struct {
 	// Role The buying role as recorded — champion, economic_buyer, blocker, influencer, user by convention. Never inferred from a job title.
 	Role string `json:"role"`
 
-	// SeatCurrent False once the seat has an end date. A seat that ended stays listed as history, and a follow-up cannot rest on it.
+	// SeatCurrent False once the seat's End day has arrived in the installation's time zone; an End date still ahead keeps it current. A seat that ended stays listed as history, and a follow-up cannot rest on it.
 	SeatCurrent *bool `json:"seat_current,omitempty"`
 }
 
@@ -43957,9 +45579,10 @@ type ContactBrief struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Sentences Two to five sentences: who this contact is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited.
@@ -44038,6 +45661,11 @@ type ContactCaseDecisionRequest struct {
 
 	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
 	OwnerId openapi_types.UUID `json:"owner_id"`
+
+	// Prefer Where the selected members disagree, the member whose value the remaining contact takes.
+	// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+	// No value is lost: every address, number and employment of every member stays on the remaining contact.
+	Prefer *ContactCasePreference `json:"prefer,omitempty"`
 
 	// Revision The case revision the reviewer looked at.
 	Revision string `json:"revision"`
@@ -44127,11 +45755,34 @@ type ContactCaseOwner struct {
 	MemberIds []openapi_types.UUID `json:"member_ids"`
 	Name      string               `json:"name"`
 	Seat      ContactCaseOwnerSeat `json:"seat"`
-	UserId    openapi_types.UUID   `json:"user_id"`
+
+	// Status `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+	Status ContactCaseOwnerStatus `json:"status"`
+	UserId openapi_types.UUID     `json:"user_id"`
 }
 
 // ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
 type ContactCaseOwnerSeat string
+
+// ContactCaseOwnerStatus `invited` is a colleague who has not signed in yet. They still own their contacts and may own the merged one.
+type ContactCaseOwnerStatus string
+
+// ContactCasePreference Where the selected members disagree, the member whose value the remaining contact takes.
+// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+// No value is lost: every address, number and employment of every member stays on the remaining contact.
+type ContactCasePreference struct {
+	// Email The member whose primary email address becomes the remaining contact's primary one.
+	Email *openapi_types.UUID `json:"email,omitempty"`
+
+	// Employment The member whose current employer becomes the remaining contact's current one.
+	Employment *openapi_types.UUID `json:"employment,omitempty"`
+
+	// Name The member whose first and last name the remaining contact takes.
+	Name *openapi_types.UUID `json:"name,omitempty"`
+
+	// Title The member whose title the remaining contact takes.
+	Title *openapi_types.UUID `json:"title,omitempty"`
+}
 
 // ContactCaseResolution defines model for ContactCaseResolution.
 type ContactCaseResolution struct {
@@ -44169,6 +45820,23 @@ type ContactCaseSkippedOwner struct {
 
 // ContactCaseSkippedOwnerReason defines model for ContactCaseSkippedOwner.Reason.
 type ContactCaseSkippedOwnerReason string
+
+// ContactConfirmedSource The source a reviewer last confirmed for this contact, from the newest confirmed
+// privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+// privacy_notice_duties section.
+type ContactConfirmedSource struct {
+	CaseId      openapi_types.UUID `json:"case_id"`
+	ConfirmedAt time.Time          `json:"confirmed_at"`
+
+	// ConfirmedBy Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists.
+	ConfirmedBy *PrincipalAttribution `json:"confirmed_by,omitempty"`
+
+	// SourceKind The confirmed kind: one of `AssessNoticeSource.kind`.
+	SourceKind string `json:"source_kind"`
+
+	// SourceObtainedAt The acquisition date the reviewer confirmed; null when they confirmed none.
+	SourceObtainedAt *time.Time `json:"source_obtained_at"`
+}
 
 // ContactConsentGuard Facts recorded for this contact, per purpose and channel, with their reason.
 // This summary does not authorize a message. Each message is checked for its
@@ -44226,12 +45894,14 @@ type ContactConsentGuardEntryVerdict string
 
 // ContactConsentState A contact's current consent for one purpose.
 type ContactConsentState struct {
-	DoubleOptInConfirmedAt *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
-	LawfulBasis            *string                  `json:"lawful_basis,omitempty"`
-	PurposeId              openapi_types.UUID       `json:"purpose_id"`
-	PurposeKey             *string                  `json:"purpose_key,omitempty"`
-	State                  ContactConsentStateState `json:"state"`
-	UpdatedAt              *time.Time               `json:"updated_at,omitempty"`
+	// ConfirmationPendingUntil When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
+	ConfirmationPendingUntil *time.Time               `json:"confirmation_pending_until,omitempty"`
+	DoubleOptInConfirmedAt   *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
+	LawfulBasis              *string                  `json:"lawful_basis,omitempty"`
+	PurposeId                openapi_types.UUID       `json:"purpose_id"`
+	PurposeKey               *string                  `json:"purpose_key,omitempty"`
+	State                    ContactConsentStateState `json:"state"`
+	UpdatedAt                *time.Time               `json:"updated_at,omitempty"`
 }
 
 // ContactConsentStateState defines model for ContactConsentState.State.
@@ -44251,7 +45921,7 @@ type ContactEmail struct {
 	EmailType ContactEmailEmailType `json:"email_type"`
 	Id        openapi_types.UUID    `json:"id"`
 
-	// IsPrimary At most one primary per type (DB-enforced).
+	// IsPrimary At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary.
 	IsPrimary bool `json:"is_primary"`
 
 	// Position Explicit ordering.
@@ -44269,8 +45939,10 @@ type ContactEmailInput struct {
 	// Email An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
 	Email     openapi_types.Email         `json:"email"`
 	EmailType *ContactEmailInputEmailType `json:"email_type,omitempty"`
-	IsPrimary *bool                       `json:"is_primary,omitempty"`
-	Position  *int                        `json:"position,omitempty"`
+
+	// IsPrimary The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.
+	IsPrimary *bool `json:"is_primary,omitempty"`
+	Position  *int  `json:"position,omitempty"`
 }
 
 // ContactEmailInputEmailType defines model for ContactEmailInput.EmailType.
@@ -44493,11 +46165,26 @@ type ContactGraphRouteEvidence struct {
 // ContactGraphRouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 type ContactGraphRouteType string
 
+// ContactImpersonationWarning The sign of impersonation the sender check saw when capture made this contact from a mail.
+type ContactImpersonationWarning struct {
+	// DetectedAt When the sender check recorded it.
+	DetectedAt time.Time `json:"detected_at"`
+
+	// Reason Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+	Reason *ContactImpersonationWarningReason `json:"reason,omitempty"`
+}
+
+// ContactImpersonationWarningReason Which sign it saw. `punycode_domain`: the mail domain is written in punycode, which can look like another domain. `display_name_other_domain`: the display name holds an address on a domain other than the one the mail came from. Absent on a warning recorded before the reason was stored.
+type ContactImpersonationWarningReason string
+
 // ContactListResponse defines model for ContactListResponse.
 type ContactListResponse struct {
 	Data []Contact `json:"data"`
 	Page PageInfo  `json:"page"`
 }
+
+// ContactMeans A way of reaching someone that a stated particular must name.
+type ContactMeans string
 
 // ContactMoment One reason this contact is worth attention now, with the evidence behind it.
 //
@@ -44550,6 +46237,13 @@ type ContactMoment struct {
 	// exists — the alternative is a page offering an action that 404s on click, which is how
 	// a moment becomes a lie. The state is honest for the same reason: an action the caller
 	// cannot take says so instead of failing.
+	//
+	// `call` dials the contact's primary phone number; a client that knows it ignores the
+	// destination. The destination is `activity_log`, so a client that predates `call` opens the
+	// log form instead of drawing a button that does nothing. The server names it only for a
+	// promise whose task was filed from a logged call, on a live contact that has a number.
+	// Writing to them then stays as the second action, and a card that asks whether the promise
+	// is done carries the call as a second action too.
 	RecommendedAction ContactMomentAction `json:"recommended_action"`
 
 	// Rule Which rung of the fixed ladder selected this moment (ADR-0096 D2), in priority order.
@@ -44580,6 +46274,13 @@ type ContactMomentConfidence string
 // exists — the alternative is a page offering an action that 404s on click, which is how
 // a moment becomes a lie. The state is honest for the same reason: an action the caller
 // cannot take says so instead of failing.
+//
+// `call` dials the contact's primary phone number; a client that knows it ignores the
+// destination. The destination is `activity_log`, so a client that predates `call` opens the
+// log form instead of drawing a button that does nothing. The server names it only for a
+// promise whose task was filed from a logged call, on a live contact that has a number.
+// Writing to them then stays as the second action, and a card that asks whether the promise
+// is done carries the call as a second action too.
 type ContactMomentAction struct {
 	BlockedReason *string `json:"blocked_reason,omitempty"`
 
@@ -44751,7 +46452,9 @@ type ContactPhone struct {
 	ContactId  *openapi_types.UUID `json:"contact_id,omitempty"`
 	CreatedAt  *time.Time          `json:"created_at,omitempty"`
 	Id         openapi_types.UUID  `json:"id"`
-	IsPrimary  bool                `json:"is_primary"`
+
+	// IsPrimary At most one primary number per contact, whatever its type (DB-enforced).
+	IsPrimary bool `json:"is_primary"`
 
 	// Phone E.164 normalized.
 	Phone     string                `json:"phone"`
@@ -44767,6 +46470,7 @@ type ContactPhonePhoneType string
 // ContactPhoneInput One phone number on a contact, as a writer supplies it. One schema for create and
 // update, so the two cannot describe a number differently.
 type ContactPhoneInput struct {
+	// IsPrimary The one primary number of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`.
 	IsPrimary *bool                       `json:"is_primary,omitempty"`
 	Phone     string                      `json:"phone"`
 	PhoneType *ContactPhoneInputPhoneType `json:"phone_type,omitempty"`
@@ -44777,9 +46481,9 @@ type ContactPhoneInput struct {
 type ContactPhoneInputPhoneType string
 
 // ContactProfileField One enriched field with the evidence it was read from. Evidence-or-omit: a row
-// exists only where a verbatim snippet was captured. A phone is a list, so a contact
-// has one `phone` row per number, told apart by `value_key`; every other field has at
-// most one row.
+// exists only where a verbatim snippet was captured. A phone and an email are lists,
+// so a contact has one `phone` row per number and one `email` row per further address,
+// told apart by `value_key`; every other field has at most one row.
 type ContactProfileField struct {
 	CapturedAt time.Time `json:"captured_at"`
 
@@ -44817,8 +46521,9 @@ type ContactProfileField struct {
 	SupersededValue *string `json:"superseded_value,omitempty"`
 	Value           string  `json:"value"`
 
-	// ValueKey What tells two rows of one field apart: the E.164 number for a `phone` row, empty
-	// for every other field. Pass it to the restore to name which number to undo.
+	// ValueKey What tells two rows of one field apart: the E.164 number for a `phone` row, the
+	// lowercased address for an `email` row, empty for every other field. Pass it to the
+	// restore to name which number to undo.
 	ValueKey *string `json:"value_key,omitempty"`
 
 	// Verdict What a human has already decided about this field, absent when nobody has. A `corrected` field shows their value in `value` and is never overwritten by a fresh inference without a 🟡 confirm — a correction outranks a later statement by the contact themselves, which is the one thing recency does not decide; `confirmed` carries the marker; `suppressed` means the claim is not shown again.
@@ -45024,6 +46729,9 @@ type ContactResearchSource struct {
 	Quote *string `json:"quote,omitempty"`
 	Url   string  `json:"url"`
 }
+
+// ContactStatedSource Where a contact created by hand came from, as the user who created it stated.
+type ContactStatedSource string
 
 // ContactStop One live stop on a contact, and whether the caller may take it back.
 type ContactStop struct {
@@ -45306,6 +47014,16 @@ type ControllerParticulars struct {
 	// as met.
 	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
 
+	// ArchivePurpose Why captured correspondence is kept in the archive after its retention window, as the
+	// words that finish the privacy page's sentence about the archive. Empty prints the page's
+	// default purpose in the reader's language.
+	ArchivePurpose *string `json:"archive_purpose,omitempty"`
+
+	// DisclosureLanguages The languages the jurisdiction packs in force ask the objection route and the advertiser
+	// contact to be stated in. The packs in force are those of the installation's country and
+	// of each legal entity's country.
+	DisclosureLanguages *[]string `json:"disclosure_languages,omitempty"`
+
 	// LegalName Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020.
 	LegalName *string `json:"legal_name,omitempty"`
 
@@ -45318,10 +47036,37 @@ type ControllerParticulars struct {
 	// usually the honest answer; an installation whose recipients answer by phone says so here.
 	ObjectionRoute *string `json:"objection_route,omitempty"`
 
+	// ObjectionRouteMeans What every stated objection route must name under the packs in force. Saving a route that
+	// lacks one answers 422 with the field and the missing part.
+	ObjectionRouteMeans *[]ContactMeans `json:"objection_route_means,omitempty"`
+
 	// PostalAddress Where they are, as a block of lines — including a register court and number where a business letter needs one.
 	PostalAddress *string `json:"postal_address,omitempty"`
 
 	// PrivacyContact How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.
+	PrivacyContact *string `json:"privacy_contact,omitempty"`
+
+	// PrivacyPage Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.
+	PrivacyPage *string `json:"privacy_page,omitempty"`
+
+	// Translations The same particulars in other languages, one entry per language. A mail or page in one of
+	// them prints the translated text where it is stated and the text above where it is not.
+	// Where a jurisdiction pack in force names a disclosure language, an advertising mail to a
+	// recipient under that pack is refused until its objection route and advertiser contact are
+	// stated in that language.
+	Translations *[]ControllerParticularsTranslation `json:"translations,omitempty"`
+}
+
+// ControllerParticularsTranslation The controller particulars in one more language. An empty field prints the default text.
+type ControllerParticularsTranslation struct {
+	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
+	ArchivePurpose    *string `json:"archive_purpose,omitempty"`
+
+	// Language The language, as a base language the installation can send mail in.
+	Language       string  `json:"language"`
+	LegalName      *string `json:"legal_name,omitempty"`
+	ObjectionRoute *string `json:"objection_route,omitempty"`
+	PostalAddress  *string `json:"postal_address,omitempty"`
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
 }
 
@@ -45339,6 +47084,9 @@ type ControllerSend struct {
 // is final against the machine — a later run may add claims but never overwrites or
 // resurrects a corrected one while its evidence fingerprint is unchanged.
 type ConversationClaim struct {
+	// AutoKept Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+	AutoKept *ConversationClaimAutoKept `json:"auto_kept,omitempty"`
+
 	// Body What the claim says, in the reader's language. The verbatim evidence is `source_quote`, beside it.
 	Body string `json:"body"`
 
@@ -45359,6 +47107,9 @@ type ConversationClaim struct {
 	// `communication_preference` is deliberately absent: observed-style inference is
 	// dropped from the product.
 	Kind ConversationClaimKind `json:"kind"`
+
+	// LooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
+	LooksKept *ConversationClaimLooksKept `json:"looks_kept,omitempty"`
 
 	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
 	NeedsReview bool       `json:"needs_review"`
@@ -45388,10 +47139,19 @@ type ConversationClaim struct {
 
 	// TaskActivityId The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
 	TaskActivityId *openapi_types.UUID `json:"task_activity_id,omitempty"`
+
+	// TaskOpen True when the task `task_activity_id` names is open and this reader may see it. Set only by the contact 360 read; absent elsewhere and when the claim names no task. `next_steps` is capped, so a claim whose task is past the cap still counts as owed, and one whose task is done or hidden does not.
+	TaskOpen *bool `json:"task_open,omitempty"`
 }
 
 // ConversationClaimStatus `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.
 type ConversationClaimStatus string
+
+// ConversationClaimAutoKept Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+type ConversationClaimAutoKept struct {
+	// Evidence A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
+	Evidence *ConversationClaimLooksKept `json:"evidence,omitempty"`
+}
 
 // ConversationClaimKind The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
 // lifecycle — extracted → cited → correctable → dismissible — and differ only here.
@@ -45405,6 +47165,16 @@ type ConversationClaimStatus string
 // `communication_preference` is deliberately absent: observed-style inference is
 // dropped from the product.
 type ConversationClaimKind string
+
+// ConversationClaimLooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
+type ConversationClaimLooksKept struct {
+	GuestName string             `json:"guest_name"`
+	MeetingAt time.Time          `json:"meeting_at"`
+	MeetingId openapi_types.UUID `json:"meeting_id"`
+
+	// MeetingPrecision How to read `meeting_at`. `day` means only its date is known.
+	MeetingPrecision OccurredPrecision `json:"meeting_precision"`
+}
 
 // ConversationMemoryEntry One thread or meeting, condensed to what it was about (ADR-0097 D3).
 //
@@ -45430,9 +47200,10 @@ type ConversationMemoryEntry struct {
 	FirstActivityId *openapi_types.UUID `json:"first_activity_id,omitempty"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
 
 	// Key The thread key, or the activity id for a meeting or a standalone message that has none.
@@ -45630,6 +47401,20 @@ type CreateActivityRequestLinksEntityType string
 // CreateActivityRequestMeetingStatus Meeting only. `held` records a report that the meeting took place, and `no_show` that the other side did not come. Either ends `awaiting_outcome`. `booked` is a meeting still to come, and `canceled` one called off. Leave it out when nobody said whether the meeting happened: a start in the past is not attendance, so such a meeting still asks for its outcome.
 type CreateActivityRequestMeetingStatus string
 
+// CreateActivityReviewTemplateRequest defines model for CreateActivityReviewTemplateRequest.
+type CreateActivityReviewTemplateRequest struct {
+	// Key Derived from the label when omitted.
+	Key   *string `json:"key,omitempty"`
+	Label string  `json:"label"`
+
+	// Outcome Which outcome the template is asked for.
+	Outcome   CreateActivityReviewTemplateRequestOutcome `json:"outcome"`
+	Questions []ReviewQuestion                           `json:"questions"`
+}
+
+// CreateActivityReviewTemplateRequestOutcome Which outcome the template is asked for.
+type CreateActivityReviewTemplateRequestOutcome string
+
 // CreateAutomationRequest defines model for CreateAutomationRequest.
 type CreateAutomationRequest struct {
 	Key    string                 `json:"key"`
@@ -45650,6 +47435,12 @@ type CreateCaptureCounterpartyHoldRequestKind string
 
 // CreateCaptureExclusionRequest defines model for CreateCaptureExclusionRequest.
 type CreateCaptureExclusionRequest struct {
+	// ConnectionId For a `container` rule, the caller's mailbox the folder was picked from, the `id` of a
+	// `CaptureConnection`. A label or folder id means another folder in another mailbox, so
+	// the rule matches only there. Omit it while the caller holds one mailbox of the
+	// provider; with several it is required. Ignored for other kinds.
+	ConnectionId *openapi_types.UUID `json:"connection_id,omitempty"`
+
 	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
 	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a workspace rule would bind every colleague's connection to a place that does not exist there.
@@ -45664,6 +47455,9 @@ type CreateCaptureExclusionRequest struct {
 
 // CreateCaptureOwnerIdentityRequest defines model for CreateCaptureOwnerIdentityRequest.
 type CreateCaptureOwnerIdentityRequest struct {
+	// Confirm Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.
+	Confirm *bool `json:"confirm,omitempty"`
+
 	// Kind What the identity names. Its own schema rather than the exclusion's, which the two shared while they happened to hold the same two values: an exclusion can now also name a CONTAINER, and a container is not something a mailbox owner can BE.
 	Kind CaptureOwnerIdentityKind `json:"kind"`
 
@@ -45690,7 +47484,7 @@ type CreateCompanyRequest struct {
 
 	// Description A description of what the company does.
 	Description *string               `json:"description,omitempty"`
-	DisplayName string                `json:"display_name"`
+	DisplayName string                `json:"display_name" singleline:"true"`
 	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
@@ -45698,7 +47492,7 @@ type CreateCompanyRequest struct {
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
-	LegalName *string `json:"legal_name,omitempty"`
+	LegalName *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl Canonical LinkedIn company URL, held to the rule the update holds it to. website_url is derived and refused here.
 	LinkedinUrl     *string             `json:"linkedin_url,omitempty"`
@@ -45729,9 +47523,11 @@ type CreateCompanyRequestSizeBand string
 
 // CreateConsentPurposeRequest defines model for CreateConsentPurposeRequest.
 type CreateConsentPurposeRequest struct {
-	Key                 string `json:"key"`
-	Label               string `json:"label"`
-	RequiresDoubleOptIn *bool  `json:"requires_double_opt_in,omitempty"`
+	// Frequency Absent means monthly.
+	Frequency           *ConsentPurposeFrequency `json:"frequency,omitempty"`
+	Key                 string                   `json:"key"`
+	Label               string                   `json:"label"`
+	RequiresDoubleOptIn *bool                    `json:"requires_double_opt_in,omitempty"`
 }
 
 // CreateContactEnrichmentRunRequest defines model for CreateContactEnrichmentRunRequest.
@@ -45749,8 +47545,14 @@ type CreateContactEnrichmentRunRequest struct {
 	Provider Provider `json:"provider"`
 }
 
-// CreateContactRequest Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
+// CreateContactRequest Requires at least one nonblank email, phone or LinkedIn URL (including social.linkedin). Name-only requests return 422 contact_channel_required. CSV import retains and warns about name-only rows. Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
 type CreateContactRequest struct {
+	// AcquisitionNote Their own words about the source, printed on the contact's privacy page beside it.
+	AcquisitionNote *string `json:"acquisition_note,omitempty"`
+
+	// AcquisitionSource Where the contact came from, as the user creating it states. The contact's privacy page prints it. `other` needs `acquisition_note`.
+	AcquisitionSource *ContactStatedSource `json:"acquisition_source,omitempty"`
+
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
@@ -45771,9 +47573,9 @@ type CreateContactRequest struct {
 	// CreatedFromActivityId The note, mail or quick capture this contact was read out of. An agent that creates a contact from a record names it here, so a reader can check where the name and title came from. The caller must be able to read it (404 `not_found` otherwise, never 403).
 	CreatedFromActivityId *openapi_types.UUID  `json:"created_from_activity_id,omitempty"`
 	Emails                *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName             *string              `json:"first_name,omitempty"`
-	FullName              string               `json:"full_name"`
-	LastName              *string              `json:"last_name,omitempty"`
+	FirstName             *string              `json:"first_name,omitempty" singleline:"true"`
+	FullName              string               `json:"full_name" singleline:"true"`
+	LastName              *string              `json:"last_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; a request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
 	LinkedinUrl *string              `json:"linkedin_url,omitempty"`
@@ -45795,7 +47597,7 @@ type CreateContactRequest struct {
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
-	Title                *string                `json:"title,omitempty"`
+	Title                *string                `json:"title,omitempty" singleline:"true"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
@@ -45896,7 +47698,7 @@ type CreateDealRequest struct {
 
 	// ExpectedCloseDate Deals are born open, so a date before today is rejected 422 (INV-CLOSE-PAST, formulas §11).
 	ExpectedCloseDate *openapi_types.Date `json:"expected_close_date,omitempty"`
-	Name              string              `json:"name"`
+	Name              string              `json:"name" singleline:"true"`
 	OwnerId           *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
@@ -45911,7 +47713,9 @@ type CreateDealRequest struct {
 
 	// ProjectId The body of work this deal belongs to; must name the same company as the deal.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
-	Source    string              `json:"source"`
+
+	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -46125,20 +47929,20 @@ type CreateLeadOriginRequest struct {
 
 	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
 	Key       *string `json:"key,omitempty"`
-	Label     string  `json:"label"`
+	Label     string  `json:"label" singleline:"true"`
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
 // CreateLeadRequest defines model for CreateLeadRequest.
 type CreateLeadRequest struct {
 	CandidateCompanyKey *string `json:"candidate_company_key,omitempty"`
-	CompanyName         *string `json:"company_name,omitempty"`
+	CompanyName         *string `json:"company_name,omitempty" singleline:"true"`
 
 	// ContactId Older clients may still send this field. The request is refused with 409 `contact_holds_email`; open a deal when a contact has a new opportunity.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	ContactId *openapi_types.UUID  `json:"contact_id,omitempty"`
 	Email     *openapi_types.Email `json:"email,omitempty"`
-	FullName  *string              `json:"full_name,omitempty"`
+	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
 
 	// Industry An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`.
 	Industry *string `json:"industry,omitempty"`
@@ -46179,7 +47983,7 @@ type CreateLeadRequest struct {
 
 	// Status The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
 	Status               *CreateLeadRequestStatus `json:"status,omitempty"`
-	Title                *string                  `json:"title,omitempty"`
+	Title                *string                  `json:"title,omitempty" singleline:"true"`
 	AdditionalProperties map[string]interface{}   `json:"-"`
 }
 
@@ -46193,7 +47997,7 @@ type CreateLeadSourceRequest struct {
 
 	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
 	Key       *string `json:"key,omitempty"`
-	Label     string  `json:"label"`
+	Label     string  `json:"label" singleline:"true"`
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
@@ -46204,17 +48008,22 @@ type CreateLegalEntityRequest struct {
 	BankAccountHolder *string             `json:"bank_account_holder,omitempty"`
 	Bic               *string             `json:"bic,omitempty"`
 
-	// Country Lower-case ISO 3166-1 alpha-2, for example `de`.
+	// Country The address country, lower-case ISO 3166-1 alpha-2, for example `de`.
 	Country string `json:"country"`
 
 	// DefaultLanguage ISO 639-1, for example `de`.
 	DefaultLanguage *string `json:"default_language,omitempty"`
-	DisplayName     string  `json:"display_name"`
+	DisplayName     string  `json:"display_name" singleline:"true"`
 
 	// Iban Spaces are removed and letters upper-cased before the check.
-	Iban      *string `json:"iban,omitempty"`
-	Imprint   *string `json:"imprint,omitempty"`
-	LegalName string  `json:"legal_name"`
+	Iban    *string `json:"iban,omitempty"`
+	Imprint *string `json:"imprint,omitempty"`
+
+	// Jurisdiction The jurisdiction pack whose law the entity follows, one of `available` of
+	// `/installation/jurisdiction`. Left out, it is the `country`, and a country no pack
+	// covers answers `invalid_jurisdiction`.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
+	LegalName    string  `json:"legal_name" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -46274,7 +48083,9 @@ type CreateOfferRequest struct {
 	// for an agent, the human it acts for. An unknown or archived entity is refused as 422.
 	LegalEntityId *openapi_types.UUID   `json:"legal_entity_id,omitempty"`
 	LineItems     *[]OfferLineItemInput `json:"line_items,omitempty"`
-	Source        string                `json:"source"`
+
+	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// TemplateId Optional offer_template to render with; unset falls back to the workspace's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
@@ -46288,7 +48099,7 @@ type CreateOfferTemplateRequest struct {
 	IsDefault *bool                  `json:"is_default,omitempty"`
 	Layout    map[string]interface{} `json:"layout"`
 	Locale    *string                `json:"locale,omitempty"`
-	Name      string                 `json:"name"`
+	Name      string                 `json:"name" singleline:"true"`
 }
 
 // CreateOutcomeReviewRequest defines model for CreateOutcomeReviewRequest.
@@ -46307,6 +48118,14 @@ type CreateOutcomeReviewRequest struct {
 
 	// SubmissionId The client's own id for this submission. Retrying with the same id returns the review that already exists rather than writing a second one; a deliberate second review uses a new id.
 	SubmissionId openapi_types.UUID `json:"submission_id"`
+
+	// TemplateKey Key of the template shown when the form opened. A template added or restored since then
+	// is a different template, possibly at the same version, so a key that is not the live
+	// template's returns 409. Optional: a client that omits it keeps the version-only check, so
+	// a client built before this field keeps working. That client cannot tell a swap to another
+	// template at the same version; its answers are still checked against the live questions,
+	// and an answer to a question the live template does not ask is refused 422.
+	TemplateKey *string `json:"template_key,omitempty"`
 
 	// TemplateVersion Version shown when the form opened. A changed template returns 409 rather than filing answers against new questions.
 	TemplateVersion *int64 `json:"template_version,omitempty"`
@@ -46374,15 +48193,15 @@ type CreateProductRequest struct {
 	// DefaultTaxRate Percent; defaults to 0.
 	DefaultTaxRate *float64 `json:"default_tax_rate,omitempty" minimum:"0"`
 	Description    *string  `json:"description,omitempty"`
-	Name           string   `json:"name"`
-	Sku            *string  `json:"sku,omitempty"`
+	Name           string   `json:"name" singleline:"true"`
+	Sku            *string  `json:"sku,omitempty" singleline:"true"`
 	Source         string   `json:"source"`
 
 	// TaxCategory Which tax rate the product takes. Omit or send null to leave it unclassified.
 	TaxCategory *CreateProductRequestTaxCategory `json:"tax_category,omitempty"`
 
 	// Unit A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`.
-	Unit           *string `json:"unit,omitempty"`
+	Unit           *string `json:"unit,omitempty" singleline:"true"`
 	UnitPriceMinor int64   `json:"unit_price_minor" minimum:"0"`
 }
 
@@ -46430,12 +48249,14 @@ type CreateProjectRequest struct {
 
 	// Key The key the creator chose; omitted or null to have the server mint one. Read-only after create.
 	Key     *string             `json:"key,omitempty"`
-	Name    string              `json:"name"`
+	Name    string              `json:"name" singleline:"true"`
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase The phase the project starts in; initiative when omitted.
-	Phase  *CreateProjectRequestPhase `json:"phase,omitempty"`
-	Source string                     `json:"source"`
+	Phase *CreateProjectRequestPhase `json:"phase,omitempty"`
+
+	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -46562,7 +48383,7 @@ type CreateRoleRequest struct {
 
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
 type CreateSavedViewRequest struct {
-	Name  string                 `json:"name"`
+	Name  string                 `json:"name" singleline:"true"`
 	Query map[string]interface{} `json:"query"`
 
 	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
@@ -46601,7 +48422,10 @@ type CreateSignalRequestSourceChannel string
 // CreateStageExitCriterionRequest defines model for CreateStageExitCriterionRequest.
 type CreateStageExitCriterionRequest struct {
 	Hint *string `json:"hint,omitempty"`
-	Key  string  `json:"key"`
+
+	// Key Optional. Left out, Margince makes the key from the label and adds a
+	// number when the stage already has a live criterion under that key.
+	Key *string `json:"key,omitempty"`
 
 	// Kind What KIND of fact settles a criterion. This is not decoration: the kind
 	// decides which evidence sources may satisfy it. `buyer_confirmed`,
@@ -46634,7 +48458,7 @@ type CreateStageRequestSemantic string
 type CreateTagRequest struct {
 	Color       *CreateTagRequestColor `json:"color,omitempty"`
 	Description *string                `json:"description,omitempty"`
-	Name        string                 `json:"name"`
+	Name        string                 `json:"name" singleline:"true"`
 }
 
 // CreateTagRequestColor defines model for CreateTagRequest.Color.
@@ -46807,6 +48631,9 @@ type CustomField struct {
 	// Options Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
 	Options *[]string `json:"options,omitempty"`
 
+	// RecordsChanged Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared.
+	RecordsChanged *int `json:"records_changed,omitempty" minimum:"0"`
+
 	// Reportable Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object.
 	Reportable bool `json:"reportable"`
 
@@ -46819,7 +48646,7 @@ type CustomField struct {
 	// Status retired = soft: hidden from the API and filtering, column and values preserved.
 	Status CustomFieldStatus `json:"status"`
 
-	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+	// Type The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
 	Type      CustomFieldType `json:"type"`
 	UpdatedAt time.Time       `json:"updated_at"`
 
@@ -46839,8 +48666,21 @@ type CustomFieldObject string
 // CustomFieldStatus retired = soft: hidden from the API and filtering, column and values preserved.
 type CustomFieldStatus string
 
-// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+// CustomFieldType The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
 type CustomFieldType string
+
+// CustomFieldChoiceCount defines model for CustomFieldChoiceCount.
+type CustomFieldChoiceCount struct {
+	Choice string `json:"choice"`
+
+	// Records Records that hold the choice, archived ones included.
+	Records int `json:"records" minimum:"0"`
+}
+
+// CustomFieldChoiceUse How many records hold each current choice of a picklist or multiselect field.
+type CustomFieldChoiceUse struct {
+	Choices []CustomFieldChoiceCount `json:"choices"`
+}
 
 // CustomFieldListResponse defines model for CustomFieldListResponse.
 type CustomFieldListResponse struct {
@@ -46909,7 +48749,12 @@ type CustomerPayments struct {
 	// LinkedCompanies Readable, live linked companies eligible for the payment overview.
 	LinkedCompanies int      `json:"linked_companies" minimum:"0"`
 	Page            PageInfo `json:"page"`
-	Provider        *string  `json:"provider,omitempty"`
+
+	// Provider The accounting source's key. Show `provider_name` to a reader.
+	Provider *string `json:"provider,omitempty"`
+
+	// ProviderName The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 
 	// State Why the figures are what they are — the six cases a company page must keep
 	// apart, because five of them look identical if you only render the numbers.
@@ -47031,6 +48876,28 @@ type DataSubjectRequestProof struct {
 	Result            string         `json:"result"`
 }
 
+// DataTaskActionNeeded Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total.
+type DataTaskActionNeeded struct {
+	Count   int64                      `json:"count" minimum:"0"`
+	Reason  DataTaskActionNeededReason `json:"reason"`
+	Records []DataTaskActionRecord     `json:"records"`
+
+	// Remedy What to do about it, in the reader's language.
+	Remedy string `json:"remedy"`
+
+	// Sentence What was left open, in the reader's language.
+	Sentence string `json:"sentence"`
+}
+
+// DataTaskActionNeededReason defines model for DataTaskActionNeeded.Reason.
+type DataTaskActionNeededReason string
+
+// DataTaskActionRecord defines model for DataTaskActionRecord.
+type DataTaskActionRecord struct {
+	Id   openapi_types.UUID `json:"id"`
+	Type string             `json:"type"`
+}
+
 // DataTaskControl defines model for DataTaskControl.
 type DataTaskControl struct {
 	Action  DataTaskControlAction `json:"action"`
@@ -47044,6 +48911,8 @@ type DataTaskControlAction string
 
 // DataTaskProgress defines model for DataTaskProgress.
 type DataTaskProgress struct {
+	// ActionNeeded Records a finished step left for someone to act on. The step is still done, so later steps run. Records lists at most 100 of them; count is the total.
+	ActionNeeded        *DataTaskActionNeeded          `json:"action_needed,omitempty"`
 	BatchLimit          int                            `json:"batch_limit"`
 	Batches             int64                          `json:"batches" minimum:"0"`
 	BlockedBy           *string                        `json:"blocked_by,omitempty"`
@@ -47092,7 +48961,10 @@ type DeactivateUserRequest struct {
 type Deal struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
+	AiWrittenFields *[]string `json:"ai_written_fields,omitempty"`
+	AmountMinor     *int64    `json:"amount_minor,omitempty"`
 
 	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
@@ -47148,7 +49020,7 @@ type Deal struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
@@ -47186,7 +49058,9 @@ type Deal struct {
 	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
 	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
-	Source    string                  `json:"source"`
+
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
@@ -47206,10 +49080,16 @@ type Deal struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
+	// WaitEndsAt The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+	WaitEndsAt *time.Time `json:"wait_ends_at,omitempty"`
+
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
-	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	// WinChance How `win_probability` of an open deal was made, from the one function every screen, report and tool reads. Absent on a won or lost deal.
+	WinChance *DealWinChance `json:"win_chance,omitempty"`
+
+	// WinProbability The chance this deal is won, in percent. An open deal that follows its stage reads the stage's typed chance moved by what this installation's closed deals show and by the risk effect of the deal's strongest signal; `win_chance` says how. A probability set on the deal stands as set. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
 	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
@@ -47218,7 +49098,7 @@ type Deal struct {
 	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
 	WinProbabilitySetByUserId *openapi_types.UUID `json:"win_probability_set_by_user_id,omitempty"`
 
-	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
 
 	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
@@ -47247,7 +49127,7 @@ type DealPriority string
 // DealStatus defines model for Deal.Status.
 type DealStatus string
 
-// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 type DealWinProbabilitySource string
 
 // DealWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
@@ -47257,7 +49137,10 @@ type DealWonWithoutContractReason string
 type DealAdvanced struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
+	AiWrittenFields *[]string `json:"ai_written_fields,omitempty"`
+	AmountMinor     *int64    `json:"amount_minor,omitempty"`
 
 	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
@@ -47313,7 +49196,7 @@ type DealAdvanced struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
@@ -47352,7 +49235,9 @@ type DealAdvanced struct {
 	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
 	ProjectId *openapi_types.UUID     `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
-	Source    string                  `json:"source"`
+
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
@@ -47372,10 +49257,16 @@ type DealAdvanced struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
+	// WaitEndsAt The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+	WaitEndsAt *time.Time `json:"wait_ends_at,omitempty"`
+
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
-	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	// WinChance How `win_probability` of an open deal was made, from the one function every screen, report and tool reads. Absent on a won or lost deal.
+	WinChance *DealWinChance `json:"win_chance,omitempty"`
+
+	// WinProbability The chance this deal is won, in percent. An open deal that follows its stage reads the stage's typed chance moved by what this installation's closed deals show and by the risk effect of the deal's strongest signal; `win_chance` says how. A probability set on the deal stands as set. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
 	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
@@ -47384,7 +49275,7 @@ type DealAdvanced struct {
 	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
 	WinProbabilitySetByUserId *openapi_types.UUID `json:"win_probability_set_by_user_id,omitempty"`
 
-	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 	WinProbabilitySource *DealAdvancedWinProbabilitySource `json:"win_probability_source,omitempty"`
 
 	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
@@ -47413,7 +49304,7 @@ type DealAdvancedPriority string
 // DealAdvancedStatus defines model for DealAdvanced.Status.
 type DealAdvancedStatus string
 
-// DealAdvancedWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+// DealAdvancedWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 type DealAdvancedWinProbabilitySource string
 
 // DealAdvancedWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
@@ -47509,6 +49400,17 @@ type DealCommitments struct {
 type DealCoverage struct {
 	DealId openapi_types.UUID `json:"deal_id"`
 
+	// Lines One entry per current colleague and readable seat who have exchanged mail or met,
+	// from the activities the caller may open, at the time of the read. A seat the caller
+	// cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+	// the edge sections are withheld: absence says nothing about who has talked.
+	Lines *[]DealCoverageLine `json:"lines,omitempty"`
+
+	// MaxEngagedSeats The published `account_coverage.max_engaged_seats` that `single_threaded_theirs` was
+	// judged at: a touched deal with this many engaged contacts, or fewer, is single-threaded.
+	// Absent when the edge sections are withheld, since no finding is judged then.
+	MaxEngagedSeats *int `json:"max_engaged_seats,omitempty" minimum:"0"`
+
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
 	// score is their warmest single relationship. `single_threaded_ours` reads the same
@@ -47536,6 +49438,31 @@ type DealCoverage struct {
 
 // DealCoverageSectionsOmitted defines model for DealCoverage.SectionsOmitted.
 type DealCoverageSectionsOmitted string
+
+// DealCoverageLine One colleague's exchange with one buyer seat, as the newest event in each direction.
+type DealCoverageLine struct {
+	ColleagueName string             `json:"colleague_name"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+
+	// LastInboundAt When the contact last wrote to this colleague.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
+	// LastMetAt The newest meeting or call of the pair that neither declined.
+	LastMetAt *time.Time `json:"last_met_at,omitempty"`
+
+	// LastMetPrecision How to read `last_met_at`.
+	LastMetPrecision *OccurredPrecision `json:"last_met_precision,omitempty"`
+
+	// LastOutboundAt When this colleague last wrote to the contact, or was copied on our mail to them.
+	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
+	UserId                openapi_types.UUID `json:"user_id"`
+}
 
 // DealCoverageRisk One finding, with the records behind it. `kind` names the rule so a surface can
 // explain the flag rather than assert it.
@@ -47570,8 +49497,22 @@ type DealCoverageSeat struct {
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
-	Role                 string             `json:"role"`
+
+	// Reach Whether a current colleague has exchanged mail with or met this seat, as the caller
+	// can prove it. `not_reached` only when no activity links the seat to a colleague at
+	// all. Anything withheld from the caller, or an exchange only with a colleague who has
+	// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+	// `activity` grant.
+	Reach *DealCoverageSeatReach `json:"reach,omitempty"`
+	Role  string                 `json:"role"`
 }
+
+// DealCoverageSeatReach Whether a current colleague has exchanged mail with or met this seat, as the caller
+// can prove it. `not_reached` only when no activity links the seat to a colleague at
+// all. Anything withheld from the caller, or an exchange only with a colleague who has
+// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+// `activity` grant.
+type DealCoverageSeatReach string
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this
 // deal, and where a captured file came from, so a reader can tell "the contract
@@ -47879,9 +49820,10 @@ type DealRevisionRequest struct {
 // DealRoleProposalResult defines model for DealRoleProposalResult.
 type DealRoleProposalResult struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Skipped How many of the model's proposals the gate refused — a wrong quote, a contact
@@ -47992,9 +49934,10 @@ type DealRoomBrief struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy               `json:"generated_by"`
 	RoomId      openapi_types.UUID      `json:"room_id"`
 	Sentences   []DealRoomBriefSentence `json:"sentences"`
@@ -48257,7 +50200,7 @@ type DealRoomSessionIssued struct {
 	// ExpiresAt Absolute expiry. The buyer exchanges a fresh link after it.
 	ExpiresAt time.Time `json:"expires_at"`
 
-	// SessionToken Present as `Authorization: Bearer`. Returned once; only its hash is stored.
+	// SessionToken Present as `Authorization: Bearer`, or let the browser send the `__Host-crm_room_session` cookie. Returned once; only its hash is stored.
 	SessionToken string `json:"session_token"`
 }
 
@@ -48334,9 +50277,10 @@ type DealStatusCard struct {
 	GeneratedAt time.Time              `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// MailCoverage The calling reader's mail capture for the requested interval. This does
@@ -48349,9 +50293,15 @@ type DealStatusCard struct {
 	// Next The one move to make, with the verb to perform it.
 	Next *DealStatusCardMove `json:"next,omitempty"`
 
+	// OurReply The current request on this deal that we replied to, while our reply is the newest
+	// message on its thread. The card then says we replied instead of saying the buyer
+	// waits, and offers to mark the reminder done.
+	OurReply *RequestReply `json:"our_reply,omitempty"`
+
 	// ReplyTo A confirmed current inbound request on this deal, admitted by the
-	// request owner's responsibility, settlement and currency rules.
-	// Absent for historical or unconfirmed review. Its absence makes no
+	// request owner's responsibility, settlement and currency rules, that
+	// is still owed our reply. Absent for historical or unconfirmed
+	// review, and while `our_reply` is present. Its absence makes no
 	// claim about whether an unrecorded reply exists.
 	ReplyTo *openapi_types.UUID `json:"reply_to,omitempty"`
 
@@ -48593,6 +50543,42 @@ type DealViabilityTask struct {
 	Id   openapi_types.UUID `json:"id"`
 }
 
+// DealWinChance The parts of one deal's win chance. `explanation` is the same fact as one English line for a tool or a brief; a screen words it from the fields.
+type DealWinChance struct {
+	// EffectDays How many days the signal has held, where it has a length.
+	EffectDays *int `json:"effect_days,omitempty" minimum:"0"`
+
+	// EffectLearned True when the effect comes from this installation's own closed deals; false when it is the fixed halving used while too few have closed.
+	EffectLearned *bool `json:"effect_learned,omitempty"`
+
+	// EffectSample How many closed deals the learned effect rests on.
+	EffectSample *int `json:"effect_sample,omitempty" minimum:"0"`
+
+	// EffectSignal The risk signal that moved the chance. Null when none did.
+	EffectSignal *DealWinChanceEffectSignal `json:"effect_signal,omitempty"`
+
+	// EvidenceN How many deals that entered the stage have closed. Null while learning is off or the probability was set on the deal.
+	EvidenceN *int `json:"evidence_n,omitempty" minimum:"0"`
+
+	// Explanation The one-line reason for the chance, in English.
+	Explanation string `json:"explanation"`
+
+	// InUse The typed chance moved by the stage outcomes, before any risk effect.
+	InUse int `json:"in_use" maximum:"100" minimum:"0"`
+
+	// SelfCorrecting False while the installation switched learning off, so every chance stays the typed one.
+	SelfCorrecting bool `json:"self_correcting"`
+
+	// Typed The chance typed on the deal's stage.
+	Typed int `json:"typed" maximum:"100" minimum:"0"`
+
+	// WonShare The percent of those closed deals that were won.
+	WonShare *int `json:"won_share,omitempty" maximum:"100" minimum:"0"`
+}
+
+// DealWinChanceEffectSignal The risk signal that moved the chance. Null when none did.
+type DealWinChanceEffectSignal string
+
 // DealWinEvidence defines model for DealWinEvidence.
 type DealWinEvidence struct {
 	// HasSignedContract True when the deal has a contract that left draft, with a signing date and a
@@ -48787,6 +50773,9 @@ type DirectCommunicationSendRequest struct {
 	// without one would record a decision nobody made.
 	Acknowledged bool `json:"acknowledged"`
 
+	// AssessmentRevision The review revision the sender read. Required when footer findings apply or a refusal is the recipient's own choice, such as an objection.
+	AssessmentRevision *string `json:"assessment_revision,omitempty"`
+
 	// Explanation What this colleague says the reason is, in their own words. Required and must say something:
 	// a blank explanation is an acknowledgement nobody can be held to.
 	Explanation string `json:"explanation"`
@@ -48795,6 +50784,22 @@ type DirectCommunicationSendRequest struct {
 	// of overrides needs to be countable — free text alone cannot answer "how often do we send
 	// on a contract clause".
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
+
+	// ScheduledAt A future moment to send at instead of now. The decision is recorded now and spent when
+	// the message fires. It sends now only when `scheduled_at`, `scheduled_tz` and
+	// `scheduled_intent` are all absent.
+	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
+
+	// ScheduledIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	ScheduledIntent *IntentTime `json:"scheduled_intent,omitempty"`
+
+	// ScheduledTz The IANA zone `scheduled_at` was picked in. Present exactly when it is.
+	ScheduledTz *string `json:"scheduled_tz,omitempty"`
+
+	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
+	// review's refusals changed since then, the decision is refused with `instruction_stale`
+	// and the director opens the review again.
+	ShownReasons *[]string `json:"shown_reasons,omitempty"`
 
 	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
 	// say what they were told, and the text changes.
@@ -49056,6 +51061,76 @@ type DomainQuestionSuggestion struct {
 // - `contact_employer`: a sender already has this company as their current employer.
 type DomainQuestionSuggestionBasis string
 
+// DormancyReading Where one account stands on the dormancy ladder, with the facts that put it there.
+type DormancyReading struct {
+	// LadderDays The silent days on which `cooling`, `dormant` and `stale` begin, each from 1 to 3650 and in rising order, so a reader can see the rule.
+	LadderDays []int `json:"ladder_days"`
+
+	// LastActivityAt The account's stored last activity the rung is counted from. Null when it has none.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// NoActivity True when the account has no activity recorded at all, which is why it reads as `stale`.
+	NoActivity bool `json:"no_activity"`
+
+	// Rung How cold an account has gone, counted in calendar days of the installation zone since its
+	// stored `last_activity_at`. `active` before the first day of the ladder, `cooling` from it,
+	// `dormant` from the second and `stale` from the third. The days are the installation's
+	// `contacts.dormancy_days` setting, 30, 60 and 90 by default. An account with no activity at
+	// all is `stale`.
+	Rung DormancyRung `json:"rung"`
+
+	// SilentDays Calendar days from `last_activity_at` to today in the installation zone. 0 when there is no activity.
+	SilentDays int `json:"silent_days" minimum:"0"`
+}
+
+// DormancyRung How cold an account has gone, counted in calendar days of the installation zone since its
+// stored `last_activity_at`. `active` before the first day of the ladder, `cooling` from it,
+// `dormant` from the second and `stale` from the third. The days are the installation's
+// `contacts.dormancy_days` setting, 30, 60 and 90 by default. An account with no activity at
+// all is `stale`.
+type DormancyRung string
+
+// DraftContentFinding defines model for DraftContentFinding.
+type DraftContentFinding struct {
+	// Country The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`.
+	Country *string `json:"country,omitempty"`
+
+	// Detail What was found, for the composer to read.
+	Detail string `json:"detail"`
+
+	// Language The language the draft must lead with, for `advertising_language_first`.
+	Language *string `json:"language,omitempty"`
+
+	// Provision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+	// for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+	// data-protection law settles. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+	// pack's next review is overdue, or the law has not taken effect or has expired. On a
+	// review it is the citation shown when the refusal was assessed, never today's.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Requirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+	// proof (the document's name, number and date), and states none.
+	// `advertising_language_first`: the draft does not open in the pack's disclosure
+	// language, which advertising leads with.
+	// `foreign_advertiser`: the sending legal entity is not established in the recipient's
+	// country, whose pack asks an advertiser from elsewhere to advertise there through a
+	// local advertising service business. The customer answers for it.
+	Requirement DraftContentFindingRequirement `json:"requirement"`
+
+	// Words The claim words found, for `claim_without_proof`.
+	Words *[]string `json:"words,omitempty"`
+}
+
+// DraftContentFindingRequirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+// proof (the document's name, number and date), and states none.
+// `advertising_language_first`: the draft does not open in the pack's disclosure
+// language, which advertising leads with.
+// `foreign_advertiser`: the sending legal entity is not established in the recipient's
+// country, whose pack asks an advertiser from elsewhere to advertise there through a
+// local advertising service business. The customer answers for it.
+type DraftContentFindingRequirement string
+
 // DraftSteering What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
 type DraftSteering struct {
 	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
@@ -49075,6 +51150,24 @@ type DraftSteering struct {
 
 // DraftSteeringLanguage The language the caller chose for the draft. It outranks every language the server would read from the correspondence, the addressee, the rep and the installation, and the greeting, register, provenance notice and deterministic fallback all follow it. Absent leaves the choice to the server, which reads it from the correspondence. The server keeps no choice between calls, so a rewrite that should stay in the chosen language names it again. A code outside this list is `422` on `language`.
 type DraftSteeringLanguage string
+
+// EditAccessRequest defines model for EditAccessRequest.
+type EditAccessRequest struct {
+	ApprovalId openapi_types.UUID `json:"approval_id"`
+	ExpiresAt  time.Time          `json:"expires_at"`
+
+	// OwnerId The owner the request is put to.
+	OwnerId    openapi_types.UUID          `json:"owner_id"`
+	RecordId   openapi_types.UUID          `json:"record_id"`
+	RecordType EditAccessRequestRecordType `json:"record_type"`
+	Status     EditAccessRequestStatus     `json:"status"`
+}
+
+// EditAccessRequestRecordType defines model for EditAccessRequest.RecordType.
+type EditAccessRequestRecordType string
+
+// EditAccessRequestStatus defines model for EditAccessRequest.Status.
+type EditAccessRequestStatus string
 
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
 // `change_mode` are decided by the same authority that would execute the write, so a
@@ -49160,12 +51253,18 @@ type EmailAccessStatus string
 type EmailAttachmentSummary struct {
 	ByteSize *int `json:"byte_size,omitempty"`
 
-	// BytesWithheld True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch.
+	// BytesWithheld True when the file was recorded by name, size and type only. There are no bytes to fetch; `withheld_reason` says why.
 	BytesWithheld *bool              `json:"bytes_withheld,omitempty"`
 	ContentType   *string            `json:"content_type,omitempty"`
 	Filename      string             `json:"filename"`
 	Id            openapi_types.UUID `json:"id"`
+
+	// WithheldReason Present when `bytes_withheld` is true. `private`: the message is private to its owner. `not_addressed`: no colleague here sent the message or was in its To line, so the bytes wait for a copy that was addressed to one.
+	WithheldReason *EmailAttachmentSummaryWithheldReason `json:"withheld_reason,omitempty"`
 }
+
+// EmailAttachmentSummaryWithheldReason Present when `bytes_withheld` is true. `private`: the message is private to its owner. `not_addressed`: no colleague here sent the message or was in its To line, so the bytes wait for a copy that was addressed to one.
+type EmailAttachmentSummaryWithheldReason string
 
 // EmailCalendarBefore defines model for EmailCalendarBefore.
 type EmailCalendarBefore struct {
@@ -49305,9 +51404,21 @@ type EmailDraft struct {
 	AiGenerated *bool  `json:"ai_generated,omitempty"`
 	Body        string `json:"body"`
 
+	// CommunicationContext What the drafting instruction says this message is, for the composer to send
+	// with it. `requested_followup` when the instruction asks to move an appointment,
+	// in English, German or Vietnamese. Absent when the instruction says nothing the
+	// send check can use, which leaves the reason to the thread or the sender. The
+	// send check still needs its own evidence, here an agreed appointment with the
+	// recipient.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
 	// DraftRef Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.
-	DraftRef            *string             `json:"draft_ref,omitempty"`
-	InReplyToActivityId *openapi_types.UUID `json:"in_reply_to_activity_id,omitempty"`
+	DraftRef *string `json:"draft_ref,omitempty"`
+
+	// Evidence The record the drafted reason rests on: the meeting itself, when the draft was
+	// written from it. Absent otherwise.
+	Evidence            *CommunicationEvidence `json:"evidence,omitempty"`
+	InReplyToActivityId *openapi_types.UUID    `json:"in_reply_to_activity_id,omitempty"`
 
 	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
 	Language *EmailDraftLanguage    `json:"language,omitempty"`
@@ -49615,6 +51726,11 @@ type EmailSummary struct {
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
+	// OurReply Present on an open request with an unfinished reminder when our reply on its thread
+	// is newer than it and is still the newest message there. The request stays open: a
+	// reply settles nothing by itself. Absent when the source is withheld.
+	OurReply *RequestReply `json:"our_reply,omitempty"`
+
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
 	Preview *string `json:"preview,omitempty"`
@@ -49764,6 +51880,8 @@ type EmploymentImportItemState string
 
 // EmploymentImportReport defines model for EmploymentImportReport.
 type EmploymentImportReport struct {
+	// Changed Whether this apply changed an employment edge or an evidence outcome. False means neither moved; claim processing bookkeeping and the duplicate recheck still run.
+	Changed   *bool                  `json:"changed,omitempty"`
 	ContactId openapi_types.UUID     `json:"contact_id"`
 	Items     []EmploymentImportItem `json:"items"`
 
@@ -50169,7 +52287,7 @@ type FileChatCaptureRequest struct {
 	// ChannelProvider The messaging app the chat happened in.
 	ChannelProvider ProviderRef `json:"channel_provider"`
 
-	// ConfirmOtherCounterparty The caller confirms the chat belongs on this contact although its header shows
+	// ConfirmOtherCounterparty The caller confirms the chat belongs on this record although its header shows
 	// someone else (`AttachmentExtraction.other_counterparty`). Without it such a chat
 	// is refused with 409.
 	ConfirmOtherCounterparty *bool `json:"confirm_other_counterparty,omitempty"`
@@ -50203,7 +52321,8 @@ type FilterPreview struct {
 	Resource FilterResource `json:"resource"`
 
 	// Rows Up to `limit` matching rows as column→value maps, ordered by id,
-	// after the request's `cursor` when it names one.
+	// after the request's `cursor` when it names one. A date column is
+	// its calendar day (`2026-12-01`); a timestamp is an RFC 3339 instant.
 	// Deliberately the export's projection rather than a shape invented for
 	// this screen: a preview that showed different columns than the export
 	// of the same filter would be a preview of something else.
@@ -50380,7 +52499,7 @@ type FilterVocabularyField struct {
 	// `id`, so only a core field can carry a reference.
 	References *FilterVocabularyFieldReferences `json:"references,omitempty"`
 
-	// Type The six custom-field types, plus `id` for a reference to another record,
+	// Type The custom-field types, plus `id` for a reference to another record,
 	// `domain` for a host column and `distance` for a place on the earth. A `distance`
 	// field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
 	// `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -50411,7 +52530,7 @@ type FilterVocabularyFieldOperators string
 // `id`, so only a core field can carry a reference.
 type FilterVocabularyFieldReferences string
 
-// FilterVocabularyFieldType The six custom-field types, plus `id` for a reference to another record,
+// FilterVocabularyFieldType The custom-field types, plus `id` for a reference to another record,
 // `domain` for a host column and `distance` for a place on the earth. A `distance`
 // field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
 // `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -50456,7 +52575,12 @@ type FinanceConnection struct {
 	LastAttemptAt *time.Time         `json:"last_attempt_at,omitempty"`
 	LastErrorCode *string            `json:"last_error_code,omitempty"`
 	LastSuccessAt *time.Time         `json:"last_success_at,omitempty"`
-	Provider      string             `json:"provider"`
+
+	// Provider The source's key. Show `provider_name` to a reader.
+	Provider string `json:"provider"`
+
+	// ProviderName The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 
 	// Status `connecting` until the first sync finishes; `error` when the last one failed.
 	Status FinanceConnectionStatus `json:"status"`
@@ -50518,6 +52642,9 @@ type FinanceSourceOption struct {
 
 	// Provider The source's key, stored on every mirrored row.
 	Provider string `json:"provider"`
+
+	// ProviderName The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 }
 
 // FinanceSourceState defines model for FinanceSourceState.
@@ -50550,6 +52677,81 @@ type FollowUpSettings struct {
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
+
+	// PrivateMailRequests Whether the AI reads private mail for requests (`activities.private_mail_requests`,
+	// on by default): a request its reader owes an answer to, and a request for a
+	// quotation. Only mail private by a mailbox setting is read; mail held as
+	// confidential, by a counterparty or members-only hold, or by hand never is. It
+	// says what a model reads, not what is shared. A GET always carries it; a PATCH
+	// that leaves it out leaves the setting unchanged. Only a human may change it,
+	// because it decides which mail reaches a model.
+	PrivateMailRequests *bool `json:"private_mail_requests,omitempty"`
+
+	// SharePrivateQuoteRequests Whether a request for a quotation found in private mail is shared with the whole
+	// workspace (`activities.share_private_quote_requests`, on by default). When on, what
+	// the customer asked for becomes visible on the deal it opens. It needs
+	// `private_mail_requests` on as well. Only mail private by a mailbox setting is
+	// shared; mail held for any other reason never is. A GET always carries it; a PATCH
+	// that leaves it out leaves it unchanged. Only a human may change it.
+	SharePrivateQuoteRequests *bool `json:"share_private_quote_requests,omitempty"`
+}
+
+// FooterFinding defines model for FooterFinding.
+type FooterFinding struct {
+	// Kind Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.
+	Kind string `json:"kind"`
+
+	// Language Required language, or empty when no language is missing.
+	Language string `json:"language"`
+
+	// MissingMeans Missing contact methods, such as email, phone or web.
+	MissingMeans []string `json:"missing_means"`
+
+	// Provision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
+	// for the sending legal entity: the recipient's own, or the sending entity's for a finding its
+	// data-protection law settles. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: a reviewed
+	// pack's next review is overdue, or the law has not taken effect or has expired. On a
+	// review it is the citation shown when the refusal was assessed, never today's.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `kind`, `provision` first. Absent when none may be shown.
+	Provisions *[]CitedProvision `json:"provisions,omitempty"`
+}
+
+// ForecastAccuracy How accurate the forecast has been: two comparisons of what it said with what happened,
+// read from the frozen daily forecasts of the whole installation. Only counts and sums are
+// returned.
+//
+// `calibration` takes each deal that has since been won or lost, and the chance it was
+// weighted by in the last freeze at least `lead_days` before it closed. It groups those
+// chances in bands of ten and gives, per band, the mean chance and the share won. A band
+// with fewer deals than `floor` gives only its count.
+//
+// `landings` takes each of the last four finished quarters, and sets what the last freeze
+// at least four weeks before the quarter ended said it would land (won plus weighted open
+// pipeline) against what was won. A reader who may not see the installation's frozen
+// forecasts, the reader `GET /forecast` shows no snapshots of the whole company, gets no
+// landings.
+type ForecastAccuracy struct {
+	Calibration ForecastCalibration       `json:"calibration"`
+	Landings    []ForecastAccuracyLanding `json:"landings"`
+}
+
+// ForecastAccuracyLanding defines model for ForecastAccuracyLanding.
+type ForecastAccuracyLanding struct {
+	Currency string `json:"currency"`
+
+	// LandedMinor What was won in the period, as the first freeze after it ended says.
+	LandedMinor int64              `json:"landed_minor"`
+	PeriodEnd   openapi_types.Date `json:"period_end"`
+	PeriodStart openapi_types.Date `json:"period_start"`
+
+	// SaidMinor Won plus weighted open pipeline in the last freeze at least four weeks before the period ended.
+	SaidMinor int64 `json:"said_minor"`
+
+	// SaidOn The day of the freeze `said_minor` was read from.
+	SaidOn openapi_types.Date `json:"said_on"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -50633,6 +52835,33 @@ type ForecastBySource struct {
 	Human    ForecastSourceTotal `json:"human"`
 	Margince ForecastSourceTotal `json:"margince"`
 	Stage    ForecastSourceTotal `json:"stage"`
+}
+
+// ForecastCalibration defines model for ForecastCalibration.
+type ForecastCalibration struct {
+	Bands []ForecastCalibrationBand `json:"bands"`
+
+	// Deals How many closed deals the bands hold in all.
+	Deals int `json:"deals" minimum:"0"`
+
+	// Floor The fewest deals a band needs before it states a share.
+	Floor int `json:"floor" minimum:"1"`
+
+	// LeadDays How many days before the close the chance was read.
+	LeadDays int `json:"lead_days" minimum:"1"`
+}
+
+// ForecastCalibrationBand defines model for ForecastCalibrationBand.
+type ForecastCalibrationBand struct {
+	Deals       int `json:"deals" minimum:"1"`
+	FromPercent int `json:"from_percent" maximum:"100" minimum:"0"`
+
+	// MeanPercent The mean chance of the deals in the band. Null below the floor.
+	MeanPercent *int `json:"mean_percent,omitempty" maximum:"100" minimum:"0"`
+	ToPercent   int  `json:"to_percent" maximum:"100" minimum:"0"`
+
+	// WonPercent The share of the deals that were won. Null below the floor.
+	WonPercent *int `json:"won_percent,omitempty" maximum:"100" minimum:"0"`
 }
 
 // ForecastCall defines model for ForecastCall.
@@ -50719,13 +52948,87 @@ type ForecastEnforcementPreview struct {
 	UnknownCount int `json:"unknown_count"`
 }
 
+// ForecastFocus defines model for ForecastFocus.
+type ForecastFocus struct {
+	PeriodEnd   openapi_types.Date `json:"period_end"`
+	PeriodStart openapi_types.Date `json:"period_start"`
+
+	// Requests Open deals a seller asked the team's manager to look at, oldest request first, next to the frozen lists. Empty for a reader who leads no team, and while individual performance is off. A deal the caller may not read is left out.
+	Requests *[]ForecastFocusRequested `json:"requests,omitempty"`
+
+	// Teams One entry per team with a daily freeze this quarter, ordered by team id.
+	Teams []ForecastFocusTeam `json:"teams"`
+
+	// Withheld True when a team's list is left out because the installation shows no individual performance and the team is too small to show without naming a colleague.
+	Withheld bool `json:"withheld"`
+}
+
+// ForecastFocusDeal defines model for ForecastFocusDeal.
+type ForecastFocusDeal struct {
+	DealId             openapi_types.UUID  `json:"deal_id"`
+	DealName           string              `json:"deal_name"`
+	EffectiveCloseDate *openapi_types.Date `json:"effective_close_date,omitempty"`
+	OwnerId            *openapi_types.UUID `json:"owner_id,omitempty"`
+	Rank               int                 `json:"rank" maximum:"20" minimum:"1"`
+
+	// Reason The stored facts behind a rank. The score is never stored.
+	Reason ForecastFocusReason `json:"reason"`
+
+	// WeightedMinor The deal's weighted amount in the base currency, as frozen. Absent when the amount is masked from the caller.
+	WeightedMinor *int64 `json:"weighted_minor,omitempty"`
+}
+
+// ForecastFocusReason The stored facts behind a rank. The score is never stored.
+type ForecastFocusReason struct {
+	CloseProvisional bool `json:"close_provisional"`
+
+	// ClosesInDays Days from the caller's day to the expected close date, negative once that date passed.
+	ClosesInDays *int                 `json:"closes_in_days,omitempty"`
+	Signals      []ForecastRiskSignal `json:"signals"`
+}
+
+// ForecastFocusRequested defines model for ForecastFocusRequested.
+type ForecastFocusRequested struct {
+	DealId   openapi_types.UUID `json:"deal_id"`
+	DealName string             `json:"deal_name"`
+
+	// OwnerId Absent when individual performance is off.
+	OwnerId     *openapi_types.UUID             `json:"owner_id,omitempty"`
+	Reasons     []ForecastFocusRequestedReasons `json:"reasons"`
+	RequestedAt time.Time                       `json:"requested_at"`
+
+	// RequestedBy Absent when individual performance is off.
+	RequestedBy *openapi_types.UUID `json:"requested_by,omitempty"`
+}
+
+// ForecastFocusRequestedReasons defines model for ForecastFocusRequested.Reasons.
+type ForecastFocusRequestedReasons string
+
+// ForecastFocusTeam defines model for ForecastFocusTeam.
+type ForecastFocusTeam struct {
+	BaseCurrency string              `json:"base_currency"`
+	Deals        []ForecastFocusDeal `json:"deals"`
+
+	// MaskedCount Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size.
+	MaskedCount int                `json:"masked_count" minimum:"0"`
+	SnapshotId  openapi_types.UUID `json:"snapshot_id"`
+
+	// Status `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+	Status  ForecastFocusTeamStatus `json:"status"`
+	TakenAt time.Time               `json:"taken_at"`
+	TeamId  openapi_types.UUID      `json:"team_id"`
+}
+
+// ForecastFocusTeamStatus `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+type ForecastFocusTeamStatus string
+
 // ForecastLanding Where the period finishes if nothing changes, and what that answer rests on.
 // The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 type ForecastLanding struct {
 	// AmountMinor The projection itself, in the installation's base currency.
 	AmountMinor int64 `json:"amount_minor"`
 
-	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_withheld` is a manager-call installation whose call this answer does not show, so it lands on Likely without saying whether a call exists. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 	Caveat *ForecastLandingCaveat `json:"caveat,omitempty"`
 
 	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
@@ -50741,7 +53044,7 @@ type ForecastLanding struct {
 	WonMinor int64 `json:"won_minor"`
 }
 
-// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_withheld` is a manager-call installation whose call this answer does not show, so it lands on Likely without saying whether a call exists. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 type ForecastLandingCaveat string
 
 // ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
@@ -50757,9 +53060,12 @@ type ForecastMovement struct {
 	ClosingMinor int64                    `json:"closing_minor"`
 
 	// Deals One row per deal that moved, each in exactly one bucket.
-	Deals        []ForecastMovementDeal  `json:"deals"`
-	OpeningMinor int64                   `json:"opening_minor"`
-	Reading      ForecastMovementReading `json:"reading"`
+	Deals []ForecastMovementDeal `json:"deals"`
+
+	// FocusActions How much of the change came from deals on the opening snapshot's stored focus list that were worked between the two snapshots. Absent when no listed deal was worked. It is a cause beside the buckets, not a bucket, so the buckets still add up.
+	FocusActions *ForecastMovementFocusActions `json:"focus_actions,omitempty"`
+	OpeningMinor int64                         `json:"opening_minor"`
+	Reading      ForecastMovementReading       `json:"reading"`
 }
 
 // ForecastMovementReading defines model for ForecastMovement.Reading.
@@ -50798,14 +53104,48 @@ type ForecastMovementDeal struct {
 // ForecastMovementDealCauses defines model for ForecastMovementDeal.Causes.
 type ForecastMovementDealCauses string
 
+// ForecastMovementFocusAction defines model for ForecastMovementFocusAction.
+type ForecastMovementFocusAction struct {
+	ActivityId openapi_types.UUID              `json:"activity_id"`
+	At         time.Time                       `json:"at"`
+	Kind       ForecastMovementFocusActionKind `json:"kind"`
+	Subject    *string                         `json:"subject,omitempty"`
+}
+
+// ForecastMovementFocusActionKind defines model for ForecastMovementFocusAction.Kind.
+type ForecastMovementFocusActionKind string
+
+// ForecastMovementFocusActions defines model for ForecastMovementFocusActions.
+type ForecastMovementFocusActions struct {
+	// AmountMinor The change of the worked focus-list deals, in the reading drawn.
+	AmountMinor int64 `json:"amount_minor"`
+
+	// Deals The worked deals, largest change first, each with links to what was done.
+	Deals []ForecastMovementFocusDeal `json:"deals"`
+
+	// ShareBps That change as a share of the whole change, in basis points. Absent when the whole change is zero.
+	ShareBps *int `json:"share_bps,omitempty"`
+}
+
+// ForecastMovementFocusDeal defines model for ForecastMovementFocusDeal.
+type ForecastMovementFocusDeal struct {
+	// Actions Up to five of the actions, oldest first.
+	Actions     []ForecastMovementFocusAction `json:"actions"`
+	AmountMinor int64                         `json:"amount_minor"`
+	DealId      openapi_types.UUID            `json:"deal_id"`
+}
+
 // ForecastReadings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 type ForecastReadings struct {
 	AsOf         time.Time `json:"as_of"`
 	BaseCurrency string    `json:"base_currency"`
 
 	// BySource The open and weighted readings split by where each deal's probability comes from. The three raw figures add up to `open_minor` and the three weighted ones to `weighted_minor`.
-	BySource           ForecastBySource `json:"by_source"`
-	ConfirmedDateCount int              `json:"confirmed_date_count"`
+	BySource ForecastBySource `json:"by_source"`
+
+	// CallWithheld True when this answer leaves out a standing call that may exist: the reader may not see calls about this population, the reading covers several populations (`managed_teams`), or a frozen share cannot tell. A client then says nothing about a manager forecast. Absent with no current_call means nobody has made one.
+	CallWithheld       *bool `json:"call_withheld,omitempty"`
+	ConfirmedDateCount int   `json:"confirmed_date_count"`
 
 	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
@@ -50817,7 +53157,7 @@ type ForecastReadings struct {
 	ContributionsLimitedReason *string       `json:"contributions_limited_reason,omitempty"`
 	CurrentCall                *ForecastCall `json:"current_call,omitempty"`
 
-	// EligibleCount Deals considered, priced or not.
+	// EligibleCount Open deals due in the period, priced or not. Like the other counts, it says nothing about the won total.
 	EligibleCount int `json:"eligible_count"`
 
 	// EvidenceMinor Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed, counted in full. A provisional date is a guess, so it is excluded here and included in open_minor.
@@ -50955,6 +53295,22 @@ type ForecastStageChance struct {
 
 // ForecastStageChances defines model for ForecastStageChances.
 type ForecastStageChances struct {
+	// Accuracy How accurate the forecast has been: two comparisons of what it said with what happened,
+	// read from the frozen daily forecasts of the whole installation. Only counts and sums are
+	// returned.
+	//
+	// `calibration` takes each deal that has since been won or lost, and the chance it was
+	// weighted by in the last freeze at least `lead_days` before it closed. It groups those
+	// chances in bands of ten and gives, per band, the mean chance and the share won. A band
+	// with fewer deals than `floor` gives only its count.
+	//
+	// `landings` takes each of the last four finished quarters, and sets what the last freeze
+	// at least four weeks before the quarter ended said it would land (won plus weighted open
+	// pipeline) against what was won. A reader who may not see the installation's frozen
+	// forecasts, the reader `GET /forecast` shows no snapshots of the whole company, gets no
+	// landings.
+	Accuracy *ForecastAccuracy `json:"accuracy,omitempty"`
+
 	// EvidenceCutoff The start of today in the installation's zone. No outcome after it counts.
 	EvidenceCutoff time.Time `json:"evidence_cutoff"`
 
@@ -50969,11 +53325,14 @@ type ForecastStageChances struct {
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
 type ForecastSufficiency struct {
-	// Absent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+	// Absent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
 	Absent *ForecastSufficiencyAbsent `json:"absent,omitempty"`
 
 	// Basis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
 	Basis *ForecastSufficiencyBasis `json:"basis,omitempty"`
+
+	// ComparableUnpriced For each comparable period behind a historical median, newest first, the won deals its total leaves out for want of an amount or an exchange rate.
+	ComparableUnpriced *[]int `json:"comparable_unpriced,omitempty"`
 
 	// CoverageBp Current over needed in BASIS POINTS, so the server chooses no rounding for the client. Nothing needed is 10000 (full) rather than a division by zero or an unbounded ratio, because "covered" is actionable and "infinity" is not.
 	CoverageBp       *int64 `json:"coverage_bp,omitempty"`
@@ -50987,7 +53346,7 @@ type ForecastSufficiency struct {
 	RemainingToSupportMinor *int64 `json:"remaining_to_support_minor,omitempty"`
 }
 
-// ForecastSufficiencyAbsent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+// ForecastSufficiencyAbsent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
 type ForecastSufficiencyAbsent string
 
 // ForecastSufficiencyBasis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
@@ -51177,8 +53536,11 @@ type HandoverCounts struct {
 	Lead    int `json:"lead" minimum:"0"`
 
 	// List Live lists owned by the member.
-	List    int `json:"list" minimum:"0"`
-	Project int `json:"project" minimum:"0"`
+	List int `json:"list" minimum:"0"`
+
+	// MailDraft Unsent messages the member saved in the composer. Only the count is shown; the words stay readable by the author alone until a handover moves them.
+	MailDraft int `json:"mail_draft" minimum:"0"`
+	Project   int `json:"project" minimum:"0"`
 
 	// RecordAssignment Current user responsibilities on records.
 	RecordAssignment int `json:"record_assignment" minimum:"0"`
@@ -51195,12 +53557,14 @@ type HandoverCounts struct {
 
 // HealthAction defines model for HealthAction.
 type HealthAction struct {
-	Available   bool                    `json:"available"`
+	Available bool `json:"available"`
+
+	// Destination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
 	Destination HealthActionDestination `json:"destination"`
 	Reason      *string                 `json:"reason,omitempty"`
 }
 
-// HealthActionDestination defines model for HealthAction.Destination.
+// HealthActionDestination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
 type HealthActionDestination string
 
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
@@ -51222,7 +53586,8 @@ type HealthDimension struct {
 	//   `at`, the last of the two.
 	// - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 	// - `last_met`: in touch through a meeting `days` days ago.
-	// - `single_threaded`: in touch, but one contact carries the whole account.
+	// - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+	//   the published `account_coverage.max_engaged_seats`.
 	// - `several_contacts`: `count` contacts here are in touch with us.
 	// - `deals_all_stalled`: all `count` open deals have stalled.
 	// - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -51244,7 +53609,8 @@ type HealthDimensionRating string
 //     `at`, the last of the two.
 //   - `meeting_booked`: quiet, but a meeting is booked to start at `at`.
 //   - `last_met`: in touch through a meeting `days` days ago.
-//   - `single_threaded`: in touch, but one contact carries the whole account.
+//   - `single_threaded`: in touch, but only `count` contacts carry the whole account, at most
+//     the published `account_coverage.max_engaged_seats`.
 //   - `several_contacts`: `count` contacts here are in touch with us.
 //   - `deals_all_stalled`: all `count` open deals have stalled.
 //   - `deals_some_stalled`: `count` of `total` open deals have stalled.
@@ -51315,7 +53681,9 @@ type HealthSource struct {
 	Availability  HealthSourceAvailability `json:"availability"`
 
 	// Code Safe presentation code, never raw failure text.
-	Code               string                `json:"code"`
+	Code string `json:"code"`
+
+	// Condition `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
 	Condition          HealthSourceCondition `json:"condition"`
 	Count              *int                  `json:"count,omitempty" minimum:"0"`
 	ExpectationSeconds *int                  `json:"expectation_seconds,omitempty" minimum:"0"`
@@ -51325,14 +53693,17 @@ type HealthSource struct {
 	Permission         string                `json:"permission"`
 	Scope              HealthSourceScope     `json:"scope"`
 	Unit               *HealthSourceUnit     `json:"unit,omitempty"`
-	WindowEnd          *time.Time            `json:"window_end,omitempty"`
-	WindowStart        *time.Time            `json:"window_start,omitempty"`
+
+	// UnplacedChanges The `unplaced` source's breakdown of the machine changes in its window that the `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds the sum of these entries when more kinds occurred than are listed.
+	UnplacedChanges *[]HealthUnplacedChange `json:"unplaced_changes,omitempty"`
+	WindowEnd       *time.Time              `json:"window_end,omitempty"`
+	WindowStart     *time.Time              `json:"window_start,omitempty"`
 }
 
 // HealthSourceAvailability defines model for HealthSource.Availability.
 type HealthSourceAvailability string
 
-// HealthSourceCondition defines model for HealthSource.Condition.
+// HealthSourceCondition `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
 type HealthSourceCondition string
 
 // HealthSourceScope defines model for HealthSource.Scope.
@@ -51340,6 +53711,14 @@ type HealthSourceScope string
 
 // HealthSourceUnit defines model for HealthSource.Unit.
 type HealthSourceUnit string
+
+// HealthUnplacedChange defines model for HealthUnplacedChange.
+type HealthUnplacedChange struct {
+	// Action The audit action.
+	Action     string `json:"action"`
+	Count      int    `json:"count" minimum:"1"`
+	EntityType string `json:"entity_type"`
+}
 
 // HeldEntityType defines model for HeldEntityType.
 type HeldEntityType string
@@ -51504,6 +53883,13 @@ type HiddenBacklog struct {
 	// read.
 	PastHorizon int `json:"past_horizon" minimum:"0"`
 
+	// PrivateUnchecked Threads `shown` counts whose mail no model will check for a request: mail held
+	// on purpose (marked confidential, a counterparty or members-only hold, or by
+	// hand), or any private mail while `activities.private_mail_requests` is off. Not
+	// hidden, so `clear` ignores it. The queue ranks such mail as a request only when
+	// the reader wrote on its conversation first.
+	PrivateUnchecked int `json:"private_unchecked" minimum:"0"`
+
 	// SetAside Work this reader has snoozed, marked `not_mine` or marked `handled`. THEIR OWN
 	// CHOICE, and the least alarming of the four: a snooze lifts on its own moment, so
 	// this includes work that will come back without anybody remembering it. `not_mine`
@@ -51605,6 +53991,9 @@ type HiddenBacklogRowsRule string
 // fields would invent fields it does not have — which is also why edge entries never
 // appear in `/field-history`.
 type HistoryEdge struct {
+	// ChangedFields Names of the link fields an update moved, sorted, masked like `role`. Absent on create and unlink. An older server omits it, and the client then shows `summary`.
+	ChangedFields *[]string `json:"changed_fields,omitempty"`
+
 	// Kind The relationship kind, e.g. `employment`, `co_sell_with`, `deal_stakeholder`.
 	Kind            string                     `json:"kind"`
 	OtherEntityId   openapi_types.UUID         `json:"other_entity_id"`
@@ -51612,6 +54001,12 @@ type HistoryEdge struct {
 
 	// OtherLabel The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it.
 	OtherLabel *string `json:"other_label,omitempty"`
+
+	// PreviousRole The role an update replaced, or removed when `role` is then absent. Set only when the role changed.
+	PreviousRole *string `json:"previous_role,omitempty"`
+
+	// Role The role the link was made with (create) or changed to (update), as the reader's field mask allows. Absent when the link has no role, when the reader's mask withholds it, and on an unlink; a client then falls back to `kind` or to `summary`.
+	Role *string `json:"role,omitempty"`
 }
 
 // HistoryEdgeOtherEntityType defines model for HistoryEdge.OtherEntityType.
@@ -51687,9 +54082,27 @@ type ImapCredentials struct {
 	// Secret Password or app-specific password. Sealed to the vault; never returned.
 	Secret *string `json:"secret,omitempty"`
 
+	// Smtp Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`, and a username that is not an email address `422` `smtp_address_invalid`. Absent keeps the connection read-only. A shared mailbox only captures, and refuses it with `422` `shared_mailbox_cannot_send`.
+	Smtp *ImapSmtpSettings `json:"smtp,omitempty"`
+
 	// Username The mailbox login — an email address on most servers.
 	Username string `json:"username"`
 }
+
+// ImapSmtpSettings Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`, and a username that is not an email address `422` `smtp_address_invalid`. Absent keeps the connection read-only. A shared mailbox only captures, and refuses it with `422` `shared_mailbox_cannot_send`.
+type ImapSmtpSettings struct {
+	// Host The SMTP server. Absent or empty uses the IMAP host.
+	Host *string `json:"host,omitempty"`
+
+	// Port Absent uses 465 for `tls` and 587 for `starttls`.
+	Port *int `json:"port,omitempty" maximum:"65535" minimum:"1"`
+
+	// Security `tls` opens TLS at once (port 465). `starttls` upgrades a plain connection (port 587) and refuses a server that cannot.
+	Security *ImapSmtpSettingsSecurity `json:"security,omitempty"`
+}
+
+// ImapSmtpSettingsSecurity `tls` opens TLS at once (port 465). `starttls` upgrades a plain connection (port 587) and refuses a server that cannot.
+type ImapSmtpSettingsSecurity string
 
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
@@ -51764,6 +54177,12 @@ type ImportFormatFile struct {
 
 	// File The file name a ZIP entry needs for this object to be detected.
 	File string `json:"file"`
+
+	// KeyColumns The columns that tell this file's rows apart. A file needs at
+	// least one of them mapped, or the test run does not start, unless
+	// the request names its own `source_key` column. Absent from a
+	// server older than this field.
+	KeyColumns *[]string `json:"key_columns,omitempty"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
@@ -52103,6 +54522,9 @@ type ImportRun struct {
 	// Error Why a failed run stopped, or why a draft's last test stopped, in the uploader's terms. Never a driver or SQL message.
 	Error *string `json:"error,omitempty"`
 
+	// ErrorRefusal `error` as the field error an upload refusal carries, for a draft whose test run refused its file: a screen words it in the reader's language and keeps `error` for a code it does not know. Absent for any other stop, and on a run stored before it was kept.
+	ErrorRefusal *ImportRunRefusal `json:"error_refusal,omitempty"`
+
 	// EtaScope `object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.
 	EtaScope *ImportRunEtaScope `json:"eta_scope,omitempty"`
 
@@ -52261,9 +54683,12 @@ type ImportRunLinks struct {
 	// Applied Links actually written. Zero on a dry run, which writes nothing.
 	Applied int `json:"applied" minimum:"0"`
 
-	// Offered Links the file asks for. A dry run reports this and nothing else,
-	// because resolving an endpoint is a read the dry run has not done —
-	// it says how many rows named an employer, not how many will find one.
+	// Offered Links the file asks for on the rows the run lands. A link whose own
+	// row is skipped is not counted, because that row is reported as a
+	// skip; `unresolved` still lists it. A dry run reports this and nothing
+	// else, because resolving an endpoint is a read the dry run has not
+	// done — it says how many landing rows named an employer, not how many
+	// will find one.
 	Offered int `json:"offered" minimum:"0"`
 
 	// Unresolved The links that named something the run could not act on, each with
@@ -52346,6 +54771,21 @@ type ImportRunProgress struct {
 		RowsDone  int    `json:"rows_done" minimum:"0"`
 		RowsTotal int    `json:"rows_total" minimum:"0"`
 	} `json:"objects"`
+}
+
+// ImportRunRefusal A refusal of a run's file by field and code, with the values its sentence names.
+type ImportRunRefusal struct {
+	// Code The refusal code, as in a 422 `errors` entry.
+	Code string `json:"code"`
+
+	// Field The field the refusal names, as in a 422 `errors` entry.
+	Field string `json:"field"`
+
+	// Max The limit the refusal names. Absent when it names none.
+	Max *int `json:"max,omitempty" minimum:"1"`
+
+	// Params The values the code's sentence names, by name. Absent when it names none.
+	Params *map[string]string `json:"params,omitempty"`
 }
 
 // ImportRunReport The same shape before and after approval: a dry run reports what the
@@ -52463,6 +54903,16 @@ type ImportSourceProfile struct {
 	// merge.
 	Object *ImportObject `json:"object,omitempty"`
 
+	// ObjectChosenBy How `object` was chosen for a CSV uploaded without one. The header is
+	// matched as `suggested_mapping` matches it, once for each type, and
+	// only a column that exactly one type's suggestion maps counts.
+	// `columns`: one type's suggestion maps more such columns than any
+	// other's. `none`: no type maps strictly the most, so `object` is
+	// `lead` and a screen asks the reader to choose. Absent when the upload
+	// named its type, and for a ZIP. The run's `profile` keeps it until a
+	// draft save names `object`, which is the reader's own choice.
+	ObjectChosenBy *ImportSourceProfileObjectChosenBy `json:"object_chosen_by,omitempty"`
+
 	// Parts One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.
 	Parts *[]ImportPartProfile `json:"parts,omitempty"`
 
@@ -52494,6 +54944,16 @@ type ImportSourceProfile struct {
 	// against the field's type and picklist options.
 	Targets []string `json:"targets"`
 }
+
+// ImportSourceProfileObjectChosenBy How `object` was chosen for a CSV uploaded without one. The header is
+// matched as `suggested_mapping` matches it, once for each type, and
+// only a column that exactly one type's suggestion maps counts.
+// `columns`: one type's suggestion maps more such columns than any
+// other's. `none`: no type maps strictly the most, so `object` is
+// `lead` and a screen asks the reader to choose. Absent when the upload
+// named its type, and for a ZIP. The run's `profile` keeps it until a
+// draft save names `object`, which is the reader's own choice.
+type ImportSourceProfileObjectChosenBy string
 
 // ImportUndoReport The result of undoing a committed import run (IEM-WIRE-9; A93). Every
 // import-created row lands in exactly one of three buckets: reversed,
@@ -52790,7 +55250,7 @@ type InstallationFiscalYearImpact struct {
 	// ReportsWithKeptPeriods Live reports with a card whose saved question filters on a period.
 	ReportsWithKeptPeriods int `json:"reports_with_kept_periods" minimum:"0"`
 
-	// ReportsWithRelativePeriods Live reports that read this quarter, a fiscal-quarter target or the fiscal-quarter close window.
+	// ReportsWithRelativePeriods Live reports that read this or the last fiscal quarter, the last fiscal year, a fiscal-quarter target or the fiscal-quarter close window.
 	ReportsWithRelativePeriods int `json:"reports_with_relative_periods" minimum:"0"`
 
 	// SavedQuestions Saved questions, of every member, that filter on a period.
@@ -52953,6 +55413,12 @@ type InstallationSettings struct {
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
+
+	// MaxKnowledgeDocumentBytes The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+	// the installation, on the same terms as `max_upload_bytes`, and lower than it by
+	// default because a corpus document becomes passages every ask scans. Absent from a
+	// server older than this field; a client then leaves the refusal to the server.
+	MaxKnowledgeDocumentBytes *int64 `json:"max_knowledge_document_bytes,omitempty"`
 
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
@@ -53398,7 +55864,7 @@ type IssuePassportRequest struct {
 	// Areas Where the passport may act. Absent means all areas.
 	Areas *PassportAreas `json:"areas,omitempty"`
 
-	// Label Which agent this binds, e.g. "Claude Desktop".
+	// Label Which agent this binds, e.g. "Claude Desktop". When given, it must not be blank: an empty or whitespace-only name is refused with 422 on `label`. The web form always sends one.
 	Label *string `json:"label,omitempty"`
 
 	// Scopes Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC.
@@ -53621,6 +56087,9 @@ type JurisdictionRetentionClass struct {
 	// Keep The ISO 8601 period the class keeps, e.g. `P6Y`.
 	Keep string `json:"keep"`
 
+	// Law The statute and article that set the period. Absent when the pack names none.
+	Law *string `json:"law,omitempty"`
+
 	// Name The class, e.g. `commercial_correspondence`.
 	Name string `json:"name"`
 }
@@ -53693,9 +56162,10 @@ type KnowledgeAnswer struct {
 	Coverage KnowledgeCoverage     `json:"coverage"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Outcome The five are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all; unreviewed says the corpus WAS searched and the nearest passages are attached, but no writer read them, so nothing has judged whether they answer the question — the claims are what the search found, not an answer. Collapsing them is the failure this endpoint exists to avoid.
@@ -53955,7 +56425,65 @@ type LatestInboundList struct {
 
 	// LastExchange The newest call, meeting, email or message on the record. Absent when there is none.
 	LastExchange *LastExchange `json:"last_exchange,omitempty"`
+
+	// LastInbound A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	LastInbound *Activity `json:"last_inbound,omitempty"`
+
+	// LastOutbound A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	LastOutbound *Activity `json:"last_outbound,omitempty"`
 }
+
+// LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
+type LawfulBasisConfirmation struct {
+	// Confirmed The records whose warning was confirmed by the signed-in user. Each confirmation waits
+	// 15 minutes for its send and is spent by the first send to that record.
+	Confirmed []CommunicationEvidenceSubject `json:"confirmed"`
+}
+
+// LawfulBasisConfirmationRequest defines model for LawfulBasisConfirmationRequest.
+type LawfulBasisConfirmationRequest struct {
+	// Subjects The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+	// them. A pinned lead is named as the lead, never as a contact sharing its address.
+	Subjects []LawfulBasisConfirmationSubject `json:"subjects"`
+}
+
+// LawfulBasisConfirmationSubject One record to confirm, with the country the sender stated for it on the message, when
+// they stated one. The confirmation is recorded under the country the preview applied, and
+// staging spends it only for a send judged under that same country.
+type LawfulBasisConfirmationSubject struct {
+	EntityId   openapi_types.UUID                       `json:"entity_id"`
+	EntityType LawfulBasisConfirmationSubjectEntityType `json:"entity_type"`
+
+	// StatedCountry The country the sender stated for this recipient in `recipient_countries`. Omit it when
+	// they stated none; the record's country then applies. Only the user writing the message
+	// may send it.
+	StatedCountry *StatedCountry `json:"stated_country,omitempty"`
+}
+
+// LawfulBasisConfirmationSubjectEntityType defines model for LawfulBasisConfirmationSubject.EntityType.
+type LawfulBasisConfirmationSubjectEntityType string
 
 // Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
@@ -53997,6 +56525,9 @@ type Lead struct {
 	// FirstResponseAt First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
 	FirstResponseAt *time.Time `json:"first_response_at,omitempty"`
 
+	// FirstResponseMarkedBy The user whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
+	FirstResponseMarkedBy *openapi_types.UUID `json:"first_response_marked_by,omitempty"`
+
 	// FromContactId The contact an older lead was created from, and null for every newly created lead.
 	FromContactId *openapi_types.UUID `json:"from_contact_id,omitempty"`
 	FullName      *string             `json:"full_name,omitempty"`
@@ -54026,7 +56557,13 @@ type Lead struct {
 	// NextTaskDueAt Due time of the earliest open task linked to this lead; undated tasks follow dated ones.
 	NextTaskDueAt *time.Time `json:"next_task_due_at,omitempty"`
 
-	// NextTaskSubject Subject of the earliest open task linked to this lead.
+	// NextTaskDueHasTime True when next_task_due_at names a time of day; false when the next task is due on a date with no time.
+	NextTaskDueHasTime *bool `json:"next_task_due_has_time,omitempty"`
+
+	// NextTaskDueIntent The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader.
+	NextTaskDueIntent *IntentTime `json:"next_task_due_intent,omitempty"`
+
+	// NextTaskSubject Subject of the earliest open task linked to this lead. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written.
 	NextTaskSubject *string `json:"next_task_subject,omitempty"`
 
 	// OpenTaskCount Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118).
@@ -54545,7 +57082,7 @@ type LegalEntity struct {
 	// Bic The BIC, upper case.
 	Bic *string `json:"bic,omitempty"`
 
-	// Country Where the entity is established, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity means the installation's country.
+	// Country Where the entity is registered, the address country, as a lower-case ISO 3166-1 alpha-2 code. Null on the default entity.
 	Country   *string   `json:"country,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 
@@ -54564,6 +57101,12 @@ type LegalEntity struct {
 
 	// IsDefault The entity a user with no assignment works for. Exactly one exists, and it cannot be archived.
 	IsDefault bool `json:"is_default"`
+
+	// Jurisdiction The jurisdiction pack whose law the entity follows, as its lower-case code, for example
+	// `de`. It is one of the packs this build offers (`available` of
+	// `/installation/jurisdiction`). Null on the default entity, whose law is the
+	// installation's jurisdiction.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
 
 	// LegalName The registered name documents are issued under.
 	LegalName *string `json:"legal_name,omitempty"`
@@ -54667,7 +57210,12 @@ type LegalReviewOutcome string
 type LegalReviewPacket struct {
 	// Binding Every other offer the buyer was sent or accepted. The approval binds to these too.
 	Binding *[]LegalReviewPacketOffer `json:"binding,omitempty"`
-	Deal    LegalReviewPacketDeal     `json:"deal"`
+
+	// Contracts The agreements filed against the deal, newest term first. Absent on a
+	// pack asked for before agreements were packed. An agreement this reader
+	// may not open, and every agreement for a reader without `deal.read`, is not listed.
+	Contracts *[]LegalReviewPacketContract `json:"contracts,omitempty"`
+	Deal      LegalReviewPacketDeal        `json:"deal"`
 
 	// Documents The deal's contract, legal and offer documents, newest first.
 	Documents []LegalReviewPacketDocument `json:"documents"`
@@ -54676,10 +57224,36 @@ type LegalReviewPacket struct {
 	History []LegalReviewPacketStage `json:"history"`
 
 	// Offer The current offer, or null when the deal has none.
-	Offer         *LegalReviewPacketOffer `json:"offer,omitempty"`
-	ValueCurrency *string                 `json:"value_currency,omitempty"`
-	ValueMinor    *int64                  `json:"value_minor,omitempty"`
+	Offer *LegalReviewPacketOffer `json:"offer,omitempty"`
+
+	// Tasks The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+	Tasks *[]LegalReviewPacketTask `json:"tasks,omitempty"`
+
+	// Touches The deal's latest calls, meetings, messages and notes, newest first. One
+	// this reader may not read, such as mail outside their audience, is not
+	// listed. Absent on an older pack.
+	Touches       *[]LegalReviewPacketTouch `json:"touches,omitempty"`
+	ValueCurrency *string                   `json:"value_currency,omitempty"`
+	ValueMinor    *int64                    `json:"value_minor,omitempty"`
 }
+
+// LegalReviewPacketContract One agreement as it stood at the request. Its title is read now for this
+// reader. The dates and notice terms are the ones frozen with the pack.
+type LegalReviewPacketContract struct {
+	AutoRenew            *bool                           `json:"auto_renew,omitempty"`
+	CancellationNoticeOn *openapi_types.Date             `json:"cancellation_notice_on,omitempty"`
+	ContractNumber       *string                         `json:"contract_number,omitempty"`
+	EndsOn               *openapi_types.Date             `json:"ends_on,omitempty"`
+	Id                   openapi_types.UUID              `json:"id"`
+	NoticePeriodDays     *int                            `json:"notice_period_days,omitempty"`
+	RenewalOn            *openapi_types.Date             `json:"renewal_on,omitempty"`
+	StartsOn             *openapi_types.Date             `json:"starts_on,omitempty"`
+	Status               LegalReviewPacketContractStatus `json:"status"`
+	Title                string                          `json:"title"`
+}
+
+// LegalReviewPacketContractStatus defines model for LegalReviewPacketContract.Status.
+type LegalReviewPacketContractStatus string
 
 // LegalReviewPacketDeal defines model for LegalReviewPacketDeal.
 type LegalReviewPacketDeal struct {
@@ -54775,6 +57349,33 @@ type LegalReviewPacketStage struct {
 	EnteredAt time.Time `json:"entered_at"`
 	StageName string    `json:"stage_name"`
 }
+
+// LegalReviewPacketTask One task that was open at the request. Its subject is read now.
+type LegalReviewPacketTask struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+	DueAt      *time.Time         `json:"due_at,omitempty"`
+
+	// DueHasTime True when due_at names a time of day; false when the task was due on a date with no time.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   *string     `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+type LegalReviewPacketTouch struct {
+	ActivityId openapi_types.UUID         `json:"activity_id"`
+	Kind       LegalReviewPacketTouchKind `json:"kind"`
+	OccurredAt time.Time                  `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouchKind defines model for LegalReviewPacketTouch.Kind.
+type LegalReviewPacketTouchKind string
 
 // LegalReviewQueueItem One row of the reviewer's queue, with the facts it is sorted by.
 type LegalReviewQueueItem struct {
@@ -54882,7 +57483,8 @@ type LicenseEntitlement struct {
 	// license is configured, every agent tool call is refused with `trial_ended`, and so is
 	// every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
 	// request routes, and a seat's own credential routes. Background jobs wait instead of
-	// running; they do not fail.
+	// running; they do not fail. A license that was refused, or is past its expiry, locks the
+	// installation the same way with `license_lapsed`, also with no grace period.
 	Trial *LicenseTrial `json:"trial,omitempty"`
 }
 
@@ -54947,7 +57549,8 @@ type LicenseHolder struct {
 // license is configured, every agent tool call is refused with `trial_ended`, and so is
 // every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
 // request routes, and a seat's own credential routes. Background jobs wait instead of
-// running; they do not fail.
+// running; they do not fail. A license that was refused, or is past its expiry, locks the
+// installation the same way with `license_lapsed`, also with no grace period.
 type LicenseTrial struct {
 	// Ended Whether `ends_at` has passed, as the server decides it, so a client with a wrong clock shows the state the installation acts on.
 	Ended bool `json:"ended"`
@@ -55965,8 +58568,8 @@ type MailDraft struct {
 	AgentDrafted bool               `json:"agent_drafted"`
 	AnchorId     openapi_types.UUID `json:"anchor_id"`
 
-	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
-	// record a new conversation starts from.
+	// AnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+	// for that message sent on to someone new, or the record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
 
 	// Attachments The chosen files the author can still attach, in the order chosen, so the composer
@@ -55994,6 +58597,13 @@ type MailDraft struct {
 	HtmlBody  *string            `json:"html_body,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// OverrideExplanation The reason the author typed for sending past a refusal. Absent when none was.
+	OverrideExplanation *string `json:"override_explanation,omitempty"`
+
+	// RecipientCountries The countries the author stated for recipients, with `country: null` for one they cleared.
+	// Absent when none was stated.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
 	// ScheduledAt The moment the author picked to send at, as saved. It may have passed since; the
 	// draft schedules nothing. Absent when none was picked.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
@@ -56009,8 +58619,8 @@ type MailDraft struct {
 	Version     int64     `json:"version"`
 }
 
-// MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, or the
-// record a new conversation starts from.
+// MailDraftAnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+// for that message sent on to someone new, or the record a new conversation starts from.
 type MailDraftAnchorType string
 
 // MailDraftEditorState The author's drafting purpose and presentation state, restored with the words. These client-supplied values grant no send permission and do not attest model execution.
@@ -56039,8 +58649,8 @@ type MailDraftEditorStateLanguage string
 type MailDraftGround struct {
 	AnchorId openapi_types.UUID `json:"anchor_id"`
 
-	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
-	// record a new conversation starts from.
+	// AnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+	// for that message sent on to someone new, or the record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
 }
 
@@ -56049,8 +58659,8 @@ type MailDraftGround struct {
 type MailDraftInput struct {
 	AnchorId openapi_types.UUID `json:"anchor_id"`
 
-	// AnchorType What the composer opened against: `activity` for a reply to that message, or the
-	// record a new conversation starts from.
+	// AnchorType What the composer opened against: `activity` for a reply to that message, `forward`
+	// for that message sent on to someone new, or the record a new conversation starts from.
 	AnchorType MailDraftAnchorType `json:"anchor_type"`
 
 	// AttachmentIds The files the rep chose, by the ids `/attachments` gave them. A save replaces the
@@ -56074,6 +58684,17 @@ type MailDraftInput struct {
 
 	// HtmlBody The editor's markup beside the plain body, so reopening restores the formatting.
 	HtmlBody *string `json:"html_body,omitempty"`
+
+	// OverrideExplanation The reason the rep typed for sending this message past a refusal, kept so a reopened
+	// composer still holds it. It grants nothing: the send still needs its own decision. Omit
+	// it for none.
+	OverrideExplanation *string `json:"override_explanation,omitempty"`
+
+	// RecipientCountries The countries the rep stated for recipients of this message, kept so a reopened composer
+	// still holds them. `country: null` is a country the rep cleared, which is not the same as no
+	// entry. An entry whose address is not on `to`, `cc` or `bcc` is not kept. Each address may
+	// appear once; a second entry is refused with 422 `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
 	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
 	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
@@ -56192,6 +58813,9 @@ type MeResponse struct {
 	// InstallationBrand The installation's own company as every seat already sees it on screen: its name and its marks, for the app's brand block. Absent until the installation has described itself. Deliberately nothing else — the rest of the company profile (`getAnchorCompany`) is an administrator's read, and this projection is not a way around it.
 	InstallationBrand *InstallationBrand `json:"installation_brand,omitempty"`
 
+	// LicenseLapsed True when this installation's license was refused or is past its expiry. There is no grace period. The installation is locked as `trial_ended` describes, and refused changes answer `license_lapsed`, until a valid license is configured. Every seat gets it. Absent while the license is valid or the installation runs on its trial.
+	LicenseLapsed *bool `json:"license_lapsed,omitempty"`
+
 	// NonProduction True when the installation runs a non-production posture (MARGINCE_ENV=dev|test). DEPRECATED as the gate for the "Reset data" action — read `data_reset_available` instead. A deployment being non-production is not consent to purge its tenant data, and inferring one from the other is why a `staging` installation full of real internal users could be wiped through the API.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NonProduction bool `json:"non_production"`
@@ -56206,6 +58830,9 @@ type MeResponse struct {
 
 	// ReaderRenderingAvailable Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
 	ReaderRenderingAvailable *bool `json:"reader_rendering_available,omitempty"`
+
+	// RoleNames The name an admin gave each live role in `roles`, keyed by role key. A member may not read the role directory, so this is how a screen shows a custom role by its name. A client may still show a seeded role in its own translation. Absent from an older server; a key it does not name is shown as the key.
+	RoleNames *map[string]string `json:"role_names,omitempty"`
 
 	// Roles Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact.
 	Roles []string `json:"roles"`
@@ -56274,9 +58901,10 @@ type MeetingBrief struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
@@ -56507,9 +59135,10 @@ type MeetingPlan struct {
 	CompanyArc []MeetingPlanArcMoment `json:"company_arc"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// LikelyAsks What the other side is likely to ask, each an assessment with the record behind it.
@@ -56789,11 +59418,13 @@ type MeetingReadyRequest struct {
 
 // MeetingRecordLink defines model for MeetingRecordLink.
 type MeetingRecordLink struct {
-	EntityId   openapi_types.UUID          `json:"entity_id"`
+	EntityId openapi_types.UUID `json:"entity_id"`
+
+	// EntityType The kind of record the meeting is filed on.
 	EntityType MeetingRecordLinkEntityType `json:"entity_type"`
 }
 
-// MeetingRecordLinkEntityType defines model for MeetingRecordLink.EntityType.
+// MeetingRecordLinkEntityType The kind of record the meeting is filed on.
 type MeetingRecordLinkEntityType string
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
@@ -57062,10 +59693,13 @@ type MorningBriefItemLineage struct {
 // MorningDigest The CAP-DDL-6 payload: what capture did overnight and what awaits the human (CAP-WIRE-6).
 type MorningDigest struct {
 	Capture struct {
+		// ActivitiesCreated Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to messages_synced by definition.
 		ActivitiesCreated *int `json:"activities_created,omitempty"`
 		CompaniesCreated  *int `json:"companies_created,omitempty"`
 		ContactsCreated   *int `json:"contacts_created,omitempty"`
-		MessagesSynced    *int `json:"messages_synced,omitempty"`
+
+		// MessagesSynced Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the workspace. Equal to activities_created by definition.
+		MessagesSynced *int `json:"messages_synced,omitempty"`
 	} `json:"capture"`
 	Connectors []struct {
 		LastSyncErrorClass *string                          `json:"last_sync_error_class,omitempty"`
@@ -57130,7 +59764,7 @@ type MorningDigest struct {
 			Other *int `json:"other,omitempty"`
 		} `json:"classify,omitempty"`
 
-		// DedupeOpen Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
+		// DedupeOpen Every open duplicate review item on the reader's own Mine Worklist, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
 		DedupeOpen *int `json:"dedupe_open,omitempty"`
 	} `json:"review"`
 }
@@ -57140,6 +59774,12 @@ type MorningDigestConnectorsProvider string
 
 // MorningDigestConnectorsStatus defines model for MorningDigest.Connectors.Status.
 type MorningDigestConnectorsStatus string
+
+// MoveDealPipelineRequest defines model for MoveDealPipelineRequest.
+type MoveDealPipelineRequest struct {
+	// PipelineId The live pipeline to move the deal to. It must differ from the deal's own.
+	PipelineId openapi_types.UUID `json:"pipeline_id"`
+}
 
 // MyAgentGrant One rep's standing answer for one scheduled agent.
 type MyAgentGrant struct {
@@ -57807,8 +60447,10 @@ type Offer struct {
 	PdfAssetRef *string `json:"pdf_asset_ref,omitempty"`
 
 	// Revision Bumped when a sent offer is regenerated; the prior revision becomes superseded.
-	Revision *int   `json:"revision,omitempty"`
-	Source   string `json:"source"`
+	Revision *int `json:"revision,omitempty"`
+
+	// Source The channel this record arrived by, one of the values `CreateOfferRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// SourceCommercialRevision The deal's `commercial_revision` the lines were copied from. Such an offer's lines change only through the deal and a refresh. Null on an offer whose lines were typed on it.
 	SourceCommercialRevision *int64      `json:"source_commercial_revision,omitempty"`
@@ -58435,7 +61077,7 @@ type PageInfo struct {
 	// NextCursor Opaque cursor for the next page, or null if none.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
-	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means.
+	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages.
 	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
@@ -58468,8 +61110,11 @@ type Partner struct {
 	CreatedAt time.Time          `json:"created_at"`
 
 	// GateMetrics Program gate metrics (certified seats, CSAT, ...).
-	GateMetrics   *map[string]interface{} `json:"gate_metrics,omitempty"`
-	LastContactAt *time.Time              `json:"last_contact_at,omitempty"`
+	GateMetrics *map[string]interface{} `json:"gate_metrics,omitempty"`
+
+	// LastContactAt Never set; always null. Kept so existing clients keep compiling.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	LastContactAt *time.Time `json:"last_contact_at,omitempty"`
 
 	// MarginTier The partner's margin tier; the allowed values are in the table's CHECK constraint.
 	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
@@ -58501,7 +61146,8 @@ type Partner struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
 
-	// RelationshipHealth Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.
+	// RelationshipHealth Never set; always null. Kept so existing clients keep compiling.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	RelationshipHealth *string `json:"relationship_health,omitempty"`
 
 	// RelationshipStage The key of the stage from `/partner-stages` the partner stands on.
@@ -58867,6 +61513,12 @@ type PreferenceCenterRefusedReason string
 // PreviewAccountSendRequest PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
 // records this new conversation would belong to.
 type PreviewAccountSendRequest struct {
+	// AttachmentIds The files the message will carry, by the ids `/attachments` gave them. Their names are
+	// read for an offer as the send reads them. A file the send would refuse is refused here.
+	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
+
+	// Body The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+	Body                 *string               `json:"body,omitempty"`
 	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 
 	// ConsentPurpose The deprecated purpose key, when the composer still has one. It authorizes
@@ -58877,18 +61529,40 @@ type PreviewAccountSendRequest struct {
 	ConsentPurpose *string                `json:"consent_purpose,omitempty"`
 	Evidence       *CommunicationEvidence `json:"evidence,omitempty"`
 
+	// HtmlBody The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+	HtmlBody *string `json:"html_body,omitempty"`
+
 	// Links The records the message would be filed under. They are read through the caller's
 	// own row scope before the engine sees them, so naming a record the caller cannot
 	// open is refused here rather than answered about.
-	Links            []ActivityLinkInput   `json:"links"`
-	MarketingPurpose *string               `json:"marketing_purpose,omitempty"`
-	To               []openapi_types.Email `json:"to"`
+	Links            []ActivityLinkInput `json:"links"`
+	MarketingPurpose *string             `json:"marketing_purpose,omitempty"`
+
+	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
+	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+	// Only the human sender states them: an agent's preview carrying this field is refused with 403
+	// `permission_denied`, and an integration's with 422 `invalid`.
+	// Each address may appear once; a second entry is refused with 422 `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
+	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
+	Subject *string               `json:"subject,omitempty"`
+	To      []openapi_types.Email `json:"to"`
 }
 
-// PreviewSendRequest What a composer is about to write, in the shape the engine judges. It carries no
-// `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
-// draft to the server to be told whether it may exist would be the wrong way round.
+// PreviewSendRequest What a composer is about to write, in the shape the engine judges. A `subject` and
+// `body` are read as the send reads them: words that make an offer (a discount, a quote,
+// a price) are judged as marketing even inside a reply. They are also checked against the
+// advertising content rules of each recipient's jurisdiction pack and answered as
+// `content_findings`.
 type PreviewSendRequest struct {
+	// AttachmentIds The files the message will carry, by the ids `/attachments` gave them. Their names are
+	// read for an offer as the send reads them. A file the send would refuse is refused here.
+	AttachmentIds *[]openapi_types.UUID `json:"attachment_ids,omitempty"`
+
+	// Body The draft's plain text, read for an offer as the send reads it and checked for `content_findings`.
+	Body *string `json:"body,omitempty"`
+
 	// CommunicationContext What the sender says this message is. Checked against the record, never believed:
 	// a claim the record does not bear out comes back as `review` naming what is
 	// missing, rather than a quiet downgrade to something weaker that happens to be
@@ -58905,8 +61579,21 @@ type PreviewSendRequest struct {
 	// Evidence Records the caller names in support of this message. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
+	// HtmlBody The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it.
+	HtmlBody *string `json:"html_body,omitempty"`
+
 	// MarketingPurpose Which marketing purpose, when the context is `marketing`.
 	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
+	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+	// Only the human sender states them: an agent's preview carrying this field is refused with 403
+	// `permission_denied`, and an integration's with 422 `invalid`.
+	// Each address may appear once; a second entry is refused with 422 `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
+	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
+	Subject *string `json:"subject,omitempty"`
 
 	// To The addressees. Cc and Bcc join this list at send, and both are asked about
 	// exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
@@ -58946,6 +61633,9 @@ type PrincipalAttributionActorType string
 // PrivacyInformationController Who is responsible for the data, from the installation's own controller particulars, by the
 // rule the mail's disclosure lines use. A part the installation has not stated is absent.
 type PrivacyInformationController struct {
+	// ArchivePurpose Why archived correspondence is kept, in the language of the link. Absent when not stated, and the page then prints its default purpose.
+	ArchivePurpose *string `json:"archive_purpose,omitempty"`
+
 	// Identity The legal name and postal address, as lines. Absent unless both are stated.
 	Identity *string `json:"identity,omitempty"`
 
@@ -58957,6 +61647,9 @@ type PrivacyInformationController struct {
 
 	// PrivacyContact How to reach whoever answers questions about the data.
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
+
+	// PrivacyPage Where the installation publishes its own privacy information. Absent when not stated.
+	PrivacyPage *string `json:"privacy_page,omitempty"`
 }
 
 // PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
@@ -58995,13 +61688,19 @@ type PrivacyInformationPage struct {
 	Language *MailLanguage `json:"language,omitempty"`
 
 	// PurposeBases The basis on record for each entry in `purposes`, at the same index: `consent` for a
-	// purpose the reader agreed to, else the kind of a live communication basis.
+	// purpose the reader agreed to, else the kind of a live communication basis. `none` says
+	// no basis is recorded, for a reader whose country has no legitimate-interest basis and
+	// whose record holds neither their consent nor an agreement with them.
 	PurposeBases []PrivacyInformationPagePurposeBases `json:"purpose_bases"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
 	// product seeds in its reader's language by its key, and shows the published name of any
 	// other.
 	PurposeKeys *[]string `json:"purpose_keys,omitempty"`
+
+	// PurposeSince When the reader gave the consent each entry in `purposes` rests on, at the same index.
+	// Null for an entry whose basis is not consent.
+	PurposeSince *[]*time.Time `json:"purpose_since,omitempty"`
 
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
@@ -59017,6 +61716,12 @@ type PrivacyInformationPage struct {
 	// Rights The rights the contact holds over this data, as codes a page renders in its own
 	// language. Art. 14(2)(c)-(e) requires naming them.
 	Rights []PrivacyInformationPageRights `json:"rights"`
+
+	// StatedSource Where the contact came from, as the user who created it by hand stated. Absent when nothing was given.
+	StatedSource *ContactStatedSource `json:"stated_source,omitempty"`
+
+	// StatedSourceNote Their own words beside `stated_source`. Absent when none were given.
+	StatedSourceNote *string `json:"stated_source_note,omitempty"`
 }
 
 // PrivacyInformationPageDataCategories defines model for PrivacyInformationPage.DataCategories.
@@ -59064,13 +61769,34 @@ type Problem struct {
 	Detail *string `json:"detail,omitempty"`
 
 	// Details Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-	// `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-	// entry also carries `max`, the limit in characters.
+	// `errors` array of `{ field, code, message }` on 422 validation. An entry that
+	// refuses at a limit also carries `max`: the limit in characters for `too_long`,
+	// in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+	// code names other values carries them in `params`, an object of text values by
+	// name, so a screen can word the code in the reader's language; `message` stays
+	// the English sentence.
+	//
+	// A value its field cannot hold names the field's path (`address.city` for a key of a
+	// nested object), with a code for the shape the field takes: `not_integer`, `not_number`,
+	// `invalid_date`, `datetime_malformed`, `email_malformed`, `invalid_uuid`, or
+	// `invalid_type` for any other shape. A body that is not one JSON object, and a value
+	// inside an item of an array of objects, answer `malformed_json` on `body`. `out_of_range`
+	// carries its bounds as `params.min` and `params.max`, as the schema spells them;
+	// a date-time range states them as ISO dates.
 	//
 	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
 	// `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
 	// The `Retry-After` header says how many seconds until the call can succeed.
+	//
+	// A 403 that the caller's roles answer carries `missing_grant`: what those roles
+	// lack, in the notation the tool table uses for a tool's requirement, with
+	// alternatives joined by `,`. An object action (`deal.update`, `deal.create|update`)
+	// is a grant an admin adds to a role. `admin` asks for the admin role, and
+	// `scope:team` for a role whose row scope reaches team records or more. Each is
+	// lifted by an admin changing the caller's roles. A refusal that no role change
+	// lifts, such as a Deal Room participant's or a record kind the installation
+	// switched off, carries none.
 	Details *map[string]interface{} `json:"details,omitempty"`
 
 	// Instance URI of the specific occurrence.
@@ -59263,12 +61989,14 @@ type Project struct {
 	OwnerId      *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phase Read-only here: transitions go through advanceProjectPhase so the history row and project.phase_changed are written from one transaction.
-	Phase         *ProjectPhase           `json:"phase,omitempty"`
-	Raw           *map[string]interface{} `json:"raw,omitempty"`
-	Source        string                  `json:"source"`
-	StartedAt     *openapi_types.Date     `json:"started_at,omitempty"`
-	TargetEndDate *openapi_types.Date     `json:"target_end_date,omitempty"`
-	UpdatedAt     time.Time               `json:"updated_at"`
+	Phase *ProjectPhase           `json:"phase,omitempty"`
+	Raw   *map[string]interface{} `json:"raw,omitempty"`
+
+	// Source The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source        string              `json:"source"`
+	StartedAt     *openapi_types.Date `json:"started_at,omitempty"`
+	TargetEndDate *openapi_types.Date `json:"target_end_date,omitempty"`
+	UpdatedAt     time.Time           `json:"updated_at"`
 
 	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
@@ -59316,7 +62044,7 @@ type Project360 struct {
 		Page PageInfo `json:"page"`
 	} `json:"deals,omitempty"`
 
-	// Documents The files attached to the project itself, newest first.
+	// Documents The project's own uploads and the files of the activities filed under it, newest first.
 	Documents *struct {
 		Data []Attachment `json:"data"`
 		Page PageInfo     `json:"page"`
@@ -60433,6 +63161,47 @@ type ReceiptActor struct {
 // ReceiptActorType defines model for ReceiptActor.Type.
 type ReceiptActorType string
 
+// RecipientCountries defines model for RecipientCountries.
+type RecipientCountries struct {
+	Recipients []RecipientCountryReading `json:"recipients"`
+}
+
+// RecipientCountriesRequest defines model for RecipientCountriesRequest.
+type RecipientCountriesRequest struct {
+	// Addresses The addresses on the message, as they are on `to`, `cc` or `bcc`.
+	Addresses []string `json:"addresses"`
+}
+
+// RecipientCountry A country a sender states for one recipient of one message. It is never written to the
+// contact.
+type RecipientCountry struct {
+	// Address The recipient's address, as it is on `to`, `cc` or `bcc`.
+	Address string `json:"address"`
+
+	// Country An ISO 3166-1 alpha-2 code, or null for a country the sender cleared. A cleared
+	// recipient is judged under the baseline even when the record states a country.
+	Country *string `json:"country"`
+}
+
+// RecipientCountryReading defines model for RecipientCountryReading.
+type RecipientCountryReading struct {
+	// Address The address as it was asked.
+	Address string `json:"address"`
+
+	// Country The ISO 3166-1 alpha-2 code in lower case, or null when the record states none.
+	Country *string `json:"country"`
+
+	// Source The record the country was read from: the contact's own address, the address of
+	// their current primary employer, or the company a lead is filed under. Null with a
+	// null `country`.
+	Source *RecipientCountryReadingSource `json:"source"`
+}
+
+// RecipientCountryReadingSource The record the country was read from: the contact's own address, the address of
+// their current primary employer, or the company a lead is filed under. Null with a
+// null `country`.
+type RecipientCountryReadingSource string
+
 // RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 type RecommendationReceipt struct {
 	BasisFingerprint string `json:"basis_fingerprint"`
@@ -60640,6 +63409,10 @@ type RecordCommunicationContextRequestKind string
 // A purpose-built projection and never the Contact360 read model, which carries this workspace's
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
 type RecordConfirmationPage struct {
+	// AsksNews False when the recipient's country bars asking about news in a details check. The page
+	// then shows no news question, and a submit carrying a marketing answer is a 422.
+	AsksNews *bool `json:"asks_news,omitempty"`
+
 	// Company The current employer, read through the live employment relationship. Not correctable here.
 	Company string `json:"company"`
 
@@ -60736,6 +63509,11 @@ type RecordGrant struct {
 	GrantedBy openapi_types.UUID `json:"granted_by"`
 	Id        openapi_types.UUID `json:"id"`
 
+	// LimitedByRole Only on the answer to a share, and only when true: the share asked for `write` and the
+	// user's role can neither change records of this type nor create activities, so the grant
+	// was saved as `read`. A team grant is never limited, because its members hold different roles.
+	LimitedByRole *bool `json:"limited_by_role,omitempty"`
+
 	// Reason Accountability/lawful-basis note surfaced in the audit row.
 	Reason     *string               `json:"reason,omitempty"`
 	RecordId   openapi_types.UUID    `json:"record_id"`
@@ -60810,6 +63588,11 @@ type RecordKindOption struct {
 
 	// Unit The extension that declared the kind.
 	Unit string `json:"unit"`
+
+	// View The path segment under the unit's screen that shows one record of the kind, as the unit
+	// declared it. Absent when the unit's screen itself shows it. A link to a record opens
+	// `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
+	View string `json:"view"`
 }
 
 // RecordKindOptionActions defines model for RecordKindOption.Actions.
@@ -60862,9 +63645,10 @@ type RecordQualifyingEventRequest struct {
 	// a card handed over at a stand. `requested_by_subject` is the contact asking us to write
 	// to them away from every system: a phone call, a conversation at a counter.
 	//
-	// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-	// records the product already holds, and a hand-written one would be a second, unbacked
-	// answer to a question the data already settles.
+	// Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+	// product already holds, and a hand-written one would be a second, unbacked answer to a
+	// question the data already settles. `active_deal` is retired: nothing writes it, and the
+	// guard does not read it.
 	Kind RecordQualifyingEventRequestKind `json:"kind"`
 
 	// Note What happened, in the words of whoever was there. Required — it is the only evidence a hand-recorded exchange has.
@@ -60878,9 +63662,10 @@ type RecordQualifyingEventRequest struct {
 // a card handed over at a stand. `requested_by_subject` is the contact asking us to write
 // to them away from every system: a phone call, a conversation at a counter.
 //
-// Every other kind — inbound_message, inquiry, active_deal, meeting — is DERIVED from
-// records the product already holds, and a hand-written one would be a second, unbacked
-// answer to a question the data already settles.
+// Every other kind — inbound_message, inquiry, meeting — is DERIVED from records the
+// product already holds, and a hand-written one would be a second, unbacked answer to a
+// question the data already settles. `active_deal` is retired: nothing writes it, and the
+// guard does not read it.
 type RecordQualifyingEventRequestKind string
 
 // RecordReference defines model for RecordReference.
@@ -61023,8 +63808,32 @@ type RefreshAcceptedStatus string
 // reason code without one says a message was refused and not who for, which is the question
 // the rep is actually asking — and it is why an erasure clears this list.
 type RefusedRecipient struct {
-	Address           string                       `json:"address"`
-	Category          *string                      `json:"category,omitempty"`
+	Address  string  `json:"address"`
+	Category *string `json:"category,omitempty"`
+
+	// Country The ISO 3166-1 alpha-2 code, in lower case, of the recipient's country whose sales-mail
+	// rules judged this refusal. Absent when none applied: no country on record, or one the
+	// sender cleared.
+	Country *string `json:"country,omitempty"`
+
+	// CountrySource Where `country` came from: the contact's address, their employer's, the lead's company,
+	// or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+	// message. Absent when no record or sender gave a country.
+	CountrySource *RefusedRecipientCountrySource `json:"country_source,omitempty"`
+
+	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
+	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
+
+	// FooterPreview Configured disclosure text included in this message. Contains no recipient credentials.
+	FooterPreview *[]string `json:"footer_preview,omitempty"`
+
+	// Provision The first law cited for `reason_code` when the refusal was assessed: the recipient's
+	// pack's, or the sending entity's when only that pack cites one.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
+	// recipient's pack, then the sending entity's for a finding its data-protection law settles.
+	Provisions        *[]CitedProvision            `json:"provisions,omitempty"`
 	ReasonCode        string                       `json:"reason_code"`
 	RequestedCategory *string                      `json:"requested_category,omitempty"`
 	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
@@ -61032,6 +63841,11 @@ type RefusedRecipient struct {
 	SubjectId         *openapi_types.UUID          `json:"subject_id,omitempty"`
 	SubjectKind       *RefusedRecipientSubjectKind `json:"subject_kind,omitempty"`
 }
+
+// RefusedRecipientCountrySource Where `country` came from: the contact's address, their employer's, the lead's company,
+// or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+// message. Absent when no record or sender gave a country.
+type RefusedRecipientCountrySource string
 
 // RefusedRecipientSubjectKind defines model for RefusedRecipient.SubjectKind.
 type RefusedRecipientSubjectKind string
@@ -61118,6 +63932,9 @@ type RejectVoiceDraftRequest struct {
 // accounting mirror, and grants no consent to mail them.
 type Relationship struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
+
+	// CanArchive List reads only. Whether the caller may archive this edge, answered by the rule the archive itself applies.
+	CanArchive *bool `json:"can_archive,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
 	CapturedBy *string             `json:"captured_by,omitempty"`
@@ -61334,7 +64151,10 @@ type RenderedReport struct {
 
 // RenderedValue defines model for RenderedValue.
 type RenderedValue struct {
-	Context           *ReportingContext  `json:"context,omitempty"`
+	Context *ReportingContext `json:"context,omitempty"`
+
+	// Coverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
 	Coverage          *ReportingCoverage `json:"coverage,omitempty"`
 	DefinitionVersion *string            `json:"definition_version,omitempty"`
 	Unit              *string            `json:"unit,omitempty"`
@@ -61620,7 +64440,7 @@ type ReportResult struct {
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 	Report             string              `json:"report"`
 
-	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
+	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
@@ -61631,6 +64451,24 @@ type ReportResult struct {
 
 	// TotalRows Groups that matched. `rows` is capped at the report row limit, so a total above its length means this answer is the top of a longer one rather than all of it. The drill-through's `total_rows` counts source rows for the same reason.
 	TotalRows *int `json:"total_rows,omitempty"`
+}
+
+// ReportRowCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+type ReportRowCoverage struct {
+	// Aggregates The aliases of the row's partial sums, which this coverage qualifies.
+	Aggregates []string `json:"aggregates"`
+
+	// MissingCurrencies The currencies with no exchange rate, from the same statement as the sums.
+	MissingCurrencies []string `json:"missing_currencies"`
+
+	// NoRateDeals Deals in the group with an amount whose currency has no exchange rate as of the answer's date.
+	NoRateDeals int `json:"no_rate_deals"`
+
+	// NoValueDeals Deals in the group with no amount.
+	NoValueDeals int `json:"no_value_deals"`
+
+	// Partial True when at least one deal is left out of those sums.
+	Partial bool `json:"partial"`
 }
 
 // ReportRun A saved question and the answer it gives THIS reader. The answer is recomputed on every read rather than served from storage, so it reflects the reader's own authority and the installation's current floor.
@@ -61676,11 +64514,13 @@ type ReportRunSummary struct {
 
 // ReportScope defines model for ReportScope.
 type ReportScope struct {
-	Id   *openapi_types.UUID `json:"id,omitempty"`
-	Kind ReportScopeKind     `json:"kind"`
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.
+	Kind ReportScopeKind `json:"kind"`
 }
 
-// ReportScopeKind defines model for ReportScope.Kind.
+// ReportScopeKind Whose figures the report covers: one owner, one team, or the whole workspace. id names the owner or team.
 type ReportScopeKind string
 
 // ReportSetupObjective defines model for ReportSetupObjective.
@@ -61696,9 +64536,10 @@ type ReportSetupProposal struct {
 	Clarifications []string `json:"clarifications"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 	ModelUsed   *string   `json:"model_used,omitempty"`
 
@@ -61786,6 +64627,10 @@ type ReportVocabulary struct {
 // `lead_cohort` follows the leads that arrived in the interval the same
 // way: one point, its `outcomes` saying whether each lead was accepted,
 // qualified, disqualified or is still open.
+// `account_cohort` follows the distinct accounts of those leads: one point,
+// its `outcomes` saying the furthest outcome any of an account's leads
+// reached. `source_quality` is one point per lead origin: how many leads
+// arrived from it and how many of them were linked to an opportunity.
 type ReportingBlockKind string
 
 // ReportingCaptureContext defines model for ReportingCaptureContext.
@@ -61874,8 +64719,11 @@ type ReportingChart struct {
 	Closing              *float64                `json:"closing,omitempty"`
 	ComparisonInterval   *ReportingWindow        `json:"comparison_interval,omitempty"`
 	ContextId            string                  `json:"context_id"`
-	Coverage             ReportingCoverage       `json:"coverage"`
-	Interval             *ReportingWindow        `json:"interval,omitempty"`
+
+	// Coverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
+	Coverage ReportingCoverage `json:"coverage"`
+	Interval *ReportingWindow  `json:"interval,omitempty"`
 
 	// Kind `breakdown` splits one metric's figure into named groups: a lead's origin,
 	// the status a lead moved to, a partner and whether it sourced or influenced
@@ -61887,6 +64735,10 @@ type ReportingChart struct {
 	// `lead_cohort` follows the leads that arrived in the interval the same
 	// way: one point, its `outcomes` saying whether each lead was accepted,
 	// qualified, disqualified or is still open.
+	// `account_cohort` follows the distinct accounts of those leads: one point,
+	// its `outcomes` saying the furthest outcome any of an account's leads
+	// reached. `source_quality` is one point per lead origin: how many leads
+	// arrived from it and how many of them were linked to an opportunity.
 	Kind              ReportingBlockKind  `json:"kind"`
 	Marker            *float64            `json:"marker,omitempty"`
 	Metric            ReportingMetricID   `json:"metric"`
@@ -61966,17 +64818,22 @@ type ReportingContext struct {
 	Scope         ReportingScope `json:"scope"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
-	ScopeHoldsDeals *bool                `json:"scope_holds_deals,omitempty"`
-	StateAt         time.Time            `json:"state_at"`
-	TargetInterval  *ReportingWindow     `json:"target_interval,omitempty"`
-	Timezone        string               `json:"timezone"`
-	ValueBasis      *ReportingValueBasis `json:"value_basis,omitempty"`
+	ScopeHoldsDeals *bool            `json:"scope_holds_deals,omitempty"`
+	StateAt         time.Time        `json:"state_at"`
+	TargetInterval  *ReportingWindow `json:"target_interval,omitempty"`
+	Timezone        string           `json:"timezone"`
+
+	// ValueBasis Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+	// the default, `software` and `implementation` count only that component of it. Open figures
+	// take only `all`.
+	ValueBasis *ReportingValueBasis `json:"value_basis,omitempty"`
 }
 
 // ReportingCountry defines model for ReportingCountry.
 type ReportingCountry = string
 
-// ReportingCoverage defines model for ReportingCoverage.
+// ReportingCoverage How much of the population the figure could be computed for. A `partial` reading with a
+// `priced_count` of 0 priced nothing, so its figure is not one to report.
 type ReportingCoverage struct {
 	EligibleCount *int64  `json:"eligible_count,omitempty" minimum:"0"`
 	PricedCount   *int64  `json:"priced_count,omitempty" minimum:"0"`
@@ -62124,7 +64981,9 @@ type ReportingForecastBasis struct {
 	// CallMinor The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
 	CallMinor *int64 `json:"call_minor,omitempty"`
 
-	// EligibleCount Deals the forecast considered, priced or not.
+	// EligibleCount Open deals due in the period, priced or not. The four counts (`eligible_count`,
+	// `priced_count`, `confirmed_date_count`, `fx_missing_count`) describe only those
+	// open deals; they do not say whether `won_minor` is complete.
 	EligibleCount int64 `json:"eligible_count" minimum:"0"`
 
 	// FxMissingCount Priced deals with no exchange rate to the base currency, left out of every total.
@@ -62161,7 +65020,7 @@ type ReportingFramework struct {
 
 // ReportingFrameworkInput defines model for ReportingFrameworkInput.
 type ReportingFrameworkInput struct {
-	// AccountCoverage What the Account coverage section counts as at risk. Absent fields take the defaults the answer prints.
+	// AccountCoverage What the coverage section counts as at risk. Absent fields take the defaults the answer prints.
 	AccountCoverage *AccountCoverageThresholds      `json:"account_coverage,omitempty"`
 	CaptureContexts []ReportingCaptureContext       `json:"capture_contexts"`
 	Qualification   []ReportingQualification        `json:"qualification"`
@@ -62180,7 +65039,10 @@ type ReportingInitiativeId = openapi_types.UUID
 
 // ReportingMetric defines model for ReportingMetric.
 type ReportingMetric struct {
-	Attainment  *float64             `json:"attainment,omitempty"`
+	Attainment *float64 `json:"attainment,omitempty"`
+
+	// Coverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
 	Coverage    ReportingCoverage    `json:"coverage"`
 	Denominator *float64             `json:"denominator,omitempty"`
 	Evidence    ReportingEvidenceRef `json:"evidence"`
@@ -62221,7 +65083,12 @@ type ReportingMetric struct {
 	// `landing`, so a won deal is never counted twice. A manager call is a
 	// whole-quarter figure and is never added to `won`.
 	TargetComparison *ReportingTargetComparison `json:"target_comparison,omitempty"`
-	TargetRevision   *int64                     `json:"target_revision,omitempty"`
+
+	// TargetDelta `target_actual` minus `target`, in the metric's unit: negative is still to reach,
+	// positive is above the target. Present with both. A client shows it and `attainment`
+	// as they are, and never works either out from the other figures.
+	TargetDelta    *float64 `json:"target_delta,omitempty"`
+	TargetRevision *int64   `json:"target_revision,omitempty"`
 
 	// TargetSource Present with `target`. `target`: a target set for this scope and
 	// period. `sales_goals`: the figure is a seller's monthly sales
@@ -62468,12 +65335,16 @@ type ReportingScheduleList struct {
 
 // ReportingScope defines model for ReportingScope.
 type ReportingScope struct {
-	Id    *openapi_types.UUID `json:"id,omitempty"`
-	Kind  ReportingScopeKind  `json:"kind"`
-	Label *string             `json:"label,omitempty"`
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// Kind Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id`
+	// naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.
+	Kind  ReportingScopeKind `json:"kind"`
+	Label *string            `json:"label,omitempty"`
 }
 
-// ReportingScopeKind defines model for ReportingScope.Kind.
+// ReportingScopeKind Whose figures the report counts: one `owner`, one `team`, or the whole `workspace`, with `id`
+// naming the owner or team. `managed_teams` is only ever answered, when a request names no scope.
 type ReportingScopeKind string
 
 // ReportingSection defines model for ReportingSection.
@@ -62513,12 +65384,20 @@ type ReportingSelection struct {
 	// evaluation time. Read at that exact moment, the week holds no time
 	// yet and the context's interval starts where it ends. A month target
 	// beside it still counts the whole month up to the evaluation time.
-	Period      ReportingSelectionPeriod      `json:"period"`
-	PipelineId  *openapi_types.UUID           `json:"pipeline_id,omitempty"`
-	ProductId   *ReportingProductId           `json:"product_id,omitempty"`
-	Scope       ReportingScope                `json:"scope"`
+	// `last_quarter` and `last_year` are the last completed fiscal quarter
+	// and fiscal year, in the installation's fiscal calendar.
+	Period     ReportingSelectionPeriod `json:"period"`
+	PipelineId *openapi_types.UUID      `json:"pipeline_id,omitempty"`
+	ProductId  *ReportingProductId      `json:"product_id,omitempty"`
+	Scope      ReportingScope           `json:"scope"`
+
+	// TargetBasis Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.
 	TargetBasis ReportingSelectionTargetBasis `json:"target_basis"`
-	ValueBasis  *ReportingValueBasis          `json:"value_basis,omitempty"`
+
+	// ValueBasis Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+	// the default, `software` and `implementation` count only that component of it. Open figures
+	// take only `all`.
+	ValueBasis *ReportingValueBasis `json:"value_basis,omitempty"`
 }
 
 // ReportingSelectionCloseWindow Which open deals the open-pipeline figures count, by expected close. `fiscal_quarter`
@@ -62530,9 +65409,11 @@ type ReportingSelectionCloseWindow string
 // evaluation time. Read at that exact moment, the week holds no time
 // yet and the context's interval starts where it ends. A month target
 // beside it still counts the whole month up to the evaluation time.
+// `last_quarter` and `last_year` are the last completed fiscal quarter
+// and fiscal year, in the installation's fiscal calendar.
 type ReportingSelectionPeriod string
 
-// ReportingSelectionTargetBasis defines model for ReportingSelection.TargetBasis.
+// ReportingSelectionTargetBasis Which target period the figures are measured against, a calendar `month` or a `fiscal_quarter`.
 type ReportingSelectionTargetBasis string
 
 // ReportingStatus `failed` means the database could not calculate this figure on this
@@ -62600,7 +65481,8 @@ type ReportingTargetComparison struct {
 	// pipeline and quarter, or the reader may not read targets; a missing
 	// target is never zero. `fx_missing` means a deal amount has no
 	// exchange rate to the base currency, so the totals are incomplete
-	// and no gap or coverage is given. `partial_visibility` means the
+	// and no gap or coverage is given. When only an open deal lacks the rate,
+	// `target` and `won` are still given. `partial_visibility` means the
 	// reader cannot see every deal of the population asked for, or a
 	// deal's amount, so its figures cannot stand against the scope's
 	// whole target.
@@ -62641,7 +65523,8 @@ type ReportingTargetComparisonIncompatibility string
 // pipeline and quarter, or the reader may not read targets; a missing
 // target is never zero. `fx_missing` means a deal amount has no
 // exchange rate to the base currency, so the totals are incomplete
-// and no gap or coverage is given. `partial_visibility` means the
+// and no gap or coverage is given. When only an open deal lacks the rate,
+// `target` and `won` are still given. `partial_visibility` means the
 // reader cannot see every deal of the population asked for, or a
 // deal's amount, so its figures cannot stand against the scope's
 // whole target.
@@ -62676,7 +65559,9 @@ type ReportingTargetList struct {
 	NextCursor *string           `json:"next_cursor,omitempty"`
 }
 
-// ReportingValueBasis defines model for ReportingValueBasis.
+// ReportingValueBasis Which part of a won deal's value the won-value figures count. `all` is the whole deal and
+// the default, `software` and `implementation` count only that component of it. Open figures
+// take only `all`.
 type ReportingValueBasis string
 
 // ReportingWindow defines model for ReportingWindow.
@@ -62698,10 +65583,49 @@ type RequestDeadline struct {
 	Rule string `json:"rule"`
 }
 
+// RequestDealManagerRequest defines model for RequestDealManagerRequest.
+type RequestDealManagerRequest struct {
+	// Reasons Why the manager is asked, as the move named them: `big_deal` is a value above the team's median, `single_contact` is one engaged contact, `stuck` is a deal stuck in its stage. A client words them.
+	Reasons []RequestDealManagerRequestReasons `json:"reasons"`
+}
+
+// RequestDealManagerRequestReasons defines model for RequestDealManagerRequest.Reasons.
+type RequestDealManagerRequestReasons string
+
 // RequestLegalReviewRequest defines model for RequestLegalReviewRequest.
 type RequestLegalReviewRequest struct {
 	Note             *string             `json:"note,omitempty"`
 	PreviousReviewId *openapi_types.UUID `json:"previous_review_id,omitempty"`
+}
+
+// RequestReply We replied after a request, and our reply is still the newest message on its thread.
+// One rule decides it, so the deal card, its risk line and its next move agree on whose
+// move it is. The request itself stays open until its reminder is done or a settlement
+// verdict records it settled.
+type RequestReply struct {
+	// ByReader The reader sent the reply. False when a colleague did.
+	ByReader bool `json:"by_reader"`
+
+	// ReminderId The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+	ReminderId *openapi_types.UUID `json:"reminder_id,omitempty"`
+
+	// ReminderVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	ReminderVersion *RowVersion `json:"reminder_version,omitempty" minimum:"1"`
+
+	// RepliedAt When our newest reply on the thread happened.
+	RepliedAt time.Time `json:"replied_at"`
+
+	// RepliedPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	RepliedPrecision OccurredPrecision `json:"replied_precision"`
+
+	// RequestActivityId The request we replied to.
+	RequestActivityId openapi_types.UUID `json:"request_activity_id"`
+
+	// StillAsked What the settlement pass found still asked, quoted from the request. Absent when no still_owed verdict quoted one.
+	StillAsked *string `json:"still_asked,omitempty"`
 }
 
 // RescheduleSendRequest A new moment for a message already scheduled. TIME ONLY — the content is what the
@@ -63169,7 +66093,13 @@ type RoleRowScope string
 // RoleDirectory Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
 type RoleDirectory struct {
 	Roles []Role `json:"roles"`
+
+	// Verbs The verbs a role may hold on each object this installation can grant, core objects and enabled extension objects alike, Read first. An object that offers no Read has none in its list. An object absent here is one the installation cannot name, and a client draws it with all four.
+	Verbs map[string][]RoleDirectoryVerbs `json:"verbs"`
 }
+
+// RoleDirectoryVerbs defines model for RoleDirectory.Verbs.
+type RoleDirectoryVerbs string
 
 // RouterActions The actions of one MCP router whose actions run REST routes.
 type RouterActions struct {
@@ -63201,7 +66131,10 @@ type RouterActions struct {
 		// UploadsAFile Whether it takes filename, content_type and content_base64.
 		UploadsAFile *bool `json:"uploads_a_file,omitempty"`
 	} `json:"actions"`
-	Router string `json:"router"`
+
+	// AskUserFirstMeans What ask_user_first asks of the model; present when an action here has it.
+	AskUserFirstMeans *string `json:"ask_user_first_means,omitempty"`
+	Router            string  `json:"router"`
 }
 
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
@@ -63266,9 +66199,10 @@ type SalesAssessment struct {
 	GeneratedAt   time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy  WrittenBy                `json:"generated_by"`
 	ModelUsed    *string                  `json:"model_used,omitempty"`
 	NextDecision *SalesAssessmentDecision `json:"next_decision,omitempty"`
@@ -63438,9 +66372,10 @@ type SalesGoalPlanState string
 // SalesGoalProposal defines model for SalesGoalProposal.
 type SalesGoalProposal struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 	ModelUsed   *string   `json:"model_used,omitempty"`
 
@@ -63685,10 +66620,23 @@ type SalesProgress struct {
 	Planned SalesProgressAmount `json:"planned"`
 
 	// PlannedValuedAt When the open deals were valued and converted.
-	PlannedValuedAt time.Time          `json:"planned_valued_at"`
-	Scope           ReportingScope     `json:"scope"`
-	State           SalesProgressState `json:"state"`
-	Timezone        string             `json:"timezone"`
+	PlannedValuedAt time.Time `json:"planned_valued_at"`
+
+	// Scenarios Where a month may finish against its goal, read from the forecast of the same month and
+	// scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+	// that is `set`. A year has none, because the forecast has no year period.
+	//
+	// - `worst` is the money already won, as if nothing more closes.
+	// - `expected` is the forecast landing under the installation's forward measure, the same
+	//   setting the Overview lands with. `landing` names the measure and what it rests on.
+	// - `best` is the money won plus every open deal expected in the month, at face value.
+	//
+	// Each case carries `delta_minor`, its amount minus the goal, signed as the reading's own
+	// `delta_minor`: negative is short of the goal.
+	Scenarios *SalesProgressScenarios `json:"scenarios,omitempty"`
+	Scope     ReportingScope          `json:"scope"`
+	State     SalesProgressState      `json:"state"`
+	Timezone  string                  `json:"timezone"`
 }
 
 // SalesProgressPeriodKind defines model for SalesProgress.Period.Kind.
@@ -63825,7 +66773,56 @@ type SalesProgressNextTask struct {
 	// AssigneeId Who the task is for. It may differ from the deal's owner.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 	DueAt      *time.Time          `json:"due_at,omitempty"`
-	Subject    string              `json:"subject"`
+
+	// DueHasTime True when due_at names a time of day; false when the task is due on a date with no time.
+	DueHasTime *bool `json:"due_has_time,omitempty"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	Subject   string      `json:"subject"`
+}
+
+// SalesProgressScenario defines model for SalesProgressScenario.
+type SalesProgressScenario struct {
+	AmountMinor int64 `json:"amount_minor"`
+
+	// DeltaMinor The amount minus the goal.
+	DeltaMinor int64 `json:"delta_minor"`
+}
+
+// SalesProgressScenarios Where a month may finish against its goal, read from the forecast of the same month and
+// scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+// that is `set`. A year has none, because the forecast has no year period.
+//
+//   - `worst` is the money already won, as if nothing more closes.
+//   - `expected` is the forecast landing under the installation's forward measure, the same
+//     setting the Overview lands with. `landing` names the measure and what it rests on.
+//   - `best` is the money won plus every open deal expected in the month, at face value.
+//
+// Each case carries `delta_minor`, its amount minus the goal, signed as the reading's own
+// `delta_minor`: negative is short of the goal.
+type SalesProgressScenarios struct {
+	// AsOf When the deals were read.
+	AsOf time.Time             `json:"as_of"`
+	Best SalesProgressScenario `json:"best"`
+
+	// EligibleCount Deals the forecast read for the month.
+	EligibleCount int                   `json:"eligible_count" minimum:"0"`
+	Expected      SalesProgressScenario `json:"expected"`
+
+	// FxMissingCount Priced deals no exchange rate reached; their money is in no case.
+	FxMissingCount int `json:"fx_missing_count" minimum:"0"`
+
+	// Landing Where the period finishes if nothing changes, and what that answer rests on.
+	// The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
+	Landing ForecastLanding `json:"landing"`
+
+	// PricedCount Of those, the deals with an amount.
+	PricedCount int `json:"priced_count" minimum:"0"`
+
+	// ScopeLimited True when the reader cannot see every deal of the scope, so each case is smaller than the scope's own.
+	ScopeLimited bool                  `json:"scope_limited"`
+	Worst        SalesProgressScenario `json:"worst"`
 }
 
 // SalesProgressSummaryRequest defines model for SalesProgressSummaryRequest.
@@ -64105,6 +67102,15 @@ type ScheduledSend struct {
 	// sender reads this row.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
+	// RecipientCountries The countries the sender stated for recipients, frozen with the message. Absent when none
+	// was stated.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
+	// ReviewActions What this caller may do about the review in `review_id`, in the words a refusal's
+	// `available_actions` uses. Absent or empty when they may only read it.
+	// `direct_send` sends the held message now on a recorded reason.
+	ReviewActions *[]string `json:"review_actions,omitempty"`
+
 	// ReviewId The review this message's refusal opened, when one stands. Null on every message
 	// nobody refused, and on a held row whose review has since been answered.
 	//
@@ -64178,7 +67184,9 @@ type SchedulingProfile struct {
 	// Blocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
 	// the page names no calendar (a page saved before the profile existed reads this way).
 	// `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-	// the connection is gone or refused. Answered on the host's own profile read only.
+	// the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+	// left, or has no calendar Margince can read; `team_members` says which. Answered on the
+	// host's own profile read only.
 	Blocker           *SchedulingProfileBlocker `json:"blocker,omitempty"`
 	BlockingCalendars *[]string                 `json:"blocking_calendars,omitempty"`
 	BufferMinutes     int                       `json:"buffer_minutes" maximum:"120" minimum:"0"`
@@ -64209,7 +67217,14 @@ type SchedulingProfile struct {
 	PublicUrl   *string `json:"public_url,omitempty"`
 	ReplaceLink *bool   `json:"replace_link,omitempty"`
 	Slug        *string `json:"slug,omitempty"`
-	Title       string  `json:"title"`
+
+	// TeamMembers Colleagues who must attend every meeting booked through this page. Guests see only the
+	// times when the host and every member are free, inside each one's own working hours, and
+	// each booking invites every member. A member named here starts as `pending` and the page
+	// takes no bookings until every member has confirmed. Only `user_id` is read from a
+	// request; a colleague not offered by `GET /scheduling/team-candidates` is refused.
+	TeamMembers *[]SchedulingTeamMember `json:"team_members,omitempty"`
+	Title       string                  `json:"title"`
 
 	// UseDefaultTitle Use the built-in meeting title. Explicitly false preserves the supplied title as custom wording.
 	UseDefaultTitle *bool `json:"use_default_title,omitempty"`
@@ -64221,11 +67236,56 @@ type SchedulingProfile struct {
 // SchedulingProfileBlocker Why the host's calendar cannot take bookings, read without a provider call. `no_calendar`:
 // the page names no calendar (a page saved before the profile existed reads this way).
 // `calendar_read_only`: the connection lacks the calendar write grant. `calendar_unavailable`:
-// the connection is gone or refused. Answered on the host's own profile read only.
+// the connection is gone or refused. `team_not_ready`: a team member has not confirmed, has
+// left, or has no calendar Margince can read; `team_members` says which. Answered on the
+// host's own profile read only.
 type SchedulingProfileBlocker string
 
 // SchedulingProfileProvider defines model for SchedulingProfile.Provider.
 type SchedulingProfileProvider string
+
+// SchedulingTeamAnswer defines model for SchedulingTeamAnswer.
+type SchedulingTeamAnswer struct {
+	State SchedulingTeamAnswerState `json:"state"`
+}
+
+// SchedulingTeamAnswerState defines model for SchedulingTeamAnswer.State.
+type SchedulingTeamAnswerState string
+
+// SchedulingTeamCandidate defines model for SchedulingTeamCandidate.
+type SchedulingTeamCandidate struct {
+	Name   string             `json:"name"`
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
+// SchedulingTeamMember defines model for SchedulingTeamMember.
+type SchedulingTeamMember struct {
+	Name *string `json:"name,omitempty"`
+
+	// State `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+	// `left`: the member left the link; remove them to take bookings again. `unavailable`:
+	// the member left the workspace or Margince cannot read their calendar.
+	State  *SchedulingTeamMemberState `json:"state,omitempty"`
+	UserId openapi_types.UUID         `json:"user_id"`
+}
+
+// SchedulingTeamMemberState `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
+// `left`: the member left the link; remove them to take bookings again. `unavailable`:
+// the member left the workspace or Margince cannot read their calendar.
+type SchedulingTeamMemberState string
+
+// SchedulingTeamRequest defines model for SchedulingTeamRequest.
+type SchedulingTeamRequest struct {
+	HostName   string                     `json:"host_name"`
+	HostUserId openapi_types.UUID         `json:"host_user_id"`
+	State      SchedulingTeamRequestState `json:"state"`
+
+	// Title The meeting title the link offers.
+	Title string `json:"title"`
+}
+
+// SchedulingTeamRequestState defines model for SchedulingTeamRequest.State.
+type SchedulingTeamRequestState string
 
 // SdrHandoffCohort defines model for SdrHandoffCohort.
 type SdrHandoffCohort struct {
@@ -64559,10 +67619,59 @@ type SdrWaitingHandoffPage struct {
 	Rows       []SdrWaitingHandoff `json:"rows"`
 }
 
+// SearchDataAnswer defines model for SearchDataAnswer.
+type SearchDataAnswer struct {
+	Analytics *AnalyticsAnswer `json:"analytics,omitempty"`
+
+	// AnalyticsQuery One question, in the vocabulary the schema returned.
+	AnalyticsQuery *AnalyticsQuery `json:"analytics_query,omitempty"`
+
+	// Count For reporting, show the metric's eligible record count rather than its value.
+	Count      *bool                   `json:"count,omitempty"`
+	Evaluation *ReportingEvaluation    `json:"evaluation,omitempty"`
+	Outcome    SearchDataAnswerOutcome `json:"outcome"`
+
+	// Records What `query_workspace` answers: the rows the plan matched, the plan as run, and how complete the answer is.
+	Records *WorkspaceQueryResult `json:"records,omitempty"`
+
+	// Source The typed selection or query requested, including its period and filters; evaluation.context names the resolved reporting period.
+	Source *string `json:"source,omitempty"`
+}
+
+// SearchDataAnswerOutcome defines model for SearchDataAnswer.Outcome.
+type SearchDataAnswerOutcome string
+
 // SearchHitEmployer A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer.
 type SearchHitEmployer struct {
 	CompanyId   openapi_types.UUID `json:"company_id"`
 	CompanyName string             `json:"company_name"`
+}
+
+// SearchHitStanding What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null.
+type SearchHitStanding struct {
+	// AmountMinor A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// Currency The ISO 4217 code of `amount_minor`; null with it.
+	Currency *string `json:"currency,omitempty"`
+
+	// DueOn A deal's expected close date or a project's target end date.
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+
+	// JobTitle A contact's job title. Null on every other type.
+	JobTitle *string `json:"job_title,omitempty"`
+
+	// LastActivityAt When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// MaskedFields The fields above a field mask withheld from this caller, by their wire names.
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
+	// Stage A deal's stage, named in the reader's language. Null on every other type.
+	Stage *string `json:"stage,omitempty"`
+
+	// State A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company.
+	State *string `json:"state,omitempty"`
 }
 
 // SearchNearMatch defines model for SearchNearMatch.
@@ -64585,6 +67694,9 @@ type SearchResponse struct {
 	// NearMatches Present only when `data` is empty on a first page of a plain search (no cursor, no record bound, no operator syntax): up to five records whose names are spelt close to the query, closest first. They are suggestions, not matches, and only records the caller may open appear. Absent otherwise, and never on a page with a cursor.
 	NearMatches *[]SearchNearMatch `json:"near_matches,omitempty"`
 	Page        PageInfo           `json:"page"`
+
+	// TypesTimedOut On a `per_type` answer only: the types whose search did not finish within the time budget. `data` holds no hits of these types, and none of them is in `types_with_more`. Empty when every type answered. Absent on a ranked answer, which answers 422 `query_too_broad` instead.
+	TypesTimedOut *[]string `json:"types_timed_out,omitempty"`
 
 	// TypesWithMore On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
 	TypesWithMore *[]string `json:"types_with_more,omitempty"`
@@ -64612,7 +67724,10 @@ type SearchResult struct {
 	Score   *float32 `json:"score,omitempty"`
 	Snippet *string  `json:"snippet,omitempty"`
 
-	// Title Display label (name/subject).
+	// Standing Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type.
+	Standing *SearchHitStanding `json:"standing,omitempty"`
+
+	// Title Display label (name/subject). An activity Margince wrote is titled in the reader's language, as its History row names it.
 	Title *string `json:"title,omitempty"`
 
 	// TrustTier Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
@@ -64688,8 +67803,13 @@ type SendAuthorizationPreview struct {
 	// Allowed Whether the whole message would go. A CONJUNCTION: one refused recipient refuses
 	// the message, because a rep who wrote to four contacts and reached three without
 	// being told which has been lied to about what happened.
-	Allowed    bool                                `json:"allowed"`
-	Recipients []SendAuthorizationPreviewRecipient `json:"recipients"`
+	Allowed bool `json:"allowed"`
+
+	// ContentFindings What the draft's `subject` and `body` do not meet among the advertising content rules
+	// of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
+	// Empty when no subject or body was given, or when the message is not advertising.
+	ContentFindings *[]DraftContentFinding              `json:"content_findings,omitempty"`
+	Recipients      []SendAuthorizationPreviewRecipient `json:"recipients"`
 }
 
 // SendAuthorizationPreviewRecipient One recipient's answer. It describes the MESSAGE, never the contact's file.
@@ -64699,23 +67819,29 @@ type SendAuthorizationPreviewRecipient struct {
 	// Basis The lawful ground an allow would rest on.
 	Basis *string `json:"basis,omitempty"`
 
-	// CanBeOverruled Whether a contact may lift this refusal by recording why they are writing.
-	//
-	// It needs BOTH halves of a question the engine keeps on two axes, which is why it
-	// is answered here rather than derived. `decided_by` says whose decision it is, and
-	// an absolute reason says no rollout mode softens it — and the two disagree: a hard
-	// bounce, a rolling frequency cap, an unresolvable recipient and an unconfirmed
-	// opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
-	// offered an override on those would render a button that cannot achieve what it
-	// promises, and the rep would type a justification the staging gate then ignores.
-	// A recorded reason lifts one category, so a refusal that resolved to no single
-	// category, such as `unknown_purpose`, answers false.
+	// CanBeOverruled Whether the sender may send this one message past the refusal by recording a
+	// reason. True for every policy refusal except the subject's own stops: the refusal
+	// stays on the record, and the reason is kept with the message. False for a stop
+	// (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+	// hard bounce, because no decision makes a dead address accept mail, and for a
+	// recipient that resolves to nobody or to two contacts, whose stops were never read.
+	// Only a user in their own session sends past it, never an agent, and only with the
+	// `communication_exception` grant. The refused send's review offers `direct_send` only
+	// to such a caller.
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
+
+	// ConsentPurposeId For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
+	// about for this use: the oldest live purpose whose class covers it, that the contact has
+	// not withdrawn, and that this door may ask about (a marketing one only if double opt-in). `POST /contacts/{id}/consent/double-opt-in` with it mails
+	// the request. The recipient's pack says for which purpose classes the contact's own request
+	// must be on record first. Absent when no such purpose exists, or when the recipient is a
+	// lead.
+	ConsentPurposeId *openapi_types.UUID `json:"consent_purpose_id,omitempty"`
 
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 	// it. `machine` is the engine reading an incomplete record and a rep who knows
 	// better may say so. `subject` is the contact's own act — an objection or a
-	// withdrawal — and nobody in the installation lifts it, admin included.
+	// withdrawal. Nobody in the installation lifts it or sends past it, admin included.
 	//
 	// It is sent rather than derived because the rule lives in Go
 	// (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -64728,6 +67854,15 @@ type SendAuthorizationPreviewRecipient struct {
 	// caller. Recording an exchange still requires permission to update that record.
 	EvidenceSubject *CommunicationEvidenceSubject `json:"evidence_subject,omitempty"`
 
+	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
+	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
+
+	// LawfulBasisMissing The recipient's country has no legitimate-interest basis, and the record holds neither
+	// their consent nor an agreement with them. A privacy notice they were sent is neither.
+	// Not a refusal: a surface shows a warning and records the sender's confirmation through
+	// `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+	LawfulBasisMissing *bool `json:"lawful_basis_missing,omitempty"`
+
 	// Mode How much authority the engine's answer carries for this category on this
 	// installation. Under `observe` a `deny` here still sends, and a composer that
 	// showed it as a refusal would be describing a rollout position as a rule.
@@ -64737,6 +67872,14 @@ type SendAuthorizationPreviewRecipient struct {
 	// the sender, before the message is checked, and this answer is the one that new
 	// contact gets. Absent or false for an address a record already holds.
 	NewContact *bool `json:"new_contact,omitempty"`
+
+	// Provision The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+	// when only that pack cites one. Absent when none may be shown.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
+	// sending entity's for a finding its data-protection law settles. Absent when none may be shown.
+	Provisions *[]CitedProvision `json:"provisions,omitempty"`
 
 	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
 	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
@@ -64776,7 +67919,7 @@ type SendAuthorizationPreviewRecipient struct {
 // SendAuthorizationPreviewRecipientDecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 // it. `machine` is the engine reading an incomplete record and a rep who knows
 // better may say so. `subject` is the contact's own act — an objection or a
-// withdrawal — and nobody in the installation lifts it, admin included.
+// withdrawal. Nobody in the installation lifts it or sends past it, admin included.
 //
 // It is sent rather than derived because the rule lives in Go
 // (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -64825,11 +67968,9 @@ type SendCompanyEmailRequest struct {
 	// they were addressed — and they are absent from the headers the recipients
 	// see, which is the whole of what "blind" means.
 	//
-	// A message with a tokenized unsubscribe link may still have only ONE
-	// addressee in total: that token is a bearer credential over one contact's
-	// consent record, so a bcc'd copy of a marketing send is refused 422
-	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
-	// preference link.
+	// Private unsubscribe links are omitted for multiple recipients, preserving
+	// To, Cc and Bcc visibility. The sender must confirm that omission with
+	// a recorded one-message reason before delivery.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
 	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.
@@ -64871,6 +68012,10 @@ type SendCompanyEmailRequest struct {
 	// Evidence Records the caller names in support of this send. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
+	// FromConnectionId The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
+	// Omitted, it goes out from the sender's default mailbox.
+	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
+
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
 	// with the plain part first, so a client that cannot render HTML still
@@ -64901,6 +68046,16 @@ type SendCompanyEmailRequest struct {
 	// reader can see what the sender believed, not so the engine can be talked into
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
+
+	// RecipientCountries The country the sender states for a recipient of this message, which the marketing rules
+	// then follow in place of the one the record states. An entry with `country: null` clears it,
+	// and that recipient is judged under the baseline. A recipient with no entry keeps the country
+	// the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+	// is written to the contact. Only the user writing the message may state one: an agent's or an
+	// integration's request carrying this field is refused with 422 `invalid`. Each address may
+	// appear once, compared without case or surrounding space; a second entry is refused with 422
+	// `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
 	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
 	// local time and current timezone rules govern the send; this field is a
@@ -65013,11 +68168,9 @@ type SendEmailRequest struct {
 	// they were addressed — and they are absent from the headers the recipients
 	// see, which is the whole of what "blind" means.
 	//
-	// A message with a tokenized unsubscribe link may still have only ONE
-	// addressee in total: that token is a bearer credential over one contact's
-	// consent record, so a bcc'd copy of a marketing send is refused 422
-	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
-	// preference link.
+	// Private unsubscribe links are omitted for multiple recipients, preserving
+	// To, Cc and Bcc visibility. The sender must confirm that omission with
+	// a recorded one-message reason before delivery.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
 	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.
@@ -65062,6 +68215,13 @@ type SendEmailRequest struct {
 	// Evidence Records the caller names in support of this send. Checked, never trusted.
 	Evidence *CommunicationEvidence `json:"evidence,omitempty"`
 
+	// FromConnectionId The sender's own mailbox the message goes out from, the `id` of one of their
+	// `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
+	// conversation arrived in, and a new message from the sender's default mailbox. A mailbox
+	// that is not the sender's, or cannot send, is refused with 422
+	// `mailbox_not_send_capable`.
+	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
+
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
 	// REPLACES `body`: a message carrying both goes out as multipart/alternative
 	// with the plain part first, so a client that cannot render HTML still
@@ -65087,6 +68247,16 @@ type SendEmailRequest struct {
 	// reader can see what the sender believed, not so the engine can be talked into
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
+
+	// RecipientCountries The country the sender states for a recipient of this message, which the marketing rules
+	// then follow in place of the one the record states. An entry with `country: null` clears it,
+	// and that recipient is judged under the baseline. A recipient with no entry keeps the country
+	// the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+	// is written to the contact. Only the user writing the message may state one: an agent's or an
+	// integration's request carrying this field is refused with 422 `invalid`. Each address may
+	// appear once, compared without case or surrounding space; a second entry is refused with 422
+	// `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
 	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
 	// local time and current timezone rules govern the send; this field is a
@@ -65238,6 +68408,58 @@ type SendMessageRequest struct {
 // objected, so naming one here is refused (422 `invalid`).
 type SendMessageRequestCommunicationContext string
 
+// SendRefusal A problem body whose `details` describe a refused send and the review it opened.
+// The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+type SendRefusal struct {
+	Code   string  `json:"code"`
+	Detail *string `json:"detail,omitempty"`
+
+	// Details Present when the refusal opened a review.
+	Details  *SendRefusalDetails `json:"details,omitempty"`
+	Instance *string             `json:"instance,omitempty"`
+	Status   int                 `json:"status"`
+	Title    *string             `json:"title,omitempty"`
+	Type     *string             `json:"type,omitempty"`
+}
+
+// SendRefusalDetails Present when the refusal opened a review.
+type SendRefusalDetails struct {
+	// AvailableActions What this caller may do about the refusal, such as `direct_send`.
+	AvailableActions *[]string `json:"available_actions,omitempty"`
+
+	// Refusals Each refused address the caller named.
+	Refusals *[]SendRefusalRecipient `json:"refusals,omitempty"`
+
+	// Review What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
+	// given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
+	// what the consent rows say today.
+	Review               *CommunicationReview   `json:"review,omitempty"`
+	ReviewId             *openapi_types.UUID    `json:"review_id,omitempty"`
+	AdditionalProperties map[string]interface{} `json:"-"`
+}
+
+// SendRefusalRecipient defines model for SendRefusalRecipient.
+type SendRefusalRecipient struct {
+	Address string `json:"address"`
+
+	// CanBeOverruled Whether a recorded reason may send this one message anyway.
+	CanBeOverruled bool `json:"can_be_overruled"`
+
+	// Category The category the engine resolved.
+	Category *string `json:"category,omitempty"`
+
+	// Provision The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+	// when only that pack cites one. Absent when none may be shown.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
+	// Provisions Every law cited for `reason_code`, `provision` first. Absent when none may be shown.
+	Provisions *[]CitedProvision `json:"provisions,omitempty"`
+	ReasonCode string            `json:"reason_code"`
+
+	// RequestedCategory The category the sender claimed.
+	RequestedCategory *string `json:"requested_category,omitempty"`
+}
+
 // ServiceMemberRequest A member for an extension's unattended feed. No password and no way in.
 type ServiceMemberRequest struct {
 	DisplayName string `json:"display_name"`
@@ -65262,6 +68484,18 @@ type SetActivityAudienceRequest struct {
 	// Members The users and teams admitted besides the participants. Read only when `audience` is `selected`; replaces the previous set.
 	Members *[]AudienceMember `json:"members,omitempty"`
 }
+
+// SetActivityDealRelevanceRequest defines model for SetActivityDealRelevanceRequest.
+type SetActivityDealRelevanceRequest struct {
+	// DealId The deal whose link to the activity is judged.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// DealRelevance `relevant` says the activity is about the deal; `unrelated` says it is not.
+	DealRelevance SetActivityDealRelevanceRequestDealRelevance `json:"deal_relevance"`
+}
+
+// SetActivityDealRelevanceRequestDealRelevance `relevant` says the activity is about the deal; `unrelated` says it is not.
+type SetActivityDealRelevanceRequestDealRelevance string
 
 // SetActivityDispositionRequest defines model for SetActivityDispositionRequest.
 type SetActivityDispositionRequest struct {
@@ -65411,7 +68645,8 @@ type SetMailHistoryBaselineRequest struct {
 	Timezone *string `json:"timezone,omitempty"`
 }
 
-// SetMailPostureRequest What one mailbox asks of the mail it brings in.
+// SetMailPostureRequest What one mailbox asks of the mail it brings in, and whether new mail goes out from it.
+// Send `posture`, `default_sender`, or both; a body with neither is refused with 422.
 type SetMailPostureRequest struct {
 	// ApplyToHistory Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
 	// narrows: a move towards `shared` leaves history where it is, because opening what was
@@ -65419,8 +68654,14 @@ type SetMailPostureRequest struct {
 	// human set to `selected` are never touched.
 	ApplyToHistory *bool `json:"apply_to_history,omitempty"`
 
+	// DefaultSender `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
+	// one that was. A reply still goes out from the mailbox the conversation arrived in.
+	// `false` is ignored: a member always has a default, the first connected when none is
+	// marked.
+	DefaultSender *bool `json:"default_sender,omitempty"`
+
 	// Posture See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
-	Posture SetMailPostureRequestPosture `json:"posture"`
+	Posture *SetMailPostureRequestPosture `json:"posture,omitempty"`
 }
 
 // SetMailPostureRequestPosture See CaptureConnection.mail_posture. `shared` needs the workspace opt-in.
@@ -65576,6 +68817,9 @@ type SettingsAvailability struct {
 
 	// Reporting Whether reporting is enabled in this installation.
 	Reporting *bool `json:"reporting,omitempty"`
+
+	// VatRegister True when this installation consults the EU VAT register, so `POST /companies/{id}/vat-check` can queue a check. Absent or false means that request answers 404, and a client offers no check.
+	VatRegister *bool `json:"vat_register,omitempty"`
 }
 
 // SettleClaimRequest How a claim finished.
@@ -65620,8 +68864,12 @@ type ShareCompanyContactsRequestSubjectType string
 
 // ShareCompanyContactsResult defines model for ShareCompanyContactsResult.
 type ShareCompanyContactsResult struct {
-	Shared  int `json:"shared" minimum:"0"`
-	Skipped int `json:"skipped" minimum:"0"`
+	// LimitedByRole Present, and true, only when at least one grant was written and the share asked for `write`
+	// while the user's role can neither change contacts nor create activities, so the grants were
+	// saved as `read`.
+	LimitedByRole *bool `json:"limited_by_role,omitempty"`
+	Shared        int   `json:"shared" minimum:"0"`
+	Skipped       int   `json:"skipped" minimum:"0"`
 }
 
 // SharedForecastView What one caller reads through a share.
@@ -65693,6 +68941,9 @@ type SharedMailbox struct {
 	// ReaderTeamId The team that reads every message this mailbox captured.
 	ReaderTeamId openapi_types.UUID  `json:"reader_team_id"`
 	Status       SharedMailboxStatus `json:"status"`
+
+	// UnreadPeriod A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none.
+	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
 }
 
 // SharedMailboxMailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the workspace.
@@ -65840,7 +69091,7 @@ type SignalEvidence struct {
 	// extension files a signal. A request that carries it is refused.
 	Fields *map[string]interface{} `json:"fields,omitempty"`
 
-	// LifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+	// LifecycleScope Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
 	LifecycleScope *SignalEvidenceLifecycleScope `json:"lifecycle_scope,omitempty"`
 
 	// Provenance Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
@@ -65859,7 +69110,7 @@ type SignalEvidence struct {
 // SignalEvidenceCommercialRole The commercial role supported by the cited source, independent of recipient order.
 type SignalEvidenceCommercialRole string
 
-// SignalEvidenceLifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+// SignalEvidenceLifecycleScope Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
 type SignalEvidenceLifecycleScope string
 
 // SignalEvidenceSourceType defines model for SignalEvidence.SourceType.
@@ -66451,6 +69702,12 @@ type StatedAmount struct {
 	Currency    string `json:"currency"`
 }
 
+// StatedCountry defines model for StatedCountry.
+type StatedCountry struct {
+	// Country An ISO 3166-1 alpha-2 code, or null for a country the sender cleared.
+	Country *string `json:"country"`
+}
+
 // SubscriptionConfirmationPage The answer for a consent link: one named subscription and the contact's current answer to it.
 //
 // Deliberately carries NOTHING about the record. The mail said "confirm this subscription", and
@@ -66460,8 +69717,11 @@ type StatedAmount struct {
 type SubscriptionConfirmationPage struct {
 	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
 	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
-	Controller *PrivacyInformationController    `json:"controller,omitempty"`
-	Kind       SubscriptionConfirmationPageKind `json:"kind"`
+	Controller *PrivacyInformationController `json:"controller,omitempty"`
+
+	// Frequency How often the purpose's mail goes out, roughly. The subscription question states it.
+	Frequency *ConsentPurposeFrequency         `json:"frequency,omitempty"`
+	Kind      SubscriptionConfirmationPageKind `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
@@ -66714,7 +69974,7 @@ type Team struct {
 	CreatedAt  *time.Time         `json:"created_at,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 
-	// MemberCount Active memberships; populated by listTeams.
+	// MemberCount Active and invited memberships; populated by listTeams.
 	MemberCount  *int                `json:"member_count,omitempty"`
 	Name         string              `json:"name"`
 	ParentTeamId *openapi_types.UUID `json:"parent_team_id,omitempty"`
@@ -66898,8 +70158,11 @@ type TeamMarginceChangeGroup struct {
 	// before Margince kept the amount it was valued from.
 	Unvalued int `json:"unvalued"`
 
-	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing.
+	// ValueBaseMinor The changed deals' value in the base currency, in minor units. Deals with no amount or rate add nothing, and `value_coverage` counts them.
 	ValueBaseMinor int64 `json:"value_base_minor"`
+
+	// ValueCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	ValueCoverage *ReportRowCoverage `json:"value_coverage,omitempty"`
 
 	// ValueMovedBaseMinor How much value these changes moved, in the base currency's minor units. Each deal's
 	// changes of this kind net out first and the group adds the size of each net move.
@@ -67203,10 +70466,14 @@ type TeamWeeklyReview struct {
 	// from age out under retention.
 	Outlook *[]WeeklyReviewOutlook `json:"outlook,omitempty"`
 
-	// Pipeline What the team's week did to the pipeline. ABSENT when any member's week could not
-	// be converted — summing only the ones that did would be a confident number quietly
-	// missing a rep.
+	// Pipeline What the team's week did to the pipeline: the members' figures added together. ABSENT when
+	// a member's week is unread or has a figure no deal converts into, or members differ in
+	// currency. `pipeline_coverage` adds the members' gaps, and is absent when any member's
+	// review was frozen before it said what it leaves out.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// PipelineCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	PipelineCoverage *ReportRowCoverage `json:"pipeline_coverage,omitempty"`
 
 	// Quality How well the team kept the CRM over the week, frozen with it. A figure is absent on a
 	// snapshot frozen before it was measured, which is not zero.
@@ -67600,13 +70867,32 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record. `restore_archiver_required` refuses undoing an archive to a caller who may edit the record but holds no delete grant, when someone else made the archive: only the colleague who archived it, or a delete holder, may bring it back.
 type UndoabilityReason string
+
+// UnroutedMailAddress defines model for UnroutedMailAddress.
+type UnroutedMailAddress struct {
+	Address string `json:"address"`
+
+	// Messages Messages in your mailbox sent to this address.
+	Messages int `json:"messages"`
+}
+
+// UnroutedMailResponse defines model for UnroutedMailResponse.
+type UnroutedMailResponse struct {
+	Data []UnroutedMailAddress `json:"data"`
+
+	// Messages Messages counted once each, however many listed addresses they name.
+	Messages int `json:"messages"`
+
+	// More True when the list is cut: at most 50 addresses are listed, from the newest 5000 messages.
+	More bool `json:"more"`
+}
 
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
 type UpdateAcquisitionSourceRequest struct {
@@ -67649,10 +70935,10 @@ type UpdateActivityRequest struct {
 	// moment a human actually knows the answer — the meeting is over — was the one
 	// moment the API could not be told.
 	//
-	// An omitted field is unchanged, like every other field on this patch. Sending
-	// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-	// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-	// wrong outcome is fixed by sending the right one.
+	// An omitted field is unchanged, like every other field on this patch. An explicit
+	// `null` removes the status, so the meeting is unanswered again; that is how a
+	// recorded outcome is taken back. A meeting held by a live calendar invitation
+	// refuses it like any status other than `held` or `no_show`.
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
@@ -67683,15 +70969,17 @@ type UpdateActivityRequestCallOutcome string
 // moment a human actually knows the answer — the meeting is over — was the one
 // moment the API could not be told.
 //
-// An omitted field is unchanged, like every other field on this patch. Sending
-// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-// wrong outcome is fixed by sending the right one.
+// An omitted field is unchanged, like every other field on this patch. An explicit
+// `null` removes the status, so the meeting is unanswered again; that is how a
+// recorded outcome is taken back. A meeting held by a live calendar invitation
+// refuses it like any status other than `held` or `no_show`.
 type UpdateActivityRequestMeetingStatus string
 
-// UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
+// UpdateActivityReviewTemplateRequest Every field but `version` is optional; an omitted one is left alone.
 type UpdateActivityReviewTemplateRequest struct {
-	Questions []ReviewQuestion `json:"questions"`
+	// Active false retires the template; true makes it the one its outcome asks.
+	Active    *bool             `json:"active,omitempty"`
+	Questions *[]ReviewQuestion `json:"questions,omitempty"`
 
 	// Version Last read template version.
 	Version int64 `json:"version" minimum:"1"`
@@ -67756,6 +71044,9 @@ type UpdateCaptureSettingsRequest struct {
 	// AutoEnrichDailyCap Set the daily ceiling on automatic website reads.
 	AutoEnrichDailyCap *int `json:"auto_enrich_daily_cap,omitempty" maximum:"20000" minimum:"1"`
 
+	// ClassifyPassCap Set how many captured messages one labelling run settles.
+	ClassifyPassCap *int `json:"classify_pass_cap,omitempty" maximum:"2500" minimum:"1"`
+
 	// ConfidentialityPassCap Set how many held mail threads one confidentiality pass judges.
 	ConfidentialityPassCap *int `json:"confidentiality_pass_cap,omitempty" maximum:"200" minimum:"1"`
 
@@ -67767,6 +71058,9 @@ type UpdateCaptureSettingsRequest struct {
 
 	// MailSyncIntervalSeconds Set how long a mailbox waits between syncs, in seconds.
 	MailSyncIntervalSeconds *int `json:"mail_sync_interval_seconds,omitempty" maximum:"3600" minimum:"30"`
+
+	// OwedClassifyPassCap Set how many new messages one owed-reply run judges.
+	OwedClassifyPassCap *int `json:"owed_classify_pass_cap,omitempty" maximum:"2500" minimum:"1"`
 
 	// SharedPostureAllowed Allow a seat to put their mailbox in the `shared` posture. Off by default; see CaptureSettings.shared_posture_allowed for what turning it on asserts.
 	SharedPostureAllowed *bool `json:"shared_posture_allowed,omitempty"`
@@ -67782,6 +71076,9 @@ type UpdateCaptureSettingsRequest struct {
 
 	// SiteReadWallSeconds Set the time limit of one website crawl, in seconds.
 	SiteReadWallSeconds *int `json:"site_read_wall_seconds,omitempty" maximum:"600" minimum:"30"`
+
+	// VerdictPassCap Set how many unresolved senders one counterparty verdict run judges.
+	VerdictPassCap *int `json:"verdict_pass_cap,omitempty" maximum:"1000" minimum:"1"`
 }
 
 // UpdateCompanyFactRequest The correction path the fact store never had — without it the page can render a confirmed state nothing is able to produce.
@@ -67807,7 +71104,7 @@ type UpdateCompanyRequest struct {
 
 	// Description A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
 	Description *string `json:"description,omitempty"`
-	DisplayName *string `json:"display_name,omitempty"`
+	DisplayName *string `json:"display_name,omitempty" singleline:"true"`
 
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
@@ -67820,7 +71117,7 @@ type UpdateCompanyRequest struct {
 
 	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry  *string `json:"industry,omitempty"`
-	LegalName *string `json:"legal_name,omitempty"`
+	LegalName *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched. `live` (the agreed first scope is in use) is accepted only from a signed-in user; any other caller gets 422 `lifecycle_live_needs_a_human`.
 	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
@@ -67911,9 +71208,12 @@ type UpdateContactRequest struct {
 	// here. Sending an empty array removes them all, which is a real answer — a
 	// contact who no longer has a working address is a fact worth recording.
 	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName *string              `json:"first_name,omitempty"`
-	FullName  *string              `json:"full_name,omitempty"`
-	LastName  *string              `json:"last_name,omitempty"`
+	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
+	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
+
+	// GreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+	GreetingRegister *UpdateContactRequestGreetingRegister `json:"greeting_register,omitempty"`
+	LastName         *string                               `json:"last_name,omitempty" singleline:"true"`
 
 	// LinkedinUrl The contact's LinkedIn profile link (https://www.linkedin.com/in/<name>). Writes the same stored value as `social.linkedin`; null or "" removes it. A request naming both with different profiles is refused with 422 `linkedin_url_conflicts_with_social`.
 	LinkedinUrl *string             `json:"linkedin_url,omitempty"`
@@ -67937,7 +71237,7 @@ type UpdateContactRequest struct {
 
 	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
 	Social *map[string]interface{} `json:"social,omitempty"`
-	Title  *string                 `json:"title,omitempty"`
+	Title  *string                 `json:"title,omitempty" singleline:"true"`
 
 	// Visibility Who may see this contact: `workspace` for everyone in the company,
 	// `owner` for the contact named by `owner_id` alone.
@@ -67963,6 +71263,9 @@ type UpdateContactRequest struct {
 	Visibility           *UpdateContactRequestVisibility `json:"visibility,omitempty"`
 	AdditionalProperties map[string]interface{}          `json:"-"`
 }
+
+// UpdateContactRequestGreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+type UpdateContactRequestGreetingRegister string
 
 // UpdateContactRequestRelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 type UpdateContactRequestRelationshipMark string
@@ -68129,7 +71432,7 @@ type UpdateDealRequest struct {
 
 	// LostReason Refused 422 `set_by_advance`; the reason travels with the advance to a lost stage.
 	LostReason *string             `json:"lost_reason,omitempty"`
-	Name       *string             `json:"name,omitempty"`
+	Name       *string             `json:"name,omitempty" singleline:"true"`
 	OwnerId    *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// PartnerAttribution `sourced` or `influenced`. Naming a partner without this field attributes the deal `sourced`; an attribution for a deal naming no partner is refused 422.
@@ -68549,7 +71852,7 @@ type UpdateLeadOriginRequest struct {
 
 	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent    *LeadSourceIntent `json:"intent,omitempty"`
-	Label     *string           `json:"label,omitempty"`
+	Label     *string           `json:"label,omitempty" singleline:"true"`
 	SortOrder *int              `json:"sort_order,omitempty"`
 }
 
@@ -68560,9 +71863,9 @@ type UpdateLeadOriginRequest struct {
 type UpdateLeadRequest struct {
 	// CandidateCompanyKey Loose ABM routing key. Format: lowercased registrable domain when known (`acme.com`), else a slug of company_name. Never a company FK.
 	CandidateCompanyKey *string              `json:"candidate_company_key,omitempty"`
-	CompanyName         *string              `json:"company_name,omitempty"`
+	CompanyName         *string              `json:"company_name,omitempty" singleline:"true"`
 	Email               *openapi_types.Email `json:"email,omitempty"`
-	FullName            *string              `json:"full_name,omitempty"`
+	FullName            *string              `json:"full_name,omitempty" singleline:"true"`
 
 	// Industry An industry code, or text the server maps to one, as it maps a company's industry. Text that names no code is `422` `not_a_known_value`. Null clears it.
 	Industry *string `json:"industry,omitempty"`
@@ -68609,7 +71912,7 @@ type UpdateLeadRequest struct {
 
 	// Status A human may place an open lead on any open step, forwards or back; the system only ever moves forwards.
 	Status               *UpdateLeadRequestStatus `json:"status,omitempty"`
-	Title                *string                  `json:"title,omitempty"`
+	Title                *string                  `json:"title,omitempty" singleline:"true"`
 	AdditionalProperties map[string]interface{}   `json:"-"`
 }
 
@@ -68641,7 +71944,7 @@ type UpdateLeadSourceRequest struct {
 
 	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent    *LeadSourceIntent `json:"intent,omitempty"`
-	Label     *string           `json:"label,omitempty"`
+	Label     *string           `json:"label,omitempty" singleline:"true"`
 	SortOrder *int              `json:"sort_order,omitempty"`
 }
 
@@ -68653,10 +71956,13 @@ type UpdateLegalEntityRequest struct {
 	Bic               *string             `json:"bic,omitempty"`
 	Country           *string             `json:"country,omitempty"`
 	DefaultLanguage   *string             `json:"default_language,omitempty"`
-	DisplayName       *string             `json:"display_name,omitempty"`
+	DisplayName       *string             `json:"display_name,omitempty" singleline:"true"`
 	Iban              *string             `json:"iban,omitempty"`
 	Imprint           *string             `json:"imprint,omitempty"`
-	LegalName         *string             `json:"legal_name,omitempty"`
+
+	// Jurisdiction One of `available` of `/installation/jurisdiction`. The default entity refuses it.
+	Jurisdiction *string `json:"jurisdiction,omitempty"`
+	LegalName    *string `json:"legal_name,omitempty" singleline:"true"`
 
 	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
 	// The default entity's offering is the company profile, so these stay null there and a write to
@@ -68774,7 +72080,7 @@ type UpdateOfferTemplateRequest struct {
 	IsDefault bool                   `json:"is_default"`
 	Layout    map[string]interface{} `json:"layout"`
 	Locale    string                 `json:"locale"`
-	Name      string                 `json:"name"`
+	Name      string                 `json:"name" singleline:"true"`
 }
 
 // UpdatePartnerStageRequest defines model for UpdatePartnerStageRequest.
@@ -68812,12 +72118,12 @@ type UpdateProductRequest struct {
 	Currency       *string                            `json:"currency,omitempty"`
 	DefaultTaxRate *float64                           `json:"default_tax_rate,omitempty" minimum:"0"`
 	Description    *string                            `json:"description,omitempty"`
-	Name           *string                            `json:"name,omitempty"`
-	Sku            *string                            `json:"sku,omitempty"`
+	Name           *string                            `json:"name,omitempty" singleline:"true"`
+	Sku            *string                            `json:"sku,omitempty" singleline:"true"`
 
 	// TaxCategory Which tax rate the product takes. Omit to leave it unchanged; send null to say nobody has classified it.
 	TaxCategory    *UpdateProductRequestTaxCategory `json:"tax_category,omitempty"`
-	Unit           *string                          `json:"unit,omitempty"`
+	Unit           *string                          `json:"unit,omitempty" singleline:"true"`
 	UnitPriceMinor *int64                           `json:"unit_price_minor,omitempty" minimum:"0"`
 }
 
@@ -68841,7 +72147,7 @@ type UpdateProductRequestTaxCategory string
 type UpdateProjectRequest struct {
 	Description          *string                `json:"description,omitempty"`
 	EndedAt              *openapi_types.Date    `json:"ended_at,omitempty"`
-	Name                 *string                `json:"name,omitempty"`
+	Name                 *string                `json:"name,omitempty" singleline:"true"`
 	OwnerId              *openapi_types.UUID    `json:"owner_id,omitempty"`
 	StartedAt            *openapi_types.Date    `json:"started_at,omitempty"`
 	TargetEndDate        *openapi_types.Date    `json:"target_end_date,omitempty"`
@@ -68926,7 +72232,7 @@ type UpdateRoleRequestRowScope string
 
 // UpdateSavedViewRequest A partial update; omitted fields keep their stored value.
 type UpdateSavedViewRequest struct {
-	Name  *string                 `json:"name,omitempty"`
+	Name  *string                 `json:"name,omitempty" singleline:"true"`
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 
@@ -69022,7 +72328,7 @@ type UpdateStageRequestSemantic string
 type UpdateTagRequest struct {
 	Color       *UpdateTagRequestColor `json:"color,omitempty"`
 	Description *string                `json:"description,omitempty"`
-	Name        *string                `json:"name,omitempty"`
+	Name        *string                `json:"name,omitempty" singleline:"true"`
 
 	// Suggestible Turns suggestions of this tag on or off. Turning them on needs a description, sent here or already held.
 	Suggestible *bool `json:"suggestible,omitempty"`
@@ -69233,6 +72539,9 @@ type UserHandoverResult struct {
 	// Left Live records per kind.
 	Left HandoverCounts `json:"left"`
 
+	// MailDraftDiscarded The member's saved drafts deleted because the receiver already had a draft in the same place.
+	MailDraftDiscarded int `json:"mail_draft_discarded" minimum:"0"`
+
 	// Moved Live records per kind.
 	Moved HandoverCounts `json:"moved"`
 }
@@ -69329,11 +72638,13 @@ type VCardImportResult struct {
 	// stays in `superseded_value`, and a field a human corrected stands.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-	// `skipped` — the card states no name, carries a sending system's address, or matches a
-	// contact the caller may not write; `reason` says which.
+	// `skipped` — the card states no name or one over 120 characters, carries a sending
+	// system's address, holds a value that is not readable text or cannot be stored, or
+	// matches a contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
-	// Reason Why a card was skipped, in words a reader can act on.
+	// Reason Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+	// card's title was cut to the length the field holds.
 	Reason *string `json:"reason,omitempty"`
 }
 
@@ -69342,9 +72653,48 @@ type VCardImportResult struct {
 // stays in `superseded_value`, and a field a human corrected stands.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-// `skipped` — the card states no name, carries a sending system's address, or matches a
-// contact the caller may not write; `reason` says which.
+// `skipped` — the card states no name or one over 120 characters, carries a sending
+// system's address, holds a value that is not readable text or cannot be stored, or
+// matches a contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
+
+// VacuumRecommendation defines model for VacuumRecommendation.
+type VacuumRecommendation struct {
+	// Owner The database role that owns the table. Only it can run the statement.
+	Owner  string `json:"owner"`
+	Schema string `json:"schema"`
+
+	// Statement The statement to run, with the names quoted.
+	Statement string `json:"statement"`
+	Table     string `json:"table"`
+
+	// TableBytes The size of the table's file at its last `VACUUM` or `ANALYZE`, without its indexes or TOAST.
+	TableBytes int `json:"table_bytes"`
+
+	// WasteBytes The estimated space in that file that holds no live row.
+	WasteBytes int `json:"waste_bytes"`
+
+	// WastePercent `waste_bytes` as a whole percent of `table_bytes`, rounded down.
+	WastePercent int `json:"waste_percent"`
+}
+
+// VacuumRecommendations The tables a full vacuum would shrink by enough to be worth a maintenance window. Sizes are
+// estimates from the statistics the database keeps for its query planner.
+type VacuumRecommendations struct {
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// MinWasteBytes The smallest empty space, in bytes, for a table to be listed.
+	MinWasteBytes int `json:"min_waste_bytes"`
+
+	// MinWastePercent The smallest share of a table's file, in percent, that must be empty for it to be listed.
+	MinWastePercent int `json:"min_waste_percent"`
+
+	// Tables The tables over both thresholds, most empty space first.
+	Tables []VacuumRecommendation `json:"tables"`
+
+	// UnmeasuredTables Tables large enough to qualify that have no statistics yet, so no estimate.
+	UnmeasuredTables int `json:"unmeasured_tables"`
+}
 
 // VoiceBuild defines model for VoiceBuild.
 type VoiceBuild struct {
@@ -69816,7 +73166,7 @@ type WebFormCreated struct {
 	// and `tally` one this installation minted when none was.
 	Sender WebFormSender `json:"sender"`
 
-	// SigningSecret The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
+	// SigningSecret The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent.
 	SigningSecret  *string             `json:"signing_secret,omitempty"`
 	State          WebFormCreatedState `json:"state"`
 	SuccessMessage *string             `json:"success_message,omitempty"`
@@ -70298,6 +73648,8 @@ type WeeklyLearningCitationSubjectType string
 
 // WeeklyNumericSummary Versioned Analytics definitions frozen with a Weekly review; absent on legacy snapshots.
 type WeeklyNumericSummary struct {
+	// BookingsCoverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
 	BookingsCoverage ReportingCoverage `json:"bookings_coverage"`
 	Currency         string            `json:"currency"`
 	EvaluatedAt      time.Time         `json:"evaluated_at"`
@@ -70305,12 +73657,15 @@ type WeeklyNumericSummary struct {
 	// FigureCoverage Whether each figure family on the review was measured over the week, by the source
 	// that feeds it. Absent on a review frozen before figures carried their coverage; such a
 	// review states no coverage either way. A family missing here has no coverage statement.
-	FigureCoverage   *WeeklyFigureCoverageSet `json:"figure_coverage,omitempty"`
-	Interval         ReportingWindow          `json:"interval"`
-	MeetingsCoverage ReportingCoverage        `json:"meetings_coverage"`
-	Timezone         string                   `json:"timezone"`
-	Version          string                   `json:"version"`
-	WonMinor         *int64                   `json:"won_minor,omitempty"`
+	FigureCoverage *WeeklyFigureCoverageSet `json:"figure_coverage,omitempty"`
+	Interval       ReportingWindow          `json:"interval"`
+
+	// MeetingsCoverage How much of the population the figure could be computed for. A `partial` reading with a
+	// `priced_count` of 0 priced nothing, so its figure is not one to report.
+	MeetingsCoverage ReportingCoverage `json:"meetings_coverage"`
+	Timezone         string            `json:"timezone"`
+	Version          string            `json:"version"`
+	WonMinor         *int64            `json:"won_minor,omitempty"`
 }
 
 // WeeklyPlan One rep's week as they meant it to go — the forward counterpart to the frozen
@@ -70498,12 +73853,16 @@ type WeeklyReview struct {
 	// Pipeline What the week did to the pipeline, in the installation's base currency at the rate that
 	// applied when the review was written.
 	//
-	// ABSENT when the week held a deal that could not be converted — an open deal freezes no
-	// rate, so a currency with no usable rate makes the whole figure unanswerable. A total
-	// covering three of four deals would be a confident number that is quietly short, and
-	// nothing is ever converted at an invented rate of 1. Absent is also the answer when the
-	// installation names no base currency.
+	// Each figure adds the deals that convert. ABSENT when no deal of one of the three figures
+	// converts, or when the installation names no base currency. Nothing is ever converted at an
+	// invented rate of 1.
+	//
+	// `pipeline_coverage` says how many deals the figures leave out, by cause, and which
+	// currencies have no rate. It is absent for a review frozen before it said so.
 	Pipeline *WeeklyReviewPipeline `json:"pipeline,omitempty"`
+
+	// PipelineCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	PipelineCoverage *ReportRowCoverage `json:"pipeline_coverage,omitempty"`
 
 	// Prior The same rep's previous review, so a reader can see what CHANGED rather than only what
 	// happened. Absent for their first week.
@@ -70847,7 +74206,9 @@ type WeeklyScorecardDealBlock struct {
 	// stage: a median of nothing is absent, never zero.
 	MedianDaysInStage *int `json:"median_days_in_stage,omitempty" minimum:"0"`
 
-	// MultiThreaded Open deals with at least two distinct contacts in the last 30 days. Thirty rather than
+	// MultiThreaded Open deals with more distinct contacts in the last 30 days than the published
+	// `account_coverage.max_engaged_seats` allows a single-threaded deal (default: two or
+	// more), as of when the week was frozen. Thirty rather than
 	// the review's own week: the risk measured is the single point of failure, and a deal
 	// worked steadily for a month is multi-threaded whether or not the second contact
 	// happened to appear in these seven days.
@@ -71137,8 +74498,9 @@ type Worklist struct {
 	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
 	OptionalRelationshipsMoreAvailable *bool `json:"optional_relationships_more_available,omitempty"`
 
-	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-	// due commitments were read across the team roster. Absent under every other scope.
+	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+	// Both read the due commitments across the reader's team roster, the reader included.
+	// Absent under every other scope.
 	//
 	// It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 	// could not be read contributes no rows, and without this a lead would read their
@@ -71192,7 +74554,7 @@ type Worklist struct {
 	ScopeTruncated *bool `json:"scope_truncated,omitempty"`
 
 	// ServedStale True when this answer is Home's kept answer past its five-minute freshness,
-	// served while the server reads it again. It still holds every access rule the
+	// or older than the reader's own latest write, served while the server reads it again. It still holds every access rule the
 	// fresh read would apply. A client asks again a few seconds later for the fresh
 	// answer. Absent or false means the answer is fresh.
 	ServedStale *bool `json:"served_stale,omitempty"`
@@ -71547,6 +74909,8 @@ type WorklistCount struct {
 	// Total The exact number of admitted items in this category for this read's scope and
 	// owner. Absent when that population has not been counted exactly; a client then
 	// reads `considered` with `more_available` as today. Absent never means zero.
+	// For `decisions` it counts only what this reader can settle, as the readings'
+	// `review` does, so a duplicate pair without verbs is left out.
 	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
@@ -71723,9 +75087,12 @@ type WorklistItem struct {
 	// scanning for "what must happen now" should not have to know which levels mean that.
 	//
 	// Derived from the level and the row's own subject, so it cannot disagree with the order:
-	// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-	// interleave prospecting and deal follow-up. A client
-	// draws a heading when the band changes and never re-sorts.
+	// the queue arrives already sorted, and across the pages of one walk a band never comes
+	// back once a later band has started. `more` heads the rows past the ranked top, which a
+	// walk reaches after every ranked row. They follow each store's own date order, are not
+	// ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+	// `due_group` still say what each one is. A client draws a heading when the band changes
+	// and never re-sorts.
 	Band *WorklistItemBand `json:"band,omitempty"`
 
 	// Batch A group of routine decisions that read alike, standing on the queue as one row.
@@ -71911,7 +75278,7 @@ type WorklistItem struct {
 	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
 	DueGroup *WorklistItemDueGroup `json:"due_group,omitempty"`
 
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
@@ -71919,6 +75286,10 @@ type WorklistItem struct {
 
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
+	// EffectFailureCode On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+	// language. `detail` keeps the English sentence.
+	EffectFailureCode *string `json:"effect_failure_code,omitempty"`
 
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -72129,9 +75500,12 @@ type WorklistItemActions string
 // scanning for "what must happen now" should not have to know which levels mean that.
 //
 // Derived from the level and the row's own subject, so it cannot disagree with the order:
-// the queue arrives already sorted. Agreed-work bands may recur as deadlines and value
-// interleave prospecting and deal follow-up. A client
-// draws a heading when the band changes and never re-sorts.
+// the queue arrives already sorted, and across the pages of one walk a band never comes
+// back once a later band has started. `more` heads the rows past the ranked top, which a
+// walk reaches after every ranked row. They follow each store's own date order, are not
+// ranked against each other, and carry no `above_next`; their `level`, `urgent` and
+// `due_group` still say what each one is. A client draws a heading when the band changes
+// and never re-sorts.
 type WorklistItemBand string
 
 // WorklistItemBriefActions defines model for WorklistItem.BriefActions.
@@ -72182,7 +75556,7 @@ type WorklistItemDestination string
 type WorklistItemDispositions string
 
 // WorklistItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
 type WorklistItemDueGroup string
 
 // WorklistItemPrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
@@ -72268,6 +75642,13 @@ type WorklistMove struct {
 	// `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 	// sends the reader to reauthorize a source that stopped answering.
 	//
+	// `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+	// one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+	// `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+	// deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+	// requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+	// when one of those facts changes.
+	//
 	// `none` is a producer's answer that there is nothing to do — a closed deal has
 	// no next step. It is a member of this enum so a producer that computes one has
 	// a word for it, but NO row carries it: a step of "nothing" and no step at all
@@ -72310,6 +75691,9 @@ type WorklistMove struct {
 	// No mailbox identity, credential, cursor or colleague account travels.
 	MailCoverage *MailCaptureCoverage `json:"mail_coverage,omitempty"`
 
+	// Reason One sentence saying why this move is offered. Carried by `bring_in_manager`, whose reasons are facts about the deal; the other verbs leave it absent and the row's own reason stands.
+	Reason *string `json:"reason,omitempty"`
+
 	// Recommendation The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 	Recommendation *RecommendationReceipt `json:"recommendation,omitempty"`
 }
@@ -72323,6 +75707,13 @@ type WorklistMove struct {
 // `draft_email` opens a new message, `create_task` agrees a next step,
 // `open_task` opens existing work, `open_meeting_brief` reads the brief before a booked meeting, and `reconnect`
 // sends the reader to reauthorize a source that stopped answering.
+//
+// `bring_in_manager` asks the team's manager to look at a deal that is above the team's median value, has
+// one engaged contact, or is stuck in its stage. `arguments` is `{deal_id, reasons}`; accepting posts them to
+// `POST /deals/{id}/manager-request`, which puts the deal on the managers' focus list. `reason` says why the
+// deal qualifies. It is offered only where the deal owner has a team manager, the deal is not already
+// requested, and the deal's own next step is a generic one. A reader who sets it aside sees it again only
+// when one of those facts changes.
 //
 // `none` is a producer's answer that there is nothing to do — a closed deal has
 // no next step. It is a member of this enum so a producer that computes one has
@@ -72393,8 +75784,9 @@ type WorklistPinRequest struct {
 	Source string `json:"source"`
 }
 
-// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-// due commitments were read across the team roster. Absent under every other scope.
+// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+// Both read the due commitments across the reader's team roster, the reader included.
+// Absent under every other scope.
 //
 // It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 // could not be read contributes no rows, and without this a lead would read their
@@ -72574,10 +75966,12 @@ type WorklistReadings struct {
 	// them as one row — the strip says how much work there is, and the queue says
 	// how much reading it costs.
 	//
-	// Only rows carrying a verb the reader may press. A duplicate pair whose two
-	// records the reader cannot both write is somebody else's decision, and
-	// counting it here tells them a contact is waiting on an answer they are not
-	// able to give.
+	// The same population as the `decisions` count's `total`, and that total
+	// wherever it is stated, so Home and the Worklist read one number. An approval
+	// requested of the reader counts also while its preview is stale, not ready or
+	// blocked by a conflict: the reader can refresh it. Any other row counts only
+	// where it carries a verb the reader may press. A duplicate pair whose two
+	// records the reader cannot both write is somebody else's decision.
 	Review int `json:"review" minimum:"0"`
 
 	// SoonestLeadDue When the nearest open task on a lead is due, over every task this read weighed.
@@ -72834,9 +76228,10 @@ type WorkspaceQueryResult struct {
 }
 
 // WrittenBy Which writer produced a piece of generated prose. `model` — the configured model
-// lane. `deterministic` — the structured fallback, used when no lane is configured
-// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-// reader deciding how much to trust a sentence needs to know which wrote it.
+// lane. `deterministic` — the structured fallback, used when no lane is configured,
+// the workspace's AI budget is exhausted, the model call fails, or the checks the
+// surface runs refuse the model's answer. Never silently interchangeable: a reader
+// deciding how much to trust a sentence needs to know which wrote it.
 type WrittenBy string
 
 // AiWritten defines model for AiWritten.
@@ -72860,11 +76255,17 @@ type AnchorRecordType string
 // ApprovalToken defines model for ApprovalToken.
 type ApprovalToken = string
 
+// AssetRevision defines model for AssetRevision.
+type AssetRevision = string
+
 // BriefProjectId defines model for BriefProjectId.
 type BriefProjectId = openapi_types.UUID
 
 // BundleId defines model for BundleId.
 type BundleId = openapi_types.UUID
+
+// CaptureConnectionId defines model for CaptureConnectionId.
+type CaptureConnectionId = openapi_types.UUID
 
 // CaptureProvider defines model for CaptureProvider.
 type CaptureProvider string
@@ -72923,6 +76324,12 @@ type Conflict = Problem
 // ControllerMailRefused RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type ControllerMailRefused = Problem
 
+// FileForbidden RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type FileForbidden = Problem
+
+// FileNotFound RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type FileNotFound = Problem
+
 // Forbidden RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Forbidden = Problem
 
@@ -72943,6 +76350,10 @@ type RetentionHeld = Problem
 
 // RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RoleCannotCapture = Problem
+
+// SendRefused A problem body whose `details` describe a refused send and the review it opened.
+// The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+type SendRefused = SendRefusal
 
 // SendValidationError RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type SendValidationError = Problem
@@ -72979,13 +76390,18 @@ type CreateAcquisitionSourceParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73010,13 +76426,18 @@ type UpdateAcquisitionSourceParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73122,13 +76543,18 @@ type LogActivityParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73161,13 +76587,18 @@ type RelinkActivitiesParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73185,13 +76616,18 @@ type RelinkThreadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73225,13 +76661,18 @@ type UpdateActivityParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73308,13 +76749,18 @@ type RelinkActivityParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73342,13 +76788,18 @@ type SendEmailParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73374,13 +76825,18 @@ type SendMessageParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73399,6 +76855,35 @@ type SendMessageParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// CreateActivityReviewTemplateParams defines parameters for CreateActivityReviewTemplate.
+type CreateActivityReviewTemplateParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // GetAutomaticWorkHealthParams defines parameters for GetAutomaticWorkHealth.
@@ -73611,13 +77096,18 @@ type RecordSalesDecisionParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73861,6 +77351,35 @@ type ListReportingReportsParams struct {
 	Scheduled *bool `form:"scheduled,omitempty" json:"scheduled,omitempty"`
 }
 
+// CreateReportingReportParams defines parameters for CreateReportingReport.
+type CreateReportingReportParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // UpdateReportingReportParams defines parameters for UpdateReportingReport.
 type UpdateReportingReportParams struct {
 	IfMatch string `json:"If-Match"`
@@ -73960,13 +77479,18 @@ type SaveSalesGoalDraftParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -73986,13 +77510,18 @@ type PublishSalesGoalPlanParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74184,13 +77713,18 @@ type ApproveApprovalParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74219,13 +77753,18 @@ type UpdateRecordAssignmentParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74270,6 +77809,11 @@ type UploadAttachmentMultipartBody struct {
 
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.
 type UploadAttachmentMultipartBodyEntityType string
+
+// PreviewAttachmentLinkJSONBody defines parameters for PreviewAttachmentLink.
+type PreviewAttachmentLinkJSONBody struct {
+	Url string `json:"url"`
+}
 
 // GetAttachmentExtractionParams defines parameters for GetAttachmentExtraction.
 type GetAttachmentExtractionParams struct {
@@ -74444,13 +77988,18 @@ type BookMeetingParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74468,13 +78017,18 @@ type ExecuteBulkChangeParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74492,13 +78046,18 @@ type UndoBulkChangeParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74578,6 +78137,17 @@ type KeepDomainQuestionJSONBody struct {
 type PurgeCaptureExclusionParams struct {
 	// Preview Report what would be destroyed and change nothing.
 	Preview *bool `form:"preview,omitempty" json:"preview,omitempty"`
+
+	// ExpectDestroyed The `destroyed` count a preview showed. With the two below, it binds the purge to what the
+	// caller saw: when the current selection differs, nothing is destroyed and the answer is 409.
+	// Send all three or none; ignored on a preview.
+	ExpectDestroyed *int `form:"expect_destroyed,omitempty" json:"expect_destroyed,omitempty" minimum:"0"`
+
+	// ExpectReleased The `released` count the preview showed.
+	ExpectReleased *int `form:"expect_released,omitempty" json:"expect_released,omitempty" minimum:"0"`
+
+	// ExpectAnonymised The `anonymised` count the preview showed.
+	ExpectAnonymised *int `form:"expect_anonymised,omitempty" json:"expect_anonymised,omitempty" minimum:"0"`
 }
 
 // ListHeldThreadsParams defines parameters for ListHeldThreads.
@@ -74694,6 +78264,35 @@ type ListOpenCommitmentsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
 }
 
+// DirectCommunicationSendParams defines parameters for DirectCommunicationSend.
+type DirectCommunicationSendParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListCompaniesParams defines parameters for ListCompanies.
 type ListCompaniesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -74711,9 +78310,10 @@ type ListCompaniesParams struct {
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
-	// in the record list's own columns. The list must be one the caller may find and of this
-	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-	// the caller's row scope still applies to every row.
+	// in the record list's own columns. A list the caller cannot find, or any list while lists
+	// are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+	// record type answers `422`. Sharing a list never widens what the read shows: the caller's
+	// row scope still applies to every row.
 	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -74854,6 +78454,11 @@ type ListCompaniesParams struct {
 	// PartnerStageMeaning Companies whose live partner program stands on a stage with this meaning. Needs the `partner` read grant (403 otherwise).
 	PartnerStageMeaning *PartnerStageMeaning `form:"partner_stage_meaning,omitempty" json:"partner_stage_meaning,omitempty"`
 
+	// Dormancy Companies on this rung of the dormancy ladder today, read from the stored
+	// `last_activity_at` by the same rule the company page's `state_strip.dormancy` uses.
+	// `stale` includes companies with no activity at all.
+	Dormancy *DormancyRung `form:"dormancy,omitempty" json:"dormancy,omitempty"`
+
 	// SourceSystem Companies that came from this outside system, matched exactly. Send `source_id`
 	// too to find the one company holding that id there. A company the caller cannot
 	// see, or that is archived without `include_archived`, is simply absent from the page.
@@ -74886,13 +78491,18 @@ type CreateCompanyParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74926,13 +78536,18 @@ type UpdateCompanyParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74987,7 +78602,7 @@ type AskAboutCompanyJSONBody struct {
 	// approval is not a citable record type here, and an answer that named one could
 	// not be checked the way every other sentence can.
 	// `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
-	// `whats_changed` — what has moved on this account recently.
+	// `whats_changed` — what has moved on this company recently.
 	Question CompanyQuestion `json:"question"`
 }
 
@@ -75129,13 +78744,18 @@ type CreateCompanyFactParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75161,13 +78781,18 @@ type DeleteCompanyFactParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75200,13 +78825,18 @@ type UpdateCompanyFactParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75239,13 +78869,18 @@ type ConfirmCompanyFactParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75293,16 +78928,16 @@ type GetCompanyHierarchyRollupParamsScope string
 
 // DraftIntroRequestJSONBody defines parameters for DraftIntroRequest.
 type DraftIntroRequestJSONBody struct {
-	// ContactId The contact to be introduced TO. Must be somebody the caller can see on this account; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the account instead.
+	// ContactId The contact to be introduced TO. Must be somebody the caller can see at this company; a contact they cannot read is `404`, the same answer a direct read gives. Absent asks for somebody at the company instead.
 	ContactId *openapi_types.UUID `json:"contact_id,omitempty"`
 
-	// DealId Which open deal the introduction is for. Absent draws on the account as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
+	// DealId Which open deal the introduction is for. Absent draws on the company as a whole, which is the honest shape when the rep is opening a conversation rather than moving a transaction.
 	DealId *openapi_types.UUID `json:"deal_id,omitempty"`
 
 	// Function Only with no `contact_id`, and optional there: the function the somebody works in. Must be one of the colleague's `functions` on the reach answer, or it is `422`, because the draft would ask for an introduction the colleague's connections cannot give.
 	Function *LinkedInReachFunction `json:"function,omitempty"`
 
-	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the account's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this account, or it is `404`.
+	// ViaUserId The colleague being asked. Must hold a recorded route to that contact — asking somebody with no relationship to trade on is a favour they cannot do, and a draft that claims one would be describing a closeness the company's own page does not show. With no `contact_id`, must be a colleague with LinkedIn reach into this company, or it is `404`.
 	ViaUserId openapi_types.UUID `json:"via_user_id"`
 }
 
@@ -75311,13 +78946,18 @@ type LinkCompanyContactsParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75341,13 +78981,18 @@ type MergeCompanyParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75406,13 +79051,18 @@ type UpdateCompanyProfileFieldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75445,13 +79095,18 @@ type ConfirmCompanyProfileFieldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75484,13 +79139,18 @@ type RejectCompanyParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75515,13 +79175,18 @@ type ShareCompanyContactsParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75546,19 +79211,19 @@ type DismissCompanySuggestionJSONBody struct {
 	// sha256 digest in lowercase hex.
 	//
 	// A value of the wrong SHAPE is a 422, so a client that mangled it can
-	// tell that from a hit. A well-formed value the account does not
+	// tell that from a hit. A well-formed value the company does not
 	// currently raise is a `204` that stores nothing; see this operation's
 	// description for why those two answers differ.
 	Fingerprint string `json:"fingerprint"`
 
 	// ProjectId The project the page was scoped to when the suggestion was rendered,
-	// absent on the whole-account page.
+	// absent on the whole-company page.
 	//
 	// A suggestion's fingerprint is derived from its EVIDENCE, and a scoped
 	// page reasons over one project's activity — so the same advice raised
-	// on a scoped page and on the account page are two different
+	// on a scoped page and on the company page are two different
 	// fingerprints. This route re-derives the suggestions to check the
-	// fingerprint is one the account really raises for this caller, and it
+	// fingerprint is one the company really raises for this caller, and it
 	// can only reproduce a scoped one by narrowing the same way.
 	//
 	// Send the project the reader was looking at. Omit it and a dismissal
@@ -75588,13 +79253,18 @@ type StartAnchorCompanySiteReadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75612,13 +79282,18 @@ type ConfirmAnchorCompanySiteReadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75658,6 +79333,42 @@ type ResolveConfirmSubmissionJSONBody struct {
 // ResolveConfirmSubmissionJSONBodyResolution defines parameters for ResolveConfirmSubmission.
 type ResolveConfirmSubmissionJSONBodyResolution string
 
+// CancelConnectorBackfillParams defines parameters for CancelConnectorBackfill.
+type CancelConnectorBackfillParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// GetConnectorBackfillStatusParams defines parameters for GetConnectorBackfillStatus.
+type GetConnectorBackfillStatusParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// StartConnectorBackfillParams defines parameters for StartConnectorBackfill.
+type StartConnectorBackfillParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// PreviewConnectorBackfillParams defines parameters for PreviewConnectorBackfill.
+type PreviewConnectorBackfillParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
 // ConnectorOAuthCallbackParams defines parameters for ConnectorOAuthCallback.
 type ConnectorOAuthCallbackParams struct {
 	// Code Provider authorization code (absent when the user denied consent).
@@ -75672,8 +79383,68 @@ type ConnectorOAuthCallbackParams struct {
 
 // ListConnectorContainersParams defines parameters for ListConnectorContainers.
 type ListConnectorContainersParams struct {
-	// ConnectionId Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox.
+	// ConnectionId The caller's own mailbox of this provider, the `id` of a `CaptureConnection`; omit it while they hold one. An administrator may also name a connection enrolled for internal operational mail.
 	ConnectionId *openapi_types.UUID `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// SetConnectorContextTagParams defines parameters for SetConnectorContextTag.
+type SetConnectorContextTagParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// DisconnectConnectorParams defines parameters for DisconnectConnector.
+type DisconnectConnectorParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// SetConnectorHistoryBaselineParams defines parameters for SetConnectorHistoryBaseline.
+type SetConnectorHistoryBaselineParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// SetConnectorMailPostureParams defines parameters for SetConnectorMailPosture.
+type SetConnectorMailPostureParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// SetConnectorSignatureEnrichmentParams defines parameters for SetConnectorSignatureEnrichment.
+type SetConnectorSignatureEnrichmentParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// DismissConnectorSilenceParams defines parameters for DismissConnectorSilence.
+type DismissConnectorSilenceParams struct {
+	// ConnectionId Which of the caller's mailboxes of this provider the call is about: the `id` of a
+	// `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+	// the caller holds one mailbox of the provider; with several, a call without it answers 422
+	// and names this parameter.
+	ConnectionId *CaptureConnectionId `form:"connection_id,omitempty" json:"connection_id,omitempty"`
+}
+
+// ListConsentPurposeSendCountsParams defines parameters for ListConsentPurposeSendCounts.
+type ListConsentPurposeSendCountsParams struct {
+	// Days How many days back the window reaches from now.
+	Days *int `form:"days,omitempty" json:"days,omitempty" maximum:"366" minimum:"1"`
 }
 
 // ListContactsParams defines parameters for ListContacts.
@@ -75693,9 +79464,10 @@ type ListContactsParams struct {
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
-	// in the record list's own columns. The list must be one the caller may find and of this
-	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-	// the caller's row scope still applies to every row.
+	// in the record list's own columns. A list the caller cannot find, or any list while lists
+	// are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+	// record type answers `422`. Sharing a list never widens what the read shows: the caller's
+	// row scope still applies to every row.
 	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -75838,13 +79610,18 @@ type CreateContactParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75868,13 +79645,18 @@ type QuickCaptureContactParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75893,6 +79675,15 @@ type ImportVCardsMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// ImportVCardsParams defines parameters for ImportVCards.
+type ImportVCardsParams struct {
+	// CompanyId The company every contact the import creates works for. Each created contact and its
+	// current employment edge to this company land in one transaction, and the company a card
+	// names is not used. A card that matches a contact already held updates it and does not
+	// move its employer. A company the caller cannot read answers 422 naming `company_id`.
+	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+}
+
 // ArchiveContactParams defines parameters for ArchiveContact.
 type ArchiveContactParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -75908,13 +79699,18 @@ type UpdateContactParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75961,13 +79757,18 @@ type RecordConsentParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76004,12 +79805,70 @@ type RevokeOverrideJSONBody struct {
 	Reason string `json:"reason"`
 }
 
+// RequestDetailsConfirmationParams defines parameters for RequestDetailsConfirmation.
+type RequestDetailsConfirmationParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // IssueDoubleOptInJSONBody defines parameters for IssueDoubleOptIn.
 type IssueDoubleOptInJSONBody struct {
 	// Language The language of the mail and of the page its link opens. Absent means the
 	// installation's mail language.
 	Language  *MailLanguage      `json:"language,omitempty"`
 	PurposeId openapi_types.UUID `json:"purpose_id"`
+}
+
+// IssueDoubleOptInParams defines parameters for IssueDoubleOptIn.
+type IssueDoubleOptInParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // PreviewControllerMailParams defines parameters for PreviewControllerMail.
@@ -76023,6 +79882,35 @@ type PreviewControllerMailParams struct {
 
 // PreviewControllerMailParamsKind defines parameters for PreviewControllerMail.
 type PreviewControllerMailParamsKind string
+
+// SendPrivacyNoticeParams defines parameters for SendPrivacyNotice.
+type SendPrivacyNoticeParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
 
 // SuppressContactJSONBody defines parameters for SuppressContact.
 type SuppressContactJSONBody struct {
@@ -76095,13 +79983,18 @@ type LinkContactEmployerParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76119,13 +80012,18 @@ type CreateContactEnrichmentRunParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76136,6 +80034,12 @@ type CreateContactEnrichmentRunParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// ClearContactImpersonationWarningJSONBody defines parameters for ClearContactImpersonationWarning.
+type ClearContactImpersonationWarningJSONBody struct {
+	// DetectedAt The `detected_at` of the `impersonation_warning` the caller read.
+	DetectedAt time.Time `json:"detected_at"`
 }
 
 // DraftIntroNoteJSONBody defines parameters for DraftIntroNote.
@@ -76162,13 +80066,18 @@ type MergeContactParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76223,13 +80132,18 @@ type CreateContractParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76329,13 +80243,18 @@ type CreateCustomFieldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76353,13 +80272,18 @@ type RenameCustomFieldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76384,13 +80308,18 @@ type UpdateCustomFieldOptionsParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76408,13 +80337,18 @@ type RetireCustomFieldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76453,13 +80387,18 @@ type CreateDataSubjectRequestParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76528,13 +80467,18 @@ type CreateDealRoomParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76634,13 +80578,18 @@ type AcceptDealSuggestionParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76658,13 +80607,18 @@ type DismissDealSuggestionParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76694,9 +80648,10 @@ type ListDealsParams struct {
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
-	// in the record list's own columns. The list must be one the caller may find and of this
-	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-	// the caller's row scope still applies to every row.
+	// in the record list's own columns. A list the caller cannot find, or any list while lists
+	// are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+	// record type answers `422`. Sharing a list never widens what the read shows: the caller's
+	// row scope still applies to every row.
 	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -76845,13 +80800,18 @@ type CreateDealParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76913,13 +80873,18 @@ type UpdateDealParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76944,13 +80909,18 @@ type AdvanceDealParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77023,6 +80993,35 @@ type RemoveDealLineParams struct {
 type ListDealMarginceChangesParams struct {
 	// Cursor The `next_cursor` of the page before. A token this server did not mint is refused with 422.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// StageHistoryId Only the change that wrote this stage-history row. A client asks for the close the deal is on without paging for it.
+	StageHistoryId *openapi_types.UUID `form:"stage_history_id,omitempty" json:"stage_history_id,omitempty"`
+
+	// NoteActivityId Only the changes that these History notes report.
+	NoteActivityId *[]openapi_types.UUID `form:"note_activity_id,omitempty" json:"note_activity_id,omitempty"`
+
+	// ChangeKind Only changes of these correction kinds, such as close_lost, deal_open or deal_revive.
+	ChangeKind *[]string `form:"change_kind,omitempty" json:"change_kind,omitempty"`
+}
+
+// MoveDealPipelineParams defines parameters for MoveDealPipeline.
+type MoveDealPipelineParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// UndoDealPipelineMoveParams defines parameters for UndoDealPipelineMove.
+type UndoDealPipelineMoveParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
 // RestoreDealMoveParams defines parameters for RestoreDealMove.
@@ -77056,13 +81055,18 @@ type CreateOfferParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77111,6 +81115,9 @@ type ListDedupeCandidatesParams struct {
 	Status     *ListDedupeCandidatesParamsStatus     `form:"status,omitempty" json:"status,omitempty"`
 	EntityType *ListDedupeCandidatesParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
 
+	// RecordId Only the pairs naming this record on either end. Needs `entity_type`, the record's type; without it the answer is 422.
+	RecordId *openapi_types.UUID `form:"record_id,omitempty" json:"record_id,omitempty"`
+
 	// Cursor Opaque keyset cursor.
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 	Limit  *int    `form:"limit,omitempty" json:"limit,omitempty" maximum:"100" minimum:"1"`
@@ -77135,24 +81142,23 @@ type ListContactCasesParams struct {
 // ListContactCasesParamsScope defines parameters for ListContactCases.
 type ListContactCasesParamsScope string
 
-// GetMorningDigestParams defines parameters for GetMorningDigest.
-type GetMorningDigestParams struct {
-	// Date A specific digest day; default: the latest generated.
-	Date *openapi_types.Date `form:"date,omitempty" json:"date,omitempty"`
-}
-
 // SendCompanyEmailParams defines parameters for SendCompanyEmail.
 type SendCompanyEmailParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77350,6 +81356,41 @@ type ListForecastCallsParamsPeriod string
 // ListForecastCallsParamsScopeKind defines parameters for ListForecastCalls.
 type ListForecastCallsParamsScopeKind string
 
+// RecordForecastCallParams defines parameters for RecordForecastCall.
+type RecordForecastCallParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetForecastFocusParams defines parameters for GetForecastFocus.
+type GetForecastFocusParams struct {
+	// Team One team. Omitted, every team whose list the caller may read.
+	Team *openapi_types.UUID `form:"team,omitempty" json:"team,omitempty"`
+}
+
 // GetForecastMovementParams defines parameters for GetForecastMovement.
 type GetForecastMovementParams struct {
 	// From The opening snapshot.
@@ -77401,7 +81442,7 @@ type GetImportFormatParamsLang string
 
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
-	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part's type. A CSV sent without `object` is typed by its header, and the profile's `object_chosen_by` says how. A ZIP is known by its content, not its name.
 	File openapi_types.File `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
@@ -77498,13 +81539,18 @@ type CreateLeadDisqualifyReasonParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77522,13 +81568,18 @@ type UpdateLeadDisqualifyReasonParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77546,13 +81597,18 @@ type CreateLeadOriginParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77570,13 +81626,18 @@ type UpdateLeadOriginParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77594,13 +81655,18 @@ type CreateLeadSourceParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77618,13 +81684,18 @@ type UpdateLeadSourceParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77654,9 +81725,10 @@ type ListLeadsParams struct {
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
-	// in the record list's own columns. The list must be one the caller may find and of this
-	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-	// the caller's row scope still applies to every row.
+	// in the record list's own columns. A list the caller cannot find, or any list while lists
+	// are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+	// record type answers `422`. Sharing a list never widens what the read shows: the caller's
+	// row scope still applies to every row.
 	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -77825,13 +81897,18 @@ type CreateLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77849,13 +81926,18 @@ type UpdateLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77886,13 +81968,18 @@ type DemoteLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77910,13 +81997,18 @@ type AcceptPartnerLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77934,13 +82026,18 @@ type PromoteLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77988,13 +82085,18 @@ type ReopenLeadParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78153,13 +82255,18 @@ type CreateLossReasonParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78182,13 +82289,18 @@ type DecideLegacyLossReasonParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78213,13 +82325,18 @@ type UpdateLossReasonParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78428,13 +82545,18 @@ type CreateOfferTemplateParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78469,13 +82591,18 @@ type UpdateOfferTemplateParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78533,13 +82660,18 @@ type RegenerateOfferParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78567,13 +82699,18 @@ type RenderOfferParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78591,13 +82728,18 @@ type SendOfferParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78631,13 +82773,18 @@ type PutOnboardingStateParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78655,13 +82802,18 @@ type CreatePartnerStageParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78679,13 +82831,18 @@ type UpdatePartnerStageParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78758,13 +82915,18 @@ type CreatePipelineParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78782,13 +82944,18 @@ type ReorderPipelinesParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78816,13 +82983,18 @@ type UpdatePipelineParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78847,13 +83019,18 @@ type ReorderStagesParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78943,13 +83120,18 @@ type CreateProductParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79048,13 +83230,18 @@ type CreateProjectParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79085,13 +83272,18 @@ type TransferProjectOwnershipParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79127,13 +83319,18 @@ type UpdateProjectParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79166,13 +83363,18 @@ type AdvanceProjectPhaseParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79243,13 +83445,18 @@ type CreateProjectHealthAssessmentParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79267,13 +83474,18 @@ type CorrectProjectHealthAssessmentParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79291,13 +83503,18 @@ type UndoProjectHealthAssessmentParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79337,13 +83554,18 @@ type UpdateProviderConnectionParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79368,13 +83590,18 @@ type ConnectProviderParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79422,13 +83649,18 @@ type BookPublicMeetingParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79610,13 +83842,18 @@ type CreateRecordGrantParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79653,13 +83890,18 @@ type CreateRecordRoleParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79677,13 +83919,18 @@ type UpdateRecordRoleParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79754,18 +84001,52 @@ type ClaimRecordParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
-// OfferOwnershipTransferParams defines parameters for OfferOwnershipTransfer.
-type OfferOwnershipTransferParams struct {
+// RequestEditAccessParams defines parameters for RequestEditAccess.
+type RequestEditAccessParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// OfferOwnershipTransferParams defines parameters for OfferOwnershipTransfer.
+type OfferOwnershipTransferParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79783,13 +84064,18 @@ type RequestOwnershipTransferParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79807,13 +84093,18 @@ type CreateRecordAssignmentParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79896,6 +84187,60 @@ type ExplainReportParamsHandleVersion string
 // ExplainReportParamsScopeKind defines parameters for ExplainReport.
 type ExplainReportParamsScopeKind string
 
+// ListArchivedActivitiesParams defines parameters for ListArchivedActivities.
+type ListArchivedActivitiesParams struct {
+	// Before Only activity that occurred before this instant.
+	Before *time.Time `form:"before,omitempty" json:"before,omitempty"`
+
+	// ContactId Only activity linked to this contact.
+	ContactId *openapi_types.UUID `form:"contact_id,omitempty" json:"contact_id,omitempty"`
+
+	// CompanyId Only activity linked to this company.
+	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+
+	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+	// effective `sort` of the originating request (field + direction) plus the last row's keyset
+	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// together with a `sort` that differs from the one the cursor was minted under returns
+	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+	// remaining pages see, so re-issue the query without the cursor when changing filters.
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
+
+// DeleteArchivedActivitiesParams defines parameters for DeleteArchivedActivities.
+type DeleteArchivedActivitiesParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListLegalHoldsParams defines parameters for ListLegalHolds.
 type ListLegalHoldsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -79917,13 +84262,18 @@ type LiftLegalHoldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79941,13 +84291,18 @@ type PlaceLegalHoldParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79981,13 +84336,18 @@ type PinActivityToFloorParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80005,13 +84365,18 @@ type ReleaseRestrictedActivityParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80048,6 +84413,12 @@ type SetRoleObjectGrantParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// RestoreRoleGrantsParams defines parameters for RestoreRoleGrants.
+type RestoreRoleGrantsParams struct {
+	// IfMatch The `version` of the role you read. A restore replaces every grant, so the write never goes out without it.
+	IfMatch string `json:"If-Match"`
 }
 
 // DescribeRouterActionsParams defines parameters for DescribeRouterActions.
@@ -80091,13 +84462,18 @@ type CreateMeetingInvitationParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80134,13 +84510,18 @@ type CreateMeetingProposalParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80164,11 +84545,14 @@ type SearchParams struct {
 	// ExcludeIds Record ids, of any type, to leave out of the answer. They are dropped before ranking, so a page is full and `types_with_more` counts only the records that remain. Use it to keep a record's own author out of the matches suggested for that record.
 	ExcludeIds *[]openapi_types.UUID `form:"exclude_ids,omitempty" json:"exclude_ids,omitempty"`
 
-	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest.
+	// PerType Answer GROUPED instead of as one ranked list: up to this many hits of EACH type, each type's best first. Relevance is not comparable across types — a message naming an account ten times outranks the account itself — so a short ranked list can hold nothing but messages, while a grouped answer carries every type that matched. `data` holds each type's hits together, best first. The page is the whole answer, so it takes no `cursor` and no `limit`; `types_with_more` names the types holding more than it carries, and asking again without `per_type`, with `types` set to one of them, pages through the rest. A type the time budget stopped is left out of `data` and named in `types_timed_out`.
 	PerType *int `form:"per_type,omitempty" json:"per_type,omitempty" maximum:"20" minimum:"1"`
 
 	// WithEmployees Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
 	WithEmployees *bool `form:"with_employees,omitempty" json:"with_employees,omitempty"`
+
+	// Typeahead The caller is a search box answering each keystroke. Messages (`activity`) are left out of the answer while the word being typed is under 4 letters, because a short prefix matches a large share of all messages and ranking them is the slow part. Every other type is searched from the first letter as usual. A query that ends in a finished word, or uses the websearch operators, has no word being typed and keeps its messages, and so does a request whose `types` names messages alone. Only a human caller's flag is honoured.
+	Typeahead *bool `form:"typeahead,omitempty" json:"typeahead,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -80182,6 +84566,11 @@ type SearchParams struct {
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
+
+// AskSearchDataJSONBody defines parameters for AskSearchData.
+type AskSearchDataJSONBody struct {
+	Question string `json:"question"`
 }
 
 // ListSignalsParams defines parameters for ListSignals.
@@ -80229,13 +84618,18 @@ type CreateSignalParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80253,13 +84647,18 @@ type UpdateSignalParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80284,13 +84683,18 @@ type ResolveSignalParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80316,13 +84720,18 @@ type CreateStageParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80350,13 +84759,18 @@ type UpdateStageParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80386,13 +84800,18 @@ type CreateStageExitCriterionParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80449,13 +84868,18 @@ type CreateTaskParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80491,6 +84915,9 @@ type ListTeamsParams struct {
 
 	// Q Case-insensitive match over team name that ignores diacritics on both sides.
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// IncludeArchived True also lists archived teams, each carrying `archived_at`, so an admin can restore one.
+	IncludeArchived *bool `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 }
 
 // ListUsersParams defines parameters for ListUsers.
@@ -80521,6 +84948,35 @@ type ListUsersParams struct {
 	IncludeInvited *bool `form:"include_invited,omitempty" json:"include_invited,omitempty"`
 }
 
+// InviteUserParams defines parameters for InviteUser.
+type InviteUserParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // PreviewAccessParams defines parameters for PreviewAccess.
 type PreviewAccessParams struct {
 	// Role A live role's key — a seeded one or one made with `createRole`.
@@ -80536,8 +84992,8 @@ type NameSeatsParams struct {
 
 // GetUserAvatarParams defines parameters for GetUserAvatar.
 type GetUserAvatarParams struct {
-	// V The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
-	V *string `form:"v,omitempty" json:"v,omitempty"`
+	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
 }
 
 // HandOverUserWorkParams defines parameters for HandOverUserWork.
@@ -80545,13 +85001,18 @@ type HandOverUserWorkParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80569,13 +85030,18 @@ type MergeMembersParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80594,6 +85060,35 @@ type MergeMembersParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// ResendUserInviteParams defines parameters for ResendUserInvite.
+type ResendUserInviteParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // PreviewMemberRetirementParams defines parameters for PreviewMemberRetirement.
@@ -80628,13 +85123,18 @@ type CreateVoiceProfileParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80672,13 +85172,18 @@ type CreateVoiceBuildParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80703,13 +85208,18 @@ type ClearVoiceCorpusParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80743,13 +85253,18 @@ type RejectVoiceDraftParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80767,13 +85282,18 @@ type IngestVoiceCorpusSourceParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80791,13 +85311,18 @@ type LearnVoiceFromSentMailParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80858,13 +85383,18 @@ type ApplyVoiceProfileVersionParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80889,13 +85419,18 @@ type RejectVoiceProfileVersionParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80913,13 +85448,18 @@ type RollbackVoiceProfileVersionParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
 	// create (API-CC-6). **Scope:** the key is unique within
 	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns the original status + body. A connected agent's principal is its connection, so a
+	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
+	// key as its `idempotency_key`. Reusing the same key with a *different* request body
 	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
 	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
 	// means the first request under the key is still running and carries `Retry-After`;
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81352,6 +85892,9 @@ type AnswerCalendarInvitationJSONRequestBody = AnswerCalendarInvitationRequest
 // DeclineActivityDealJSONRequestBody defines body for DeclineActivityDeal for application/json ContentType.
 type DeclineActivityDealJSONRequestBody = DeclineActivityDealRequest
 
+// SetActivityDealRelevanceJSONRequestBody defines body for SetActivityDealRelevance for application/json ContentType.
+type SetActivityDealRelevanceJSONRequestBody = SetActivityDealRelevanceRequest
+
 // SetActivityDispositionJSONRequestBody defines body for SetActivityDisposition for application/json ContentType.
 type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
@@ -81384,6 +85927,9 @@ type PreviewSendAuthorizationJSONRequestBody = PreviewSendRequest
 
 // SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
 type SendMessageJSONRequestBody = SendMessageRequest
+
+// CreateActivityReviewTemplateJSONRequestBody defines body for CreateActivityReviewTemplate for application/json ContentType.
+type CreateActivityReviewTemplateJSONRequestBody = CreateActivityReviewTemplateRequest
 
 // UpdateActivityReviewTemplateJSONRequestBody defines body for UpdateActivityReviewTemplate for application/json ContentType.
 type UpdateActivityReviewTemplateJSONRequestBody = UpdateActivityReviewTemplateRequest
@@ -81535,6 +86081,12 @@ type UpdateRecordAssignmentJSONRequestBody = UpdateRecordAssignmentRequest
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
 
+// AddAttachmentLinkJSONRequestBody defines body for AddAttachmentLink for application/json ContentType.
+type AddAttachmentLinkJSONRequestBody = AddAttachmentLinkRequest
+
+// PreviewAttachmentLinkJSONRequestBody defines body for PreviewAttachmentLink for application/json ContentType.
+type PreviewAttachmentLinkJSONRequestBody PreviewAttachmentLinkJSONBody
+
 // ReadAttachmentForFieldsJSONRequestBody defines body for ReadAttachmentForFields for application/json ContentType.
 type ReadAttachmentForFieldsJSONRequestBody = AttachmentReadRequest
 
@@ -81573,6 +86125,9 @@ type PreviewAutomationJSONRequestBody = AutomationPreviewRequest
 
 // UpdateAutonomyJSONRequestBody defines body for UpdateAutonomy for application/json ContentType.
 type UpdateAutonomyJSONRequestBody = UpdateAutonomyRequest
+
+// UpdateAutoApplyInstallationJSONRequestBody defines body for UpdateAutoApplyInstallation for application/json ContentType.
+type UpdateAutoApplyInstallationJSONRequestBody = AutoApplyInstallation
 
 // BookMeetingJSONRequestBody defines body for BookMeeting for application/json ContentType.
 type BookMeetingJSONRequestBody BookMeetingJSONBody
@@ -81820,6 +86375,9 @@ type ApplyContactEmploymentImportJSONRequestBody = EmploymentImportRequest
 // CreateContactEnrichmentRunJSONRequestBody defines body for CreateContactEnrichmentRun for application/json ContentType.
 type CreateContactEnrichmentRunJSONRequestBody = CreateContactEnrichmentRunRequest
 
+// ClearContactImpersonationWarningJSONRequestBody defines body for ClearContactImpersonationWarning for application/json ContentType.
+type ClearContactImpersonationWarningJSONRequestBody ClearContactImpersonationWarningJSONBody
+
 // DraftIntroNoteJSONRequestBody defines body for DraftIntroNote for application/json ContentType.
 type DraftIntroNoteJSONRequestBody DraftIntroNoteJSONBody
 
@@ -81933,6 +86491,12 @@ type UseDealEstimateJSONRequestBody = DealRevisionRequest
 
 // UpdateDealLineJSONRequestBody defines body for UpdateDealLine for application/json ContentType.
 type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
+
+// RequestDealManagerJSONRequestBody defines body for RequestDealManager for application/json ContentType.
+type RequestDealManagerJSONRequestBody = RequestDealManagerRequest
+
+// MoveDealPipelineJSONRequestBody defines body for MoveDealPipeline for application/json ContentType.
+type MoveDealPipelineJSONRequestBody = MoveDealPipelineRequest
 
 // DismissDealMoveJSONRequestBody defines body for DismissDealMove for application/json ContentType.
 type DismissDealMoveJSONRequestBody = DismissDealMoveRequest
@@ -82080,6 +86644,9 @@ type AskCorpusJSONRequestBody AskCorpusJSONBody
 
 // UploadCorpusDocumentMultipartRequestBody defines body for UploadCorpusDocument for multipart/form-data ContentType.
 type UploadCorpusDocumentMultipartRequestBody UploadCorpusDocumentMultipartBody
+
+// ConfirmSendWithoutLawfulBasisJSONRequestBody defines body for ConfirmSendWithoutLawfulBasis for application/json ContentType.
+type ConfirmSendWithoutLawfulBasisJSONRequestBody = LawfulBasisConfirmationRequest
 
 // CreateLeadDisqualifyReasonJSONRequestBody defines body for CreateLeadDisqualifyReason for application/json ContentType.
 type CreateLeadDisqualifyReasonJSONRequestBody = CreateLeadDisqualifyReasonRequest
@@ -82399,6 +86966,9 @@ type OpenBuyerRoomThreadJSONRequestBody = OpenDealRoomThreadRequest
 // ReplyBuyerRoomThreadJSONRequestBody defines body for ReplyBuyerRoomThread for application/json ContentType.
 type ReplyBuyerRoomThreadJSONRequestBody = PostDealRoomCommentRequest
 
+// ResolveRecipientCountriesJSONRequestBody defines body for ResolveRecipientCountries for application/json ContentType.
+type ResolveRecipientCountriesJSONRequestBody = RecipientCountriesRequest
+
 // CreateRecordGrantJSONRequestBody defines body for CreateRecordGrant for application/json ContentType.
 type CreateRecordGrantJSONRequestBody = CreateRecordGrantRequest
 
@@ -82434,6 +87004,9 @@ type CreateRetentionPolicyJSONRequestBody = CreateRetentionPolicyRequest
 
 // UpdateRetentionPolicyJSONRequestBody defines body for UpdateRetentionPolicy for application/json ContentType.
 type UpdateRetentionPolicyJSONRequestBody = UpdateRetentionPolicyRequest
+
+// DeleteArchivedActivitiesJSONRequestBody defines body for DeleteArchivedActivities for application/json ContentType.
+type DeleteArchivedActivitiesJSONRequestBody = ArchiveDeletionRequest
 
 // LiftLegalHoldJSONRequestBody defines body for LiftLegalHold for application/json ContentType.
 type LiftLegalHoldJSONRequestBody = RetentionOverrideRequest
@@ -82480,8 +87053,14 @@ type PutSchedulingAliasJSONRequestBody = SchedulingAliasRequest
 // CreateMeetingProposalJSONRequestBody defines body for CreateMeetingProposal for application/json ContentType.
 type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
+// AnswerSchedulingTeamRequestJSONRequestBody defines body for AnswerSchedulingTeamRequest for application/json ContentType.
+type AnswerSchedulingTeamRequestJSONRequestBody = SchedulingTeamAnswer
+
 // ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
 type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
+
+// AskSearchDataJSONRequestBody defines body for AskSearchData for application/json ContentType.
+type AskSearchDataJSONRequestBody AskSearchDataJSONBody
 
 // ConnectSharedMailboxJSONRequestBody defines body for ConnectSharedMailbox for application/json ContentType.
 type ConnectSharedMailboxJSONRequestBody = ConnectSharedMailboxRequest
@@ -84773,12 +89352,28 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["greeting_register"]; found {
+		err = json.Unmarshal(raw, &a.GreetingRegister)
+		if err != nil {
+			return fmt.Errorf("error reading 'greeting_register': %w", err)
+		}
+		delete(object, "greeting_register")
+	}
+
 	if raw, found := object["id"]; found {
 		err = json.Unmarshal(raw, &a.Id)
 		if err != nil {
 			return fmt.Errorf("error reading 'id': %w", err)
 		}
 		delete(object, "id")
+	}
+
+	if raw, found := object["impersonation_warning"]; found {
+		err = json.Unmarshal(raw, &a.ImpersonationWarning)
+		if err != nil {
+			return fmt.Errorf("error reading 'impersonation_warning': %w", err)
+		}
+		delete(object, "impersonation_warning")
 	}
 
 	if raw, found := object["imported_from"]; found {
@@ -85088,9 +89683,23 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
 	}
 
+	if a.GreetingRegister != nil {
+		object["greeting_register"], err = json.Marshal(a.GreetingRegister)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'greeting_register': %w", err)
+		}
+	}
+
 	object["id"], err = json.Marshal(a.Id)
 	if err != nil {
 		return nil, fmt.Errorf("error marshaling 'id': %w", err)
+	}
+
+	if a.ImpersonationWarning != nil {
+		object["impersonation_warning"], err = json.Marshal(a.ImpersonationWarning)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'impersonation_warning': %w", err)
+		}
 	}
 
 	if a.ImportedFrom != nil {
@@ -86764,6 +91373,22 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["acquisition_note"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionNote)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_note': %w", err)
+		}
+		delete(object, "acquisition_note")
+	}
+
+	if raw, found := object["acquisition_source"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionSource)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_source': %w", err)
+		}
+		delete(object, "acquisition_source")
+	}
+
 	if raw, found := object["address"]; found {
 		err = json.Unmarshal(raw, &a.Address)
 		if err != nil {
@@ -86934,6 +91559,20 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AcquisitionNote != nil {
+		object["acquisition_note"], err = json.Marshal(a.AcquisitionNote)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_note': %w", err)
+		}
+	}
+
+	if a.AcquisitionSource != nil {
+		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
 
 	if a.Address != nil {
 		object["address"], err = json.Marshal(a.Address)
@@ -88380,6 +93019,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "acquisition_source")
 	}
 
+	if raw, found := object["ai_written_fields"]; found {
+		err = json.Unmarshal(raw, &a.AiWrittenFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_written_fields': %w", err)
+		}
+		delete(object, "ai_written_fields")
+	}
+
 	if raw, found := object["amount_minor"]; found {
 		err = json.Unmarshal(raw, &a.AmountMinor)
 		if err != nil {
@@ -88732,12 +93379,28 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["wait_ends_at"]; found {
+		err = json.Unmarshal(raw, &a.WaitEndsAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_ends_at': %w", err)
+		}
+		delete(object, "wait_ends_at")
+	}
+
 	if raw, found := object["wait_until"]; found {
 		err = json.Unmarshal(raw, &a.WaitUntil)
 		if err != nil {
 			return fmt.Errorf("error reading 'wait_until': %w", err)
 		}
 		delete(object, "wait_until")
+	}
+
+	if raw, found := object["win_chance"]; found {
+		err = json.Unmarshal(raw, &a.WinChance)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_chance': %w", err)
+		}
+		delete(object, "win_chance")
 	}
 
 	if raw, found := object["win_probability"]; found {
@@ -88819,6 +93482,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
+	if a.AiWrittenFields != nil {
+		object["ai_written_fields"], err = json.Marshal(a.AiWrittenFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_written_fields': %w", err)
 		}
 	}
 
@@ -89112,10 +93782,24 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.WaitEndsAt != nil {
+		object["wait_ends_at"], err = json.Marshal(a.WaitEndsAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_ends_at': %w", err)
+		}
+	}
+
 	if a.WaitUntil != nil {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinChance != nil {
+		object["win_chance"], err = json.Marshal(a.WinChance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_chance': %w", err)
 		}
 	}
 
@@ -89208,6 +93892,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'acquisition_source': %w", err)
 		}
 		delete(object, "acquisition_source")
+	}
+
+	if raw, found := object["ai_written_fields"]; found {
+		err = json.Unmarshal(raw, &a.AiWrittenFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_written_fields': %w", err)
+		}
+		delete(object, "ai_written_fields")
 	}
 
 	if raw, found := object["amount_minor"]; found {
@@ -89570,12 +94262,28 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["wait_ends_at"]; found {
+		err = json.Unmarshal(raw, &a.WaitEndsAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_ends_at': %w", err)
+		}
+		delete(object, "wait_ends_at")
+	}
+
 	if raw, found := object["wait_until"]; found {
 		err = json.Unmarshal(raw, &a.WaitUntil)
 		if err != nil {
 			return fmt.Errorf("error reading 'wait_until': %w", err)
 		}
 		delete(object, "wait_until")
+	}
+
+	if raw, found := object["win_chance"]; found {
+		err = json.Unmarshal(raw, &a.WinChance)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_chance': %w", err)
+		}
+		delete(object, "win_chance")
 	}
 
 	if raw, found := object["win_probability"]; found {
@@ -89657,6 +94365,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
+	if a.AiWrittenFields != nil {
+		object["ai_written_fields"], err = json.Marshal(a.AiWrittenFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_written_fields': %w", err)
 		}
 	}
 
@@ -89957,10 +94672,24 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.WaitEndsAt != nil {
+		object["wait_ends_at"], err = json.Marshal(a.WaitEndsAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_ends_at': %w", err)
+		}
+	}
+
 	if a.WaitUntil != nil {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinChance != nil {
+		object["win_chance"], err = json.Marshal(a.WinChance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_chance': %w", err)
 		}
 	}
 
@@ -91023,6 +95752,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "first_response_at")
 	}
 
+	if raw, found := object["first_response_marked_by"]; found {
+		err = json.Unmarshal(raw, &a.FirstResponseMarkedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'first_response_marked_by': %w", err)
+		}
+		delete(object, "first_response_marked_by")
+	}
+
 	if raw, found := object["from_contact_id"]; found {
 		err = json.Unmarshal(raw, &a.FromContactId)
 		if err != nil {
@@ -91109,6 +95846,22 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'next_task_due_at': %w", err)
 		}
 		delete(object, "next_task_due_at")
+	}
+
+	if raw, found := object["next_task_due_has_time"]; found {
+		err = json.Unmarshal(raw, &a.NextTaskDueHasTime)
+		if err != nil {
+			return fmt.Errorf("error reading 'next_task_due_has_time': %w", err)
+		}
+		delete(object, "next_task_due_has_time")
+	}
+
+	if raw, found := object["next_task_due_intent"]; found {
+		err = json.Unmarshal(raw, &a.NextTaskDueIntent)
+		if err != nil {
+			return fmt.Errorf("error reading 'next_task_due_intent': %w", err)
+		}
+		delete(object, "next_task_due_intent")
 	}
 
 	if raw, found := object["next_task_subject"]; found {
@@ -91512,6 +96265,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.FirstResponseMarkedBy != nil {
+		object["first_response_marked_by"], err = json.Marshal(a.FirstResponseMarkedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'first_response_marked_by': %w", err)
+		}
+	}
+
 	if a.FromContactId != nil {
 		object["from_contact_id"], err = json.Marshal(a.FromContactId)
 		if err != nil {
@@ -91584,6 +96344,20 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["next_task_due_at"], err = json.Marshal(a.NextTaskDueAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'next_task_due_at': %w", err)
+		}
+	}
+
+	if a.NextTaskDueHasTime != nil {
+		object["next_task_due_has_time"], err = json.Marshal(a.NextTaskDueHasTime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'next_task_due_has_time': %w", err)
+		}
+	}
+
+	if a.NextTaskDueIntent != nil {
+		object["next_task_due_intent"], err = json.Marshal(a.NextTaskDueIntent)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'next_task_due_intent': %w", err)
 		}
 	}
 
@@ -93396,6 +98170,119 @@ func (a RenewContractRequest) MarshalJSON() ([]byte, error) {
 	return json.Marshal(object)
 }
 
+// Getter for additional properties for SendRefusalDetails. Returns the specified
+// element and whether it was found
+func (a SendRefusalDetails) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for SendRefusalDetails
+func (a *SendRefusalDetails) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for SendRefusalDetails to handle AdditionalProperties
+func (a *SendRefusalDetails) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["available_actions"]; found {
+		err = json.Unmarshal(raw, &a.AvailableActions)
+		if err != nil {
+			return fmt.Errorf("error reading 'available_actions': %w", err)
+		}
+		delete(object, "available_actions")
+	}
+
+	if raw, found := object["refusals"]; found {
+		err = json.Unmarshal(raw, &a.Refusals)
+		if err != nil {
+			return fmt.Errorf("error reading 'refusals': %w", err)
+		}
+		delete(object, "refusals")
+	}
+
+	if raw, found := object["review"]; found {
+		err = json.Unmarshal(raw, &a.Review)
+		if err != nil {
+			return fmt.Errorf("error reading 'review': %w", err)
+		}
+		delete(object, "review")
+	}
+
+	if raw, found := object["review_id"]; found {
+		err = json.Unmarshal(raw, &a.ReviewId)
+		if err != nil {
+			return fmt.Errorf("error reading 'review_id': %w", err)
+		}
+		delete(object, "review_id")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for SendRefusalDetails to handle AdditionalProperties
+func (a SendRefusalDetails) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.AvailableActions != nil {
+		object["available_actions"], err = json.Marshal(a.AvailableActions)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'available_actions': %w", err)
+		}
+	}
+
+	if a.Refusals != nil {
+		object["refusals"], err = json.Marshal(a.Refusals)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'refusals': %w", err)
+		}
+	}
+
+	if a.Review != nil {
+		object["review"], err = json.Marshal(a.Review)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'review': %w", err)
+		}
+	}
+
+	if a.ReviewId != nil {
+		object["review_id"], err = json.Marshal(a.ReviewId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'review_id': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
 // Getter for additional properties for UpdateActivityRequest. Returns the specified
 // element and whether it was found
 func (a UpdateActivityRequest) Get(fieldName string) (value interface{}, found bool) {
@@ -94092,6 +98979,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "full_name")
 	}
 
+	if raw, found := object["greeting_register"]; found {
+		err = json.Unmarshal(raw, &a.GreetingRegister)
+		if err != nil {
+			return fmt.Errorf("error reading 'greeting_register': %w", err)
+		}
+		delete(object, "greeting_register")
+	}
+
 	if raw, found := object["last_name"]; found {
 		err = json.Unmarshal(raw, &a.LastName)
 		if err != nil {
@@ -94207,6 +99102,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["full_name"], err = json.Marshal(a.FullName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'full_name': %w", err)
+		}
+	}
+
+	if a.GreetingRegister != nil {
+		object["greeting_register"], err = json.Marshal(a.GreetingRegister)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'greeting_register': %w", err)
 		}
 	}
 
@@ -96013,7 +100915,7 @@ type ServerInterface interface {
 	// How long a sent message may go unanswered before the worklist reminds its sender.
 	// (GET /activities/follow-up-settings)
 	GetFollowUpSettings(w http.ResponseWriter, r *http.Request)
-	// Change the follow-up window (admin/ops).
+	// Change the follow-up window or the private-mail request check (admin/ops).
 	// (PATCH /activities/follow-up-settings)
 	UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 	// What they sent on one record in the last 7 days that nobody has answered.
@@ -96046,6 +100948,9 @@ type ServerInterface interface {
 	// Say a captured message is not about a deal, or about none of the deals its question offered.
 	// (POST /activities/{id}/deal-decline)
 	DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id)
+	// Say whether an activity linked to a deal is about that deal, or take that back.
+	// (PUT /activities/{id}/deal-relevance)
+	SetActivityDealRelevance(w http.ResponseWriter, r *http.Request, id Id)
 	// Pick the message back up — the undo behind every set-aside verb.
 	// (DELETE /activities/{id}/disposition)
 	ClearActivityDisposition(w http.ResponseWriter, r *http.Request, id Id, params ClearActivityDispositionParams)
@@ -96109,7 +101014,10 @@ type ServerInterface interface {
 	// The question sets an outcome review can ask.
 	// (GET /activity-review-templates)
 	ListActivityReviewTemplates(w http.ResponseWriter, r *http.Request)
-	// Edit the questions for future outcome reviews.
+	// Add the question set an outcome's reviews ask from now on.
+	// (POST /activity-review-templates)
+	CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, params CreateActivityReviewTemplateParams)
+	// Edit the questions for future outcome reviews, or retire or restore a template.
 	// (PATCH /activity-review-templates/{id})
 	UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id)
 	// Per colleague and day, how much work automation handed out and what became of it.
@@ -96154,6 +101062,9 @@ type ServerInterface interface {
 	// Scoped capability readings and evidence coverage for System health.
 	// (GET /admin/system-health)
 	GetSystemHealth(w http.ResponseWriter, r *http.Request)
+	// Which tables would win back enough space from a full vacuum run out of band.
+	// (GET /admin/vacuum-recommendations)
+	GetVacuumRecommendations(w http.ResponseWriter, r *http.Request)
 	// Download the Margince skill for an AI tool, as a ZIP.
 	// (GET /agent-bundle)
 	DownloadAgentSkillBundle(w http.ResponseWriter, r *http.Request)
@@ -96268,7 +101179,7 @@ type ServerInterface interface {
 	// What AI cost over a window, this month by default, as one figure.
 	// (GET /ai/usage/summary)
 	GetAiUsageSummary(w http.ResponseWriter, r *http.Request, params GetAiUsageSummaryParams)
-	// The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
+	// The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
 	// (GET /analytics/account-coverage)
 	GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams)
 	// The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see. Written by the model and kept per reader until the figures or the recorded decisions move; without a model, or when the model's reply cannot be grounded, it answers no sentences and `generated_by` says so, and the page shows its own summary.
@@ -96366,7 +101277,7 @@ type ServerInterface interface {
 	ListReportingReports(w http.ResponseWriter, r *http.Request, params ListReportingReportsParams)
 	// Create reporting report
 	// (POST /analytics/reports)
-	CreateReportingReport(w http.ResponseWriter, r *http.Request)
+	CreateReportingReport(w http.ResponseWriter, r *http.Request, params CreateReportingReportParams)
 	// The block grammar a report document is written in.
 	// (GET /analytics/reports/blocks)
 	DescribeReportBlocks(w http.ResponseWriter, r *http.Request)
@@ -96535,6 +101446,12 @@ type ServerInterface interface {
 	// Upload a file and attach it to an entity.
 	// (POST /attachments)
 	UploadAttachment(w http.ResponseWriter, r *http.Request)
+	// Add a web link to a record's documents.
+	// (POST /attachments/links)
+	AddAttachmentLink(w http.ResponseWriter, r *http.Request)
+	// Read the title a web page gives itself, before the link is added.
+	// (POST /attachments/links/preview)
+	PreviewAttachmentLink(w http.ResponseWriter, r *http.Request)
 	// Archive an attachment (soft delete).
 	// (DELETE /attachments/{id})
 	DeleteAttachment(w http.ResponseWriter, r *http.Request, id Id)
@@ -96550,7 +101467,7 @@ type ServerInterface interface {
 	// Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only).
 	// (POST /attachments/{id}/extraction:accept)
 	AcceptAttachmentExtraction(w http.ResponseWriter, r *http.Request, id Id)
-	// File a chat screenshot on its contact as one message activity, with the image attached.
+	// File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
 	// (POST /attachments/{id}/extraction:file-chat)
 	FileChatCapture(w http.ResponseWriter, r *http.Request, id Id)
 	// One named reading of this attachment, for a screen polling the reading it started.
@@ -96628,6 +101545,9 @@ type ServerInterface interface {
 	// Turn automatic application on or off for one kind.
 	// (PATCH /autonomy)
 	UpdateAutonomy(w http.ResponseWriter, r *http.Request)
+	// Switch automatic application on or off for the whole installation.
+	// (PUT /autonomy/installation)
+	UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request)
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
@@ -96778,6 +101698,15 @@ type ServerInterface interface {
 	// The same ladder, opened from a row of the capture-activity window.
 	// (GET /capture/traces/{id})
 	ReadCaptureTracePipeline(w http.ResponseWriter, r *http.Request, id Id)
+	// The mail in your mailbox that was sent to addresses that are not yours.
+	// (GET /capture/unrouted-mail)
+	ListUnroutedMail(w http.ResponseWriter, r *http.Request)
+	// Take back "not mine" for an address.
+	// (DELETE /capture/unrouted-mail/{address}/refusal)
+	RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request, address string)
+	// Say that you do not receive this address.
+	// (PUT /capture/unrouted-mail/{address}/refusal)
+	RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request, address string)
 	// What has been going on with one record, in one cited picture.
 	// (GET /catch-up)
 	CatchUpOnRecord(w http.ResponseWriter, r *http.Request, params CatchUpOnRecordParams)
@@ -96817,6 +101746,9 @@ type ServerInterface interface {
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
+	// Undo Margince's close of a promise.
+	// (POST /claims/{id}/reopen)
+	ReopenConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Say a promise was kept, or that it no longer stands.
 	// (POST /claims/{id}/settle)
 	SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
@@ -96855,7 +101787,7 @@ type ServerInterface interface {
 	CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
-	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DirectCommunicationSendParams)
 	// List companies (live by default; cursor-paginated).
 	// (GET /companies)
 	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
@@ -97092,16 +102024,16 @@ type ServerInterface interface {
 	ListConnectors(w http.ResponseWriter, r *http.Request)
 	// Cancel a running backfill — captured rows are retained.
 	// (DELETE /connectors/{provider}/backfill)
-	CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params CancelConnectorBackfillParams)
 	// Backfill progress — the activation read.
 	// (GET /connectors/{provider}/backfill)
-	GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params GetConnectorBackfillStatusParams)
 	// Start the bounded connect-time backfill.
 	// (POST /connectors/{provider}/backfill)
-	StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params StartConnectorBackfillParams)
 	// Preview a backfill window — the scope before the spend.
 	// (POST /connectors/{provider}/backfill/preview)
-	PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params PreviewConnectorBackfillParams)
 	// OAuth redirect callback — completes a mail/calendar connect.
 	// (GET /connectors/{provider}/callback)
 	ConnectorOAuthCallback(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params ConnectorOAuthCallbackParams)
@@ -97113,28 +102045,31 @@ type ServerInterface interface {
 	ListConnectorContainers(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params ListConnectorContainersParams)
 	// Set the word this connector files what it captures under.
 	// (PUT /connectors/{provider}/context-tag)
-	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorContextTagParams)
 	// Disconnect the calling user's mail/calendar capture.
 	// (POST /connectors/{provider}/disconnect)
-	DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DisconnectConnectorParams)
 	// Set the date this mailbox's automatic commitment suggestions start from.
 	// (PUT /connectors/{provider}/history-baseline)
-	SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorHistoryBaselineParams)
 	// Set what this mailbox asks of the mail it brings in.
 	// (PUT /connectors/{provider}/mail-posture)
-	SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorMailPostureParams)
 	// Set this mailbox's own answer to the nightly signature pass.
 	// (PUT /connectors/{provider}/signature-enrichment)
-	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorSignatureEnrichmentParams)
 	// Dismiss the owner's current mailbox silence warning.
 	// (POST /connectors/{provider}/silence/dismiss)
-	DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DismissConnectorSilenceParams)
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
 	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
 	// Define a consent purpose — a human-only admin write.
 	// (POST /consent-purposes)
 	CreateConsentPurpose(w http.ResponseWriter, r *http.Request)
+	// How many messages went out under each declared consent purpose, and how many the record disputes.
+	// (GET /consent-purposes/send-counts)
+	ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request, params ListConsentPurposeSendCountsParams)
 	// List contacts (live by default; cursor-paginated).
 	// (GET /contacts)
 	ListContacts(w http.ResponseWriter, r *http.Request, params ListContactsParams)
@@ -97152,7 +102087,7 @@ type ServerInterface interface {
 	QuickCaptureContact(w http.ResponseWriter, r *http.Request, params QuickCaptureContactParams)
 	// Import a .vcf address-card file.
 	// (POST /contacts/vcard-import)
-	ImportVCards(w http.ResponseWriter, r *http.Request)
+	ImportVCards(w http.ResponseWriter, r *http.Request, params ImportVCardsParams)
 	// Archive (soft-delete) a contact.
 	// (DELETE /contacts/{id})
 	ArchiveContact(w http.ResponseWriter, r *http.Request, id Id, params ArchiveContactParams)
@@ -97194,10 +102129,10 @@ type ServerInterface interface {
 	RevokeOverride(w http.ResponseWriter, r *http.Request, id Id, overrideId openapi_types.UUID)
 	// Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
 	// (POST /contacts/{id}/consent/confirm-request)
-	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id)
+	RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id, params RequestDetailsConfirmationParams)
 	// Mail the subject a single-use link that confirms one marketing purpose.
 	// (POST /contacts/{id}/consent/double-opt-in)
-	IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id)
+	IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id, params IssueDoubleOptInParams)
 	// May we write to this contact right now — per purpose and channel, with the reason.
 	// (GET /contacts/{id}/consent/guard)
 	GetContactConsentGuard(w http.ResponseWriter, r *http.Request, id Id)
@@ -97209,7 +102144,7 @@ type ServerInterface interface {
 	ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id Id)
 	// Mail this contact the Art. 14 disclosure, which asks them for nothing.
 	// (POST /contacts/{id}/consent/privacy-notice)
-	SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id)
+	SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id, params SendPrivacyNoticeParams)
 	// Record an exchange for scoped correspondence.
 	// (POST /contacts/{id}/consent/qualifying-events)
 	RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id)
@@ -97252,6 +102187,9 @@ type ServerInterface interface {
 	// Who around this contact could open a door, and through whom.
 	// (GET /contacts/{id}/graph)
 	GetContactGraph(w http.ResponseWriter, r *http.Request, id Id)
+	// Answer a contact's impersonation warning as fine.
+	// (POST /contacts/{id}/impersonation-warning/clear)
+	ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft the forwardable note a colleague can paste into their own introduction.
 	// (POST /contacts/{id}/intro-note-draft)
 	DraftIntroNote(w http.ResponseWriter, r *http.Request, id Id)
@@ -97339,6 +102277,9 @@ type ServerInterface interface {
 	// Rename a custom field or change whether create dialogs offer it (not a schema change).
 	// (PATCH /custom-fields/{id})
 	RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams)
+	// How many records hold each choice of a picklist or multiselect field.
+	// (GET /custom-fields/{id}/choices)
+	ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request, id Id)
 	// The Live Lists whose filter names this custom field.
 	// (GET /custom-fields/{id}/lists)
 	ListCustomFieldLiveLists(w http.ResponseWriter, r *http.Request, id Id)
@@ -97522,9 +102463,21 @@ type ServerInterface interface {
 	// Change one line of a deal; omit a field to leave it as it is, send null to clear it.
 	// (PATCH /deals/{id}/lines/{lineId})
 	UpdateDealLine(w http.ResponseWriter, r *http.Request, id Id, lineId openapi_types.UUID)
+	// Mark the manager request on this deal as handled.
+	// (DELETE /deals/{id}/manager-request)
+	ClearDealManagerRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Ask the team's manager to look at this deal.
+	// (POST /deals/{id}/manager-request)
+	RequestDealManager(w http.ResponseWriter, r *http.Request, id Id)
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
+	// Move an open deal to another pipeline, onto its first open stage.
+	// (POST /deals/{id}/move-pipeline)
+	MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams)
+	// Put a deal back on the pipeline and stage its last move left.
+	// (POST /deals/{id}/move-pipeline/undo)
+	UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams)
 	// Put a set-aside move back on the deal card, the undo behind "Not now".
 	// (DELETE /deals/{id}/move/dismiss)
 	RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams)
@@ -97605,7 +102558,7 @@ type ServerInterface interface {
 	UpdateContactCaseSettings(w http.ResponseWriter, r *http.Request)
 	// The calling user's morning digest — what capture did overnight.
 	// (GET /digest)
-	GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams)
+	GetMorningDigest(w http.ResponseWriter, r *http.Request)
 	// The workspace's signature template.
 	// (GET /email-signature-template)
 	GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
@@ -97749,7 +102702,10 @@ type ServerInterface interface {
 	ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams)
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
-	RecordForecastCall(w http.ResponseWriter, r *http.Request)
+	RecordForecastCall(w http.ResponseWriter, r *http.Request, params RecordForecastCallParams)
+	// The deals each team should work to meet its goal this quarter.
+	// (GET /forecast/focus)
+	GetForecastFocus(w http.ResponseWriter, r *http.Request, params GetForecastFocusParams)
 	// What moved the forecast between two snapshots, and which deals moved it.
 	// (GET /forecast/movement)
 	GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams)
@@ -97933,6 +102889,9 @@ type ServerInterface interface {
 	// Download a document's own bytes.
 	// (GET /knowledge/documents/{id})
 	DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that a user read the no-lawful-basis warning and chose to send anyway.
+	// (POST /lawful-basis-confirmations)
+	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
 	// List disqualification reasons, active and inactive, in display order.
 	// (GET /lead-disqualify-reasons)
 	ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request)
@@ -98656,6 +103615,9 @@ type ServerInterface interface {
 	// The views the read_view agent tool reads, and the arguments each takes.
 	// (GET /read-views)
 	DescribeReadViews(w http.ResponseWriter, r *http.Request)
+	// The country the record states for each address, and where it was read.
+	// (POST /recipient-countries)
+	ResolveRecipientCountries(w http.ResponseWriter, r *http.Request)
 	// The fields a record create or update may write, for each record type.
 	// (GET /record-fields)
 	DescribeRecordFields(w http.ResponseWriter, r *http.Request)
@@ -98710,6 +103672,15 @@ type ServerInterface interface {
 	// Take ownership of a customer record.
 	// (POST /records/{record_type}/{id}/claim)
 	ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams)
+	// Withdraw the caller's open request for edit access to this record.
+	// (DELETE /records/{record_type}/{id}/edit-access-request)
+	WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// The caller's open request for edit access to this record.
+	// (GET /records/{record_type}/{id}/edit-access-request)
+	GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	// Ask a record's owner for edit access.
+	// (POST /records/{record_type}/{id}/edit-access-request)
+	RequestEditAccess(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestEditAccessParams)
 	// Withdraw the caller's open offer of this record.
 	// (DELETE /records/{record_type}/{id}/ownership-offer)
 	WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
@@ -98767,6 +103738,12 @@ type ServerInterface interface {
 	// Edit a retention policy (admin/ops).
 	// (PATCH /retention-policies/{id})
 	UpdateRetentionPolicy(w http.ResponseWriter, r *http.Request, id Id)
+	// List archived activity, oldest first, for the controller to review against the archive's purpose.
+	// (GET /retention/archive)
+	ListArchivedActivities(w http.ResponseWriter, r *http.Request, params ListArchivedActivitiesParams)
+	// Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept.
+	// (POST /retention/archive/delete)
+	DeleteArchivedActivities(w http.ResponseWriter, r *http.Request, params DeleteArchivedActivitiesParams)
 	// List the records a legal hold is preserving.
 	// (GET /retention/legal-holds)
 	ListLegalHolds(w http.ResponseWriter, r *http.Request, params ListLegalHoldsParams)
@@ -98812,6 +103789,9 @@ type ServerInterface interface {
 	// Restore an archived role. Human-only.
 	// (POST /roles/{key}/restore)
 	RestoreRole(w http.ResponseWriter, r *http.Request, key string)
+	// Put a shipped role's grants back to the ones the product ships. Human-only.
+	// (POST /roles/{key}/restore-grants)
+	RestoreRoleGrants(w http.ResponseWriter, r *http.Request, key string, params RestoreRoleGrantsParams)
 	// What each action of one MCP router takes, as its own route defines it.
 	// (GET /router-actions)
 	DescribeRouterActions(w http.ResponseWriter, r *http.Request, params DescribeRouterActionsParams)
@@ -98860,6 +103840,15 @@ type ServerInterface interface {
 	// Create a personal, expiring invitation without reserving time or sending mail.
 	// (POST /scheduling/proposals)
 	CreateMeetingProposal(w http.ResponseWriter, r *http.Request, params CreateMeetingProposalParams)
+	// List the colleagues the caller may name on their booking link.
+	// (GET /scheduling/team-candidates)
+	ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request)
+	// List the colleagues' booking links that name the caller.
+	// (GET /scheduling/team-requests)
+	ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request)
+	// Confirm or leave a colleague's booking link that names the caller.
+	// (PUT /scheduling/team-requests/{host_user_id})
+	AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID)
 	// Read the current receiver and reassignment version of a prospect handoff.
 	// (GET /sdr-handoffs/{id}/assignee)
 	GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id Id)
@@ -98869,6 +103858,9 @@ type ServerInterface interface {
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
+	// Answer a question through the caller's reporting and record readers.
+	// (POST /search/data-answer)
+	AskSearchData(w http.ResponseWriter, r *http.Request)
 	// The installation's shared mailboxes, disconnected ones included.
 	// (GET /shared-mailboxes)
 	ListSharedMailboxes(w http.ResponseWriter, r *http.Request)
@@ -98950,6 +103942,9 @@ type ServerInterface interface {
 	// Anonymous reachability probe for external uptime monitors.
 	// (GET /status)
 	GetStatus(w http.ResponseWriter, r *http.Request)
+	// Reachability probe for a monitor that sends HEAD.
+	// (HEAD /status)
+	HeadStatus(w http.ResponseWriter, r *http.Request)
 	// One open tag suggestion the caller may see, with the mail and notes it cites.
 	// (GET /tag-suggestions/{id})
 	GetTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
@@ -99018,7 +104013,7 @@ type ServerInterface interface {
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
 	// Invite a new member. Admin-only.
 	// (POST /users)
-	InviteUser(w http.ResponseWriter, r *http.Request)
+	InviteUser(w http.ResponseWriter, r *http.Request, params InviteUserParams)
 	// What a seat with this role and these teams will see and may do.
 	// (GET /users/access-preview)
 	PreviewAccess(w http.ResponseWriter, r *http.Request, params PreviewAccessParams)
@@ -99075,7 +104070,7 @@ type ServerInterface interface {
 	RemoveMember(w http.ResponseWriter, r *http.Request, id Id)
 	// Mail an invited member a new set-password link. Admin-only.
 	// (POST /users/{id}/resend-invite)
-	ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id)
+	ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id, params ResendUserInviteParams)
 	// Preview removing a member or merging them into another account.
 	// (GET /users/{id}/retirement-preview)
 	PreviewMemberRetirement(w http.ResponseWriter, r *http.Request, id Id, params PreviewMemberRetirementParams)
@@ -99169,7 +104164,7 @@ type ServerInterface interface {
 	// List the website forms that land leads in this installation.
 	// (GET /web-forms)
 	ListWebForms(w http.ResponseWriter, r *http.Request, params ListWebFormsParams)
-	// Create a website form (returns a minted signing secret once).
+	// Create a website form; a human sees its minted signing secret once.
 	// (POST /web-forms)
 	CreateWebForm(w http.ResponseWriter, r *http.Request)
 	// Archive a website form; its address stops taking submissions.
@@ -99352,7 +104347,7 @@ func (_ Unimplemented) GetFollowUpSettings(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Change the follow-up window (admin/ops).
+// Change the follow-up window or the private-mail request check (admin/ops).
 // (PATCH /activities/follow-up-settings)
 func (_ Unimplemented) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -99415,6 +104410,12 @@ func (_ Unimplemented) AnswerCalendarInvitation(w http.ResponseWriter, r *http.R
 // Say a captured message is not about a deal, or about none of the deals its question offered.
 // (POST /activities/{id}/deal-decline)
 func (_ Unimplemented) DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say whether an activity linked to a deal is about that deal, or take that back.
+// (PUT /activities/{id}/deal-relevance)
+func (_ Unimplemented) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -99544,7 +104545,13 @@ func (_ Unimplemented) ListActivityReviewTemplates(w http.ResponseWriter, r *htt
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Edit the questions for future outcome reviews.
+// Add the question set an outcome's reviews ask from now on.
+// (POST /activity-review-templates)
+func (_ Unimplemented) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, params CreateActivityReviewTemplateParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Edit the questions for future outcome reviews, or retire or restore a template.
 // (PATCH /activity-review-templates/{id})
 func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -99631,6 +104638,12 @@ func (_ Unimplemented) ResetData(w http.ResponseWriter, r *http.Request) {
 // Scoped capability readings and evidence coverage for System health.
 // (GET /admin/system-health)
 func (_ Unimplemented) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Which tables would win back enough space from a full vacuum run out of band.
+// (GET /admin/vacuum-recommendations)
+func (_ Unimplemented) GetVacuumRecommendations(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -99862,7 +104875,7 @@ func (_ Unimplemented) GetAiUsageSummary(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The accounts at risk in one population: single-threaded deals, accounts in pipeline nobody has exchanged a word with, and won accounts gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
+// The companies at risk in one population: single-threaded deals, companies in pipeline nobody has exchanged a word with, and won companies gone silent. Each row carries the facts behind its verdict. Counts for every view come with each answer; rows come for the view asked for. The thresholds are the framework's, and the answer prints them.
 // (GET /analytics/account-coverage)
 func (_ Unimplemented) GetAccountCoverage(w http.ResponseWriter, r *http.Request, params GetAccountCoverageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -100056,7 +105069,7 @@ func (_ Unimplemented) ListReportingReports(w http.ResponseWriter, r *http.Reque
 
 // Create reporting report
 // (POST /analytics/reports)
-func (_ Unimplemented) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) CreateReportingReport(w http.ResponseWriter, r *http.Request, params CreateReportingReportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100396,6 +105409,18 @@ func (_ Unimplemented) UploadAttachment(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Add a web link to a record's documents.
+// (POST /attachments/links)
+func (_ Unimplemented) AddAttachmentLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the title a web page gives itself, before the link is added.
+// (POST /attachments/links/preview)
+func (_ Unimplemented) PreviewAttachmentLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Archive an attachment (soft delete).
 // (DELETE /attachments/{id})
 func (_ Unimplemented) DeleteAttachment(w http.ResponseWriter, r *http.Request, id Id) {
@@ -100426,7 +105451,7 @@ func (_ Unimplemented) AcceptAttachmentExtraction(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// File a chat screenshot on its contact as one message activity, with the image attached.
+// File a chat screenshot on its contact, lead or deal as one message activity, with the image attached.
 // (POST /attachments/{id}/extraction:file-chat)
 func (_ Unimplemented) FileChatCapture(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -100579,6 +105604,12 @@ func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 // Turn automatic application on or off for one kind.
 // (PATCH /autonomy)
 func (_ Unimplemented) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Switch automatic application on or off for the whole installation.
+// (PUT /autonomy/installation)
+func (_ Unimplemented) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100882,6 +105913,24 @@ func (_ Unimplemented) ReadCaptureTracePipeline(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The mail in your mailbox that was sent to addresses that are not yours.
+// (GET /capture/unrouted-mail)
+func (_ Unimplemented) ListUnroutedMail(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take back "not mine" for an address.
+// (DELETE /capture/unrouted-mail/{address}/refusal)
+func (_ Unimplemented) RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request, address string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say that you do not receive this address.
+// (PUT /capture/unrouted-mail/{address}/refusal)
+func (_ Unimplemented) RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request, address string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What has been going on with one record, in one cited picture.
 // (GET /catch-up)
 func (_ Unimplemented) CatchUpOnRecord(w http.ResponseWriter, r *http.Request, params CatchUpOnRecordParams) {
@@ -100960,6 +106009,12 @@ func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Undo Margince's close of a promise.
+// (POST /claims/{id}/reopen)
+func (_ Unimplemented) ReopenConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Say a promise was kept, or that it no longer stands.
 // (POST /claims/{id}/settle)
 func (_ Unimplemented) SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
@@ -101034,7 +106089,7 @@ func (_ Unimplemented) CorrectCommunicationWording(w http.ResponseWriter, r *htt
 
 // Send a refused message anyway, on a named human's recorded decision.
 // (POST /communication-reviews/{id}/direct-send)
-func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DirectCommunicationSendParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101508,25 +106563,25 @@ func (_ Unimplemented) ListConnectors(w http.ResponseWriter, r *http.Request) {
 
 // Cancel a running backfill — captured rows are retained.
 // (DELETE /connectors/{provider}/backfill)
-func (_ Unimplemented) CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) CancelConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params CancelConnectorBackfillParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Backfill progress — the activation read.
 // (GET /connectors/{provider}/backfill)
-func (_ Unimplemented) GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) GetConnectorBackfillStatus(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params GetConnectorBackfillStatusParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Start the bounded connect-time backfill.
 // (POST /connectors/{provider}/backfill)
-func (_ Unimplemented) StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) StartConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params StartConnectorBackfillParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Preview a backfill window — the scope before the spend.
 // (POST /connectors/{provider}/backfill/preview)
-func (_ Unimplemented) PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) PreviewConnectorBackfill(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params PreviewConnectorBackfillParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101550,37 +106605,37 @@ func (_ Unimplemented) ListConnectorContainers(w http.ResponseWriter, r *http.Re
 
 // Set the word this connector files what it captures under.
 // (PUT /connectors/{provider}/context-tag)
-func (_ Unimplemented) SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorContextTagParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Disconnect the calling user's mail/calendar capture.
 // (POST /connectors/{provider}/disconnect)
-func (_ Unimplemented) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DisconnectConnectorParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Set the date this mailbox's automatic commitment suggestions start from.
 // (PUT /connectors/{provider}/history-baseline)
-func (_ Unimplemented) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) SetConnectorHistoryBaseline(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorHistoryBaselineParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Set what this mailbox asks of the mail it brings in.
 // (PUT /connectors/{provider}/mail-posture)
-func (_ Unimplemented) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) SetConnectorMailPosture(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorMailPostureParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Set this mailbox's own answer to the nightly signature pass.
 // (PUT /connectors/{provider}/signature-enrichment)
-func (_ Unimplemented) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params SetConnectorSignatureEnrichmentParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Dismiss the owner's current mailbox silence warning.
 // (POST /connectors/{provider}/silence/dismiss)
-func (_ Unimplemented) DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+func (_ Unimplemented) DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DismissConnectorSilenceParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101593,6 +106648,12 @@ func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Reques
 // Define a consent purpose — a human-only admin write.
 // (POST /consent-purposes)
 func (_ Unimplemented) CreateConsentPurpose(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How many messages went out under each declared consent purpose, and how many the record disputes.
+// (GET /consent-purposes/send-counts)
+func (_ Unimplemented) ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request, params ListConsentPurposeSendCountsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101628,7 +106689,7 @@ func (_ Unimplemented) QuickCaptureContact(w http.ResponseWriter, r *http.Reques
 
 // Import a .vcf address-card file.
 // (POST /contacts/vcard-import)
-func (_ Unimplemented) ImportVCards(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ImportVCards(w http.ResponseWriter, r *http.Request, params ImportVCardsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101712,13 +106773,13 @@ func (_ Unimplemented) RevokeOverride(w http.ResponseWriter, r *http.Request, id
 
 // Mail this contact a single-use link to see what is held about them, correct it, and answer on marketing.
 // (POST /contacts/{id}/consent/confirm-request)
-func (_ Unimplemented) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) RequestDetailsConfirmation(w http.ResponseWriter, r *http.Request, id Id, params RequestDetailsConfirmationParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Mail the subject a single-use link that confirms one marketing purpose.
 // (POST /contacts/{id}/consent/double-opt-in)
-func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id Id, params IssueDoubleOptInParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101742,7 +106803,7 @@ func (_ Unimplemented) ExportContactOptOutRecords(w http.ResponseWriter, r *http
 
 // Mail this contact the Art. 14 disclosure, which asks them for nothing.
 // (POST /contacts/{id}/consent/privacy-notice)
-func (_ Unimplemented) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id, params SendPrivacyNoticeParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101827,6 +106888,12 @@ func (_ Unimplemented) GetContactEnrichmentRun(w http.ResponseWriter, r *http.Re
 // Who around this contact could open a door, and through whom.
 // (GET /contacts/{id}/graph)
 func (_ Unimplemented) GetContactGraph(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a contact's impersonation warning as fine.
+// (POST /contacts/{id}/impersonation-warning/clear)
+func (_ Unimplemented) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102001,6 +107068,12 @@ func (_ Unimplemented) CreateCustomField(w http.ResponseWriter, r *http.Request,
 // Rename a custom field or change whether create dialogs offer it (not a schema change).
 // (PATCH /custom-fields/{id})
 func (_ Unimplemented) RenameCustomField(w http.ResponseWriter, r *http.Request, id Id, params RenameCustomFieldParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// How many records hold each choice of a picklist or multiselect field.
+// (GET /custom-fields/{id}/choices)
+func (_ Unimplemented) ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102370,9 +107443,33 @@ func (_ Unimplemented) UpdateDealLine(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Mark the manager request on this deal as handled.
+// (DELETE /deals/{id}/manager-request)
+func (_ Unimplemented) ClearDealManagerRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask the team's manager to look at this deal.
+// (POST /deals/{id}/manager-request)
+func (_ Unimplemented) RequestDealManager(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Every change Margince made to this deal, newest first.
 // (GET /deals/{id}/margince-changes)
 func (_ Unimplemented) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move an open deal to another pipeline, onto its first open stage.
+// (POST /deals/{id}/move-pipeline)
+func (_ Unimplemented) MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a deal back on the pipeline and stage its last move left.
+// (POST /deals/{id}/move-pipeline/undo)
+func (_ Unimplemented) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102534,7 +107631,7 @@ func (_ Unimplemented) UpdateContactCaseSettings(w http.ResponseWriter, r *http.
 
 // The calling user's morning digest — what capture did overnight.
 // (GET /digest)
-func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request, params GetMorningDigestParams) {
+func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -102822,7 +107919,13 @@ func (_ Unimplemented) ListForecastCalls(w http.ResponseWriter, r *http.Request,
 
 // Record what somebody believes will close.
 // (POST /forecast/calls)
-func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request, params RecordForecastCallParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The deals each team should work to meet its goal this quarter.
+// (GET /forecast/focus)
+func (_ Unimplemented) GetForecastFocus(w http.ResponseWriter, r *http.Request, params GetForecastFocusParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -103189,6 +108292,12 @@ func (_ Unimplemented) DeleteCorpusDocument(w http.ResponseWriter, r *http.Reque
 // Download a document's own bytes.
 // (GET /knowledge/documents/{id})
 func (_ Unimplemented) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that a user read the no-lawful-basis warning and chose to send anyway.
+// (POST /lawful-basis-confirmations)
+func (_ Unimplemented) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104638,6 +109747,12 @@ func (_ Unimplemented) DescribeReadViews(w http.ResponseWriter, r *http.Request)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The country the record states for each address, and where it was read.
+// (POST /recipient-countries)
+func (_ Unimplemented) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The fields a record create or update may write, for each record type.
 // (GET /record-fields)
 func (_ Unimplemented) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
@@ -104743,6 +109858,24 @@ func (_ Unimplemented) RestoreRecordChange(w http.ResponseWriter, r *http.Reques
 // Take ownership of a customer record.
 // (POST /records/{record_type}/{id}/claim)
 func (_ Unimplemented) ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw the caller's open request for edit access to this record.
+// (DELETE /records/{record_type}/{id}/edit-access-request)
+func (_ Unimplemented) WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The caller's open request for edit access to this record.
+// (GET /records/{record_type}/{id}/edit-access-request)
+func (_ Unimplemented) GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask a record's owner for edit access.
+// (POST /records/{record_type}/{id}/edit-access-request)
+func (_ Unimplemented) RequestEditAccess(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestEditAccessParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104860,6 +109993,18 @@ func (_ Unimplemented) UpdateRetentionPolicy(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List archived activity, oldest first, for the controller to review against the archive's purpose.
+// (GET /retention/archive)
+func (_ Unimplemented) ListArchivedActivities(w http.ResponseWriter, r *http.Request, params ListArchivedActivitiesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept.
+// (POST /retention/archive/delete)
+func (_ Unimplemented) DeleteArchivedActivities(w http.ResponseWriter, r *http.Request, params DeleteArchivedActivitiesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List the records a legal hold is preserving.
 // (GET /retention/legal-holds)
 func (_ Unimplemented) ListLegalHolds(w http.ResponseWriter, r *http.Request, params ListLegalHoldsParams) {
@@ -104947,6 +110092,12 @@ func (_ Unimplemented) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request
 // Restore an archived role. Human-only.
 // (POST /roles/{key}/restore)
 func (_ Unimplemented) RestoreRole(w http.ResponseWriter, r *http.Request, key string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a shipped role's grants back to the ones the product ships. Human-only.
+// (POST /roles/{key}/restore-grants)
+func (_ Unimplemented) RestoreRoleGrants(w http.ResponseWriter, r *http.Request, key string, params RestoreRoleGrantsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105046,6 +110197,24 @@ func (_ Unimplemented) CreateMeetingProposal(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// List the colleagues the caller may name on their booking link.
+// (GET /scheduling/team-candidates)
+func (_ Unimplemented) ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the colleagues' booking links that name the caller.
+// (GET /scheduling/team-requests)
+func (_ Unimplemented) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Confirm or leave a colleague's booking link that names the caller.
+// (PUT /scheduling/team-requests/{host_user_id})
+func (_ Unimplemented) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request, hostUserId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Read the current receiver and reassignment version of a prospect handoff.
 // (GET /sdr-handoffs/{id}/assignee)
 func (_ Unimplemented) GetHandoffAssignee(w http.ResponseWriter, r *http.Request, id Id) {
@@ -105061,6 +110230,12 @@ func (_ Unimplemented) ReassignHandoff(w http.ResponseWriter, r *http.Request, i
 // Cross-object search (contacts, companies, deals, activities, leads).
 // (GET /search)
 func (_ Unimplemented) Search(w http.ResponseWriter, r *http.Request, params SearchParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a question through the caller's reporting and record readers.
+// (POST /search/data-answer)
+func (_ Unimplemented) AskSearchData(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105226,6 +110401,12 @@ func (_ Unimplemented) GetStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Reachability probe for a monitor that sends HEAD.
+// (HEAD /status)
+func (_ Unimplemented) HeadStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // One open tag suggestion the caller may see, with the mail and notes it cites.
 // (GET /tag-suggestions/{id})
 func (_ Unimplemented) GetTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
@@ -105360,7 +110541,7 @@ func (_ Unimplemented) ListUsers(w http.ResponseWriter, r *http.Request, params 
 
 // Invite a new member. Admin-only.
 // (POST /users)
-func (_ Unimplemented) InviteUser(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) InviteUser(w http.ResponseWriter, r *http.Request, params InviteUserParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105474,7 +110655,7 @@ func (_ Unimplemented) RemoveMember(w http.ResponseWriter, r *http.Request, id I
 
 // Mail an invited member a new set-password link. Admin-only.
 // (POST /users/{id}/resend-invite)
-func (_ Unimplemented) ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) ResendUserInvite(w http.ResponseWriter, r *http.Request, id Id, params ResendUserInviteParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -105664,7 +110845,7 @@ func (_ Unimplemented) ListWebForms(w http.ResponseWriter, r *http.Request, para
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create a website form (returns a minted signing secret once).
+// Create a website form; a human sees its minted signing secret once.
 // (POST /web-forms)
 func (_ Unimplemented) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -107007,6 +112188,40 @@ func (siw *ServerInterfaceWrapper) DeclineActivityDeal(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// SetActivityDealRelevance operation middleware
+func (siw *ServerInterfaceWrapper) SetActivityDealRelevance(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetActivityDealRelevance(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ClearActivityDisposition operation middleware
 func (siw *ServerInterfaceWrapper) ClearActivityDisposition(w http.ResponseWriter, r *http.Request) {
 
@@ -107913,6 +113128,55 @@ func (siw *ServerInterfaceWrapper) ListActivityReviewTemplates(w http.ResponseWr
 	handler.ServeHTTP(w, r)
 }
 
+// CreateActivityReviewTemplate operation middleware
+func (siw *ServerInterfaceWrapper) CreateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateActivityReviewTemplateParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateActivityReviewTemplate(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateActivityReviewTemplate operation middleware
 func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request) {
 
@@ -108319,6 +113583,26 @@ func (siw *ServerInterfaceWrapper) GetSystemHealth(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetSystemHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetVacuumRecommendations operation middleware
+func (siw *ServerInterfaceWrapper) GetVacuumRecommendations(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetVacuumRecommendations(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -111966,6 +117250,9 @@ func (siw *ServerInterfaceWrapper) ListReportingReports(w http.ResponseWriter, r
 // CreateReportingReport operation middleware
 func (siw *ServerInterfaceWrapper) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -111974,8 +117261,32 @@ func (siw *ServerInterfaceWrapper) CreateReportingReport(w http.ResponseWriter, 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateReportingReportParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateReportingReport(w, r)
+		siw.Handler.CreateReportingReport(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -114851,6 +120162,48 @@ func (siw *ServerInterfaceWrapper) UploadAttachment(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// AddAttachmentLink operation middleware
+func (siw *ServerInterfaceWrapper) AddAttachmentLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddAttachmentLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAttachmentLink operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAttachmentLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAttachmentLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DeleteAttachment operation middleware
 func (siw *ServerInterfaceWrapper) DeleteAttachment(w http.ResponseWriter, r *http.Request) {
 
@@ -115962,6 +121315,26 @@ func (siw *ServerInterfaceWrapper) UpdateAutonomy(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAutonomy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAutoApplyInstallation operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAutoApplyInstallation(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -117299,6 +122672,45 @@ func (siw *ServerInterfaceWrapper) PurgeCaptureExclusion(w http.ResponseWriter, 
 		return
 	}
 
+	// ------------- Optional query parameter "expect_destroyed" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "expect_destroyed", r.URL.Query(), &params.ExpectDestroyed, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expect_destroyed"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expect_destroyed", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "expect_released" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "expect_released", r.URL.Query(), &params.ExpectReleased, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expect_released"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expect_released", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "expect_anonymised" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "expect_anonymised", r.URL.Query(), &params.ExpectAnonymised, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "expect_anonymised"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "expect_anonymised", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PurgeCaptureExclusion(w, r, id, params)
 	}))
@@ -117780,6 +123192,90 @@ func (siw *ServerInterfaceWrapper) ReadCaptureTracePipeline(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ReadCaptureTracePipeline(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListUnroutedMail operation middleware
+func (siw *ServerInterfaceWrapper) ListUnroutedMail(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListUnroutedMail(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreUnroutedAddress operation middleware
+func (siw *ServerInterfaceWrapper) RestoreUnroutedAddress(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "address" -------------
+	var address string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "address", chi.URLParam(r, "address"), &address, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "address", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreUnroutedAddress(w, r, address)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RefuseUnroutedAddress operation middleware
+func (siw *ServerInterfaceWrapper) RefuseUnroutedAddress(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "address" -------------
+	var address string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "address", chi.URLParam(r, "address"), &address, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "address", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RefuseUnroutedAddress(w, r, address)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -118273,6 +123769,38 @@ func (siw *ServerInterfaceWrapper) ListChannelProviders(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListChannelProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReopenConversationClaim operation middleware
+func (siw *ServerInterfaceWrapper) ReopenConversationClaim(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReopenConversationClaim(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -118781,14 +124309,36 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 
 	ctx := r.Context()
 
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DirectCommunicationSendParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DirectCommunicationSend(w, r, id)
+		siw.Handler.DirectCommunicationSend(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -119123,6 +124673,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "partner_stage_meaning"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "partner_stage_meaning", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "dormancy" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "dormancy", r.URL.Query(), &params.Dormancy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "dormancy"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "dormancy", Err: err})
 		}
 		return
 	}
@@ -122865,8 +128428,24 @@ func (siw *ServerInterfaceWrapper) CancelConnectorBackfill(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CancelConnectorBackfillParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CancelConnectorBackfill(w, r, provider)
+		siw.Handler.CancelConnectorBackfill(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -122897,8 +128476,24 @@ func (siw *ServerInterfaceWrapper) GetConnectorBackfillStatus(w http.ResponseWri
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetConnectorBackfillStatusParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetConnectorBackfillStatus(w, r, provider)
+		siw.Handler.GetConnectorBackfillStatus(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -122931,8 +128526,24 @@ func (siw *ServerInterfaceWrapper) StartConnectorBackfill(w http.ResponseWriter,
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params StartConnectorBackfillParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.StartConnectorBackfill(w, r, provider)
+		siw.Handler.StartConnectorBackfill(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -122965,8 +128576,24 @@ func (siw *ServerInterfaceWrapper) PreviewConnectorBackfill(w http.ResponseWrite
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params PreviewConnectorBackfillParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.PreviewConnectorBackfill(w, r, provider)
+		siw.Handler.PreviewConnectorBackfill(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123149,8 +128776,24 @@ func (siw *ServerInterfaceWrapper) SetConnectorContextTag(w http.ResponseWriter,
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetConnectorContextTagParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetConnectorContextTag(w, r, provider)
+		siw.Handler.SetConnectorContextTag(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123183,8 +128826,24 @@ func (siw *ServerInterfaceWrapper) DisconnectConnector(w http.ResponseWriter, r 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DisconnectConnectorParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DisconnectConnector(w, r, provider)
+		siw.Handler.DisconnectConnector(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123217,8 +128876,24 @@ func (siw *ServerInterfaceWrapper) SetConnectorHistoryBaseline(w http.ResponseWr
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetConnectorHistoryBaselineParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetConnectorHistoryBaseline(w, r, provider)
+		siw.Handler.SetConnectorHistoryBaseline(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123251,8 +128926,24 @@ func (siw *ServerInterfaceWrapper) SetConnectorMailPosture(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetConnectorMailPostureParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetConnectorMailPosture(w, r, provider)
+		siw.Handler.SetConnectorMailPosture(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123285,8 +128976,24 @@ func (siw *ServerInterfaceWrapper) SetConnectorSignatureEnrichment(w http.Respon
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SetConnectorSignatureEnrichmentParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SetConnectorSignatureEnrichment(w, r, provider)
+		siw.Handler.SetConnectorSignatureEnrichment(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123319,8 +129026,24 @@ func (siw *ServerInterfaceWrapper) DismissConnectorSilence(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DismissConnectorSilenceParams
+
+	// ------------- Optional query parameter "connection_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "connection_id", r.URL.Query(), &params.ConnectionId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "connection_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "connection_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DismissConnectorSilence(w, r, provider)
+		siw.Handler.DismissConnectorSilence(w, r, provider, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123363,6 +129086,47 @@ func (siw *ServerInterfaceWrapper) CreateConsentPurpose(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateConsentPurpose(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListConsentPurposeSendCounts operation middleware
+func (siw *ServerInterfaceWrapper) ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListConsentPurposeSendCountsParams
+
+	// ------------- Optional query parameter "days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "days", r.URL.Query(), &params.Days, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListConsentPurposeSendCounts(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -123764,6 +129528,9 @@ func (siw *ServerInterfaceWrapper) QuickCaptureContact(w http.ResponseWriter, r 
 // ImportVCards operation middleware
 func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -123772,8 +129539,24 @@ func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.R
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ImportVCardsParams
+
+	// ------------- Optional query parameter "company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ImportVCards(w, r)
+		siw.Handler.ImportVCards(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -124420,8 +130203,32 @@ func (siw *ServerInterfaceWrapper) RequestDetailsConfirmation(w http.ResponseWri
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RequestDetailsConfirmationParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RequestDetailsConfirmation(w, r, id)
+		siw.Handler.RequestDetailsConfirmation(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -124454,8 +130261,32 @@ func (siw *ServerInterfaceWrapper) IssueDoubleOptIn(w http.ResponseWriter, r *ht
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params IssueDoubleOptInParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.IssueDoubleOptIn(w, r, id)
+		siw.Handler.IssueDoubleOptIn(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -124619,8 +130450,32 @@ func (siw *ServerInterfaceWrapper) SendPrivacyNotice(w http.ResponseWriter, r *h
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SendPrivacyNoticeParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.SendPrivacyNotice(w, r, id)
+		siw.Handler.SendPrivacyNotice(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -125175,6 +131030,38 @@ func (siw *ServerInterfaceWrapper) GetContactGraph(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetContactGraph(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ClearContactImpersonationWarning operation middleware
+func (siw *ServerInterfaceWrapper) ClearContactImpersonationWarning(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearContactImpersonationWarning(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -126519,6 +132406,40 @@ func (siw *ServerInterfaceWrapper) RenameCustomField(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RenameCustomField(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCustomFieldChoiceUse operation middleware
+func (siw *ServerInterfaceWrapper) ListCustomFieldChoiceUse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCustomFieldChoiceUse(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -129971,6 +135892,74 @@ func (siw *ServerInterfaceWrapper) UpdateDealLine(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ClearDealManagerRequest operation middleware
+func (siw *ServerInterfaceWrapper) ClearDealManagerRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ClearDealManagerRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestDealManager operation middleware
+func (siw *ServerInterfaceWrapper) RequestDealManager(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestDealManager(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListDealMarginceChanges operation middleware
 func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request) {
 
@@ -130010,8 +135999,161 @@ func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter
 		return
 	}
 
+	// ------------- Optional query parameter "stage_history_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "stage_history_id", r.URL.Query(), &params.StageHistoryId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "stage_history_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "stage_history_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "note_activity_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "note_activity_id", r.URL.Query(), &params.NoteActivityId, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "note_activity_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "note_activity_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "change_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "change_kind", r.URL.Query(), &params.ChangeKind, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "change_kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "change_kind", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListDealMarginceChanges(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MoveDealPipeline operation middleware
+func (siw *ServerInterfaceWrapper) MoveDealPipeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MoveDealPipelineParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MoveDealPipeline(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoDealPipelineMove operation middleware
+func (siw *ServerInterfaceWrapper) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoDealPipelineMoveParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoDealPipelineMove(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -130793,6 +136935,19 @@ func (siw *ServerInterfaceWrapper) ListDedupeCandidates(w http.ResponseWriter, r
 		return
 	}
 
+	// ------------- Optional query parameter "record_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "record_id", r.URL.Query(), &params.RecordId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "record_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_id", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "cursor" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -131148,33 +137303,14 @@ func (siw *ServerInterfaceWrapper) UpdateContactCaseSettings(w http.ResponseWrit
 // GetMorningDigest operation middleware
 func (siw *ServerInterfaceWrapper) GetMorningDigest(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetMorningDigestParams
-
-	// ------------- Optional query parameter "date" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "date", r.URL.Query(), &params.Date, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "date"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetMorningDigest(w, r, params)
+		siw.Handler.GetMorningDigest(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132804,6 +138940,9 @@ func (siw *ServerInterfaceWrapper) ListForecastCalls(w http.ResponseWriter, r *h
 // RecordForecastCall operation middleware
 func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -132812,8 +138951,73 @@ func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RecordForecastCallParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RecordForecastCall(w, r)
+		siw.Handler.RecordForecastCall(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastFocus operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastFocus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetForecastFocusParams
+
+	// ------------- Optional query parameter "team" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "team", r.URL.Query(), &params.Team, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastFocus(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -134646,6 +140850,26 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DownloadCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmSendWithoutLawfulBasis operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmSendWithoutLawfulBasis(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -144910,6 +151134,26 @@ func (siw *ServerInterfaceWrapper) DescribeReadViews(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ResolveRecipientCountries operation middleware
+func (siw *ServerInterfaceWrapper) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveRecipientCountries(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DescribeRecordFields operation middleware
 func (siw *ServerInterfaceWrapper) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
 
@@ -145814,6 +152058,159 @@ func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ClaimRecord(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// WithdrawEditAccessRequest operation middleware
+func (siw *ServerInterfaceWrapper) WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.WithdrawEditAccessRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetEditAccessRequest operation middleware
+func (siw *ServerInterfaceWrapper) GetEditAccessRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEditAccessRequest(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RequestEditAccess operation middleware
+func (siw *ServerInterfaceWrapper) RequestEditAccess(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RequestEditAccessParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RequestEditAccess(w, r, recordType, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -146781,6 +153178,144 @@ func (siw *ServerInterfaceWrapper) UpdateRetentionPolicy(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ListArchivedActivities operation middleware
+func (siw *ServerInterfaceWrapper) ListArchivedActivities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListArchivedActivitiesParams
+
+	// ------------- Optional query parameter "before" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "before", r.URL.Query(), &params.Before, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "before"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "before", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "contact_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "contact_id", r.URL.Query(), &params.ContactId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "contact_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "contact_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListArchivedActivities(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteArchivedActivities operation middleware
+func (siw *ServerInterfaceWrapper) DeleteArchivedActivities(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DeleteArchivedActivitiesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteArchivedActivities(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListLegalHolds operation middleware
 func (siw *ServerInterfaceWrapper) ListLegalHolds(w http.ResponseWriter, r *http.Request) {
 
@@ -147443,6 +153978,66 @@ func (siw *ServerInterfaceWrapper) RestoreRole(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreRoleGrants operation middleware
+func (siw *ServerInterfaceWrapper) RestoreRoleGrants(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", chi.URLParam(r, "key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreRoleGrantsParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreRoleGrants(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DescribeRouterActions operation middleware
 func (siw *ServerInterfaceWrapper) DescribeRouterActions(w http.ResponseWriter, r *http.Request) {
 
@@ -148082,6 +154677,82 @@ func (siw *ServerInterfaceWrapper) CreateMeetingProposal(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ListSchedulingTeamCandidates operation middleware
+func (siw *ServerInterfaceWrapper) ListSchedulingTeamCandidates(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchedulingTeamCandidates(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSchedulingTeamRequests operation middleware
+func (siw *ServerInterfaceWrapper) ListSchedulingTeamRequests(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchedulingTeamRequests(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnswerSchedulingTeamRequest operation middleware
+func (siw *ServerInterfaceWrapper) AnswerSchedulingTeamRequest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "host_user_id" -------------
+	var hostUserId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "host_user_id", chi.URLParam(r, "host_user_id"), &hostUserId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "host_user_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnswerSchedulingTeamRequest(w, r, hostUserId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetHandoffAssignee operation middleware
 func (siw *ServerInterfaceWrapper) GetHandoffAssignee(w http.ResponseWriter, r *http.Request) {
 
@@ -148232,6 +154903,19 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// ------------- Optional query parameter "typeahead" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "typeahead", r.URL.Query(), &params.Typeahead, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "typeahead"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "typeahead", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "cursor" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -148260,6 +154944,28 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.Search(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AskSearchData operation middleware
+func (siw *ServerInterfaceWrapper) AskSearchData(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AskSearchData(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -149488,6 +156194,20 @@ func (siw *ServerInterfaceWrapper) GetStatus(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// HeadStatus operation middleware
+func (siw *ServerInterfaceWrapper) HeadStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HeadStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTagSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) GetTagSuggestion(w http.ResponseWriter, r *http.Request) {
 
@@ -150128,6 +156848,19 @@ func (siw *ServerInterfaceWrapper) ListTeams(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListTeams(w, r, params)
 	}))
@@ -150377,6 +157110,9 @@ func (siw *ServerInterfaceWrapper) ListUsers(w http.ResponseWriter, r *http.Requ
 // InviteUser operation middleware
 func (siw *ServerInterfaceWrapper) InviteUser(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -150385,8 +157121,32 @@ func (siw *ServerInterfaceWrapper) InviteUser(w http.ResponseWriter, r *http.Req
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params InviteUserParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.InviteUser(w, r)
+		siw.Handler.InviteUser(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -151091,8 +157851,32 @@ func (siw *ServerInterfaceWrapper) ResendUserInvite(w http.ResponseWriter, r *ht
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ResendUserInviteParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ResendUserInvite(w, r, id)
+		siw.Handler.ResendUserInvite(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -152685,6 +159469,8 @@ func (siw *ServerInterfaceWrapper) ListWebForms(w http.ResponseWriter, r *http.R
 func (siw *ServerInterfaceWrapper) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -154533,6 +161319,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/activities/{id}/deal-decline", wrapper.DeclineActivityDeal)
 	})
 	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/activities/{id}/deal-relevance", wrapper.SetActivityDealRelevance)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/activities/{id}/disposition", wrapper.ClearActivityDisposition)
 	})
 	r.Group(func(r chi.Router) {
@@ -154596,6 +161385,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/activity-review-templates", wrapper.ListActivityReviewTemplates)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/activity-review-templates", wrapper.CreateActivityReviewTemplate)
+	})
+	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/activity-review-templates/{id}", wrapper.UpdateActivityReviewTemplate)
 	})
 	r.Group(func(r chi.Router) {
@@ -154639,6 +161431,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/system-health", wrapper.GetSystemHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/vacuum-recommendations", wrapper.GetVacuumRecommendations)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/agent-bundle", wrapper.DownloadAgentSkillBundle)
@@ -155022,6 +161817,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/attachments", wrapper.UploadAttachment)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attachments/links", wrapper.AddAttachmentLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attachments/links/preview", wrapper.PreviewAttachmentLink)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/attachments/{id}", wrapper.DeleteAttachment)
 	})
 	r.Group(func(r chi.Router) {
@@ -155113,6 +161914,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/autonomy", wrapper.UpdateAutonomy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/autonomy/installation", wrapper.UpdateAutoApplyInstallation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/availability", wrapper.GetAvailability)
@@ -155265,6 +162069,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/capture/traces/{id}", wrapper.ReadCaptureTracePipeline)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/capture/unrouted-mail", wrapper.ListUnroutedMail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/capture/unrouted-mail/{address}/refusal", wrapper.RestoreUnroutedAddress)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/capture/unrouted-mail/{address}/refusal", wrapper.RefuseUnroutedAddress)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/catch-up", wrapper.CatchUpOnRecord)
 	})
 	r.Group(func(r chi.Router) {
@@ -155302,6 +162115,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/claims/{id}/reopen", wrapper.ReopenConversationClaim)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/claims/{id}/settle", wrapper.SettleConversationClaim)
@@ -155622,6 +162438,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/consent-purposes", wrapper.CreateConsentPurpose)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/consent-purposes/send-counts", wrapper.ListConsentPurposeSendCounts)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts", wrapper.ListContacts)
 	})
 	r.Group(func(r chi.Router) {
@@ -155739,6 +162558,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/contacts/{id}/graph", wrapper.GetContactGraph)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/impersonation-warning/clear", wrapper.ClearContactImpersonationWarning)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/intro-note-draft", wrapper.DraftIntroNote)
 	})
 	r.Group(func(r chi.Router) {
@@ -155824,6 +162646,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/custom-fields/{id}", wrapper.RenameCustomField)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/custom-fields/{id}/choices", wrapper.ListCustomFieldChoiceUse)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/custom-fields/{id}/lists", wrapper.ListCustomFieldLiveLists)
@@ -156009,7 +162834,19 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/deals/{id}/lines/{lineId}", wrapper.UpdateDealLine)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/deals/{id}/manager-request", wrapper.ClearDealManagerRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/manager-request", wrapper.RequestDealManager)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline", wrapper.MoveDealPipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline/undo", wrapper.UndoDealPipelineMove)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/deals/{id}/move/dismiss", wrapper.RestoreDealMove)
@@ -156237,6 +163074,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/focus", wrapper.GetForecastFocus)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/movement", wrapper.GetForecastMovement)
 	})
 	r.Group(func(r chi.Router) {
@@ -156418,6 +163258,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/documents/{id}", wrapper.DownloadCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lawful-basis-confirmations", wrapper.ConfirmSendWithoutLawfulBasis)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-disqualify-reasons", wrapper.ListLeadDisqualifyReasons)
@@ -157143,6 +163986,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/read-views", wrapper.DescribeReadViews)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/recipient-countries", wrapper.ResolveRecipientCountries)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-fields", wrapper.DescribeRecordFields)
 	})
 	r.Group(func(r chi.Router) {
@@ -157195,6 +164041,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/claim", wrapper.ClaimRecord)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/records/{record_type}/{id}/edit-access-request", wrapper.WithdrawEditAccessRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/{record_type}/{id}/edit-access-request", wrapper.GetEditAccessRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{record_type}/{id}/edit-access-request", wrapper.RequestEditAccess)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/records/{record_type}/{id}/ownership-offer", wrapper.WithdrawOwnershipOffer)
@@ -157254,6 +164109,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/retention-policies/{id}", wrapper.UpdateRetentionPolicy)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/retention/archive", wrapper.ListArchivedActivities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/retention/archive/delete", wrapper.DeleteArchivedActivities)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/retention/legal-holds", wrapper.ListLegalHolds)
 	})
 	r.Group(func(r chi.Router) {
@@ -157297,6 +164158,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/roles/{key}/restore", wrapper.RestoreRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/roles/{key}/restore-grants", wrapper.RestoreRoleGrants)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/router-actions", wrapper.DescribeRouterActions)
@@ -157347,6 +164211,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/scheduling/proposals", wrapper.CreateMeetingProposal)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/team-candidates", wrapper.ListSchedulingTeamCandidates)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/scheduling/team-requests", wrapper.ListSchedulingTeamRequests)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/scheduling/team-requests/{host_user_id}", wrapper.AnswerSchedulingTeamRequest)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/sdr-handoffs/{id}/assignee", wrapper.GetHandoffAssignee)
 	})
 	r.Group(func(r chi.Router) {
@@ -157354,6 +164227,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/search/data-answer", wrapper.AskSearchData)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/shared-mailboxes", wrapper.ListSharedMailboxes)
@@ -157435,6 +164311,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/status", wrapper.GetStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Head(options.BaseURL+"/status", wrapper.HeadStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tag-suggestions/{id}", wrapper.GetTagSuggestion)

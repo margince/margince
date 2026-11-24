@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // The two ways a stored actor can have lost the authority it acted with. Both
@@ -48,33 +49,24 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 		return principal.Principal{}, errors.New("rebuilding a stored actor outside workspace context")
 	}
 	human := stored.UserID
-	rbac, seat, err := s.authority.EffectiveAuthority(ctx, ws, human)
+	actor, err := authz.MemberPrincipal(ctx, s.authority, ws, human)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return principal.Principal{}, errActorSeatGone
 	}
 	if err != nil {
 		return principal.Principal{}, fmt.Errorf("reading the authority of %s: %w", human, err)
 	}
-	if !seat.CanMutate() {
+	if !actor.SeatType.CanMutate() {
 		return principal.Principal{}, errActorSeatGone
 	}
-
-	actor := principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          "human:" + human.String(),
-		UserID:      human,
-		TeamIDs:     rbac.TeamIDs,
-		SeatType:    seat,
-		Permissions: rbac.Permissions,
-		// Queued work names whose it is even when they act themselves, so its
-		// audit rows say who it was for, not only who ran it.
-		OnBehalfOf: human,
-	}
+	// Queued work names whose it is even when they act themselves, so its
+	// audit rows say who it was for, not only who ran it.
+	actor.OnBehalfOf = human
 	if !stored.OnBehalfOf.IsZero() {
 		actor.OnBehalfOf = stored.OnBehalfOf
 	}
 	if stored.Type == principal.PrincipalHuman {
-		return actor, nil
+		return s.withLanguage(ctx, actor)
 	}
 	if stored.ID == "" {
 		return principal.Principal{}, fmt.Errorf("a stored agent actor for %s names no agent", human)
@@ -92,6 +84,21 @@ func (s storedActor) rebuild(ctx context.Context, stored migration.StoredActor, 
 	actor.ConnectionID = stored.ConnectionID
 	actor.Scopes = live.within(scopes)
 	actor.Areas = live.areas
+	if live.unbounded {
+		return s.withLanguage(ctx, actor)
+	}
+	actor.Locale = live.locale
+	return actor, nil
+}
+
+// withLanguage gives the rebuilt actor the language its human reads, so system
+// text in resumed work reads as it does in that human's own session.
+func (s storedActor) withLanguage(ctx context.Context, actor principal.Principal) (principal.Principal, error) {
+	lang, err := s.authority.ReadingLanguage(ctx, actor)
+	if err != nil {
+		return principal.Principal{}, fmt.Errorf("reading the language of %s: %w", actor.UserID, err)
+	}
+	actor.Locale = string(lang)
 	return actor, nil
 }
 
@@ -103,6 +110,8 @@ type livePassport struct {
 	scopes   principal.ScopeSet
 	// areas are where the live passport may act; all areas for none.
 	areas principal.WorkAreas
+	// locale is the language its re-authentication resolved for the human.
+	locale string
 	// unbounded marks an agent that presented no passport: no credential
 	// exists to narrow the verbs, so the human's authority alone governs.
 	unbounded bool
@@ -140,7 +149,7 @@ func (s storedActor) passportStillLive(ctx context.Context, stored migration.Sto
 	if err != nil {
 		return livePassport{}, false, fmt.Errorf("re-authenticating the stored passport: %w", err)
 	}
-	return livePassport{passport: live.PassportID.UUID, scopes: live.Scopes, areas: live.Areas}, true, nil
+	return livePassport{passport: live.PassportID.UUID, scopes: live.Scopes, areas: live.Areas, locale: live.Locale}, true, nil
 }
 
 // actAsRun binds the principal that queued an import attempt, and that

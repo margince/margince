@@ -2,7 +2,9 @@
   "verb": "file_channel_message",
   "checks": [
     "activity.create",
-    "activity.read"
+    "activity.read",
+    "company.read",
+    "contact.read"
   ],
   "takes": [
     "channel_deal",

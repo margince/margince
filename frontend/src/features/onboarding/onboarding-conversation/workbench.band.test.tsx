@@ -1,0 +1,72 @@
+/** @vitest-environment happy-dom */
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../../i18n/en";
+import {
+  collectingState,
+  render,
+  requestsTo,
+  stubApi,
+  VoiceHarness,
+} from "./voice-act.testkit";
+
+beforeEach(() => {
+  vi.stubGlobal("scrollTo", vi.fn());
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+const chipName = new RegExp(`^${en["ob.ai.runtimeChip"]}:`);
+
+describe("the onboarding band", () => {
+  it("names no research status and no model on a member's journey", async () => {
+    stubApi();
+    render(
+      <VoiceHarness initial={{ ...collectingState(), memberPath: true }} />,
+    );
+
+    expect(
+      await screen.findByText(en["ob.conv.voice.sceneTitle"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["ob.ai.ready"])).toBeNull();
+    expect(screen.queryByRole("button", { name: chipName })).toBeNull();
+  });
+
+  it("keeps the status and the model chip on the first administrator's journey", async () => {
+    stubApi();
+    render(<VoiceHarness initial={collectingState()} />);
+
+    expect(await screen.findByText(en["ob.ai.ready"])).toBeTruthy();
+    expect(screen.getByRole("button", { name: chipName })).toBeTruthy();
+  });
+
+  it("offers Sign out on every step of the journey", async () => {
+    const calls = stubApi();
+    render(
+      <VoiceHarness initial={{ ...collectingState(), memberPath: true }} />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["auth.signOut"] }),
+    );
+    await waitFor(() => {
+      expect(requestsTo(calls, "/auth/logout", "POST")).toHaveLength(1);
+    });
+  });
+
+  it("links to Settings > Account from the band", async () => {
+    stubApi();
+    render(
+      <VoiceHarness initial={{ ...collectingState(), memberPath: true }} />,
+    );
+
+    const account = await screen.findByRole("link", {
+      name: en["settings.tab.account"],
+    });
+    expect(account.getAttribute("href")).toMatch(/#\/settings\/account$/);
+  });
+});

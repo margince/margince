@@ -6,6 +6,7 @@ import { createQueryClient } from "../../app/queryclient";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { company, company360 } from "../../testing/company.fixtures";
+import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import {
   installFetchStub,
@@ -14,6 +15,9 @@ import {
   type RouteMap,
 } from "../../testing/story-utils";
 import { CompanyScreen } from "./companies";
+
+// What a reader sees: a hidden description is not a second copy on screen.
+const SEEN = "script, style, [hidden]";
 
 afterEach(() => {
   cleanup();
@@ -95,7 +99,9 @@ describe("CompanyScreen — an archived account", () => {
 
     expect(await screen.findByText(en["record.archived"])).toBeTruthy();
     await waitFor(() => expect(asked).toContain("/companies/o-1/360"));
-    expect(await screen.findByText(en["record.archivedReadOnly"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["record.archivedReadOnly"], { ignore: SEEN }),
+    ).toBeTruthy();
     for (const failure of [
       en["co.partial"],
       en["co.section.unavailable"],
@@ -186,8 +192,33 @@ describe("CompanyScreen — an archived account", () => {
     client.setQueryData(["company", "o-1"], archived);
     const asked = mountArchived({ client });
 
-    expect(await screen.findByText(en["record.archivedReadOnly"])).toBeTruthy();
+    expect(
+      await screen.findByText(en["record.archivedReadOnly"], { ignore: SEEN }),
+    ).toBeTruthy();
     expect(asked).not.toContain("/companies/o-1/360");
+  });
+
+  it("says on the Overview that it is archived instead of opening on nothing", async () => {
+    mountArchived();
+
+    expect(await screen.findByText(en["co.archived.overview"])).toBeTruthy();
+    expect(screen.queryByText(en["history.field.merged_into_id"])).toBeNull();
+  });
+
+  it("links the company it was merged into from the Overview", async () => {
+    mountArchived({
+      routes: {
+        "GET /companies/o-1": () =>
+          jsonResponse({ ...archived, merged_into_id: "o-2" }),
+        ...recordNamesRoutes({ company: { "o-2": "Kept Holdings" } }),
+      },
+    });
+
+    const link = await screen.findByRole("link", { name: "Kept Holdings" });
+    expect(link.getAttribute("href")).toMatch(/#\/companies\/o-2$/);
+    expect(link.closest(".callout-text")?.textContent).toBe(
+      `${en["history.field.merged_into_id"]} Kept Holdings.`,
+    );
   });
 
   it("reads no contracts on its documents tab", async () => {

@@ -124,7 +124,7 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *record
 	// A call takes the record and never its company, which is a kind of its own.
 	parentCompany := sync.OnceValue(func() string { return create["company"]() })
 	create["contact"] = func() string {
-		return post("/v1/contacts", owned(integration.AnyMap{"full_name": "Role Sweep", "source": "manual"}))
+		return post("/v1/contacts", owned(integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "linkedin_url": "https://www.linkedin.com/in/" + ids.NewV7().String()}))
 	}
 	create["deal"] = func() string {
 		return post("/v1/deals", owned(integration.AnyMap{
@@ -132,7 +132,7 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *record
 			"stage_id": seeded.Open, "company_id": parentCompany(), "source": "manual",
 		}))
 	}
-	create["sdr_handoff"] = func() string { return seedHandoff(sweepSeed{t: t, e: e, pool: pool, create: create}) }
+	create["sdr_handoff"] = func() string { return seedHandoff(sweepSeed{t: t, e: e, pool: pool, create: create, owner: owner}) }
 	create["lead"] = func() string {
 		email := ids.NewV7().String() + "@lead.test"
 		id := post("/v1/leads", owned(integration.AnyMap{"full_name": "Role Sweep", "email": email, "source": "manual"}))
@@ -146,14 +146,14 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *record
 		return post("/v1/activities", integration.AnyMap{"kind": "task", "subject": "Role sweep"})
 	}
 	create["attachment"] = func() string {
-		status, raw := apptest.UploadAs(t, e, nil, "company", create["company"](), []byte("PDF"))
+		status, raw := apptest.UploadAs(t, e, nil, "company", create["company"](), []byte("%PDF-1.4"))
 		if status != http.StatusCreated {
 			t.Fatalf("seeding an attachment → %d %s", status, raw)
 		}
 		return apptest.AttachmentIDOf(t, raw)
 	}
 	maps.Copy(create, configSeeders(post, unique, create))
-	maps.Copy(create, stateSeeders(sweepSeed{t: t, e: e, pool: pool, create: create}))
+	maps.Copy(create, stateSeeders(sweepSeed{t: t, e: e, pool: pool, create: create, owner: owner}))
 	create["voice_profile"] = func() string { return liveVoiceProfile(t, e) }
 	create["commitment"] = func() string {
 		if status := e.Call(t, "POST", "/v1/weekly-plans/current", integration.AnyMap{}, nil, nil); status >= http.StatusBadRequest && status != http.StatusConflict {
@@ -182,7 +182,7 @@ func configSeeders(post func(string, integration.AnyMap) string, unique func(str
 			return post("/v1/record-roles", integration.AnyMap{"label": unique("Sweep"), "record_types": []string{"company"}, "assignee_kinds": []string{"user"}})
 		},
 		"legal_entity": func() string {
-			return post("/v1/legal-entities", integration.AnyMap{"display_name": unique("Sweep"), "legal_name": unique("Sweep GmbH"), "country": "de"})
+			return post("/v1/legal-entities", integration.AnyMap{"display_name": unique("Sweep"), "legal_name": unique("Sweep GmbH"), "country": "de", "jurisdiction": namedValues["jurisdiction"]})
 		},
 		"list": func() string {
 			return post("/v1/lists", integration.AnyMap{"name": unique("Sweep"), "entity_type": "company"})

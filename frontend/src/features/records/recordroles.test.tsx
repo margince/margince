@@ -61,19 +61,23 @@ it.each([
   await user.click(await screen.findByRole("button", { name: "Add role" }));
   const dialog = within(screen.getByRole("dialog"));
   const save = dialog.getByRole("button", { name: "Add role" });
-  await user.type(dialog.getByRole("textbox", { name: "Name" }), example.label);
-  expect(save).toBeDisabled();
+  await user.type(
+    dialog.getByRole("textbox", { name: /^Name/ }),
+    example.label,
+  );
+  await user.click(save);
+  expect(dialog.getAllByText("This field is required.")).toHaveLength(2);
+  expect(document.activeElement).toBe(
+    dialog.getByRole("checkbox", { name: "Company" }),
+  );
+  expect(posted).toHaveLength(0);
   for (const name of example.records) {
     await user.click(dialog.getByRole("checkbox", { name }));
   }
-  expect(save).toBeDisabled();
   for (const name of example.kinds) {
     await user.click(dialog.getByRole("checkbox", { name }));
   }
-  expect(save).toBeEnabled();
-  await user.click(dialog.getByRole("checkbox", { name: example.kinds[0] }));
-  expect(save).toBeDisabled();
-  await user.click(dialog.getByRole("checkbox", { name: example.kinds[0] }));
+  expect(dialog.queryByText("This field is required.")).toBeNull();
   await user.click(save);
   await waitFor(() =>
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
@@ -223,7 +227,7 @@ it("renames a role through its menu's dialog and retires one through its switch"
   const dialog = within(await screen.findByRole("dialog"));
   const field = dialog.getByLabelText(en["recordRoles.addLabel"]);
   expect(field).toHaveValue("Delivery lead");
-  expect(dialog.getByText("delivery_lead").tagName).toBe("CODE");
+  expect(dialog.queryByText("delivery_lead")).toBeNull();
   await user.clear(field);
   await user.type(field, "Project lead{Enter}");
   await waitFor(() =>
@@ -250,7 +254,7 @@ it("says a duplicate name on the Name field and keeps the dialog open", async ()
   render(<RecordRolesCard />);
   await user.click(await screen.findByRole("button", { name: "Add role" }));
   const dialog = within(screen.getByRole("dialog"));
-  const field = dialog.getByRole("textbox", { name: "Name" });
+  const field = dialog.getByRole("textbox", { name: /^Name/ });
   await user.type(field, "Technical contact");
   await user.click(dialog.getByRole("checkbox", { name: "Deal" }));
   await user.click(dialog.getByRole("checkbox", { name: "Team" }));

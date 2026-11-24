@@ -177,7 +177,7 @@ func seedLinkDeal(t *testing.T, e *sendEnv, name string) ids.UUID {
 	seedLinkRow(t, e, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`,
 		stage, pipeline)
 	seedLinkRow(t, e, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, $2, 'open', $3, $4, $5, 'seed', 'system')`, id, name, e.rep, pipeline, stage)
+		VALUES ($1, $2, 'open', $3, $4, $5, 'manual', 'system')`, id, name, e.rep, pipeline, stage)
 	return id
 }
 

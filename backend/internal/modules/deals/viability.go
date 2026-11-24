@@ -21,7 +21,7 @@ type ViabilityInput struct {
 	// LastCustomerRefusalAt is when the customer last wrote to refuse. A refusal
 	// is not progress; it only counts while nothing they sent since moved the deal.
 	LastCustomerRefusalAt *time.Time
-	// CustomerWaitUntil is the day the customer asked us to wait until.
+	// CustomerWaitUntil is the instant the customer's wait ends (deals.PauseEndsSQL).
 	CustomerWaitUntil *time.Time
 	// ConfirmedMeetingAt is the next meeting still to come that a customer
 	// guest accepted. A booked meeting nobody outside accepted is not one.
@@ -42,16 +42,11 @@ type ViabilityInput struct {
 	OpenReview bool
 }
 
-// Viability is the assessment. Outcome, the reasons and the next time the
-// answer can change by the clock alone are stored on the receipt.
+// Viability is the assessment. The outcome is stored on the receipt.
 type Viability struct {
 	Outcome    viability.Outcome
 	Reasons    []viability.Reason
 	SilentDays int
-	// NextChange is when the answer changes if no evidence arrives: the day the
-	// silence crosses the threshold, or the day a deferral ends. Nil when only
-	// new evidence can change it.
-	NextChange *time.Time
 }
 
 // AssessViability judges one open deal at asOf, counting days in the
@@ -74,10 +69,6 @@ func AssessViability(in ViabilityInput, asOf time.Time, zone *time.Location) Via
 
 	out := Viability{SilentDays: silentDays}
 	deferral := activeDeferral(in, asOf)
-	if !silent {
-		crossing := thresholdCrossing(anchor, zone)
-		out.NextChange = &crossing
-	}
 
 	switch {
 	case declined(in.LastCustomerRefusalAt, progress, asOf):
@@ -102,7 +93,6 @@ func AssessViability(in ViabilityInput, asOf time.Time, zone *time.Location) Via
 	if deferral != "" {
 		out.Outcome = viability.OutcomeWaiting
 		out.Reasons = []viability.Reason{deferral}
-		out.NextChange = earliest(out.NextChange, deferralEnd(in, deferral))
 		return out
 	}
 	out.Outcome = viability.OutcomeEligible
@@ -131,16 +121,6 @@ func activeDeferral(in ViabilityInput, asOf time.Time) viability.Reason {
 	return ""
 }
 
-func deferralEnd(in ViabilityInput, deferral viability.Reason) *time.Time {
-	switch deferral {
-	case viability.ReasonCustomerWait:
-		return in.CustomerWaitUntil
-	case viability.ReasonEarlierAnswer:
-		return in.EarlierAnswerUntil
-	}
-	return in.ConfirmedMeetingAt
-}
-
 func silenceReason(progress *time.Time) viability.Reason {
 	if progress == nil {
 		return viability.ReasonNeverContacted
@@ -158,29 +138,11 @@ func supportReasons(in ViabilityInput, silent bool, deferral viability.Reason, a
 	switch {
 	case in.ExpectedClose == nil || in.CloseProvisional || silent || CloseIsOverdue(*in.ExpectedClose, asOf, zone):
 		out = append(out, viability.ReasonCloseDateUnsupported)
-	case deferral == viability.ReasonCustomerWait && in.ExpectedClose.Before(*in.CustomerWaitUntil):
+	case deferral == viability.ReasonCustomerWait && in.ExpectedClose.Before(elapsed.CalendarDay(*in.CustomerWaitUntil, zone)):
 		out = append(out, viability.ReasonCloseDateUnsupported)
 	}
 	if !in.HasNextStep && deferral == "" {
 		out = append(out, viability.ReasonNoNextStep)
 	}
 	return out
-}
-
-// thresholdCrossing is the first local midnight at which the silence counts as
-// more than StalledThresholdDays days.
-func thresholdCrossing(anchor time.Time, zone *time.Location) time.Time {
-	local := anchor.In(zone)
-	day := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, zone)
-	return day.AddDate(0, 0, StalledThresholdDays+1)
-}
-
-func earliest(a, b *time.Time) *time.Time {
-	if a == nil {
-		return b
-	}
-	if b == nil || a.Before(*b) {
-		return a
-	}
-	return b
 }

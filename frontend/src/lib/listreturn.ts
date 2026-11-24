@@ -1,12 +1,17 @@
-import { stepsBackOutOf } from "./historydepth";
+import { stepBackOutOf, steppedBackOutOf } from "./historydepth";
 import {
-  navigateReplacing,
   parseHash,
   type Route,
   routeHash,
   type Screen,
+  samePage,
 } from "./router";
-import { GLOBAL_DIALS, hashWithParams, parseParams } from "./urlstate";
+import {
+  type AddressWriters,
+  GLOBAL_DIALS,
+  hashWithParams,
+  parseParams,
+} from "./urlstate";
 
 // The address each list screen last stood at in this page load, filter
 // included. Memory, not storage: after a reload the parent is the plain list.
@@ -47,30 +52,49 @@ export function listAddress(screen: Screen): string {
   return lastListAddress.get(screen) ?? routeHash({ screen });
 }
 
+/** Whether `hash` is on `record`, whichever tab and dials it has open. */
+export function isOnRecord(record: Route, hash: string): boolean {
+  const route = parseHash(hash);
+  return route.screen === record.screen && route.id === record.id;
+}
+
+const onRecord = (record: Route) => (hash: string) => isOnRecord(record, hash);
+
 /**
- * Leave a record for the screen before it.
- *
- * The installed app has no browser Back, so this is the only way out. The
- * record's own tabs are views of one page, so they are stepped over. With an
- * earlier screen of ours in history, history is the truest answer, because it
- * also brings back the list's filter and scroll offset. A record with none of
- * ours behind it goes to its list instead of out of the app.
+ * Leave a record for the screen before it, which history restores with its
+ * filter and scroll. With none of ours behind, go to `parent`: the record's
+ * list, unless the page names another.
  */
-export function leaveRecord(record: Route): void {
-  const steps = stepsBackOutOf((hash) => {
-    const route = parseHash(hash);
-    return route.screen === record.screen && route.id === record.id;
+export function leaveRecord(
+  record: Route,
+  parent = listAddress(record.screen),
+): void {
+  stepBackOutOf(onRecord(record), () => {
+    globalThis.location.hash = parent;
   });
-  if (steps > 0) {
-    globalThis.history.go(-steps);
-    return;
-  }
-  globalThis.location.hash = listAddress(record.screen);
+}
+
+/**
+ * Whether the bar has already left `record` the way `leaveRecord` would: just
+ * behind it, or on its parent. A bar still on the record has left nothing.
+ */
+export function leftRecord(
+  record: Route,
+  bar: string,
+  parent = listAddress(record.screen),
+): boolean {
+  return (
+    !isOnRecord(record, bar) &&
+    (steppedBackOutOf(onRecord(record)) || samePage(bar, parent))
+  );
 }
 
 /** Close a list's create form onto the list, replacing the form's address so
  *  Back from the list does not open the form again. */
-export function leaveCreateForm(screen: Screen): void {
+export function leaveCreateForm(
+  screen: Screen,
+  { navigateReplacing }: AddressWriters,
+): void {
   const here = parseHash(globalThis.location.hash);
   if (here.screen !== screen || here.id === undefined) {
     return;

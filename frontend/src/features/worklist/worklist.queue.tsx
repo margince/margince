@@ -153,7 +153,7 @@ export function ViewPanel({
     return launcher ?? null;
   }
   return (
-    <Panel title={t(`worklist.view.${view}`)} actions={launcher}>
+    <Panel title={t(`worklist.view.${view}`)} titleAction={launcher}>
       <QueueRows items={items} {...rows} />
       {children}
     </Panel>

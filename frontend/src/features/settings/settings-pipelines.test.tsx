@@ -646,6 +646,39 @@ describe("PipelinesCard: the ladder", () => {
     const [edit] = backend.writes("PATCH", "/stages/s1");
     expect(edit.ifMatch).toBe("5");
     expect(edit.body).toMatchObject({ name: "Qualified" });
+    // The "Forecast uses" line reads the chances again after the write.
+    await waitFor(() =>
+      expect(backend.writes("GET", "/forecast/stage-chances")).toHaveLength(2),
+    );
+  });
+
+  it("refuses a new type on the pipeline's only Won stage, and saves the same type", async () => {
+    const user = userEvent.setup();
+    const backend = server({});
+    renderPage();
+    await user.click(
+      await screen.findByRole("button", { name: "Actions for Closed won" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Edit stage" }));
+    const form = await screen.findByRole("dialog");
+    const type = within(form).getByLabelText("Stage type *");
+    await user.click(type);
+    await user.click(screen.getByRole("option", { name: "Open" }));
+    const sentence =
+      "A pipeline needs a Won and a Lost stage. Add another of this type first.";
+    expect((await within(form).findAllByText(sentence)).length).toBeGreaterThan(
+      0,
+    );
+    await user.click(within(form).getByRole("button", { name: "Save" }));
+    expect(backend.writes("PATCH", "/stages/s2")).toHaveLength(0);
+    expect(document.activeElement).toBe(type);
+    expect(type.getAttribute("aria-invalid")).toBe("true");
+    await user.click(type);
+    await user.click(screen.getByRole("option", { name: "Won" }));
+    await user.click(within(form).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(backend.writes("PATCH", "/stages/s2")).toHaveLength(1),
+    );
   });
 
   it("removes a stage through DELETE pinned to its version, and hands focus to the next row", async () => {

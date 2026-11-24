@@ -11,7 +11,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
+import { de } from "../../i18n/de";
 import { en } from "../../i18n/en";
+import { vi as viCatalog } from "../../i18n/vi";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiCallsCard, useLastCallAt } from "./aicalls";
 
@@ -357,6 +359,23 @@ it("reads each call in five columns: when, feature, model, outcome and cost", as
   expect(within(row).getByText("provider_unavailable")).toBeTruthy();
 });
 
+it("names a call's task, with its key behind the name rather than under it", async () => {
+  const user = userEvent.setup();
+  mount();
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(row.textContent).not.toContain("capture_classify");
+
+  await user.click(
+    within(row).getByRole("button", {
+      name: "Message classification: what it does",
+    }),
+  );
+
+  expect(await screen.findByText("capture_classify")).toBeTruthy();
+  // The name answers on its own: the row's call is not opened by it.
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
 it("opens a call in a drawer and leaves the table exactly as it was", async () => {
   const user = userEvent.setup();
   mount();
@@ -366,7 +385,12 @@ it("opens a call in a drawer and leaves the table exactly as it was", async () =
   const drawer = await openCall(user);
   // Nothing is inserted under the row: the detail lives beside the table.
   expect(table.querySelectorAll("tr").length).toBe(rowsBefore);
-  expect(within(drawer).getByText("Message classification")).toBeTruthy();
+  expect(screen.getByRole("dialog", { name: "Message classification" })).toBe(
+    drawer,
+  );
+  expect(
+    within(drawer).getByRole("heading", { name: "Message classification" }),
+  ).toBeTruthy();
   expect(await within(drawer).findByText(/retry.on.5xx/i)).toBeTruthy();
   expect(within(drawer).getByText("Request payload")).toBeTruthy();
   expect(
@@ -447,7 +471,7 @@ it("narrows the trace to the feature the address names, and writes a new pick ba
   mount();
   const filter = await screen.findByRole("combobox", { name: "Feature" });
   // No call for it yet, so the server's set lacks it; the select still says it.
-  expect(filter.textContent).toContain("Reading what an account needs");
+  expect(filter.textContent).toContain("Reading what a company needs");
   const asked = vi
     .mocked(fetch)
     .mock.calls.map(([input]) =>
@@ -677,7 +701,9 @@ it("shows the request settings the attempts were sent with, and the host that se
     ],
   });
   const drawer = await openCall(user);
-  expect(await within(drawer).findByText("Request settings sent")).toBeTruthy();
+  expect(
+    await within(drawer).findByText("Settings this call was configured with"),
+  ).toBeTruthy();
   expect(within(drawer).getByText(/"deadline_ms": 30000/)).toBeTruthy();
   expect(within(drawer).getByText(/served by Cerebras/)).toBeTruthy();
   expect(
@@ -789,4 +815,19 @@ it("says in the drawer when the AI budget demoted the call", async () => {
   mount();
   const drawer = await openCall(user);
   expect(within(drawer).getByText("Budget degraded")).toBeTruthy();
+});
+
+it("names the call detail settings as the call's configured settings in every language", () => {
+  const titles = [en, de, viCatalog].map(
+    (catalog) => catalog["aicalls.detail.settings"],
+  );
+  expect(new Set(titles).size).toBe(3);
+  const old = [
+    "Request settings sent",
+    "Gesendete Anfrage-Einstellungen",
+    "Cài đặt yêu cầu đã gửi",
+  ];
+  for (const text of old) {
+    expect(titles).not.toContain(text);
+  }
 });

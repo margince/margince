@@ -13,9 +13,9 @@ package activities
 // viewer something about them, which is the disclosure the parent gate exists to
 // prevent (DOC-AC-2).
 //
-// `company_id` on the row is a read path for uploads, not a second parent; it
-// never decides who may see one. A mail's file carries no stamp: it is read
-// through the links of its mail as they are now (documentMembership).
+// A file's company is read from the record it is filed on, never from a copy
+// on the file's row. A mail's file is read through the links of its mail as
+// they are now (documentMembership).
 
 import (
 	"context"
@@ -123,7 +123,7 @@ func companyDocumentsQuery(ctx context.Context, companyID ids.UUID, in DocumentF
 		if err != nil {
 			return "", nil, err
 		}
-		clause, err := sort.KeysetClause(*in.Cursor, arg)
+		clause, err := sort.KeysetClause("company_documents", *in.Cursor, arg)
 		if err != nil {
 			return "", nil, err
 		}
@@ -245,7 +245,7 @@ const scopeNothing = "FALSE"
 // clause over their own columns. `activity` is not one of them — its scope is
 // the link walk — so it gets its own arm in activityParentClause rather than
 // being forced into this shape, which would widen it.
-var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityContact}
+var documentParentKinds = []string{linkEntityCompany, linkEntityDeal, linkEntityContact, linkEntityProject}
 
 // activityParentClause is the arm for a file hanging off an activity. It uses
 // the link-walk scope every other activity read uses (ADR-0054 §8: scope policy
@@ -409,6 +409,9 @@ var provenanceCategories = map[string]struct{}{
 	"message_attachment": {},
 }
 
+// codeCategoryNotAssertable refuses a category that only the system may set.
+const codeCategoryNotAssertable = "category_not_assertable"
+
 // refuseAssertedProvenance stops a human from claiming a file arrived somewhere
 // it did not.
 //
@@ -421,26 +424,32 @@ var provenanceCategories = map[string]struct{}{
 // GATED ON THE ROW, NOT THE VOCABULARY. The enum still admits both values
 // because a CAPTURED file may legitimately be re-pointed between them — a
 // mislabeled row is exactly what a correction is for. What is refused is a
-// caller asserting arrival on a file that never arrived: `source` is the writer
-// that made the row, and `upload` is the one that means a human handed it over.
+// caller asserting arrival on a file that never arrived. `source` names the
+// writer of the row, and `upload` and `link` mean a human handed it over.
 func refuseAssertedProvenance(before crmcontracts.Attachment, in DocumentMetadata) error {
 	if in.Category == nil {
 		return nil
 	}
 	if before.Category != nil && *before.Category == categoryLink {
 		return &values.ParseError{
-			Field: fieldCategory, Code: "category_not_assertable",
+			Field: fieldCategory, Code: codeCategoryNotAssertable,
 			Message: "a document link stays a link; archive it if it should not be listed",
 		}
 	}
-	if before.Source != attachmentSource {
+	if *in.Category == categoryLink {
+		return &values.ParseError{
+			Field: fieldCategory, Code: codeCategoryNotAssertable,
+			Message: "only a link a mail carried is filed as sent; choose contract, offer, legal or other",
+		}
+	}
+	if before.Source != attachmentSource && before.Source != linkSource {
 		return nil
 	}
 	if _, provenance := provenanceCategories[*in.Category]; !provenance {
 		return nil
 	}
 	return &values.ParseError{
-		Field: fieldCategory, Code: "category_not_assertable",
+		Field: fieldCategory, Code: codeCategoryNotAssertable,
 		Message: "that category records how a file arrived and is derived from the message " +
 			"that carried it; an uploaded file has no arrival to claim — file it by what it is",
 	}
@@ -456,7 +465,7 @@ func documentMetadataPatch(before crmcontracts.Attachment, in DocumentMetadata) 
 		p.Set(fieldCategory, before.Category, *in.Category)
 	}
 	if in.Title != nil || in.ClearTitle {
-		p.Set("title", before.Title, in.Title)
+		p.Set(fieldTitle, before.Title, in.Title)
 	}
 	if in.DocState != nil {
 		p.Set("doc_state", before.DocState, *in.DocState)
@@ -480,7 +489,7 @@ func documentPage(ctx context.Context, last crmcontracts.Attachment) (storekit.P
 		return storekit.Page{}, err
 	}
 	pinned := strconv.FormatBool(last.Pinned != nil && *last.Pinned)
-	next, err := sort.EncodePageCursor(&pinned, last.CreatedAt, ids.UUID(last.Id))
+	next, err := sort.EncodePageCursor("company_documents", &pinned, last.CreatedAt, ids.UUID(last.Id))
 	if err != nil {
 		return storekit.Page{}, err
 	}

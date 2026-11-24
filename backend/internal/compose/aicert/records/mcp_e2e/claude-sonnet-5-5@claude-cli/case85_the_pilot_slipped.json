@@ -10,14 +10,83 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "d65aa5e0204c6735",
+    "tools": "24a50b2bc28d3d4f",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T09:02:51Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:31:32Z"
+  },
   "usage": {
     "input_tokens": 18,
-    "output_tokens": 1554,
-    "cache_creation_input_tokens": 7117,
-    "cache_read_input_tokens": 689610,
+    "output_tokens": 1226,
+    "cache_creation_input_tokens": 6868,
+    "cache_read_input_tokens": 699050,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.113
+    "cost_usd": 0.1097
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "create_project_health_assessment",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_state",
+        "create_project_health_assessment",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 3.5,
+      "min": 3,
+      "max": 4
+    },
+    "turns": {
+      "median": 4.5,
+      "min": 4,
+      "max": 5
+    },
+    "refused": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 352968,
+      "min": 313516,
+      "max": 392420
+    },
+    "output_tokens": {
+      "median": 613,
+      "min": 562,
+      "max": 664
+    },
+    "duration_ms": {
+      "median": 8896.5,
+      "min": 8375,
+      "max": 9418
+    }
   }
 }

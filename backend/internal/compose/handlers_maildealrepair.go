@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -27,7 +28,7 @@ import (
 // registered repair, run on one page and rolled back, so an operator sees what
 // it resolves and what it leaves.
 func (h dataTaskHandlers) PreviewMailDealRepair(w http.ResponseWriter, r *http.Request) {
-	if !admitOperator(w, r, "data_task", principal.ActionRead) {
+	if !adminadmit.Operator(w, r, "data_task", principal.ActionRead) {
 		return
 	}
 	var in crmcontracts.PreviewMailDealRepairJSONBody
@@ -43,7 +44,7 @@ func (h dataTaskHandlers) PreviewMailDealRepair(w http.ResponseWriter, r *http.R
 	if in.After != nil {
 		after = ids.UUID(*in.After)
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), adminadmit.ReadTimeout)
 	defer cancel()
 	// The preview decides under the data task's own identity, as its executor does.
 	system := datatask.Acting(ctx, mailDealsDataTask(h.pool).ID)

@@ -13,7 +13,6 @@ import {
 } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { draftButton, redraft } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
 import {
   jsonResponse,
   problemResponse,
@@ -23,6 +22,7 @@ import {
   type Sent,
   stubRoutes,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // The rep picks the language of an AI draft. The server keeps no choice
 // between calls, so these read what each request names.
@@ -63,7 +63,7 @@ const answer = (body: string, language?: string) => () =>
 
 function contactComposer(): ReactNode {
   return (
-    <ComposeModal
+    <ComposeWindow
       intent={INTENT}
       entityType="contact"
       entityId="p-1"
@@ -134,7 +134,7 @@ const ORIGINS = [
     route: "POST /leads/l-1/draft-email",
     reads: {},
     ui: () => (
-      <ComposeModal
+      <ComposeWindow
         intent={INTENT}
         entityType="lead"
         entityId="l-1"
@@ -150,7 +150,7 @@ const ORIGINS = [
     route: "POST /companies/company-1/draft-email",
     reads: { "GET /companies/company-1/360": () => jsonResponse(COMPANY_360) },
     ui: () => (
-      <ComposeModal
+      <ComposeWindow
         intent={INTENT}
         entityType="company"
         entityId="company-1"
@@ -168,7 +168,7 @@ const ORIGINS = [
     route: "POST /activities/act-1/draft-email",
     reads: {},
     ui: () => (
-      <ComposeModal
+      <ComposeWindow
         intent={INTENT}
         activityId="act-1"
         entityType="contact"
@@ -531,7 +531,7 @@ describe("the picked language in a saved draft", () => {
       "PUT /mail-drafts": () => jsonResponse(SAVED),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent={INTENT}
         entityType="contact"
         entityId="p-1"

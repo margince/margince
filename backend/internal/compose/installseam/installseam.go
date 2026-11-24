@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/editaccess"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -45,7 +46,9 @@ func Deals() deals.Installation {
 		KnownCountry: func(code string) (bool, error) {
 			return contacts.IsAssignedCountry(code), nil
 		},
-		Timezone: identity.TimezoneOf,
+		// identity owns teams and leads, so whose requests a caller manages is
+		// read there and the edge is injected here.
+		ManagerOwners: identity.ManagerOwnersTx,
 		// The Value sort reads both ungated: a seat that may read deals may
 		// order them, whatever its installation_settings grant.
 		BaseCurrencyApplied: identity.BaseCurrencyAppliedTx,
@@ -65,7 +68,8 @@ func Deals() deals.Installation {
 		EnsureContractsShareCompany: contracts.EnsureDealContractsShareCompany,
 		// approvals owns the pending proposals that follow a deal to its new
 		// owner, so the hand-over lives there and the edge is injected here.
-		FollowOwner: approvals.FollowDealOwnerInTx,
+		// An edit access request put to the previous owner closes with it.
+		FollowOwner: followDealOwner,
 		// contracts owns the contract row rule, which stage evidence asks
 		// before it calls a cited contract openable.
 		ContractVisible: contracts.VisibleClause,
@@ -98,10 +102,18 @@ func dealsIssuerEntity(ctx context.Context, tx pgx.Tx, id *ids.LegalEntityID) (d
 		}
 		return *value
 	}
+	country := text(e.Country)
+	if e.IsDefault {
+		// The default entity's country is the installation's jurisdiction, the
+		// one value data protection and retention read for it too.
+		if country, err = installationCountry(ctx, tx); err != nil {
+			return deals.IssuerEntity{}, err
+		}
+	}
 	a := e.Address
 	return deals.IssuerEntity{
 		ID: e.ID, IsDefault: e.IsDefault, Live: live,
-		DisplayName: e.DisplayName, LegalName: text(e.LegalName), Country: text(e.Country),
+		DisplayName: e.DisplayName, LegalName: text(e.LegalName), Country: country,
 		Address: deals.IssuerAddress{
 			Line1: text(a.Line1), Line2: text(a.Line2), PostalCode: text(a.PostalCode),
 			City: text(a.City), Region: text(a.Region),
@@ -134,7 +146,7 @@ func ProjectDealLink(store *deals.Store) (projects.CheckDeal, projects.AttachDea
 			return err
 		}
 		// The version read above, so a link made in between is not overwritten.
-		_, err = store.UpdateDealTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID, IfVersion: deal.Version}, deals.CustomColumns{})
+		err = store.ApplyDealUpdateTx(ctx, tx, dealID, deals.UpdateDealInput{ProjectID: &projectID, IfVersion: deal.Version}, deals.CustomColumns{})
 		if _, mismatch := errors.AsType[*deals.DealProjectCompanyMismatchError](err); mismatch {
 			return &projects.DealCompanyMismatchError{}
 		}
@@ -160,4 +172,13 @@ func dealForNewProject(ctx context.Context, tx pgx.Tx, store *deals.Store, dealI
 		return deal, &projects.DealCompanyMismatchError{}
 	}
 	return deal, nil
+}
+
+// followDealOwner hands the deal's proposals on and closes the edit access
+// requests put to its previous owner.
+func followDealOwner(ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *ids.UUID) error {
+	if err := approvals.FollowDealOwnerInTx(ctx, tx, dealID, from, to); err != nil {
+		return err
+	}
+	return editaccess.FollowOwnerTx(ctx, tx, "deal", dealID, to)
 }

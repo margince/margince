@@ -5,13 +5,14 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge, Button, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { FieldEditDialog } from "../../design-system/fieldeditdialog";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Row } from "../../design-system/stack";
 import { formatDate } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
-import { unwrap } from "../../lib/problem";
+import { blankRequired, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   recordProfileFieldVerdict,
@@ -115,7 +116,7 @@ function EnrichedField({
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(field.value);
+  const fieldName = t(`contact.enriched.field.${field.field}`);
   // WHAT THE EDITOR OPENED ON, held apart from `field`.
   //
   // `field` refreshes underneath an open editor — a re-capture lands, a
@@ -141,7 +142,6 @@ function EnrichedField({
         correctedValue: input.value,
       }),
     onSuccess: () => {
-      setEditing(false);
       queryClient.invalidateQueries({ queryKey: ["contact360", contactId] });
     },
   });
@@ -176,16 +176,8 @@ function EnrichedField({
         <Row gap="2" align="baseline">
           {/* Semibold, the heading weight, not the element's own bold: six of
             these labels down one card at 700 outweighed the panel's title. */}
-          <strong>{t(`contact.enriched.field.${field.field}`)}</strong>
-          {editing ? (
-            <TextInput
-              aria-label={t(`contact.enriched.field.${field.field}`)}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-            />
-          ) : (
-            <span>{field.value}</span>
-          )}
+          <strong>{fieldName}</strong>
+          <span>{field.value}</span>
           {field.verdict === "corrected" && (
             <Badge>{t("contact.enriched.correctedByYou")}</Badge>
           )}
@@ -193,7 +185,6 @@ function EnrichedField({
             <Badge>{t("contact.enriched.confirmed")}</Badge>
           )}
         </Row>
-
         {/* The evidence stays visible after a correction, not instead of it:
           what the machine read is the reason the correction was needed. */}
         <p className="t-sub corrections-note">
@@ -224,68 +215,65 @@ function EnrichedField({
           </p>
         )}
 
-        <ErrorLine error={record.error} />
+        {/* A refused correction shows in its dialog, on the field. */}
+        <ErrorLine
+          error={
+            record.variables?.verdict === "confirmed" ? record.error : null
+          }
+        />
       </div>
       {mayCorrect && (
         <div className="corrections-verbs">
-          {editing ? (
-            <>
-              {/* Pending is not refusal: the write the reader just started keeps
-                  their focus, while an empty draft is the one thing that really
-                  is refused. Disabling on both would move focus off the control
-                  they pressed, at the moment they are waiting on it. */}
-              <Button
-                pending={record.isPending}
-                disabled={draft.trim() === ""}
-                onClick={() =>
-                  record.mutate({ verdict: "corrected", value: draft.trim() })
-                }
-              >
-                {t("contact.enriched.save")}
-              </Button>
-              <Button
-                disabled={record.isPending}
-                onClick={() => setEditing(false)}
-              >
-                {t("contact.enriched.cancel")}
-              </Button>
-            </>
-          ) : (
-            <>
-              {/* The editor opens on what the field says NOW. `draft` survives
-                  a cancel and a save alike, so without this a second open
-                  reloads text the reader abandoned — and saving it would
-                  overwrite the correction they just made with the one they
-                  threw away. */}
-              {/* Edit first, as the quieter verb: the reader who disagrees
-                  reaches for it once in six rows. Confirm closes the row,
-                  filled, because confirming is what most rows get and the
-                  filled control is the one the eye lands on. */}
-              <Button
-                onClick={() => {
-                  setDraft(field.value);
-                  setShown(shownValueOf(field));
-                  setEditing(true);
-                }}
-              >
-                {t("record.edit")}
-              </Button>
-              {/* Confirm is offered while nobody has ruled on the claim. A
+          {/* Edit first, as the quieter verb: the reader who disagrees
+              reaches for it once in six rows. Confirm closes the row,
+              filled, because confirming is what most rows get and the
+              filled control is the one the eye lands on. */}
+          <Button
+            onClick={() => {
+              // What the dialog opened on, so a re-capture landing under it
+              // does not change the value this correction answers for.
+              setShown(shownValueOf(field));
+              setEditing(true);
+            }}
+          >
+            {t("record.edit")}
+          </Button>
+          {/* Confirm is offered while nobody has ruled on the claim. A
                   field a human already corrected has been ruled on, theirs is
                   the value on display, so a second verdict on it would ask
                   them to confirm a machine reading the page no longer shows,
                   and `suppressed` is a decision to stop being asked at all. */}
-              {!field.verdict && (
-                <Button
-                  variant="primary"
-                  disabled={record.isPending}
-                  onClick={() => record.mutate({ verdict: "confirmed" })}
-                >
-                  {t("contact.enriched.confirm")}
-                </Button>
-              )}
-            </>
+          {!field.verdict && (
+            <Button
+              variant="primary"
+              disabled={record.isPending}
+              onClick={() => record.mutate({ verdict: "confirmed" })}
+            >
+              {t("contact.enriched.confirm")}
+            </Button>
           )}
+          <FieldEditDialog
+            open={editing}
+            label={fieldName}
+            value={field.value}
+            settle={(draft) => draft.trim()}
+            check={(next) =>
+              blankRequired(locale, { value: [fieldName, next] }).get("value")
+            }
+            onClose={() => setEditing(false)}
+            onSave={(next) =>
+              record.mutateAsync({ verdict: "corrected", value: next })
+            }
+          >
+            {({ control, draft, setDraft, saving }) => (
+              <TextInput
+                {...control}
+                value={draft}
+                readOnly={saving}
+                onChange={(e) => setDraft(e.target.value)}
+              />
+            )}
+          </FieldEditDialog>
         </div>
       )}
     </Row>

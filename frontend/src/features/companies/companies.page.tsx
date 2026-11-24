@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useId, useState } from "react";
-import { useActivityGate } from "../../components/activitygate";
+import { useActivityGate, writableTarget } from "../../components/activitygate";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -19,7 +19,6 @@ import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { RecordHistoryTab } from "../records/history";
-import { WorklistReturnLink } from "../worklist/worklist.return";
 import type { Company, Company360View } from "./companies";
 import {
   CompanyRecordBody,
@@ -123,7 +122,7 @@ export function CompanyPage({
   // The daily brief's leading card opens the same drawer from its own verb, so
   // the header strip is not the only door into it.
   const [activityDrawer, setActivityDrawer] = useState<ActivityDrawer>(null);
-  const activity = useActivityGate();
+  const activity = useActivityGate(writableTarget(company));
   const [auditOpen, setAuditOpen] = useState(false);
   // Which open task the Tasks tab has expanded into its detail modal. Keyed by
   // activity id rather than a boolean, because the modal reads that row.
@@ -171,7 +170,6 @@ export function CompanyPage({
     company,
     view,
     loading,
-    failed,
     active: tab === "timeline",
   });
   const showChanges = () => {
@@ -180,7 +178,6 @@ export function CompanyPage({
   };
   return (
     <RecordView
-      back={<WorklistReturnLink />}
       name={company.display_name}
       rename={rename}
       identity={company.id}

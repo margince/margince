@@ -216,14 +216,22 @@ function InquiryPolicyEditor({
       policy,
       enabled,
     });
-  const ready =
+  // The fields a review cannot go ahead without, by label, in form order.
+  // Review stays pressable; a press with one missing names it instead.
+  const missing = [
+    [policy.form_id.trim() === "", t("inquiry.form")],
     [
-      policy.form_id,
-      policy.coordinator_id,
-      policy.timezone,
-      policy.task_title,
-    ].every((value) => value.trim() !== "") &&
-    (policy.mode === "coordinator" || (policy.routing.owners?.length ?? 0) > 0);
+      policy.mode !== "coordinator" &&
+        (policy.routing.owners?.length ?? 0) === 0,
+      t(policy.mode === "rotate" ? "inquiry.colleagues" : "inquiry.colleague"),
+    ],
+    [policy.coordinator_id.trim() === "", t("inquiry.coordinator")],
+    [policy.task_title.trim() === "", t("inquiry.taskTitle")],
+    [policy.timezone.trim() === "", t("auto.deadlineTimezone")],
+  ]
+    .filter((need): need is [true, string] => need[0] === true)
+    .map(([, label]) => label);
+  const [attempted, setAttempted] = useState(false);
   const dirty =
     name !== initialName || JSON.stringify(policy) !== JSON.stringify(initial);
   useUnsavedGuard(dirty);
@@ -241,6 +249,10 @@ function InquiryPolicyEditor({
           className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
+            if (missing.length > 0) {
+              setAttempted(true);
+              return;
+            }
             setReviewing(true);
           }}
         >
@@ -292,6 +304,11 @@ function InquiryPolicyEditor({
               />
             </>
           )}
+          {attempted && !reviewing && missing.length > 0 && (
+            <ErrorLine inline>
+              {t("inquiry.stillNeeded", { fields: missing.join(", ") })}
+            </ErrorLine>
+          )}
           <ErrorLine error={save.error} />
         </form>
       }
@@ -321,7 +338,7 @@ function InquiryPolicyEditor({
               </Button>
             </>
           ) : (
-            <Button type="submit" form={id} variant="primary" disabled={!ready}>
+            <Button type="submit" form={id} variant="primary">
               {t("inquiry.review")}
             </Button>
           )}

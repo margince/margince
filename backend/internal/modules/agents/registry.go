@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
@@ -30,10 +31,8 @@ import (
 type Registry struct {
 	mu    sync.RWMutex
 	tools map[string]mcp.Tool
-	// specs[tool] is what every surface is SERVED for that tool: its own spec
-	// with the declared output shape wrapped in the result envelope. Held here
-	// rather than re-derived per request because tools/list embeds it verbatim
-	// and a client caches it — one derivation, one set of bytes, forever.
+	// specs[tool] is what every surface serves for that tool: its spec, with its
+	// output shape in the envelope. tools/list embeds it as is, so it is derived once.
 	specs map[string]mcp.ToolSpec
 	// idArgs[tool] is what that tool's schema says about its uuid arguments,
 	// read off the schema once at registration. Invoke enforces it, so the
@@ -65,10 +64,11 @@ type Registry struct {
 	// must not diverge: what the schema advertises (withRetryKey) and what a
 	// call carrying `idempotency_key` is answered with (refuseUnkeyableCall).
 	unitOwned map[string]bool
-	// routeServed names the verbs that run a REST route's own handler. Their
-	// answers carry no replay evidence, so withRetryKey and
-	// refuseUnkeyableCall both read this one set.
+	// routeServed names the route verbs whose route claims no retry key; their
+	// answers carry no replay evidence (withRetryKey, refuseUnkeyableCall).
 	routeServed map[string]bool
+	// routeKeyed names the route verbs whose route claims a retry key.
+	routeKeyed map[string]bool
 	// routeActions are the contract's route-backed actions per router name,
 	// added to that router's own targets when it registers.
 	routeActions map[string]map[string]string
@@ -86,7 +86,7 @@ type Registry struct {
 	// toolGate decides which callers a Gated tool exists for. Nil offers it to no one.
 	toolGate         ToolGate
 	callAvailability CallAvailability
-	trialEnded       func(context.Context) (bool, error)
+	installationLock func(context.Context) error
 	// volume budget is the MCP-SESS-* meter this surface CHARGES. The gate holds the
 	// same meter and does the refusing; the split is deliberate — a bound is
 	// enforced where admission is decided and paid where records and effects
@@ -207,7 +207,7 @@ func (r *Registry) InvokeServed(ctx context.Context, name string, in json.RawMes
 // It serves name as given and resolves no router. Callers holding a name a
 // client chose go through InvokeServed; taskexecute holds the stored target.
 func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMessage) (json.RawMessage, int, error) {
-	if err := r.refuseAfterTrial(ctx); err != nil {
+	if err := r.refuseWhenLocked(ctx); err != nil {
 		return nil, 0, err
 	}
 	if r.callAvailability != nil {
@@ -331,6 +331,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 // approval it already spent. Redemption comes second, so a refused redemption
 // gives the key straight back — nothing ran.
 func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved) (json.RawMessage, int, error) {
+	ctx, res, err := r.handKeyToRoute(ctx, spec, res)
+	if err != nil {
+		return nil, 0, err
+	}
 	fresh, attempt, answered, records, err := r.claimFor(ctx, spec, res)
 	if !fresh {
 		// A replay hands over the records the original call served, and claimFor
@@ -360,7 +364,7 @@ func (r *Registry) redeemPresented(ctx context.Context, spec mcp.ToolSpec, res r
 		return ctx, nil
 	}
 	if r.approvals == nil {
-		return ctx, fmt.Errorf("crmagents: approval_id presented but this surface has no approvals engine: %w", apperrors.ErrApprovalTokenInvalid)
+		return ctx, fmt.Errorf("this call presents an approval_id, but this surface has no approvals to redeem it against: %w", apperrors.ErrApprovalTokenInvalid)
 	}
 	marked, _, _, err := RedeemAndMark(ctx, r.approvals, res.ApprovalID, spec.Name, res.DiffHash)
 	if err != nil {
@@ -371,20 +375,19 @@ func (r *Registry) redeemPresented(ctx context.Context, spec mcp.ToolSpec, res r
 }
 
 // handle runs an admitted call, seals its answer, and records what a claimed
-// retry key produced — this is the one place that knows both that the tool RAN
-// and what it answered with.
+// retry key produced. Only here is it known that the tool ran and what it said.
 func (r *Registry) handle(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved, attempt string) (json.RawMessage, int, error) {
-	sealed, records, err := r.runAndSeal(ctx, t, spec, res.Args)
-	r.settleRun(ctx, spec, res, attempt, sealed, records, err)
+	work, committed := database.WatchCommits(ctx)
+	sealed, records, err := r.runAndSeal(work, t, spec, res.Args)
+	r.settleRun(ctx, spec, res, attempt, sealed, records, err, committed)
 	return sealed, records, err
 }
 
 // runAndSeal is the call itself: run, seal, charge. It answers the record count
-// as well as the document, because what an answer COST is what its replay
-// costs, and only this frame can see it.
+// too, because what an answer cost is what its replay costs.
 func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, args json.RawMessage) (json.RawMessage, int, error) {
 	ctx, trace := withTrace(ctx)
-	ctx, facts := withEnvelopeFacts(ctx)
+	ctx, facts := withEnvelopeFacts(ctx, spec)
 	ctx = agentvolume.WithEffectTally(ctx)
 	// An answer about the caller reads no workspace rows, so it has nothing a
 	// row scope could have hidden.

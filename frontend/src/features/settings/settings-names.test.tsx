@@ -11,7 +11,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { SettingList } from "../../design-system/settingrow";
-import { useToast } from "../../design-system/toast";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -22,7 +21,7 @@ import {
 import { NameSettingRows, useAccountNames } from "./settings-names";
 
 function Rows() {
-  const names = useAccountNames(useToast());
+  const names = useAccountNames();
   return (
     <SettingList bleed="settings">
       <NameSettingRows names={names} />

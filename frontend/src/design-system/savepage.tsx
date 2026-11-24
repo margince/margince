@@ -12,12 +12,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { useT } from "../i18n";
-import { problemFieldErrorsOf } from "../lib/problem";
+import { translate, useLocale, useT } from "../i18n";
+import { problemFieldErrorsOf, problemFieldSentencesOf } from "../lib/problem";
 import { ActionRow } from "./actionrow";
 import { Button } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { SaveBar } from "./savebar";
+import { useToast } from "./toast";
 
 /** One card's draft, as the page's save bar sees it. */
 export type SaveDraft = Readonly<{
@@ -86,6 +87,10 @@ function placedAt(reason: unknown, placed: readonly string[] = []): boolean {
 export function SavePageProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
+  // The locale, not a translator: `useT` answers a new function every render,
+  // and a `save` that changed with it would re-register every draft in a loop.
+  const { locale } = useLocale();
+  const toast = useToast();
   const drafts = useRef(new Map<string, SaveDraft>());
   const [marks, setMarks] = useState<ReadonlyMap<string, Mark>>(new Map());
   const [pending, setPending] = useState(false);
@@ -133,8 +138,10 @@ export function SavePageProvider({
       setErrorPlaced(placedAt(refused.reason, due[at]?.placed));
       return false;
     }
+    // The page answers once for every card, so no card has to say it itself.
+    toast.show(translate(locale, "settings.saved"));
     return true;
-  }, []);
+  }, [toast, locale]);
   const discard = useCallback(() => {
     for (const draft of drafts.current.values()) {
       if (waiting(draft)) draft.discard();
@@ -231,12 +238,75 @@ export function useSavePage(): SavePage | null {
   return useContext(SavePageContext)?.page ?? null;
 }
 
-// The bar is pinned over the foot of the view, so a refused field below the
-// fold would sit under it. Centring it keeps it clear of the bar.
-function showFirstRefused() {
-  const field = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+// Focus the first refused field under `root`: `aria-invalid` is the mark every
+// control shares. Centred, so a pinned bar or dialog foot does not cover it.
+export function focusFirstRefused(root: ParentNode | null): void {
+  const field = root?.querySelector<HTMLElement>('[aria-invalid="true"]');
   field?.scrollIntoView?.({ block: "center" });
   field?.focus({ preventScroll: true });
+}
+
+const NO_FAULTS: ReadonlyMap<string, string> = new Map();
+
+type Resettable = Readonly<{ reset: () => void }>;
+
+/** An edit makes the error of a write that refused the old value stale. */
+export function retireErrors(...writes: readonly Resettable[]): void {
+  for (const write of writes) write.reset();
+}
+
+export type FieldFaults = Readonly<{
+  of: (field: string) => string | undefined;
+  // The reader changed the field, so its refusal no longer describes it, and
+  // nor does the error of any write given here.
+  edited: (field: string, ...stale: readonly Resettable[]) => void;
+  // Puts each sentence on its field and focuses the first; true when any.
+  show: (faults: ReadonlyMap<string, string>) => boolean;
+}>;
+
+// A form's refused fields, each until edited, and the ref focus searches.
+// A tuple: the React Compiler reads an object holding a ref as a ref.
+export function useFieldFaults<
+  E extends HTMLElement = HTMLFormElement,
+>(): readonly [FieldFaults, (element: E | null) => void] {
+  const [root, setRoot] = useState<E | null>(null);
+  const [faults, setFaults] = useState(NO_FAULTS);
+  // Counts the refusals shown, so focus moves once the fields carry them.
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (shown > 0) focusFirstRefused(root);
+  }, [shown, root]);
+  const fieldFaults: FieldFaults = {
+    of: (field) => faults.get(field),
+    edited: (field, ...stale) => {
+      retireErrors(...stale);
+      setFaults((current) => {
+        if (!current.has(field)) return current;
+        const next = new Map(current);
+        next.delete(field);
+        return next;
+      });
+    },
+    show: (next) => {
+      setFaults(next);
+      if (next.size === 0) return false;
+      setShown((count) => count + 1);
+      return true;
+    },
+  };
+  return [fieldFaults, setRoot];
+}
+
+// A refusal naming fields reads as sentences of its own, opening in capitals,
+// not as the server's lower-case fragment.
+function RefusedLine({ error }: Readonly<{ error: unknown }>) {
+  const { locale } = useLocale();
+  const sentences = [...problemFieldSentencesOf(error, locale).values()];
+  return sentences.length > 0 ? (
+    <ErrorLine>{sentences.join(" ")}</ErrorLine>
+  ) : (
+    <ErrorLine error={error} />
+  );
 }
 
 /**
@@ -247,8 +317,10 @@ export function PageSaveBar() {
   const t = useT();
   const page = useSavePage();
   if (!page?.open) return null;
+  // A default shown as the answer is not an edit: it asks to be kept.
+  const caption = page.dirty ? t("saveBar.unsaved") : t("saveBar.offered");
   return (
-    <SaveBar label={t("saveBar.unsaved")}>
+    <SaveBar label={caption}>
       <ActionRow
         primary={
           <Button
@@ -257,7 +329,11 @@ export function PageSaveBar() {
             reason={page.invalid ? t("saveBar.invalid") : undefined}
             onClick={() => {
               void page.save().then((saved) => {
-                if (!saved) globalThis.requestAnimationFrame(showFirstRefused);
+                if (!saved) {
+                  globalThis.requestAnimationFrame(() =>
+                    focusFirstRefused(document),
+                  );
+                }
               });
             }}
           >
@@ -265,7 +341,7 @@ export function PageSaveBar() {
           </Button>
         }
       >
-        <p className="t-caption save-bar-caption">{t("saveBar.unsaved")}</p>
+        <p className="t-caption save-bar-caption">{caption}</p>
         {/* A discard that lands while the save runs would race it. */}
         <Button variant="ghost" disabled={page.pending} onClick={page.discard}>
           {t("saveBar.discard")}
@@ -274,7 +350,7 @@ export function PageSaveBar() {
       {page.errorPlaced ? (
         <ErrorLine>{t("saveBar.invalid")}</ErrorLine>
       ) : (
-        <ErrorLine error={page.error} />
+        <RefusedLine error={page.error} />
       )}
     </SaveBar>
   );

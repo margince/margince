@@ -15,9 +15,20 @@ import { pickOption, pickSuggestion } from "../../design-system/select-testing";
 import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { forgetSetupDeclines } from "../../lib/installation-setup.decline";
+import { MODEL_SETUPS } from "../../lib/modelsetups.gen";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { InstallationSetup, outstandingStep } from "./installation-setup";
+
+// The model field is the advanced choice behind one tick; the graded preset is
+// what the step binds otherwise.
+async function chooseOneModel(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole("checkbox", {
+      name: "Use one model for every tier instead",
+    }),
+  );
+}
 
 afterEach(() => {
   // Every case starts with the platform question unanswered by this account.
@@ -114,12 +125,30 @@ function mount(
   refuse: readonly string[] = [],
   /** The routing read's locks; given, the reader may read the routing. */
   routingLocks?: unknown[],
+  /** What the vendor says when the stored key is tested. */
+  keyTest: Record<string, unknown> = { ok: true, model_count: 3 },
+  /** Whether the reader holds ai_routing:update, as an admin does. */
+  canBind = true,
 ) {
-  const writes: { url: string; body: unknown }[] = [];
+  const writes: { url: string; method: string; body: unknown }[] = [];
+  /** Every write and key test, in the order the server saw them. */
+  const order: string[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     const url = new URL(request.url).pathname;
     if (request.method !== "GET") {
-      writes.push({ url, body: JSON.parse(await request.text()) });
+      order.push(`${request.method} ${url}`);
+    }
+    // A question to the vendor, not a write: it changes nothing here.
+    if (request.method === "POST" && url.endsWith("/test")) {
+      return jsonResponse({ provider: "gemini", ...keyTest });
+    }
+    if (request.method !== "GET") {
+      const text = await request.text();
+      writes.push({
+        url,
+        method: request.method,
+        body: text ? JSON.parse(text) : undefined,
+      });
       if (refuse.some((p) => url.endsWith(p))) {
         return jsonResponse({ title: "refused" }, 500);
       }
@@ -132,7 +161,14 @@ function mount(
     // gave it, so the gate reads the session before it can hide the step.
     if (url.endsWith("/me")) {
       return jsonResponse(
-        meFixture({ allow: routingLocks ? { ai_routing: ["read"] } : {} }),
+        meFixture({
+          allow: {
+            ai_routing: [
+              ...(routingLocks ? (["read"] as const) : []),
+              ...(canBind ? (["update"] as const) : []),
+            ],
+          },
+        }),
       );
     }
     if (routingLocks && url.endsWith("/ai/routing")) {
@@ -157,7 +193,7 @@ function mount(
     </QueryClientProvider>
   );
   const { container } = render(<InstallationSetup />, { wrapper: Wrap });
-  return { writes, container, qc };
+  return { writes, order, container, qc };
 }
 
 /**
@@ -454,6 +490,81 @@ describe("the first-run setup gate", () => {
     expect(writes[1].url).toBe("/v1/ai/routing");
   });
 
+  it("asks the vendor about the stored key before it binds any tier", async () => {
+    const user = userEvent.setup();
+    const { order } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await screen.findByRole("heading", { name: "Model connected" });
+    expect(order).toEqual([
+      "PUT /v1/ai/provider-keys/gemini",
+      "POST /v1/ai/provider-keys/gemini/test",
+      "PUT /v1/ai/routing",
+    ]);
+  });
+
+  it("shows nothing to a reader who may not bind a model", async () => {
+    const { qc } = mount(
+      setupReport(false, false),
+      [],
+      undefined,
+      undefined,
+      false,
+    );
+    await reportArrived(qc);
+    expect(screen.queryByText("Choose a model provider")).toBeNull();
+  });
+
+  it("binds nothing and removes the key when the vendor refuses it", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false), [], undefined, {
+      ok: false,
+      reason: "auth_failed",
+    });
+    await screen.findByText("Choose a model provider");
+    await user.type(screen.getByLabelText("API key"), "not-a-real-key");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(
+      await screen.findByText(
+        "The provider refused this key. Check it, then replace it.",
+      ),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(writes.map((w) => `${w.method} ${w.url}`)).toEqual([
+        "PUT /v1/ai/provider-keys/gemini",
+        "DELETE /v1/ai/provider-keys/gemini",
+      ]),
+    );
+    expect(writes.some((w) => w.url === "/v1/ai/routing")).toBe(false);
+    expect(
+      screen.queryByRole("heading", { name: "Model connected" }),
+    ).toBeNull();
+    expect(screen.getByLabelText<HTMLInputElement>("API key").value).toBe(
+      "not-a-real-key",
+    );
+  });
+
+  it("offers Connect anyway when the vendor could not be asked, and binds on that press", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false), [], undefined, {
+      ok: false,
+      reason: "unreachable",
+    });
+    await screen.findByText("Choose a model provider");
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await screen.findByText(
+      "The provider did not respond. Check the host and the network.",
+    );
+    expect(writes.some((w) => w.url === "/v1/ai/routing")).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Connect anyway" }));
+    await screen.findByRole("heading", { name: "Model connected" });
+    expect(writes.at(-1)?.url).toBe("/v1/ai/routing");
+  });
+
   it("stores only the key when a boot source sets the routing, and says where", async () => {
     const user = userEvent.setup();
     const { writes } = mount(
@@ -586,11 +697,36 @@ describe("the first-run setup gate", () => {
       "local_small",
       "premium",
     ]);
-    for (const bound of Object.values(routing.tiers)) {
+    // The graded preset, tier by tier: the setup the certification measured,
+    // which binds a stronger model above the cheap tiers.
+    const preset = new Map(
+      Object.entries(MODEL_SETUPS.gemini_cloud.routing.tiers),
+    );
+    for (const [tier, bound] of Object.entries(routing.tiers)) {
       expect(bound.provider).toBe("gemini");
+      expect(bound.model, tier).toBe(preset.get(tier)?.model);
+    }
+    expect(new Set(Object.values(routing.tiers).map((b) => b.model)).size).toBe(
+      2,
+    );
+    expect(routing.embeddings.model).toBe("gemini-embedding-001");
+  });
+
+  // The one-model choice is still there, and puts that model on every tier.
+  it("binds one model on every tier when the reader asks for it", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+    await chooseOneModel(user);
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(2));
+    const routing = writes[1].body as {
+      tiers: Record<string, { model: string }>;
+    };
+    for (const bound of Object.values(routing.tiers)) {
       expect(bound.model).toBe("gemini-3.1-flash-lite");
     }
-    expect(routing.embeddings.model).toBe("gemini-embedding-001");
   });
 
   // OpenRouter is a preset, and openai_compatible fails closed without a
@@ -644,6 +780,7 @@ describe("the first-run setup gate", () => {
     await waitFor(() => expect(writes.length).toBe(2));
     expect(writes[0]).toEqual({
       url: "/v1/ai/provider-keys/gemini_vertex",
+      method: "PUT",
       body: { service_account_json: keyFile },
     });
     const routing = writes[1].body as {
@@ -755,6 +892,7 @@ describe("the first-run setup gate", () => {
     const user = userEvent.setup();
     mount(setupReport(false, false));
     await screen.findByText("Choose a model provider");
+    await chooseOneModel(user);
 
     await user.click(screen.getByRole("combobox", { name: "Model" }));
     expect(
@@ -779,6 +917,7 @@ describe("the first-run setup gate", () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
     await screen.findByText("Choose a model provider");
+    await chooseOneModel(user);
 
     await pickSuggestion(
       user,
@@ -802,6 +941,7 @@ describe("the first-run setup gate", () => {
     const user = userEvent.setup();
     const { writes } = mount(setupReport(false, false));
     await screen.findByText("Choose a model provider");
+    await chooseOneModel(user);
 
     const model = screen.getByRole("combobox", { name: "Model" });
     await user.clear(model);
@@ -829,6 +969,7 @@ describe("the first-run setup gate", () => {
       screen.getByRole("combobox", { name: "Provider" }),
       "OpenRouter",
     );
+    await chooseOneModel(user);
     await user.click(screen.getByRole("combobox", { name: "Model" }));
     expect(
       within(screen.getByRole("listbox"))

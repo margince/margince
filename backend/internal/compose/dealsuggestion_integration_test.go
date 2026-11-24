@@ -120,9 +120,12 @@ func TestAcceptingOpensTheDealWithTheRepsCorrections(t *testing.T) {
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
+	erik := e.employee(t, "Erik Buyer", acme)
+	e.ShareForWriting(t, "contact", dana, "user", e.Rep1)
+	e.ShareForWriting(t, "contact", erik, "user", e.Rep3)
 	rep1 := e.rep(e.Rep1, e.Team1)
 	ours := e.meeting(rep1, t, "Scoping workshop", &dana, e.daysAgo(3))
-	theirs := e.meeting(e.rep(e.Rep3, e.Team2), t, "Intro call", &dana, e.daysAgo(4))
+	theirs := e.meeting(e.rep(e.Rep3, e.Team2), t, "Intro call", &erik, e.daysAgo(4))
 	mail, buyer := e.buyingEmail(t, acme, e.daysAgo(6))
 	opportunity := e.signal(t, "new_opportunity", acme, mail, e.daysAgo(5), ids.Nil, buyer)
 	commitment := e.signal(t, "commitment_made", acme, mail, e.daysAgo(2), ids.Nil)
@@ -142,8 +145,8 @@ func TestAcceptingOpensTheDealWithTheRepsCorrections(t *testing.T) {
 		t.Fatalf("reading the deal: %v", err)
 	}
 	if deal.Name != name || deal.AmountMinor == nil || *deal.AmountMinor != amount ||
-		deal.CompanyId == nil || ids.UUID(*deal.CompanyId) != acme || deal.Source != "agent:dealscout" {
-		t.Fatalf("deal = %+v, want the rep's name and amount on Acme, sourced from the scout", deal)
+		deal.CompanyId == nil || ids.UUID(*deal.CompanyId) != acme || deal.Source != "automation" {
+		t.Fatalf("deal = %+v, want the rep's name and amount on Acme, opened by automation", deal)
 	}
 	if deal.CloseDateProvisional != nil && *deal.CloseDateProvisional {
 		t.Fatal("a close date the rep chose is marked provisional")
@@ -206,6 +209,7 @@ func TestASuggestionIsShownOnlyToAReaderWhoMaySeeAllOfItsEvidence(t *testing.T) 
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	rep1, rep3 := e.rep(e.Rep1, e.Team1), e.rep(e.Rep3, e.Team2)
+	e.ShareForWriting(t, "contact", dana, "user", e.Rep1)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(5))
 	private := e.meeting(rep1, t, "Pricing call", &dana, e.daysAgo(3))
 	e.buyerPair(t, acme, e.daysAgo(6))
@@ -283,6 +287,7 @@ func TestASuggestionFromSignalsIsHiddenWhenAMessageTheyCiteIsLimited(t *testing.
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	rep1, rep3 := e.rep(e.Rep1, e.Team1), e.rep(e.Rep3, e.Team2)
 	buyer := e.employee(t, "Mira Buyer", acme)
+	e.ShareForWriting(t, "contact", buyer, "user", e.Rep1)
 	subject, inbound, at := "Next steps", "inbound", e.daysAgo(6)
 	mail, _, err := e.Activities.LogActivity(rep1, activities.LogActivityInput{
 		Kind: "email", Subject: &subject, Direction: &inbound, OccurredAt: &at, Source: "manual",

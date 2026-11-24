@@ -8,36 +8,57 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// forgetHomeOnWrite ends the writer's cached Home answers when a write they
-// made succeeds or meets a conflict, before its status is sent. A client that
-// refetches on the answer must not read the day as it was. Many of a reader's
-// own writes emit no event and no audit row, so the door they all pass is where
-// this is asked.
+// forgetHomeOnWrite ends the writer's cached Home after a write that succeeds or
+// conflicts (homecache.AfterWrite says how). Many writes emit no event or audit row.
 func forgetHomeOnWrite(cache *homecache.Cache, log *slog.Logger) crmcontracts.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			writers := writersOf(r)
-			if cache == nil || len(writers) == 0 {
+			if cache == nil || len(writers) == 0 || !mayChangeHome(r) {
 				next.ServeHTTP(w, r)
 				return
 			}
 			//nolint:contextcheck // WriteHeader has net/http's signature, and the request's context is the one this write ran under.
-			next.ServeHTTP(&forgettingWriter{ResponseWriter: w, forget: func() {
+			next.ServeHTTP(homecache.NewForgettingWriter(w, func(status int) {
 				// The write has committed and its answer is the caller's; a
-				// failure here leaves their Home behind by at most homecache.Life
-				// plus homecache.StaleGrace.
-				if err := cache.Forget(r.Context(), writers); err != nil {
+				// failure here leaves their Home behind until a read past
+				// homecache.Life reads it again.
+				if err := cache.AfterWrite(r, writers, status); err != nil {
 					log.Error("ending a writer's cached Home", "err", err)
 				}
-			}}, r)
+			}), r)
 		})
 	}
+}
+
+// homeUnchangedBy lists the writes that cannot change what Home shows, so they
+// do not mark it behind. Each is reviewed; a write not listed marks Home.
+var homeUnchangedBy = map[string]string{
+	http.MethodPost + " /v1/companies/{id}/view-ack": "moves only the since-last-visit baseline of one company page",
+	http.MethodPost + " /v1/contacts/{id}/view-ack":  "moves only the since-last-visit baseline of one contact page",
+	http.MethodPut + " /v1/mail-drafts":              "autosaves an unsent message that no Home row reads",
+}
+
+// mayChangeHome is false for a route with the read scope, a POST that only
+// asks a question. It is also false for the writes in homeUnchangedBy.
+func mayChangeHome(r *http.Request) bool {
+	if routePolicy(r).Scope == scopeRead {
+		return false
+	}
+	route := chi.RouteContext(r.Context())
+	if route == nil {
+		return true
+	}
+	_, unchanged := homeUnchangedBy[r.Method+" "+route.RoutePattern()]
+	return !unchanged
 }
 
 // writersOf names the readers a mutating request writes for: the human, or the
@@ -61,36 +82,3 @@ func writersOf(r *http.Request) []ids.UUID {
 	}
 	return out
 }
-
-// forgettingWriter runs forget once, as a success or a 409 is first written.
-//
-// A 409 (version_skew among them) says the row moved under the version the
-// writer read, often by a worker write that never ends their cache. Their
-// refetch must read the moved row, or every retry meets the same old version.
-// Ending the cache here covers every write that can skew, with no client change.
-type forgettingWriter struct {
-	http.ResponseWriter
-	forget  func()
-	settled bool
-}
-
-func (f *forgettingWriter) WriteHeader(status int) {
-	if !f.settled {
-		f.settled = true
-		if status >= http.StatusOK && status < http.StatusMultipleChoices || status == http.StatusConflict {
-			f.forget()
-		}
-	}
-	f.ResponseWriter.WriteHeader(status)
-}
-
-// Write without a header is the 200 net/http sends for it.
-func (f *forgettingWriter) Write(body []byte) (int, error) {
-	if !f.settled {
-		f.WriteHeader(http.StatusOK)
-	}
-	return f.ResponseWriter.Write(body)
-}
-
-// Unwrap lets http.NewResponseController reach the connection through this layer.
-func (f *forgettingWriter) Unwrap() http.ResponseWriter { return f.ResponseWriter }

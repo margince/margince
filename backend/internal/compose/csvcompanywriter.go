@@ -3,92 +3,168 @@
 
 package compose
 
-// The company object's own claimed-key checks, and the LinkedIn one a lead shares.
-//
-// A domain names ONE company across the estate, the same way an email names one
-// contact, so the preview has to answer the same question the contact path does:
-// will the store refuse this row before it is written?
+// Whether a row the CRM holds no record for may land as a new one. A company
+// row on a held domain may land on its holder instead. The test run and the import both
+// ask here, so they reach one verdict per row. The run's ledger carries the
+// file's earlier rows to the test run, which writes nothing.
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/compose/importkeys"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// companyDomainAlreadyHeld answers whether the estate already holds this row's
-// domain, WITHOUT regard to which company holds it.
-//
-// Not visibility-filtered, and that is the opposite of the name-collision check
-// beside it — for the reason the contact email version gives. A duplicate NAME is
-// a judgement the commit resolves by creating a twin and filing a review pair,
-// so telling a caller about an incumbent they cannot see would disclose one. A
-// duplicate domain is not a judgement: the key is estate-wide, so the commit
-// refuses the row whoever holds the domain, and a preview promising a create
-// would simply be wrong.
-//
-// The reason text names the row's own value and never the incumbent.
-func (w *csvWriters) companyDomainAlreadyHeld(ctx context.Context, row migration.Row) (bool, error) {
-	if w.object != migration.ObjectCompany {
-		return false, nil
+// keysOf spells the keys a row of this writer's type holds, the way the store
+// compares them. A company's LinkedIn URL and domain compare without case. A
+// lead's or contact's LinkedIn URL keeps the case of its path.
+func (w *csvWriters) keysOf(row migration.Row, typed map[string]any) map[importkeys.Kind]string {
+	fields := textFields(row.Fields)
+	keys := map[importkeys.Kind]string{}
+	if url, ok := typed[fieldLinkedIn].(string); ok {
+		keys[importkeys.LinkedIn] = strings.TrimSpace(url)
 	}
-	domain := strings.TrimSpace(textFields(row.Fields)[fieldDomain])
-	if domain == "" {
-		return false, nil
+	switch w.object {
+	case migration.ObjectContact, migration.ObjectLead:
+		keys[importkeys.Email] = canonicalFor(fieldEmail, fields[fieldEmail])
+	case migration.ObjectCompany:
+		keys[importkeys.Domain] = canonicalFor(fieldDomain, fields[fieldDomain])
+		keys[importkeys.LinkedIn] = strings.ToLower(keys[importkeys.LinkedIn])
 	}
-	// Compared as the store will hold it, so a file spelling a URL does not read
-	// as a different domain from the host already on file.
-	domain = canonicalFor(fieldDomain, domain)
-	var held bool
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company_domain
-			   WHERE domain = ANY($1) AND archived_at IS NULL)`,
-			owndomain.Spellings(domain)).Scan(&held)
-	}); err != nil {
-		return false, fmt.Errorf("import: checking whether %q is already held: %w", domain, err)
-	}
-	return held, nil
+	return keys
 }
 
-// linkedInClaimed reports whether the store refused a write because another
-// live company or lead holds its LinkedIn URL.
-func linkedInClaimed(err error) bool {
-	if _, ok := errors.AsType[*contacts.DuplicateCompanyLinkedInError](err); ok {
-		return true
+// claimRow records a row that lands, so a later row of the run meets its keys.
+func (w *csvWriters) claimRow(row migration.Row, typed map[string]any) {
+	if w.links.claims == nil {
+		w.links.claims = importkeys.Ledger{}
 	}
-	_, ok := errors.AsType[*contacts.DuplicateLeadLinkedInError](err)
-	return ok
+	w.links.claims.Claim(w.object, w.keysOf(row, typed))
 }
 
-// linkedInAlreadyHeld is linkedInClaimed asked before the write, so the
-// preview skips the row the commit will. A contact's handle is not a key.
-func (w *csvWriters) linkedInAlreadyHeld(ctx context.Context, typed map[string]any) (bool, error) {
-	url, ok := typed[fieldLinkedIn].(string)
-	if !ok || w.object == migration.ObjectContact {
-		return false, nil
+// movedKeyFields are the columns whose change moves a key.
+var movedKeyFields = map[string]importkeys.Kind{fieldEmail: importkeys.Email, fieldLinkedIn: importkeys.LinkedIn, fieldDomain: importkeys.Domain}
+
+// movedKeyRefusal says why an update cannot move a key onto its record, or the
+// zero reason. The test run and the import both ask before they write, so the
+// preview promises only an update the import makes.
+func (w *csvWriters) movedKeyRefusal(ctx context.Context, id ids.UUID, row migration.Row, typed map[string]any, changed map[string]string) (migration.Reason, error) {
+	return importkeys.MovedKeyWhy(ctx, w.pool, w.links.claims, w.object, id, w.keysOf(row, typed), importkeys.MovedKinds(changed, movedKeyFields))
+}
+
+// keyChecks are the refusals the create door of the row's type makes, in its order.
+func (w *csvWriters) keyChecks(ctx context.Context, row migration.Row, typed map[string]any) []importkeys.KeyCheck {
+	email := strings.TrimSpace(textFields(row.Fields)[fieldEmail])
+	return importkeys.CreateKeyChecks(ctx, w.pool, w.links.claims, w.object, w.keysOf(row, typed), email,
+		func() (bool, error) { return w.contactEmailAlreadyHeld(ctx, row) })
+}
+
+// newRecordRefusal says why the row cannot land as a new record, or the zero
+// reason when it can. A row with no name comes first: the store has nothing
+// to call the record by, whatever its keys are.
+func (w *csvWriters) newRecordRefusal(ctx context.Context, row migration.Row, typed map[string]any) (migration.Reason, error) {
+	fields := textFields(row.Fields)
+	switch {
+	case w.object == migration.ObjectContact && contactFullName(fields) == "":
+		return contactUnnamedWhy, nil
+	case w.object == migration.ObjectCompany && strings.TrimSpace(fields[fieldDisplayName]) == "":
+		return companyNameEmptyWhy, nil
 	}
-	var held bool
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		if w.object == migration.ObjectLead {
-			var err error
-			_, held, err = storekit.LiveLeadByLinkedInURL(ctx, tx, url, nil)
-			return err
+	for _, check := range w.keyChecks(ctx, row, typed) {
+		if check.InFile {
+			return check.Why, nil
 		}
-		return tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM company WHERE lower(linkedin_url) = lower($1) AND archived_at IS NULL)`,
-			url).Scan(&held)
-	})
-	if err != nil {
-		return false, fmt.Errorf("import: checking whether %q is already held: %w", url, err)
+		held, err := check.Stored()
+		if err != nil {
+			return migration.Reason{}, err
+		}
+		if held {
+			return check.Why, nil
+		}
 	}
-	return held, nil
+	return migration.Reason{}, nil
+}
+
+// domainHolderOf finds the company a company row lands on when no id column
+// and no binding name one. It is the live company holding the row's domain,
+// if the caller may change it. A domain an earlier row of this run claims is no match.
+// The test run has no company yet to file that second row onto.
+func (w *csvWriters) domainHolderOf(ctx context.Context, row migration.Row) (ids.UUID, bool, error) {
+	domain := w.keysOf(row, nil)[importkeys.Domain]
+	if w.object != migration.ObjectCompany || domain == "" || w.links.claims.Held(importkeys.Domain, domain, w.object) {
+		return ids.UUID{}, false, nil
+	}
+	return importkeys.WritableDomainHolder(ctx, w.pool, domain)
+}
+
+// domainMatched is the warning a row filed onto its domain's holder lands
+// with. It carries the domain as its value, so the report keeps it apart from
+// the row's other warnings.
+func domainMatched(row migration.Row) migration.SkippedRow {
+	domain := canonicalFor(fieldDomain, textFields(row.Fields)[fieldDomain])
+	warning := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Value: domain}
+	return warning.Because(migration.Why(migration.ReasonCompanyDomainMatched, "value", domain))
+}
+
+// landOnDomainHolder binds the row's ref to the company holding its domain and
+// reconciles it, as a row naming that company by id would be.
+func (w *csvWriters) landOnDomainHolder(ctx context.Context, row migration.Row, id ids.UUID, typed map[string]any) (migration.EnsureResult, error) {
+	if err := w.reviewedTarget(row.ExternalID, id); err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if err := w.bind(ctx, row, id); err != nil {
+		return migration.EnsureResult{}, err
+	}
+	landed, err := w.reconcile(ctx, id, row, typed)
+	if err == nil && !landed.Skipped {
+		landed.Warnings = append(landed.Warnings, domainMatched(row))
+	}
+	return landed, err
+}
+
+// predictDomainHolder is landOnDomainHolder without writing.
+func (w *csvWriters) predictDomainHolder(ctx context.Context, row migration.Row, id ids.UUID, typed map[string]any) (predictedOutcome, migration.Reason, error) {
+	outcome, why, err := w.reconcilePrediction(ctx, id, row, typed)
+	if err != nil || outcome == predictUnwritable || outcome == predictHeldKey {
+		return outcome, why, err
+	}
+	w.predictedWarnings = append(w.predictedWarnings, domainMatched(row))
+	return outcome, why, nil
+}
+
+// landingChanges is the fields a row would change on a record it reaches.
+// The file overwrites only a record this importer created or a row names by
+// id. Any other record keeps every stored value, the row fills only empty
+// fields, and the reason names what was kept.
+func (w *csvWriters) landingChanges(ctx context.Context, row migration.Row, current []byte, typed map[string]any) (map[string]string, migration.Reason, error) {
+	changed, err := changedFields(current, textFields(row.Fields), typed)
+	if err != nil || strings.TrimSpace(textFields(row.Fields)[csvTargetID]) != "" {
+		return changed, migration.Reason{}, err
+	}
+	binding, bound, err := w.bindingOf(ctx, row.ExternalID)
+	owned := bound && binding.RunStatus != migration.StatusUndone && binding.Origin != migration.OriginBound
+	if err != nil || owned {
+		return changed, migration.Reason{}, err
+	}
+	var stored map[string]json.RawMessage
+	if err := json.Unmarshal(current, &stored); err != nil {
+		return nil, migration.Reason{}, fmt.Errorf("import: reading the stored record: %w", err)
+	}
+	var kept []string
+	for field := range changed {
+		if textOf(storedValue(stored, field)) != "" {
+			delete(changed, field)
+			kept = append(kept, field)
+		}
+	}
+	if len(kept) == 0 {
+		return changed, migration.Reason{}, nil
+	}
+	slices.Sort(kept)
+	return changed, migration.Why(migration.ReasonStoredValuesKept, "column", strings.Join(kept, ", ")), nil
 }

@@ -28,7 +28,7 @@ var SharedMergeReviews = config.DefineStored(config.Spec[bool]{
 	Doc: "Let any owner of a possible duplicate merge the whole case, keeping the other owners' access " +
 		"to the remaining contact through a record grant.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	RBACObject: installationSettingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the case merge reads it for whoever merges
 })
 

@@ -34,6 +34,7 @@ const DEAL_ID = "d-brandt";
 function coverage(over: Partial<DealCoverage>): DealCoverage {
   return {
     deal_id: DEAL_ID,
+    max_engaged_seats: 1,
     stakeholders: [],
     our_side: [],
     risks: [],

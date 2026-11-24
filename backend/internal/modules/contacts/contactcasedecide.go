@@ -32,6 +32,7 @@ type ContactCaseDecision struct {
 	MemberIDs  []ids.UUID
 	SurvivorID ids.UUID
 	OwnerID    ids.UUID
+	Prefer     MergePreference
 }
 
 // CaseSelectionError refuses a selection the case cannot take: 422 with the
@@ -94,13 +95,13 @@ func (s *Store) decideContactCase(ctx context.Context, contactID ids.UUID, d Con
 	if err != nil {
 		return crmcontracts.ContactCaseOutcome{}, err
 	}
-	active, err := s.activeColumns(ctx, contactEntity)
-	if err != nil {
-		return crmcontracts.ContactCaseOutcome{}, err
-	}
 	var out crmcontracts.ContactCaseOutcome
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+	// errCasePreview is no lock cycle, so a preview's rollback is never run again.
+	err = s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
+		active, err := s.activeColumnsIn(ctx, tx, contactEntity)
+		if err != nil {
+			return err
+		}
 		if out, err = s.decideContactCaseTx(ctx, tx, contactID, d, selected, active); err != nil {
 			return err
 		}
@@ -138,7 +139,7 @@ func caseSelection(d ContactCaseDecision) ([]ids.UUID, error) {
 	case !slices.Contains(selected, d.SurvivorID):
 		return nil, &DedupeInputError{Field: "survivor_id", Msg: "must be one of member_ids"}
 	}
-	return selected, nil
+	return selected, checkMergePreference(d.Prefer, selected)
 }
 
 // decideContactCaseTx locks every selected member, then reads and checks the
@@ -177,20 +178,15 @@ func (s *Store) decideContactCaseTx(ctx context.Context, tx pgx.Tx, contactID id
 		return crmcontracts.ContactCaseOutcome{}, err
 	}
 	return s.executeCaseMerge(ctx, tx, caseMergePlan{
-		c: c, selected: selected, survivor: survivor, owner: d.OwnerID, mode: mode, policy: policy,
+		c: c, selected: selected, survivor: survivor, owner: d.OwnerID, mode: mode, policy: policy, prefer: d.Prefer,
 	}, active)
 }
 
-// lockMergingContacts takes the stop locks of contacts about to merge in one
-// call, then holds each live one in id order. Every contact merge keeps this
-// order, before any pair row. A contact already gone is left to the caller's
-// own check. selected is sorted.
+// lockMergingContacts takes lockMergeSubjects, then holds each live contact
+// in id order, before any pair row. A contact already gone is left to the
+// caller's own check. selected is sorted.
 func (s *Store) lockMergingContacts(ctx context.Context, tx pgx.Tx, selected []ids.UUID) error {
-	subjects := make([]commsauthz.StopSubject, 0, len(selected))
-	for _, id := range selected {
-		subjects = append(subjects, commsauthz.ContactStopSubject(ids.From[ids.ContactKind](id)))
-	}
-	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, subjects...); err != nil {
+	if err := s.lockMergeSubjects(ctx, tx, selected); err != nil {
 		return err
 	}
 	for _, id := range selected {
@@ -199,6 +195,21 @@ func (s *Store) lockMergingContacts(ctx context.Context, tx pgx.Tx, selected []i
 		}
 	}
 	return nil
+}
+
+// lockMergeSubjects takes the locks every contact merge holds before it locks
+// a contact row: consent's stop locks, then the employment locks. Employer
+// attach, the company roster and the seat repair take an employment lock and
+// then the contact row, so the reverse order deadlocks with them.
+func (s *Store) lockMergeSubjects(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) error {
+	subjects := make([]commsauthz.StopSubject, 0, len(contacts))
+	for _, id := range contacts {
+		subjects = append(subjects, commsauthz.ContactStopSubject(ids.From[ids.ContactKind](id)))
+	}
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, subjects...); err != nil {
+		return err
+	}
+	return lockMergedEmployments(ctx, tx, contacts)
 }
 
 // caseGone answers for a contact the reviewer saw in a case that is in none
@@ -309,6 +320,7 @@ type caseMergePlan struct {
 	owner    ids.UUID
 	mode     crmcontracts.ContactCaseOutcomeMode
 	policy   bool
+	prefer   MergePreference
 }
 
 func (p caseMergePlan) survivorID() ids.ContactID { return ids.From[ids.ContactKind](p.survivor.ID) }

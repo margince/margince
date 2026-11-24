@@ -76,7 +76,8 @@ export type MeetingOutcomeWrite = {
   // Without it, two readers answering one meeting both succeed, and the
   // later one wins with no warning.
   version: number | undefined;
-  status: "held" | "no_show" | "canceled";
+  // `null` takes the status back off, which a meeting that never had one needs.
+  status: "held" | "no_show" | "canceled" | "booked" | null;
   followUpTask?: components["schemas"]["ActivityFollowUpTask"];
   dealFiling?: components["schemas"]["ActivityDealFiling"];
   // Each sent only when given, so an answer alone never touches the notes.
@@ -119,6 +120,14 @@ export async function writeMeetingOutcome(
     }),
     t,
   );
+}
+
+/** The status a meeting holds now, so an Undo can put it back. */
+export async function readMeetingStatus(id: string): Promise<"booked" | null> {
+  const { data } = await api.GET("/activities/{id}", {
+    params: { path: { id } },
+  });
+  return data?.meeting_status === "booked" ? "booked" : null;
 }
 
 /**
@@ -177,7 +186,7 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
  */
 export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
-  const queryClient = useQueryClient();
+  const rereadClaims = useClaimReread(invalidateKeys);
   return useMutation({
     mutationFn: async (input: {
       id: string;
@@ -191,13 +200,35 @@ export function useClaimSettle(invalidateKeys: readonly QueryKey[]) {
         t,
       );
     },
-    onSuccess: () => {
-      for (const queryKey of invalidateKeys) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      for (const queryKey of CLAIM_SETTLED_KEYS) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-    },
+    onSuccess: rereadClaims,
   });
+}
+
+/**
+ * Undoing Margince's own close of a promise. The server reopens only the claim,
+ * the one thing the automatic close changed.
+ */
+export function useClaimReopen(invalidateKeys: readonly QueryKey[]) {
+  const t = useT();
+  const rereadClaims = useClaimReread(invalidateKeys);
+  return useMutation({
+    mutationFn: async (input: { id: string }) => {
+      unwrap(
+        await api.POST("/claims/{id}/reopen", {
+          params: { path: { id: input.id } },
+        }),
+        t,
+      );
+    },
+    onSuccess: rereadClaims,
+  });
+}
+
+function useClaimReread(invalidateKeys: readonly QueryKey[]) {
+  const queryClient = useQueryClient();
+  return () => {
+    for (const queryKey of [...invalidateKeys, ...CLAIM_SETTLED_KEYS]) {
+      queryClient.invalidateQueries({ queryKey });
+    }
+  };
 }

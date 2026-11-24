@@ -1,0 +1,101 @@
+{
+  "scenario": "case10_finish_the_import",
+  "criteria": [
+    1,
+    2
+  ],
+  "passed": 1,
+  "runs": 3,
+  "pass_at": 2,
+  "driver": "claude:cli",
+  "effort": "thinking off",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "door": "rest",
+  "self_judged": true,
+  "stamp": {
+    "scenario": "b8ebb94fd9cfaf54",
+    "tools": "8b653e7a3d01b493",
+    "instructions": "a0e5174113e30161",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "3145e709ad366fe7cda83e5612c5792d285a0836",
+    "ran_at": "2026-11-22T10:12:23Z",
+    "graded_commit": "3145e709ad366fe7cda83e5612c5792d285a0836",
+    "graded_at": "2026-11-22T10:12:23Z"
+  },
+  "usage": {
+    "input_tokens": 62,
+    "output_tokens": 6638,
+    "cache_creation_input_tokens": 60035,
+    "cache_read_input_tokens": 323196,
+    "runs_measured": 3,
+    "runs_costed": 3,
+    "cost_usd": 0.339
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "create_record",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "skill_file"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "create_record",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "skill_file"
+      ]
+    },
+    {
+      "passed": false,
+      "tools": [
+        "create_record",
+        "find_records",
+        "list_approvals",
+        "list_records",
+        "skill_file"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 3,
+    "calls": {
+      "median": 14,
+      "min": 14,
+      "max": 17
+    },
+    "turns": {
+      "median": 15,
+      "min": 15,
+      "max": 18
+    },
+    "refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "prompt_tokens": {
+      "median": 133384,
+      "min": 106525,
+      "max": 143384
+    },
+    "output_tokens": {
+      "median": 2190,
+      "min": 2164,
+      "max": 2284
+    },
+    "duration_ms": {
+      "median": 25998,
+      "min": 24765,
+      "max": 30003
+    }
+  }
+}

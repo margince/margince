@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -45,7 +46,7 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 	if _, err := registry.Connect(actor, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatal(err)
 	}
-	run, err := registry.StartBackfill(actor, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: count}, enqueueNothing)
+	run, err := registry.StartBackfill(actor, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: count}, enqueueNothing)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,9 +92,11 @@ func TestHistoryImportReportsItsDatabaseWork(t *testing.T) {
 // Thread membership and mailbox generation are checked before each message write.
 // It includes one statement per filed message that names the linked contact as
 // the sender when the stated address proves them (stampProvenSenders).
+// Every writer of a meeting's attendees takes the meeting lock first, in one
+// statement, and those locks cost about seven round trips per imported message.
 const (
-	historyExchangesPerMessage    = 187
-	historyTransactionsPerMessage = 6.15
+	historyExchangesPerMessage    = 171
+	historyTransactionsPerMessage = 5.15
 )
 
 func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
@@ -124,7 +127,7 @@ func TestHistoryImportStaysWithinItsRoundTripBudget(t *testing.T) {
 	if _, err := registry.Connect(actor, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatal(err)
 	}
-	run, err := registry.StartBackfill(actor, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: count}, enqueueNothing)
+	run, err := registry.StartBackfill(actor, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: count}, enqueueNothing)
 	if err != nil {
 		t.Fatal(err)
 	}

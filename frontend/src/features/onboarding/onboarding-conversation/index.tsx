@@ -1,21 +1,27 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import type { Dispatch } from "react";
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { Button } from "../../../design-system/atoms";
 import { useLocale, useT } from "../../../i18n";
-import { useHoldsAdminRole } from "../../../lib/capability";
+import {
+  useCan,
+  useCanWrite,
+  useHoldsAdminRole,
+} from "../../../lib/capability";
 import {
   type useCompany,
   useInstallationDescribed,
 } from "../../../lib/installationcompany";
 import { throwProblem } from "../../../lib/problem";
-import { navigate, navigateReplacing, useRoute } from "../../../lib/router";
+import { useRoute } from "../../../lib/router";
+import { useMe } from "../../../lib/session";
+import { useAddressWriters } from "../../../lib/urlstate";
 import { EMPTY_DRAFT, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
-import { loadWizardState } from "../onboarding-progress";
+import { onboardingProgressOptions } from "../onboarding-progress";
 import { BasisAct } from "./basis-act";
 import { CompanyAct } from "./company-act";
 import { ConnectAct } from "./connect-act";
@@ -27,12 +33,17 @@ import {
   initialConversationState,
 } from "./conversation-machine";
 import { InviteAct } from "./invite-act";
-import { restorePlan, type VoiceRestoreProbe } from "./restore";
+import {
+  restorePlan,
+  VOICE_PROBE_KEY,
+  type VoiceRestoreProbe,
+} from "./restore";
 import { TeamAct } from "./team-act";
+import { useStepAddress } from "./use-step-address";
 import type { WizardPersistInput } from "./use-wizard-state";
 import { useWizardStatePersist } from "./use-wizard-state";
 import { VoiceAct } from "./voice-act";
-import { WorkbenchEntranceScope } from "./workbench";
+import { RestoredReadScope, WorkbenchEntranceScope } from "./workbench";
 
 // The conversational onboarding shell — THE onboarding experience: one pure
 // machine owns where the conversation is, and each act renders inside the
@@ -66,14 +77,15 @@ function voiceProbeNeeded(
   wizard: OnboardingState | null,
   described: boolean,
   mayDescribe: boolean,
+  mayTrainVoice: boolean,
 ): boolean {
-  if (!mayDescribe) {
-    return true;
+  const memberPath =
+    !mayDescribe || (wizard === null ? described : wizard.path === "member");
+  // The member journey offers voice only to a seat that may train one.
+  if (memberPath) {
+    return mayTrainVoice;
   }
-  if (wizard === null) {
-    return described;
-  }
-  return wizard.path === "member" || voiceProbeSteps.has(wizard.step);
+  return wizard !== null && voiceProbeSteps.has(wizard.step);
 }
 
 // One probe per fact the restore needs: does a built version exist, and
@@ -85,7 +97,7 @@ async function probeVoice(): Promise<VoiceRestoreProbe> {
   }
   const profileId = list.data.data[0]?.id;
   if (profileId === undefined) {
-    return { built: false, summary: null };
+    return { built: false, summary: null, sources: [] };
   }
   const [versions, sources] = await Promise.all([
     api.GET("/voice-profiles/{id}/versions", {
@@ -104,6 +116,7 @@ async function probeVoice(): Promise<VoiceRestoreProbe> {
   return {
     built: pickBuiltVersion(versions.data.data) !== null,
     summary: sources.data.summary,
+    sources: sources.data.data,
   };
 }
 
@@ -127,10 +140,12 @@ const actCheckpoints: ReadonlyMap<
   ["co.manual>bs.ask", { step: "basis" }],
   ["bs.ask>in.ask", { step: "invite" }],
   ["in.ask>vo.collecting", { step: "voice", voiceSkipped: false }],
+  ["in.ask>cn.consent", { step: "connect" }],
   ["in.ask>tm.ask", { step: "team", voiceSkipped: true, connectSkipped: true }],
-  ["vo.collecting>vo.skipped", { step: "voice", voiceSkipped: true }],
+  ["vo.collecting>cn.consent", { step: "connect", voiceSkipped: true }],
   ["vo.result>cn.consent", { step: "connect" }],
-  ["vo.skipped>cn.consent", { step: "connect" }],
+  ["cn.consent>vo.collecting", { step: "voice", voiceSkipped: false }],
+  ["cn.consent>vo.result", { step: "voice", voiceSkipped: false }],
 ]);
 
 function actCheckpoint(
@@ -188,31 +203,46 @@ function useRestore(
   routeConnect: boolean,
 ) {
   const { locale } = useLocale();
+  const { navigateReplacing } = useAddressWriters();
   const { company: existing, described } = useInstallationDescribed(true);
   const mayDescribe = useHoldsAdminRole();
-  // The restore's own snapshot, not the live entry the shell gates on: a
-  // checkpoint landing mid-journey must not re-run the restore's reads.
-  const wizard = useQuery({
-    queryKey: ["onboarding-conv-state"],
-    queryFn: loadWizardState,
+  const mayTrainVoice = useCanWrite("voice_profile", "create");
+  // The probe's GET needs this grant, which a custom role may leave out.
+  const readsVoice = useCan("voice_profile", "read");
+  // The grants above read false until /me answers, so the restore waits on it.
+  const meAnswered = useMe().data !== undefined;
+  const progress = useQuery({
+    ...onboardingProgressOptions,
+    staleTime: Number.POSITIVE_INFINITY,
   });
+  // Held from the first answer, so a checkpoint landing mid-journey does not
+  // re-run the restore's reads.
+  const [atMount, setAtMount] = useState<{ row: OnboardingState | null }>();
+  if (atMount === undefined && progress.isSuccess) {
+    setAtMount({ row: progress.data });
+  }
+  const wizard = atMount?.row ?? null;
   const voiceNeeded =
-    wizard.isSuccess &&
+    readsVoice &&
+    atMount !== undefined &&
     described !== undefined &&
-    voiceProbeNeeded(wizard.data ?? null, described, mayDescribe);
+    voiceProbeNeeded(wizard, described, mayDescribe, mayTrainVoice);
   const voice = useQuery({
-    queryKey: ["onboarding-conv-voice"],
+    queryKey: VOICE_PROBE_KEY,
     queryFn: probeVoice,
     enabled: voiceNeeded,
+    // The corpus owner writes every later change into this entry, so a
+    // refetch would replace a change the user already made.
+    staleTime: Number.POSITIVE_INFINITY,
   });
   // The persisted read is only worth fetching while the company act is
   // still open: a reload must reattach a running or finished read instead
   // of stranding the user's work behind a fresh intro.
   const persistedReadId =
     mayDescribe &&
-    wizard.data != null &&
-    (wizard.data.step === "read" || wizard.data.step === "confirm")
-      ? (wizard.data.site_read_id ?? null)
+    wizard !== null &&
+    (wizard.step === "read" || wizard.step === "confirm")
+      ? (wizard.site_read_id ?? null)
       : null;
   const persistedRead = useQuery({
     queryKey: ["onboarding-conv-read", persistedReadId],
@@ -236,8 +266,9 @@ function useRestore(
 
   const restored = useRef(false);
   const settled =
+    meAnswered &&
     described !== undefined &&
-    wizard.isSuccess &&
+    atMount !== undefined &&
     (!voiceNeeded || voice.isSuccess) &&
     (persistedReadId === null || persistedRead.isSuccess);
   useEffect(() => {
@@ -246,10 +277,11 @@ function useRestore(
     }
     restored.current = true;
     const plan = restorePlan({
-      state: wizard.data ?? null,
+      state: wizard,
       profile: existing.data ?? null,
       described: described === true,
       mayDescribe,
+      mayTrainVoice,
       voice: voice.data ?? null,
       read: persistedRead.data ?? null,
       routeConnect,
@@ -268,6 +300,7 @@ function useRestore(
     dispatch({
       type: "START",
       memberPath: plan.memberPath,
+      voiceStep: plan.voiceStep,
       companyConfirmed: plan.companyConfirmed,
       recap: plan.recap,
     });
@@ -282,22 +315,24 @@ function useRestore(
   }, [
     state.act,
     settled,
-    wizard.data,
+    wizard,
     existing.data,
     described,
     mayDescribe,
+    mayTrainVoice,
     voice.data,
     persistedRead.data,
     routeConnect,
     locale,
     dispatch,
+    navigateReplacing,
   ]);
 
   return {
     existing,
-    voice,
     persistedRead,
-    lookups: [existing, wizard, voice, persistedRead],
+    restoredReadId: wizard?.site_read_id ?? null,
+    lookups: [existing, progress, voice, persistedRead],
   };
 }
 
@@ -308,11 +343,12 @@ export function OnboardingConversationScreen() {
     initialConversationState,
   );
   const { persist } = useWizardStatePersist();
-  const { existing, voice, persistedRead, lookups } = useRestore(
+  const { existing, persistedRead, restoredReadId, lookups } = useRestore(
     state,
     dispatch,
     route.id === "connect",
   );
+  useStepAddress(state, dispatch, route.id);
 
   // Act-transition checkpoints: the server remembers where the journey is,
   // so a mid-onboarding reload restores to the right act with recap. Only
@@ -346,17 +382,18 @@ export function OnboardingConversationScreen() {
       {/* Above the act switch on purpose: this is the one level that survives an
           act change, so it is the only place that can know whether the workbench
           frame has already introduced itself. */}
-      <WorkbenchEntranceScope>
-        <CurrentAct
-          state={state}
-          dispatch={dispatch}
-          route={route}
-          persist={persist}
-          existing={existing}
-          voice={voice}
-          persistedRead={persistedRead}
-        />
-      </WorkbenchEntranceScope>
+      <RestoredReadScope value={restoredReadId}>
+        <WorkbenchEntranceScope>
+          <CurrentAct
+            state={state}
+            dispatch={dispatch}
+            route={route}
+            persist={persist}
+            existing={existing}
+            persistedRead={persistedRead}
+          />
+        </WorkbenchEntranceScope>
+      </RestoredReadScope>
     </div>
   );
 }
@@ -371,7 +408,6 @@ function CurrentAct({
   route,
   persist,
   existing,
-  voice,
   persistedRead,
 }: Readonly<{
   state: ConversationState;
@@ -379,9 +415,9 @@ function CurrentAct({
   route: ReturnType<typeof useRoute>;
   persist: (input: WizardPersistInput) => Promise<boolean>;
   existing: ReturnType<typeof useCompany>;
-  voice: UseQueryResult<VoiceRestoreProbe>;
   persistedRead: UseQueryResult<CompanySiteRead | null>;
 }>) {
+  const { navigateReplacing } = useAddressWriters();
   switch (state.act) {
     case "company":
       return (
@@ -399,13 +435,7 @@ function CurrentAct({
         />
       );
     case "voice":
-      return (
-        <VoiceAct
-          state={state}
-          dispatch={dispatch}
-          initialSummary={voice.data?.summary ?? null}
-        />
-      );
+      return <VoiceAct state={state} dispatch={dispatch} />;
     case "basis":
       return <BasisAct state={state} dispatch={dispatch} />;
     case "invite":
@@ -413,9 +443,11 @@ function CurrentAct({
     case "team":
       return <TeamAct state={state} dispatch={dispatch} persist={persist} />;
     // Every journey ends on the same handoff, once the act that closed it has
-    // recorded completion.
+    // recorded completion. It replaces, so Back cannot replay it.
     case "done":
-      return <BuildScene onDone={() => navigate({ screen: "home" })} />;
+      return (
+        <BuildScene onDone={() => navigateReplacing({ screen: "home" })} />
+      );
     case "connect":
       return (
         <ConnectAct

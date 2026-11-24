@@ -7,7 +7,7 @@ import type { ListQuery } from "../../components/listquery";
 import type { MessageKey } from "../../i18n/en";
 import { useHealthScope } from "../../lib/healthscope";
 import { LEAD_STATUS_COUNTS_KEY, leadTerminalKey } from "../../lib/leadkeys";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { isOwnerNotMeasurable, throwProblem, unwrap } from "../../lib/problem";
 import type { Lead } from "./leadpresentation";
 import { leadsQueryParams } from "./leads.list.queries";
 
@@ -71,7 +71,7 @@ export function terminalCountsWithheldBecause(
 }
 
 // The one reason the server decides: an owner dial naming somebody whose
-// counts this reader may not measure answers 403.
+// counts this reader may not measure answers owner_not_measurable.
 export function terminalCountsRefusedBecause(
   counts: Map<string, number> | null | undefined,
 ): MessageKey | undefined {
@@ -104,7 +104,7 @@ export function useLeadStatusCounts(query: ListQuery) {
       readerScope !== undefined &&
       terminalCountsWithheldBecause(query) === undefined,
     queryFn: async ({ signal }): Promise<Map<string, number> | null> => {
-      const { data, error, response } = await api.POST("/reports/{report}", {
+      const { data, error } = await api.POST("/reports/{report}", {
         signal,
         params: { path: { report: "leads-by-status" } },
         body: {
@@ -114,8 +114,8 @@ export function useLeadStatusCounts(query: ListQuery) {
         },
       });
       if (error) {
-        // Only an owner dial meets the owner gate; any other 403 is a failure.
-        if (response.status === 403 && filters.owner_id) return null;
+        // Only the owner gate's own code is an owner refusal; any other 403 is a failure.
+        if (isOwnerNotMeasurable(error)) return null;
         throwProblem(error);
       }
       const counts = new Map<string, number>();
@@ -132,12 +132,15 @@ export function useLeadStatusCounts(query: ListQuery) {
 }
 
 // The /leads query for one terminal column: the list's dials, held to that
-// status and widened to the archived rows every terminal lead is.
+// status, which reads the archived rows every terminal lead is.
 export function terminalLeadsQueryParams(
   query: ListQuery,
   status: Lead["status"],
 ) {
-  return { ...leadsQueryParams(query), status, include_archived: true };
+  return leadsQueryParams({
+    ...query,
+    filters: { ...query.filters, status },
+  });
 }
 
 // The leads in one terminal column, read only while it is open. A status dial

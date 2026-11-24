@@ -62,9 +62,9 @@ func withMailboxScope(t *testing.T, check func(mailboxScopeEnv)) {
 func entityMailbox(t *testing.T, f mailboxScopeEnv, label string) ids.UUID {
 	t.Helper()
 	id, _, err := upsertConnection(f.ctx, f.tx, connectionUpsert{
-		userID: f.seat, provider: "gmail", scopes: []string{},
+		userID: f.seat, provider: "gmail",
 		ref: keyvault.Ref("fixture-credential"), accountLabel: &label,
-	})
+	}, ids.Nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func expectMailboxEntity(t *testing.T, f mailboxScopeEnv, id, want ids.UUID) {
 	}
 }
 
-func TestAMailboxKeepsItsCompanyUntilAnotherAccountIsBound(t *testing.T) {
+func TestAMailboxKeepsItsCompanyWhenAnotherAccountIsAdded(t *testing.T) {
 	withMailboxScope(t, func(f mailboxScopeEnv) {
 		id := entityMailbox(t, f, "first@example.test")
 		expectMailboxEntity(t, f, id, f.first)
@@ -104,27 +104,34 @@ func TestAMailboxKeepsItsCompanyUntilAnotherAccountIsBound(t *testing.T) {
 			t.Fatal("reauth created another connection")
 		}
 		expectMailboxEntity(t, f, id, f.first)
-		entityMailbox(t, f, "second@example.test")
-		expectMailboxEntity(t, f, id, f.next)
+		second := entityMailbox(t, f, "second@example.test")
+		expectMailboxEntity(t, f, id, f.first)
+		expectMailboxEntity(t, f, second, f.next)
 		if _, err := f.tx.Exec(f.ctx, `UPDATE capture_connection SET legal_entity_id=NULL WHERE id=@id`,
-			pgx.StrictNamedArgs{"id": id}); err != nil {
+			pgx.StrictNamedArgs{"id": second}); err != nil {
 			t.Fatal(err)
 		}
 		entityMailbox(t, f, "second@example.test")
-		expectMailboxEntity(t, f, id, ids.Nil)
+		expectMailboxEntity(t, f, second, f.next)
 	})
 }
 
-func scopedReceipt(t *testing.T, f mailboxScopeEnv, activity ids.UUID, message string) {
+// scopedReceipt records one receipt delivered by the mailbox connection names.
+func scopedReceipt(t *testing.T, f mailboxScopeEnv, connection, activity ids.UUID, message string) {
 	t.Helper()
 	when := time.Date(2020, time.March, 2, 9, 0, 0, 0, time.UTC)
-	if err := recordImportTx(f.ctx, f.tx, ids.From[ids.ActivityKind](activity), f.seat, "gmail",
+	if err := recordImportTx(withMailboxConnection(f.ctx, connection, 0), f.tx, ids.From[ids.ActivityKind](activity), f.seat, "gmail",
 		birthDecision{}, when, when, nil, message); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func expectReceiptEntity(t *testing.T, f mailboxScopeEnv, activity, want ids.UUID, deliveries int) {
+	t.Helper()
+	expectReceiptCompany(t, f, activity, &want, deliveries)
+}
+
+func expectReceiptCompany(t *testing.T, f mailboxScopeEnv, activity ids.UUID, want *ids.UUID, deliveries int) {
 	t.Helper()
 	var got *ids.UUID
 	var count int
@@ -133,8 +140,8 @@ func expectReceiptEntity(t *testing.T, f mailboxScopeEnv, activity, want ids.UUI
 		pgx.StrictNamedArgs{"activity": activity, "user": f.seat}).Scan(&got, &count); err != nil {
 		t.Fatal(err)
 	}
-	if got == nil || *got != want || count != deliveries {
-		t.Fatalf("receipt entity = %v, deliveries = %d; want %s, %d", got, count, want, deliveries)
+	if (got == nil) != (want == nil) || (got != nil && *got != *want) || count != deliveries {
+		t.Fatalf("receipt entity = %v, deliveries = %d; want %v, %d", got, count, want, deliveries)
 	}
 }
 
@@ -160,13 +167,24 @@ func TestBackfilledMailKeepsTheMailboxCompanyAfterItsOwnerMoves(t *testing.T) {
 		}
 		moveMailboxOwner(t, f)
 		first := mailboxThread(t, f)
-		scopedReceipt(t, f, first, "first-receipt")
+		scopedReceipt(t, f, connection, first, "first-receipt")
 		expectReceiptEntity(t, f, first, f.first, 1)
-		entityMailbox(t, f, "second@example.test")
-		scopedReceipt(t, f, first, "replayed-receipt")
-		expectReceiptEntity(t, f, first, f.first, 2)
+		second := entityMailbox(t, f, "second@example.test")
+		scopedReceipt(t, f, second, first, "replayed-receipt")
+		expectReceiptCompany(t, f, first, nil, 2)
 		next := mailboxThread(t, f)
-		scopedReceipt(t, f, next, "second-receipt")
+		scopedReceipt(t, f, second, next, "second-receipt")
 		expectReceiptEntity(t, f, next, f.next, 1)
+	})
+}
+
+func TestAMessageDeliveredByMailboxesOfOneCompanyStaysScoped(t *testing.T) {
+	withMailboxScope(t, func(f mailboxScopeEnv) {
+		connection := entityMailbox(t, f, "first@example.test")
+		second := entityMailbox(t, f, "second@example.test")
+		activity := mailboxThread(t, f)
+		scopedReceipt(t, f, connection, activity, "first-receipt")
+		scopedReceipt(t, f, second, activity, "second-receipt")
+		expectReceiptEntity(t, f, activity, f.first, 2)
 	})
 }

@@ -21,21 +21,24 @@ import (
 
 func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 	t.Parallel()
-	contact := ids.NewV7()
+	contact, author := ids.NewV7(), ids.NewV7()
 	refused := func(reason string) consent.RefusedRecipient {
 		return consent.RefusedRecipient{
 			SubjectKind: "contact", SubjectID: contact.String(),
 			ReasonCode: reason, Category: string(commsauthz.CategoryRequestedFollowup),
 		}
 	}
-	held := consent.Review{IntentID: ids.NewV7(), Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonNoEvidence)}}
-	mixed := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{
+	held := consent.Review{IntentID: ids.NewV7(), InitiatedBy: author, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonNoEvidence)}}
+	mixed := consent.Review{IntentID: held.IntentID, InitiatedBy: author, Refusals: []consent.RefusedRecipient{
 		refused(commsauthz.ReasonNoEvidence), refused(commsauthz.ReasonHardBounce),
 	}}
-	objected := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonObjection)}}
-	holdsTheGrant := func(roleKeys ...string) principal.Principal {
+	objected := consent.Review{IntentID: held.IntentID, InitiatedBy: author, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonObjection)}}
+	objectedBeside := consent.Review{IntentID: held.IntentID, InitiatedBy: author, Refusals: []consent.RefusedRecipient{
+		refused(commsauthz.ReasonMarketingConsentRequired), refused(commsauthz.ReasonObjection),
+	}}
+	holdsTheGrantAs := func(user ids.UUID, roleKeys ...string) principal.Principal {
 		return principal.Principal{
-			Type: principal.PrincipalHuman,
+			Type: principal.PrincipalHuman, UserID: user,
 			Permissions: principal.Permissions{
 				RoleKeys: roleKeys,
 				Objects: map[string]principal.ObjectGrant{
@@ -44,7 +47,9 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			},
 		}
 	}
-	bounced := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonHardBounce)}}
+	holdsTheGrant := func(roleKeys ...string) principal.Principal { return holdsTheGrantAs(author, roleKeys...) }
+	colleague := holdsTheGrantAs(ids.NewV7(), "admin")
+	bounced := consent.Review{IntentID: held.IntentID, InitiatedBy: author, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonHardBounce)}}
 
 	for _, tc := range []struct {
 		name   string
@@ -73,7 +78,7 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			// around themselves.
 			name: "a human who may direct a send",
 			actor: principal.Principal{
-				Type: principal.PrincipalHuman,
+				Type: principal.PrincipalHuman, UserID: author,
 				Permissions: principal.Permissions{
 					Objects: map[string]principal.ObjectGrant{
 						consent.EntityCommunicationException: {Create: true},
@@ -83,13 +88,23 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: held, want: []string{"direct_send"},
 		},
 		{
-			// No grant reaches a contact's own stop, an admin's included.
 			name: "a rep holding the grant, refused for an objection", actor: holdsTheGrant("rep"),
-			review: objected,
+			review: objected, want: []string{"direct_send"},
 		},
 		{
 			name: "an admin, refused for an objection", actor: holdsTheGrant("admin"),
-			review: objected,
+			review: objected, want: []string{"direct_send"},
+		},
+		{
+			name: "an admin, refused for an objection beside a passable refusal", actor: holdsTheGrant("admin"),
+			review: objectedBeside, want: []string{"direct_send"},
+		},
+		// The release sends from the caller's mailbox, so only the author is offered it.
+		{name: "an admin holding the grant who did not write the message", actor: colleague, review: held},
+		{
+			// A bounce is a fact about the address, whoever holds the grant.
+			name: "a grant holder refused for a dead address", actor: holdsTheGrant("admin"),
+			review: bounced,
 		},
 		{
 			// Holding the grant does not conjure a message to send. A refusal
@@ -110,6 +125,7 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			name: "a passportless agent", actor: principal.Principal{Type: principal.PrincipalAgent}, review: held,
 		},
 		{
+			// The decision is the user's own, so their agent is not offered it.
 			name: "a user's agent holding the grant",
 			actor: principal.Principal{
 				Type: principal.PrincipalAgent, PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
@@ -119,7 +135,7 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 					},
 				},
 			},
-			review: held, want: []string{"direct_send"},
+			review: held,
 		},
 		{
 			name:   "a user's agent without the grant",

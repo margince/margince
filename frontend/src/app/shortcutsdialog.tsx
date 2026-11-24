@@ -17,12 +17,14 @@ import { DECK_KEY_WORDS } from "../features/brief/brief.deckwords";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
-  type CoreFeature,
   screenEnabled,
-  useDisabledCoreFeatures,
+  useHiddenCoreFeatures,
+  type Withheld,
 } from "../lib/corefeatures";
 import { type BindingGroup, bindingCaps, capOf, KEYMAP } from "../lib/keymap";
+import { useReadsTeamProgress } from "../lib/progressreader";
 import { useSingleKeyShortcuts } from "../lib/shortcuts";
+import { NAV, navLabelKey } from "./nav";
 
 /** One way to press a shortcut: a chord's keys together, or a sequence's in turn. */
 type ShortcutWay = Readonly<{
@@ -67,7 +69,8 @@ const pressedAlone = (key: string): readonly ShortcutWay[] => [
 function keymapGroup(
   group: BindingGroup,
   t: Translator,
-  disabled: readonly CoreFeature[],
+  disabled: readonly Withheld[],
+  readsTeam: boolean,
 ): ShortcutGroup {
   const rows = new Map<MessageKey, Shortcut>();
   for (const entry of KEYMAP) {
@@ -78,15 +81,19 @@ function keymapGroup(
       continue;
     }
     const way: ShortcutWay = {
-      caps: bindingCaps(entry.keys),
+      caps: bindingCaps(entry.keys, t),
       sequence: entry.keys.kind === "sequence",
     };
+    // A destination reads as the sidebar names it, which for Progress
+    // depends on whose progress the reader sees.
+    const railItem = NAV.find((item) => item.screen === entry.goesTo?.screen);
+    const labelKey = navLabelKey(railItem, readsTeam) ?? entry.labelKey;
     const row = rows.get(entry.labelKey);
     rows.set(
       entry.labelKey,
       row
         ? { ...row, ways: [...row.ways, way] }
-        : { id: entry.id, label: t(entry.labelKey), ways: [way] },
+        : { id: entry.id, label: t(labelKey), ways: [way] },
     );
   }
   const words = GROUP_WORDS[group];
@@ -104,10 +111,11 @@ function keymapGroup(
  */
 function shortcutGroups(
   t: Translator,
-  disabled: readonly CoreFeature[],
+  disabled: readonly Withheld[],
+  readsTeam: boolean,
 ): readonly ShortcutGroup[] {
   return [
-    ...GROUP_ORDER.map((group) => keymapGroup(group, t, disabled)),
+    ...GROUP_ORDER.map((group) => keymapGroup(group, t, disabled, readsTeam)),
     {
       id: "deck",
       title: t("brief.panel.decisions"),
@@ -143,7 +151,8 @@ function ShortcutKeys({ ways }: Readonly<{ ways: readonly ShortcutWay[] }>) {
             <span className="t-caption">{t("shell.shortcuts.or")}</span>
           )}
           {way.caps.map((cap, step) => (
-            <Fragment key={cap}>
+            // The keys pressed so far: a sequence may press one key twice.
+            <Fragment key={way.caps.slice(0, step + 1).join(" ")}>
               {way.sequence && step > 0 && (
                 <span className="t-caption">{t("shell.shortcuts.then")}</span>
               )}
@@ -174,7 +183,8 @@ export function ShortcutsDialog({
   const t = useT();
   const titleId = useId();
   const singleKeys = useSingleKeyShortcuts();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
+  const readsTeam = useReadsTeamProgress();
   return (
     <Modal
       open={open}
@@ -196,7 +206,7 @@ export function ShortcutsDialog({
             {t("shell.shortcuts.singleKeyOffHint")}
           </Callout>
         )}
-        {shortcutGroups(t, disabled).map((group) => (
+        {shortcutGroups(t, disabled, readsTeam).map((group) => (
           <section key={group.id} className="acctshortcutsgroup">
             <Eyebrow as="h3" size="xxsmall">
               {group.title}

@@ -18,7 +18,7 @@ instead. The lane is never part of a request path.
 > certified record. Read it before you pay for a run.
 
 See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-provider.md](connect-a-cloud-model-provider.md), [add-an-ai-task.md](add-an-ai-task.md),
-[certify-a-decision-site.md](certify-a-decision-site.md) (the decisions lane) and [reference/ai-certification.md](../reference/ai-certification.md), the page these records fill.
+[certify-a-decision-site.md](certify-a-decision-site.md) (decisions), [run-the-agent-loop-lane.md](run-the-agent-loop-lane.md) (scheduled agents) and [reference/ai-certification.md](../reference/ai-certification.md).
 
 ## Prerequisites
 
@@ -45,9 +45,10 @@ See also [ai-runtime.md](../explanation/ai-runtime.md), [connect-a-cloud-model-p
    example, use `openai_compatible:anthropic/claude-sonnet-4.6` with `JUDGE_UPSTREAM='{}'` (a Claude
    model, paid for each call), or `gemini:gemini-3.5-flash`.
 
-   The run **never takes the judge from the routing**, and a model never grades itself. The run refuses,
-   before the first paid call, when any task it certifies has a candidate in the family of the judge. It
-   names those tasks. So a preset that binds a Claude model names a judge that is not Claude.
+   The run **never takes the judge from the routing**. It refuses the judge model as a candidate, and a
+   Claude candidate under a `claude_cli` judge, before the first paid call. Other pairs of one family
+   run with `self_judged: true` (see below). A record another judge graded reads `stale`, unless its
+   candidate is a Claude model, which the default judge may not grade.
 
    For a broker on the OpenAI wire, such as one OpenRouter key that reaches every model with open weights, add
    the endpoint. Without it, `openai_compatible` fails closed:
@@ -82,7 +83,7 @@ call. It runs a scenario near the pass line more often (see below). Then it judg
 verdict:
 
 ```text
-cold_start: certified (reliability=1.00 judge_score_p50=100 self_judged=false)
+cold_start: certified (reliability=1.00 [0.65, 1.00] judge_score_p50=100 self_judged=false)
 ```
 
 `self_judged` is `true` when the candidate and the judge are the **same model family**: from the same
@@ -103,18 +104,18 @@ make e2e-ai ROUTING=config/margince.dev.yaml
 
 It logs the rungs of each task (task, tier, model) before it spends money, and writes a record for
 each model. `STALE_ONLY` is **on by default**. The run skips a model whose record is already current
-for this build, so a full run pays only for what is missing or stale. `STALE_ONLY=0` measures it again.
+for this build, so a full run pays only for what is missing or stale. It also measures a record
+older than 60 days: a vendor can change the model behind a name. `STALE_ONLY=0` measures it again.
 
 The **task** names come from the contract (`backend/api/ai-tasks.yaml`). Only a task it marks
 `status: shipped` can be certified. That includes `cert_judge`, because the rubric judge is certified
 like any other task. Read the list from the build: `make ai-probe ARGS='list'` prints every site we
 ship, from the same census the report reads. Leave out `TASK=` to run the whole corpus.
 
-A `planned` task (`transcript`) has no scenarios, so a run that names it fails with
-`task "…" has no scenarios under corpus`. A scenario for a prompt that we do not ship would score a
-copy, and `aicert/corpus_test.go` holds the rule both ways.
+A `planned` task (`transcript`) has no scenarios, so a run that names it fails. A scenario for a
+prompt that we do not ship would score a copy, and `aicert/corpus_test.go` holds the rule both ways.
 
-A task can ship more than one call **site**: `cold_start` ships four and `voice_build` ships three.
+A task can ship more than one call **site**: `cold_start` and `voice_build` ship four each.
 Each site has its own scenarios. `TASK=` picks the task, so a run that certifies one task runs every
 site it ships. The report of step 3 then splits the result per site.
 
@@ -137,7 +138,7 @@ such as `:free`, `:batch` or `:thinking`. The run splits provider from model at 
 
 Other settings:
 
-- `RUNS=5` sets the runs in the first pass; 9 or more turns off the added runs. `PROFILE=` sets the kind of setup.
+- `RUNS=5` sets the runs in the first pass; 12 or more turns off the added runs. `PROFILE=` sets the kind of setup.
 - `JUDGE_BASE_URL=` sets the host for an `openai_compatible` judge. When it is not set, the judge uses
   the `BASE_URL=` of the candidate (or `MARGINCE_AICERT_BASE_URL`). It uses the OpenRouter host only
   when neither is set.
@@ -183,11 +184,11 @@ sites that nothing has certified yet:
 ```text
 AI certification readiness: 1 of 36 shipped sites carry a current record.
 
-SITE                      SCOPE            STATUS   SCENARIOS  BAND       PROVIDER  MODEL             ENV        RUNS  PASSED  RELIABILITY  ACCEPTED  WRONG_ANSWER  INVALID  ABSTAINED
-agent_loop/morning_brief  single_turn      absent   -          -          -         -                 -          -     -       -            -         -             -        -
-cold_start/acts           single_turn      current  3/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
-cold_start/company        single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  eu_hosted  27    27      1.00         27        0             0        0
-rate_extract/fx           full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00         3         0             0        0
+SITE                      SCOPE            STATUS   SCENARIOS  BAND       PROVIDER  MODEL             ENV        RUNS  PASSED  RELIABILITY        ACCEPTED  WRONG_ANSWER  INVALID  ABSTAINED
+agent_loop/morning_brief  single_turn      absent   -          -          -         -                 -          -     -       -                  -         -             -        -
+cold_start/acts           single_turn      current  3/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00 [0.65, 1.00]  3         0             0        0
+cold_start/company        single_turn      partial  9/10       certified  gemini    gemini-3.5-flash  eu_hosted  27    27      1.00 [0.94, 1.00]  27        0             0        0
+rate_extract/fx           full_invocation  stale    2/3        certified  gemini    gemini-3.5-flash  eu_hosted  3     3       1.00 [0.65, 1.00]  3         0             0        0
 ```
 
 **Each row counts only its own site.** The run writes one record per task, and a task
@@ -202,15 +203,13 @@ run can be `ACCEPTED` and still fail, when the scenario asked the model to hold 
 There are four states, and each one means something different:
 
 - **`current`**: the run measured every scenario this site ships, and the stamp of each one is the stamp
-  this build makes. So the band describes the request this build sends. A stamp covers three
-  things: the scenario, the request the site builds from it, and how a run is graded. That last one is
-  the request and the rule of the grader.
+  this build makes. So the band describes the request this build sends. A stamp covers the scenario, the
+  request the site builds from it, and how a run is graded. That is the request and rule of the
+  grader, and the Go code of the check of the site (`testdata/site_checks.golden`).
 - **`partial`**: all that the record measured is still current, but the corpus has new cases since then.
-  A `partial` record is wrong about nothing; it only misses the new cases. To fix it costs only the new
-  scenarios, not the whole task.
-- **`stale`**: a scenario the record *measured* has changed since then. Or the code that turns it into
-  a prompt changed, or how a run is graded changed. The band describes requests or grades this build
-  does not use any more, so certify that task again.
+  It is wrong about nothing, and to fix it costs only the new scenarios.
+- **`stale`**: a scenario the record *measured* has changed since then. Or the prompt code or how a
+  run is graded changed. Or another judge graded it, or the provider's wire changed (`wire_rule`). Certify it again.
 - **`absent`**: the run has measured nothing yet. The columns show `-`, not `0`, because a `0` would be a
   result.
 
@@ -237,9 +236,8 @@ by its task stamp, and reads `-` there.
   measured either.
 
 **Every row is one (provider, model, `env`) binding.** A `certified` band lets that deployment go live,
-and says nothing about another one. That is why the binding is in the row. The report helps a human
-decide on a release, and it gates nothing. It always returns 0, because the lane it reports on is paid
-and you run it by hand.
+and says nothing about another one. The report helps a human decide on a release, and it gates nothing. It
+always returns 0, because the lane it reports on is paid and you run it by hand.
 
 A `gemini_vertex` rung with no record of its own is graded by the `gemini` record for the same model,
 under `cloud_frontier`. Vertex serves the same model on the same wire, so it gets the request
@@ -328,8 +326,10 @@ to three times, and the run takes the middle score. The band rules, the score li
 is in [`thresholds.go`](../../backend/internal/compose/aicert/thresholds.go): edit it, change
 `gradingRule`, and generate again.
 
-`reliability` is the share of runs with a HardPass, and the number to watch over time. When the model
-that served a run is not the same across runs or calls, the record **does not count**.
+`reliability` is the share of runs with a HardPass. When the model that served a run is not the same across runs
+or calls, the record **does not count**. Reports print it with its range, as `0.67 [0.32, 0.89]` for 2 of 3 runs,
+from `wilsonBounds`, which the verdict also uses. Count a change as real only when the two ranges do not meet or
+the band changes. Otherwise call it "not measurable at this sample".
 
 A run is not always one model call: a site may try again, fall back, or turn a tool loop. All that the
 run is judged on and paid for is added up across all of those calls. One degraded call degrades the

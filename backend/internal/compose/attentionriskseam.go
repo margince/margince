@@ -7,13 +7,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/modules/agents"
-	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
@@ -37,7 +35,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context, owners *storekit.OwnerSet) (
 	if err != nil {
 		return nil, false, err
 	}
-	risky, err := a.risky(ctx, candidates, a.now().UTC())
+	risky, err := a.risky(ctx, candidates, owners, a.now().UTC())
 	return risky, cut, err
 }
 
@@ -49,7 +47,7 @@ func (a attentionAtRisk) RiskAfter(
 	if err != nil {
 		return nil, false, err
 	}
-	risky, err := a.risky(ctx, candidates, asOf.UTC())
+	risky, err := a.risky(ctx, candidates, owners, asOf.UTC())
 	if err != nil {
 		return nil, false, err
 	}
@@ -68,7 +66,7 @@ func (a attentionAtRisk) RiskAmong(
 }
 
 // risky draws each candidate as the queue's at-risk deal, in order.
-func (a attentionAtRisk) risky(ctx context.Context, candidates []agents.SlippingDeal, now time.Time) ([]attention.RiskyDeal, error) {
+func (a attentionAtRisk) risky(ctx context.Context, candidates []agents.SlippingDeal, owners *storekit.OwnerSet, now time.Time) ([]attention.RiskyDeal, error) {
 	if len(candidates) == 0 {
 		return []attention.RiskyDeal{}, nil
 	}
@@ -76,12 +74,10 @@ func (a attentionAtRisk) risky(ctx context.Context, candidates []agents.Slipping
 	if err != nil {
 		return nil, err
 	}
-	var zone *time.Location
-	if err := database.WithWorkspaceTx(ctx, a.pool, func(tx pgx.Tx) error {
-		var zoneErr error
-		zone, zoneErr = identity.ZoneAppliedTx(ctx, tx)
-		return zoneErr
-	}); err != nil {
+	// The zone the candidates were admitted in, so quiet days and the close date
+	// answer one day.
+	zone, err := dayrule.ZoneForOwners(ctx, a.pool, owners)
+	if err != nil {
 		return nil, err
 	}
 	risky := make([]attention.RiskyDeal, 0, len(candidates))

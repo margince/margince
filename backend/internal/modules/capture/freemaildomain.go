@@ -149,6 +149,13 @@ func (s *FreemailDomainStore) List(ctx context.Context) ([]FreemailDomain, error
 // keys on: an operator typing "mail.gmx.net" means gmx.net, and storing the
 // subdomain would leave an entry that never matches anything.
 func (s *FreemailDomainStore) Add(ctx context.Context, domain, kind string) (FreemailDomain, error) {
+	return s.AddConfirmed(ctx, domain, kind, false)
+}
+
+// AddConfirmed is Add for a caller that may carry the answer to a question.
+// An `extra` entry for a company's domain needs it, or is refused with a 409
+// naming the company. The own domain and a shipped entry are refused either way.
+func (s *FreemailDomainStore) AddConfirmed(ctx context.Context, domain, kind string, confirmed bool) (FreemailDomain, error) {
 	// Which grant this write demands depends on what it turns out to be — a
 	// fresh `extra` contribution is create (every seat), everything else is
 	// update (admin/ops) — and "fresh" is only knowable from the table. So the
@@ -175,10 +182,8 @@ func (s *FreemailDomainStore) Add(ctx context.Context, domain, kind string) (Fre
 		if err := lockFreemailDomain(ctx, tx, base); err != nil {
 			return err
 		}
-		var before *string
-		if err := tx.QueryRow(ctx,
-			`SELECT kind FROM capture_freemail_domain WHERE domain = $1`, base).Scan(&before); err != nil &&
-			!errors.Is(err, pgx.ErrNoRows) {
+		before, err := priorFreemailKind(ctx, tx, base)
+		if err != nil {
 			return err
 		}
 		// The specific demand, now that the write knows which half it is:
@@ -189,22 +194,25 @@ func (s *FreemailDomainStore) Add(ctx context.Context, domain, kind string) (Fre
 		// the contract promises an idempotent re-add answers the existing
 		// entry, so a create-only seat retrying a lost response must not 403.
 		// UpsertAction keeps this demand and the audit verb below one word.
-		rewriting := before != nil && *before != kind
-		freshCarveOut := before == nil && kind == FreemailKindNever
-		required := auth.UpsertAction(rewriting || freshCarveOut)
+		required := auth.UpsertAction(changesPriorDecision(before, kind))
 		if err := auth.Require(ctx, freemailDomainObject, required); err != nil {
 			return err
 		}
+		if err := checkConsumerListEntry(ctx, tx, base, kind, confirmed); err != nil {
+			return err
+		}
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO capture_freemail_domain (domain, kind, created_by)
-			VALUES ($1, $2, $3)
+			INSERT INTO capture_freemail_domain (domain, kind)
+			VALUES ($1, $2)
 			ON CONFLICT (domain) DO UPDATE SET kind = EXCLUDED.kind
 			RETURNING id, domain, kind, created_at`,
-			base, kind, freemailEntryAuthor(ctx)).
+			base, kind).
 			Scan(&out.ID, &out.Domain, &out.Kind, &out.CreatedAt); err != nil {
 			return err
 		}
-		database.Forget(tx, freemailMemo)
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		if before != nil && *before == kind {
 			// Nothing changed — no audit row for a re-add that said the same
 			// thing, so the trail records decisions rather than clicks.
@@ -254,7 +262,9 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 		if err != nil {
 			return err
 		}
-		database.Forget(tx, freemailMemo)
+		if err := storekit.CaptureFactsChanged(ctx, tx); err != nil {
+			return err
+		}
 		// 'archive', not 'delete': the audit vocabulary is closed (0018) and
 		// carries no delete verb, and withdrawing a list entry IS retiring it.
 		_, auditErr := storekit.Audit(ctx, tx, "archive", freemailDomainObject, id,
@@ -267,26 +277,10 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 	return nil
 }
 
-// lockFreemailDomain serializes decisions about ONE domain for the life of the
-// caller's transaction. Keyed on the domain alone since ADR-0091 §5 — one
-// installation, one company (ADR-0061) — so two admins editing different
-// domains never wait on each other.
+// lockFreemailDomain serializes this domain's decision against the company
+// domain writer, which takes the same lock.
 func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
-	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:consumer-mail:' || $1)::bigint)`, domain); err != nil {
-		return fmt.Errorf("capture: serializing the decision about %s: %w", domain, err)
-	}
-	return nil
-}
-
-// freemailEntryAuthor is the human an entry is attributed to, NULL for a system
-// actor. The list is workspace-shared, so this is provenance for the audit
-// trail and never a scope.
-func freemailEntryAuthor(ctx context.Context) *ids.UUID {
-	if author := actorUserID(ctx); !author.IsZero() {
-		return &author
-	}
-	return nil
+	return storekit.LockConsumerDomain(ctx, tx, domain)
 }
 
 // MatcherTx builds the consumer-mail matcher this workspace's mail is judged
@@ -302,15 +296,15 @@ func freemailEntryAuthor(ctx context.Context) *ids.UUID {
 // index, so the read costs less than the correspondence check already run for
 // every captured message.
 //
-// One message asks it about ten times in one transaction, so the transaction
-// remembers the answer; an admin's edit lands in its own transaction.
+// One message asks it about ten times. An import run keeps the answer while the
+// capture facts version stands, and an admin's edit moves the version.
 func MatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
-	return database.Remember(tx, freemailMemo, func() (*freemail.Matcher, error) { return readMatcherTx(ctx, tx) })
+	return storekit.RememberCaptureFact(ctx, tx, freemailMemo, func() (*freemail.Matcher, error) { return readMatcherTx(ctx, tx) })
 }
 
 // freemailMemo keys the matcher in a transaction's memo. Every writer of the
-// list forgets it (TestEveryWriterOfAMemoizedReadForgetsIt).
-const freemailMemo = "capture.freemail"
+// list forgets it (gates/capturefactwriters_test.go).
+const freemailMemo = storekit.CaptureFactsMemo + "freemail"
 
 func readMatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
 	rows, err := tx.Query(ctx, `SELECT domain, kind FROM capture_freemail_domain`)
@@ -334,4 +328,20 @@ func readMatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
 		return nil, fmt.Errorf("capture: reading the workspace consumer-mail list: %w", err)
 	}
 	return freemail.New(extra, never), nil
+}
+
+// priorFreemailKind is the kind a domain already has on the list, nil for none.
+func priorFreemailKind(ctx context.Context, tx pgx.Tx, domain string) (*string, error) {
+	var kind *string
+	err := tx.QueryRow(ctx, `SELECT kind FROM capture_freemail_domain WHERE domain = $1`, domain).Scan(&kind)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	return kind, nil
+}
+
+// changesPriorDecision is true for a fresh carve-out and for a kind flip, the
+// two writes that need the update grant.
+func changesPriorDecision(before *string, kind string) bool {
+	return (before != nil && *before != kind) || (before == nil && kind == FreemailKindNever)
 }

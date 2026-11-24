@@ -23,7 +23,8 @@ An admin connects the Dispact bot once for everyone.
 Open the deal. Once an admin connects the chat bot, the **Team chat** card appears on its overview.
 - Click **Create a channel** to make a new private channel named after the deal. Every member who can
   see the deal is invited, at most 50, starting with the deal's owner and you. Someone without a chat
-  account is not added.
+  account is not added. If another channel has that name, the new one ends in a short code. If the chat
+  refuses the name, rename the deal or link an existing channel.
 - Click **Link an existing channel** to use a private channel you already have. **Channel name or link**
   lists the private channels the bot is in that no record has yet. Pick one, or type its name or link.
 - A private channel the bot is not in is not listed, because the chat does not show it to the bot. A
@@ -64,9 +65,14 @@ you make it private after it was posted, Margince removes it from that post.
 Some members may not see deal amounts, and everyone in the channel reads the card.
 
 ### What does "Channel paused" mean?
-The channel was archived or deleted in the chat, or the bot lost access to it. Nothing is posted.
+The channel was archived or deleted in the chat, or the bot lost access to it. Nothing is posted. An
+archive shows here within the hour.
 Click **Unlink**, then give the record a new channel.
 
 ### How do I stop it?
 Open the card's menu and click **Unlink**. Margince stops posting. The channel and its messages stay
 in the chat.
+
+### What happens when I archive a deal or project?
+Margince stops posting and frees the channel for another deal or project. A deal and its project keep
+a shared channel while one of them is still open. If you restore the record, link a channel again.

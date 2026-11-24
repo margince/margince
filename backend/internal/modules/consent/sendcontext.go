@@ -5,18 +5,26 @@ package consent
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// withSendingEntity names the entity a message about to be staged or previewed
-// goes out for: the one the caller named, else the sender's. Transmit never
-// calls it; it reads the entity staging stored.
-func withSendingEntity(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.Request, error) {
+// withSendFacts completes a message about to be staged or previewed. It names
+// the entity it goes out for, the caller's or else the sender's, and reads
+// whether its authored words make an offer. Transmit reads both from staging.
+func withSendFacts(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (commsauthz.Request, error) {
+	anchorSubject, err := anchorSubjectOf(ctx, tx, req.AnchorActivityID)
+	if err != nil {
+		return commsauthz.Request{}, err
+	}
+	req = withAuthoredOffer(req, anchorSubject)
 	if !req.SendingEntity.IsZero() {
 		return req, nil
 	}
@@ -26,6 +34,33 @@ func withSendingEntity(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (
 	}
 	req.SendingEntity = entity
 	return req, nil
+}
+
+// anchorSubjectOf reads the subject of the message a send answers, empty
+// when it answers none or the sender may not read it. Empty leaves the
+// subject read as the rep's own words.
+func anchorSubjectOf(ctx context.Context, tx pgx.Tx, anchor ids.UUID) (string, error) {
+	if anchor.IsZero() {
+		return "", nil
+	}
+	args := []any{anchor}
+	visible, err := auth.ActivityContentClause(ctx, "a", func(value any) int {
+		args = append(args, value)
+		return len(args)
+	})
+	if err != nil {
+		return "", err
+	}
+	var subject string
+	err = tx.QueryRow(ctx, `SELECT coalesce(a.subject, '') FROM activity a
+		 WHERE a.id = $1 AND a.archived_at IS NULL AND (`+visible+`)`, args...).Scan(&subject)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("consent: reading the subject of the message answered: %w", err)
+	}
+	return subject, nil
 }
 
 // groundNotice, groundOffer and groundSoldAt are the existing-customer ground a

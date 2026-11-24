@@ -85,7 +85,7 @@ func LoadOriginIntents(ctx context.Context, tx pgx.Tx) (OriginIntents, error) {
 // misfiling the lead.
 func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, error) {
 	exact := strings.TrimSpace(text)
-	wanted := deriveSourceKey(text)
+	wanted := values.CatalogKey(text)
 	if wanted == "" {
 		return "", false, nil
 	}
@@ -103,7 +103,7 @@ func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, e
 		if key == exact {
 			return key, true, nil
 		}
-		if deriveSourceKey(label) == wanted {
+		if values.CatalogKey(label) == wanted {
 			labelMatches = append(labelMatches, key)
 		}
 	}
@@ -120,7 +120,7 @@ func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, e
 type UnknownLeadOriginError struct{ Key string }
 
 func (e *UnknownLeadOriginError) Error() string {
-	return "origin " + e.Key + " is not in the lead origin list; pick one from Settings › Data model"
+	return "origin " + e.Key + " is not in the lead origin list; pick one from Settings › Leads"
 }
 
 // FieldFault names the origin as the invalid input.
@@ -133,7 +133,7 @@ func (e *UnknownLeadOriginError) FieldFault() (field, code, message string) {
 type InactiveLeadOriginError struct{ Key string }
 
 func (e *InactiveLeadOriginError) Error() string {
-	return "origin " + e.Key + " is retired; pick an active origin or reactivate it in Settings › Data model"
+	return "origin " + e.Key + " is retired; pick an active origin or reactivate it in Settings › Leads"
 }
 
 // FieldFault names the origin as the invalid input.
@@ -271,7 +271,7 @@ func (s *Store) CreateLeadOrigin(ctx context.Context, in CreateLeadOriginInput) 
 	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
-		key = deriveSourceKey(label)
+		key = values.CatalogKey(label)
 	}
 	if key == "" || key != strings.ToLower(key) {
 		return crmcontracts.LeadOrigin{}, &values.ParseError{Field: leadOriginKeyField, Code: codeInvalidKey, Message: "key must be a non-empty lowercase value"}

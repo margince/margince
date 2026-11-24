@@ -16,9 +16,12 @@ const SERVER_WEEK =
   "The server buckets this week or day on the company's clock (decision B1 on #7894); naming it in another zone would label the bucket with days it does not hold.";
 const SERVER_TODAY =
   "The server reads 'today' on the company's clock, so the form opens on the day the server will count.";
+const DATE_ONLY_TASK =
+  "A task with only a date is overdue by the company's calendar, as the Worklist groups it, so every page agrees on the day it falls on; a timed task reads on the reader's clock.";
 export const companyZoneSites: { file: string; why: string }[] = [
   ...[
     "analytics.decisions.tsx",
+    "analytics.forecast.accuracy.tsx",
     "analytics.forecast.checktable.tsx",
     "analytics.forecast.tsx",
     "analytics.overview.donext.tsx",
@@ -40,19 +43,46 @@ export const companyZoneSites: { file: string; why: string }[] = [
     "reporting.targets.tsx",
     "reporting.versions.tsx",
   ].map((name) => ({ file: `features/analytics/${name}`, why: REPORTING })),
+  {
+    file: "features/analytics/goals.tsx",
+    why: "A goal plan's months are the company's reporting months, so the times its history was changed read on that clock, and the history names the zone once.",
+  },
   { file: "features/companies/companies.hierarchy.tsx", why: REPORTING },
   {
     file: "design-system/boardtotals.tsx",
     why: "The rates day behind a converted total is the company's, counted on its clock like every report figure.",
   },
   { file: "lib/deals.queries.ts", why: SERVER_TODAY },
+  {
+    file: "lib/employmentcurrency.ts",
+    why: "A departure day belongs to the installation's zone, which is the day the server judges a job current on.",
+  },
   { file: "features/settings/rates.tsx", why: SERVER_TODAY },
   { file: "features/settings/taxrates.tsx", why: SERVER_TODAY },
+  { file: "features/deals/offers.header.tsx", why: SERVER_TODAY },
   {
     file: "features/brief/brief.glance.tsx",
     why: "Home holds the server's day and the weekly's week, both bucketed on the company's clock (decision B1), so the day and week it is labelled with are on that clock; the greeting hour is the reader's.",
   },
+  ...[
+    "features/companies/companyhowitstands.tsx",
+    "features/companies/companynextbar.tsx",
+    "features/contacts/contacttoday.tsx",
+    "features/deals/deal360/dealfigures.tsx",
+    "features/deals/deals.overview.tsx",
+    "components/opentaskrow.tsx",
+    "components/taskwrite.ts",
+    "features/companies/companytaskstable.tsx",
+    "features/contacts/contacthowitstands.tsx",
+    "features/contacts/contactopentasks.tsx",
+    "features/leads/leadnext.tsx",
+    "features/projects/partners.nextstep.tsx",
+    "features/projects/projectnext.tsx",
+    "features/projects/projectsections.tsx",
+    "features/projects/projectstandingcard.tsx",
+  ].map((file) => ({ file, why: DATE_ONLY_TASK })),
   { file: "features/brief/brief.plan.tsx", why: SERVER_WEEK },
+  { file: "features/brief/brief.teamweekly.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.deals.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.figures.tsx", why: SERVER_WEEK },
   { file: "features/brief/brief.weekly.activity.tsx", why: SERVER_WEEK },
@@ -86,6 +116,14 @@ const DATE_ONLY =
 export const browserZoneSites: { file: string; why: string }[] = [
   { file: "features/deals/buyerroomframe.tsx", why: PUBLIC },
   {
+    file: "format/formatters.ts",
+    why: "A date formatter asked with no zone keeps the old Intl behaviour and reads the browser's clock. The zone goes into the cache key, so a changed browser zone builds a new formatter.",
+  },
+  {
+    file: "format/timezoneoptions.ts",
+    why: "The time zone list always offers the browser's own zone, so a reader can pick the clock they are on. It renders no time in it.",
+  },
+  {
     file: "features/booking/booking-guest.tsx",
     why: "A guest on the public booking page has only the browser's clock; a host previewing their own page starts from their own zone instead.",
   },
@@ -95,14 +133,6 @@ export const browserZoneSites: { file: string; why: string }[] = [
   },
   { file: "features/privacy/confirmprivacy.tsx", why: PUBLIC },
   { file: "features/privacy/confirmdetailsaction.tsx", why: PUBLIC },
-  {
-    file: "features/sign-in/magic.tsx",
-    why: `${PUBLIC} It is the magic-link sign-in.`,
-  },
-  {
-    file: "features/sign-in/magic.records.tsx",
-    why: `${PUBLIC} It is the magic-link sign-in.`,
-  },
   {
     file: "features/sign-in/setupclaim.tsx",
     why: "The first admin sets the installation up before any user or zone is stored; the browser's zone is the only one there is.",

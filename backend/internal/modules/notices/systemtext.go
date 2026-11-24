@@ -25,12 +25,6 @@ func noticeSystemDisplay(ctx context.Context, message *systemtext.Message, subje
 
 // InLanguage renders an authorized recipient’s copy without changing stored text.
 func (n Notice) InLanguage(locale textlang.Lang) Notice {
-	subject, body := n.SystemText.Displays(n.Subject, n.Body, locale)
-	if subject != nil {
-		n.Subject = *subject
-	}
-	if body != nil {
-		n.Body = *body
-	}
+	n.Subject, n.Body = n.SystemText.SubjectIn(n.Subject, locale), n.SystemText.BodyIn(n.Body, locale)
 	return n
 }

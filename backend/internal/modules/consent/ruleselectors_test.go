@@ -4,8 +4,13 @@
 package consent
 
 import (
+	"context"
+	"slices"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
@@ -83,5 +88,41 @@ func TestTwoRecipientsOweOneLinePerKind(t *testing.T) {
 	}
 	if owed[0].MarketingOnly {
 		t.Error("a pack owing the route on every message was narrowed to advertising by the other recipient's pack")
+	}
+}
+
+// A route owed under two packs names every means either pack asks for.
+func TestTwoRecipientsOweEveryMeansEitherPackAsks(t *testing.T) {
+	t.Parallel()
+	owed := appendOwed(nil, []messagingrules.Disclosure{{
+		Kind: messagingrules.ObjectionRoute, Means: []messagingrules.ContactMeans{messagingrules.MeansEmail},
+	}}, false)
+	owed = appendOwed(owed, []messagingrules.Disclosure{{
+		Kind: messagingrules.ObjectionRoute, Means: []messagingrules.ContactMeans{messagingrules.MeansEmail, messagingrules.MeansPhone},
+	}}, false)
+	if len(owed) != 1 || !slices.Equal(owed[0].Means, []messagingrules.ContactMeans{messagingrules.MeansEmail, messagingrules.MeansPhone}) {
+		t.Errorf("owed %+v, want one route asking for email and phone", owed)
+	}
+}
+
+// The data-protection law of a further entity is its jurisdiction, never its
+// address country; one with none takes the installation's.
+func TestAnEntityLawFollowsItsJurisdictionNotItsAddress(t *testing.T) {
+	t.Parallel()
+	s := (&Store{}).WithInstallationCountry(
+		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return "vn", nil }))
+	for _, tc := range []struct {
+		name   string
+		entity sendingEntityFacts
+		want   jurisdiction.Code
+	}{
+		{"registered in fr under de law", sendingEntityFacts{found: true, country: "fr", jurisdiction: "de"}, "de"},
+		{"a further entity with no jurisdiction", sendingEntityFacts{found: true, country: "fr"}, "vn"},
+		{"the default entity", sendingEntityFacts{found: true, isDefault: true, country: "fr", jurisdiction: "de"}, "vn"},
+	} {
+		got, err := s.dataProtectionCountryOf(context.Background(), nil, tc.entity)
+		if err != nil || got != tc.want {
+			t.Errorf("%s: law = %q (%v), want %q", tc.name, got, err, tc.want)
+		}
 	}
 }

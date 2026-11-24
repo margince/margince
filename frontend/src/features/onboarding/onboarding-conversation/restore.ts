@@ -1,7 +1,9 @@
+import type { Query, QueryClient, QueryKey } from "@tanstack/react-query";
 import type { components } from "../../../api/schema";
 import { formatNumber } from "../../../format/format";
 import type { Locale } from "../../../i18n";
 import type { NarrationEntry, ResumePoint } from "./conversation-types";
+import { SummaryOrder } from "./summary-order";
 
 // Session restore as a pure decision: server state in, a start plan out.
 // The wizard state's `path` field is THE member signal; a described
@@ -16,6 +18,7 @@ import type { NarrationEntry, ResumePoint } from "./conversation-types";
 type OnboardingState = components["schemas"]["OnboardingState"];
 type CompanyProfile = components["schemas"]["CompanyProfile"];
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
+type CorpusSource = components["schemas"]["VoiceCorpusSource"];
 type CompanySiteRead = components["schemas"]["CompanySiteRead"];
 
 export type VoiceRestoreProbe = Readonly<{
@@ -23,7 +26,71 @@ export type VoiceRestoreProbe = Readonly<{
   built: boolean;
   /** The server corpus meter; null when no voice profile exists yet. */
   summary: CorpusSummary | null;
+  /** The samples the meter counts, so the step lists them after a reload. */
+  sources: readonly CorpusSource[];
+  /** True once a removal landed and no read since has told the new count. */
+  meterStale?: boolean;
 }>;
+
+/** The probe's query key; the voice step writes each corpus change into it,
+ * so re-entering the step lists what the server holds now. */
+export const VOICE_PROBE_KEY = ["onboarding-conv-voice"] as const;
+
+export type ProbeChange = (
+  old: VoiceRestoreProbe,
+) => Partial<VoiceRestoreProbe>;
+
+const emptyProbe: VoiceRestoreProbe = {
+  built: false,
+  summary: null,
+  sources: [],
+};
+
+// The screen keeps the probe mounted, so an invalidation would read it again
+// at once. Each change is written in instead, and a Back remount reads it.
+// A probe the screen never read starts empty, so the step's corpus still
+// outlives the step.
+function patchVoiceProbe(client: QueryClient, change: ProbeChange) {
+  client.setQueryData<VoiceRestoreProbe>(VOICE_PROBE_KEY, (old) => {
+    const base = old ?? emptyProbe;
+    return { ...base, ...change(base) };
+  });
+}
+
+/** The one owner of the voice corpus: every voice step that opens over the
+ *  same probe entry shares its write order, and writes through it. */
+export type VoiceCorpusOwner = Readonly<{
+  order: SummaryOrder;
+  patch: (change: ProbeChange) => void;
+}>;
+
+type ProbeEntry = Query<VoiceRestoreProbe, Error, VoiceRestoreProbe, QueryKey>;
+
+const owners = new WeakMap<ProbeEntry, VoiceCorpusOwner>();
+
+// Keyed by the probe's cache entry, not the client. A seat change removes the
+// entry, so a write the last seat left in flight lands in no corpus.
+export function voiceCorpusOwner(client: QueryClient): VoiceCorpusOwner {
+  const cache = client.getQueryCache();
+  const probe = cache.build<
+    VoiceRestoreProbe,
+    Error,
+    VoiceRestoreProbe,
+    QueryKey
+  >(client, { queryKey: VOICE_PROBE_KEY });
+  const current = () =>
+    cache.find<VoiceRestoreProbe>({ queryKey: VOICE_PROBE_KEY, exact: true });
+  const known = owners.get(probe);
+  if (known !== undefined) return known;
+  const owner: VoiceCorpusOwner = {
+    order: new SummaryOrder(),
+    patch: (change) => {
+      if (current() === probe) patchVoiceProbe(client, change);
+    },
+  };
+  owners.set(probe, owner);
+  return owner;
+}
 
 export type RestoreInputs = Readonly<{
   /** GET /onboarding/state; null when nothing was persisted (404). */
@@ -37,14 +104,17 @@ export type RestoreInputs = Readonly<{
   /** Whether this seat holds the admin role, the only one that may save the
    * company: any other seat walks the member path, whatever its row says. */
   mayDescribe: boolean;
+  /** Whether this seat may create a voice profile, which the first sample
+   * mints: a seat without it never reaches the voice act. */
+  mayTrainVoice: boolean;
   /** Voice server truth; null when the probe was not needed (member path,
    * or the journey has not reached the voice act). */
   voice: VoiceRestoreProbe | null;
   /** The read the persisted site_read_id points at (only fetched while the
    * company act is still open); null when none was persisted or it is gone. */
   read: CompanySiteRead | null;
-  /** The OAuth return deep link (#/onboarding/connect/...) lands mid-journey
-   * and must reopen the connect act, exactly like the classic coordinator. */
+  /** The connect step's own address, and the OAuth return under it
+   * (#/onboarding/connect/...), reopen the connect act on a reload. */
   routeConnect: boolean;
   /** The recap entries below are sentences a reader reads, and the counts in
    * them are rendered here rather than at the renderer — a ThreadEntry's
@@ -57,6 +127,8 @@ export type RestorePlan =
   | {
       kind: "start";
       memberPath: boolean;
+      /** Whether the voice act is offered (ConversationState.voiceStep). */
+      voiceStep: boolean;
       companyConfirmed: boolean;
       /** Where RESUME lands; null means the company act is still open. */
       resumeTarget: ResumePoint | null;
@@ -158,10 +230,9 @@ function resumeTarget(state: OnboardingState): ResumePoint {
   if (state.step === "team") {
     return "tm.ask";
   }
-  // step "voice": the act is still open, and lands straight on the collect
-  // scene. A skip recorded early is honored; otherwise collection reopens
-  // (or starts) with whatever corpus the server already holds.
-  return state.voice_skipped ? "vo.skipped" : "vo.collecting";
+  // step "voice": the collect scene with the corpus the server holds, unless
+  // a skip recorded here already led on to connect.
+  return state.voice_skipped ? "cn.consent" : "vo.collecting";
 }
 
 function recapEntries(
@@ -215,23 +286,27 @@ function recapEntries(
   return entries;
 }
 
-// A member's company was confirmed before they arrived, so their plan always
-// opens confirmed. A first visit has no row and nothing to recap: the journey
-// opens at voice. A returning member resumes where their row says, and the
-// OAuth return deep link reopens connect exactly as it does for a creator.
+// Where a confirmed journey lands. Its own connect address wins, and so does
+// connect over a voice act the seat may not train.
+function landingPoint(inputs: RestoreInputs, wanted: ResumePoint): ResumePoint {
+  const pastVoice = !inputs.mayTrainVoice && wanted === "vo.collecting";
+  return inputs.routeConnect || pastVoice ? "cn.consent" : wanted;
+}
+
+// A member's plan opens confirmed at voice, and a returning member resumes
+// where their row says.
 function memberPlan(
   inputs: RestoreInputs,
   state: OnboardingState | null,
 ): RestorePlan {
-  let target: ResumePoint = "vo.collecting";
-  if (inputs.routeConnect) {
-    target = "cn.consent";
-  } else if (state !== null) {
-    target = resumeTarget(state);
-  }
+  const target = landingPoint(
+    inputs,
+    state === null ? "vo.collecting" : resumeTarget(state),
+  );
   return {
     kind: "start",
     memberPath: true,
+    voiceStep: inputs.mayTrainVoice,
     companyConfirmed: true,
     resumeTarget: target,
     adoptRead: null,
@@ -240,7 +315,7 @@ function memberPlan(
 }
 
 export function restorePlan(inputs: RestoreInputs): RestorePlan {
-  const { state, described, mayDescribe, read, routeConnect, locale } = inputs;
+  const { state, described, mayDescribe, read, locale } = inputs;
   // "complete" is the wizard row's own word, and it can outrun the record it
   // claims: the state row and the company profile are separate writes, and the
   // connect act persists completion without requiring a saved profile. An
@@ -271,6 +346,7 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
     return {
       kind: "start",
       memberPath,
+      voiceStep: inputs.mayTrainVoice,
       companyConfirmed: false,
       resumeTarget: null,
       adoptRead:
@@ -278,10 +354,11 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
       recap: read !== null ? readRecap(read, locale) : [],
     };
   }
-  const target: ResumePoint = routeConnect ? "cn.consent" : resumeTarget(state);
+  const target = landingPoint(inputs, resumeTarget(state));
   return {
     kind: "start",
     memberPath: false,
+    voiceStep: inputs.mayTrainVoice,
     companyConfirmed: true,
     resumeTarget: target,
     adoptRead: null,

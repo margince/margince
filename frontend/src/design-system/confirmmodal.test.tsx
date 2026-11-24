@@ -8,9 +8,11 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ConfirmModal } from "./confirmmodal";
+import { DateInput, type ISODate } from "./dateinput";
+import { Field } from "./field";
 import type { ModalIntent } from "./modal";
 
 // ConfirmModal is the extracted state-driven confirm-dialog shape that used
@@ -69,6 +71,22 @@ describe("ConfirmModal", () => {
       </ConfirmModal>,
     );
     expect(document.querySelector(".dot-confirm")).toBeTruthy();
+  });
+
+  it("names the dialog by its title alone, not by the dot before it", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Move to Lost?"
+        tier="confirm"
+        confirmLabel="Confirm"
+        onConfirm={vi.fn()}
+      >
+        <p>Moving this deal to a terminal stage.</p>
+      </ConfirmModal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Move to Lost?" })).toBeTruthy();
   });
 
   it("draws the tier it is given, an automatic one included", () => {
@@ -435,5 +453,248 @@ describe("the box a confirm sits in", () => {
       </ConfirmModal>,
     );
     expect(screen.getByRole("dialog", { name: "Full" })).toBeInTheDocument();
+  });
+
+  it("hands its body, the element around the fields, to bodyRef", () => {
+    let body: HTMLDivElement | null = null;
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Add to Shortlist"
+        confirmLabel="Add"
+        onConfirm={vi.fn()}
+        bodyRef={(element) => {
+          body = element;
+        }}
+      >
+        <input aria-label="Note" />
+      </ConfirmModal>,
+    );
+    const note = screen.getByRole("textbox", { name: "Note" });
+    expect(body).not.toBeNull();
+    expect(body).toBe(note.parentElement);
+    expect(note.closest(".form-stack")).toBe(body);
+  });
+});
+
+describe("Enter in a form dialog", () => {
+  type Shape = Partial<
+    Pick<
+      Parameters<typeof ConfirmModal>[0],
+      | "intent"
+      | "enterConfirms"
+      | "confirmDisabled"
+      | "confirmReason"
+      | "pending"
+    >
+  >;
+
+  function NamedTag({
+    onSave,
+    shape = { intent: "form" },
+    field,
+  }: Readonly<{
+    onSave: (name: string) => void;
+    shape?: Shape;
+    field?: (name: string, setName: (next: string) => void) => ReactNode;
+  }>) {
+    const [name, setName] = useState("");
+    return (
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Add tag"
+        confirmLabel="Add"
+        onConfirm={() => onSave(name)}
+        {...shape}
+      >
+        {field ? (
+          field(name, setName)
+        ) : (
+          <input
+            aria-label="Name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        )}
+      </ConfirmModal>
+    );
+  }
+
+  const nameBox = () => screen.getByRole("textbox", { name: "Name" });
+
+  it("presses Confirm with what was typed", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    rtlRender(<NamedTag onSave={onSave} />);
+    await user.type(nameBox(), "Renewal{Enter}");
+    expect(onSave).toHaveBeenCalledExactlyOnceWith("Renewal");
+  });
+
+  it.each<[string, Shape]>([
+    ["disabled", { intent: "form", confirmDisabled: true }],
+    ["refused with a reason", { intent: "form", confirmReason: "Name it." }],
+    ["busy with the write", { intent: "form", pending: true }],
+    ["switched off", { intent: "form", enterConfirms: false }],
+    ["a plain confirm", {}],
+  ])("does nothing while Confirm is %s", async (_state, shape) => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    rtlRender(<NamedTag onSave={onSave} shape={shape} />);
+    await user.type(nameBox(), "Renewal{Enter}");
+    expect(onSave).not.toHaveBeenCalled();
+    expect(nameBox()).toHaveValue("Renewal");
+  });
+
+  it("leaves a modified Enter and an input method's Enter to the field", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    rtlRender(<NamedTag onSave={onSave} />);
+    await user.type(nameBox(), "Renewal{Shift>}{Enter}{/Shift}");
+    await user.keyboard("{Alt>}{Enter}{/Alt}");
+    fireEvent.keyDown(nameBox(), { key: "Enter", isComposing: true });
+    fireEvent.keyDown(nameBox(), { key: "Enter", keyCode: 229 });
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it.each<
+    [string, (name: string, setName: (next: string) => void) => ReactNode]
+  >([
+    [
+      "a combobox",
+      (name, setName) => (
+        <input
+          aria-label="Name"
+          role="combobox"
+          aria-expanded={false}
+          aria-controls="tag-rows"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+      ),
+    ],
+    [
+      "a field that suggests",
+      (name, setName) => (
+        <input
+          aria-label="Name"
+          aria-autocomplete="list"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+      ),
+    ],
+    [
+      "a field that takes its own Enter",
+      (name, setName) => (
+        <input
+          aria-label="Name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.preventDefault();
+          }}
+        />
+      ),
+    ],
+  ])("leaves Enter to %s", async (_owner, field) => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    rtlRender(<NamedTag onSave={onSave} field={field} />);
+    const box = screen.getByLabelText("Name");
+    await user.type(box, "Renewal{Enter}");
+    expect(onSave).not.toHaveBeenCalled();
+    expect(box).toHaveValue("Renewal");
+  });
+
+  it("leaves a checkbox's Enter to the checkbox", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    rtlRender(
+      <NamedTag
+        onSave={onSave}
+        field={() => <input type="checkbox" aria-label="Pinned" />}
+      />,
+    );
+    screen.getByRole("checkbox", { name: "Pinned" }).focus();
+    await user.keyboard("{Enter}");
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("lets a form inside the body submit once, without a second save", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const onSubmit = vi.fn((event: FormEvent) => event.preventDefault());
+    rtlRender(
+      <NamedTag
+        onSave={onSave}
+        field={(name, setName) => (
+          <form onSubmit={onSubmit}>
+            <input
+              aria-label="Name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </form>
+        )}
+      />,
+    );
+    await user.type(nameBox(), "Renewal{Enter}");
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("saves the day a date field settles on that same Enter", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    rtlRender(
+      <NamedTag
+        onSave={onSave}
+        field={(day, setDay) => (
+          <Field label="Due">
+            {(control) => (
+              <DateInput
+                {...control}
+                today="2026-05-20"
+                value={day as ISODate | ""}
+                onChange={(event) => setDay(event.target.value)}
+              />
+            )}
+          </Field>
+        )}
+      />,
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: "Due" }),
+      "21/05/2026{Enter}",
+    );
+    expect(onSave).toHaveBeenCalledExactlyOnceWith("2026-05-21");
+  });
+
+  it("refuses as the click does while a date field holds text it cannot read", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    rtlRender(
+      <NamedTag
+        onSave={onSave}
+        field={(day, setDay) => (
+          <Field label="Due">
+            {(control) => (
+              <DateInput
+                {...control}
+                today="2026-05-20"
+                value={day as ISODate | ""}
+                onChange={(event) => setDay(event.target.value)}
+              />
+            )}
+          </Field>
+        )}
+      />,
+    );
+    const due = screen.getByRole("textbox", { name: "Due" });
+    await user.type(due, "31/02/2026{Enter}");
+    expect(onSave).not.toHaveBeenCalled();
+    expect(due).toHaveFocus();
   });
 });

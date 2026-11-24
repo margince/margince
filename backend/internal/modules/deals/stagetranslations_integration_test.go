@@ -18,7 +18,7 @@ import (
 func TestAStageNamesItselfPerLanguage(t *testing.T) {
 	e := setupConfigEnv(t)
 	ctx := e.as()
-	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales"})
+	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + ids.NewV7().String()})
 	if err != nil {
 		t.Fatal(err)
 	}

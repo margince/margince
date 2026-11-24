@@ -7,10 +7,12 @@ import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { useFieldFaults } from "../../design-system/savepage";
 import { StageLadder } from "../../design-system/stageladder";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
+import { project360Key } from "./project360.key";
 import {
   PHASE_LABEL,
   PROJECT_PHASES,
@@ -22,9 +24,8 @@ import {
 // Movement goes both ways — a closed project is reopened into delivery by
 // the same verb — and every move lands a phase-history row, so the dialog
 // always offers a reason. Closing REQUIRES one (the server refuses a close
-// without it, 422 closed_reason_required), and the dialog holds Confirm back
-// until the reason says something rather than letting the reader learn that
-// from the refusal.
+// without it, 422 closed_reason_required), and Confirm says the reason is
+// missing before the server has to.
 
 /**
  * PhaseStepper draws the four phases in order on the design system's
@@ -58,6 +59,10 @@ export function PhaseStepper({
       steps={PROJECT_PHASES.map((step, rung) => ({
         key: step,
         label: t(labelFor(PHASE_LABEL, step)),
+        // The name holds the phase it shows, so voice control can say it.
+        actionLabel: t("project.advance.title", {
+          phase: t(labelFor(PHASE_LABEL, step)),
+        }),
         done: rung < here,
         current: step === phase,
         terminal: step === "closed",
@@ -95,9 +100,18 @@ export function useAdvanceProject(onDone: () => void) {
         }),
       );
     },
-    onSuccess: (_data, move) => {
-      queryClient.invalidateQueries({ queryKey: ["project", move.projectId] });
-      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    // The dialog stays pending, Move disabled, until the page is read again.
+    // The answer goes into the page first, so the phase bar is right at once.
+    onSuccess: async (project, move) => {
+      queryClient.setQueryData(project360Key(move.projectId), (view) =>
+        view ? { ...view, project } : view,
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["project", move.projectId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+      ]);
       onDone();
     },
   });
@@ -120,18 +134,21 @@ export function AdvanceProjectModal({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [reason, setReason] = useState("");
   const [openFor, setOpenFor] = useState<ProjectPhase | null>(null);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   // A fresh dialog per move: a reason typed for one close must not be offered
   // for the next reopen. Reset during render on the transition, the way the
   // create dialog seeds its defaults.
   if (to !== openFor) {
     setOpenFor(to);
     setReason("");
+    faults.show(new Map());
   }
   const advance = useAdvanceProject(onClose);
   const closing = to === "closed";
-  const reasonMissing = closing && reason.trim() === "";
+  const reasonLabel = t("project.advance.reason");
   return (
     <ConfirmModal
       open={to !== null}
@@ -145,11 +162,14 @@ export function AdvanceProjectModal({
         closing ? t("project.advance.close") : t("project.advance.confirm")
       }
       confirmVariant={closing ? "danger" : "primary"}
-      confirmDisabled={reasonMissing}
+      bodyRef={faultsRoot}
       pending={advance.isPending}
       error={advance.isError ? problemMessageOf(advance.error, t) : null}
       onConfirm={() => {
-        if (to) {
+        const blank = closing
+          ? blankRequired(locale, { reason: [reasonLabel, reason] })
+          : new Map<string, string>();
+        if (to && !faults.show(blank)) {
           advance.mutate({ projectId, version, to, reason: reason.trim() });
         }
       }}
@@ -158,9 +178,10 @@ export function AdvanceProjectModal({
         {closing ? t("project.advance.closeBody") : t("project.advance.body")}
       </p>
       <Field
-        label={t("project.advance.reason")}
+        label={reasonLabel}
         required={closing}
         hint={closing ? t("project.advance.reasonRequired") : undefined}
+        error={faults.of("reason")}
       >
         {(control) => (
           <Textarea
@@ -168,7 +189,10 @@ export function AdvanceProjectModal({
             data-testid="project-advance-reason"
             rows={3}
             value={reason}
-            onChange={(event) => setReason(event.target.value)}
+            onChange={(event) => {
+              setReason(event.target.value);
+              faults.edited("reason");
+            }}
           />
         )}
       </Field>

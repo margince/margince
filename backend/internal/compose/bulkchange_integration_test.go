@@ -25,9 +25,11 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/redistest"
@@ -530,5 +532,114 @@ func TestAChangeThatDoesNotCommitGivesItsReservationBack(t *testing.T) {
 	}
 	if got := meter.Read(agent, agentvolume.Writes).Observed; got != 0 {
 		t.Errorf("the window reads %d writes after a change that did not commit, want 0", got)
+	}
+}
+
+// What a bulk reassignment costs per record. Two changes differ by ten records.
+// Their difference over ten is one record's cost without the fixed cost.
+
+// bulkReassignStatementsPerRecord are the ceilings, per record type, on the
+// statements one more record adds to a bulk reassignment's preview or execution.
+// They are the counts measured with one read check per row, no re-read for
+// If-Match and no read-back for the caller. A lead's writer takes its own lock.
+var bulkReassignStatementsPerRecord = map[crmcontracts.BulkRecordType]int64{
+	crmcontracts.BulkRecordTypeContact: 21,
+	crmcontracts.BulkRecordTypeCompany: 15,
+	crmcontracts.BulkRecordTypeDeal:    11,
+	crmcontracts.BulkRecordTypeLead:    16,
+}
+
+func seedBulkCompanies(t *testing.T, e *integration.Env, owner ids.UUID, n int) []crmcontracts.BulkItem {
+	t.Helper()
+	items := make([]crmcontracts.BulkItem, 0, n)
+	for i := range n {
+		ownerID := ids.From[ids.UserKind](owner)
+		created, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
+			DisplayName: fmt.Sprintf("Bulk Company %d %s", i, ids.NewV7().String()[:8]), OwnerID: &ownerID,
+		})
+		if err != nil {
+			t.Fatalf("seeding company %d: %v", i, err)
+		}
+		items = append(items, crmcontracts.BulkItem{Id: created.Id, Version: *created.Version})
+	}
+	return items
+}
+
+func seedBulkDeals(t *testing.T, e *integration.Env, owner ids.UUID, n int) []crmcontracts.BulkItem {
+	t.Helper()
+	pipeline, open, _ := integration.DealFixture(t, e)
+	items := make([]crmcontracts.BulkItem, 0, n)
+	for i := range n {
+		ownerID := ids.From[ids.UserKind](owner)
+		created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Source: "manual",
+			Name:   fmt.Sprintf("Bulk Deal %d %s", i, ids.NewV7().String()[:8]), PipelineID: pipeline, StageID: open, OwnerID: &ownerID,
+		})
+		if err != nil {
+			t.Fatalf("seeding deal %d: %v", i, err)
+		}
+		items = append(items, crmcontracts.BulkItem{Id: created.Id, Version: *created.Version})
+	}
+	return items
+}
+
+// bulkStatements is what one call of the engine cost in statements.
+func bulkStatements(ctx context.Context, t *testing.T, run func(context.Context) error) int64 {
+	t.Helper()
+	ctx, meter := database.WithStatementMeter(ctx)
+	if err := run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	return meter.Cost().Statements
+}
+
+func TestABulkReassignmentCostsAFixedNumberOfStatementsPerRecord(t *testing.T) {
+	seeders := map[crmcontracts.BulkRecordType]func(*testing.T, *integration.Env, ids.UUID, int) []crmcontracts.BulkItem{
+		crmcontracts.BulkRecordTypeContact: seedBulkContacts,
+		crmcontracts.BulkRecordTypeCompany: seedBulkCompanies,
+		crmcontracts.BulkRecordTypeDeal:    seedBulkDeals,
+		crmcontracts.BulkRecordTypeLead:    seedBulkLeads,
+	}
+	for recordType, ceiling := range bulkReassignStatementsPerRecord {
+		t.Run(string(recordType), func(t *testing.T) {
+			e := integration.Setup(t)
+			engine := bulkEngineFor(e)
+			change := func(items []crmcontracts.BulkItem) bulkChange {
+				return bulkChange{recordType: recordType, verb: crmcontracts.BulkVerbReassignOwner, items: items, ownerID: &e.Rep2}
+			}
+			small, large := bulkConfirmAbove+1, bulkConfirmAbove+11
+			seeded := seeders[recordType](t, e, e.Rep1, small+large)
+			cost := func(items []crmcontracts.BulkItem) (preview, execute int64) {
+				n := len(items)
+				confirmed := change(items)
+				preview = bulkStatements(e.Admin(), t, func(ctx context.Context) error {
+					shown, err := engine.Preview(ctx, confirmed)
+					if err == nil && shown.ConfirmToken != nil {
+						confirmed.confirmToken = *shown.ConfirmToken
+					}
+					return err
+				})
+				execute = bulkStatements(e.Admin(), t, func(ctx context.Context) error {
+					out, err := engine.Execute(ctx, confirmed)
+					if err == nil && out.Changed != n {
+						err = fmt.Errorf("changed %d of %d, skipped %v", out.Changed, n, out.Skipped)
+					}
+					return err
+				})
+				return preview, execute
+			}
+			// Both sizes are above the confirmation threshold, so both pay its
+			// fixed cost and the difference is the records alone.
+			previewSmall, executeSmall := cost(seeded[:small])
+			previewLarge, executeLarge := cost(seeded[small:])
+			preview, execute := (previewLarge-previewSmall)/10, (executeLarge-executeSmall)/10
+			t.Logf("%s: %d statements per record previewed, %d executed", recordType, preview, execute)
+			if preview > ceiling {
+				t.Errorf("previewing a %s reassignment costs %d statements per record, ceiling %d", recordType, preview, ceiling)
+			}
+			if execute > ceiling {
+				t.Errorf("executing a %s reassignment costs %d statements per record, ceiling %d", recordType, execute, ceiling)
+			}
+		})
 	}
 }

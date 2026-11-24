@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/dayrule"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 )
@@ -73,7 +74,7 @@ func (w *briefGenerateWorker) morningWindow(ctx context.Context, now time.Time, 
 	}
 	var local time.Time
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		_, clock, err := briefs.LocalDayAt(ctx, tx, now)
+		_, clock, err := briefs.LocalDayAt(ctx, tx, dayrule.ActingUser(ctx), now)
 		local = clock
 		return err
 	})

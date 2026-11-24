@@ -22,6 +22,7 @@ const VIENNA: LegalEntity = {
   display_name: "Acme Wien",
   legal_name: "Acme Wien GmbH",
   country: "at",
+  jurisdiction: "at",
   address: {},
   member_count: 0,
   version: 1,

@@ -17,11 +17,11 @@ package integration
 // sendMessageTool.StageInfo nor Invoke's staging branch. This file is the
 // one proof of the MCP loop.
 //
-// It drives Registry.Invoke directly rather than the wire transport: the
+// It drives Registry.Invoke directly rather than the wire transport. The
 // JSON-RPC framing, discovery and admission machinery is already proven end
-// to end by mcp_transport_integration_test.go against a different tool, and
-// Invoke is the one call every transport — stdio, hosted MCP, Surface B —
-// dispatches through (registry.go's package comment). What was missing is
+// to end by mcp_transport_integration_test.go against a different tool.
+// Invoke is the one call every transport dispatches through: stdio, hosted
+// MCP and the night helpers' runner (registry.go's package comment). What was missing is
 // the send_message-specific stage → approve → redeem loop against real
 // Postgres, which is what this test drives.
 
@@ -65,7 +65,7 @@ func (c *channelSendEnv) enrichTarget(t *testing.T) string {
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/companies",
-		AnyMap{"source": "manual", "display_name": "Approval Mechanism GmbH", "domains": []AnyMap{{"domain": "example.com", "is_primary": true}}}, nil, &company); status != http.StatusCreated {
+		AnyMap{"source": "manual", "display_name": "Approval Mechanism GmbH", "domains": []AnyMap{{"domain": "example.test", "is_primary": true}}}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	return company.ID

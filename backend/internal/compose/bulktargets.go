@@ -26,11 +26,15 @@ type bulkRow struct {
 	label   string
 	version int64
 	ownerID *ids.UUID
+	// Set by hold only; lock stays zero where the writer takes its own.
+	archived bool
+	lock     storekit.RowLock
 }
 
-// bulkTarget is one record type's share of a bulk change.
+// bulkTarget is one record type's share of a bulk change. hold locks every
+// row first, archived ones included, because an undo restores them.
 type bulkTarget interface {
-	hold(ctx context.Context, tx pgx.Tx, id ids.UUID) error
+	hold(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
 	lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkRow, error)
 }
 
@@ -46,6 +50,12 @@ type bulkReassigner interface {
 	reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error
 }
 
+// bulkHeldReassigner is a reassignment that writes on the lock hold took
+// instead of locking the row a second time.
+type bulkHeldReassigner interface {
+	reassignHeld(ctx context.Context, tx pgx.Tx, held storekit.RowLock, owner ids.UserID, version int64) error
+}
+
 // bulkArchiver is the share of a record type that has a single-record archive.
 // A lead has none — it leaves the queue by being disqualified — so the archive
 // verb is refused for it before any row is tried.
@@ -54,6 +64,15 @@ type bulkArchiver interface {
 	// restore brings an archived record back, conditioned on version, and
 	// tries again the links earlier restores of the same undo left behind.
 	restore(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64, pending []storekit.LeftBehind) (storekit.RestoreReport, error)
+}
+
+// bulkStageMover is the share of a record type that sits on a pipeline stage.
+// Only a deal does, so the move_stage verb is refused for every other type.
+type bulkStageMover interface {
+	checkStage(ctx context.Context, stage ids.UUID) error
+	// moveStage moves one record to stage, conditioned on version. reversalOf
+	// names the history row an undo's move puts back.
+	moveStage(ctx context.Context, tx pgx.Tx, id ids.UUID, stage ids.UUID, version int64, reversalOf *ids.UUID) (deals.BulkStageMove, error)
 }
 
 // bulkTargets builds the four record adapters over the stores the REST
@@ -142,6 +161,20 @@ func (t dealBulkTarget) lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (bulkR
 
 func (t dealBulkTarget) reassign(ctx context.Context, tx pgx.Tx, id ids.UUID, owner ids.UserID, version int64) error {
 	return t.store.ReassignDealTx(ctx, tx, ids.From[ids.DealKind](id), owner, &version)
+}
+
+func (t dealBulkTarget) reassignHeld(ctx context.Context, tx pgx.Tx, held storekit.RowLock, owner ids.UserID, version int64) error {
+	return t.store.ReassignHeldDealTx(ctx, tx, held, owner, &version)
+}
+
+func (t dealBulkTarget) checkStage(ctx context.Context, stage ids.UUID) error {
+	return t.store.CheckBulkStage(ctx, ids.From[ids.StageKind](stage))
+}
+
+func (t dealBulkTarget) moveStage(
+	ctx context.Context, tx pgx.Tx, id, stage ids.UUID, version int64, reversalOf *ids.UUID,
+) (deals.BulkStageMove, error) {
+	return t.store.MoveStageForBulkTx(ctx, tx, ids.From[ids.DealKind](id), ids.From[ids.StageKind](stage), version, reversalOf)
 }
 
 func (t dealBulkTarget) archive(ctx context.Context, tx pgx.Tx, id ids.UUID, version int64) error {

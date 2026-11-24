@@ -318,3 +318,19 @@ export const SaveRefused: Story = {
     await waitFor(() => expect(body.scrollTop).toBeGreaterThan(0));
   },
 };
+
+// A notice period below zero, refused on its field in the server's words.
+export const NoticePeriodRefused: Story = {
+  render: () => {
+    installFetchStub({ "GET /me": SESSION });
+    return (
+      <StoryProviders>
+        <ContractForm companyId="o-1" open onClose={() => {}} />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.type(await screen.findByLabelText(/^Notice period/), "-1");
+    await screen.findByText("Notice period (days) must be at least 0.");
+  },
+};

@@ -2,6 +2,7 @@ import { Badge } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
+import { useOpenableApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import type { Route } from "../lib/router";
@@ -18,39 +19,9 @@ import {
   PAGE_SUB_KEYS,
   resolveTitle,
   sectionHead,
+  useTabTitle,
 } from "./pagemeta";
 import { SectionSwitcher } from "./sectionswitcher";
-import { TopBar } from "./topbar";
-
-/**
- * The chrome on a settings route, naming the tab the reader opened.
- *
- * Both halves read the same section the rail does. The hook derives it from
- * the capability cache the rail already warmed. So the trail, the heading and
- * the sidebar cannot disagree about which tab is current.
- */
-export function SettingsTopBar({
-  route,
-  collapsed,
-  onToggle,
-  onOpenSearch,
-}: Readonly<{
-  route: Route;
-  collapsed: boolean;
-  onToggle: () => void;
-  onOpenSearch: () => void;
-}>) {
-  const section = useSettingsSection(route);
-  return (
-    <TopBar
-      route={route}
-      section={section}
-      collapsed={collapsed}
-      onToggle={onToggle}
-      onOpenSearch={onOpenSearch}
-    />
-  );
-}
 
 export function SettingsPageTitle(
   props: Readonly<{ route: Route; actionSlot: SlotRef }>,
@@ -85,15 +56,14 @@ export function PageTitle({
   const t = useT();
   const { locale } = useLocale();
   const phone = usePhoneViewport();
+  // The tab is named on every page, a record and a self-headed one included.
+  useTabTitle(route, section);
 
   const navItem = NAV.find((item) => item.screen === route.screen);
   const readsTeam = useReadsTeamProgress();
   const inSection = sectionHead(section, route);
   // On a screen that publishes a level, the page is the entry the reader
-  // opened, not the section they opened it from. The trail in the top bar and
-  // the sidebar's level name the section. Printing it here named the section
-  // twice and the surface never. A settings page read "Settings" above a
-  // heading reading "Settings", with the audit log under both.
+  // opened. The sidebar's level names the section it was opened from.
   const entryTitle = inSection
     ? entryLabel(inSection.entry, locale, t)
     : undefined;
@@ -111,8 +81,10 @@ export function PageTitle({
   // installation did not compose is an unknown page, and its screen says so in
   // words. That case keeps the heading rather than yielding to a surface that
   // will not name itself either.
+  const openableApp = useOpenableApp(route);
   const unitNamesPage =
-    route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
+    (route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null) ||
+    openableApp !== null;
   // A page that heads itself. Brief greets the reader by name in its own h1.
   // The shell printing the nav label above it named the page twice at heading
   // level: an outline with two top-level headings. The branches above exist to
@@ -138,9 +110,7 @@ export function PageTitle({
 
   // At phone width a section's page is its switcher. The control names the
   // page and opens the others, so it stands as the heading rather than under a
-  // heading repeating it. The page is still named once at heading level. The
-  // trail above it is the only other place the name appears, the same
-  // arithmetic as every other route.
+  // heading repeating it. The page is still named once at heading level.
   const switcher = phone && inSection && (
     <SectionSwitcher section={inSection.section} entry={inSection.entry} />
   );

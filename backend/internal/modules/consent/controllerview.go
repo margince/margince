@@ -10,23 +10,30 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// controllerView completes the installation's own mail to one recipient. The
-// installation sends it, so the default legal entity is the sender.
-func (s *Store) controllerView(ctx context.Context, tx pgx.Tx, rendered Rendered, category commsauthz.Category, recipient string) (Rendered, error) {
-	lines, err := s.DisclosuresFor(ctx, tx, DisclosureQuery{Category: category, Recipients: []string{recipient}})
+// controllerView completes the installation's own mail to one recipient about
+// one record. It goes out for the entity that answers for that record
+// (recordEntityTx), so its footer and its sender line name that entity.
+func (s *Store) controllerView(ctx context.Context, tx pgx.Tx, rendered Rendered, category commsauthz.Category, recipient string, who ruleSubject) (Rendered, error) {
+	entity, err := recordEntityTx(ctx, tx, who)
 	if err != nil {
 		return Rendered{}, err
 	}
-	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
+	lines, err := s.DisclosuresFor(ctx, tx, DisclosureQuery{
+		Category: category, Recipients: []string{recipient}, Language: rendered.Language, Entity: entity,
+	})
 	if err != nil {
 		return Rendered{}, err
 	}
+	var page PrivacyInformation
+	if err := readControllerTx(ctx, tx, &page, who); err != nil {
+		return Rendered{}, err
+	}
+	identity := page.Controller
 	words := mailcopy.For(rendered.Language)
 	disclosures := make([]string, 0, len(lines))
 	for _, line := range lines {
@@ -61,7 +68,7 @@ func labelledDisclosure(line DisclosureLine, words mailcopy.Copy) string {
 
 func controllerAction(key string, words mailcopy.Copy) string {
 	switch key {
-	case TemplateRecordConfirmation:
+	case TemplateRecordConfirmation, TemplateRecordCheck:
 		return words.ConfirmRecordAction
 	case TemplateConsentConfirmation:
 		return words.ConfirmConsentAction

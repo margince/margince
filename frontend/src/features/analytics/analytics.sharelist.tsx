@@ -17,7 +17,7 @@ import {
   PanelRow,
 } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
-import { formatDate } from "../../format/format";
+import { formatDate, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
@@ -221,7 +221,7 @@ function OpenShareRow({
         <span>{t(labelFor(KIND_LABELS, share.kind))}</span>
         <span>
           {t("analytics.share.listCreated", {
-            date: formatDate(share.created_at, locale, zone),
+            date: formatDateTime(share.created_at, locale, zone),
           })}
         </span>
         <span>

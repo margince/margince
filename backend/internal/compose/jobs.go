@@ -61,17 +61,16 @@ func sweepInsertOpts() *river.InsertOpts {
 //
 // WHICH of these a kind needs, and what an absent one costs it, is declared
 // per kind in api/jobs.yaml and resolved in jobschedule.go — not counted here.
-// A field below says what it IS and what its absence means for the pass that
-// reads it; the two postures that absence takes are the declaration's to
-// choose, and they are not interchangeable. Registers nothing means a row
-// nothing here could work is never queued at all; registers anyway keeps the
-// worker so a picked-up row fails with an actionable message instead of
-// rotting queued. The SAME field takes opposite postures on different kinds —
-// Embedder registers nothing for the drift sweep and anyway for a reindex —
-// which is why the posture is stated per kind and never per field.
+// A field below says what it is and what its absence means for its pass.
+// The declaration chooses between two postures. Registers nothing means a row
+// nothing here could work is never queued. Registers anyway keeps the worker,
+// so a picked-up row fails with an actionable message, not rotting queued.
+// One field takes opposite postures on different kinds: Embedder registers
+// nothing for the drift sweep and anyway for a reindex. So the posture is
+// stated per kind and never per field.
 type JobRunnerConfig struct {
-	DisabledCoreFeatures []string
-	DataTasksPace        time.Duration
+	DisabledCoreFeatures                 []string
+	DataTasksPace, UnusedClientRetention time.Duration
 	// Schedules is the interval every {setting: …} cadence runs at, read from
 	// the admin's settings at boot and moved by its Watch while the worker
 	// runs. Nil schedules from the registered defaults.
@@ -91,7 +90,8 @@ type JobRunnerConfig struct {
 	DrainWindow time.Duration
 	// Paused snoozes every job while it answers true: an installation whose
 	// trial has ended does no background work. Nil never pauses.
-	Paused func(context.Context) bool
+	Paused     func(context.Context) bool
+	ModelBound func() bool // unbound: gated model jobs no-op; nil is always bound
 	// SendBlob is the object store the send lane AND the document reading read
 	// attachment bytes from. Both need it for the same reason — the bytes are
 	// object-store references, never rows — so they share the field rather than
@@ -389,7 +389,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	if pool != nil {
 		reg.sessionSlots = make(chan struct{}, database.WorkerSessionCapacity(pool.Config().MaxConns))
 	}
-	reg.paused = cfg.Paused
+	reg.paused, reg.modelBound = cfg.Paused, cfg.ModelBound
 
 	// The workers, in the groups their gating and their concern make: each
 	// helper registers its own and states what an absent dependency costs
@@ -416,7 +416,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addGraphJobs(reg, pool, cfg, log),
 		addEmbedDriftSweepJob(reg, pool, cfg, log),
 		addScheduledSendRecoveryJob(reg, pool, cfg, log),
-		addImportRunSweepJob(reg, pool, cfg, log),
+		addImportRunSweepJob(reg, pool, cfg, log), addUnusedClientSweepJob(reg, pool, cfg, log),
 		addControllerPayloadSweepJob(reg, pool, cfg, log),
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
 		addCapturePartSlimJobs(reg, pool, cfg, log),
@@ -446,15 +446,15 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	return reg, periodic
 }
 
-// placedSchedules are the schedules this file places. Each carries its own gate:
-// the cadence, the configuration it needs, and what an absent dependency costs.
-// So every one is named here, whether or not this boot places it.
+// placedSchedules names every schedule this file places, whether or not this boot
+// places it. Each carries its own gate: cadence, configuration, absent-dependency cost.
 func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 	return slices.Concat(
 		periodicFor(cfg, AssuranceSweepArgs{}),
 		periodicFor(cfg, CloseDateSweepArgs{}),
 		periodicFor(cfg, MeetingProfileRetractSweepArgs{}),
 		periodicFor(cfg, TranscriptAudienceSweepArgs{}),
+		periodicFor(cfg, PromiseKeptSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
 		periodicFor(cfg, InitiativeEnrolmentSweepArgs{}),
@@ -487,7 +487,6 @@ func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 		periodicFor(cfg, CaptureTraceSweepArgs{}),
 		periodicFor(cfg, CapturedDealRefileSweepArgs{}),
 		periodicFor(cfg, CompanyNamePromotionArgs{}),
-		periodicFor(cfg, CaptureDigestArgs{}),
 		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),
 		periodicFor(cfg, NotificationDigestArgs{}),

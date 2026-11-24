@@ -1,0 +1,12 @@
+{
+  "verb": "clear_deal_manager_request",
+  "checks": [
+    "deal.read",
+    "deal.update",
+    "scope:team",
+    "team_oversight.read,team_lead.read"
+  ],
+  "takes": [
+    "deal"
+  ]
+}

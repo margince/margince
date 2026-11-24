@@ -78,8 +78,8 @@ func (s *Store) queryMeetingFollowUps(
 }
 
 // addressableContactClause is which contacts under alias rc this reader may
-// write a follow-up to. It is the attach rule a send files under, so a
-// read-only shared contact is never offered a draft the send would refuse.
+// write a follow-up to. It is the attach rule a send files under. So a contact
+// the reader may see but not change is never offered a draft the send refuses.
 func addressableContactClause(ctx context.Context, arg func(any) int) (string, error) {
 	if !auth.ReadGranted(ctx, "contact") {
 		return scopeNothing, nil
@@ -186,7 +186,8 @@ func meetingAttendeesSQL(addressable string) string {
 // a later activity.
 const laterActivityColumns = `keyed.id, keyed.kind, keyed.direction, keyed.origin, keyed.occurred_at,
 	keyed.occurred_precision, keyed.archived_at, keyed.restricted_at, keyed.meeting_status, keyed.call_outcome,
-	keyed.calendar_method, keyed.sender_is_machine, keyed.bulk_mail_attested, keyed.internal_mail_authorization`
+	keyed.calendar_method, keyed.sender_is_machine, keyed.bulk_mail_attested, keyed.internal_mail_authorization,
+	keyed.forwarded_to_self`
 
 // The limit keeps the keyed lookup ahead of predicates on the later activity,
 // even when stale statistics favor scanning the whole activity table.

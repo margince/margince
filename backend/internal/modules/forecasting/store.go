@@ -63,8 +63,9 @@ const (
 
 // Store owns the forecast tables.
 type Store struct {
-	db   *database.DB
-	lens SnapshotLens
+	db           *database.DB
+	lens         SnapshotLens
+	focusActions FocusActionsFunc
 }
 
 // SnapshotLens narrows a frozen snapshot to what the caller may see: it refuses
@@ -297,6 +298,9 @@ func checkCall(in NewCall) (string, error) {
 			Field: "currency", Code: codeInvalid,
 			Message: "a called amount names the currency it is in",
 		}
+	}
+	if err := values.RequireAssignableCurrency(in.Currency); err != nil {
+		return "", err
 	}
 	if err := checkScope(in.Scope); err != nil {
 		return "", err

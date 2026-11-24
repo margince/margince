@@ -101,8 +101,6 @@ backend/internal/modules/activities/scheduledsendprovenance.go core 0260
 backend/internal/modules/activities/threadwire_integration_test.go migration 0093
 backend/internal/modules/agents/tools_comms_test.go core 0251
 backend/internal/modules/ai/callstats.go migration 0088
-backend/internal/modules/automation/automations_catalog.go core 0035
-backend/internal/modules/automation/automations_catalog.go core 0078
 backend/internal/modules/automation/automations_runs.go migration 0061
 backend/internal/modules/automation/automations_runs_test.go migration 0061
 backend/internal/modules/automation/engine_blocked.go migration 0061
@@ -128,7 +126,6 @@ backend/internal/modules/contacts/relationshiperrors.go migration 0007
 backend/internal/modules/contacts/relationshiperrors.go migration 1787111736
 backend/internal/modules/contacts/sitereadfinish.go migration 0221
 backend/internal/modules/customfields/candidates_integration_test.go core 0009
-backend/internal/modules/customfields/engine.go core 0063
 backend/internal/modules/customfields/engine.go core 0171
 backend/internal/modules/customfields/fieldobjects_test.go core 0171
 backend/internal/modules/customfields/service.go core 0063

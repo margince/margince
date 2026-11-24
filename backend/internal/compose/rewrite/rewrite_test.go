@@ -224,10 +224,22 @@ func TestARewriteIsItsOwnTaskServedPremiumFirst(t *testing.T) {
 	if site := (CertCases{}).Site(); site.Task != ai.TaskRewrite {
 		t.Errorf("the rewrite site is certified under %q, want %q", site.Task, ai.TaskRewrite)
 	}
-	if lead := ai.LeadingTier(ai.TaskRewrite); lead != ai.TierPremium {
+	if lead := ai.TaskLadder(ai.TaskRewrite)[0]; lead != ai.TierPremium {
 		t.Errorf("the rewrite ladder leads with %q, want premium", lead)
 	}
 	if !slices.Contains(ai.ServableTiers(ai.TaskRewrite), ai.TierCheapCloud) {
 		t.Errorf("the rewrite ladder %v has no cheap_cloud fallback", ai.ServableTiers(ai.TaskRewrite))
+	}
+}
+
+func TestAWordingActionStillKeepsTheMessageItIsGiven(t *testing.T) {
+	for _, verb := range []Verb{VerbShorter, VerbWarmer} {
+		req := Request(Input{Envelope: EnvelopeEmail, Verb: verb, Body: "Hello Anna, can we talk about pricing?", Language: textlang.English, Detected: true}, nil, draftvoice.Context{})
+		if !strings.Contains(req.System, draftrules.Revise) || !strings.Contains(req.System, "Keep the meaning and every fact") {
+			t.Errorf("%s: the prompt no longer keeps the message's meaning", verb)
+		}
+		if strings.Contains(req.System, "names a different topic or format") {
+			t.Errorf("%s: a wording action may change the topic", verb)
+		}
 	}
 }

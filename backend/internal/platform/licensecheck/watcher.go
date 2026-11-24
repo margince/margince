@@ -43,6 +43,8 @@ type TokenSource func(context.Context) (string, error)
 type Watcher struct {
 	source  TokenSource
 	now     func() time.Time
+	budget  time.Duration
+	module  []byte
 	log     *slog.Logger
 	env     runtimeenv.Environment
 	posture atomic.Pointer[Posture]
@@ -60,13 +62,10 @@ type recheckRun struct {
 	err  error
 }
 
-// NewWatcher resolves the posture once and refuses a rejected one, so the
-// caller's boot fails before the role serves.
-//
-// An absent license is a posture here, not a refusal. Whether an installation
-// may RUN unlicensed depends on the deployment posture rather than on the
-// license, so that decision is the composition root's (compose.EnsureLicense)
-// and this package reports what it found.
+// NewWatcher resolves the posture once. A rejected license is a posture here,
+// as an absent one is. The role starts locked rather than not at all, so every
+// seat sees why and an admin can correct the token without a shell. What a
+// posture locks is the composition root's to decide (installtrial).
 func NewWatcher(ctx context.Context, source TokenSource, now func() time.Time, log *slog.Logger, env runtimeenv.Environment) (*Watcher, error) {
 	token, err := source(ctx)
 	if err != nil {
@@ -79,14 +78,7 @@ func NewWatcher(ctx context.Context, source TokenSource, now func() time.Time, l
 	if err != nil {
 		return nil, err
 	}
-	if resolved.State == StateRejected {
-		// Where the token CAME from is not named here: this package is handed a
-		// token, not a configuration file, and the caller that resolved it is the
-		// one that can tell the operator which setting to correct.
-		return nil, fmt.Errorf("licensecheck: the license was refused by the bundled validation module (%s): %s",
-			ModuleVersion(), resolved.Reason)
-	}
-	w := &Watcher{source: source, now: now, log: log, env: env}
+	w := &Watcher{source: source, now: now, budget: recheckBudget, module: bundledModule, log: log, env: env}
 	w.posture.Store(&resolved)
 	return w, nil
 }
@@ -127,7 +119,7 @@ func (w *Watcher) Recheck(ctx context.Context) error {
 	w.mu.Unlock()
 
 	// Not the caller's cancellation: callers who joined are waiting on this run.
-	detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), recheckBudget)
+	detached, cancel := context.WithTimeout(context.WithoutCancel(ctx), w.budget)
 	run.err = w.recheckOnce(detached)
 	cancel()
 	w.mu.Lock()
@@ -148,7 +140,7 @@ func (w *Watcher) recheckOnce(ctx context.Context) (err error) {
 			"err", err, "posture", string(before.State))
 		return fmt.Errorf("licensecheck: re-reading the license token: %w", err)
 	}
-	after, err := Resolve(ctx, token, w.now(), w.env)
+	after, err := resolveWith(ctx, w.module, token, w.now(), w.env)
 	if err != nil {
 		w.log.ErrorContext(ctx, "re-checking the license failed; keeping the posture this process last resolved",
 			"err", err, "posture", string(before.State))

@@ -102,6 +102,11 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 		return "", false
 	case ast.Expr:
 		seen[n] = true
+		if owner.resolve != nil {
+			if text, ok := owner.resolve(v); ok {
+				return text, true
+			}
+		}
 		return " ", true
 	}
 	return "", false
@@ -120,6 +125,9 @@ type helperScope struct {
 	other     string          // the local name of a second package that defines the same helper, "" if none or not imported
 	inside    bool            // this file IS the owning package
 	names     map[string]bool // the exported helper(s) that ARE the definition
+	// resolve renders a name as the constant it holds, for a census that judges
+	// a value spelled through a Go constant. Nil renders every name as a blank.
+	resolve func(ast.Expr) (string, bool)
 }
 
 // isOneDefinition reports whether the call is the owning module's helper — the

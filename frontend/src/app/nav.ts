@@ -12,12 +12,19 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
-import { type CoreFeature, screenEnabled } from "../lib/corefeatures";
+import { screenEnabled, type Withheld } from "../lib/corefeatures";
 import { type EntityKind, SCREEN_ENTITY } from "../lib/entity";
+import { EXTENSION_APP_SCREEN, type UnitApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import type { Route, Screen } from "../lib/router";
 import { CUSTOM_SCREEN, customNavItems } from "./custom";
+import { appItems } from "./navapps";
+import {
+  opensReservedPage,
+  type ReservedPageScreen,
+  reservedPageOf,
+} from "./reservedpages";
 import {
   type NavLevelEntry,
   type NavSection,
@@ -25,6 +32,14 @@ import {
   navLevelRoute,
   navTrail,
 } from "./subnav";
+
+export {
+  CREATE_ID,
+  CREATE_SCREENS,
+  IMPORT_ID,
+  opensCreateForm,
+  opensReservedPage,
+} from "./reservedpages";
 
 // The level registry lives beside this list and is reached through it: a caller
 // asking where the sidebar can go has one module to import.
@@ -154,6 +169,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
         screen: "analytics",
         labelKey: "nav.analytics",
         icon: ChartNoAxesCombined,
+        // Reports and the forecast live here, so a reader typing either lands.
+        aliases: ["reports", "report", "forecast"],
       },
       // Closed revenue against the goal. The rail names it My progress or
       // Team progress (navLabelKey); this key is its name in the shortcuts.
@@ -199,28 +216,11 @@ export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
   "deals",
 ]);
 
-// Every RecordView RECORD page keeps ONE reading column, so a reader who walks
-// from a company to a deal to the lead behind it meets the same measure on
-// each. That is the invariant this set states: a screen whose record page is
-// drawn as a RecordView belongs here, and one missing from it is the one page
-// in the walk that jumps.
-//
-// A detail page that lays out its OWN surface takes its measure from
-// `GRIDDED_SCREENS` below instead: `#/offers/<id>` draws SectionHeader and Card
-// itself, with no RecordView, no tab strip and no details pane, so this set has
-// no record column to keep on it. Settings is absent for the same kind of
-// reason — always capped, and a whole section rather than a record.
-//
-// A record reads DOWN rather than across: a rail of facts beside prose, where a
-// measured line length is the point and a fact a monitor away from its label is
-// worse, not wider. A list, a board or a report is scanned ACROSS, and the cap
-// only ever pushed columns off the right edge of a wide display — which is why
-// the key is the id and not the screen alone.
-//
-// Keyed on the screen, applied only when the route carries a RECORD id:
-// `#/companies` is the list and belongs to the other family, `#/companies/<id>`
-// is the record.
-export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
+// The screens whose record page is drawn as a RecordView. It applies only when
+// the route carries a record id: `#/companies` is the list, `#/companies/<id>`
+// the record. The shell names that record's scroller as a container, so the
+// record's tab strip can span it.
+export const RECORD_VIEW_SCREENS: ReadonlySet<Screen> = new Set([
   "companies",
   "contacts",
   "leads",
@@ -228,80 +228,33 @@ export const GRIDDED_RECORD_SCREENS: ReadonlySet<Screen> = new Set([
   "projects",
 ]);
 
-// Id segments that name a page rather than a record, each on its own screen
-// only: `#/leads/import` is the lead whose id is "import".
-export const CREATE_ID = "new";
-export const IMPORT_ID = "import";
-
-/** The screens whose list opens a create form at `CREATE_ID`, which `C` opens. */
-export const CREATE_SCREENS: ReadonlySet<Screen> = new Set([
-  "contacts",
-  "companies",
-  "leads",
-  "deals",
-  "projects",
-]);
-
-/** `#/deals/new`: the list itself, with its create form open. */
-export function opensCreateForm(route: Route): boolean {
-  return route.id === CREATE_ID && CREATE_SCREENS.has(route.screen);
-}
-
-// A page of its own below the list, which the trail names.
-const RESERVED_PAGES: Readonly<
-  Partial<Record<Screen, { id: string; titleKey: MessageKey }>>
-> = {
-  contacts: { id: IMPORT_ID, titleKey: "vcardImport.title" },
+// The name of each reserved page.
+const RESERVED_PAGE_TITLES: Readonly<Record<ReservedPageScreen, MessageKey>> = {
+  contacts: "vcardImport.title",
 };
 
-export function opensReservedPage(route: Route): boolean {
-  return (
-    opensCreateForm(route) ||
-    (route.id !== undefined && RESERVED_PAGES[route.screen]?.id === route.id)
-  );
+// Off-rail screens that belong to a rail destination: the rail marks the
+// destination, and the tab title names it after the page.
+const PARENT_SCREENS: Readonly<Partial<Record<Screen, Screen>>> = {
+  partners: "companies",
+};
+
+export function parentScreenOf(route: Route): Screen | undefined {
+  return PARENT_SCREENS[route.screen];
 }
 
-// The trail, the agent's subject and the rail read a reserved page's name here.
+// The page heading, the agent's subject and the rail read its name here.
 export function reservedPageTitle(route: Route): MessageKey | undefined {
-  const page = RESERVED_PAGES[route.screen];
-  return route.id !== undefined && page?.id === route.id
-    ? page.titleKey
-    : undefined;
+  const page = reservedPageOf(route);
+  return page === undefined ? undefined : RESERVED_PAGE_TITLES[page];
 }
 
-// The trail, the page heading, the agent's subject and the rail all ask this.
+// The page heading, the agent's subject and the rail all ask this.
 export function recordKindOf(route: Route): EntityKind | undefined {
   return route.id === undefined || opensReservedPage(route)
     ? undefined
     : SCREEN_ENTITY[route.screen];
 }
-
-// Screens that keep the same reading column on every address they answer,
-// whatever segments follow, because none of them is drawn as a RecordView.
-// Every one of them reads DOWN. Brief is a briefing in sentences beside a rail
-// of context, with decision cards carrying drafted prose somebody has to read
-// before they can decide. Today is a queue worked top to bottom. Filters is a
-// list of saved views. An opened list reads down from its facts to its members
-// and history, and its library and Edit filter page keep this column too.
-// Analytics is a column of report sections. A share view is one record handed
-// to a reader, prose beside facts. An offer is a detail page drawing its own
-// surface. Uncapped, each of them ran a line of text the full width of a wide
-// display with the words hugging the left edge, which is the failure the cap
-// exists to prevent.
-//
-// The rest of the app is scanned ACROSS — a list, a board, a table — and the
-// cap only ever pushed columns off the right edge there.
-export const GRIDDED_SCREENS: ReadonlySet<Screen> = new Set([
-  "home",
-  "worklist",
-  "filters",
-  "lists",
-  "analytics",
-  "progress",
-  "goals",
-  "share",
-  "offers",
-]);
 
 // Documented rail-less exceptions (AC-shell layout exception): onboarding,
 // the public booking page, the extension client surfaces, and the OAuth
@@ -327,17 +280,9 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
 // It prints no heading: the navigation landmark names it, and its GROUPS are the
 // level-2 headings the sidebar promises.
 //
-// It carries the product's OWN destinations and nothing else. A composed unit
-// had a group of its own here once; it does not any more. An installation
-// enabling a unit is not the same as the product growing a twelfth
-// destination, and the rail is the one surface where that distinction is
-// visible to every contact who uses the app.
-//
-// The unit's screen is still reachable at `#/ext/<unit>`. What changed is
-// where it is OFFERED: Settings, on the page that holds the unit's credential,
-// features/automations/extension-units.tsx. That also puts the offer under the
-// right permission, because the two settings pages are already split by whose
-// thing each surface is.
+// It carries the product's own destinations, a fork's, then the apps that
+// composed units declare (navapps.ts). Vanilla declares none, so its rows are
+// the ones rail.test.tsx pins.
 // Which of the three headings a fork screen names, keyed by the heading it
 // declares. A fork says "records" and this is what that means to the rail — the
 // mapping lives here rather than in app/custom.ts because the group KEYS are
@@ -392,8 +337,9 @@ export function navLabelKey(
 
 function primaryLevel(
   route: Route,
-  disabled: readonly CoreFeature[],
+  disabled: readonly Withheld[],
   readsTeam: boolean,
+  apps: readonly UnitApp[],
 ): NavTrailLevel {
   return {
     groups: NAV_GROUPS.map((group) => ({
@@ -407,6 +353,10 @@ function primaryLevel(
             icon: item.icon,
           })),
         ...forkItems(group.headingKey),
+        ...appItems(
+          group.headingKey ? CUSTOM_NAV_GROUPS[group.headingKey] : undefined,
+          apps,
+        ),
       ],
     })).filter((group) => group.items.length > 0),
     ancestor: opensAPageBelow(route),
@@ -416,17 +366,14 @@ function primaryLevel(
   };
 }
 
-// Whether the active row is only the SECTION the page sits in rather than the
-// page itself: true exactly where the top bar's trail ends in a page of its own
-// below the screen. That is a record, a reserved segment that names its own page
-// (`#/contacts/import`), or a page below the Filters and views library. The trail
-// asks the same three predicates, which keeps exactly one element claiming
-// `aria-current="page"`; `route.id !== undefined` would demote the row on a
-// segment that opens no page, such as `#/filters/views`, the library itself.
+// Whether the active row is only the section the page sits in. That is a record,
+// a reserved page (`#/contacts/import`), or a page below the Filters library.
+// Not `route.id !== undefined`: `#/filters/views` is the library itself.
 function opensAPageBelow(route: Route): boolean {
   return (
     recordKindOf(route) !== undefined ||
     reservedPageTitle(route) !== undefined ||
+    parentScreenOf(route) !== undefined ||
     opensAFocusedFiltersPage(route)
   );
 }
@@ -434,11 +381,9 @@ function opensAPageBelow(route: Route): boolean {
 // Which primary row a route makes current. It is the route's screen for every
 // destination the product owns, and `settings` for a unit's — a unit screen
 // routes as `{screen: "ext", id: "<unit>"}` and has no row of its own. Nothing
-// in the sidebar renders that id today: Settings left the rail for the account
-// menu, so a unit route marks no row and the top bar's trail is what says where
-// the reader is (`Settings / <unit>`). The mapping stays because it is the
-// honest answer to the question — a unit IS reached from Settings — and because
-// the level machinery asks it for every route, unit routes included.
+// in the sidebar renders that id today, so a unit route marks no row. The
+// mapping stays because a unit is reached from Settings, and the level machinery
+// asks it for every route.
 function activeRowFor(route: Route): string {
   if (route.screen === EXTENSION_SCREEN) {
     return "settings";
@@ -450,8 +395,14 @@ function activeRowFor(route: Route): string {
   //
   // Falling back to the segment for `#/x` with no key: that address resolves to
   // no screen and marks no row, which is the honest answer for one.
-  if (route.screen === CUSTOM_SCREEN) {
+  // An app's row is keyed by its unit in the same way. Unlike `ext`, an app is
+  // a destination of the drawer and not a page under Settings.
+  if (route.screen === CUSTOM_SCREEN || route.screen === EXTENSION_APP_SCREEN) {
     return route.id ?? route.screen;
+  }
+  const parent = parentScreenOf(route);
+  if (parent) {
+    return parent;
   }
   // One list is a page of the library that lists it, and has no row of its own.
   if (route.screen === "lists") {
@@ -460,23 +411,29 @@ function activeRowFor(route: Route): string {
   return route.screen;
 }
 
+/** Whether the page is one of Settings', which the account menu leads to. */
+export function underSettings(route: Route): boolean {
+  return activeRowFor(route) === "settings";
+}
+
 // The levels the sidebar shows for a route: the destinations, then whatever the
 // screen on that route published under them.
 export function railTrail(
   route: Route,
   section?: NavSection,
-  disabled: readonly CoreFeature[] = [],
+  disabled: readonly Withheld[] = [],
   readsTeam = false,
+  apps: readonly UnitApp[] = [],
 ): readonly NavTrailLevel[] {
   return navTrail(
-    primaryLevel(route, disabled, readsTeam),
+    primaryLevel(route, disabled, readsTeam, apps),
     route,
     activeRowFor(route),
     section,
   );
 }
 
-export function firstAvailableRoute(disabled: readonly CoreFeature[]): Route {
+export function firstAvailableRoute(disabled: readonly Withheld[]): Route {
   return {
     screen:
       NAV.find((item) => screenEnabled(item.screen, disabled))?.screen ??
@@ -487,7 +444,7 @@ export function firstAvailableRoute(disabled: readonly CoreFeature[]): Route {
 export function walkUpTarget(
   parent: NavTrailLevel | undefined,
   origin: Route,
-  disabled: readonly CoreFeature[],
+  disabled: readonly Withheld[],
 ): Route {
   if (!parent || parent.path.length === 0 || !parent.activeId) {
     return screenEnabled(origin.screen, disabled)

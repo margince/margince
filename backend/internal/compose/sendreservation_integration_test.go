@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -146,12 +147,17 @@ func digestDecision(t *testing.T, d *digestEnv, a approvalNotifyEnv, summary str
 	return id, deal
 }
 
+// closeDateAhead is a close date the deal writer takes on any day the suite runs.
+func closeDateAhead(t *testing.T) string {
+	return clocktest.Now(t).AddDate(0, 1, 0).Format(time.DateOnly)
+}
+
 // stageDealDecision stages a close-date correction on a new deal the owner
 // decides, and returns the decision, its deal and the notice it raised.
 func stageDealDecision(t *testing.T, a approvalNotifyEnv, summary string, owner ids.UUID) (ids.ApprovalID, ids.UUID, ids.UUID) {
 	t.Helper()
 	a.deal = dealBeside(t, a, summary, owner)
-	proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](a.deal), ExpectedCloseDate: "2026-12-01", Basis: "the date has passed"})
+	proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](a.deal), ExpectedCloseDate: closeDateAhead(t), Basis: "the date has passed"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +203,8 @@ func digestWindow(seatCtx context.Context, t *testing.T, d *digestEnv) notices.W
 	var window notices.Window
 	if err := database.WithWorkspaceTx(seatCtx, d.Pool, func(tx pgx.Tx) error {
 		var err error
-		window, err = notificationWindow(seatCtx, tx, digestMorning)
+		actor, _ := principal.Actor(seatCtx)
+		window, err = notificationWindow(seatCtx, tx, occurredday.Personal, actor.UserID, digestMorning)
 		return err
 	}); err != nil {
 		t.Fatal(err)

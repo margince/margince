@@ -20,14 +20,14 @@ Margince Settings puts its pages in these groups:
 - **Data**: Mail capture, Integrations, Website forms, Knowledge, Data import, Automations.
 - **AI**: AI models, AI tool access, AI usage, AI call log.
 - **Compliance**: Privacy and retention, Jurisdiction, Audit log.
-- **System**: System health, [Configuration](configuration.md), Extensions, Reset data.
+- **System**: System health, [Configuration](configuration.md), Extensions, Reset data, About Margince.
 
 Some pages joined others as tabs. Search still finds them by their old names:
 - **Pipelines**, **Acquisition sources**, **Loss reasons** and **Outcome reviews** are tabs of **Deals**.
 - **Fields**, **Tags** and **Responsibility roles** are tabs of **Records and fields**.
 - **Capture activity** is the **Activity** tab of **Connections**.
 
-You see only the pages your permissions open. The Reset data page appears only where the installation turns it on.
+You see only the pages your permissions open. **About Margince** is open to everyone. The Reset data page appears only where the installation turns it on.
 
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.
@@ -63,7 +63,7 @@ Sales and data settings in Margince each have one page.
 - The price list, rate card and offer templates: **Products and offers**.
 - Turn each question sent from a form on your website into a lead: **Website forms**.
 - Upload a document set to ask questions of: **Knowledge**.
-- Import companies, contacts or prospects from a ZIP of CSV files or one CSV: **Data import**.
+- Import companies, contacts or leads from a ZIP of CSV files or one CSV: **Data import**.
 
 ### Which settings page do I need for AI, compliance and the system?
 AI, compliance and system settings in Margince each have one page.
@@ -135,11 +135,11 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 ### How do I add a second company we work under?
 <!-- opens: settings/company -->
 
-**Legal entities** lists the companies you work under. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for.
+**Legal entities** lists the companies you work under, each with its **Country** and **Jurisdiction**. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default. A colleague's booking page shows the company they work for.
 
-To add another, an Admin chooses **New legal entity**, types its name and legal name, and picks where it is based. Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A new offer is issued by the company its writer works for; see [Offers and the rate card](offers-and-products.md).
+An Admin adds another with **New legal entity**: its name, legal name, **Country** (where its address is) and **Jurisdiction** (the law it follows). Of the roles Margince ships, only Admin may change them, and a custom role can be given that permission too. Every other role sees the list and cannot change it. The ones you add can also say what they sell and to whom. On a company you can then choose which of them its fit rating is measured against. A new offer is issued by the company its writer works for; see [Offers and the rate card](offers-and-products.md).
 
-To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed. A logo is stored as soon as you choose it with **Edit** and **Upload logo** under the logo. For the default the form holds only where it is based, its **Bank details**, document language and imprint.
+To change one, open the menu on its row and choose **Edit**. The form holds its address, VAT ID, register entry, **Bank details**, document language, imprint, mail signature template, what it sells and its logo. **Save** stores only what you changed. A logo is stored as soon as you choose it with **Edit** and **Upload logo** under the logo. For the default the form holds only its **Bank details**, document language and imprint. It shows the law of the default, which you choose on **Settings → Compliance → Jurisdiction**.
 
 **Archive** in the same menu takes one off the list, and the default cannot be archived. Margince also refuses while colleagues still work for it or companies are rated against it. It then says what to change first. Once there are two, the **Members** page shows a **Legal entity** column, where an Admin chooses which one each colleague works for.
 ## Sign-in and security
@@ -157,11 +157,11 @@ The switch keeps its setting when someone resets data.
 Also called: require MFA, password MFA.
 
 ### How do I offer sign-in with Google or Microsoft?
-To offer sign-in with Google or Microsoft in Margince, store that company's app on Settings → **Sign-in and security** and keep its switch on.
-1. Under **Google app** or **Microsoft app**, open **Authorized redirect URIs**. Add each address to the app at Google or Microsoft.
-2. Enter the **Client ID** and **Client secret**, then choose **Store app**.
-3. Under **Sign-in methods**, check that **Continue with Google** or **Continue with Microsoft** is on.
-A provider that is on but has no app yet says it is not on the sign-in screen.
+To offer sign-in with Google or Microsoft in Margince, set up that company's app on Settings → **Sign-in and security** → **Sign-in apps**.
+1. Choose **Set up Google app** or **Set up Microsoft app**. The panel lists the addresses Google or Microsoft sends people back to: add each one to the app there.
+2. Enter the **Client ID** and **Client secret**, then choose **Save Google app** or **Save Microsoft app**.
+3. On the **Sign-in methods** tab, check that **Continue with Google** or **Continue with Microsoft** is on.
+A provider that is on but has no app yet says that it is not on the sign-in screen. It links to where you set up its app.
 Also called: single sign-on, Google login, Microsoft login.
 
 ## Members, Teams, and Seats and license
@@ -170,7 +170,7 @@ The Members, Teams, Roles and permissions, and Seats and license pages sit in th
 
 **Members** lists everyone with a seat, and what each one can open. Here you ask colleagues in, change a role, turn a user off and turn them on again. Only a role allowed to see users sees this page: Admin by default, or a custom role given that permission. Every seat can still look a colleague up in the lists for sharing and for picking an owner on a record. An Admin also picks a member's teams here, and a team name nobody has yet creates that team.
 
-**Teams** holds who is in each team, which decides who can open records shared with a team. Create one, archive it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it. See [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds).
+**Teams** holds who is in each team, which decides who can open records shared with a team. Create one, archive or restore it, and open a team to add or remove its members. Being in a team gives no access on its own, with one exception. A **Team lead** reads and works their team's records, so for them a team is what "their team" means. For every other built-in role, a team counts when a record is shared with it. See [Seats, roles and who can see what](seats-roles-and-access.md#row-scope-which-records-not-which-kinds).
 
 **Seats and license** shows how many seats the installation may use against how many are in use. See [the licence](seats-roles-and-access.md#the-licence).
 
@@ -194,7 +194,7 @@ The Mail capture page in Settings (group **Data**) decides what comes into the C
 
 **Mail sharing and sync**, on the first tab: whether captured mail is shared with colleagues, and how often each mailbox syncs. It holds for everybody, so it lives here. Your own **Connections** page shows the current sharing setting on a row marked **Whole company**.
 
-The same card holds **Held threads reviewed per run**. A mailbox set to *Held until checked* holds its mail until Margince has checked the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run looks at, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the run schedule, which System health sets.
+The same card sets how much each Margince check handles in one run. **Held threads reviewed per run** takes 1 to 200 and defaults to 40, and **Senders judged per run** takes 1 to 1000 and defaults to 200. **Messages labeled per run** and **Messages checked for a reply per run** take 1 to 2500 and default to 500. What a run leaves over waits for the next run. Raise a number when new mail stays hidden or without a label for longer than the run schedule, which System health sets. Mail in a mailbox set to *Held until checked* waits for the thread review ([Who can see an email](who-can-see-an-email.md)).
 
 **Own email domains** are the domains that belong to this company. Mail between colleagues is skipped by default. An Admin can add a mailbox and its folders under **Internal operational mail**. That mail stays with its participants. See [Capture](capture.md) for the source and history choices. Take note: no mailbox offers again the mail skipped while a domain is on this list.
 
@@ -212,7 +212,7 @@ The Sales group in Settings has one page per subject. There are the fields a rec
   - **Pipelines**: the stages a deal moves through, for the whole company. See [The pipeline](the-pipeline.md#pipelines-and-stages).
   - **Acquisition sources**: the business channels a deal can come from. Lead origins, which record where a lead came from, are separate.
   - **Loss reasons**: the reasons a seller picks when a deal is lost.
-  - **Outcome reviews**: questions a seller answers when a deal is won or lost. There is one set for won and one for lost.
+  - **Outcome reviews**: questions a seller answers when a deal is won or lost. Each outcome asks one template at a time; you can add templates and turn them on or off.
   - **Legal review**: whether a stage waits for legal. See [Legal review](legal-review.md).
   - **Forecast**: how the forecast counts open deals, and whether anyone sees a colleague's figures.
 - **Leads**: lead origins, reasons to drop a lead, and the first-reply target, which is off by default. Origins add or take away score points.
@@ -232,7 +232,7 @@ The AI group in Settings has the pages **AI models**, **AI tool access**, **AI u
 
 **Model routing**, on **AI models**, shows which model does each kind of work, listed by activity. What you see is the current setting; **AI call log** shows what ran. Settings that several kinds of work share sit under **Advanced**, and changing one can move several kinds of work at once. Prices show the cost of the text sent in and the text that comes back, per million tokens. To know where data goes and what it costs, check the model and provider shown on each row, not the tier name.
 
-Each row in **AI tasks** names its tier. Its name opens its state, what it does when the provider is down, and **View calls**. Opening the row sets how hard it reasons, and its time limits. Search and retrieval has neither: set its model under **Model tiers**.
+Each row in **AI tasks** names its tier. Its name opens what it does, the key it runs under, its state, what it does when the provider is down, and **View calls**. The task's sheet, **AI usage** and **AI call log** name a task the same way. Opening the row sets how hard it reasons, and its time limits. Search and retrieval has neither: set its model under **Model tiers**.
 
 Changes start to work in about 60 seconds; a call already running keeps its old setting.
 
@@ -317,10 +317,11 @@ Admin and Ops can see Retention and the **Held** list. The audit log and privacy
 
 System health and Reset data sit in the **System** group, and Data import in **Data**.
 
-**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass.
-Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review.
+**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass. Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review. **The reporting timezone cannot be read** means the server cannot load the saved time zone, so background work counts its days in UTC. Its button opens **Regional and calendar**, where an admin chooses the time zone again.
 
 **Not set up yet** lists each part nobody has set up, such as AI providers, search or restore tests. Each says what happened, why it matters and what to do, with a button that goes there. **Passing** lists the checks with nothing to do. **All checks** holds service status; **Diagnostics** shows the technical details.
+
+With **AI diagnostics read**, a **For information** group below **Passing** lists **Changes Home leaves out**. These are automatic changes from the last 7 days that Home cannot show. **All checks** counts them by record type and action. They are facts, not problems: they need no action, and the counts at the top leave them out.
 
 **Review mailbox decisions** lists who has choices waiting. **Review my choices** opens your **Worklist → Decisions** for proposed contacts, or your held conversations on the **Activity** tab of **Connections** for sharing choices. For another owner, copy a request with their personal review link. The request sends no message and gives you no access to their mail.
 
@@ -331,9 +332,9 @@ A canceled run is not a failed run. Deleted runs do not prove the work is done. 
 **System health > Schedules and sending** holds background schedules and mail send limits. Edits use the page save bar. The read-only [Configuration](configuration.md) page is separate.
 Moving to another view asks you to save a draft first. **Search settings** opens the view with the control you asked for.
 
-- **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
+- **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, leads, deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the AI finds.
-- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
+- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it. A step marked **Done, action needed** finished but left records for someone. It says why, what to do and how many records are left. Once that is done, choose **Retry** on the step to handle the records again.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
 - **AI provider status**: recorded provider problems. An empty list does not prove that a provider recently answered. See [AI providers](ai-providers.md).
 - **Mail capture checks**: connections that need attention, with the member, mailbox, condition and last good sync. Admin and Ops see no messages here.
@@ -343,10 +344,10 @@ Moving to another view asks you to save a draft first. **Search settings** opens
 - **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
   **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.
 - **Restore drills**: when a restore was tested, if it passed, and how long it took against the targets. Whoever runs the installation records each test. Margince does not see backups; the card says "Not observed by Margince". The same readers as Background jobs see it.
+- **Table space**: below **Restore drills**. It lists each table where at least 20% of the file, and at least 100 MB, holds no live row. It shows the command to run and the role that must run it. Margince never runs the command: it holds a lock on the table until it ends, so run it in a set window.
 - **Reset data**: takes an installation back to how it was on its first start.
-  It deletes every record and setting, but keeps the company and its users, so
-  everyone can still sign in. It appears only where whoever runs the
-  installation has turned it on.
+  It deletes every record and setting, but keeps the company and its users, so everyone can still sign in.
+  It appears only where whoever runs the installation has turned it on.
 
 ### Review automatic Home work
 
@@ -368,7 +369,7 @@ A changed rule or an old preview requires another review before starting.
 
 ## Data import
 
-The Data import page in Settings (group **Data**) brings in companies, contacts, prospects, deals and activities from CSV files. Only an admin or ops user can import.
+The Data import page in Settings (group **Data**) brings in companies, contacts, leads, deals and activities from CSV files. Only an admin or ops user can import.
 
 [Importing data](importing-data.md) holds the rest. It covers the template, the steps and the test run. It also covers deals, activities, importing the same file again, undo and the limits.
 

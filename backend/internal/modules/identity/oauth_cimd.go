@@ -134,7 +134,7 @@ func isDotSegment(segment string) bool { return segment == "." || segment == "..
 //
 // It answers errNotCIMD for anything that is not a metadata-document URL, which
 // is how the caller tells "resolve this from the table" from "this failed".
-func (s *Service) resolveCIMDClient(ctx context.Context, clientID string) error {
+func (s *Service) resolveCIMDClient(ctx context.Context, clientID string, unusedLimit int) error {
 	if err := cimdClientID(clientID); err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (s *Service) resolveCIMDClient(ctx context.Context, clientID string) error 
 			"client_id", clientID, "err", err)
 		return err
 	}
-	return s.upsertCIMDClient(ctx, doc, ttl)
+	return s.upsertCIMDClient(ctx, doc, ttl, unusedLimit)
 }
 
 // cimdCacheIsFresh reports whether the stored document is still believable.
@@ -195,7 +195,7 @@ func (s *Service) cimdCacheIsFresh(ctx context.Context, clientID string) (bool, 
 // opaque id happened to look like a URL would otherwise be re-provenanced by
 // anyone who could serve a document at that URL — and with it, its redirect
 // list. The conflict target is the row this document may own or nothing.
-func (s *Service) upsertCIMDClient(ctx context.Context, doc cimdDocument, ttl time.Duration) error {
+func (s *Service) upsertCIMDClient(ctx context.Context, doc cimdDocument, ttl time.Duration, unusedLimit int) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if !validAgentClientName(doc.ClientName) {
 			var unchanged bool
@@ -206,6 +206,19 @@ func (s *Service) upsertCIMDClient(ctx context.Context, doc cimdDocument, ttl ti
 			}
 			if !unchanged {
 				return fmt.Errorf("identity: client_name must use 1 to %d characters", maxAgentClientNameRunes)
+			}
+		}
+
+		// A document that makes a new row is a self-made client, held to the
+		// same cap a registration is.
+		var known bool
+		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM oauth_client WHERE client_id = $1)`,
+			doc.ClientID).Scan(&known); err != nil {
+			return err
+		}
+		if !known {
+			if err := makeRoomForSelfMadeClient(ctx, tx, unusedLimit); err != nil {
+				return err
 			}
 		}
 
@@ -333,6 +346,9 @@ func validCIMD(body []byte, clientID string) (cimdDocument, error) {
 	}
 	if len(doc.RedirectURIs) == 0 {
 		return cimdDocument{}, errors.New("identity: the client's metadata document lists no redirect_uris")
+	}
+	if !withinRedirectLimit(doc.RedirectURIs) {
+		return cimdDocument{}, fmt.Errorf("identity: the client's metadata document lists more than %d redirect_uris", maxAgentClientRedirects)
 	}
 	for _, raw := range doc.RedirectURIs {
 		// The SAME predicate a DCR registration is held to. One rule for what a

@@ -135,3 +135,25 @@ export const OpenedByItsAddress: Story = {
     ).toHaveAttribute("aria-keyshortcuts", "c");
   },
 };
+
+export const NameOnly: Story = {
+  render: form(),
+  play: async (context: Canvas) => {
+    const user = userEvent.setup();
+    await openWith(user, context);
+    const body = within(document.body);
+    await user.type(await body.findByLabelText("Full name *"), "Dana Buyer");
+    await expect(
+      body.getByText("Add at least one email, phone or LinkedIn URL."),
+    ).toBeVisible();
+    await user.click(body.getByRole("button", { name: "Create" }));
+    await expect(document.activeElement).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(document.activeElement).toHaveAccessibleDescription(
+      expect.stringContaining("Add at least one email, phone or LinkedIn URL."),
+    );
+  },
+};
+export const NameOnlyDark: Story = { ...NameOnly, globals: { theme: "dark" } };

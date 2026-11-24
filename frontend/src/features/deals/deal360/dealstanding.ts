@@ -12,10 +12,8 @@ import {
   activityIsAhead,
   type OccurredPrecision,
 } from "../../../format/activitywhen";
-import { calendarDaysUntil } from "../../../format/daysuntil";
 import { calendarDaysBetween } from "../../../format/format";
-import { messageFromOutside } from "../../../lib/messagevoice";
-import { ghostCount } from "./dealcommittee";
+import { committeeContacts, ghostCount } from "./dealcommittee";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -29,6 +27,8 @@ type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];
 export type DealLadderControl = Readonly<{
   advancing: boolean;
   advanceRefused: boolean;
+  /** The deal's pipeline is retired, so its stages are shown and not offered. */
+  pipelineRetired?: boolean;
   refusedReasonId?: string;
   onAdvance: (toStage: Stage) => void;
 }>;
@@ -41,6 +41,9 @@ export type DealStandingInputs = Readonly<{
   // The instant the page was read at: where today stands on the axis.
   asOf: string;
   activities: readonly Activity[];
+  // The newest message the other side wrote, read by the server over every
+  // row rather than off the loaded page.
+  lastInbound?: Activity;
   // The list `activities` came from, which pages older rows in for the line.
   history?: TimelineHistory;
   offers: readonly Offer[] | undefined;
@@ -92,17 +95,18 @@ export type Momentum =
   | Readonly<{ state: "quiet" }>;
 
 /**
- * Whether the buyer's wait date still pauses the deal on `now`. The server's
- * stall rule ends the pause on that day, so the page must not outlast it.
+ * Whether the buyer's wait date still pauses the deal at `now`. The server ends
+ * the pause at `waitEndsAt`, the start of that day in the deal owner's zone.
+ * The page reads that instant. It never re-cuts the date in the viewer's zone.
+ * A server that sends no instant is read as UTC midnight.
  */
 export function waitHolds(
   waitUntil: string | null | undefined,
-  zone: string,
+  waitEndsAt: string | null | undefined,
   now: Date,
 ): waitUntil is string {
-  return (
-    Boolean(waitUntil) && calendarDaysUntil(waitUntil ?? "", zone, now) > 0
-  );
+  if (!waitUntil) return false;
+  return Date.parse(waitEndsAt ?? waitUntil) > now.getTime();
 }
 
 /**
@@ -111,8 +115,10 @@ export function waitHolds(
  * on hold only on a deal that is not stalled, and only until that day.
  */
 export function momentumOf(
-  deal: Pick<Deal, "stalled" | "wait_until" | "last_activity_at">,
-  zone: string,
+  deal: Pick<
+    Deal,
+    "stalled" | "wait_until" | "wait_ends_at" | "last_activity_at"
+  >,
   now: Date,
 ): Momentum {
   if (deal.stalled) {
@@ -120,7 +126,7 @@ export function momentumOf(
       ? { state: "stalled", since: deal.last_activity_at }
       : { state: "stalled" };
   }
-  if (waitHolds(deal.wait_until, zone, now)) {
+  if (waitHolds(deal.wait_until, deal.wait_ends_at, now)) {
     return { state: "on_hold", until: deal.wait_until };
   }
   if (deal.last_activity_at) {
@@ -158,10 +164,11 @@ export function committeeOf(
   if (!coverage?.stakeholders || withheld) {
     return { state: "unknown" };
   }
+  const contacts = committeeContacts(coverage.stakeholders);
   return {
     state: "read",
-    named: coverage.stakeholders.length,
-    engaged: coverage.stakeholders.filter((seat) => seat.engaged).length,
+    named: contacts.length,
+    engaged: contacts.filter((contact) => contact.engaged).length,
     gaps: ghostCount(coverage.risks ?? []),
   };
 }
@@ -202,13 +209,14 @@ export function closeTone(
 /**
  * When the deal entered each stage, from the advance rows of its field
  * history. A stage visited twice keeps its latest entry, because the time
- * spent there now runs from the last arrival. When the history is whole but
- * has no creation row (an import), the stage the first advance left is dated
- * by the deal's creation. A cut history dates nothing it cannot see.
+ * spent there now runs from the last arrival. A history may be whole but have
+ * no creation row (an import). Then the deal's creation dates the stage the
+ * first advance left, as it dates the stage of a deal that never moved. A cut
+ * history dates nothing it cannot see.
  */
 export function stageEntries(
   history: readonly FieldHistoryEntry[],
-  deal: Pick<Deal, "created_at">,
+  deal: Pick<Deal, "created_at" | "stage_id">,
   complete: boolean,
 ): ReadonlyMap<string, string> {
   const entries = new Map<string, string>();
@@ -216,8 +224,9 @@ export function stageEntries(
     .filter((row) => row.field === "stage_id" && row.new_value)
     .sort((a, b) => Date.parse(a.changed_at) - Date.parse(b.changed_at));
   const first = rows[0];
-  if (complete && first?.old_value) {
-    entries.set(first.old_value, deal.created_at);
+  const startedIn = first ? first.old_value : deal.stage_id;
+  if (complete && startedIn) {
+    entries.set(startedIn, deal.created_at);
   }
   for (const row of rows) {
     if (row.new_value) {
@@ -268,22 +277,28 @@ export function stageTimes({
 }
 
 /**
- * The offer that stands: the newest revision not replaced by a later one.
- * Drafts count, because a draft is what the deal is about to say.
+ * The offer that stands is the accepted one, because accepting it set the
+ * deal's value. Without one, it is the latest draft or sent offer.
+ * A rejected or expired offer says nothing about what the deal will be.
  */
 export function standingOffer(
   offers: readonly Offer[] | undefined,
 ): Offer | undefined {
-  let best: Offer | undefined;
-  for (const offer of offers ?? []) {
-    if (offer.status === "superseded" || offer.archived_at) {
-      continue;
-    }
-    if (!best || offer.revision > best.revision) {
-      best = offer;
-    }
+  const live = (offers ?? []).filter((offer) => !offer.archived_at);
+  const latest = (candidates: Offer[], at: (offer: Offer) => string) =>
+    candidates.reduce<Offer | undefined>(
+      (best, offer) =>
+        !best || Date.parse(at(offer)) > Date.parse(at(best)) ? offer : best,
+      undefined,
+    );
+  const accepted = live.filter((offer) => offer.status === "accepted");
+  if (accepted.length > 0) {
+    return latest(accepted, (offer) => offer.accepted_at ?? offer.created_at);
   }
-  return best;
+  return latest(
+    live.filter((offer) => offer.status === "draft" || offer.status === "sent"),
+    (offer) => offer.created_at,
+  );
 }
 
 export type NextStep = Readonly<{
@@ -358,27 +373,4 @@ function soonest(
     }
   }
   return best;
-}
-
-/**
- * The newest message the other side wrote, from the loaded page of the
- * timeline. Read from the recorded author, not the direction: a colleague's
- * mail arrives inbound too. A row no human wrote (automatic_kind) is no word.
- */
-export function lastInbound(
-  activities: readonly Activity[],
-): Activity | undefined {
-  let latest: Activity | undefined;
-  for (const row of activities) {
-    if (row.automatic_kind || !messageFromOutside(row)) {
-      continue;
-    }
-    if (
-      !latest ||
-      Date.parse(row.occurred_at) > Date.parse(latest.occurred_at)
-    ) {
-      latest = row;
-    }
-  }
-  return latest;
 }

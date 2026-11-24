@@ -20,10 +20,14 @@ import (
 
 // attentionRecorder stands in for the host's notice, a true boundary here: it
 // records the episodes the host would be told about.
-type attentionRecorder struct{ episodes []ids.UUID }
+type attentionRecorder struct {
+	episodes []ids.UUID
+	reasons  []string
+}
 
-func (a *attentionRecorder) InvitationAttentionTx(_ context.Context, _ pgx.Tx, _ ids.UserID, _, episode ids.UUID, _ string) error {
+func (a *attentionRecorder) InvitationAttentionTx(_ context.Context, _ pgx.Tx, _ ids.UserID, _, episode ids.UUID, reason string) error {
 	a.episodes = append(a.episodes, episode)
+	a.reasons = append(a.reasons, reason)
 	return nil
 }
 

@@ -79,23 +79,29 @@ func (s *Store) PreviewControllerMail(ctx context.Context, contactID ids.Contact
 var errMailPreviewDone = errors.New("consent: mail preview complete")
 
 func (s *Store) previewControllerMailTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, kind, language string) (ControllerMailPreview, error) {
-	to, err := admitLinkTx(ctx, tx, linkRequest{contactID: contactID, preview: true})
+	admitted, err := admitLinkTx(ctx, tx, linkRequest{contactID: contactID, preview: true})
 	if err != nil {
 		return ControllerMailPreview{}, err
 	}
+	to := admitted.deliveredTo
 	if !s.canSendConfirm() {
 		return ControllerMailPreview{}, ErrNoMailLane
+	}
+	rules, err := s.confirmRulesTx(ctx, tx, linkSubjectOf(contactID, ids.LeadID{}), kind, askedPurpose{}, to, false)
+	if err != nil {
+		return ControllerMailPreview{}, err
 	}
 	issued := s.now().UTC()
 	in := confirmMailInput{
 		contactID: contactID, recipient: to, kind: kind,
 		language: s.sendLanguage(ctx, tx, language), expiresAt: issued.Add(confirmTokenTTL),
+		asksNews: rules.asksNews,
 	}
 	// The engine allows a confirmation only on a live link of its kind, so the
 	// preview writes one, digest only, which the rollback above undoes.
 	if _, err := insertContactLinkTx(ctx, tx, contactLink{
 		contactID: contactID, tokenHash: hashPublicToken(ids.NewV7().String()), deliveredTo: to,
-		issued: issued, expires: in.expiresAt, kind: kind, language: in.language,
+		issued: issued, expires: in.expiresAt, kind: kind, language: in.language, rules: rules,
 	}); err != nil {
 		return ControllerMailPreview{}, err
 	}
@@ -103,7 +109,7 @@ func (s *Store) previewControllerMailTx(ctx context.Context, tx pgx.Tx, contactI
 	if err != nil {
 		return ControllerMailPreview{}, err
 	}
-	presented, err := s.confirmSender.PresentConfirmationTx(ctx, tx, ConfirmationSend{
+	presented, err := s.presentControllerMailTx(ctx, tx, ConfirmationSend{
 		ContactID: contactID, Recipient: to, Category: category, ExpiresAt: in.expiresAt, Rendered: rendered,
 	})
 	if err != nil {

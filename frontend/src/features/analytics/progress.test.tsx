@@ -154,6 +154,11 @@ describe("ProgressReadings", () => {
   it("names what sold and counts the deals no line could place", () => {
     render(<ProgressReadings progress={sellerMarch} onEvidence={vi.fn()} />);
     expect(
+      screen.getByText(
+        /^Open deals as of .+ · Central European Summer Time · UTC\+2$/,
+      ),
+    ).toBeTruthy();
+    expect(
       screen.getByText("Fleet Suite, Telematics, Driver App and 1 more"),
     ).toBeTruthy();
     expect(screen.getByText("Unclassified")).toBeTruthy();
@@ -167,6 +172,7 @@ describe("ProgressReadings", () => {
     await user.click(screen.getAllByRole("button")[0] as HTMLElement);
     expect(onEvidence).toHaveBeenCalledWith(
       expect.objectContaining({ group_key: "kind:software" }),
+      "Product sales",
     );
     cleanup();
     render(
@@ -393,7 +399,7 @@ describe("ProgressScreen", () => {
     ).toBeNull();
   });
 
-  it("offers no team the reader may not measure, and opens Analytics on the same days", async () => {
+  it("offers no team the reader may not measure, names the zone of its cutoff, and opens Analytics on the same days", async () => {
     installFetchStub({
       "GET /me": meRoute({ lead: ["read"] }),
       "GET /analytics/context": () =>
@@ -420,6 +426,11 @@ describe("ProgressScreen", () => {
     const user = userEvent.setup();
     render(<ProgressScreen />);
     expect((await screen.findAllByText("Sales won")).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(
+        /^Figures up to .+ · Central European Summer Time · UTC\+2$/,
+      ),
+    ).toBeTruthy();
     expect(screen.queryByLabelText("Team member or team")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Open in Analytics" }));
     expect(window.location.hash).toMatch(/^#\/analytics\/performance\?/);

@@ -1,20 +1,12 @@
 # CASE 81 — A subject asking for their data opens a request in the queue. It is not a task and not a note.
 name: case81_she_wants_her_data
+title: She wants to see her data
 criteria: [1]
 writes: true
 
 prompt: |
   Katrin Sommer (katrin.sommer@reply.test) wrote asking which personal data we hold about her. Open a data
   subject access request for it, received today.
-
-must_call:
-  - change_compliance
-
-must_call_with:
-  - change_compliance.action=open_data_subject_request
-
-must_call_matching:
-  - open_data_subject_request~"kind": "access"
 
 must_not_call_with:
   - create_record~.
@@ -27,9 +19,13 @@ may_call:
   - read_record
   - read_workspace
   - whoami
+  - change_compliance
 
 must_mention:
   - "Katrin"
+
+must_end_with:
+  - contact "Katrin Sommer" data_subject_request=access
 
 runs: 3
 pass_at: 2

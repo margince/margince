@@ -37,9 +37,12 @@ Settings in Margince, by page:
 - How do I book a meeting with a contact, move or cancel it, or fix an invitation that needs attention? → [Meetings and booking](meetings-and-booking.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - How do I invite a colleague or change a role? → [Seats, roles and who can see what](seats-roles-and-access.md)
+- How do I make a new role, or change what a role can do? → [Roles and permissions](roles-and-permissions.md)
+- How do I turn a kind of notice off, or get it by email? → [Notifications](notifications.md)
 - How many days are left of the trial, and how do I get a licence? → [The trial](the-trial.md)
 - How do I add an AI provider's key, connect OpenRouter, or choose a Vertex location? → [AI providers](ai-providers.md)
 - What happens to an AI task while its provider is down? → [AI providers](ai-providers.md)
+- Which AI model should I choose, and which AI assistant can I connect? → [Which AI can I use with Margince?](which-ai-you-can-use.md)
 
 Records, deals and mail in Margince, by page:
 - How do record links appear in a message? → [Sharing record links](sharing-record-links.md)
@@ -54,6 +57,7 @@ Records, deals and mail in Margince, by page:
 - How do I create and send an offer (a quote)? → [Offers and the rate card](offers-and-products.md)
 - How do I ask legal to review a deal, or make a stage wait for legal? → [Legal review](legal-review.md)
 - How do I set up a partner, or credit and pay a partner's commission? → [Partners and commission](partners.md)
+- Which companies have gone quiet, and who is asked to follow up? → [Companies that have gone quiet](quiet-companies.md)
 - What is on a project page, and how do I start delivery? → [Leads, deals and projects](leads-deals-and-projects.md)
 - How do I send or schedule an email? → [Writing and sending mail](sending-mail.md)
 - Where is my Worklist, and how do I snooze or pin? → [Your day](your-day.md)
@@ -64,6 +68,7 @@ Records, deals and mail in Margince, by page:
 - How do I give a deal or project its own channel in the team chat? → [Team chat channels](chat-channels.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
+- Why does the archive keep old mail, and how do I delete what it no longer needs? → [The archive and its purpose](the-archive.md)
 - What does the import preview show, and how do I correct companies with a spreadsheet? → [Importing data](importing-data.md)
 - What happens if I import the same file again? → [Importing data](importing-data.md)
 
@@ -148,6 +153,8 @@ Records, deals and mail in Margince, by page:
 - [What the AI does, and what it does not](what-the-ai-does.md): what the AI
   makes for you: drafts, document reads and the overnight brief. How every claim
   it works out carries its evidence.
+- [Which AI can I use with Margince?](which-ai-you-can-use.md): the two ways AI works with
+  Margince. Which model setups and assistants we tested, and how each did.
 - [AI providers](ai-providers.md): what each provider needs. That is a key, a
   host for an OpenAI-compatible service or decision model, or the OpenRouter
   hosts that keep data in the EU. Gemini on Vertex AI needs a location.
@@ -184,10 +191,15 @@ Records, deals and mail in Margince, by page:
   archiving and deleting.
   Erasure and what else it removes, and the legal floor no administrator can
   override. Consent, the audit trail, and what you can export.
+- [The archive and its purpose](the-archive.md): why the archive keeps old
+  mail. How an admin reviews it and deletes what it no longer needs.
 - [Seats, roles and who can see what](seats-roles-and-access.md): full and read
   seats, and the six roles. Why reading a customer record ignores row scope,
   and who can see one record. Teams, sharing, inviting and removing colleagues,
   and what a refusal looks like.
+- [Companies that have gone quiet](quiet-companies.md): the four steps from
+  **Active** to **Stale**, the filter on **Companies**, and the suggestion to
+  get back in touch.
 - [Relationships, introductions and research](relationships-and-research.md):
   who here already knows somebody, and how that is measured. Asking a colleague
   for a warm introduction, and the four answers they can give. What a website
@@ -196,6 +208,10 @@ Records, deals and mail in Margince, by page:
   invitation, offering times and sharing personal links. What the invitation
   states mean, and moving, cancelling or retrying a meeting. Reminders, what
   counts as busy, and what a guest sees.
+- [Notifications](notifications.md): the kinds of notice you can set, the choices each one offers, and the
+  browser reminder row.
+- [Roles and permissions](roles-and-permissions.md): the Settings page that lists roles. Making a role, changing
+  its rights and whose records it changes, and archiving or restoring one.
 - [Your own settings](your-own-settings.md): changing your password, display
   name, language and theme, and turning off single-key shortcuts. Your email
   signature, your meetings and booking link, and your writing voice. Your agent

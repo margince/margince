@@ -25,6 +25,10 @@ func (k *withheldOnlyKeeper) Stage(context.Context, []CapturedFile) ([]StagedFil
 	return nil, errors.New("not reached")
 }
 
+func (k *withheldOnlyKeeper) Discard(context.Context, []StagedFile) error {
+	return errors.New("not reached")
+}
+
 func (k *withheldOnlyKeeper) Record(context.Context, pgx.Tx, ids.ActivityID, FileSource, []StagedFile) error {
 	return errors.New("not reached")
 }

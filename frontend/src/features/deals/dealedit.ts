@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { createContext, useState } from "react";
 import type { CreateField } from "../../components/create";
 import {
   useNoPartnersYet,
@@ -9,9 +9,7 @@ import {
 } from "../../components/dealpartnerfields";
 import { useEntityName } from "../../components/entityref";
 import type { RailEdit } from "../../components/railfield";
-import { saveRecordEdit } from "../../components/recordedit";
 import type { FieldGroup } from "../../components/recordfieldtypes";
-import { rawRecord } from "../../components/recordfieldtypes";
 import { useOwnerPicker, useRecordOwners } from "../../components/recordowners";
 import { useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
@@ -28,7 +26,7 @@ import {
   dealEditFields,
   editProjectFields,
 } from "./deals.fields";
-import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
+import { openDealEdit, saveDealEdit, stringValues } from "./deals.write";
 
 // The masked money columns as the form's keys.
 function formKey(column: string): string {
@@ -36,6 +34,10 @@ function formKey(column: string): string {
   if (column === "expected_arr_minor") return "expected_arr";
   return column;
 }
+
+// The deal page's one edit, built by its record view. A card under the page
+// reads it here instead of mounting a second copy of the edit's reads.
+export const DealEditContext = createContext<RailEdit | undefined>(undefined);
 
 /**
  * How a deal's fields change: the fields, the groups that change together,
@@ -147,7 +149,7 @@ export function useDealEdit(
         keys: ["partner_company_id", "partner_attribution"],
       },
     ],
-    record: { ...dealEditRecord(deal), original: deal },
+    record: openDealEdit(deal, locale),
     onValuesChange: setFormValues,
     save: async (values, _rows, opened) => {
       const submitted = stringValues({ ...opened, ...values });
@@ -158,14 +160,11 @@ export function useDealEdit(
             t,
           )
         : submitted.project_id;
-      return saveRecordEdit(
-        "deal",
-        rawRecord(opened),
-        mapDealUpdate(
-          { ...opened, ...values, project_id: projectId ?? "" },
-          opened,
-          masked,
-        ),
+      return saveDealEdit(
+        opened,
+        { ...values, project_id: projectId ?? "" },
+        masked,
+        locale,
       );
     },
   };

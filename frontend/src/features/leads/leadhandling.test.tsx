@@ -3,8 +3,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, expect, it, vi } from "vitest";
+import { useLeadDisqualifyReasons } from "../../lib/leaddisqualifyreasons";
 import { labelsIn } from "../../testing/shippedlabels.testkit";
-import { useLeadDisqualifyReasons } from "./leadhandling";
 
 afterEach(() => {
   vi.unstubAllGlobals();

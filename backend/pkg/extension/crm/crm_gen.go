@@ -390,6 +390,27 @@ func (e ActivityEmailTargetRefusal) Valid() bool {
 	}
 }
 
+// Defines values for ActivityLinkDealRelevance.
+const (
+	LinkDealRelevanceRelevant  ActivityLinkDealRelevance = "relevant"
+	LinkDealRelevanceUncertain ActivityLinkDealRelevance = "uncertain"
+	LinkDealRelevanceUnrelated ActivityLinkDealRelevance = "unrelated"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkDealRelevance enum.
+func (e ActivityLinkDealRelevance) Valid() bool {
+	switch e {
+	case LinkDealRelevanceRelevant:
+		return true
+	case LinkDealRelevanceUncertain:
+		return true
+	case LinkDealRelevanceUnrelated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityLinkEntityType.
 const (
 	ActivityLinkEntityTypeCompany ActivityLinkEntityType = "company"
@@ -411,6 +432,24 @@ func (e ActivityLinkEntityType) Valid() bool {
 	case ActivityLinkEntityTypeLead:
 		return true
 	case ActivityLinkEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityLinkRelevanceSource.
+const (
+	LinkRelevanceSourceClassifier ActivityLinkRelevanceSource = "classifier"
+	LinkRelevanceSourceHuman      ActivityLinkRelevanceSource = "human"
+)
+
+// Valid indicates whether the value is a known member of the ActivityLinkRelevanceSource enum.
+func (e ActivityLinkRelevanceSource) Valid() bool {
+	switch e {
+	case LinkRelevanceSourceClassifier:
+		return true
+	case LinkRelevanceSourceHuman:
 		return true
 	default:
 		return false
@@ -1056,6 +1095,30 @@ func (e DealLastEmailDirection) Valid() bool {
 	case DealLastEmailDirectionInbound:
 		return true
 	case DealLastEmailDirectionOutbound:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealWinChanceEffectSignal.
+const (
+	ClosePushed DealWinChanceEffectSignal = "close_pushed"
+	NoNextStep  DealWinChanceEffectSignal = "no_next_step"
+	Quiet       DealWinChanceEffectSignal = "quiet"
+	Stuck       DealWinChanceEffectSignal = "stuck"
+)
+
+// Valid indicates whether the value is a known member of the DealWinChanceEffectSignal enum.
+func (e DealWinChanceEffectSignal) Valid() bool {
+	switch e {
+	case ClosePushed:
+		return true
+	case NoNextStep:
+		return true
+	case Quiet:
+		return true
+	case Stuck:
 		return true
 	default:
 		return false
@@ -1980,7 +2043,7 @@ type Activity struct {
 	// RemindIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	RemindIntent *IntentTime `json:"remind_intent,omitempty"`
 
-	// ReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
 	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
@@ -2060,7 +2123,7 @@ type ActivityMeetingStatus string
 // a message owed our answer is `none`, as for mail.
 type ActivityMessageMove string
 
-// ActivityReplyChannel Task only. For a `reply` task, the kind of the activity it answers (`source_activity_id`), so the answer goes back the way the message came in. Null for every other type, and for a reply with no source of one of these kinds.
+// ActivityReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a promise made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 type ActivityReplyChannel string
 
 // ActivityAudience Who may read an activity's content — see Activity.audience.
@@ -2126,14 +2189,30 @@ type ActivityFollowUpTask struct {
 
 // ActivityLink defines model for ActivityLink.
 type ActivityLink struct {
-	ActivityId *string                `json:"activity_id,omitempty"`
-	EntityId   string                 `json:"entity_id"`
-	EntityType ActivityLinkEntityType `json:"entity_type"`
-	Id         *string                `json:"id,omitempty"`
+	ActivityId *string `json:"activity_id,omitempty"`
+
+	// DealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+	// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+	// it; only `unrelated` also leaves it out of the silent close.
+	DealRelevance *ActivityLinkDealRelevance `json:"deal_relevance,omitempty"`
+	EntityId      string                     `json:"entity_id"`
+	EntityType    ActivityLinkEntityType     `json:"entity_type"`
+	Id            *string                    `json:"id,omitempty"`
+
+	// RelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+	RelevanceSource *ActivityLinkRelevanceSource `json:"relevance_source,omitempty"`
 }
+
+// ActivityLinkDealRelevance On a deal link only: whether the activity is about the deal. Absent when nobody judged
+// it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+// it; only `unrelated` also leaves it out of the silent close.
+type ActivityLinkDealRelevance string
 
 // ActivityLinkEntityType defines model for ActivityLink.EntityType.
 type ActivityLinkEntityType string
+
+// ActivityLinkRelevanceSource Who set `deal_relevance`. The classifier never changes a mark a human set.
+type ActivityLinkRelevanceSource string
 
 // ActivityReference One activity a derived number was computed from, named well enough to be
 // recognised and opened.
@@ -2441,8 +2520,11 @@ type CompanyDomain struct {
 // `reason` is the honest floor for a field with no backend data model yet — the row is
 // still returned, never omitted or fabricated.
 type ComputedField struct {
-	Computable   bool     `json:"computable"`
-	Dependencies []string `json:"dependencies"`
+	Computable bool `json:"computable"`
+
+	// Coverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+	Coverage     *ReportRowCoverage `json:"coverage,omitempty"`
+	Dependencies []string           `json:"dependencies"`
 
 	// FormulaSql The literal GENERATED-column/view SQL definition; empty string when computable=false.
 	FormulaSql string            `json:"formula_sql"`
@@ -2450,7 +2532,7 @@ type ComputedField struct {
 	Kind       ComputedFieldKind `json:"kind"`
 	Label      string            `json:"label"`
 
-	// Reason Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx".
+	// Reason Set (non-null) iff computable=false, e.g. "not_yet_built", "awaiting_fx", "partial_pipeline", or "amount_withheld" when the reader's deal amount or currency is masked.
 	Reason *string `json:"reason,omitempty"`
 
 	// Value Present (and non-null) only when kind is count/duration_months/percent and computable=true.
@@ -2602,7 +2684,10 @@ type CreateActivityRequestMeetingStatus string
 type Deal struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
+	AiWrittenFields *[]string `json:"ai_written_fields,omitempty"`
+	AmountMinor     *int64    `json:"amount_minor,omitempty"`
 
 	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
@@ -2658,7 +2743,7 @@ type Deal struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+	// LastActivityAt The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
@@ -2696,7 +2781,9 @@ type Deal struct {
 	// ProjectId The body of work this deal belongs to. A deal has at most one project; a project carries several deals over time. The deal and the project must name the same company — a cross-company pointer is refused 422. Null when the caller may not read that project, in which case `masked_fields` names it.
 	ProjectId *string                 `json:"project_id,omitempty"`
 	Raw       *map[string]interface{} `json:"raw,omitempty"`
-	Source    string                  `json:"source"`
+
+	// Source The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.
+	Source string `json:"source"`
 
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *string `json:"stage_id"`
@@ -2716,10 +2803,16 @@ type Deal struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
+	// WaitEndsAt The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+	WaitEndsAt *time.Time `json:"wait_ends_at,omitempty"`
+
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *string `json:"wait_until,omitempty"`
 
-	// WinProbability The chance this deal is won, in percent: the deal's own probability where somebody set one, else its stage's. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
+	// WinChance How `win_probability` of an open deal was made, from the one function every screen, report and tool reads. Absent on a won or lost deal.
+	WinChance *DealWinChance `json:"win_chance,omitempty"`
+
+	// WinProbability The chance this deal is won, in percent. An open deal that follows its stage reads the stage's typed chance moved by what this installation's closed deals show and by the risk effect of the deal's strongest signal; `win_chance` says how. A probability set on the deal stands as set. Won deals read 100 and lost deals 0 through their stage. Moving the deal to another stage sets it back to that stage's probability.
 	WinProbability *int `json:"win_probability,omitempty" maximum:"100" minimum:"0"`
 
 	// WinProbabilitySetByName The display name of `win_probability_set_by_user_id`, so the deal can say who set its probability.
@@ -2728,7 +2821,7 @@ type Deal struct {
 	// WinProbabilitySetByUserId The colleague who set `win_probability`, read from the newest change of it: the member who typed it, or the member an agent set it for. Absent unless `win_probability_source` is `human`, and when that member's seat no longer exists.
 	WinProbabilitySetByUserId *string `json:"win_probability_set_by_user_id,omitempty"`
 
-	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+	// WinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 	WinProbabilitySource *DealWinProbabilitySource `json:"win_probability_source,omitempty"`
 
 	// WonWithoutContractDetail Required when the reason is `other`, which explains nothing on its own.
@@ -2757,7 +2850,7 @@ type DealPriority string
 // DealStatus defines model for Deal.Status.
 type DealStatus string
 
-// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince lowered it on a deal nobody touched.
+// DealWinProbabilitySource Where `win_probability` comes from: `stage` while the deal follows its stage, `human` when a colleague set it, `margince` when Margince set it on a deal.
 type DealWinProbabilitySource string
 
 // DealWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
@@ -2775,6 +2868,42 @@ type DealLastEmail struct {
 
 // DealLastEmailDirection Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
 type DealLastEmailDirection string
+
+// DealWinChance The parts of one deal's win chance. `explanation` is the same fact as one English line for a tool or a brief; a screen words it from the fields.
+type DealWinChance struct {
+	// EffectDays How many days the signal has held, where it has a length.
+	EffectDays *int `json:"effect_days,omitempty" minimum:"0"`
+
+	// EffectLearned True when the effect comes from this installation's own closed deals; false when it is the fixed halving used while too few have closed.
+	EffectLearned *bool `json:"effect_learned,omitempty"`
+
+	// EffectSample How many closed deals the learned effect rests on.
+	EffectSample *int `json:"effect_sample,omitempty" minimum:"0"`
+
+	// EffectSignal The risk signal that moved the chance. Null when none did.
+	EffectSignal *DealWinChanceEffectSignal `json:"effect_signal,omitempty"`
+
+	// EvidenceN How many deals that entered the stage have closed. Null while learning is off or the probability was set on the deal.
+	EvidenceN *int `json:"evidence_n,omitempty" minimum:"0"`
+
+	// Explanation The one-line reason for the chance, in English.
+	Explanation string `json:"explanation"`
+
+	// InUse The typed chance moved by the stage outcomes, before any risk effect.
+	InUse int `json:"in_use" maximum:"100" minimum:"0"`
+
+	// SelfCorrecting False while the installation switched learning off, so every chance stays the typed one.
+	SelfCorrecting bool `json:"self_correcting"`
+
+	// Typed The chance typed on the deal's stage.
+	Typed int `json:"typed" maximum:"100" minimum:"0"`
+
+	// WonShare The percent of those closed deals that were won.
+	WonShare *int `json:"won_share,omitempty" maximum:"100" minimum:"0"`
+}
+
+// DealWinChanceEffectSignal The risk signal that moved the chance. Null when none did.
+type DealWinChanceEffectSignal string
 
 // EmailAccessStatus What a reader is allowed to know about who else reads this message, in one word the
 // badge can print.
@@ -3004,6 +3133,11 @@ type EmailSummary struct {
 	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
 
+	// OurReply Present on an open request with an unfinished reminder when our reply on its thread
+	// is newer than it and is still the newest message there. The request stays open: a
+	// reply settles nothing by itself. Absent when the source is withheld.
+	OurReply *RequestReply `json:"our_reply,omitempty"`
+
 	// Preview One line of the sender's own text, signature and quoted history already removed.
 	// Null when withheld, and when the message has no text of its own.
 	Preview *string `json:"preview,omitempty"`
@@ -3114,8 +3248,11 @@ type Partner struct {
 	CreatedAt time.Time `json:"created_at"`
 
 	// GateMetrics Program gate metrics (certified seats, CSAT, ...).
-	GateMetrics   *map[string]interface{} `json:"gate_metrics,omitempty"`
-	LastContactAt *time.Time              `json:"last_contact_at,omitempty"`
+	GateMetrics *map[string]interface{} `json:"gate_metrics,omitempty"`
+
+	// LastContactAt Never set; always null. Kept so existing clients keep compiling.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
+	LastContactAt *time.Time `json:"last_contact_at,omitempty"`
 
 	// MarginTier The partner's margin tier; the allowed values are in the table's CHECK constraint.
 	MarginTier *PartnerMarginTier `json:"margin_tier,omitempty"`
@@ -3147,7 +3284,8 @@ type Partner struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	PartnerRole *PartnerPartnerRole `json:"partner_role,omitempty"`
 
-	// RelationshipHealth Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags.
+	// RelationshipHealth Never set; always null. Kept so existing clients keep compiling.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	RelationshipHealth *string `json:"relationship_health,omitempty"`
 
 	// RelationshipStage The key of the stage from `/partner-stages` the partner stands on.
@@ -3287,6 +3425,54 @@ type RelationshipStrength struct {
 // RelationshipStrengthBucket Coarse band derived from score for display — the same vocabulary every strength band on the wire uses.
 type RelationshipStrengthBucket string
 
+// ReportRowCoverage What a row's partial sums leave out. A sum over a converted amount adds the deals that convert, so without this a short sum reads as a whole one.
+type ReportRowCoverage struct {
+	// Aggregates The aliases of the row's partial sums, which this coverage qualifies.
+	Aggregates []string `json:"aggregates"`
+
+	// MissingCurrencies The currencies with no exchange rate, from the same statement as the sums.
+	MissingCurrencies []string `json:"missing_currencies"`
+
+	// NoRateDeals Deals in the group with an amount whose currency has no exchange rate as of the answer's date.
+	NoRateDeals int `json:"no_rate_deals"`
+
+	// NoValueDeals Deals in the group with no amount.
+	NoValueDeals int `json:"no_value_deals"`
+
+	// Partial True when at least one deal is left out of those sums.
+	Partial bool `json:"partial"`
+}
+
+// RequestReply We replied after a request, and our reply is still the newest message on its thread.
+// One rule decides it, so the deal card, its risk line and its next move agree on whose
+// move it is. The request itself stays open until its reminder is done or a settlement
+// verdict records it settled.
+type RequestReply struct {
+	// ByReader The reader sent the reply. False when a colleague did.
+	ByReader bool `json:"by_reader"`
+
+	// ReminderId The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+	ReminderId *string `json:"reminder_id,omitempty"`
+
+	// ReminderVersion Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
+	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
+	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
+	// (ErrVersionSkew) so the client re-reads before retrying.
+	ReminderVersion *RowVersion `json:"reminder_version,omitempty" minimum:"1"`
+
+	// RepliedAt When our newest reply on the thread happened.
+	RepliedAt time.Time `json:"replied_at"`
+
+	// RepliedPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
+	RepliedPrecision OccurredPrecision `json:"replied_precision"`
+
+	// RequestActivityId The request we replied to.
+	RequestActivityId string `json:"request_activity_id"`
+
+	// StillAsked What the settlement pass found still asked, quoted from the request. Absent when no still_owed verdict quoted one.
+	StillAsked *string `json:"still_asked,omitempty"`
+}
+
 // RowTag A tag as a list ROW carries it: the word and its colour, nothing else. The full
 // assignment — who applied it, when — comes from the record's own tags read, because a
 // page of fifty rows does not need fifty assignments to draw a chip.
@@ -3415,7 +3601,7 @@ type SignalEvidence struct {
 	// extension files a signal. A request that carries it is refused.
 	Fields *map[string]interface{} `json:"fields,omitempty"`
 
-	// LifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+	// LifecycleScope Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
 	LifecycleScope *SignalEvidenceLifecycleScope `json:"lifecycle_scope,omitempty"`
 
 	// Provenance Where an extension signal came from. Core stamps it from the filing extension and the signed-in seat. A request that carries it is refused.
@@ -3434,7 +3620,7 @@ type SignalEvidence struct {
 // SignalEvidenceCommercialRole The commercial role supported by the cited source, independent of recipient order.
 type SignalEvidenceCommercialRole string
 
-// SignalEvidenceLifecycleScope Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+// SignalEvidenceLifecycleScope Whether the cited words end the whole relationship with the company or only one engagement. Missing means unknown.
 type SignalEvidenceLifecycleScope string
 
 // SignalEvidenceSourceType defines model for SignalEvidence.SourceType.
@@ -6240,6 +6426,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "acquisition_source")
 	}
 
+	if raw, found := object["ai_written_fields"]; found {
+		err = json.Unmarshal(raw, &a.AiWrittenFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_written_fields': %w", err)
+		}
+		delete(object, "ai_written_fields")
+	}
+
 	if raw, found := object["amount_minor"]; found {
 		err = json.Unmarshal(raw, &a.AmountMinor)
 		if err != nil {
@@ -6592,12 +6786,28 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["wait_ends_at"]; found {
+		err = json.Unmarshal(raw, &a.WaitEndsAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_ends_at': %w", err)
+		}
+		delete(object, "wait_ends_at")
+	}
+
 	if raw, found := object["wait_until"]; found {
 		err = json.Unmarshal(raw, &a.WaitUntil)
 		if err != nil {
 			return fmt.Errorf("error reading 'wait_until': %w", err)
 		}
 		delete(object, "wait_until")
+	}
+
+	if raw, found := object["win_chance"]; found {
+		err = json.Unmarshal(raw, &a.WinChance)
+		if err != nil {
+			return fmt.Errorf("error reading 'win_chance': %w", err)
+		}
+		delete(object, "win_chance")
 	}
 
 	if raw, found := object["win_probability"]; found {
@@ -6679,6 +6889,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
+	if a.AiWrittenFields != nil {
+		object["ai_written_fields"], err = json.Marshal(a.AiWrittenFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_written_fields': %w", err)
 		}
 	}
 
@@ -6972,10 +7189,24 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.WaitEndsAt != nil {
+		object["wait_ends_at"], err = json.Marshal(a.WaitEndsAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_ends_at': %w", err)
+		}
+	}
+
 	if a.WaitUntil != nil {
 		object["wait_until"], err = json.Marshal(a.WaitUntil)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'wait_until': %w", err)
+		}
+	}
+
+	if a.WinChance != nil {
+		object["win_chance"], err = json.Marshal(a.WinChance)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'win_chance': %w", err)
 		}
 	}
 

@@ -46,7 +46,9 @@ operation in the OpenAPI document shows which. A list answers `{ "data": [...], 
 
 ## Errors
 
-An error answers `application/problem+json` (RFC 7807) with a machine `code` to branch on:
+An error answers `application/problem+json` (RFC 7807) with a machine `code` to branch on. A file
+route that a browser tab opens answers its 404 or 403 as a short `text/html` page instead, and the
+contract declares it there:
 
 ```json
 {"type": "https://errors.gradion.com/version_skew", "title": "Conflict", "status": 409,
@@ -73,7 +75,17 @@ operation a bad value for each parameter and checks.
 | `Idempotency-Key` | Once the first request has finished, a retry with the same key within 24 hours answers its status and body. The key is held per caller and path, and the same key with another body answers `409 idempotency_key_conflict`. While the first request is still running, a retry answers `409 idempotency_key_in_progress` with a `Retry-After` header; send it again after the wait until it answers with the recorded result. If the first request failed after it had started, a retry answers `409 idempotency_key_failed`: check whether it had an effect before using a new key. On an operation that runs an agent tool, the key is held per caller and tool, and the same key with other arguments answers `409 conflict`. Only an operation that lists the header in the OpenAPI document reads it. |
 | `If-Match` | The record `version` you last read. If the record changed since, the write answers `409 version_skew`. Read it again and retry. |
 
+A request has 30 seconds to answer (`httpserver.ResponseDeadline`), and a route that waits on a model has
+longer. The work stops two seconds before that limit, so there is time to answer. A request stopped there
+answers `503 request_timed_out` with a `Retry-After` header. If it saved nothing, its `Idempotency-Key` is
+free again, so send the same request after the wait. If it saved before it stopped, a retry answers
+`409 idempotency_key_failed`.
+
 ## Changes that wait for a human
+
+A client must get human approval before sending; a direct instruction to send counts.
+Standing send permission alone is not approval of an unattended message. The API cannot
+verify the conversation outside Margince.
 
 A passport's change runs at once or waits for a human, per the operation's tier
 ([explanation/authorization.md](../explanation/authorization.md#autonomy-tiers--how-agent-actions-are-governed---)).
@@ -99,6 +111,9 @@ says what produced the record (such as `api`), is yours to set; `source_system` 
 when you import. A record is archived, not deleted: an archive operation sets `archived_at`, and the
 record stays readable by id. A few operations remove a part of a record, such as
 `removeOfferLineItem`.
+
+On a deal, an offer and a project, `source` is one of the values the contract lists for that field.
+A program that calls the API sends `api`. Any other value is refused with `422 invalid_source`.
 
 ## An id from your system
 

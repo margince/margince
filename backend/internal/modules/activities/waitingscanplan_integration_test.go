@@ -12,7 +12,9 @@ package activities
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -94,12 +96,21 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 	return plan
 }
 
+// pinnedTables are the tables pinNeverAnalyzed resets.
+const pinnedTables = "relkind = 'r' AND relnamespace = 'public'::regnamespace"
+
 // pinNeverAnalyzed gives the planner the table sizes of a database nothing has
 // analyzed. Earlier tests in the same process may have left small statistics.
 // Those steer a plan test to a scan the seeded rows do not warrant.
+//
+// The update holds each table's pg_class row until rollback, and an autovacuum
+// pass waits on that row while it holds its table. A later ANALYZE in this
+// transaction then deadlocks with it, so the tables are locked first.
 func pinNeverAnalyzed(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	t.Helper()
-	if _, err := tx.Exec(ctx, "UPDATE pg_class SET reltuples = -1, relpages = 0 WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"); err != nil {
+	if _, err := tx.Exec(ctx, `DO $$ BEGIN EXECUTE (SELECT 'LOCK TABLE '||string_agg(oid::regclass::text, ', ' ORDER BY oid)||' IN SHARE UPDATE EXCLUSIVE MODE'
+	  FROM pg_class WHERE `+pinnedTables+`); END $$;
+	UPDATE pg_class SET reltuples = -1, relpages = 0 WHERE `+pinnedTables); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -316,5 +327,57 @@ func TestTheMarkedSenderCheckLooksUpEachMailByItsID(t *testing.T) {
 		if read.NodeType == "Seq Scan" {
 			t.Errorf("marked_sender is read by a sequential scan, once per walked mail, instead of by the mail's id")
 		}
+	}
+}
+
+// An autovacuum pass may analyze a table while a plan test holds its pins.
+// That pass queues behind the pinned tables, so the test's own ANALYZE
+// finishes without a deadlock.
+func TestAConcurrentAnalyzeQueuesBehindThePins(t *testing.T) {
+	e := setupPromises(t)
+	ctx := context.Background()
+	racer, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := racer.Close(context.Background()); err != nil {
+			t.Errorf("closing the racing connection: %v", err)
+		}
+	})
+	tx, err := e.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinNeverAnalyzed(ctx, t, tx)
+	var holder int32
+	if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&holder); err != nil {
+		t.Fatal(err)
+	}
+	racerErr := make(chan error, 1)
+	returned := make(chan struct{})
+	go func() {
+		_, err := racer.Exec(ctx, `ANALYZE activity`)
+		racerErr <- err
+		close(returned)
+	}()
+	// Runs before the racer's connection closes, so a failed check never
+	// leaves its ANALYZE waiting on pins nobody releases.
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Errorf("rolling back the pins: %v", err)
+		}
+		<-returned
+	})
+	testdb.AwaitQueuedBehind(t, tx, holder, 1, returned, "the concurrent ANALYZE")
+	_, ownErr := tx.Exec(ctx, `ANALYZE`)
+	if err := tx.Rollback(ctx); err != nil {
+		t.Fatalf("rolling back the pins: %v", err)
+	}
+	if ownErr != nil {
+		t.Errorf("the test's ANALYZE failed beside a concurrent one: %v", ownErr)
+	}
+	if err := <-racerErr; err != nil {
+		t.Errorf("the concurrent ANALYZE failed beside the test's: %v", err)
 	}
 }

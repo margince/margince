@@ -115,9 +115,11 @@ type counterpartyDecision struct {
 	// by an address, the other by a provider identity. So the seam a record
 	// belongs to is decided once, here, and not re-derived downstream.
 	channel bool
-	// linkOnly files the mail under existing records and mints none.
+	// linkOnly files the mail under existing records, and mints a record only
+	// for a shared mailbox's backup owner (acting) when the ladder said create.
 	linkOnly   bool
 	readerTeam ids.UUID
+	acting     *principal.Principal
 	// subject is the party this decision is ABOUT, which is the message's
 	// counterparty except where a colleague's message named an external one
 	// (ladderSubjectTx). It is carried, not re-derived, so the create acts on
@@ -134,6 +136,9 @@ type counterpartyDecision struct {
 	// learn something this function just decided.
 	traceOutcome TraceOutcome
 	traceReason  string
+	// notesMail marks Google's mail about a meeting: held to its participants,
+	// filed under no contact, its notes landed on the meeting (meetingnotesmail.go).
+	notesMail bool
 }
 
 // traced is the decision with its trace fields set, so a tier can answer in one
@@ -194,7 +199,7 @@ func (s *Sink) decideMailSubject(ctx context.Context, tx pgx.Tx, rec connector.N
 		return decision, err
 	}
 	decision.subject = cp
-	private, _, err := threadIsPrivateTx(ctx, tx, rec)
+	private, err := capturedThreadIsPrivateTx(ctx, tx, rec)
 	if err != nil {
 		return counterpartyDecision{}, err
 	}
@@ -216,7 +221,8 @@ func (s *Sink) decideCorrespondent(ctx context.Context, tx pgx.Tx, rec connector
 		return counterpartyDecision{}, err
 	}
 	corresponded := dealt.positive()
-	decision.create, decision.replied = dealt.create, dealt.replied
+	// A forward to self is the seat filing the original's sender by hand.
+	decision.create, decision.replied = dealt.create || forwardedOriginalOf(rec) != nil, dealt.replied
 	roleMailbox := refusesToNameAContact(cp.Email, dealt.exchanged)
 	if roleMailbox {
 		decision.create = false
@@ -289,7 +295,7 @@ func (s *Sink) decideCorrespondent(ctx context.Context, tx pgx.Tx, rec connector
 func (s *Sink) alreadyDecided(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, email string, activityID ids.UUID,
 ) (known, settled bool, reason string, err error) {
-	prior, err := s.priorDispositionTx(ctx, tx, email)
+	prior, err := priorDispositionTx(ctx, tx, email)
 	if err != nil {
 		return false, false, "", err
 	}
@@ -341,7 +347,7 @@ const priorKnownNonContact = "known_noncontact"
 // known correspondence — auto-creating every later bulk mail from it and
 // switching off the noise sweep for it for good. It still identifies the
 // contact; it just does not speak here.
-func (s *Sink) priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) (string, error) {
+func priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) (string, error) {
 	normalized := normalizeEmail(email)
 	if normalized == "" {
 		return "", nil
@@ -352,6 +358,14 @@ func (s *Sink) priorDispositionTx(ctx context.Context, tx pgx.Tx, email string) 
 		return "", fmt.Errorf("capture: reading the prior disposition: %w", err)
 	}
 	return status, nil
+}
+
+// senderSuppressedTx is the suppression verdict as the ledger keeps it. Every
+// writer that files a mail after its capture asks it, so a suppressed mail
+// stays filed under nobody it names (sinkmaillinks.go).
+func senderSuppressedTx(ctx context.Context, tx pgx.Tx, email string) (bool, error) {
+	prior, err := priorDispositionTx(ctx, tx, email)
+	return prior == PendingStatusSuppressed, err
 }
 
 // capturePrincipal resolves the acting connector and the human it acts for.

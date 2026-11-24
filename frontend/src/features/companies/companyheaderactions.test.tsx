@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
+import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -29,6 +30,9 @@ import {
   type ActivityDrawer,
   CompanyHeaderActions,
 } from "./companyheaderactions";
+
+// The verb shows "Meet", so its name starts with the word a speech user says.
+const BOOK_NAME = `${en["record.verb.meet"]}, ${en["scheduling.bookContact"]}`;
 
 // The account header's Email and Log strip, and the menu's Add task. The strip
 // is icon-first like every other record header's action strip.
@@ -222,6 +226,40 @@ describe("Log activity and Add task, gated on the create grant", () => {
     );
   });
 
+  it("names each refusal in its verb's tooltip or title, outside its description", async () => {
+    stubGrants({});
+    const user = userEvent.setup();
+    armHoverIntent();
+    renderActions();
+    const why = en["record.logActivityRefused"];
+
+    const log = await screen.findByRole("button", { name: "Log activity" });
+    const email = screen.getByRole("button", {
+      name: en["contact.action.email"],
+    });
+    await waitFor(() =>
+      expect(log.getAttribute("title")).toBe(`${en["log.title"]}. ${why}`),
+    );
+    expect(email.getAttribute("aria-describedby")).toBe(
+      log.getAttribute("aria-describedby"),
+    );
+    const book = screen.getByRole("button", {
+      name: BOOK_NAME,
+    });
+    expect(book.getAttribute("title")).toBe(
+      `${en["scheduling.bookContact"]}. ${en["scheduling.bookRefused"]}`,
+    );
+
+    const host = email.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the Email verb lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `${en["contact.action.email"]}. ${why}`,
+    );
+  });
+
   it("refuses both without the grant, over one shared sentence", async () => {
     stubGrants({});
     const user = userEvent.setup();
@@ -246,7 +284,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
 
     // Booking needs the same grant, and says so in the booking screen's words.
     const book = screen.getByRole("button", {
-      name: en["scheduling.bookContact"],
+      name: BOOK_NAME,
     });
     expect(book.hasAttribute("disabled")).toBe(true);
     expect(
@@ -281,9 +319,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     expect(log.hasAttribute("disabled")).toBe(true);
     expect(task.hasAttribute("disabled")).toBe(true);
     expect(
-      screen
-        .getByRole("button", { name: en["scheduling.bookContact"] })
-        .hasAttribute("disabled"),
+      screen.getByRole("button", { name: BOOK_NAME }).hasAttribute("disabled"),
     ).toBe(true);
     expect(
       screen.queryByText(
@@ -332,7 +368,7 @@ it("draws the bar's verbs in the design's order with their short words", async (
   const log = await screen.findByRole("button", { name: en["log.title"] });
   expect(log.querySelector(".verb-word")?.textContent).toBe("Log");
   const book = screen.getByRole("button", {
-    name: en["scheduling.bookContact"],
+    name: BOOK_NAME,
   });
   // Meet stands with Email, ahead of the two that record.
   expect(
@@ -393,7 +429,8 @@ describe("Add task writes only tasks", () => {
     expect(within(drawer).queryByLabelText(en["log.kind"])).toBeNull();
     const due = within(drawer).getByLabelText("Due date");
     await user.clear(due);
-    await user.type(due, "16/03/2099");
+    const year = new Date().getFullYear() + 1;
+    await user.type(due, `16/03/${year}`);
     await user.type(within(drawer).getByLabelText("Subject *"), "Demo prep");
     await user.click(within(drawer).getByRole("button", { name: "Add task" }));
 
@@ -405,7 +442,7 @@ describe("Add task writes only tasks", () => {
     });
     expect(posted[0]?.body).toHaveProperty(
       "due_at",
-      expect.stringMatching(/^2099-03-1[56]T/),
+      expect.stringMatching(new RegExp(`^${year}-03-1[56]T`)),
     );
   });
 
@@ -440,8 +477,7 @@ describe("Book a meeting from the account", () => {
 
     // The picker is drawn once `/me` allows it; before that the face is a
     // disabled stand-in.
-    const book = () =>
-      screen.getByRole("button", { name: en["scheduling.bookContact"] });
+    const book = () => screen.getByRole("button", { name: BOOK_NAME });
     await waitFor(() => expect(book().hasAttribute("disabled")).toBe(false));
     await user.click(book());
     await user.type(
@@ -468,8 +504,7 @@ describe("Book a meeting from the account", () => {
     stubWritableAccount({ posted: [], read });
     renderInApp(<ActionsHost view={TWO_CONTACTS} />);
 
-    const book = () =>
-      screen.getByRole("button", { name: en["scheduling.bookContact"] });
+    const book = () => screen.getByRole("button", { name: BOOK_NAME });
     await waitFor(() => expect(book().hasAttribute("disabled")).toBe(false));
     vi.useFakeTimers();
     fireEvent.click(book());

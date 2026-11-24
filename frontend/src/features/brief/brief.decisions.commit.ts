@@ -7,6 +7,7 @@ import type {
   DecisionDeckItem,
   StagedDecision,
 } from "../../design-system/decisiondeck";
+import type { HomeRow } from "../../lib/homerows";
 import { isAlreadyDecided, ProblemError, unwrap } from "../../lib/problem";
 
 // Sending the Brief's staging tray: what one verdict does, and what a whole
@@ -23,6 +24,27 @@ export type Approval = components["schemas"]["Approval"];
 /** Every approval one deck item answers for. */
 function approvalsOf(item: DecisionDeckItem): readonly Approval[] {
   return item.kind === "single" ? [item.approval] : item.members;
+}
+
+/** The Home rows a tray's accepted and rejected items settle. */
+export function decidedRows(tray: {
+  staged: readonly StagedDecision[];
+  items: readonly DecisionDeckItem[];
+}): HomeRow[] {
+  const byId = new Map(tray.items.map((item) => [item.id, item]));
+  return tray.staged.flatMap((decision) => {
+    const item = byId.get(decision.id);
+    if (!item || decision.verdict === "skip" || decision.verdict === "edit") {
+      return [];
+    }
+    const members = approvalsOf(item).map((approval) => ({
+      source: "approval",
+      id: approval.id,
+    }));
+    return item.kind === "bundle"
+      ? [{ source: "batch", id: item.bundleId }, ...members]
+      : members;
+  });
 }
 
 /** What a commit sent, and what came back for each item in it. */
@@ -42,7 +64,39 @@ export type CommitResult = Readonly<{
   failure: unknown | null;
   /** The failed approval's kind, which words its failure; null for a bundle. */
   failedKind: string | null;
+  /** Approved proposals an agent still has to run: nothing has changed yet. */
+  awaitingAgent: number;
+  /** Approved proposals whose released work did not run. */
+  effectFailed: number;
 }>;
+
+type SentOutcome = Pick<
+  CommitResult,
+  "alreadyDecided" | "awaitingAgent" | "effectFailed"
+>;
+
+const NOTHING_SENT: SentOutcome = {
+  alreadyDecided: false,
+  awaitingAgent: 0,
+  effectFailed: 0,
+};
+
+/** What an approve answered with: whether it ran, waits, or failed. */
+function outcomeOf(approval: Approval | undefined): SentOutcome {
+  return {
+    ...NOTHING_SENT,
+    awaitingAgent: approval?.awaiting_agent ? 1 : 0,
+    effectFailed: approval?.effect_failed_at ? 1 : 0,
+  };
+}
+
+function addOutcome(a: SentOutcome, b: SentOutcome): SentOutcome {
+  return {
+    alreadyDecided: a.alreadyDecided || b.alreadyDecided,
+    awaitingAgent: a.awaitingAgent + b.awaitingAgent,
+    effectFailed: a.effectFailed + b.effectFailed,
+  };
+}
 
 /**
  * One approval's verdict, sent.
@@ -54,20 +108,20 @@ export type CommitResult = Readonly<{
 async function sendOne(
   approval: Approval,
   verdict: "accept" | "reject",
-): Promise<{ alreadyDecided: boolean }> {
+): Promise<SentOutcome> {
   const path =
     verdict === "accept" ? "/approvals/{id}/approve" : "/approvals/{id}/reject";
   try {
-    unwrap(
+    const decided = unwrap(
       await api.POST(path, {
         params: { path: { id: approval.id } },
         ...(verdict === "reject" ? { body: { reason: "" } } : {}),
       }),
     );
-    return { alreadyDecided: false };
+    return verdict === "accept" ? outcomeOf(decided) : NOTHING_SENT;
   } catch (error) {
     if (error instanceof ProblemError && isAlreadyDecided(error.problem)) {
-      return { alreadyDecided: true };
+      return { ...NOTHING_SENT, alreadyDecided: true };
     }
     throw error;
   }
@@ -83,13 +137,12 @@ async function sendOne(
 async function sendVerdict(
   approvals: readonly Approval[],
   verdict: "accept" | "reject",
-): Promise<Pick<CommitResult, "alreadyDecided">> {
-  let alreadyDecided = false;
+): Promise<SentOutcome> {
+  let sent = NOTHING_SENT;
   for (const approval of approvals) {
-    const outcome = await sendOne(approval, verdict);
-    alreadyDecided = alreadyDecided || outcome.alreadyDecided;
+    sent = addOutcome(sent, await sendOne(approval, verdict));
   }
-  return { alreadyDecided };
+  return sent;
 }
 
 /**
@@ -99,7 +152,7 @@ async function sendVerdict(
 async function sendBundle(
   bundleId: string,
   verdict: "accept" | "reject",
-): Promise<{ alreadyDecided: boolean }> {
+): Promise<SentOutcome> {
   const path =
     verdict === "accept"
       ? "/approval-bundles/{bundle_id}/approve"
@@ -123,6 +176,10 @@ async function sendBundle(
     alreadyDecided: members.some(
       (member) => member.outcome === "already_decided",
     ),
+    awaitingAgent: members.filter((member) => member.approval.awaiting_agent)
+      .length,
+    effectFailed: members.filter((member) => member.outcome === "effect_failed")
+      .length,
   };
 }
 
@@ -130,10 +187,9 @@ async function sendBundle(
 async function sendStaged(
   item: DecisionDeckItem,
   verdict: "accept" | "reject",
-): Promise<Pick<CommitResult, "alreadyDecided">> {
+): Promise<SentOutcome> {
   if (item.kind === "bundle") {
-    const outcome = await sendBundle(item.bundleId, verdict);
-    return { alreadyDecided: outcome.alreadyDecided };
+    return sendBundle(item.bundleId, verdict);
   }
   return sendVerdict(approvalsOf(item), verdict);
 }
@@ -151,7 +207,7 @@ export async function commitTray(input: {
   items: readonly DecisionDeckItem[];
 }): Promise<CommitResult> {
   const byId = new Map(input.items.map((item) => [item.id, item]));
-  let alreadyDecided = false;
+  let sent = NOTHING_SENT;
   let edits = 0;
   let failure: unknown | null = null;
   let failedKind: string | null = null;
@@ -165,8 +221,7 @@ export async function commitTray(input: {
       continue;
     }
     try {
-      const outcome = await sendStaged(item, decision.verdict);
-      alreadyDecided = alreadyDecided || outcome.alreadyDecided;
+      sent = addOutcome(sent, await sendStaged(item, decision.verdict));
     } catch (error) {
       // The FIRST failure is kept and the loop stops: these are outbound
       // effects, and carrying on after one refusal sends the rest against
@@ -177,5 +232,5 @@ export async function commitTray(input: {
       break;
     }
   }
-  return { alreadyDecided, edits, failure, failedKind };
+  return { ...sent, edits, failure, failedKind };
 }

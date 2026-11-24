@@ -78,16 +78,13 @@ func NewContactAutoEnrich(pool *pgxpool.Pool, store *contacts.Store, approvalsSv
 // nothing: a redelivered event re-runs a match that has already been made and
 // changes no row.
 func (g *ContactAutoEnrich) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if env.Entity.ID == ids.Nil || env.Entity.Type != string(recordTypeContact) {
+	// Every event that can make a contact newly matchable. An archived contact
+	// stops being a candidate without anything being recomputed.
+	if !events.ContactAutoEnrichTypes.Has(env.Type) || env.Entity.ID == ids.Nil || env.Entity.Type != string(recordTypeContact) {
 		return nil
 	}
 	subject := env.Entity.ID
-	switch env.Type {
-	// Every event that can make a contact newly matchable. An archive needs no
-	// reaction: the match requires a live row, so an archived contact stops
-	// being a candidate without anything being recomputed.
-	case "contact.created", "contact.updated", "contact.restored":
-	case "contact.merged":
+	if env.Type == contactMergedEvent {
 		// A merge names the merged-AWAY contact as its entity — the row it just
 		// archived. Enriching that would fill a record no read returns, and the
 		// survivor, which is the one that actually became newly matchable
@@ -99,8 +96,6 @@ func (g *ContactAutoEnrich) HandleEvent(ctx context.Context, env events.Envelope
 			return nil
 		}
 		subject = survivor
-	default:
-		return nil
 	}
 	// The envelope carries no tenant (ADR-0091 §6); the store's handle names it.
 	ws, err := InstallationDB(g.pool).Workspace(ctx)

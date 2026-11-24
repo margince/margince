@@ -19,11 +19,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// A tool that archives, merges, sends, decides or disqualifies, and offers no
-// restore to take it back, cannot be undone from the conversation. So its
-// listing must tell the client to get the user's yes first. Derived from the
-// contract's operations and the send scope, so a new verb of any kind is held
-// by being declared.
+// A tool that archives, merges, decides or disqualifies, and offers no restore
+// to take it back, cannot be undone from the conversation. So its listing must
+// tell the client to get the user's yes first. Derived from the contract's
+// operations, so a new verb of any kind is held by being declared. Sends are
+// held by TestEverySendAsksTheUserFirst.
 func TestEveryIrreversibleToolAsksTheUserFirst(t *testing.T) {
 	irreversible, restores := map[string]bool{}, map[string]bool{}
 	for _, pol := range agentPolicies {
@@ -39,17 +39,6 @@ func TestEveryIrreversibleToolAsksTheUserFirst(t *testing.T) {
 	}
 
 	registry := NewRegistry(nil, SendPath{})
-	for _, spec := range registry.Specs() {
-		// A router's own Egress is its targets', which this loop also visits.
-		if _, isRouter := registry.RouteTargets(spec.Name); isRouter {
-			continue
-		}
-		// A message, mail or invitation that has left cannot be called back.
-		if spec.Egress && spec.RequiredScope == principal.ScopeSend {
-			irreversible[spec.Name] = true
-		}
-	}
-
 	checked := 0
 	tools := make([]string, 0, len(irreversible))
 	for tool := range irreversible {
@@ -75,6 +64,58 @@ func TestEveryIrreversibleToolAsksTheUserFirst(t *testing.T) {
 	}
 }
 
+// A message, mail or invitation that has left cannot be called back. A
+// passport's send runs at once. So every tool and router action that spends the
+// send scope sets AskUserFirst. The listing a passport caller is served carries
+// the ask-first clause for it. The census is the send scope itself, read
+// off every registered spec, so a new send of any kind is held by its scope.
+func TestEverySendAsksTheUserFirst(t *testing.T) {
+	registry := NewRegistry(nil, SendPath{})
+	sends := map[string]bool{}
+	for _, spec := range registry.Specs() {
+		if _, isRouter := registry.RouteTargets(spec.Name); isRouter || spec.RequiredScope != principal.ScopeSend {
+			continue
+		}
+		sends[spec.Name] = true
+		if !spec.AskUserFirst {
+			t.Errorf("%s spends the send scope but leaves AskUserFirst unset, so a client is never told "+
+				"to ask the user before the message leaves", spec.Name)
+		}
+	}
+	if len(sends) < 5 {
+		t.Fatalf("only %d send tools were found; the census is short and this gate proves nothing", len(sends))
+	}
+
+	caller := loopAgentGrantedEveryScope(registry)
+	caller.Permissions = everyMeasuredGrant(t)
+	served := map[string]bool{}
+	for _, spec := range registry.Offered(principal.WithActor(context.Background(), caller)) {
+		clause := askFirstClause(spec)
+		if sends[spec.Name] {
+			served[spec.Name] = true
+			if !strings.Contains(clause, "for it,") {
+				t.Errorf("%s is served to a passport caller without the ask-first clause: %q",
+					spec.Name, agents.DescribeForClient(spec))
+			}
+		}
+		for _, action := range spec.Actions {
+			if !sends[action.Verb] {
+				continue
+			}
+			served[action.Verb] = true
+			if !action.AskUserFirst || !regexp.MustCompile(`\b`+action.Action+`\b`).MatchString(clause) {
+				t.Errorf("%s's action %s sends (%s), but the clause a passport caller is served does not "+
+					"name it: %q", spec.Name, action.Action, action.Verb, clause)
+			}
+		}
+	}
+	for send := range sends {
+		if !served[send] {
+			t.Errorf("%s is neither listed nor an action of a listed router, so its clause was never read", send)
+		}
+	}
+}
+
 // irreversibleOpPrefixes are the contract verbs that act on a record or a
 // queue in a way the conversation has no verb to take back.
 var irreversibleOpPrefixes = []string{"archive", "merge", "disqualify", "approve", "reject", "executeBulkChange"}
@@ -85,7 +126,7 @@ func hasAnyPrefix(op string, prefixes []string) bool {
 
 // promisesApproval is written guidance that tells a caller a human will
 // approve the call. A publish step a human takes later is not that promise.
-var promisesApproval = regexp.MustCompile(`(?i)waits? for (?:a human|approval)|staged for (?:approval|confirmation)|needs? (?:a )?human'?s? (?:approval|decision)|a human approves`)
+var promisesApproval = regexp.MustCompile(`(?i)waits? for (?:a human|approval)|answers staged|stage[sd]? for (?:approval|confirmation)|needs? (?:a )?human'?s? (?:approval|decision)|a human approves`)
 
 // publishStep is the one promise that stays true for an agent acting as its
 // user. The draft is the agent's, and publishing is a later human act.
@@ -121,6 +162,23 @@ func TestNoToolPromisesAnApprovalItsUserSkips(t *testing.T) {
 	}
 	if checked < 20 {
 		t.Fatalf("only %d tools were checked; the census is short and this gate proves nothing", checked)
+	}
+}
+
+// The present tense is the form the census missed before. A copy saying a call
+// "stages for approval" read as safe, where "staged for approval" was caught.
+// Both make a promise an own-user agent never meets. The gate above sees it in
+// either tense now.
+func TestPromisesApprovalCatchesEveryTense(t *testing.T) {
+	for _, made := range []string{
+		"the call stages for approval",
+		"the call staged for approval",
+		"this call stages for confirmation",
+		"filing under a project answers staged with an approval id",
+	} {
+		if !promisesApproval.MatchString(made) {
+			t.Errorf("promisesApproval missed %q, a promise an own-user agent never meets", made)
+		}
 	}
 }
 

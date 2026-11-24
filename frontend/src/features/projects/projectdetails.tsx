@@ -12,7 +12,7 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef, OwnerName } from "../../components/entityref";
-import { RailField } from "../../components/railfield";
+import { useSectionEdit } from "../../components/sectionedit";
 import { Badge } from "../../design-system/atoms";
 import { RecordCard } from "../../design-system/recordcard";
 import {
@@ -53,6 +53,11 @@ function CompanyRef({ view }: Readonly<{ view: Project360 }>) {
   if (state === "withheld") {
     return (
       <span data-testid="project-company-withheld">{t("state.withheld")}</span>
+    );
+  }
+  if (!view.project.company_id) {
+    return (
+      <span data-testid="project-company-none">{t("project.noCustomer")}</span>
     );
   }
   return (
@@ -141,7 +146,14 @@ function CompanyCardRow({ view }: Readonly<{ view: Project360 }>) {
       <span data-testid="project-company-withheld">{t("state.withheld")}</span>
     );
   }
-  if (!companyId || !company) {
+  if (!companyId) {
+    return (
+      <span data-testid="project-company-none">
+        {t("project.noCustomerSet")}
+      </span>
+    );
+  }
+  if (!company) {
     return <span>{t("field.unset")}</span>;
   }
   return <CompanyCard companyId={companyId} name={company.name} />;
@@ -191,7 +203,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
   const day = (date: string | null | undefined) =>
     date ? formatDateAbbrev(date, locale, zone) : unset;
   const closed = project.phase === "closed";
-  const edit = useProjectEdit(project);
+  const edits = useSectionEdits(project);
   const about: DetailRow[] = [
     {
       key: "company",
@@ -214,15 +226,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     {
       key: "target",
       term: t("project.aside.targetEnd"),
-      value: (
-        <RailField
-          edit={edit}
-          keys={["target_end_date"]}
-          label={t("project.aside.targetEnd")}
-          reading={day(project.target_end_date)}
-          text={project.target_end_date ? day(project.target_end_date) : ""}
-        />
-      ),
+      value: day(project.target_end_date),
       empty: !project.target_end_date,
     },
     ...(closed
@@ -241,20 +245,13 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
           },
         ]
       : []),
-    // The design's About draws no description; it stays one click away.
+    // Prose, not a line: the full width, with the writer's line breaks.
     {
       key: "description",
       term: t("project.description"),
-      value: (
-        <RailField
-          edit={edit}
-          keys={["description"]}
-          label={t("project.description")}
-          reading={project.description || unset}
-          text={project.description ?? ""}
-        />
-      ),
-      empty: true,
+      value: project.description || unset,
+      block: Boolean(project.description),
+      empty: !project.description,
     },
     ...customFieldRows(cf, project, display, unset, fieldLabel),
   ];
@@ -263,14 +260,7 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
       key: "owner",
       term: t("project.owner"),
       value: (
-        <RailField
-          edit={edit}
-          keys={["owner_id"]}
-          label={t("project.owner")}
-          reading={
-            <OwnerName ownerId={project.owner_id} unowned={t("list.unowned")} />
-          }
-        />
+        <OwnerName ownerId={project.owner_id} unowned={t("list.unowned")} />
       ),
     },
   ];
@@ -287,18 +277,57 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     });
   }
   return (
-    <RecordDetails
-      sections={[
-        { key: "about", label: t("record.details.about"), rows: about },
-        {
-          key: "ownership",
-          label: t("record.details.ownership"),
-          rows: ownership,
-        },
-      ]}
-      footnote={closed ? undefined : t("project.aside.closeNote")}
-    />
+    <>
+      <RecordDetails
+        sections={[
+          {
+            key: "about",
+            label: t("record.details.about"),
+            edit: edits.about,
+            rows: about,
+          },
+          {
+            key: "ownership",
+            label: t("record.details.ownership"),
+            edit: edits.ownership,
+            rows: ownership,
+          },
+        ]}
+        footnote={closed ? undefined : t("project.aside.closeNote")}
+      />
+      {edits.element}
+    </>
   );
+}
+
+// The other rows stay readings; Edit project holds the custom fields.
+function useSectionEdits(project: Project) {
+  const t = useT();
+  const edit = useProjectEdit(project);
+  const about = useSectionEdit(edit, {
+    label: t("record.details.about"),
+    // A project gets its end day once it is closed, as its row does.
+    keys: [
+      "started_at",
+      "target_end_date",
+      ...(project.phase === "closed" ? ["ended_at"] : []),
+      "description",
+    ],
+  });
+  const ownership = useSectionEdit(edit, {
+    label: t("record.details.ownership"),
+    keys: ["owner_id"],
+  });
+  return {
+    about: about.edit,
+    ownership: ownership.edit,
+    element: (
+      <>
+        {about.element}
+        {ownership.element}
+      </>
+    ),
+  };
 }
 
 // A custom field with a value is an About row; an empty one folds with the

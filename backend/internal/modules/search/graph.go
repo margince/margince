@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -146,7 +147,7 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 		// slipped past that gate, so the store layer answers with the same
 		// sentinel every other invalid-record-reference case in this module
 		// uses.
-		return nil, fmt.Errorf("search: %s is not a graph anchor: %w", anchorType, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("a %s cannot anchor a relationship graph: %w", anchorType, apperrors.ErrNotFound)
 	}
 	// Object RBAC before row scope, the order every read in this module takes
 	// (Search's branch admission spells it the same way). The row-scope probe
@@ -238,17 +239,16 @@ func anchorProfile(ctx context.Context, tx pgx.Tx, branch *searchBranch, anchorT
 // Copies share the thread key mailmap derives from the headers, which keeps
 // that search on the thread index. A group shows only when a member reaches
 // the anchor. The seventh column is the import marker trustOfWriter explains.
-func anchorTimelineSQL(ctx context.Context, linkCol string, anchorPos int, within projectScope, arg func(any) int) (string, error) {
+func anchorTimelineSQL(ctx context.Context, linkCol string, anchorPos int, within projectScope, limit, foldRows int, arg func(any) int) (string, error) {
 	scope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}
 	narrowing := conjunction("a.archived_at IS NULL", scope, within.clause("a", arg))
-	// An ACCOUNT reaches its activities by three arms rather than one, so it
-	// takes a predicate where every other anchor takes its link column.
+	// Account reach includes indirect links and participant employment.
 	reach := fmt.Sprintf("EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.%s = $%d)", linkCol, anchorPos)
 	if linkCol == anchorLinkColumn[string(datasource.EntityCompany)] {
-		reach = activityReachesCompany(anchorPos)
+		reach = storekit.CompanyActivityExists(fmt.Sprintf("$%d", anchorPos))
 	}
 	elsewhere := `a.kind = 'email' AND a.thread_key IN (SELECT r.thread_key FROM activity r WHERE r.id IN (SELECT id FROM reached))
 		AND ` + connector.SharedMailKeySQL("a") + ` IN (SELECT ` + connector.SharedMailKeySQL("r") + ` FROM activity r WHERE r.id IN (SELECT id FROM reached))`
@@ -259,39 +259,56 @@ func anchorTimelineSQL(ctx context.Context, linkCol string, anchorPos int, withi
 		candidate(id) AS (SELECT id FROM reached UNION SELECT a.id FROM activity a WHERE %s),
 		readable(id) AS MATERIALIZED (SELECT a.id FROM activity a WHERE a.id = ANY(ARRAY(SELECT id FROM candidate)) AND %s)
 		SELECT a.id, coalesce(a.subject, a.kind), a.kind, a.is_done, a.occurred_at, coalesce(a.captured_by, ''),
-		       (coalesce(a.source_system, '') LIKE '%s%%'), a.occurred_precision = 'day', copies.copy_ids
+		       (coalesce(a.source_system, '') LIKE '%s%%'), a.occurred_precision = 'day', copies.copy_ids, copies.%s
 		FROM %s
 		WHERE copies.copy_ids && ARRAY(SELECT id FROM reached)
-		ORDER BY a.occurred_at DESC LIMIT %d`, reach, elsewhere, narrowing, provenance.ReservedSourceSystemPrefix,
-		connector.MailCopyGroupFrom(ctx, "activity", "a", "a.id IN (SELECT id FROM readable)", sqlTrue, arg),
-		graphExpansionLimit), nil
+		ORDER BY a.occurred_at DESC LIMIT %d`, reach, elsewhere, narrowing, provenance.ReservedSourceSystemPrefix, connector.CopyFoldFullColumn,
+		connector.MailCopyGroupBoundedFrom(ctx, "activity", "a", "a.id IN (SELECT id FROM readable)", sqlTrue, connector.FoldBound{Rows: foldRows}, arg),
+		limit), nil
 }
 
 // anchorTimeline is hop 1: the anchor's activity timeline, scope-walked
 // and ranked by recency × trust (§10.7.2 with similarity = 0), split
 // into recent touches and open tasks.
 func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids.UUID, maxItems int, now time.Time, within projectScope) (touches, openTasks []graphItem, activityIDs []ids.ActivityID, err error) {
+	for _, foldRows := range connector.FoldBounds(graphExpansionLimit) {
+		var short bool
+		touches, openTasks, activityIDs, short, err = anchorTimelineAt(ctx, tx, linkCol, anchorID, maxItems, now, within, graphExpansionLimit, foldRows)
+		if err != nil || foldRows == 0 || !short {
+			return touches, openTasks, activityIDs, err
+		}
+	}
+	return nil, nil, nil, errors.New("the anchor timeline never ran unbounded")
+}
+
+// anchorTimelineAt is anchorTimeline with the fold bounded to foldRows
+// candidates, or unbounded at zero, keeping limit groups. Its fourth result
+// says the bound may have left groups out of a short page.
+func anchorTimelineAt(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids.UUID, maxItems int, now time.Time, within projectScope, limit, foldRows int) (touches, openTasks []graphItem, activityIDs []ids.ActivityID, short bool, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	anchorPos := arg(anchorID)
-	activitySQL, err := anchorTimelineSQL(ctx, linkCol, anchorPos, within, arg)
+	activitySQL, err := anchorTimelineSQL(ctx, linkCol, anchorPos, within, limit, foldRows, arg)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, err
 	}
 	rows, err := tx.Query(ctx, activitySQL, args...)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, err
 	}
 	defer rows.Close()
+	got, foldFull := 0, true
 	for rows.Next() {
 		var id ids.ActivityID
 		var summary, kind, capturedBy string
 		var isDone, imported, dateOnly bool
 		var occurredAt time.Time
 		var copies []ids.UUID
-		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy, &imported, &dateOnly, &copies); err != nil {
-			return nil, nil, nil, err
+		var full bool
+		if err := rows.Scan(&id, &summary, &kind, &isDone, &occurredAt, &capturedBy, &imported, &dateOnly, &copies, &full); err != nil {
+			return nil, nil, nil, false, err
 		}
+		got, foldFull = got+1, full
 		// Every copy's links lead on: each colleague filed their own.
 		for _, copyID := range copies {
 			activityIDs = append(activityIDs, ids.From[ids.ActivityKind](copyID))
@@ -310,11 +327,11 @@ func anchorTimeline(ctx context.Context, tx pgx.Tx, linkCol string, anchorID ids
 		touches = append(touches, item)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, false, err
 	}
 	sortAndTrim(&touches, maxItems)
 	sortAndTrim(&openTasks, maxItems)
-	return touches, openTasks, activityIDs, nil
+	return touches, openTasks, activityIDs, connector.FoldIncomplete(got, limit, foldFull), nil
 }
 
 // whoKnowsSection reads the colleagues who interact with this contact, warmest

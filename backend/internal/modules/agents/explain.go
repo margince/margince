@@ -15,7 +15,9 @@ package agents
 // rejected call.
 
 import (
+	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -120,13 +122,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.As(err, &archiveRefusal):
 		return "Refused on authority: " + refusalDetail(err)
 	case errors.Is(err, apperrors.ErrPermissionDenied):
-		// Whose bound it was is in the detail, and the summary must not guess:
-		// an agent has the access of the human it acts for AND no more of it than
-		// they lent, so a refusal here is one of those two and a sentence naming
-		// only the first would send a caller to ask for permissions they already
-		// hold.
-		return "Refused on authority: an agent has exactly the access of the human it acts for, and never " +
-			"more of it than they lent this credential. (" + refusalDetail(err) + ")"
+		return AuthorityRefusal(err)
 	case errors.Is(err, apperrors.ErrNotFound):
 		return "No such record in this workspace (or it is outside the acting user's row scope). (" + refusalDetail(err) + ")"
 	case errors.As(err, &skew):
@@ -181,6 +177,35 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	}
 }
 
+// Explain is what a scheduled run's model is told about a refused call. It
+// logs a fault the taxonomy does not know against the run's context.
+func (r *Registry) Explain(ctx context.Context, tool string, err error) string {
+	if _, known := httperr.Classify(err); !known {
+		slog.ErrorContext(ctx, "runner: tool call failed", "tool", tool, "err", err)
+	}
+	return RunRefusal(err)
+}
+
+// RunRefusal is a refusal in words a run can act on. That is the taxonomy's code
+// and detail, bounded and escaped as the MCP door bounds them. A fault the
+// taxonomy does not know is one sentence. It names no MCP method and no human.
+func RunRefusal(err error) string {
+	if fault, known := httperr.Classify(err); known {
+		return faultExplanation(fault)
+	}
+	return runFaultAdvice
+}
+
+// AuthorityRefusal is what an agent is told when a gate refused its call. The
+// detail says whose bound it was: the human's own, or what they lent.
+func AuthorityRefusal(err error) string {
+	return "Refused on authority: an agent has exactly the access of the human it acts for, and never " +
+		"more of it than they lent this credential. (" + refusalDetail(err) + ")"
+}
+
+// runFaultAdvice withholds a fault's own words from a run's model.
+const runFaultAdvice = "The tool failed for an internal reason; nothing may have changed."
+
 // internalFaultAdvice is what an agent is told when nothing in the taxonomy
 // recognises the error. Named because it is the one answer on this surface that
 // is unactionable by construction — it withholds the argument the agent could
@@ -207,12 +232,10 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		return internalFaultAdvice
 	}
 
-	// A classified refusal is not a fault of ours, so it is not logged as
-	// one — except where a sentinel wrapped a driver failure, which is. In
-	// that case Classify has already withheld the driver's text from Detail,
-	// so the operator's half is logged and the agent still sees only the
-	// sentinel's own words.
-	if fault.InfraCause != nil {
+	// A classified refusal is not our fault and is logged as a refusal. A
+	// driver failure answered as a 5xx is ours. Classify has already withheld
+	// the driver's text from Detail either way.
+	if fault.InfraCause != nil && !fault.CallersToFix() {
 		s.log.Error("mcp: tool call failed", "tool", tool, "err", fault.InfraCause)
 	} else {
 		s.log.Warn("mcp: tool call refused", "tool", tool, "code", fault.Code, "err", err)
@@ -223,6 +246,11 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		// A 501 is the installation, not the call: no argument or retry reaches it.
 		return "This installation does not offer what this call needs, so nothing was changed and no argument " +
 			"would change that. (" + explained + ") Do not retry; tell the user it is not available here."
+	}
+	if fault.Code == httperr.CodeAINotConfigured {
+		// Nothing about the call is wrong: the installation has no AI model.
+		return "No AI model is connected to this installation, so nothing was changed and no argument would " +
+			"change that. (" + explained + ") Do not retry; tell the user to connect an AI model under Settings, AI."
 	}
 	if fault.Transient() {
 		return "This tool is temporarily unavailable — nothing was changed. (" + explained + ") " +
@@ -434,9 +462,14 @@ func stagedReleasePath(staged *workflow.StagedApprovalError) string {
 // AN EMPTY REFERENCE APPENDS NOTHING. Most faults carry none, and a trailing
 // "review:" with nothing after it is worse than silence.
 func faultReferenceSuffix(fault httperr.Fault) string {
-	if len(fault.Details) == 0 {
-		return ""
+	suffix := reviewSuffix(fault)
+	if grant, ok := fault.Details["missing_grant"].(string); ok && grant != "" {
+		suffix += " (missing grant " + echoSafe(grant, maxBadArgsDetail) + "; an admin changes your roles to allow it)"
 	}
+	return suffix
+}
+
+func reviewSuffix(fault httperr.Fault) string {
 	reference, ok := fault.Details["review_id"].(string)
 	if !ok || reference == "" {
 		return ""

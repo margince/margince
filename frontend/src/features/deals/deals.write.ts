@@ -1,7 +1,10 @@
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { toMajorUnits, toMinorUnits } from "../../format/minorunits";
+import { saveRecordEdit } from "../../components/recordedit";
+import { type FieldRecord, rawRecord } from "../../components/recordfieldtypes";
+import { typedAmountText, typedMinorOrNaN } from "../../format/minorunits";
+import type { Locale } from "../../i18n";
 import { commercialMotion, dealPriority } from "../../lib/dealcommercialvalues";
 import { partnerAttribution } from "../../lib/dealcreate";
 import { currencyBeside } from "../../lib/dealcurrency";
@@ -14,15 +17,18 @@ type UpdateDealRequest = components["schemas"]["UpdateDealRequest"];
 // This projection seeds both the controls and their update comparison.
 function moneyFieldValue(
   minor: number | null | undefined,
-  currency?: string | null,
+  currency: string | null | undefined,
+  locale: Locale,
 ): string {
-  return minor != null && currency ? String(toMajorUnits(minor, currency)) : "";
+  return minor != null && currency
+    ? typedAmountText(minor, currency, locale)
+    : "";
 }
 
-export function dealEditRecord(deal: Deal): Record<
-  string,
-  string | number | undefined
-> & {
+export function dealEditRecord(
+  deal: Deal,
+  locale: Locale,
+): Record<string, string | number | undefined> & {
   id: string;
   version?: number;
 } {
@@ -30,8 +36,12 @@ export function dealEditRecord(deal: Deal): Record<
     id: deal.id,
     version: deal.version,
     name: deal.name,
-    amount: moneyFieldValue(deal.amount_minor, deal.currency),
-    expected_arr: moneyFieldValue(deal.expected_arr_minor, deal.currency),
+    amount: moneyFieldValue(deal.amount_minor, deal.currency, locale),
+    expected_arr: moneyFieldValue(
+      deal.expected_arr_minor,
+      deal.currency,
+      locale,
+    ),
     currency: deal.currency ?? "",
     owner_id: deal.owner_id ?? "",
     company_id: deal.company_id ?? "",
@@ -83,10 +93,11 @@ function dealPriceUpdate(
     amount: string;
     expectedArr: string;
     previousCurrency: string;
+    locale: Locale;
   }>,
   moved: (formKey: string) => boolean,
 ): Pick<UpdateDealRequest, "amount_minor" | "expected_arr_minor" | "currency"> {
-  const { currency, amount, expectedArr, previousCurrency } = values;
+  const { currency, amount, expectedArr, previousCurrency, locale } = values;
   const patch: Pick<
     UpdateDealRequest,
     "amount_minor" | "expected_arr_minor" | "currency"
@@ -97,13 +108,15 @@ function dealPriceUpdate(
   // re-denominates the stored figure: 10000 JPY re-saved as EUR becomes 10000
   // minor EUR (€100). The FX freeze and the forecast history record that price.
   if (moved("amount") || (moved("currency") && amount)) {
-    patch.amount_minor = amount ? toMinorUnits(Number(amount), currency) : null;
+    patch.amount_minor = amount
+      ? typedMinorOrNaN(amount, currency, locale)
+      : null;
   }
   // ARR carries its currency's scale and travels on a currency move, as the
   // amount does. The code is what says how many minor units the figure counts in.
   if (moved("expected_arr") || (moved("currency") && expectedArr)) {
     patch.expected_arr_minor = expectedArr
-      ? toMinorUnits(Number(expectedArr), currency)
+      ? typedMinorOrNaN(expectedArr, currency, locale)
       : null;
   }
   const pricedCurrency = currencyBeside(currency, amount, expectedArr);
@@ -138,8 +151,9 @@ function dealPriceUpdate(
  */
 export function mapDealUpdate(
   values: Record<string, unknown>,
-  seeded: Record<string, unknown> = {},
-  masked: readonly string[] = [],
+  seeded: Record<string, unknown>,
+  masked: readonly string[],
+  locale: Locale,
 ): UpdateDealRequest {
   const str = (v: unknown) => (typeof v === "string" ? v.trim() : "");
   const currency = str(values.currency);
@@ -171,7 +185,13 @@ export function mapDealUpdate(
   Object.assign(
     patch,
     dealPriceUpdate(
-      { currency, amount, expectedArr, previousCurrency: str(seeded.currency) },
+      {
+        currency,
+        amount,
+        expectedArr,
+        previousCurrency: str(seeded.currency),
+        locale,
+      },
       moved,
     ),
   );
@@ -248,6 +268,28 @@ function withoutMasked(
     }
   }
   return out as UpdateDealRequest;
+}
+
+/** The deal as an editor opens on it: the form's values beside the wire's. */
+export function openDealEdit(deal: Deal, locale: Locale): FieldRecord {
+  return { ...dealEditRecord(deal, locale), original: deal };
+}
+
+/**
+ * `opened` comes from `openDealEdit`. A version refusal re-reads the deal and
+ * retries only while the fields this edit touches have not moved.
+ */
+export function saveDealEdit(
+  opened: FieldRecord,
+  values: Record<string, unknown>,
+  masked: readonly string[],
+  locale: Locale,
+) {
+  return saveRecordEdit(
+    "deal",
+    rawRecord(opened),
+    mapDealUpdate({ ...opened, ...values }, opened, masked, locale),
+  );
 }
 
 // Pinned to the version the reader saw, so an archive never lands on a deal

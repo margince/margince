@@ -6,9 +6,9 @@ import { ListTable, useListQuery } from "../../components/listquery";
 import {
   createdColumn,
   lastActivityColumn,
-  mineEmptyNote,
+  mineEmptyLine,
   ownerColumn,
-  sharedEmptyNote,
+  sharedEmptyLine,
   sharedWithMeView,
   standardViews,
   tagsColumn,
@@ -17,10 +17,19 @@ import {
 import { Badge } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { ContactLink, CopyEmail } from "../../design-system/contactlink";
+import {
+  type ListRefusal,
+  useListRefusal,
+} from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
+import { useActionRefusal } from "../../lib/writerefusal";
+import {
+  useVCardImportRefusal,
+  VCardImportAction,
+  VCardImportPage,
+} from "../import/vcard-import";
 import {
   SavedViewsFailure,
   SaveViewAction,
@@ -51,7 +60,7 @@ function ContactName({
     <span className="avatar-row">
       <Avatar identity={contact.id} name={contact.full_name} />
       <span>
-        <strong>{contact.full_name}</strong>
+        <strong title={contact.full_name}>{contact.full_name}</strong>
         {title && <span className="t-caption"> · {title}</span>}
       </span>
       {contact.archived_at && (
@@ -71,6 +80,36 @@ export function ContactsScreen({
     <VCardImportPage />
   ) : (
     <ContactsList startCreating={startCreating} />
+  );
+}
+
+// The ways a contact comes to exist. The vCard import is last: a reader
+// reaches for it with a stack of cards in hand. A seat refused them reads why
+// once, under the list's head, and each refused verb points at that sentence.
+function useContactListRefusal(): ListRefusal | undefined {
+  const createRefusal = useActionRefusal({
+    object: "contact",
+    action: "create",
+  });
+  const importRefusal = useVCardImportRefusal();
+  return useListRefusal(createRefusal ?? importRefusal);
+}
+
+function ContactListActions({
+  startCreating,
+  refusalId,
+}: Readonly<{ startCreating: boolean; refusalId: string | undefined }>) {
+  const importRefusal = useVCardImportRefusal();
+  return (
+    <>
+      <ContactCreateActions
+        startCreating={startCreating}
+        refusalId={refusalId}
+      />
+      <VCardImportAction
+        refusalId={importRefusal === undefined ? undefined : refusalId}
+      />
+    </>
   );
 }
 
@@ -94,6 +133,7 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
     recordType: "contact",
     labelOf: (contact) => contact.full_name,
   });
+  const refusal = useContactListRefusal();
 
   return (
     <div className="wrap">
@@ -101,17 +141,17 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
         title={pageName}
         state={state}
         unit="unit.contacts"
-        emptyNote={
-          mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" }) ??
-          sharedEmptyNote({ t, state, unit: "unit.contacts" })
+        unitOne="unit.contact"
+        emptyLine={
+          mineEmptyLine({ t, state, viewerId, unit: "unit.contacts" }) ??
+          sharedEmptyLine({ t, state, unit: "unit.contacts" })
         }
+        refusal={refusal}
         action={
-          <>
-            <ContactCreateActions startCreating={startCreating} />
-            {/* Last, because it is the one a reader reaches for with a stack
-                of cards already in hand rather than while typing one contact. */}
-            <VCardImportAction />
-          </>
+          <ContactListActions
+            startCreating={startCreating}
+            refusalId={refusal?.id}
+          />
         }
         columns={[
           {

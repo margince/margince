@@ -14,23 +14,21 @@ import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { PageZones } from "../../design-system/pagezones";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { FlatPanelHeads, Panel, PanelBody } from "../../design-system/panel";
 import { greetingNameOf } from "../../format/greetingname";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
 import { lazy } from "../../i18n/lazy";
 import { APPROVAL_PARAM } from "../../lib/approvalhref";
-import { useCanWrite } from "../../lib/capability";
+import { useCan, useCanWrite } from "../../lib/capability";
 import { markJourney } from "../../lib/journeymarks";
 import { useMagic } from "../../lib/magic.queries";
 import { usePendingMarginceChanges } from "../../lib/marginchanges";
-import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { readerTask } from "../../lib/worklistcopy";
 import { pillFigure } from "../../lib/worklistcounts";
-import { WORKLIST_VIEW_PARAM } from "../../lib/worklistrouting";
 import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
 import {
@@ -64,24 +62,21 @@ import { BriefGlance } from "./brief.glance";
 import { homeJourneyMarks } from "./brief.journey";
 import { CustomerPaymentsCard } from "./brief.payments";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
-import { BriefQueue, loadWorklistScreen } from "./brief.queue";
+import {
+  BriefQueue,
+  closeQueue,
+  drawerOpen,
+  loadWorklistScreen,
+  openQueue,
+} from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
 import { SchedulePanel } from "./brief.schedule";
 import { BriefSuggestions } from "./brief.suggestions";
 import { taskName } from "./brief.taskcard";
+import { shownAddress } from "./brief.teamselect";
 import { addressFrom, type BriefAddress, paramsFor } from "./brief.view";
 import { BriefCoverage } from "./briefcoverage";
 import "./brief.css";
-
-// The dials that narrow the drawer. The Home button clears them, so it always
-// opens the reader's own Today with every category.
-const DRAWER_DIALS = [
-  "queue_scope",
-  WORKLIST_VIEW_PARAM,
-  "filter",
-  "owner",
-  "selected",
-];
 
 export function BriefScreen() {
   const t = useT();
@@ -89,12 +84,12 @@ export function BriefScreen() {
   const me = useMe();
   const [params, setParams] = useUrlParams();
   const query = useHomeDay(Boolean(params.get(FOCUS_PARAM)));
-  const address = addressFrom(params);
+  const address = shownAddress(addressFrom(params), me.data?.team_week);
   const day = briefDay(query.data?.pages);
-  const drawerOpen = params.get("queue") === "1";
+  const queueOpen = drawerOpen(params);
   const review = useWeeklyReview(address.week, address.view === "weekly");
   const firstName = greetingNameOf(me.data?.user);
-  const brief = useMorningBrief();
+  const brief = useMorningBrief(useCan("deal", "read"));
   const morning = address.view === "morning";
   const dials = (
     <BriefDials
@@ -102,28 +97,18 @@ export function BriefScreen() {
       onChange={(next) => setParams(paramsFor(next, params))}
     />
   );
-  // The way into the reader's own Today, with that list's count on it. It
-  // always opens Mine, Today, every category, whatever view the drawer was
-  // last left on, so the number is the one the opened list shows.
+  // The way into the reader's own Today: it always opens Mine, Today, every
+  // category, so the number is the one the opened list shows.
   const queueToggle = (
     <PageAsideToggle
       controlled={{
-        open: drawerOpen,
+        open: queueOpen,
         ...(day && pillFigure(day, "all", DEFAULT_VIEW)),
         labels: {
           show: t("brief.queue.show"),
           hide: t("brief.queue.hide"),
         },
-        onToggle: () => {
-          const next = new Map(params);
-          if (next.get("queue") === "1") {
-            next.delete("queue");
-          } else {
-            for (const dial of DRAWER_DIALS) next.delete(dial);
-            next.set("queue", "1");
-          }
-          navigate({ screen: "home" }, next);
-        },
+        onToggle: queueOpen ? closeQueue : openQueue,
       }}
     />
   );
@@ -146,13 +131,13 @@ export function BriefScreen() {
             }
           : undefined
       }
-      week={review.data}
+      week={address.team ? undefined : review.data}
       firstName={firstName}
       now={new Date(nowMs)}
       pending={query.isPending}
       briefedAt={morning ? brief.data?.generated_at : undefined}
       controls={dials}
-      titleAside={morning ? undefined : <WeekStepper />}
+      titleAside={morning || address.team ? undefined : <WeekStepper />}
     />
   );
   return (
@@ -161,7 +146,7 @@ export function BriefScreen() {
       <LinkedApprovalDrawer />
       {/* The head stands over the panes in both views, so the dial never
           moves when it is pressed. */}
-      <div className="brief-frame">
+      <div className="brief-frame arrive-stack">
         {glance}
         <BriefBody address={address} query={query} queueToggle={queueToggle} />
       </div>
@@ -181,7 +166,7 @@ function BriefBody({
   query: ReturnType<typeof useWorklist>;
   queueToggle: ReactNode;
 }>) {
-  if (address.view === "weekly") return <WeeklyPage />;
+  if (address.view === "weekly") return <WeeklyPage team={address.team} />;
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
 }
 
@@ -194,6 +179,22 @@ function dayAnswered(
   return state !== "loading" && reads.every((read) => !read.isPending);
 }
 
+// The deal reads never start for a reader without `deal.read`, so their
+// sections are not drawn and nothing waits for them.
+function useDealReads() {
+  const readsDeals = useCan("deal", "read");
+  const brief = useMorningBrief(readsDeals);
+  const magic = useMagic(readsDeals);
+  const pendingChanges = usePendingMarginceChanges(readsDeals);
+  return {
+    readsDeals,
+    brief,
+    magic,
+    pendingChanges,
+    dealReads: readsDeals ? [brief, magic] : [],
+  };
+}
+
 function PersonalMorning({
   query,
   queueToggle,
@@ -202,7 +203,6 @@ function PersonalMorning({
   queueToggle: ReactNode;
 }>) {
   const t = useT();
-  const brief = useMorningBrief();
   const handled = useHandledForYou();
   const [selected, setSelected] = useState("");
   const [params] = useUrlParams();
@@ -233,9 +233,10 @@ function PersonalMorning({
     : query.isError && !day
       ? "failed"
       : "ready";
-  const pendingChanges = usePendingMarginceChanges();
-  const magic = useMagic();
-  const settled = brief.isSuccess && handled.isSuccess && magic.isSuccess;
+  const { readsDeals, brief, magic, pendingChanges, dealReads } =
+    useDealReads();
+  const settled =
+    handled.isSuccess && dealReads.every((read) => read.isSuccess);
   useEffect(() => {
     const marks = homeJourneyMarks({
       state,
@@ -254,8 +255,8 @@ function PersonalMorning({
       <PageZones
         shape="aside"
         panes
-        className="brief-morning"
-        mainClassName="brief-main"
+        className="brief-morning arrive-stack"
+        mainClassName="brief-main arrive-stack"
         asideClassName="brief-rail"
         asideLabel={t("brief.rail")}
         main={
@@ -271,45 +272,47 @@ function PersonalMorning({
             />
             {/* What Margince finished stands with the work, where a reader
                 reviews or undoes it, not in the rail beside it. */}
-            <DoneForYou
-              completed={() => (
-                <MagicPanel
-                  lanes={["done"]}
-                  embedded
-                  visibleReceiptIds={
-                    handled.isSuccess && !handled.isRefetchError
-                      ? shownReceiptIds(
-                          handled.data.receipts,
-                          pendingChanges.data?.bundles,
-                        )
-                      : []
-                  }
+            {readsDeals && (
+              <>
+                <DoneForYou
+                  completed={() => (
+                    <MagicPanel
+                      lanes={["done"]}
+                      embedded
+                      visibleReceiptIds={
+                        handled.isSuccess && !handled.isRefetchError
+                          ? shownReceiptIds(
+                              handled.data.receipts,
+                              pendingChanges.data?.bundles,
+                            )
+                          : []
+                      }
+                    />
+                  )}
                 />
-              )}
-            />
-            <BriefSuggestions />
-            <MagicPanel
-              lanes={WAITING_LANES}
-              visibleApprovalIds={day?.focus?.items
-                .filter(
-                  (item) =>
-                    item.source === "approval" &&
-                    item.actions.includes("decide"),
-                )
-                .map((item) => item.id)}
-            />
+                <BriefSuggestions />
+                <MagicPanel
+                  lanes={WAITING_LANES}
+                  visibleApprovalIds={day?.focus?.items
+                    .filter(
+                      (item) =>
+                        item.source === "approval" &&
+                        item.actions.includes("decide"),
+                    )
+                    .map((item) => item.id)}
+                />
+              </>
+            )}
           </>
         }
         aside={
-          <>
+          // Every rail card opens with the one flat head, so a card added here
+          // cannot draw a band its neighbours do not.
+          <FlatPanelHeads value>
             {/* The day's meetings first: the work is read against them. */}
             <ScheduleWithMeetings day={day} state={state} />
             {day && (
-              <Panel
-                title={t("brief.rail.numbers")}
-                flatHead
-                className="brief-overview"
-              >
+              <Panel title={t("brief.rail.numbers")} className="brief-overview">
                 <PanelBody>
                   <BriefReadingsStrip day={day} />
                   <BriefCoverage
@@ -326,7 +329,6 @@ function PersonalMorning({
               <div aria-hidden="true">
                 <Panel
                   title={t("brief.rail.numbers")}
-                  flatHead
                   className="brief-overview"
                 >
                   <PanelBody>
@@ -336,9 +338,9 @@ function PersonalMorning({
               </div>
             )}
             <CustomerPaymentsCard
-              enabled={dayAnswered(state, [brief, handled, magic])}
+              enabled={dayAnswered(state, [handled, ...dealReads])}
             />
-          </>
+          </FlatPanelHeads>
         }
       />
       {linkedTask && (

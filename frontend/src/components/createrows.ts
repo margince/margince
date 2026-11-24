@@ -3,41 +3,16 @@
 
 import type { FormRow } from "./create";
 
-// A row's own kind for grouping primaries. An unanswered row resolves to
-// typeDefault rather than its own "" bucket — contactformfields.ts passes
-// the same default its asEmailType/asPhoneType request mapper falls back
-// to, so an unset row and an explicit default-kind row are one kind on
-// both sides of the wire, never two kinds that collide once submitted.
-export function kindOf(
-  row: FormRow,
-  typeKey: string | undefined,
-  typeDefault: string,
-): string {
-  return typeKey ? row[typeKey] || typeDefault : "";
-}
-
-// One row's value change, plus the primary bookkeeping a kind change owes:
-// a row that changes kind stops claiming a primary it held under its OLD
-// kind, so it never silently contends for the new kind's primary slot
-// without the reader choosing it again.
+// One row's value change.
 export function withRowUpdated(
   rows: FormRow[],
   index: number,
   key: string,
   value: string,
-  primaryKey: string | undefined,
-  typeKey: string | undefined,
 ): FormRow[] {
-  return rows.map((row, rowIndex) => {
-    if (rowIndex !== index) {
-      return row;
-    }
-    const next = { ...row, [key]: value };
-    if (primaryKey && key === typeKey && row[primaryKey] === "true") {
-      next[primaryKey] = "";
-    }
-    return next;
-  });
+  return rows.map((row, rowIndex) =>
+    rowIndex === index ? { ...row, [key]: value } : row,
+  );
 }
 
 // One row moved a single position up or down. Order is a real gesture on these
@@ -62,20 +37,44 @@ export function withRowMoved(
   return next;
 }
 
-// Marks one row primary among the rows sharing its kind, leaving every
-// other kind's rows untouched.
+// Marks one row primary and clears the flag on every other row: a contact has
+// one primary address and one primary number, whatever their types.
 export function withPrimaryMarked(
   rows: FormRow[],
   index: number,
   primaryKey: string,
-  typeKey: string | undefined,
-  typeDefault: string,
 ): FormRow[] {
-  const targetKind = kindOf(rows[index] ?? {}, typeKey, typeDefault);
-  return rows.map((row, rowIndex) => {
-    if (typeKey && kindOf(row, typeKey, typeDefault) !== targetKind) {
-      return row;
-    }
-    return { ...row, [primaryKey]: rowIndex === index ? "true" : "" };
-  });
+  return rows.map((row, rowIndex) => ({
+    ...row,
+    [primaryKey]: rowIndex === index ? "true" : "",
+  }));
+}
+
+// The rows as sent: when none is marked primary, the first is, so a contact
+// that has addresses always has one the app writes to.
+export function withPrimaryDefault<T extends { is_primary: boolean }>(
+  rows: T[],
+): T[] {
+  return rows.some((row) => row.is_primary)
+    ? rows
+    : rows.map((row, index) =>
+        index === 0 ? { ...row, is_primary: true } : row,
+      );
+}
+
+// The first value a second row repeats, as that row spells it, when the
+// field's values are stored once. Case and edge spaces name no other value.
+export function repeatedRowValue(
+  rows: readonly FormRow[],
+  valueKey: string,
+): string | undefined {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const value = (row[valueKey] ?? "").trim();
+    const key = value.toLowerCase();
+    if (!key) continue;
+    if (seen.has(key)) return value;
+    seen.add(key);
+  }
+  return undefined;
 }

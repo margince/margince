@@ -21,6 +21,9 @@ type sentParams struct {
 	Reasoning     *OpenRouterReasoning `json:"reasoning,omitempty"`
 	ThinkingLevel string               `json:"thinking_level,omitempty"`
 	DeadlineMs    int64                `json:"deadline_ms"`
+	// WalkBoundMs bounds every try of the call together. A try is sent with
+	// deadline_ms, or with what is left of this bound when that is less.
+	WalkBoundMs int64 `json:"walk_bound_ms,omitempty"`
 }
 
 // sentSnapshotKey names one memoized snapshot.
@@ -29,6 +32,7 @@ type sentSnapshotKey struct {
 	kind     string
 	thinking string
 	deadline time.Duration
+	walk     time.Duration
 }
 
 // sentSnapshots memoizes a binding's snapshots, built on first use. A pointer,
@@ -44,7 +48,7 @@ func (b *binding) snapshotFor(tier Tier, kind string, task EffectiveTask) Config
 	if kind == callKindEmbedding || b.sent == nil {
 		return b.configSnapshot
 	}
-	key := sentSnapshotKey{tier: tier, kind: kind, thinking: task.Thinking, deadline: task.AttemptTimeout}
+	key := sentSnapshotKey{tier: tier, kind: kind, thinking: task.Thinking, deadline: task.AttemptTimeout, walk: task.WalkTimeout}
 	if kind == callKindDecision {
 		key = sentSnapshotKey{tier: tier, kind: kind, deadline: task.DecisionTimeout}
 	}
@@ -62,7 +66,7 @@ func (b *binding) snapshotFor(tier Tier, kind string, task EffectiveTask) Config
 // routing and the task's level as written, before an adapter maps a level to
 // what one model lists.
 func (b *binding) buildSnapshot(key sentSnapshotKey) ConfigSnapshot {
-	params := sentParams{DeadlineMs: key.deadline.Milliseconds(), ThinkingLevel: key.thinking}
+	params := sentParams{DeadlineMs: key.deadline.Milliseconds(), WalkBoundMs: key.walk.Milliseconds(), ThinkingLevel: key.thinking}
 	if routing, broker := b.tierRouting[key.tier]; broker && key.kind == callKindCompletion {
 		params.Provider, params.Reasoning = routing.providerWire(), routing.reasoningWire()
 		if key.thinking != "" {

@@ -11,11 +11,13 @@ package consent
 // better than the bare error code it replaced.
 
 import (
+	"context"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/commsauthzwire"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -26,12 +28,28 @@ import (
 // that decided scope here would be a second answer to a question the store
 // already answers, and the two would disagree the first time either changed.
 func (h Handlers) GetCommunicationReview(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	review, err := h.store.ReviewForReader(r.Context(), ids.UUID(id))
+	review, err := h.store.ServedReview(r.Context(), ids.UUID(id))
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, wireReview(review))
+	httperr.WriteJSON(w, http.StatusOK, review)
+}
+
+// ServedReview is the review as GET /communication-reviews/{id} serves it to
+// this caller. A refusal that embeds its review reads it here, so the two
+// answers share one scope, one redaction and one set of actions.
+func (s *Store) ServedReview(ctx context.Context, id ids.UUID) (crmcontracts.CommunicationReview, error) {
+	review, err := s.ReviewForReader(ctx, id)
+	if err != nil {
+		return crmcontracts.CommunicationReview{}, err
+	}
+	return wireReview(review), nil
+}
+
+// ServedReview is Store.ServedReview, for the send path that holds the gate.
+func (g *Gate) ServedReview(ctx context.Context, id ids.UUID) (crmcontracts.CommunicationReview, error) {
+	return g.store.ServedReview(ctx, id)
 }
 
 // wireReview renders a review for the rep who asked for it.
@@ -43,42 +61,16 @@ func (h Handlers) GetCommunicationReview(w http.ResponseWriter, r *http.Request,
 func wireReview(review Review) crmcontracts.CommunicationReview {
 	refusals := make([]crmcontracts.RefusedRecipient, 0, len(review.Refusals))
 	for _, refusal := range review.Refusals {
-		wire := crmcontracts.RefusedRecipient{
-			Address:    refusal.Address,
-			ReasonCode: refusal.ReasonCode,
-		}
-		if refusal.SendingEntity != nil {
-			id := openapi_types.UUID(*refusal.SendingEntity)
-			wire.SendingEntityId = &id
-		}
-		if refusal.SendingEntityName != "" {
-			name := refusal.SendingEntityName
-			wire.SendingEntityName = &name
-		}
-		if refusal.Requested != "" {
-			requested := refusal.Requested
-			wire.RequestedCategory = &requested
-		}
-		if refusal.Category != "" {
-			category := refusal.Category
-			wire.Category = &category
-		}
-		if refusal.SubjectKind != "" {
-			kind := crmcontracts.RefusedRecipientSubjectKind(refusal.SubjectKind)
-			wire.SubjectKind = &kind
-		}
-		if subject, err := ids.Parse(refusal.SubjectID); err == nil {
-			id := openapi_types.UUID(subject)
-			wire.SubjectId = &id
-		}
-		refusals = append(refusals, wire)
+		refusals = append(refusals, wireRefusal(refusal))
 	}
+	revision := review.AssessmentRevision()
 	out := crmcontracts.CommunicationReview{
-		Id:         openapi_types.UUID(review.ID),
-		State:      crmcontracts.CommunicationReviewState(review.State),
-		Kind:       crmcontracts.CommunicationReviewKind(review.Kind),
-		ReasonCode: review.ReasonCode,
-		Refusals:   refusals,
+		AssessmentRevision: &revision,
+		Id:                 openapi_types.UUID(review.ID),
+		State:              crmcontracts.CommunicationReviewState(review.State),
+		Kind:               crmcontracts.CommunicationReviewKind(review.Kind),
+		ReasonCode:         review.ReasonCode,
+		Refusals:           refusals,
 	}
 	// Null rather than a zero uuid when nothing was held. A caller reading
 	// 00000000-… would have an id it could take to a lookup that answers not
@@ -95,6 +87,11 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 	out.Warning = &crmcontracts.OverrideWarning{
 		Version: warning.Version, Text: warning.Text,
 	}
+	warnings := make([]crmcontracts.OverrideWarning, 0, len(review.Warnings))
+	for _, served := range review.Warnings {
+		warnings = append(warnings, crmcontracts.OverrideWarning{Version: served.Version, Text: served.Text})
+	}
+	out.Warnings = &warnings
 	if correction := review.Correction; correction != nil {
 		out.WordingCorrection = &crmcontracts.WordingCorrectionContext{
 			InstructionId: openapi_types.UUID(correction.InstructionID), Version: correction.Version,
@@ -104,6 +101,55 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 		}
 	}
 	return out
+}
+
+// wireRefusal renders one refused recipient as the rep may read it.
+func wireRefusal(refusal RefusedRecipient) crmcontracts.RefusedRecipient {
+	wire := crmcontracts.RefusedRecipient{
+		Address:    refusal.Address,
+		ReasonCode: refusal.ReasonCode,
+	}
+	if len(refusal.FooterPreview) > 0 {
+		wire.FooterPreview = &refusal.FooterPreview
+	}
+	if len(refusal.FooterFindings) > 0 {
+		wire.FooterFindings = commsauthzwire.FooterFindings(refusal.FooterFindings)
+	}
+	wire.Provision = commsauthzwire.Provision(refusal.Provision)
+	wire.Provisions = commsauthzwire.Provisions(refusal.Provisions)
+	if refusal.SendingEntity != nil {
+		id := openapi_types.UUID(*refusal.SendingEntity)
+		wire.SendingEntityId = &id
+	}
+	if refusal.SendingEntityName != "" {
+		name := refusal.SendingEntityName
+		wire.SendingEntityName = &name
+	}
+	if refusal.Requested != "" {
+		requested := refusal.Requested
+		wire.RequestedCategory = &requested
+	}
+	if refusal.Category != "" {
+		category := refusal.Category
+		wire.Category = &category
+	}
+	if refusal.Country != "" {
+		country := refusal.Country
+		wire.Country = &country
+	}
+	if refusal.CountrySource != "" {
+		source := crmcontracts.RefusedRecipientCountrySource(refusal.CountrySource)
+		wire.CountrySource = &source
+	}
+	if refusal.SubjectKind != "" {
+		kind := crmcontracts.RefusedRecipientSubjectKind(refusal.SubjectKind)
+		wire.SubjectKind = &kind
+	}
+	if subject, err := ids.Parse(refusal.SubjectID); err == nil {
+		id := openapi_types.UUID(subject)
+		wire.SubjectId = &id
+	}
+	return wire
 }
 
 // RecordCommunicationContext takes one rep's statement about one contact and

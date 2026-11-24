@@ -27,7 +27,9 @@ type Harness = Readonly<{
   onDirtyChange?: (dirty: boolean) => void;
   control?: "text" | "textarea" | "choice" | "date";
   stored?: string;
+  absent?: boolean;
   settle?: (draft: string) => string;
+  check?: (next: string) => string | undefined;
 }>;
 
 function Edited({
@@ -35,7 +37,9 @@ function Edited({
   onDirtyChange,
   control = "text",
   settle,
+  check,
   stored = "Software",
+  absent,
 }: Harness) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(stored);
@@ -48,7 +52,9 @@ function Edited({
         open={open}
         label="Industry"
         value={value}
+        absent={absent}
         settle={settle}
+        check={check}
         onDirtyChange={onDirtyChange}
         onClose={() => setOpen(false)}
         onSave={async (next) => {
@@ -206,7 +212,26 @@ describe("FieldEditDialog", () => {
     );
     expect(box).toHaveValue("Retail");
     expect(box).toHaveAttribute("aria-invalid", "true");
+    expect(box).toHaveFocus();
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("moves focus to the field when a check refuses the value, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => undefined);
+    await user.click(
+      renderEdited({
+        onSave,
+        settle: (draft) => draft.trim(),
+        check: (next) => (next === "" ? "Industry is required." : undefined),
+      }),
+    );
+    const box = await screen.findByRole("textbox", { name: "Industry" });
+    await user.clear(box);
+    await user.click(screen.getByRole("button", { name: en["record.save"] }));
+    expect(await screen.findByText("Industry is required.")).toBeVisible();
+    expect(box).toHaveFocus();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it("closes on Escape without saving an untouched value", async () => {
@@ -256,6 +281,14 @@ describe("FieldEditDialog", () => {
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("saves an empty draft when nothing is stored yet", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn(async () => undefined);
+    await user.click(renderEdited({ onSave, stored: "", absent: true }));
+    await user.click(await screen.findByRole("button", { name: "Save" }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(""));
   });
 
   it("reports a draft as unsaved while it differs from the stored value", async () => {
@@ -322,7 +355,7 @@ describe("FieldEditDialog", () => {
     await user.type(box, "31/02/2026");
     await user.click(screen.getByRole("button", { name: en["record.save"] }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Enter a date as DD/MM/YYYY.",
+      "There is no 31/02/2026 in the calendar.",
     );
     expect(box).toHaveValue("31/02/2026");
     expect(screen.getByRole("dialog", { name: "Industry" })).toBeVisible();

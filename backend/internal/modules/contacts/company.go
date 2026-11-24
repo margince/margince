@@ -65,17 +65,17 @@ func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmco
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	// The store-opened path reads the catalog through the unexported helper,
-	// not ActiveCompanyColumns: that one takes company:read on the
-	// caller's behalf, and a seat may hold create without it.
-	active, err := s.activeColumns(ctx, "company")
-	if err != nil {
-		return crmcontracts.Company{}, err
-	}
-
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
+		// Not ActiveCompanyColumns, which takes company:read on the caller's
+		// behalf. A seat may hold create without it.
+		active, err := s.activeColumnsIn(ctx, tx, "company")
+		if err != nil {
+			return err
+		}
+		if err = s.refuseConsumerCompanyDomains(ctx, tx, ids.CompanyID{}, in.Domains); err != nil {
+			return err
+		}
 		out, err = createCompanyInTx(ctx, tx, in, by, active)
 		if err != nil {
 			return err

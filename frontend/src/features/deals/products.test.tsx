@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
-import { LocaleProvider } from "../../i18n";
+import { type Locale, LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ProductsAdmin } from "./products";
 
@@ -27,13 +27,13 @@ function jsonResponse(body: unknown, status = 200) {
     headers: { "Content-Type": "application/json" },
   });
 }
-function render(ui: ReactNode) {
+function render(ui: ReactNode, locale: Locale = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -67,11 +67,13 @@ function productsStub({
   allow,
   seat = "full",
   onPost,
+  onPatch,
   rows = [product],
 }: {
   allow: GrantSpec;
   seat?: "full" | "read";
   onPost?: (body: unknown) => Response;
+  onPatch?: (body: unknown) => Response;
   rows?: readonly object[];
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -84,6 +86,10 @@ function productsStub({
     if (method === "POST" && onPost) {
       const sent = input instanceof Request ? await input.text() : init?.body;
       return onPost(typeof sent === "string" ? JSON.parse(sent) : null);
+    }
+    if (method === "PATCH" && onPatch) {
+      const sent = input instanceof Request ? await input.text() : init?.body;
+      return onPatch(typeof sent === "string" ? JSON.parse(sent) : null);
     }
     return jsonResponse({
       data: rows,
@@ -130,10 +136,7 @@ async function fillRequired(user: User) {
     await screen.findByRole("textbox", { name: /Name/ }),
     "Consulting Day",
   );
-  await user.type(
-    screen.getByRole("spinbutton", { name: /Unit price/ }),
-    "1500",
-  );
+  await user.type(screen.getByRole("textbox", { name: /Unit price/ }), "1500");
 }
 
 // Records each create body and answers with the product it would make.
@@ -198,7 +201,8 @@ describe("ProductsAdmin", () => {
     expect(newButton()).toBeTruthy();
   });
 
-  it("surfaces a 409 SKU-duplicate detail verbatim on create", async () => {
+  it("puts a 409 SKU duplicate on the SKU field, in the form's words", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       productsStub({
@@ -215,19 +219,137 @@ describe("ProductsAdmin", () => {
       }),
     );
     render(<ProductsAdmin />);
-    await userEvent.click(await screen.findByTestId("new-record"));
-    // Each column header is a sort button carrying its own column's name, so
-    // every form field is asked for by role rather than by a loose text match.
-    const nameField = await screen.findByRole("textbox", { name: /Name/ });
-    await userEvent.type(nameField, "Consulting Day");
-    await userEvent.type(
-      screen.getByRole("spinbutton", { name: /Unit price/ }),
-      "1500",
-    );
-    await userEvent.click(screen.getByText("Create"));
+    await user.click(await screen.findByTestId("new-record"));
+    await fillRequired(user);
+    const sku = screen.getByRole("textbox", { name: "SKU" });
+    await user.type(sku, "CONS-DAY");
+    await user.click(screen.getByText("Create"));
     expect(
-      await screen.findByText("sku already in use by a live product: conflict"),
+      await screen.findByText("Another product already has this SKU."),
     ).toBeTruthy();
+    expect(sku.getAttribute("aria-invalid")).toBe("true");
+    expect(screen.queryByText(/sku already in use/)).toBeNull();
+  });
+
+  it("refuses a negative unit price on its field before sending", async () => {
+    const user = userEvent.setup();
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      productsStub({ allow: PRODUCT_MANAGER, onPost: capture(posted) }),
+    );
+    render(<ProductsAdmin />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(
+      await screen.findByRole("textbox", { name: /Name/ }),
+      "Widget",
+    );
+    const price = screen.getByRole("textbox", { name: /Unit price/ });
+    await user.type(price, "-5");
+    expect(
+      await screen.findByText("Unit price must be at least €0.00."),
+    ).toBeTruthy();
+    expect(price.getAttribute("aria-invalid")).toBe("true");
+    await user.keyboard("{Enter}");
+    expect(posted).toEqual([]);
+  });
+
+  it.each([
+    ["de", "Einzelpreis", /^Einzelpreis muss mindestens 0,00\s€ sein\.$/],
+    ["vi", "Đơn giá", /^Đơn giá phải từ 0,00\s€ trở lên\.$/],
+  ] as const)(
+    "states the price's lower bound as money (%s)",
+    async (locale, label, sentence) => {
+      const user = userEvent.setup();
+      vi.stubGlobal("fetch", productsStub({ allow: PRODUCT_MANAGER }));
+      render(<ProductsAdmin />, locale);
+      await user.click(await screen.findByTestId("new-record"));
+      await user.type(
+        await screen.findByRole("textbox", { name: new RegExp(`^${label}`) }),
+        "-5",
+      );
+      expect(await screen.findByText(sentence)).toBeTruthy();
+    },
+  );
+
+  it("states the server's price limit in the currency the form was sent in", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      productsStub({
+        allow: PRODUCT_MANAGER,
+        onPost: () =>
+          jsonResponse(
+            {
+              code: "validation_error",
+              detail: "`unit_price_minor` refused",
+              details: {
+                errors: [
+                  {
+                    field: "unit_price_minor",
+                    code: "out_of_range",
+                    message: "`unit_price_minor` refused",
+                    params: { max: "100000" },
+                  },
+                ],
+              },
+            },
+            422,
+          ),
+      }),
+    );
+    render(<ProductsAdmin />);
+    await user.click(await screen.findByTestId("new-record"));
+    await fillRequired(user);
+    await pick(user, "Currency", "USD");
+    await user.click(screen.getByText("Create"));
+
+    const price = screen.getByRole("textbox", { name: /Unit price/ });
+    expect((await screen.findByText(/must be at most/)).textContent).toBe(
+      "Unit price must be at most US$1,000.00.",
+    );
+    expect(price.getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("refuses a negative default tax rate in percent", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", productsStub({ allow: PRODUCT_MANAGER }));
+    render(<ProductsAdmin />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(
+      await screen.findByRole("textbox", { name: /Default tax rate/ }),
+      "-19",
+    );
+    expect(
+      await screen.findByText(
+        /^Default tax rate %? ?must be at least 0\s?%\.$/,
+      ),
+    ).toBeTruthy();
+  });
+
+  // Converted, a price finer than its currency is NaN, which the request would
+  // send as a null price.
+  it("refuses a price finer than its currency before it creates", async () => {
+    const posted = vi.fn(() => jsonResponse({}, 201));
+    vi.stubGlobal(
+      "fetch",
+      productsStub({ allow: PRODUCT_MANAGER, onPost: posted }),
+    );
+    render(<ProductsAdmin />);
+    await userEvent.click(await screen.findByTestId("new-record"));
+    await userEvent.type(
+      await screen.findByRole("textbox", { name: /Name/ }),
+      "Consulting Day",
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /Unit price/ }),
+      "15.999",
+    );
+    expect(
+      await screen.findByText("This amount has more decimals than EUR allows."),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByText("Create"));
+    expect(posted).not.toHaveBeenCalled();
   });
 
   it("gives a read-only seat the rows, the posture line and no write affordance", async () => {
@@ -236,7 +358,7 @@ describe("ProductsAdmin", () => {
     // The list itself is never withheld — every seat reads it.
     expect(await screen.findByText("Consulting Day")).toBeTruthy();
     expect(postureLine()).toBeTruthy();
-    expect(newButton()).toBeNull();
+    expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(rowMenu()).toBeNull();
     // With both row verbs withheld the column goes too, rather than standing
     // there headed and empty.
@@ -262,7 +384,7 @@ describe("ProductsAdmin", () => {
       await screen.findByRole("button", { name: "Edit product" }),
     ).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Actions" })).toBeTruthy();
-    expect(newButton()).toBeNull();
+    expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(archiveButton()).toBeNull();
     expect(postureLine()).toBeNull();
   });
@@ -274,7 +396,7 @@ describe("ProductsAdmin", () => {
     expect(
       await screen.findByRole("button", { name: "Archive product" }),
     ).toBeTruthy();
-    expect(newButton()).toBeNull();
+    expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(editButton()).toBeNull();
     expect(postureLine()).toBeNull();
   });
@@ -289,7 +411,7 @@ describe("ProductsAdmin", () => {
     render(<ProductsAdmin />);
     expect(await screen.findByText("Consulting Day")).toBeTruthy();
     expect(postureLine()).toBeTruthy();
-    expect(newButton()).toBeNull();
+    expect(newButton()?.hasAttribute("disabled")).toBe(true);
     expect(rowMenu()).toBeNull();
   });
 
@@ -495,6 +617,59 @@ describe("ProductsAdmin", () => {
       await screen.findByText(
         "Archive this product? Existing offer lines keep their snapshot.",
       ),
+    ).toBeTruthy();
+  });
+
+  it("saves an emptied default tax rate as 0%, as a new product's empty field is", async () => {
+    const patched: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      productsStub({
+        allow: PRODUCT_MANAGER,
+        onPatch: (body) => {
+          patched.push(body);
+          return jsonResponse({ ...product, default_tax_rate: 0 });
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<ProductsAdmin />);
+    await openRowMenu();
+    await user.click(
+      await screen.findByRole("button", { name: "Edit product" }),
+    );
+    const rate = await screen.findByRole("textbox", {
+      name: /Default tax rate/,
+    });
+    expect(rate).toHaveProperty("value", "19");
+    await user.clear(rate);
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]).toMatchObject({ default_tax_rate: 0 });
+  });
+
+  it("offers no write on an archived product, which every write would refuse", async () => {
+    vi.stubGlobal(
+      "fetch",
+      productsStub({
+        allow: PRODUCT_MANAGER,
+        rows: [
+          { ...product, archived_at: "2026-06-02T08:00:00Z" },
+          { ...product, id: "p-2", name: "Support Plan" },
+        ],
+      }),
+    );
+    render(<ProductsAdmin />);
+    const archived = within(
+      await screen.findByRole("row", { name: /Consulting Day/ }),
+    );
+    expect(archived.getByText("Archived")).toBeTruthy();
+    expect(rowMenu()).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Actions for Support Plan" }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Archive product" }),
     ).toBeTruthy();
   });
 });

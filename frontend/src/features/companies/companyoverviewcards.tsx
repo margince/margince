@@ -17,7 +17,7 @@ import { formatDayMonth } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
 import { useLocale, useT } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
-import { useDisabledCoreFeatures } from "../../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { labelFor } from "../../lib/labelfor";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { routeHash } from "../../lib/router";
@@ -112,6 +112,11 @@ function OtherOpenTasks({
 }>) {
   const t = useT();
   const steps = otherOpenTasks(view, shownTaskId);
+  const restricted = emptyWords(view, ["next_steps"]);
+  // Nothing left to list draws no card; the header keeps Add task.
+  if (steps.length === 0 && !restricted) {
+    return null;
+  }
   return (
     <OverviewCard
       title={t("co.overview.otherOpen")}
@@ -120,10 +125,7 @@ function OtherOpenTasks({
           {t("record.allTasks")}
         </Button>
       }
-      empty={t(
-        emptyWords(view, ["next_steps"]) ??
-          (shownTaskId ? "co.overview.nothingOpen" : "co.next.empty"),
-      )}
+      empty={restricted && t(restricted)}
     >
       {steps.length > 0 && (
         <OverviewList>
@@ -184,7 +186,7 @@ function DealsAndProjects({
   onOpenTab,
 }: Readonly<{ view: Company360; onOpenTab: (tab: CompanyTab) => void }>) {
   const t = useT();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   const rows = workInFlight(view).filter(
     (row) => !disabled.includes(row.kind === "deal" ? "deals" : "projects"),
   );
@@ -299,7 +301,7 @@ function ContactsCard({
   onOpenTab,
 }: Readonly<{ view: Company360; onOpenTab: (tab: CompanyTab) => void }>) {
   const t = useT();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   const contacts = strongestContacts(view);
   if (disabled.includes("contacts")) {
     return null;
@@ -309,7 +311,7 @@ function ContactsCard({
       title={t("tab.contacts")}
       action={
         <Button variant="link" onClick={() => onOpenTab("contacts")}>
-          {t("co.rail.contacts.add")}
+          {t("co.overview.allContacts")}
         </Button>
       }
       empty={t(emptyWords(view, ["contacts"]) ?? "co.rail.contacts.empty")}

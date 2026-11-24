@@ -106,7 +106,7 @@ token:
 
 | Value | Provider | Meaning |
 |---|---|---|
-| `SendsWithScope` | `gmail` | The grant must carry `.../auth/gmail.send`; a connection without it parks with `"reconnect it to enable sending"`. |
+| `SendsWithScope` | `gmail`, `graph`, `imap` | The grant must carry the provider's send scope (`.../auth/gmail.send`, `Mail.Send`, `urn:margince:imap:send`); a connection without it parks with `"reconnect it to enable sending"`. An IMAP connection holds its scope only when its owner turned sending on and the SMTP login passed. |
 | `SendsWithoutScope` | `telegram` | The credential **is** the whole authority. A bot token carries no OAuth grant, so there is nothing to check it against. |
 | `CannotSend` | anything else | Nothing on this installation sends for it. It is the zero value, so a provider nobody answered for refuses instead of sending. |
 
@@ -223,8 +223,9 @@ the text lands. Both write a row per recipient into `communication_decision`.
 The answer is no by default, and an allow rests on evidence, never on a purpose key the caller
 supplies. The engine resolves a kind from what the send is: the thread it answers, the invoice it is
 about, the template it uses. It then checks what that kind requires. A reply is allowed because this
-recipient is on the thread the subject opened. An invoice goes to the company's billing contact,
-or to the buyer on the deal when the company has none.
+recipient is on the thread the subject opened. An offer in the words or file names the sender wrote
+(`consent/authoredoffer.go`) needs a live deal, a requested quote or marketing consent instead.
+An invoice goes to the company's billing contact, or to the deal's buyer when the company has none.
 
 A marketing mail still needs consent, and there a `requires_double_opt_in` purpose needs a confirmed
 `consent_event`. A send whose kind nothing supports is `review`, never a silent pass.
@@ -232,9 +233,8 @@ A marketing mail still needs consent, and there a `requires_double_opt_in` purpo
 The engine must tell an **answer** (park: a human can do something about it) from a **fault** (retry:
 the question could not be asked). Reading one as the other silently loses good mail.
 
-The rest of the engine is in
-[privacy-and-consent.md](privacy-and-consent.md#the-authorization-engine-consent). It covers consent
-revoked by kind, and `communication_suppression`. It covers the messages that still reach a subject
+The rest of the engine is in [privacy-and-consent.md](privacy-and-consent.md#the-authorization-engine-consent).
+It covers consent revoked by kind, and `communication_suppression`. It covers the messages that still reach a subject
 whose data use is limited (`security_notice`, `privacy_notice`, `optout_confirmation`). And it covers
 the modes for turning it on step by step (`consent.authorization_modes`, `observe`, `warn`). A fixed
 set of reason codes (`absoluteDenials` in `commsauthz`) refuses in every mode.
@@ -260,14 +260,14 @@ Merging them into one would put an endpoint that takes only POST behind a link r
 
 | Where | URL | Who clicks it |
 |---|---|---|
-| `List-Unsubscribe` header | `{base}/v1/public/preferences/{token}/unsubscribe?purpose=` | a mailbox provider, by POST, with no human |
-| Visible `Unsubscribe` link | `{base}/#/unsubscribe/{token}/{purpose}?lang=` | the recipient, who gets a page that asks before it does anything |
+| `List-Unsubscribe` header | `{base}/v1/public/preferences/{token}/unsubscribe[?purpose=]` | a mailbox provider, by POST, with no human |
+| Visible `Unsubscribe` link | `{base}/#/unsubscribe/{token}[/{purpose}]?lang=` | the recipient, who gets a page that asks before it does anything |
 | Visible `Manage preferences` link | `{base}/#/preferences/{token}?lang=` | the recipient, who gets every purpose |
 
 `activities.unsubscribeLinksFor` builds all three. So the header, both visible links, and the copy on
 the timeline with the token removed cannot name different tokens, purposes or languages. The two
-visible links are routes after a `#`. The SPA already serves its public pages that way. And the token
-stays out of ordinary web server access logs until the page calls the API with it.
+visible links are routes after a `#`, which keeps the token out of web server access logs. A link names
+only a live marketing purpose. Any other key gets a link for all marketing, and its press stops that.
 
 The human page never revokes consent when it opens. Mail scanners and link checkers follow links in a
 mailbox with nobody there. That is the same reason RFC 8058 makes the machine endpoint take only POST.
@@ -276,16 +276,16 @@ The text at the end of the mail uses the language of the message above it. That 
 the body, then the subject, then the installation's own language, then English. Nothing records the
 recipient's own choice. The pages a link opens carry a language switch, which is the way back.
 
-### Agents send on their own authority
+### Human approval for agent sends
 
 All three send operations (`sendEmail`, `sendCompanyEmail`, `sendMessage`) declare
 `tier: auto_execute` and `scope: send` in the contract's `x-mcp-tool` extension. The gate for agent
 actions (`auth.Gate.Admit`) checks that scope before the request reaches the handler. A passport
 without `send` is refused there, and nothing is staged for a human to approve.
 
-A passport with `send` acts on the seat, grants and row scope of the human who gave it. So an agent
-can send only what that human could send in the app. See
-[authorization.md](authorization.md#what-a-passport-is).
+A passport with `send` acts on its granting human's seat, grants and row scope. A direct human instruction counts as approval.
+A connected client must ask before sending without one; send scope alone does not approve messages.
+The runner marks work with nobody there; `auth.TierFor` stages each send, even after a run resumes. See [authorization.md](authorization.md#what-a-passport-is).
 
 ### Pace: the policies that wait
 

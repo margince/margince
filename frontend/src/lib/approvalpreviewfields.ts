@@ -6,6 +6,7 @@ import { historyFieldLabel } from "./historyfieldlabels";
 
 const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   promise_strength: "approval.commitment.strength",
+  odd_due_date: "approval.commitment.oddDue",
   import_create_tag: "approval.import.createTag",
   import_apply_tag: "approval.import.applyTag",
   import_context_tag: "approval.import.contextTag",
@@ -202,6 +203,8 @@ export function previewFieldLabel(field: string, t: Translator): string {
       return t("approval.preview.evidenceInvoice");
     case "deal_id":
       return t("approval.preview.evidenceDeal");
+    case "footer_warning":
+      return t("approval.preview.footerWarning");
     case "disclosure_text":
       return t("approval.preview.disclosureText");
     case "signature_text":

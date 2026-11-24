@@ -331,7 +331,7 @@ var segmentEngines = map[string]storekit.Query{
 			"status":                {Expr: "t.status", Type: storekit.FieldPicklist, Options: leadStatusValues},
 			ownerIDField:            {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField:        ownerTeamField,
-			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldText},
+			"candidate_company_key": {Expr: "t.candidate_company_key", Type: storekit.FieldCompanyKey, FoldCase: true},
 			tagFilterField:          tagLinkFor("lead"),
 			// The industry a rep typed on the lead, and the linked company's own
 			// facts, so one rule names a market on leads and deals alike.
@@ -396,6 +396,9 @@ func (s *Store) coreSegmentEngine(ctx context.Context, resource string) (storeki
 	merged.Fields = make(map[string]storekit.Field, len(core.Fields))
 	maps.Copy(merged.Fields, core.Fields)
 	s.bindDealAmount(resource, merged.Fields)
+	if resource == typeDeal {
+		merged.WinChance = s.winChance
+	}
 	if s.catalog == nil {
 		withholdFromCaller(ctx, resource, merged.Fields)
 		return merged, true, nil

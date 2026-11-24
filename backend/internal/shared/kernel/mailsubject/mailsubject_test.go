@@ -50,3 +50,22 @@ func TestNoPrefixIsBothAReplyAndAForward(t *testing.T) {
 		}
 	}
 }
+
+// Topic strips reply and forward prefixes alike, stacked and in any case, and
+// nothing a sender wrote after them.
+func TestTopicStripsRepliesAndForwards(t *testing.T) {
+	cases := map[string]string{
+		"Re: Termin und Angebot":      "termin und angebot",
+		"WG: AW:  Termin und Angebot": "termin und angebot",
+		"fwd:Re: Termin":              "termin",
+		"Termin":                      "termin",
+		"Re: Termin, unser Angebot":   "termin, unser angebot",
+		"Angebot Re: Termin":          "angebot re: termin",
+		"FW: Re: Termin":              "termin",
+	}
+	for subject, want := range cases {
+		if got := mailsubject.Topic(subject); got != want {
+			t.Errorf("Topic(%q) = %q, want %q", subject, got, want)
+		}
+	}
+}

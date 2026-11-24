@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode, RefObject } from "react";
@@ -18,7 +19,7 @@ import {
 
 type CorpusSummary = components["schemas"]["VoiceCorpusSummary"];
 type VoiceProfileVersion = components["schemas"]["VoiceProfileVersion"];
-type CorpusManifestEntry = import("./use-voice-corpus").CorpusManifestEntry;
+type CorpusManifestEntry = import("./voice-manifest").CorpusManifestEntry;
 
 // A minimal but contract-complete VoiceProfileVersion; profileJSON carries
 // only what the result board actually reads, `sample_drafts` swapped per
@@ -89,8 +90,21 @@ function summaryOf(totalWords: number): CorpusSummary {
 // half: the percentage has to move on its own, honestly, and stop moving for
 // readers who asked it to.
 
+// One client for the test, so a rerender keeps the tree it replaces.
+const client = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+function providers(ui: ReactNode) {
+  return (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>
+  );
+}
+
 function withLocale(ui: ReactNode) {
-  return render(<LocaleProvider initial="en">{ui}</LocaleProvider>);
+  return render(providers(ui));
 }
 
 // jsdom's own matchMedia always answers false; the reduced-motion arm needs
@@ -109,6 +123,7 @@ function stubReducedMotion(reduce: boolean) {
 }
 
 afterEach(() => {
+  client.clear();
   cleanup();
   vi.useRealTimers();
   vi.unstubAllGlobals();
@@ -126,9 +141,12 @@ function collectScene(overrides: {
     <VoiceCollectScene
       summary={overrides.summary ?? null}
       manifest={overrides.manifest ?? []}
+      failures={[]}
       fileRef={overrides.fileRef ?? createRef<HTMLInputElement>()}
       onFiles={() => undefined}
       onAddPaste={overrides.onAddPaste ?? (() => undefined)}
+      onRemove={() => undefined}
+      removing={null}
       onBuild={overrides.onBuild ?? (() => undefined)}
       onSkip={() => undefined}
       canBuild={overrides.canBuild ?? false}
@@ -180,6 +198,33 @@ describe("VoiceCollectScene", () => {
     expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
   });
 
+  it("puts the cursor in the paste box when it opens, and Escape hands focus back", async () => {
+    const user = userEvent.setup();
+    collectScene({});
+    const opener = screen.getByRole("button", { name: "Paste text instead" });
+
+    await user.click(opener);
+    const field = screen.getByLabelText("Paste the text you wrote here");
+    expect(document.activeElement).toBe(field);
+
+    await user.keyboard("{Escape}");
+    expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("hands focus back to the opener once a paste is added", async () => {
+    const user = userEvent.setup();
+    collectScene({});
+    const opener = screen.getByRole("button", { name: "Paste text instead" });
+
+    await user.click(opener);
+    await user.keyboard("A paragraph I wrote.");
+    await user.click(
+      screen.getByRole("button", { name: "Add to writing samples" }),
+    );
+    expect(document.activeElement).toBe(opener);
+  });
+
   // Why the step is worth doing is available on the scene, behind its own
   // control rather than above the drop target. The control has to name what it
   // opens, and what it opens has to be the rationale — a disclosure whose body
@@ -204,6 +249,48 @@ describe("VoiceCollectScene", () => {
   });
 });
 
+describe("the collect scene's copy", () => {
+  it("answers an early Build with the words still missing, not the floor sentence again", async () => {
+    collectScene({ summary: summaryOf(799) });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Add 1 more word to build.",
+    );
+    expect(
+      screen.getAllByText(/800 words minimum/, { exact: false }),
+    ).toHaveLength(1);
+  });
+
+  it("counts a one-word sample as one word", () => {
+    collectScene({
+      manifest: [
+        {
+          ref: "p1",
+          id: "p1",
+          version: 1,
+          label: "Pasted text – extra",
+          keptWords: 1,
+          inputWords: 1,
+          transcript: false,
+          lines: [],
+        },
+      ],
+    });
+
+    expect(screen.getByText("1 word")).toBeTruthy();
+  });
+
+  it("offers the skip as a short button with no period", () => {
+    collectScene({});
+
+    expect(screen.getByRole("button", { name: "Skip for now" })).toBeTruthy();
+  });
+});
+
 describe("the collect scene's distilling panel", () => {
   it("reads the reader's own lines back beside the intake, with the server's readings between them", () => {
     collectScene({
@@ -211,6 +298,8 @@ describe("the collect scene's distilling panel", () => {
       manifest: [
         {
           ref: "u1",
+          id: "u1",
+          version: 1,
           label: "notes.md",
           keptWords: 1200,
           inputWords: 1200,
@@ -254,17 +343,16 @@ describe("the collect scene's corpus floor meter", () => {
   });
 
   it("shows the same floor the Build action gates on, below and at it", async () => {
-    // Below the floor: Build presses, and the press names the floor the
-    // scene's own canBuild (computed from the same VOICE_MIN_WORDS) is read
-    // against, while the meter still reads "not yet".
+    // Below the floor: Build presses and names how far the corpus is from
+    // VOICE_MIN_WORDS. The meter reads the same floor and still says "not yet".
     const onBuild = vi.fn();
     collectScene({ summary: summaryOf(200), canBuild: false, onBuild });
     await userEvent.click(
       screen.getByRole("button", { name: "Build my voice profile" }),
     );
     expect(onBuild).not.toHaveBeenCalled();
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      `${VOICE_MIN_WORDS}`,
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      `Add ${VOICE_MIN_WORDS - 200} more words to build.`,
     );
     expect(
       document.querySelector(".ob-voice-meter-line")?.textContent,
@@ -291,20 +379,23 @@ describe("the collect scene's corpus floor meter", () => {
     expect(document.querySelector('[role="status"]')?.textContent).toBe("");
 
     rerender(
-      <LocaleProvider initial="en">
+      providers(
         <VoiceCollectScene
           summary={summaryOf(VOICE_MIN_WORDS)}
           manifest={[]}
+          failures={[]}
           fileRef={createRef<HTMLInputElement>()}
           onFiles={() => undefined}
           onAddPaste={() => undefined}
+          onRemove={() => undefined}
+          removing={null}
           onBuild={() => undefined}
           onSkip={() => undefined}
           canBuild
           startPending={false}
           startError={null}
-        />
-      </LocaleProvider>,
+        />,
+      ),
     );
 
     const ready = `${VOICE_MIN_WORDS} words: enough to build. More words improve it.`;
@@ -376,9 +467,7 @@ describe("VoiceBuildScene", () => {
     const beforeStage = pct();
 
     rerender(
-      <LocaleProvider initial="en">
-        <VoiceBuildScene stage="extract" summary={null} sources={1} />
-      </LocaleProvider>,
+      providers(<VoiceBuildScene stage="extract" summary={null} sources={1} />),
     );
     // extract's ceiling is 2/5 = 40%; the very next frame must not already
     // read 40 — the display keeps closing the gap, it does not teleport.
@@ -481,5 +570,37 @@ describe("VoiceResultScene", () => {
     expect(onRevise).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole("button", { name: "That is me" }));
     expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("VoiceCollectScene with no AI connected", () => {
+  it("says Connect an AI first with the settings link and holds the build press", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              complete: false,
+              steps: [
+                { step: "ai_models", configured: false, blocking: false },
+              ],
+            }),
+            { status: 200, headers: { "content-type": "application/json" } },
+          ),
+      ),
+    );
+    const onBuild = vi.fn();
+    collectScene({ canBuild: true, onBuild });
+
+    expect(
+      await screen.findByRole("link", { name: "Open AI settings" }),
+    ).toBeTruthy();
+    await userEvent
+      .setup()
+      .click(
+        screen.getByRole("button", { name: en["ob.conv.voice.buildChip"] }),
+      );
+    expect(onBuild).not.toHaveBeenCalled();
   });
 });

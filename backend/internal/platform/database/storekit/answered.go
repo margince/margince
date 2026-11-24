@@ -26,7 +26,7 @@ type answerArm struct {
 // An answer follows its source in event time (occurredday.AnswersSQL); capture order never breaks a tie.
 // Private off-thread evidence cannot clear another reader's work.
 func answerArms(inbound, until string) []answerArm {
-	return append([]answerArm{threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))},
+	return append(ourReplyArms(inbound, until),
 		offThreadAnswerArms(inbound, until)...)
 }
 
@@ -49,21 +49,19 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	}
 	sameSubject := NormalisedSubjectSQL(inbound+".subject") + ` <> ''
 	    AND ` + NormalisedSubjectSQL("answer_mail.subject") + ` = ` + NormalisedSubjectSQL(inbound+".subject")
-	ourMail := `answer_mail.kind = ` + inbound + `.kind
-	    AND answer_mail.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
-	    AND answer_mail.direction = 'outbound'
-	    AND answer_mail.counterparty_outbound_attested
-	    AND ` + everyoneReads("answer_mail") + `
-	    AND ` + later("answer_mail") + `
-	    AND ` + sameSubject
 	// The subject is matched inside the address probe, where
-	// idx_activity_answer_mail_subject takes it as a key column.
+	// idx_activity_answer_mail_subject takes it as a key column. A probe's rows
+	// then need only the rest of ourMail, as Postgres plans every copy.
 	ourMailIndexed := `answer_mail.kind = ` + inbound + `.kind
 	       AND answer_mail.direction = 'outbound'
 	       AND answer_mail.counterparty_outbound_attested
 	       AND ` + everyoneReads("answer_mail") + `
 	       AND ` + later("answer_mail") + `
 	       AND ` + sameSubject
+	ourMailBeyondIndexed := `answer_mail.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
+	    AND ` + deliveredSQL("answer_mail")
+	ourMail := ourMailIndexed + `
+	    AND ` + ourMailBeyondIndexed
 	asker := `answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
 	senderAddresses := `CROSS JOIN LATERAL (
 	    SELECT lower(btrim(answer_asker.address)) AS address
@@ -85,7 +83,7 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	     WHERE answer_mail.counterparty_email = answer_address.address
 	       AND ` + ourMailIndexed + ` OFFSET 0) answer_mail
 	  WHERE ` + asker + `
-	    AND ` + ourMail},
+	    AND ` + ourMailBeyondIndexed},
 		{at: "answer_mail.occurred_at", id: "answer_mail.id", from: `FROM activity_participant answer_asker
 	  ` + senderAddresses + `
 	  CROSS JOIN LATERAL (SELECT ` + answerMailColumns + ` FROM activity_participant answer_told
@@ -94,9 +92,13 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	       AND answer_told.role IN ('to', 'cc') OFFSET 0) answer_mail
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
+		// One arm walks both ways to the sender's touches, so the touch test is
+		// planned once. A `UNION ALL` keeps a touch reached both ways twice, as
+		// two arms did.
 		touchAnswerArm(asker, touch, `SELECT answer_link.activity_id FROM activity_link answer_link
-	     WHERE answer_link.contact_id = answer_asker.contact_id`),
-		touchAnswerArm(asker, touch, `SELECT answer_attendee.activity_id FROM activity_participant answer_attendee
+	     WHERE answer_link.contact_id = answer_asker.contact_id
+	   UNION ALL
+	   SELECT answer_attendee.activity_id FROM activity_participant answer_attendee
 	     WHERE answer_attendee.contact_id = answer_asker.contact_id`),
 	}
 }
@@ -121,36 +123,102 @@ func touchAnswerArm(asker, touch, walk string) answerArm {
 // A thread can contain different correspondents. Only a reply delivered to this sender counts.
 // Same-thread answers retain the waiting lane's established audience semantics.
 // Settlement uses ourOutboundInThisThread's narrower attested-counterparty question instead.
-func threadAnswerArm(inbound, later string) answerArm {
+func threadAnswerArm(inbound, until string) answerArm {
+	return answerArm{at: "answer_thread.occurred_at", id: "answer_thread.id", from: `FROM activity answer_thread
+	  WHERE answer_thread.thread_key = ` + inbound + `.thread_key
+	    AND answer_thread.direction = 'outbound'
+	    AND ` + ourReplySQL("answer_thread", inbound, until)}
+}
+
+// ourReplyArms are our replies to the inbound row: in its conversation, and on
+// a new topic to it.
+func ourReplyArms(inbound, until string) []answerArm {
+	return []answerArm{threadAnswerArm(inbound, until), splitAnswerArm(inbound, until)}
+}
+
+// splitAnswerArm is our reply on a new topic to a message of the inbound row's
+// conversation. It carries its own key, so only its delivery links it here.
+func splitAnswerArm(inbound, until string) answerArm {
+	return answerArm{at: "answer_split.occurred_at", id: "answer_split.id", from: `FROM ` + SplitRepliesSQL("answer_split", inbound) + `
+	    AND answer_split.direction = 'outbound'
+	    AND ` + ourReplySQL("answer_split", inbound, until)}
+}
+
+// ourReplySQL tests that row, an outbound message, was delivered to the inbound
+// row's sender in the same medium by until.
+func ourReplySQL(row, inbound, until string) string {
 	sender := `SELECT ` + inbound + `.counterparty_email
 	     UNION
 	    SELECT lower(btrim(answer_known.email)) FROM activity_participant answer_asker
 	      JOIN contact_email answer_known ON answer_known.contact_id = answer_asker.contact_id
 	       AND answer_known.archived_at IS NULL
 	     WHERE answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
-	return answerArm{at: "answer_thread.occurred_at", id: "answer_thread.id", from: `FROM activity answer_thread
-	  WHERE answer_thread.thread_key = ` + inbound + `.thread_key
-	    AND answer_thread.kind = ` + inbound + `.kind
-	    AND answer_thread.kind IN ('email', 'message')
-	    AND answer_thread.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
-	    AND answer_thread.direction = 'outbound'
+	return row + `.kind = ` + inbound + `.kind
+	    AND ` + row + `.kind IN ('email', 'message')
+	    AND ` + row + `.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
+	    AND ` + deliveredSQL(row) + `
 	    AND (` + inbound + `.counterparty_email IS NULL
-	      OR (answer_thread.counterparty_email IN (` + sender + `)
+	      OR (` + row + `.counterparty_email IN (` + sender + `)
 	        AND NOT EXISTS (SELECT 1 FROM activity_participant answer_blind
-	             WHERE answer_blind.activity_id = answer_thread.id AND answer_blind.role = 'bcc'
-	               AND lower(btrim(answer_blind.address)) = answer_thread.counterparty_email))
+	             WHERE answer_blind.activity_id = ` + row + `.id AND answer_blind.role = 'bcc'
+	               AND lower(btrim(answer_blind.address)) = ` + row + `.counterparty_email))
 	      OR EXISTS (SELECT 1 FROM activity_participant answer_told
-	           WHERE answer_told.activity_id = answer_thread.id AND answer_told.role IN ('to', 'cc')
+	           WHERE answer_told.activity_id = ` + row + `.id AND answer_told.role IN ('to', 'cc')
 	             AND lower(btrim(answer_told.address)) IN (` + sender + `)))
-	    AND ` + later}
+	    AND ` + answerLater(row, inbound, until)
+}
+
+// deliveredSQL holds unless our send of the row is still pending, was parked
+// or bounced: mail that never reached them answers nothing. Captured mail has
+// no send row and stands.
+func deliveredSQL(row string) string {
+	return `NOT EXISTS (SELECT 1 FROM comms_outbound undelivered
+	     WHERE undelivered.activity_id = ` + row + `.id
+	       AND (undelivered.status <> 'sent' OR undelivered.bounced_at IS NOT NULL))`
 }
 
 // ThreadAnsweredAtSQL is when our earliest same-thread reply that reached the
 // inbound row's sender happened, or NULL when none did. It is the thread arm of
 // AnsweredSQL at any instant, so a time it names answers the row from then on.
 func ThreadAnsweredAtSQL(inbound string) string {
-	arm := threadAnswerArm(inbound, answerLater("answer_thread", inbound, "'infinity'::timestamptz"))
-	return "(SELECT min(" + arm.at + ") " + arm.from + ")"
+	until := "'infinity'::timestamptz"
+	thread, split := threadAnswerArm(inbound, until), splitAnswerArm(inbound, until)
+	return "least((SELECT min(" + thread.at + ") " + thread.from + "), (SELECT min(" + split.at + ") " + split.from + "))"
+}
+
+// ThreadNewestReplySQL selects the id, occurred_at and occurred_precision of
+// our newest same-thread reply that reached the inbound row's sender and had
+// begun by until. It is the thread arm of AnsweredSQL, read for its newest
+// answer instead of its first.
+func ThreadNewestReplySQL(inbound, until string) string {
+	arms := make([]string, 0, 2)
+	for _, arm := range ourReplyArms(inbound, until) {
+		precision := strings.TrimSuffix(arm.at, "occurred_at") + "occurred_precision"
+		arms = append(arms, "SELECT "+arm.id+" AS id, "+arm.at+" AS occurred_at, "+precision+" "+arm.from)
+	}
+	return "SELECT newest_reply.* FROM (" + strings.Join(arms, "\n\t UNION ALL ") + ") newest_reply" +
+		"\n\t  ORDER BY newest_reply.occurred_at DESC, newest_reply.id DESC LIMIT 1"
+}
+
+// SplitRepliesSQL joins row to every reply we sent on a new topic that answers
+// a message of anchor's conversation. Such a reply carries a key of its own,
+// and its delivery names the message it answers. The caller adds more tests.
+//
+// The walk starts at the deliveries that name a message of the conversation,
+// and reaches the reply by its id. OFFSET 0 keeps that order. Left free, the
+// planner starts at activity by the caller's own tests: the correspondent and
+// the kind. A busy correspondent then costs a bitmap over every later message
+// of that kind, for each request, although few deliveries name an answered
+// message.
+func SplitRepliesSQL(row, anchor string) string {
+	origin, send := "origin_"+row, "split_"+row
+	return `(SELECT ` + send + `.activity_id FROM comms_outbound ` + send + `
+	     JOIN activity ` + origin + ` ON ` + origin + `.id = ` + send + `.answers_activity_id
+	    WHERE ` + origin + `.thread_key = ` + anchor + `.thread_key
+	      AND ` + origin + `.kind = ` + anchor + `.kind
+	      AND ` + origin + `.channel_provider IS NOT DISTINCT FROM ` + anchor + `.channel_provider OFFSET 0) ` + send + `
+	  JOIN activity ` + row + ` ON ` + row + `.id = ` + send + `.activity_id
+	 WHERE ` + anchor + `.thread_key <> ''`
 }
 
 // NormalisedSubjectSQL is a subject with its reply prefixes and outer spaces

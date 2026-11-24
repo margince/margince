@@ -72,3 +72,13 @@ func (c toolCopy) render() string {
 	}
 	return strings.Join(parts, " ")
 }
+
+// sendAnywayRule is said where a model reads a refusal reason and where it sends.
+// Neither place can then promise a way past a refusal that the other denies.
+const sendAnywayRule = "A message the engine refused and held is sent anyway only by the user, in the app: show " +
+	"them the review and its warning."
+
+// askFirstGetYes ends every ask-first sentence a client reads, in the tool
+// descriptions and in the action catalog. It says how to get the yes, and when
+// it is not needed.
+const askFirstGetYes = "get it before calling, unless they asked for this call themselves"

@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/extai"
 	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -110,6 +111,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vaul
 	// already nil where none is configured, and it is the same value
 	// startRunnerLane passes — so the two bindings are idempotent.
 	compose.BindExtensionRuntime(pool, vault)
+	extai.Bind(pool, modelPath.ExtensionTask)
 	// The capture pipeline a unit's ingress lands through. Units ingest only from
 	// job ticks and subscription deliveries, and both run in this role. It shares
 	// cfg.captureConfig with the sweep registry, so both reach one attachment store.
@@ -213,10 +215,12 @@ func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 		return nil, err
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
-		Paused:               workPause(ctx),
-		ListsEnabled:         cfg.listsEnabled,
-		DisabledCoreFeatures: config.Val(cfg.settings, ps.CoreFeaturesDisabled),
-		DataTasksPace:        cfg.dataTasksPace,
+		Paused:                workPause(ctx),
+		ModelBound:            modelPath.Bound,
+		ListsEnabled:          cfg.listsEnabled,
+		DisabledCoreFeatures:  config.Val(cfg.settings, ps.CoreFeaturesDisabled),
+		DataTasksPace:         cfg.dataTasksPace,
+		UnusedClientRetention: config.Val(cfg.settings, ps.MCPUnusedClientRetention),
 		// Every setting-driven schedule, read once here and kept current by
 		// the watch startJobRunner starts.
 		Schedules: schedules,

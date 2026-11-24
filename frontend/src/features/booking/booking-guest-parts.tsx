@@ -103,7 +103,7 @@ export function GuestHost({
       </HostLine>
       {videoApp ? (
         <HostLine icon={<Video aria-hidden="true" />}>
-          {t("scheduling.videoApp", { app: VIDEO_APP_NAME[videoApp] })}
+          {t("book.videoApp", { app: VIDEO_APP_NAME[videoApp] })}
         </HostLine>
       ) : (
         host.location && (
@@ -200,7 +200,7 @@ export function GuestDetailsForm({
               />
             )}
           </Field>
-          <Field label={t("scheduling.guestAgenda")}>
+          <Field label={t("book.agenda")}>
             {(control) => (
               <Textarea
                 {...control}
@@ -279,7 +279,7 @@ export function GuestUnavailable({
               {meeting.subject}
             </Heading>
             <p>{formatDateTime(meeting.start, locale, zone)}</p>
-            <p className="t-caption">{t("scheduling.savedRequest")}</p>
+            <p className="t-caption">{t("book.savedRequest")}</p>
             <Button
               variant="primary"
               onClick={() =>
@@ -293,10 +293,21 @@ export function GuestUnavailable({
           <p>
             {host.host_name
               ? t("scheduling.pausedUnavailable", { host: host.host_name })
-              : t("scheduling.unavailable")}
+              : t("book.unavailable")}
           </p>
         )}
       </PanelBody>
     </Panel>
   );
+}
+
+// The tab names the host only while their page takes bookings; a paused or
+// missing page keeps a generic title, as its link-preview card does.
+export function guestTitle(
+  t: ReturnType<typeof useT>,
+  host: { paused: boolean; host_name: string } | undefined,
+): string {
+  return host && !host.paused && host.host_name
+    ? t("book.pageTitle", { host: host.host_name })
+    : t("book.pageTitleGeneric");
 }

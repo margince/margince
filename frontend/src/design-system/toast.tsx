@@ -16,6 +16,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "../i18n";
+import { raiseInTopLayer } from "./toplayer";
 import "./toast.css";
 
 /**
@@ -377,6 +378,11 @@ export function ToastRegion() {
       setFocusInside(false);
     }
   }, []);
+  // Each message rises above a layer opened since the last one, such as a
+  // select: the top layer stacks in the order layers are shown.
+  useLayoutEffect(() => {
+    if (shownId !== null) raiseInTopLayer(region);
+  }, [region, shownId]);
   const leftFrom = useLeftFrom();
   const handBack = useHandBack();
   // Where focus sat in a message that is about to unmount; a replacement takes
@@ -443,6 +449,7 @@ export function ToastRegion() {
   return createPortal(
     <div
       ref={attachRegion}
+      popover="manual"
       className="toast-region"
       onPointerEnter={() => setPointerInside(true)}
       onPointerLeave={() => setPointerInside(false)}

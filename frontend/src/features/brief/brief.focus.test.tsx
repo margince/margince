@@ -9,7 +9,7 @@ import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import type { TaskType } from "../../lib/tasktype";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
-import { taskRow } from "../../testing/brief.fixtures";
+import { taskRow, waitingEmailRow } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -26,6 +26,31 @@ const LEAD: WorklistItem = {
   ...taskRow("task-1", "Call back Alice about the renewal"),
   contact: { id: "c-1", label: "Alice Brandt" },
 };
+
+function stubReader() {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
+  });
+}
+
+/** The day's cards with the one at `at` in hand. */
+function triageOf(
+  rows: WorklistItem[],
+  at: number,
+  onChoose: (item: WorklistItem) => void = () => {},
+) {
+  return (
+    <StoryProviders>
+      <Triage
+        rows={rows}
+        at={at}
+        lead={rows[at]}
+        onChoose={onChoose}
+        onOpenEmail={() => {}}
+      />
+    </StoryProviders>
+  );
+}
 
 function showLead(
   lead: WorklistItem,
@@ -156,9 +181,10 @@ it("reach out drafts the mail first, then the number and an outlined Call", asyn
   // One filled button to a card: beside the draft, Done is outlined.
   const done = card.getByRole("button", { name: en["tasks.complete"] });
   expect(done.classList.contains("btn-primary")).toBe(false);
+  // The way to read more starts the line, so it comes first in the page too.
   const details = card.getByRole("button", { name: en["brief.focus.context"] });
   expect(
-    draft.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING,
+    details.compareDocumentPosition(draft) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(
     card.queryByRole("button", { name: en["record.verb.email"] }),
@@ -198,6 +224,39 @@ it("a reply to a call answers by phone, and the menu still offers Email", async 
     name: en["record.verb.email"],
   });
   expect(email.getAttribute("href")).toBe("mailto:alice@example.com");
+});
+
+it("a reach out on a promise made by mail drafts the mail, and Call waits in the menu", async () => {
+  showLead(LEAD, "reach_out", vi.fn(), "email");
+  const user = userEvent.setup();
+
+  const card = within(await screen.findByRole("article"));
+  await card.findByRole("button", { name: en["task.next.draftEmail"] });
+  expect(card.queryByRole("link", { name: en["record.verb.call"] })).toBeNull();
+  expect(
+    card.queryByRole("button", { name: en["task.next.copyNumber"] }),
+  ).toBeNull();
+  await user.click(card.getByRole("button", { name: /^More actions for/ }));
+  const dial = await screen.findByRole("link", {
+    name: en["record.verb.call"],
+  });
+  expect(dial.getAttribute("href")).toBe("tel:+491517654321");
+});
+
+it("a reach out after a call leads with a filled Call, and Email waits in the menu", async () => {
+  showLead(LEAD, "reach_out", vi.fn(), "call");
+  const user = userEvent.setup();
+
+  const card = within(await screen.findByRole("article"));
+  const dial = await card.findByRole("link", { name: en["record.verb.call"] });
+  expect(dial.classList.contains("btn-primary")).toBe(true);
+  expect(
+    card.queryByRole("button", { name: en["task.next.draftEmail"] }),
+  ).toBeNull();
+  await user.click(card.getByRole("button", { name: /^More actions for/ }));
+  expect(
+    await screen.findByRole("button", { name: en["task.next.draftEmail"] }),
+  ).toBeTruthy();
 });
 
 // The verbs arrive after the card: the task is read, then its contact. Their
@@ -262,21 +321,10 @@ it("a task lead holds its verbs' room until the task and its contact are read", 
 
 it("Next task opens the following card, wraps past the last, and is absent alone", async () => {
   const second = taskRow("task-2", "Send the sheet");
-  installFetchStub({
-    "GET /me": meRoute({ activity: ["read"] }, { roles: ["rep"] }),
-  });
+  stubReader();
   const chosen = vi.fn();
-  const triage = (rows: WorklistItem[], at: number) => (
-    <StoryProviders>
-      <Triage
-        rows={rows}
-        at={at}
-        lead={rows[at]}
-        onChoose={chosen}
-        onOpenEmail={() => {}}
-      />
-    </StoryProviders>
-  );
+  const triage = (rows: WorklistItem[], at: number) =>
+    triageOf(rows, at, chosen);
   const user = userEvent.setup();
   const view = render(triage([LEAD, second], 0));
   const next = () =>
@@ -295,4 +343,76 @@ it("Next task opens the following card, wraps past the last, and is absent alone
   expect(
     screen.queryByRole("button", { name: en["brief.focus.next"] }),
   ).toBeNull();
+});
+
+// A promise carrying the email it was read out of is still a task. It is named
+// once, by the promise, and the card does not call it an email.
+it("a promise carrying its email is named once and drawn as a task", async () => {
+  const mail = waitingEmailRow().email_summary;
+  if (!mail) throw new Error("the fixture carries its message");
+  const promise: WorklistItem = {
+    ...LEAD,
+    band: "now",
+    due_at: "2026-09-15T10:00:00Z",
+    actions: ["complete", "reply"],
+    subject: { type: "contact", id: "c-1", label: "Alice Brandt" },
+    move: { action: "draft_reply", activity_id: mail.activity_id },
+    email_summary: { ...mail, direction: "outbound", move: "waiting_for_them" },
+  };
+  showLead(promise, "do");
+
+  const article = await screen.findByRole("article");
+  const card = within(article);
+  expect(card.getAllByText(LEAD.title ?? "")).toHaveLength(1);
+  expect(card.queryByRole("heading", { name: LEAD.title })).toBeNull();
+  // The email is drawn under the promise; the card's own meta names a task.
+  const meta = article.querySelector(".brief-triage-lead-head");
+  expect(meta?.textContent).not.toContain(en["timeline.kind.email"]);
+  expect(article.querySelector(".brief-task-status")).toBeNull();
+});
+
+it("a card done from its own tick hands focus to the card that takes its place", () => {
+  stubReader();
+  const second = taskRow("task-2", "Send the sheet");
+  const third = taskRow("task-3", "Book the venue");
+  const triage = (rows: WorklistItem[]) => triageOf(rows, 0);
+  const view = render(triage([LEAD, second, third]));
+  screen.getByRole("button", { name: /^Mark done: Send the sheet/ }).focus();
+
+  view.rerender(triage([LEAD, third]));
+
+  const [, next] = document.querySelectorAll(
+    ".brief-task-open, .brief-triage-frame",
+  );
+  expect(next?.textContent).toContain("Book the venue");
+  expect(document.activeElement).toBe(next);
+});
+
+it("a card that leaves while focus is elsewhere moves no focus", () => {
+  stubReader();
+  const second = taskRow("task-2", "Send the sheet");
+  const triage = (rows: WorklistItem[]) => triageOf(rows, 0);
+  const view = render(triage([LEAD, second]));
+
+  view.rerender(triage([LEAD]));
+
+  expect(document.activeElement).toBe(document.body);
+});
+
+it("the card in hand reaches its controls in the order it draws them", async () => {
+  showLead(LEAD, "do");
+  const article = await screen.findByRole("article");
+  const done = await within(article).findByRole("button", { name: "Done" });
+  const stops = [...article.querySelectorAll<HTMLElement>("a[href], button")];
+  const at = (stop: HTMLElement) => stops.indexOf(stop);
+  const card = within(article);
+  const title = card.getByRole("button", { name: LEAD.title });
+  const chip = card.getByRole("link", { name: /Alice Brandt/ });
+  const details = card.getByRole("button", {
+    name: en["brief.focus.context"],
+  });
+
+  expect(at(title)).toBeLessThan(at(chip));
+  expect(at(chip)).toBeLessThan(at(details));
+  expect(at(details)).toBeLessThan(at(done));
 });

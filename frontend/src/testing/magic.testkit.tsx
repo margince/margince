@@ -15,6 +15,8 @@ import { vi } from "vitest";
 import { MagicPanel } from "../features/sign-in/magic";
 import { type Locale, LocaleProvider } from "../i18n";
 import type { MagicReceipt } from "../lib/magic.queries";
+import { ViewerZoneProvider } from "../lib/viewerzone";
+import { meFixture } from "./mefixture";
 
 export function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -66,11 +68,24 @@ export function renderMagic(
     defaultOptions: { queries: { retry: false } },
   }),
   visible: Parameters<typeof MagicPanel>[0] = {},
+  zone?: string,
 ): RenderResult {
+  // The panel reads only for a reader with deal read.
+  if (!client.getQueryData(["me"]))
+    client.setQueryData(
+      ["me"],
+      meFixture({ allow: { deal: ["read", "update"] } }),
+    );
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
-        <MagicPanel {...visible} />
+        {zone ? (
+          <ViewerZoneProvider zone={zone}>
+            <MagicPanel {...visible} />
+          </ViewerZoneProvider>
+        ) : (
+          <MagicPanel {...visible} />
+        )}
       </LocaleProvider>
     </QueryClientProvider>,
   );

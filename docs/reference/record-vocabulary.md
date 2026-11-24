@@ -66,6 +66,8 @@ Three scans, each taking its list of files from the tree:
   Every key that offers the record type carries the contact noun. No catalog
   value says the dropped noun, unless its key is listed there as one where the
   word means a human. That list is grouped by the reason each key stays.
+  The same file holds the English value of each key whose name says
+  `account` about a company: it must not say account.
 - `backend/gates/contactvocabulary_test.go` checks the code. It fails on the
   dropped word in the path or text of every file git tracks. It takes the
   sentences where the word means a human from the catalogs above, and does not

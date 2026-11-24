@@ -110,6 +110,7 @@ func (d derivedTool) Handle(ctx context.Context, _ json.RawMessage) (json.RawMes
 func readToolOver(records ...datasource.Record) recordTool {
 	spec := objectSpec("read_probe", principal.ScopeRead)
 	spec.OutputSchema = schemaFor[ListRecordsResult]()
+	spec.ProductMadeAnswer = true
 	return recordTool{spec: spec, records: records}
 }
 
@@ -241,20 +242,36 @@ func TestOneMirrorBackedRecordTaintsTheAnswer(t *testing.T) {
 	}
 }
 
-// An answer that carried no content at all is product-generated. It is the
-// HIGHEST tier, which is why noteDerivedContent exists: a report over live rows
-// that landed here would have had its trust raised.
-func TestAnAnswerOverNoRecordIsSystemTrusted(t *testing.T) {
+// An answer over no record is product-generated only when its tool declares a
+// product-made answer. That is the HIGHEST tier, which is why noteDerivedContent
+// exists: a report over live rows that landed here would have had its trust raised.
+func TestAnAnswerOverNoRecordIsSystemTrustedOnlyWhenDeclared(t *testing.T) {
 	env := sealedEnvelope(t, invokeSealed(readingAgent(), t, unboundedAuthority{}, readToolOver()))
 
 	if env.Trust != trustSystem {
-		t.Errorf("trust = %q, want %q when nothing was read", env.Trust, trustSystem)
+		t.Errorf("trust = %q, want %q when nothing was read by a tool declaring a product-made answer", env.Trust, trustSystem)
 	}
 	if env.Freshness.LastSyncedAt != nil {
 		t.Errorf("last_synced_at = %v, want it absent when no record contributed", env.Freshness.LastSyncedAt)
 	}
 	if !env.Freshness.Authoritative {
 		t.Error("an answer with no mirror content reported itself non-authoritative")
+	}
+}
+
+// A tool that never said where its answer's text came from is read as carrying
+// someone else's words: the safe reading of a forgotten declaration.
+func TestAnAnswerFromAToolThatDeclaresNothingIsUntrusted(t *testing.T) {
+	undeclared := readToolOver()
+	undeclared.spec.ProductMadeAnswer = false
+
+	env := sealedEnvelope(t, invokeSealed(readingAgent(), t, unboundedAuthority{}, undeclared))
+
+	if env.Trust != trustExternal {
+		t.Errorf("trust = %q, want %q from a tool that declares no product-made answer", env.Trust, trustExternal)
+	}
+	if _, warned := warningNamed(env, warningUntrustedContent); !warned {
+		t.Errorf("warnings = %v, want %s", env.Warnings, warningUntrustedContent)
 	}
 }
 

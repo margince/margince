@@ -20,11 +20,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/dealfiler"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -47,9 +49,20 @@ type whichDealAsker struct {
 	now   func() time.Time
 }
 
+// newWhichDealAsker is the one asker capture and the refile passes share, so
+// both raise the same question. now is the clock that decides which mail is
+// current.
+func newWhichDealAsker(pool *pgxpool.Pool, now func() time.Time) whichDealAsker {
+	return whichDealAsker{
+		tasks: activities.NewStore(InstallationDB(pool)),
+		deals: deals.NewStore(InstallationDB(pool), DealsInstallation()),
+		now:   now,
+	}
+}
+
 // offeredDeals reads the open deals a question offers, from the deals module.
 type offeredDeals interface {
-	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID) ([]ids.UUID, error)
+	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID, stakeholders []ids.UUID) ([]ids.UUID, error)
 }
 
 // Ask raises the question at most once per thread. The task is keyed on the
@@ -101,7 +114,7 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: string(record.kind), EntityID: record.id})
 		}
 	}
-	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID)
+	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID, q.StakeholderIDs)
 	if err != nil {
 		return err
 	}

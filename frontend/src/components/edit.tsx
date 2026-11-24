@@ -6,12 +6,9 @@ import { IconAction } from "../design-system/iconaction";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { derivedRecordKeys } from "../lib/activitykeys";
+import { catalogOfRecord } from "../lib/customfields.logic";
 import { sameEditValue } from "../lib/independentedit";
-import {
-  ProblemError,
-  problemExistingId,
-  problemMessageOf,
-} from "../lib/problem";
+import { ProblemError, problemExistingId } from "../lib/problem";
 import type { Route } from "../lib/router";
 import {
   type CreateField,
@@ -19,12 +16,14 @@ import {
   RecordFormBody,
   usePublishedValues,
 } from "./create";
-import { catalogOfRecord, useSettledOpen } from "./create.dialog";
+import { useSettledOpen } from "./create.dialog";
+import { type CreateConflict, fieldRefusals } from "./create.refusals";
 import {
   prefillFromRecord,
   prefillRowsFromRecord,
   seedMissingFields,
 } from "./edit.prefill";
+import { useAnswerlessRows } from "./edit.rows";
 import "../design-system/querystates.css";
 
 // The agent rail's WROTE head for an edit, keyed by `recordKey` (agentrail-
@@ -130,6 +129,8 @@ export function EditRecordModal({
   record,
   pending,
   error,
+  fieldRefusals,
+  refusedAt,
   existing,
   resolveExisting,
   notice,
@@ -144,6 +145,10 @@ export function EditRecordModal({
   record: Record<string, unknown> & { id: string; version?: number };
   pending: boolean;
   error: string | null;
+  // What the server refused per field, keyed by field key, beside that field.
+  fieldRefusals?: ReadonlyMap<string, string>;
+  // See RecordFormBody.
+  refusedAt?: number;
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
   /** A refusal the caller answers with its own verbs, in place of `error`. */
@@ -249,26 +254,34 @@ export function EditRecordModal({
   useEffect(() => {
     onDirtyChange?.(dirty);
   }, [dirty, onDirtyChange]);
+  const answerless = useAnswerlessRows({ open, dirty, pending, onClose });
 
   return (
-    <RecordFormBody
-      dialog={{ open, title }}
-      fields={fields}
-      values={values}
-      setValues={setValues}
-      rows={rows}
-      setRows={setRows}
-      pending={pending}
-      error={error}
-      existing={existing}
-      resolveExisting={resolveExisting}
-      notice={notice}
-      onSubmit={(submitted, submittedRows) =>
-        onSubmit(submitted, submittedRows, opened)
-      }
-      onClose={onClose}
-      intent="save"
-    />
+    <>
+      <RecordFormBody
+        dialog={{ open, title }}
+        fields={fields}
+        values={values}
+        setValues={setValues}
+        rows={rows}
+        setRows={setRows}
+        pending={pending}
+        error={error}
+        fieldRefusals={fieldRefusals}
+        refusedAt={refusedAt}
+        existing={existing}
+        resolveExisting={resolveExisting}
+        notice={notice}
+        onSubmit={(submitted, submittedRows) =>
+          onSubmit(submitted, submittedRows, opened)
+        }
+        onClose={onClose}
+        intent="save"
+        answerlessRow={answerless.row}
+        unsaved={dirty}
+      />
+      {answerless.question}
+    </>
   );
 }
 
@@ -288,6 +301,7 @@ export function EditAction<Updated extends { id: string }>({
   disabledReasonId,
   labelled,
   onValuesChange,
+  conflict,
 }: Readonly<{
   label: string;
   /**
@@ -325,6 +339,8 @@ export function EditAction<Updated extends { id: string }>({
   // Symmetric with CreateAction's dedupe link — edit rarely collides, but the
   // API stays uniform for the screens that adopt it.
   resolveExisting?: (code: string, id: string) => Route;
+  // See CreateConflict.
+  conflict?: CreateConflict;
   // The form's live answers, for a screen whose field list depends on them —
   // a dependent picker whose options only the server can narrow. See
   // usePublishedValues (create.fields.ts).
@@ -345,6 +361,17 @@ export function EditAction<Updated extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
+  const refused = fieldRefusals(
+    mutation.error,
+    fields,
+    t,
+    conflict,
+    typedValues(mutation.variables?.values),
+  );
+  const open = () => {
+    mutation.reset();
+    setEditing(true);
+  };
   return (
     <>
       {/* Square in a header. A pencil is the one glyph every reader in this
@@ -359,7 +386,7 @@ export function EditAction<Updated extends { id: string }>({
       {labelled ? (
         <Button
           reasonId={disabledReasonId}
-          onClick={() => setEditing(true)}
+          onClick={open}
           pending={editing && !shown}
           data-testid="edit-record"
         >
@@ -370,7 +397,7 @@ export function EditAction<Updated extends { id: string }>({
           label={label}
           icon={<PenLine aria-hidden="true" />}
           reasonId={disabledReasonId}
-          onClick={() => setEditing(true)}
+          onClick={open}
           pending={editing && !shown}
           testId="edit-record"
         />
@@ -382,7 +409,9 @@ export function EditAction<Updated extends { id: string }>({
         fields={fields}
         record={record}
         pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+        error={mutation.isError && !refused.allPlaced ? refused.rest : null}
+        fieldRefusals={refused.byField}
+        refusedAt={mutation.isError ? mutation.submittedAt : undefined}
         existing={existing}
         resolveExisting={resolveExisting}
         onValuesChange={onValuesChange}
@@ -391,5 +420,16 @@ export function EditAction<Updated extends { id: string }>({
         }
       />
     </>
+  );
+}
+
+// The form's own answers out of a write's variables, which a screen may widen.
+function typedValues(
+  values: Readonly<Record<string, unknown>> = {},
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(values).flatMap(([key, value]) =>
+      typeof value === "string" ? [[key, value]] : [],
+    ),
   );
 }

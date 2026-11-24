@@ -69,6 +69,10 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/rewrite/service.go",
 		"the record the words on screen are written on, which every rewrite names; the rep's words are the request",
 	},
+	"internal/compose/chattasks/reader.go:Settle": {
+		"internal/compose/chattasks/reader.go",
+		"the filed chat message whose text is the request, beside the open tasks on its record",
+	},
 	"internal/compose/chatsync/summary.go:summarise": {
 		"internal/compose/chatsync/summary.go",
 		"the deal or project whose linked channel's talk is the request",
@@ -158,6 +162,8 @@ var namesItsSubject = map[string]subjectClaim{
 // namesNoSubject: the call is about no single record, and the reason is what
 // stops the next reader adding one.
 var namesNoSubject = gatekit.Waive(map[string]string{
+	"internal/compose/extai/port.go:Run":                        "an extension's input is whatever the unit sends, and the core cannot tell which record it came from. The task is no_payload, so nothing of the call is stored for an erasure to reach",
+	"internal/compose/searchdata.go:answerSearchData":           "a typed question and reader catalogs; no CRM record is loaded before planning, so there is no single record to cite",
 	"internal/compose/captureclassify.go:ask":                   "one call labels a BATCH of unread messages. The batch is the unit the economics are built on, and a citation naming one of its rows would be wrong about the others",
 	"internal/compose/owedclassify.go:ask":                      "one call judges many messages at once, as the classifier above does; a citation naming one row would be wrong about the rest",
 	"internal/compose/tagsuggestpass.go:ask":                    "one call reads a batch of captured items against the tag vocabulary; a citation naming one item would be wrong about the rest",

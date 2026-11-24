@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
   Suspense,
@@ -16,53 +16,49 @@ import { ScreenView } from "./App.views";
 import { useWarmRouteChunks } from "./App.warmchunks";
 import { ApprovalHost } from "./app/approvalhost";
 import { AskFromAddress } from "./app/askfromaddress";
-import {
-  AuthScreen,
-  AvailabilityScreen,
-  ReleaseSkewScreen,
-  SetupClaimScreen,
-} from "./app/authscreens";
+import { AuthScreen, ReleaseSkewScreen } from "./app/authscreens";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { lockScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
-import { prefetchHome } from "./app/homeprefetch";
-import { passesOnboardingGate } from "./app/onboarding-gate";
+import { useHomePrefetch } from "./app/homeprefetch";
+import { ONBOARDING_ENTRY, passesOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
+import { UnavailableOrClaimable } from "./app/unavailableorclaimable";
 import { CallLogHost } from "./components/calllog.host";
+import { UnsavedExits } from "./components/unsaved";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import { WriteToHost } from "./features/settings/writetohost";
 import type { AuthNotice } from "./features/sign-in/auth";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
-import { fetchSetupStatus } from "./features/sign-in/setupclaim.queries";
-import { CompleteLocale, useLocale } from "./i18n";
+import { useAccountLocale, useLocale } from "./i18n";
 import { lazy } from "./i18n/lazy";
 import { useSkewedApiRelease } from "./lib/capabilities";
 import {
   CompanyZoneProvider,
   useConfiguredCompanyZone,
 } from "./lib/companyzone";
-import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
+import { screenEnabled, useHiddenCoreFeatures } from "./lib/corefeatures";
 import { useInstallationDescribed } from "./lib/installationcompany";
 import { notifyNavigate } from "./lib/instruments";
 import { markJourney } from "./lib/journeymarks";
 import { useWarmProgressName } from "./lib/progressreader";
 import { SPA_RELEASE } from "./lib/release";
 import { routePattern } from "./lib/routepattern";
-import { navigateReplacing, type Screen } from "./lib/router";
+import { type Screen, takeHashCredential, watchAddress } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
+import { sessionSeenNow } from "./lib/session.read";
 import {
-  readStored,
   removeStored,
   STORAGE_KEYS,
   watchStored,
   writeStored,
 } from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
-import { currentParams } from "./lib/urlstate";
+import { useAddressWriters } from "./lib/urlstate";
 import {
   renderableViewerZone,
   useBrowserZoneOnFirstSignIn,
@@ -130,68 +126,41 @@ export function App() {
       </Shell>
     );
   }
-  // The emailed reset link is a bearer credential, not a session check: it
-  // must reach the reset form whether or not this browser already carries a
-  // live cookie, so it is routed here, ahead of AuthedApp's session gate,
-  // rather than left for AuthedApp to reach only when unauthenticated (where
-  // an existing session instead rendered the authenticated shell's fallback
-  // for an unrecognised route).
   if (route.screen === RESET_ROUTE) {
-    return (
-      <RaillessFrame>
-        <CompleteLocale>
-          <ResetRoute />
-        </CompleteLocale>
-      </RaillessFrame>
-    );
+    return <ResetEntry route={route} />;
   }
   return <AuthedApp route={route} />;
 }
 
-// UnavailableOrClaimable splits the 503 the boundary already reached into its
-// two product states. "Not ready" is true of both, but only one of them has
-// something the contact in front of the browser can do: an installation that
-// holds no company and is WAITING to be claimed (ADR-0105) gets the claim
-// screen; anything else keeps the availability message.
-//
-// The probe runs only on this branch, and only for the installation kind: a
-// connectivity failure says nothing about whether a claim is possible, and
-// asking would replace a true message with a guess. While it is in flight the
-// availability screen stands — it is the honest answer until the probe says
-// otherwise, and it is what the user would have seen anyway.
-function UnavailableOrClaimable({
-  kind,
-  onRetry,
-}: Readonly<{ kind: "connection" | "installation"; onRetry: () => void }>) {
-  const claimable = useQuery({
-    queryKey: ["setup-status"],
-    queryFn: fetchSetupStatus,
-    enabled: kind === "installation",
-    retry: false,
-  });
-  // Retry re-probes BOTH. fetchSetupStatus resolves rather than throws, so a
-  // one-off failure caches a `false` under this key — without refetching it,
-  // "Try again" would keep showing the availability screen for an installation
-  // that has been claimable all along, and only a page reload would recover.
-  const retryBoth = () => {
-    onRetry();
-    if (kind === "installation") {
-      void claimable.refetch();
-    }
-  };
-  if (kind === "installation" && claimable.data?.claimable) {
-    // A successful claim provisions the installation, so the same /v1/me probe
-    // that sent us here now answers — the boundary re-resolves rather than this
-    // screen deciding where to go next.
-    return <SetupClaimScreen onClaimed={onRetry} status={claimable.data} />;
+// The emailed reset link is a bearer credential, not a session check. With its
+// token it reaches the reset form ahead of AuthedApp's session gate; without one
+// it goes through the gate. A link pasted while the gate waits is scrubbed back
+// to this same address, so the router is watched, not the route. A token once
+// seen stays decided, since the form forgets it as it takes it.
+function ResetEntry({
+  route,
+}: Readonly<{ route: ReturnType<typeof useRoute> }>) {
+  const tokenHeld = useSyncExternalStore(
+    watchAddress,
+    () => takeHashCredential(RESET_ROUTE) !== null,
+  );
+  const [carriesToken, setCarriesToken] = useState(tokenHeld);
+  if (tokenHeld && !carriesToken) {
+    setCarriesToken(true);
   }
-  return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
+  if (!carriesToken) {
+    return <AuthedApp route={route} />;
+  }
+  return (
+    <RaillessFrame>
+      <ResetRoute />
+    </RaillessFrame>
+  );
 }
 
 // Watched, so a sign-out here or in another tab ends Home's early reads at once.
 const watchSessionSeen = (changed: () => void) =>
   watchStored(STORAGE_KEYS.sessionSeen, changed);
-const sessionSeenNow = () => readStored(STORAGE_KEYS.sessionSeen) === "1";
 
 // Marks whether this browser has a session, and answers whether the probe was
 // refused. A refused refetch keeps the last data beside its error.
@@ -206,30 +175,60 @@ function noteSessionSeen(data: unknown, error: unknown): boolean {
   return refused;
 }
 
-// On a browser that had a session, Home's reads start with the session probe.
-// Waiting for the gates it opens costs two round trips. An answer that sends the
-// reader elsewhere stops them, and the cleanup aborts them.
-function homeMayRead(
-  state: Readonly<{
-    screen: Screen;
-    homeAvailable: boolean;
-    signedIn: boolean;
-    sessionSeen: boolean;
-    refused: boolean;
-    confined: boolean;
-    described: boolean | undefined;
-    unfinished: boolean;
-  }>,
-): boolean {
+type HomeReadState = Readonly<{
+  screen: Screen;
+  homeAvailable: boolean;
+  signedIn: boolean;
+  sessionSeen: boolean;
+  refused: boolean;
+  confined: boolean;
+  heldForOnboarding: boolean;
+  rememberedFinished: boolean;
+  gatesPending: boolean;
+}>;
+
+// On a browser that saw this reader finish onboarding, Home's reads start with
+// the session probe. Waiting for the gates it opens costs two round trips. An
+// answer that sends the reader elsewhere stops them, and the cleanup aborts
+// them. Any other reader's reads wait for the gates to admit them.
+function homeMayRead(state: HomeReadState): boolean {
   return (
     state.screen === "home" &&
     state.homeAvailable &&
     (state.signedIn || state.sessionSeen) &&
     !state.refused &&
     !state.confined &&
-    state.described !== false &&
-    !state.unfinished
+    !state.heldForOnboarding &&
+    (state.rememberedFinished || (state.signedIn && !state.gatesPending))
   );
+}
+
+type OnboardingHold = Readonly<{ held: boolean; turnedAway: boolean }>;
+
+// The route is a dependency so the gate holds on every navigation. Otherwise
+// the palette or a typed hash walks past onboarding.
+// passesOnboardingGate's screens are exempt, or this effect would fight its
+// own destination (onboarding) or destroy a request that cannot survive the
+// rewrite (oauth-consent).
+function useOnboardingHold(
+  authed: boolean,
+  described: boolean | undefined,
+  unfinished: boolean,
+  route: ReturnType<typeof useRoute>,
+): OnboardingHold {
+  const held = authed && described !== undefined && (!described || unfinished);
+  const { screen, id, id2 } = route;
+  const { navigateReplacing } = useAddressWriters();
+  useEffect(() => {
+    if (held && !passesOnboardingGate({ screen, id, id2 })) {
+      // Replacing, not pushing: this is a redirect. The address it sends the
+      // reader away from answers by sending them here again. Pushed, Back
+      // lands on that address and the effect fires. The one key meant for
+      // getting out of things then returns the reader to onboarding.
+      navigateReplacing(ONBOARDING_ENTRY);
+    }
+  }, [held, screen, id, id2, navigateReplacing]);
+  return { held, turnedAway: held && !passesOnboardingGate(route) };
 }
 
 // AuthGate: everything behind the session probes GET /v1/me, and the
@@ -243,7 +242,7 @@ function AuthedApp({
   route,
 }: Readonly<{ route: ReturnType<typeof useRoute> }>) {
   const me = useMe();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   // A 401 after a previously live session is an expiry (or a deliberate
   // sign-out, which useLogout marks); a 401 on first load is just "not
   // signed in" and carries no notice.
@@ -253,25 +252,13 @@ function AuthedApp({
   // above this component. It cannot ask for `/me` itself, and this is the first
   // place the answer exists — so a choice made on another browser reaches the
   // catalog here or nowhere.
-  const { adoptLocale } = useLocale();
-  useEffect(() => {
-    const chosen = me.data?.user?.locale;
-    if (chosen) {
-      adoptLocale(chosen);
-    }
-  }, [me.data, adoptLocale]);
+  useAccountLocale(me.data?.user?.locale);
   // A user with no stored zone gets the browser's as a first guess. They
   // change it under Settings → Account.
   useBrowserZoneOnFirstSignIn(me.data);
   useEffect(() => {
-    const refused = noteSessionSeen(me.data, me.error);
-    if (me.data) {
-      hadSession.current = true;
-      setNotice(null);
-      markJourney("session");
-      return;
-    }
-    if (refused) {
+    // The refusal is tested first: a refused re-read still holds the old data.
+    if (noteSessionSeen(me.data, me.error)) {
       const exit = consumeAuthExitNotice();
       if (exit) {
         setNotice(exit);
@@ -279,6 +266,12 @@ function AuthedApp({
         setNotice("session-expired");
       }
       hadSession.current = false;
+      return;
+    }
+    if (me.data) {
+      hadSession.current = true;
+      setNotice(null);
+      markJourney("session");
     }
   }, [me.data, me.error]);
 
@@ -289,12 +282,7 @@ function AuthedApp({
     authed,
     { readProfile: false },
   );
-  const progress = useJourneyProgress(
-    authed,
-    authed &&
-      described === true &&
-      me.data?.authorization?.seat_type === "full",
-  );
+  const progress = useJourneyProgress(authed, described, me.data?.user?.id);
   // The company's clock, for every record date under this boundary. Read
   // here rather than per screen so all of them agree, and gated on the session
   // for the same reason the company probe is: an unauthenticated read would
@@ -308,26 +296,7 @@ function AuthedApp({
     [storedZone],
   );
 
-  // The route is a dependency so the gate holds on every navigation. Otherwise
-  // the palette or a typed hash walks past onboarding.
-  // passesOnboardingGate's screens are exempt, or this effect would fight its
-  // own destination (onboarding) or destroy a request that cannot survive the
-  // rewrite (oauth-consent).
-  const { screen: gateScreen, id: gateId, id2: gateId2 } = route;
-  useEffect(() => {
-    if (
-      authed &&
-      described !== undefined &&
-      (!described || progress.unfinished) &&
-      !passesOnboardingGate({ screen: gateScreen, id: gateId, id2: gateId2 })
-    ) {
-      // Replacing, not pushing: this is a redirect, and the address it sends
-      // the reader away from answers by sending them here again. Pushed, Back
-      // lands on that address, the effect fires, and the reader is returned to
-      // onboarding by the one key that exists for getting out of things.
-      navigateReplacing({ screen: "onboarding", id: "company" });
-    }
-  }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
+  const hold = useOnboardingHold(authed, described, progress.unfinished, route);
 
   const { refusal, confinement } = useProbeAnswer(me);
   const sessionSeen = useSyncExternalStore(
@@ -335,7 +304,7 @@ function AuthedApp({
     sessionSeenNow,
     sessionSeenNow,
   );
-  const palette = useCommandPalette(route);
+  const palette = useCommandPalette(route, !hold.held);
   const gatesPending =
     companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;
@@ -346,21 +315,16 @@ function AuthedApp({
     sessionSeen,
     refused: me.isError,
     confined: confinement !== null,
-    described,
-    unfinished: progress.unfinished,
+    heldForOnboarding: hold.held,
+    rememberedFinished: progress.remembered,
+    gatesPending,
   });
-  const queryClient = useQueryClient();
   useEffect(() => {
     if (shellReady) {
       markJourney("gates");
     }
   }, [shellReady]);
-  useEffect(() => {
-    if (!opensHome) {
-      return;
-    }
-    return prefetchHome(queryClient, currentParams());
-  }, [opensHome, queryClient]);
+  useHomePrefetch(opensHome, me.data);
   useTaskReminderNotifications(authed);
   useFeatureLanding(shellReady, confinement !== null, disabled);
 
@@ -440,13 +404,19 @@ function AuthedApp({
             <CallLogHost>
               <SourceHost>
                 <ApprovalHost>
-                  <AuthedShell onOpenSearch={() => palette.show("all")}>
-                    <ScreenView
-                      screen={route.screen}
-                      id={route.id}
-                      id2={route.id2}
-                    />
-                  </AuthedShell>
+                  {/* Sign out in the shell's account menu asks the page's guard. */}
+                  <UnsavedExits>
+                    <AuthedShell
+                      hold={hold}
+                      onOpenSearch={() => palette.show("all")}
+                    >
+                      <ScreenView
+                        screen={route.screen}
+                        id={route.id}
+                        id2={route.id2}
+                      />
+                    </AuthedShell>
+                  </UnsavedExits>
                 </ApprovalHost>
               </SourceHost>
             </CallLogHost>
@@ -470,11 +440,29 @@ function AuthedApp({
 
 function AuthedShell({
   children,
+  hold,
   onOpenSearch,
-}: Readonly<{ children: ReactNode; onOpenSearch: () => void }>) {
+}: Readonly<{
+  children: ReactNode;
+  hold: OnboardingHold;
+  onOpenSearch: () => void;
+}>) {
   useWarmRouteChunks();
-  useWarmProgressName();
-  return <Shell onOpenSearch={onOpenSearch}>{children}</Shell>;
+  useWarmProgressName(!hold.held);
+  // The gate is replacing this address, and its shell would only start the
+  // full app's reads.
+  if (hold.turnedAway) {
+    return (
+      <RaillessFrame>
+        <AuthSplash />
+      </RaillessFrame>
+    );
+  }
+  return (
+    <Shell onOpenSearch={onOpenSearch} held={hold.held}>
+      {children}
+    </Shell>
+  );
 }
 
 // The rail-less page frame (same shape Shell renders for onboarding/booking),

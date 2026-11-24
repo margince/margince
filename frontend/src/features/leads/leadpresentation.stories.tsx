@@ -128,7 +128,10 @@ export const CountsRefused: Story = {
     installFetchStub({
       "GET /me": meRoute({ lead: ["read"] }),
       "POST /reports/leads-by-status": () =>
-        jsonResponse({ title: "Forbidden", status: 403 }, 403),
+        jsonResponse(
+          { title: "Forbidden", status: 403, code: "owner_not_measurable" },
+          403,
+        ),
     });
     return (
       <Board

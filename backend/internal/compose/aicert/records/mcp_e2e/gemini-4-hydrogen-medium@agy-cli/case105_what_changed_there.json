@@ -11,13 +11,95 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "0a48db8ab956be35",
+    "tools": "210bbdaf14125c6d",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "d76651445fdbe7445b1318837cd33cb56282f221",
+    "ran_at": "2026-11-21T17:07:24Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:31:48Z"
+  },
   "usage": {
-    "input_tokens": 71847,
-    "output_tokens": 21878,
+    "input_tokens": 71423,
+    "output_tokens": 18731,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 226698,
+    "cache_read_input_tokens": 185242,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "get_company_brief",
+        "get_field_history",
+        "list_deal_margince_changes",
+        "list_records",
+        "read_attention",
+        "read_context",
+        "read_details",
+        "read_record",
+        "review_commitments",
+        "search_records",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "at_risk_relationships",
+        "catch_me_up_on",
+        "find_records",
+        "get_company_brief",
+        "get_field_history",
+        "get_magic",
+        "list_deal_margince_changes",
+        "list_notices",
+        "read_attention",
+        "read_context",
+        "read_details",
+        "read_record",
+        "review_commitments",
+        "search_records",
+        "whats_slipping_this_week",
+        "whoami"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 20.5,
+      "min": 20,
+      "max": 21
+    },
+    "turns": {
+      "median": 6.5,
+      "min": 6,
+      "max": 7
+    },
+    "refused": {
+      "median": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "prompt_tokens": {
+      "median": 128332.5,
+      "min": 118440,
+      "max": 138225
+    },
+    "output_tokens": {
+      "median": 9365.5,
+      "min": 9244,
+      "max": 9487
+    }
   }
 }

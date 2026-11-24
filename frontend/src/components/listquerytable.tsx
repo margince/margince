@@ -1,8 +1,15 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "../design-system/atoms";
 import {
   type ListChip,
   type ListColumn,
+  type ListRefusal,
   type ListSelection,
   ListTable as ListSurface,
   type ViewRow,
@@ -10,10 +17,22 @@ import {
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "../lib/problem";
-import { navigate, type Route, routeHash, useHash } from "../lib/router";
+import { entryDepth } from "../lib/historydepth";
+import { problemMessageOf, problemStatus } from "../lib/problem";
+import {
+  navigate,
+  type Route,
+  routeHash,
+  samePage,
+  useHash,
+  watchAddress,
+} from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
-import { currentParams, useUrlParams } from "../lib/urlstate";
+import {
+  currentParams,
+  useNarrowedFromOutside,
+  useUrlParams,
+} from "../lib/urlstate";
 import type {
   FilterSpec,
   ListState,
@@ -52,12 +71,14 @@ export function ListTable<Row>({
   rowKey,
   rowRoute,
   unit,
+  unitOne,
   layoutKey = unit,
   chips = [],
   dataChips = [],
   views = [],
   dataViews = [],
   action,
+  refusal,
   caption,
   footer,
   searchable = true,
@@ -68,9 +89,11 @@ export function ListTable<Row>({
   saveView,
   notice,
   emptyNote,
+  emptyLine,
   scopeKey,
   body,
   bodyOwnsPaging = false,
+  bodyEmpty,
   bodyCount,
   countScope,
   selection,
@@ -95,6 +118,8 @@ export function ListTable<Row>({
   body?: ReactNode;
   /** The alternate body renders its own complete-count/load-more contract. */
   bodyOwnsPaging?: boolean;
+  /** The body settled with nothing in it; see the design-system table. */
+  bodyEmpty?: boolean;
   /** The count for a body that pages itself; see the design-system table. */
   bodyCount?: ReactNode;
   /** What the table's count names its rows as part of (the deals pipeline). */
@@ -109,6 +134,8 @@ export function ListTable<Row>({
   rowRoute?: (row: Row) => Route;
   /** Message key for the plural noun in the count and the empty state. */
   unit: MessageKey;
+  /** The noun for a list that holds one row: "1 to 1 of 1 lead". */
+  unitOne?: MessageKey;
   /**
    * Names the table for the column widths and order it remembers. Defaults to
    * `unit`; two tables that share a unit pass keys of their own.
@@ -129,6 +156,8 @@ export function ListTable<Row>({
    */
   dataViews?: readonly SavedViewTab[];
   action?: ReactNode;
+  /** Why `action` is refused; see the design-system ListTable. */
+  refusal?: ListRefusal;
   /** What this list is, for the lists that need saying. Never the screen name. */
   caption?: MessageKey;
   footer?: ReactNode;
@@ -147,10 +176,14 @@ export function ListTable<Row>({
   notice?: ReactNode;
   /**
    * What the empty table says under its generic line, when this screen knows
-   * why it is empty. Example: a "Mine" view for a reader who owns nothing,
-   * with the way back to everything.
+   * why it is empty. Example: a filter the reader's role cannot apply.
    */
   emptyNote?: ReactNode;
+  /**
+   * What the empty table says in place of its generic line and Clear filters.
+   * Example: a "Mine" view for a reader who owns nothing, with the way back.
+   */
+  emptyLine?: ReactNode;
   /**
    * What this list is reading, when the screen narrows it by something that
    * is neither a chip nor a filter. Passed to the surface, which resets the
@@ -164,16 +197,16 @@ export function ListTable<Row>({
   const { rows, query, setQuery, isPending, isError, error, refetch } = state;
   // The rendered page is a dial like the rest, so it comes from the address.
   // Read here rather than threaded through ListState: it is the only dial the
-  // table owns by default. A screen that never puts it in the URL keeps the
-  // table's own number.
+  // table owns by default.
   const [params, setParams] = useUrlParams();
+  const narrowedFromOutside = useNarrowedFromOutside(JSON.stringify(query));
   // Where the reader was in the rows, which the shell cannot remember for them.
   // A full-height list takes the overflow itself, so the page column the shell
   // watches is at zero on every one of these screens. Back then returned
   // readers to the top of a list they had scrolled a long way down. Its own
   // lane, so a record page's column and a list's rows are two separate places.
   const rowsScroller = useRef<HTMLDivElement>(null);
-  useScrollMemory(rowsScroller, useHash(), "rows");
+  useScrollMemory(rowsScroller, useHash(), { lane: "rows" });
   const [localSearch, setLocalSearch] = useState(query.q);
   // What this box last put on the wire. It tells a `q` that moved for another
   // reason apart from this box's own debounce landing.
@@ -212,15 +245,6 @@ export function ListTable<Row>({
   const [view, pickView] = useActiveView(railViews, query);
   // No tab lit means the list departs from every view this rail offers.
   const changed = railViews.length > 0 && view < 0;
-  // Keyed on the values, not on the arrays that carry them. The table treats a
-  // new `chosen` object as the reader narrowing the list and resets to page 1.
-  // So an object rebuilt every render resets on every render. Pressing Next
-  // re-read page 2, then snapped back to page 1, and the list flipped between
-  // the first two pages forever.
-  //
-  // `chips` cannot be the key: screens declare it as an inline array literal,
-  // which is a fresh reference each render. The option values are what
-  // chosenFor reads, and they are strings.
   // Every chip on the surface, declared and data-driven alike. The owner dial
   // is a dataChip because it names colleagues at runtime, and code that asks
   // which chips there are must see it. Reading `chips` alone once made picking
@@ -276,33 +300,28 @@ export function ListTable<Row>({
     }
   }, [query.q]);
 
-  // The reader left with a word still settling. The effect above follows `q`.
-  // But the reader may walk away from the list a word was typed against, with
-  // a `q` that never moved. Example: Back to a differently sorted view of the
-  // same list. The word would then land on a list it was not typed into.
-  //
-  // The browser's own navigation is the discriminator, with no false hits.
-  // `replaceParams` uses `history.replaceState`, which fires neither event, so
-  // every dial this surface turns is silent here. Both events are heard: Back
-  // moves the address at `popstate`, and a fragment-only move also fires
-  // `hashchange` a task later. A timer firing between them would write the word
-  // over the address Back restored. These are the raw events and not
-  // lib/router.tsx's `watchAddress`, which also runs for the app's own
-  // `replaceParams` announcements. Those must not abandon the word.
+  // A word still settling when the reader leaves must not land elsewhere:
+  // on another entry (Back, Forward, a link) or a replaced page. A dial
+  // this list turns keeps both. The box takes the word of the address it was
+  // drawn for, which a list held by the leave question still shows.
+  const dropPendingWord = useEffectEvent(() => {
+    const own = ownDials(params, state.paramScope).get("q") ?? "";
+    committed.current = own;
+    typed.current = own;
+    setLocalSearch(own);
+  });
   useEffect(() => {
-    const abandonPendingSearch = () => {
-      const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";
-      committed.current = live;
-      typed.current = live;
-      setLocalSearch(live);
-    };
-    globalThis.addEventListener("popstate", abandonPendingSearch);
-    globalThis.addEventListener("hashchange", abandonPendingSearch);
-    return () => {
-      globalThis.removeEventListener("popstate", abandonPendingSearch);
-      globalThis.removeEventListener("hashchange", abandonPendingSearch);
-    };
-  }, [state.paramScope]);
+    let entry = { hash: globalThis.location.hash, depth: entryDepth() };
+    return watchAddress(() => {
+      const left =
+        entryDepth() !== entry.depth ||
+        !samePage(globalThis.location.hash, entry.hash);
+      entry = { hash: globalThis.location.hash, depth: entryDepth() };
+      if (left) {
+        dropPendingWord();
+      }
+    });
+  }, []);
 
   useEffect(() => {
     // Only a word the box has not committed is pending. Any other timer would
@@ -326,14 +345,34 @@ export function ListTable<Row>({
   // Neither state replaces the surface. The header, the dials and the primary
   // action belong to the screen rather than to the response. So they stay put,
   // and only the body reports what happened.
+  // A 422 refuses the list's own dials, a sort or filter from an old link or
+  // saved view. A retry asks the same thing again; clearing them does not.
+  const refusedDials = isError && problemStatus(error) === 422;
+  const clearDials = () => {
+    committed.current = "";
+    typed.current = "";
+    setLocalSearch("");
+    setQuery((prev) => ({
+      ...prev,
+      q: "",
+      sort: state.initialSort ?? "",
+      filters: { ...state.initialFilters },
+    }));
+  };
   const problem = isError ? (
     <>
-      <p>{t("common.error")}</p>
+      <p>{t(refusedDials ? "table.dialsRefused" : "common.error")}</p>
       {/* ds:ignore the cause under a headline with its own Retry, a composite */}
       <p className="listquery-cause">{problemMessageOf(error, t)}</p>
-      <Button className="listquery-retry" onClick={() => refetch()}>
-        {t("common.retry")}
-      </Button>
+      {refusedDials ? (
+        <Button className="listquery-retry" onClick={clearDials}>
+          {t("table.clearFilters")}
+        </Button>
+      ) : (
+        <Button className="listquery-retry" onClick={() => refetch()}>
+          {t("common.retry")}
+        </Button>
+      )}
     </>
   ) : undefined;
 
@@ -376,8 +415,11 @@ export function ListTable<Row>({
       onRowClick={rowRoute ? (row) => navigate(rowRoute(row)) : undefined}
       rowHref={rowRoute ? (row) => routeHash(rowRoute(row)) : undefined}
       unit={t(unit)}
+      unitOne={unitOne && t(unitOne)}
       emptyNote={emptyNote}
+      emptyLine={emptyLine}
       action={action}
+      refusal={refusal}
       caption={caption ? t(caption) : undefined}
       footer={footer}
       tools={tools}
@@ -437,10 +479,12 @@ export function ListTable<Row>({
       onPage={(next) =>
         setParams(withListPage(currentParams(), next, state.paramScope))
       }
+      keepsPage={narrowedFromOutside}
       bodyRef={rowsScroller}
       widthsKey={layoutKey}
       body={body}
       bodyOwnsPaging={bodyOwnsPaging}
+      bodyEmpty={bodyEmpty}
       bodyCount={bodyCount}
       countScope={countScope}
       selection={selection}

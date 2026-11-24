@@ -29,7 +29,7 @@ func strangerChatReply() string {
 func (f chatFixture) fileConfirmed(t *testing.T, confirm bool) (ids.UUID, error) {
 	t.Helper()
 	body := chatScreenshotText
-	out, err := NewChatCaptureFile(f.env.Pool).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
+	out, err := NewChatCaptureFile(f.env.Pool, nil).File(f.env.Admin(), f.attachment, crmcontracts.FileChatCaptureRequest{
 		ExtractionId: openapi_types.UUID(f.reading), ChannelProvider: "whatsapp", Body: &body,
 		ConfirmOtherCounterparty: &confirm,
 	})

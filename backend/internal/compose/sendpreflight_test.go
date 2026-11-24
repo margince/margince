@@ -3,10 +3,8 @@
 
 package compose
 
-// The pre-flight's branches, one table. Each row decides whether a sender is
-// handed an actionable 422 or a 202 for a message that can only park — and which
-// TABLE was consulted to decide it, which is the half a mail-only suite cannot
-// see going wrong.
+// The pre-flight's branches, one table. Each row decides whether a sender gets an
+// actionable 422 or a 202 for a message that can only park, and which table said so.
 
 import (
 	"context"
@@ -20,23 +18,34 @@ import (
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 type stubGrants struct {
 	granted []string
-	// grantedFor answers per provider, for the cases about choosing between two
-	// mailboxes. nil falls back to `granted` for all of them.
+	// grantedFor answers per provider; nil falls back to `granted` for all.
 	grantedFor map[string][]string
 	err        error
 	calls      int
-	// channelBound is what the WORKSPACE lookup answers, and channelCalls counts
-	// it separately: the two lookups read different tables, and a pre-flight
-	// that asked the wrong one is exactly the defect that refused every channel
-	// reply while every mail test still passed.
+	// channelBound answers the WORKSPACE lookup and channelCalls counts it apart:
+	// asking the wrong table is what once refused every channel reply.
 	channelBound bool
 	channelErr   error
 	channelCalls int
+}
+
+func (s *stubGrants) ChooseSendingMailbox(ctx context.Context, user ids.UserID, _ ids.UUID, _ ids.ActivityID, providers []string, canSend func(capture.SendingMailbox) (bool, error)) (capture.SendingMailbox, error) {
+	if user.IsZero() || len(providers) == 0 {
+		return capture.SendingMailbox{}, errors.New("a mailbox lookup must name the sender and the mail providers")
+	}
+	for _, provider := range providers {
+		scopes, err := s.GrantedScopesFor(ctx, user, provider)
+		if can, canErr := canSend(capture.SendingMailbox{Provider: provider, ProviderScopes: scopes}); err != nil || canErr != nil || can {
+			return capture.SendingMailbox{Provider: provider, ProviderScopes: scopes}, errors.Join(err, canErr)
+		}
+	}
+	return capture.SendingMailbox{}, nil
 }
 
 func (s *stubGrants) GrantedScopesFor(_ context.Context, _ ids.UserID, provider string) ([]string, error) {
@@ -100,7 +109,7 @@ func sendCapableCases(human context.Context) []sendCapableCase {
 		// A provider that cannot transmit at all has no send scope to hold;
 		// asking capture about it would be asking the wrong question.
 		{
-			"a provider that cannot send at all", human, "imap",
+			"a provider that cannot send at all", human, "carrier_pigeon",
 			&stubGrants{granted: []string{sendScope}}, false, nil, 0, false,
 		},
 		// A bot token carries no OAuth scope, so the per-user grant lookup has
@@ -254,9 +263,8 @@ func TestSendCapableAsksTheUnitRatherThanTheWorkspaceBotTable(t *testing.T) {
 	}
 }
 
-// Which mailbox a send goes out through — the question this pre-flight was
-// extended to answer, and the one a hard-coded provider got wrong for every rep
-// whose only mailbox is the other vendor.
+// Which mailbox a send goes out through, a question a hard-coded provider got
+// wrong for every rep whose only mailbox is the other vendor.
 func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testing.T) {
 	human := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:x", UserID: ids.NewV7(),
@@ -287,15 +295,14 @@ func TestSendableMailProviderNamesAMailboxTheSenderCanActuallySendFrom(t *testin
 		"only the first vendor":  {sendable(first), first},
 		// Holding both is not something any surface asks for, and the answer is
 		// the census's own order — stable beats arbitrary-looking.
-		"both":    {sendable(mail...), first},
-		"neither": {map[string][]string{}, ""},
+		"both": {sendable(mail...), first},
 	} {
 		t.Run(name, func(t *testing.T) {
 			authority := mailboxAuthority{
 				grants:            &stubGrants{grantedFor: tc.grantedFor},
 				mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
 			}
-			got, err := authority.SendableMailProvider(human)
+			got, _, err := authority.SendableMailbox(human, ids.Nil, ids.ActivityID{})
 			if err != nil {
 				t.Fatalf("SendableMailProvider: %v", err)
 			}
@@ -318,7 +325,7 @@ func TestSendableMailProviderReportsALookupFaultRatherThanNoMailbox(t *testing.T
 		grants:            &stubGrants{err: wantErr},
 		mailAppConfigured: func(context.Context, string) (bool, error) { return true, nil },
 	}
-	got, err := authority.SendableMailProvider(human)
+	got, _, err := authority.SendableMailbox(human, ids.Nil, ids.ActivityID{})
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("SendableMailProvider error = %v, want the lookup fault", err)
 	}
@@ -376,7 +383,7 @@ func TestAStoredAppInstallationPassesTheSendPreflight(t *testing.T) {
 	}}
 	authority := mailboxAuthority{grants: &stubGrants{granted: []string{scope}}, mailAppConfigured: s.mailAppConfigured}
 
-	got, err := authority.SendableMailProvider(human)
+	got, _, err := authority.SendableMailbox(human, ids.Nil, ids.ActivityID{})
 	if err != nil {
 		t.Fatalf("SendableMailProvider: %v", err)
 	}
@@ -426,8 +433,7 @@ func TestThePreflightAndRegistrationAgreeOnEveryAppSource(t *testing.T) {
 	}
 }
 
-// The QC mailbox is gated on its deployment flag alone. A provider that cannot
-// send has no app to ask about.
+// No app to ask about: the QC mailbox answers its flag, and IMAP always sends.
 func TestMailAppConfiguredWithoutAnAppToResolve(t *testing.T) {
 	for name, tc := range map[string]struct {
 		server   Server
@@ -436,7 +442,8 @@ func TestMailAppConfiguredWithoutAnAppToResolve(t *testing.T) {
 	}{
 		"the test mailbox, allowed":    {Server{captureConfig: CaptureConfig{AllowTestMailbox: true}}, testmailbox.Name, true},
 		"the test mailbox, disallowed": {Server{}, testmailbox.Name, false},
-		"a provider that cannot send":  {Server{gmailAppConfigured: true}, "imap", false},
+		"a provider that cannot send":  {Server{gmailAppConfigured: true}, "carrier_pigeon", false},
+		"an IMAP mailbox needs no app": {Server{}, "imap", true},
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, err := tc.server.mailAppConfigured(context.Background(), tc.provider)
@@ -503,7 +510,7 @@ func TestWorkerMailAuthorityAnswersFromItsRegistry(t *testing.T) {
 // so the connect surface keeps its declared 501.
 func TestNoMicrosoftAppRegistersNoMicrosoftConnector(t *testing.T) {
 	reg := NewCaptureRegistry(&pgxpool.Pool{}, fakeVault{}, CaptureConfig{})
-	registerMicrosoftConnectors(reg, nil, GraphConfig{}, nil)
+	registerMicrosoftConnectors(reg, nil, GraphConfig{}, nil, connector.BackfillTuning{})
 	for _, descriptor := range reg.Connectors() {
 		if descriptor.Name == providerGraph || descriptor.Name == providerGraphCal {
 			t.Errorf("%s was registered with no Microsoft app to run on", descriptor.Name)

@@ -246,14 +246,11 @@ func TestTheMemberReadFollowsAnyAdministrationVerbNotReadAlone(t *testing.T) {
 	}
 }
 
-// deleteOnlyMemberAdmin is a seat holding user_admin.delete and not read, edited through the
-// real role editor so the grant is one an operator can produce.
+// deleteOnlyMemberAdmin is a seat holding user_admin.delete and not read. The role editor now
+// refuses that grant, but a document stored before the rule can still hold it, so the seat's
+// permissions are built directly.
 func deleteOnlyMemberAdmin(t *testing.T, e *revocationEnv) Identity {
 	t.Helper()
-	if _, err := e.svc.SetRoleObjectGrant(e.wsCtx(e.admin), e.admin, "ops", objectUserAdmin,
-		storedGrant{Delete: true}, nil); err != nil {
-		t.Fatalf("granting ops user_admin.delete and nothing else: %v", err)
-	}
 	deleter := e.admin
 	deleter.Roles = []string{"ops"}
 	deleter.Permissions = principal.Permissions{
@@ -281,5 +278,62 @@ func TestTeamSearchTreatsPercentAndUnderscoreAsTypedText(t *testing.T) {
 		if len(rows) != 1 || rows[0].Name != want {
 			t.Errorf("team search %q returned %d rows; want only %q", q, len(rows), want)
 		}
+	}
+}
+
+// An archived team leaves the pickers' list. Only a team administrator may ask
+// for it back, with its archived_at, so the Teams page can restore it.
+func TestArchivedTeamsAreListedOnlyWhenATeamAdministratorAsks(t *testing.T) {
+	e := setupRevocationEnv(t, "roster-archived-teams")
+	live, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, "Sales South")
+	if err != nil {
+		t.Fatalf("creating the live team: %v", err)
+	}
+	gone, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, "Sales North")
+	if err != nil {
+		t.Fatalf("creating the team to archive: %v", err)
+	}
+	archived := true
+	if _, err := e.svc.UpdateTeam(e.wsCtx(e.admin), e.admin, gone.ID, UpdateTeamInput{Archived: &archived}); err != nil {
+		t.Fatalf("archiving the team: %v", err)
+	}
+
+	listed := func(in ListTeamsInput) map[ids.UUID]teamRow {
+		t.Helper()
+		rows, _, err := e.svc.ListTeams(e.wsCtx(e.admin), in)
+		if err != nil {
+			t.Fatalf("listing teams %+v: %v", in, err)
+		}
+		byID := map[ids.UUID]teamRow{}
+		for _, row := range rows {
+			byID[row.ID] = row
+		}
+		return byID
+	}
+	if _, found := listed(ListTeamsInput{})[gone.ID]; found {
+		t.Error("the default team list carries an archived team")
+	}
+	q := "Sales"
+	for name, in := range map[string]ListTeamsInput{
+		"unfiltered": {IncludeArchived: true},
+		"searched":   {IncludeArchived: true, Q: &q},
+	} {
+		rows := listed(in)
+		if row, found := rows[gone.ID]; !found || row.ArchivedAt == nil {
+			t.Errorf("%s: the archived team is %+v (found %v); want it with archived_at", name, row, found)
+		}
+		if row, found := rows[live.ID]; !found || row.ArchivedAt != nil {
+			t.Errorf("%s: the live team is %+v (found %v); want it without archived_at", name, row, found)
+		}
+	}
+
+	if err := auth.Require(e.wsCtx(e.member), objectTeamAdmin, principal.ActionRead); err == nil {
+		t.Fatal("the member fixture holds team_admin.read, so the refusal below proves nothing")
+	}
+	if _, _, err := e.svc.ListTeams(e.wsCtx(e.member), ListTeamsInput{IncludeArchived: true}); err == nil {
+		t.Error("a member without team_admin.read listed archived teams")
+	}
+	if _, _, err := e.svc.ListTeams(e.wsCtx(e.member), ListTeamsInput{}); err != nil {
+		t.Errorf("a member could not read the live team list: %v", err)
 	}
 }

@@ -10,14 +10,83 @@
   "effort": "thinking off",
   "system_prompt": "cli-default",
   "search": "semantic",
+  "door": "mcp",
   "self_judged": true,
+  "stamp": {
+    "scenario": "3b32be5b5ae06b75",
+    "tools": "1a12fa8ab3926d3b",
+    "instructions": "c5c644eee9719be0",
+    "judge": "",
+    "harness": "024566e70b0c3db3",
+    "commit": "bcf9db5be3820f3f7331a9b9b73120b83749f027",
+    "ran_at": "2026-11-21T08:57:24Z",
+    "graded_commit": "5808d1c0d9c1a63a8e4b2a14495d96f45c40c7fd",
+    "graded_at": "2026-11-21T23:31:31Z"
+  },
   "usage": {
     "input_tokens": 16,
-    "output_tokens": 1728,
-    "cache_creation_input_tokens": 8414,
-    "cache_read_input_tokens": 617584,
+    "output_tokens": 1585,
+    "cache_creation_input_tokens": 8673,
+    "cache_read_input_tokens": 622172,
     "runs_measured": 2,
     "runs_costed": 2,
-    "cost_usd": 0.1127
+    "cost_usd": 0.1128
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "change_offers",
+        "create_contract",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "search_records"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_offers",
+        "create_contract",
+        "describe_router_actions",
+        "find_records",
+        "read_workspace",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 4.5,
+      "min": 3,
+      "max": 6
+    },
+    "turns": {
+      "median": 5.5,
+      "min": 4,
+      "max": 7
+    },
+    "refused": {
+      "median": 1.5,
+      "min": 0,
+      "max": 3
+    },
+    "prompt_tokens": {
+      "median": 315430.5,
+      "min": 236788,
+      "max": 394073
+    },
+    "output_tokens": {
+      "median": 792.5,
+      "min": 687,
+      "max": 898
+    },
+    "duration_ms": {
+      "median": 9957,
+      "min": 8602,
+      "max": 11312
+    }
   }
 }

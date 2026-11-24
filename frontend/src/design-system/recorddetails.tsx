@@ -14,8 +14,9 @@ import "./recorddetails.css";
 /**
  * One label/value pair. `empty` folds the row behind "Show N empty fields"
  * until the reader opens them; the caller still passes the plain words for
- * it ("Add…", "Not set"). `block` puts the term over the value, for a value
- * that is a card rather than a line.
+ * it ("Add…", "Not set"). `block` puts the term over a value that is a card.
+ * `termHidden` keeps the term for a screen reader alone, for a card whose
+ * lines name themselves.
  */
 export type DetailRow = Readonly<{
   key: string;
@@ -23,24 +24,27 @@ export type DetailRow = Readonly<{
   value: ReactNode;
   empty?: boolean;
   block?: boolean;
+  termHidden?: boolean;
 }>;
 
 /** A named group: its rows, then anything that is not a row (chips). */
 export type DetailSection = Readonly<{
   key: string;
-  label: ReactNode;
+  label: string;
   /** What the group shows, behind a "?" beside its label. */
   help?: string;
+  /** Leave it out for a reader who may not edit: the section then draws no Edit link. */
+  edit?: Readonly<{ onEdit: () => void }>;
   rows?: readonly DetailRow[];
   children?: ReactNode;
 }>;
 
 /**
- * The details under a record's head, as flat groups: a small label, then
- * label/value rows with no card around them, a hairline between groups. The
- * empty rows of every group fold behind one link, and a group with nothing
- * left to show draws no label. The `footnote` is what the record says about itself (who
- * may change it, what a verb will ask), in a grey box at the foot.
+ * The details under a record's head, each group a pane of its own: a small
+ * label, then label/value rows. The empty rows of every group fold behind one
+ * link, and a group with nothing left to show draws no pane. The `footnote` is
+ * what the record says about itself, such as who may change it, in a pane of
+ * the same shape at the foot.
  */
 export function RecordDetails({
   sections,
@@ -92,9 +96,10 @@ function DetailGroup({
   section,
   showEmpty,
 }: Readonly<{ section: DetailSection; showEmpty: boolean }>) {
+  const t = useT();
   const labelId = useId();
   const rows = (section.rows ?? []).filter((row) => showEmpty || !row.empty);
-  if (rows.length === 0 && !section.children) {
+  if (rows.length === 0 && !section.children && !section.edit) {
     return null;
   }
   return (
@@ -109,6 +114,18 @@ function DetailGroup({
           {section.label}
         </Heading>
         {section.help && <SectionHelp help={section.help} />}
+        {section.edit && (
+          <Button
+            variant="link"
+            className="recorddetails-edit"
+            aria-label={t("record.details.editSection", {
+              section: section.label,
+            })}
+            onClick={section.edit.onEdit}
+          >
+            {t("record.edit")}
+          </Button>
+        )}
       </div>
       {rows.length > 0 && <FactList flat facts={rows} />}
       {section.children}

@@ -2,6 +2,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   gap: var(--gapCards);
+  column-gap: var(--gapPanes);
   /* Two charts sharing a row stand as tall as the taller one, so the row ends
      on one line instead of a ragged edge. */
   align-items: stretch;
@@ -57,6 +58,12 @@
   align-items: start;
   gap: var(--space-5);
   margin-bottom: var(--space-5);
+}
+/* The name is the author's text and may be one unbroken run; it gives way to
+   the actions instead of pushing them off the row. */
+.reporting-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 /* The author's line breaks are kept; a long purpose wraps at reading width. */
 .reporting-description {

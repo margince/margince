@@ -6,6 +6,7 @@ import { Disclosure } from "../../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
 import { approvalHref } from "../../lib/approvalhref";
 import { approvalKindLabel } from "../../lib/approvalkindlabel";
@@ -14,6 +15,7 @@ import type { MagicLane, MagicLine } from "../../lib/magic.queries";
 import { lineSentence } from "../../lib/magiccopy";
 import {
   magicByKey,
+  magicConsequenceKey,
   magicUndoReasonKey,
   magicWhyKey,
 } from "../../lib/magickeys";
@@ -80,6 +82,13 @@ export function MagicLaneSection({
   );
 }
 
+// A sentence that is a whole clause sets its record off after it as a label.
+// Other lines read as one phrase that runs into their record.
+const SUBJECT_AS_LABEL: ReadonlySet<string> = new Set([
+  "magic.action.automation_troubled",
+  "magic.action.approval_capture_counterparty",
+]);
+
 function MagicLineRow({
   line,
   since,
@@ -116,7 +125,13 @@ function MagicLineRow({
         </div>
       ) : (
         <p className="magic-line-text">
-          {lineSentence(line, t)} <LineSubject line={line} since={since} />{" "}
+          {lineSentence(line, t)}{" "}
+          {SUBJECT_AS_LABEL.has(line.summary.key) && subjectLabel(line) && (
+            <span className="magic-line-sep" aria-hidden="true">
+              ·
+            </span>
+          )}
+          <LineSubject line={line} since={since} />{" "}
           {detail.length > 0 && (
             <span className="t-caption">
               {detail.map((part) => (
@@ -154,16 +169,18 @@ function lineDetail(line: MagicLine, t: Translator, locale: Locale): string[] {
   );
 }
 
+// The only consequences a watching line states as coverage; a skewed response
+// carrying another registered one must not print a sentence about capture.
+const CAPTURE_CONSEQUENCES: ReadonlySet<MessageKey> = new Set<MessageKey>([
+  "magic.consequence.capture_not_collecting",
+  "magic.consequence.capture_may_be_incomplete",
+  "magic.consequence.capture_history_incomplete",
+]);
+
 function captureCoverage(line: MagicLine, t: Translator): string | null {
-  if (line.lane !== "watching") return null;
-  switch (line.consequence) {
-    case "magic.consequence.capture_not_collecting":
-    case "magic.consequence.capture_may_be_incomplete":
-    case "magic.consequence.capture_history_incomplete":
-      return t(line.consequence);
-    default:
-      return null;
-  }
+  const key = line.consequence ? magicConsequenceKey(line.consequence) : null;
+  const states = key !== null && CAPTURE_CONSEQUENCES.has(key);
+  return line.lane === "watching" && key !== null && states ? t(key) : null;
 }
 
 function forecastReasonValues(line: MagicLine, locale: Locale) {
@@ -394,13 +411,16 @@ function standsForMany(line: MagicLine): boolean {
 /**
  * What to call the record this line is about.
  *
- * The entity's own label first, then the caption the approval was staged under,
- * then the mailbox a connector is failing on. Absent rather than invented: a
- * line naming a record it cannot label still says what happened.
+ * The entity's own label first, then the caption the approval was staged under.
+ * Then the mailbox a connector is failing on, then a failed rule's name. Absent
+ * rather than invented: a line naming a record it cannot label still says what
+ * happened. A sentence never repeats these values, since the subject draws them.
  */
 function subjectLabel(line: MagicLine): string | undefined {
   const values = line.summary.values;
-  return line.entity?.label ?? values?.target ?? values?.account;
+  return (
+    line.entity?.label ?? values?.target ?? values?.account ?? values?.name
+  );
 }
 
 // The record's address, through the entity registry rather than a switch

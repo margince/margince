@@ -45,11 +45,13 @@ const (
 )
 
 // lockLadder takes the pipeline row every ladder write serializes on, and
-// answers ErrNotFound for one that is gone or retired. NO KEY, because nothing
-// a ladder write changes on the row is a key: a deal created into the pipeline
-// takes FOR KEY SHARE on it for its foreign key and need not queue behind a
-// reorder, while two ladder writes still queue behind each other — and behind a
-// retirement, a promotion or a catalog reorder, which take FOR UPDATE.
+// answers ErrNotFound for one that is gone or retired. It also repairs a ladder
+// that lost its Won or Lost stage.
+//
+// The lock is NO KEY because a ladder write changes no key on the row. A deal
+// created into the pipeline takes FOR KEY SHARE and need not queue behind a
+// reorder. Two ladder writes still queue, and so do a retirement, a promotion
+// or a catalog reorder, which take FOR UPDATE.
 func lockLadder(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineID) error {
 	var locked ids.UUID
 	err := tx.QueryRow(ctx,
@@ -61,7 +63,7 @@ func lockLadder(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineID) error
 	if err != nil {
 		return fmt.Errorf("lock the pipeline's ladder: %w", err)
 	}
-	return nil
+	return ensureClosingPair(ctx, tx, pipelineID)
 }
 
 // OrderStaleError refuses an order that does not name exactly the live records
@@ -246,9 +248,6 @@ func (s *Store) ReorderStages(ctx context.Context, pipelineID ids.PipelineID, st
 	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := holdLadderForAgent(ctx, tx, pipelineID); err != nil {
-			return err
-		}
 		if err := lockLadder(ctx, tx, pipelineID); err != nil {
 			return err
 		}
@@ -272,9 +271,6 @@ func (s *Store) ReorderStages(ctx context.Context, pipelineID ids.PipelineID, st
 		}
 		if moves := placements(order); len(moves) > 0 {
 			if err := refuseMovingAGatedLadder(ctx, tx, pipelineID); err != nil {
-				return err
-			}
-			if err := refuseAgentOnTrustedLadder(ctx, tx, pipelineID); err != nil {
 				return err
 			}
 			if err := writeStageOrder(ctx, tx, pipelineID, ladder, moves); err != nil {

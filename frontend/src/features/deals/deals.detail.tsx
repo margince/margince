@@ -1,13 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
-import { DealStatusBadge } from "../../components/dealstatusbadge";
+import { useIdempotencyKey } from "../../api/idempotencykey";
 import {
   LatestInboundLine,
   useLatestInbound,
+  useLatestInboundRead,
 } from "../../components/latestinbound";
 import { useRailRename } from "../../components/railfield";
-import { Badge } from "../../design-system/atoms";
+import { RecordGone } from "../../components/recordgone";
 import { ErrorLine } from "../../design-system/errorline";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
@@ -21,19 +22,20 @@ import {
 } from "../../design-system/recordview";
 import { useLocale, useT } from "../../i18n";
 import { useTargetApprovals } from "../../lib/approvals.queries";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { useDeal } from "../../lib/dealread";
 import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
+import { useDealChangesWhere } from "../../lib/marginchanges";
+import { fromHere } from "../../lib/navigatefrom";
 import { useOpenEmail } from "../../lib/openemail";
+import { inPositionOrder } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import type { RecordTabId } from "../../lib/recordtaborder";
 import { scrollPageToTop } from "../../lib/reveal";
-import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { WorklistReturnLink } from "../worklist/worklist.return";
 import {
   type ClosedDeal,
   CloseReviewOffer,
@@ -45,24 +47,27 @@ import {
   type PendingAdvance,
 } from "./deal360/confirmadvance";
 import { DealActions } from "./deal360/dealactions";
+import { dealBand } from "./deal360/dealband";
 import { DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab, DealLatestInbound } from "./deal360/dealhistorytab";
 import { DealLegalTab } from "./deal360/deallegaltab";
+import { marginceLineOf } from "./deal360/dealmarginceline";
 import { DealRoomTab } from "./deal360/dealroomtab";
 import { useDealTabCounts } from "./deal360/dealtabcounts";
 import { currentReplyTarget } from "./deal360/dealwaiting";
 import { useDealCoverage } from "./deal360/usedealcoverage";
+import { useAdvanceDeal } from "./dealadvance";
 import { DealAside } from "./dealaside";
-import { useDealEdit } from "./dealedit";
+import { DealEditContext, useDealEdit } from "./dealedit";
 import { DealFiles } from "./dealfiles";
 import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
-import { useAdvanceDeal } from "./deals.board";
-import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
+import { DealPulsePills } from "./deals.pulsepills";
 import { useDealStatusCard } from "./dealstatus";
+import { offerWriteRefusal, settleUnsureOfferWrite } from "./offers.actions";
 
 const DEAL_TABS = [
   "overview",
@@ -104,6 +109,7 @@ function DealTabs({
       options={tabsOf(deal, legalReview)}
       value={value}
       onChange={onChange}
+      keepPlace
       counts={counts}
       labels={{
         overview: t("tab.overview"),
@@ -113,43 +119,6 @@ function DealTabs({
         history: t("tab.history"),
       }}
     />
-  );
-}
-
-// One sentence for why this deal takes no changes, whichever reason applies,
-// said once across the header so every refused control can point at it.
-// Absent while the deal is live and the reader's: `undefined`, not an element
-// that renders null, because RecordView reserves space for anything it is
-// handed. A line always reserved would read as a record with nothing said.
-function dealBand({
-  reason,
-  reasonId,
-}: Readonly<{
-  reason: string | undefined;
-  reasonId: string;
-}>): ReactNode | undefined {
-  if (reason === undefined) {
-    return undefined;
-  }
-  return <p id={reasonId}>{reason}</p>;
-}
-
-// The pills under the deal's name: whose move it is, when a buyer is owed a
-// reply, then the deal's status.
-function DealPulsePills({
-  status,
-  yourMove,
-}: Readonly<{ status: Deal["status"]; yourMove: boolean }>) {
-  const t = useT();
-  return (
-    <>
-      {yourMove && (
-        <Badge tone="warning" dot>
-          {t("deal.standing.teamReply")}
-        </Badge>
-      )}
-      <DealStatusBadge status={status} />
-    </>
   );
 }
 
@@ -164,6 +133,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // point at it are two different slots of the same header.
   const readOnlyReasonId = useId();
   const [tab, setTab] = useState<DealTab>("overview");
+  // The tab lives in state, so no move of the address opens the new one at its
+  // top. A door in a tab's body does that here; the strip keeps the place.
+  const openTab = (next: DealTab) => {
+    setTab(next);
+    scrollPageToTop();
+  };
   const [editingDetails, setEditingDetails] = useState(false);
   const legalReview = useLegalReviewAvailable() === true;
   const [pending, setPending] = useState<PendingAdvance | null>(null);
@@ -175,13 +150,22 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const advance = useAdvanceDeal();
   const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
+  const pipelineRetired = Boolean(pipelineQuery.data?.archived_at);
+  // Asked for by what the header line is about, so it is found however many
+  // other changes the deal has. A closed deal asks for the close it is on, an
+  // open one for the opening or reopening Margince may still take back.
+  const closingOccurrence = dealQuery.data?.closing_occurrence_id;
+  const marginceReceipts = useDealChangesWhere(
+    id,
+    closingOccurrence
+      ? { stageHistoryId: closingOccurrence }
+      : { changeKinds: ["deal_open", "deal_revive"] },
+    dealQuery.isSuccess,
+  );
   // Every write affordance on this page answers one question, asked once. An
   // archived deal takes no changes, and its verbs stay, refused. One this
   // caller cannot write takes none from them, so its verbs are left out.
-  const readOnlyReason = useRecordWriteRefusal("deal", dealQuery.data, {
-    archived: t("deal.archivedReadOnly"),
-    notYours: t("deal.notYoursToChange"),
-  });
+  const readOnlyReason = useKindWriteRefusal("deal", dealQuery.data);
   const readOnly = Boolean(readOnlyReason);
   // The id every refused control points at, or nothing while the deal takes
   // changes, resolved once here so the render below reads one name.
@@ -198,6 +182,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const live = dealQuery.isSuccess && !dealQuery.data.archived_at;
   const statusQuery = useDealStatusCard(id, live);
   const latest = useLatestInbound("deal", id);
+  const lastInbound = useLatestInboundRead("deal", id).data?.last_inbound;
   const coverageRead = useDealCoverage(id, live);
   // How it stands reads the whole history, not what the History tab's own
   // filter has narrowed. A "no reply" read off a filtered view would be false.
@@ -213,11 +198,20 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
       );
     },
   });
+  const { key: offerKey, renew: renewOfferKey } = useIdempotencyKey();
   const createOffer = useMutation({
-    mutationFn: async (input: { currency: string; fromRevision?: number }) => {
+    mutationFn: async (input: {
+      dealId: string;
+      currency: string;
+      fromRevision?: number;
+      key: string;
+    }) => {
       return unwrap(
         await api.POST("/deals/{id}/offers", {
-          params: { path: { id } },
+          params: {
+            path: { id: input.dealId },
+            header: { "Idempotency-Key": input.key },
+          },
           body: {
             currency: input.currency,
             source: "manual",
@@ -226,10 +220,17 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
         }),
       );
     },
-    onSuccess: (offer: Offer) => {
-      navigate({ screen: "offers", id: offer.id });
+    onMutate: fromHere,
+    onSuccess: (offer: Offer, _input, from) => {
+      renewOfferKey();
+      from.navigate({ screen: "offers", id: offer.id });
     },
+    onError: (error, input) =>
+      settleUnsureOfferWrite(error, queryClient, input.dealId, renewOfferKey),
   });
+  const createRefusal = createOffer.isError
+    ? offerWriteRefusal(createOffer.error, t)
+    : undefined;
   const decide = useMutation({
     mutationFn: async (input: {
       approvalId: string;
@@ -251,9 +252,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
 
   return (
     <div className="wrap">
-      <QueryGate query={dealQuery} pendingLabel={t("nav.deals")}>
+      <QueryGate
+        query={dealQuery}
+        pendingLabel={t("nav.deals")}
+        gone={<RecordGone kind="deal" />}
+      >
         {(deal) => {
-          const stages = stagesInOrder(pipelineQuery.data?.stages ?? []);
+          const stages = inPositionOrder(pipelineQuery.data?.stages ?? []);
           const openStages = stages.filter(
             (stage) => stage.semantic === "open",
           );
@@ -266,7 +271,10 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
             // the reader saw it, so a change made elsewhere fails loud.
             const input = { dealId: deal.id, version: deal.version, toStage };
             if (toStage.semantic === "open") {
-              advance.mutate(input);
+              advance.mutate({
+                ...input,
+                fromStage: stages.find((stage) => stage.id === deal.stage_id),
+              });
             } else {
               setPending(input);
             }
@@ -277,7 +285,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
           return (
             <DealRecordView
               deal={deal}
-              back={<WorklistReturnLink />}
               aside={<DealAside deal={deal} stages={stages} />}
               name={deal.name}
               identity={deal.id}
@@ -294,6 +301,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               pulse={
                 <DealPulsePills
                   status={deal.status}
+                  archived={Boolean(deal.archived_at)}
                   yourMove={Boolean(
                     statusQuery.data && currentReplyTarget(statusQuery.data),
                   )}
@@ -303,7 +311,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 shownTab !== "overview" && (
                   <LatestInboundLine
                     latest={latest}
-                    onOpen={() => setTab("overview")}
+                    onOpen={() => openTab("overview")}
                   />
                 )
               }
@@ -311,6 +319,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <DealActions
                   deal={deal}
                   openStages={openStages}
+                  pipelineRetired={pipelineRetired}
                   refusedReasonId={refusedReasonId}
                   onEditDetails={() => setEditingDetails(true)}
                 />
@@ -318,8 +327,16 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               // The sentence naming why this deal takes no changes, while
               // it does not.
               band={dealBand({
+                deal,
                 reason: readOnlyReason,
                 reasonId: readOnlyReasonId,
+                marginceLine: marginceLineOf({
+                  deal,
+                  receipts: marginceReceipts,
+                  openStages,
+                  pipelineRetired,
+                  refusedReasonId,
+                }),
               })}
               tabs={
                 <DealTabs
@@ -327,10 +344,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   legalReview={legalReview}
                   thread={threadQuery}
                   value={shownTab}
-                  onChange={(next) => {
-                    setTab(next);
-                    scrollPageToTop();
-                  }}
+                  onChange={setTab}
                 />
               }
             >
@@ -346,6 +360,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       stages,
                       asOf,
                       activities: threadQuery.activities,
+                      lastInbound,
                       history: threadQuery,
                       offers: offersQuery.data?.data,
                       coverage: coverageRead,
@@ -355,24 +370,28 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                         // A deal that takes no changes is not moved through
                         // the pipeline. A closed one is reopened by its own
                         // action, whose dialog says what reopening clears.
-                        advanceRefused: readOnly || deal.status !== "open",
+                        advanceRefused:
+                          readOnly || deal.status !== "open" || pipelineRetired,
+                        pipelineRetired,
                         refusedReasonId,
                         onAdvance,
                       },
                     }}
                     onOpenEmail={setOpenEmail}
-                    onOpenTab={(next) => {
-                      setTab(next);
-                      scrollPageToTop();
-                    }}
-                    onEditDetails={() => setEditingDetails(true)}
+                    onOpenTab={openTab}
                     threadComplete={
                       threadQuery.isSuccess && !threadQuery.hasNextPage
                     }
                     creatingOffer={createOffer.isPending}
+                    createRefusal={createRefusal}
                     locale={locale}
                     onCreateOffer={(currency, fromRevision) =>
-                      createOffer.mutate({ currency, fromRevision })
+                      createOffer.mutate({
+                        dealId: id,
+                        currency,
+                        fromRevision,
+                        key: offerKey,
+                      })
                     }
                     readOnly={readOnly}
                     refusedReasonId={refusedReasonId}
@@ -410,6 +429,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 zone={readerZone}
                 onClose={() => setOpenEmail(null)}
               />
+              <ErrorLine error={pipelineQuery.error} />
               <ErrorLine
                 error={advanceErrorBehind(advance.error, pending !== null)}
               />
@@ -441,5 +461,9 @@ function DealRecordView({
   const t = useT();
   const edit = useDealEdit(deal, useViewerId() ?? "");
   const rename = useRailRename(edit, "name", t("create.dealName"));
-  return <RecordView {...view} rename={rename} />;
+  return (
+    <DealEditContext.Provider value={edit}>
+      <RecordView {...view} rename={rename} />
+    </DealEditContext.Provider>
+  );
 }

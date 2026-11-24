@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
@@ -23,9 +24,9 @@ import (
 // Zone answers the installation's timezone, which is what decides when "today"
 // ends for this feed.
 //
-// A SEAM rather than a read of its own: this package binds no module and opens
-// no transaction, and the installation's timezone is a fact the composition
-// root already resolves for the morning brief through identity.TimezoneOf.
+// A seam rather than a read of its own, because this package binds no module
+// and opens no transaction. Compose resolves the zone through
+// identity.TimezoneAppliedTx, as it does for the morning brief.
 type Zone func(ctx context.Context) (*time.Location, error)
 
 // Option adjusts a service after its seams are bound.
@@ -43,6 +44,22 @@ type Option func(*Service)
 // shipped wiring binds it, which is what makes the difference visible.
 func WithZone(z Zone) Option {
 	return func(s *Service) { s.zone = z }
+}
+
+// WithZones is WithZone plus the zone a member's own list measures its day in
+// (dayrule.Zone). A list that combines several colleagues stays on the installation
+// zone. With no personal zone bound, a personal list reads the installation's.
+func WithZones(installation, personal Zone) Option {
+	return func(s *Service) { s.zone, s.personalZone = installation, personal }
+}
+
+// dayZoneOf is the zone name a task read counts its chosen due dates in.
+// It is the reader's own zone on their own list, and empty elsewhere.
+func dayZoneOf(scope TaskScope, loc *time.Location) string {
+	if scope != TasksMine || loc == nil {
+		return ""
+	}
+	return loc.String()
 }
 
 // WithMeetingsAwaitingOutcome binds the lane of meetings that already happened.
@@ -225,6 +242,32 @@ func dueGroup(deadlineAt, asOf, until time.Time, loc *time.Location) string {
 	case deadlineAt.Before(tomorrowEnds):
 		return dueGroupTomorrow
 	case deadlineAt.Before(weekEnds):
+		return dueGroupThisWeek
+	default:
+		return dueGroupLater
+	}
+}
+
+// pickedDay is how many calendar days the chosen date of a task lies from today
+// in loc. Only a task with a date and no time has one.
+func pickedDay(due *time.Time, hasTime bool, intent *crmcontracts.IntentTime, asOf time.Time, loc *time.Location) (int, bool) {
+	if due == nil || hasTime || intent == nil {
+		return 0, false
+	}
+	return deadline.WallDayOffset(intent.WallClock, asOf, loc)
+}
+
+// pickedDayGroup is dueGroup for a chosen date, counted in calendar days.
+// A reader in any zone files the task under the same day.
+func pickedDayGroup(days int) string {
+	switch {
+	case days < 0:
+		return dueGroupOverdue
+	case days == 0:
+		return dueGroupToday
+	case days == 1:
+		return dueGroupTomorrow
+	case days <= upcomingWeekDays:
 		return dueGroupThisWeek
 	default:
 		return dueGroupLater

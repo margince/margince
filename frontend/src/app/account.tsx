@@ -4,6 +4,7 @@ import { Avatar, Button } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { buildRelease } from "../lib/buildrelease";
 import { useMe } from "../lib/session";
 import { useShortcutHandler } from "../lib/shortcuts";
 import { identityOf } from "./accountidentity";
@@ -28,18 +29,33 @@ const ShortcutsDialog = lazy(
   CardBoundary,
 );
 
+const AboutMarginceDialog = lazy(
+  async () => ({
+    default: (await import("../components/aboutmargince")).AboutMarginceDialog,
+  }),
+  "complete",
+  CardBoundary,
+);
+
+type DialogState = "unopened" | "open" | "closed";
+
 /**
  * The account menu owns settings, appearance, the booking link, help and
- * feedback with the keyboard shortcuts, and sign-out. At phone width it also
- * carries the setup reminder.
+ * feedback with the keyboard shortcuts and About Margince, and sign-out. At
+ * phone width it also carries the setup reminder.
  */
-export function AccountMenu() {
+export function AccountMenu({
+  current = false,
+}: Readonly<{
+  /** The page on screen is one this menu leads to, and nothing else says so. */
+  current?: boolean;
+}>) {
   const t = useT();
   const me = useMe();
   const [open, setOpen] = useState(false);
-  const [shortcuts, setShortcuts] = useState<"unopened" | "open" | "closed">(
-    "unopened",
-  );
+  const [fromEnd, setFromEnd] = useState(false);
+  const [shortcuts, setShortcuts] = useState<DialogState>("unopened");
+  const [about, setAbout] = useState<DialogState>("unopened");
   // From Help, focus returns to the trigger; from `?`, to wherever the key was pressed.
   const [fromHelp, setFromHelp] = useState(false);
   useShortcutHandler("shortcuts", () => {
@@ -98,12 +114,25 @@ export function AccountMenu() {
         aria-labelledby={identity.label ? `${faceId} ${nameId}` : nameId}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-current={current ? "page" : undefined}
         aria-controls={open ? menuId : undefined}
         // Who is signed in, for a screen reader: a description, because the name
         // above leaves it out. The `title` is the pointer's copy, never the name.
         aria-describedby={identity.spoken ? spokenId : undefined}
         title={identity.spoken || undefined}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          setFromEnd(false);
+          setOpen((current) => !current);
+        }}
+        // The menu button's keys: Down opens on the first row, Up on the last.
+        onKeyDown={(event) => {
+          if (open || (event.key !== "ArrowDown" && event.key !== "ArrowUp")) {
+            return;
+          }
+          event.preventDefault();
+          setFromEnd(event.key === "ArrowUp");
+          setOpen(true);
+        }}
       >
         {identity.label ? (
           <span className="account-face" id={faceId} aria-hidden="true">
@@ -131,12 +160,17 @@ export function AccountMenu() {
             identity={identity}
             id={menuId}
             panel={menu}
+            fromEnd={fromEnd}
             onDismiss={dismiss}
             onFocusLost={closeFromLostFocus}
             onShortcuts={() => {
               dismiss();
               setFromHelp(true);
               setShortcuts("open");
+            }}
+            onAbout={() => {
+              dismiss();
+              setAbout("open");
             }}
           />
         </Suspense>
@@ -149,6 +183,16 @@ export function AccountMenu() {
             open={shortcuts === "open"}
             onClose={() => setShortcuts("closed")}
             returnFocusTo={() => (fromHelp ? trigger.current : null)}
+          />
+        </Suspense>
+      )}
+      {about !== "unopened" && (
+        <Suspense fallback={null}>
+          <AboutMarginceDialog
+            build={buildRelease()}
+            open={about === "open"}
+            onClose={() => setAbout("closed")}
+            returnFocusTo={() => trigger.current}
           />
         </Suspense>
       )}

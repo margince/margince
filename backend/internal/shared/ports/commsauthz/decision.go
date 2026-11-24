@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// Basis is what makes a message lawful. It is EVIDENCE, not consent: eight of
-// the nine are things that happened and were recorded, and only BasisConsent
+// Basis is what makes a message lawful. It is EVIDENCE, not consent: seven of
+// the eight are things that happened and were recorded, and only BasisConsent
 // is somebody agreeing to something.
 type Basis string
 
@@ -33,8 +33,6 @@ const (
 	BasisConsent Basis = "consent"
 	// BasisExistingCustomerException is the narrow own-similar-products lane.
 	BasisExistingCustomerException Basis = "existing_customer_exception"
-	// BasisVNSubjectAgreement is the Vietnamese advertising agreement.
-	BasisVNSubjectAgreement Basis = "vn_subject_agreement"
 )
 
 // Verdict is what the engine answered.
@@ -74,14 +72,20 @@ const (
 	ModeEnforce Mode = "enforce"
 )
 
-// Evidence names the records a decision rests on, by id and never by content.
+// Evidence names sources and rendered-footer findings. Only the footer digest
+// and finding codes are persisted; FooterPreview is transient review text.
 // Every field is optional: which ones a category needs is the validator's
 // question, not this type's.
 type Evidence struct {
-	ActivityID ids.UUID
-	DealID     ids.UUID
-	InvoiceID  ids.UUID
-	ContractID ids.UUID
+	// FooterFindings are server-derived omissions in the rendered message.
+	FooterFindings []FooterFinding
+	FooterPreview  []string
+	PolicyRevision string
+	FooterDigest   string
+	ActivityID     ids.UUID
+	DealID         ids.UUID
+	InvoiceID      ids.UUID
+	ContractID     ids.UUID
 	// ConsentEventID is the proof row a marketing allow stands on.
 	ConsentEventID ids.UUID
 	// BasisID is a durable communication_basis row.
@@ -91,6 +95,22 @@ type Evidence struct {
 	// the engine decides about that lead alone, at staging and at transmit, and
 	// refuses a recipient address the lead does not hold.
 	LeadID ids.UUID
+	// AuthoredOffer says the words the sender wrote make an offer. The engine
+	// sets it at staging from the Authored* request fields; transmit reads
+	// the staged value, because the delivery keeps no authored text.
+	AuthoredOffer bool
+	// QuotedSubjectOffer says only the subject reads as an offer, and it
+	// carries the anchor's subject over. Staging settles it per recipient:
+	// the subject is quoted for the one who wrote the anchor, authored for
+	// everyone else. Never stored.
+	QuotedSubjectOffer bool
+	// QuotedAnchorID is the mail a quoted subject was carried over from, kept
+	// on the staged row so transmit asks again whether the recipient wrote it.
+	QuotedAnchorID ids.UUID
+	// RecipientCountries are the countries the sender stated for this
+	// message's recipients. On a decision it holds that recipient's entry
+	// alone, which is what staging stores and transmit reads back.
+	RecipientCountries []CountryOverride
 }
 
 // Request is one message put to the engine.
@@ -126,6 +146,16 @@ type Request struct {
 	// Subject and Body are fingerprinted, never stored on the decision.
 	Subject string
 	Body    string
+	// AuthoredSubject and AuthoredBody are what the sender wrote, without the
+	// signature and footer a send adds. Empty for a notice no sender wrote.
+	AuthoredSubject string
+	AuthoredBody    string
+	// AuthoredHTML is the markup the sender wrote beside the plain body. A
+	// client shows it, so its visible text is read for an offer too.
+	AuthoredHTML string
+	// AuthoredFileNames are the names of the files the sender attached, which
+	// say what a message offers as plainly as its body does.
+	AuthoredFileNames []string
 	// HTMLBody is the markup alternative, carried for the reason
 	// TransmitRequest carries it: the fingerprint stamped here is what the
 	// transmit phase compares against, so a field missing from one side is a
@@ -166,8 +196,12 @@ type Decision struct {
 	ReasonCode  string
 	Basis       Basis
 	Evidence    Evidence
-	Suppression string
-	Mode        Mode
+	// Country is the recipient's country whose marketing rules judged this
+	// decision, empty for the baseline. CountrySource says where it came from.
+	Country       string
+	CountrySource string
+	Suppression   string
+	Mode          Mode
 	// LegacyVerdict is what the old purpose gate said, so a disagreement is
 	// visible in the row rather than only in a metric.
 	LegacyVerdict string
@@ -211,6 +245,19 @@ type Decision struct {
 	// claimed one fails. Only a preview fills them, and none is ever applied:
 	// the sender switches the reason and the engine is asked again.
 	SupportedAlternatives []Category
+
+	// LawfulBasisMissing says the recipient's or the sender's pack has no
+	// legitimate-interest basis and the record holds neither their consent nor an agreement with
+	// them. Only a preview fills it, and it refuses nothing: the screen warns.
+	LawfulBasisMissing bool
+	// ConsentPurpose is the purpose a consent request to a LawfulBasisMissing
+	// recipient would ask about, zero when none can be asked.
+	ConsentPurpose ids.UUID
+
+	// Citations are the provisions shown for each code, resolved when the
+	// decision was taken: the recipient's pack's first, then the sending
+	// entity's. A review stores what it shows, so a later pack never rewrites it.
+	Citations map[string][]Provision
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

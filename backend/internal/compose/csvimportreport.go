@@ -88,7 +88,9 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 			report.Associations++
 			continue
 		}
-		report.AssociationsSkipped = append(report.AssociationsSkipped, skippedAssocFor(edge, why))
+		skipped := skippedAssocFor(edge, why)
+		skipped.RowSkipped = willNotLand[edge.FromID]
+		report.AssociationsSkipped = append(report.AssociationsSkipped, skipped)
 	}
 	return report, nil
 }
@@ -144,9 +146,24 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				}
 				p.review.Add(review)
 			}
-			if !p.tally(object, row, outcome, problem) {
+			landed := p.tally(object, row, outcome, problem)
+			if landed {
+				p.warnings = append(p.warnings, writers.predictedWarnings...)
+			}
+			if !landed {
 				writers.links.markRefused(object, row.ExternalID)
 				continue
+			}
+			if object == migration.ObjectContact && (outcome == predictCreate || outcome == predictCollides) {
+				typed, _, _ := writers.landingCells(row)
+				in, err := writers.contactInputForRow(ctx, row, typed)
+				if err != nil {
+					return prediction{}, err
+				}
+				if warning := importedContactChannelWarning(in); warning != nil {
+					warning.ExternalID, warning.Line = row.ExternalID, row.Line
+					p.warnings = append(p.warnings, *warning)
+				}
 			}
 			p.countClosedDeal(writers.dealStages, object, row, outcome)
 			writers.markPredictedRow(row, outcome)
@@ -167,6 +184,9 @@ func (p *prediction) tally(object string, row migration.Row, outcome predictedOu
 		// refuse this row, and the report says so before a human approves it.
 		p.skipped = append(p.skipped, *problem)
 		return false
+	case predictHeldKey:
+		p.skipped = append(p.skipped, *problem)
+		return true
 	case predictCollidesSkipped:
 		p.absent = append(p.absent, row.ExternalID)
 		// The run asked to skip duplicates, so the preview reports this row as a

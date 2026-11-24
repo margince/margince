@@ -102,6 +102,6 @@ describe("offerAmount — the last offer's own figure", () => {
   it("names the gross, not the net, so the figure matches what the buyer saw", () => {
     expect(
       offerAmount({ gross_minor: 119_000, currency: "EUR" } as never, "en"),
-    ).toBe("€1,190.00");
+    ).toBe("€1,190");
   });
 });

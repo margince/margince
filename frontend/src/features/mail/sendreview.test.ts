@@ -60,6 +60,64 @@ describe("sendReviewOf", () => {
     ]);
   });
 
+  // The law a refusal and its footer finding cite travels with them; a citation
+  // missing its link is dropped and the row keeps its facts.
+  it("keeps the law each refusal and footer finding cites", () => {
+    const law = {
+      instrument: "UWG",
+      provision: "§ 7(2)",
+      source_url: "https://example.org/uwg",
+    };
+    const review = sendReviewOf(
+      refusal({
+        review_id: "r-9",
+        refusals: [
+          {
+            address: "ana@example.test",
+            reason_code: "marketing_objection",
+            provision: law,
+            footer_findings: [{ kind: "objection_route", provision: law }],
+          },
+          {
+            address: "ben@example.test",
+            reason_code: "marketing_objection",
+            provision: { instrument: "UWG", provision: "§ 7(2)" },
+          },
+        ],
+      }),
+    );
+    expect(review?.refusals[0]?.provision).toEqual(law);
+    expect(review?.refusals[0]?.footerFindings?.[0]?.provision).toEqual(law);
+    expect(review?.refusals[1]).not.toHaveProperty("provision");
+  });
+
+  it("keeps every whole law a refusal cites, in the server's order", () => {
+    const first = {
+      instrument: "GDPR",
+      provision: "Art. 6(1)",
+      source_url: "https://example.org/gdpr",
+    };
+    const second = {
+      instrument: "PDPL",
+      provision: "Art. 9",
+      source_url: "https://example.org/pdpl",
+    };
+    const review = sendReviewOf(
+      refusal({
+        review_id: "r-10",
+        refusals: [
+          {
+            address: "ana@example.test",
+            reason_code: "no_compatible_evidence",
+            provision: first,
+            provisions: [first, { instrument: "broken" }, second],
+          },
+        ],
+      }),
+    );
+    expect(review?.refusals[0]?.provisions).toEqual([first, second]);
+  });
+
   // An agent, or a refusal with no message to decide about. The reference still
   // travels so a human reading the transcript can pick the review up; what is
   // absent is the shortcut.

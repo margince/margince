@@ -16,10 +16,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strconv"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -75,21 +74,31 @@ func writeZip(dst io.Writer, actor principal.Principal, wsID ids.UUID, members [
 	return zw.Close()
 }
 
-// writeCSV writes one member as a CSV entry: the derived column list is
-// the header, each driver value rendered as a flat cell.
+// writeCSV writes one member as a CSV entry of the bundle.
 func writeCSV(zw *zip.Writer, m memberData) error {
 	f, err := zw.Create(m.table + ".csv")
 	if err != nil {
 		return err
 	}
-	cw := csv.NewWriter(f)
+	return writeMemberCSV(f, m)
+}
+
+// writeMemberCSV is the one CSV spelling of a member, shared by the bundle and
+// the filtered export. The derived column list is the header, and each driver
+// value is one flat cell.
+func writeMemberCSV(dst io.Writer, m memberData) error {
+	cw := csv.NewWriter(dst)
 	if err := cw.Write(m.columns); err != nil {
 		return err
 	}
 	record := make([]string, len(m.columns))
 	for _, row := range m.rows {
 		for i := range m.columns {
-			record[i] = csvCell(row[i])
+			cell, err := rowvalue.CSVCell(row[i])
+			if err != nil {
+				return fmt.Errorf("export %s.%s: %w", m.table, m.columns[i], err)
+			}
+			record[i] = cell
 		}
 		if err := cw.Write(record); err != nil {
 			return err
@@ -112,60 +121,18 @@ func writeJSON(zw *zip.Writer, name string, v any) error {
 	return enc.Encode(v)
 }
 
-// rowsAsMaps shapes a member's rows as column→value maps for the JSON
-// dump, re-embedding jsonb bytes as raw JSON (never base64) and uuids as
-// their canonical strings.
+// rowsAsMaps shapes a member's rows as column→value maps for the JSON dump,
+// each value normalized by rowvalue.Document.
 func rowsAsMaps(m memberData) []map[string]any {
 	out := make([]map[string]any, 0, len(m.rows))
 	for _, row := range m.rows {
 		rec := make(map[string]any, len(m.columns))
 		for i, col := range m.columns {
-			rec[col] = jsonValue(row[i])
+			rec[col] = rowvalue.Document(row[i])
 		}
 		out = append(out, rec)
 	}
 	return out
-}
-
-// jsonValue normalizes a driver value for the JSON dump.
-//
-//craft:ignore naked-any a driver row value spans every SQL type the exported tables carry; the switch narrows each
-func jsonValue(v any) any {
-	switch t := v.(type) {
-	case nil:
-		return nil
-	case [16]byte:
-		return ids.UUID(t).String()
-	case []byte:
-		// jsonb columns arrive as raw bytes; embed them as JSON so the
-		// dump nests the object instead of base64-encoding it.
-		return json.RawMessage(t)
-	default:
-		return v
-	}
-}
-
-// csvCell renders a driver value as a single CSV field. Only the text branches
-// are guarded: a typed negative number must keep its sign without a quote.
-//
-//craft:ignore naked-any a driver row value spans every SQL type the exported tables carry; the switch narrows each
-func csvCell(v any) string {
-	switch t := v.(type) {
-	case nil:
-		return ""
-	case [16]byte:
-		return ids.UUID(t).String()
-	case []byte:
-		return formulacell.Guard(string(t))
-	case string:
-		return formulacell.Guard(t)
-	case time.Time:
-		return t.UTC().Format(time.RFC3339Nano)
-	case bool:
-		return strconv.FormatBool(t)
-	default:
-		return fmt.Sprint(t)
-	}
 }
 
 // bundleManifest describes the bundle: format, provenance, the members

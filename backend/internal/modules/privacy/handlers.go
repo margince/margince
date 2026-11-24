@@ -89,6 +89,13 @@ func (h Handlers) WithExtensions(r extprivacy.Registry) Handlers {
 	return h
 }
 
+// WithEdgeInvalidator corrects the relationship graph in the transaction that
+// erases an activity, as the nightly retention does.
+func (h Handlers) WithEdgeInvalidator(fn EdgeInvalidator) Handlers {
+	h.eraser = h.eraser.WithEdgeInvalidator(fn)
+	return h
+}
+
 // WithCountry gives the controller's pin the selected jurisdiction, so it pins
 // to the floor that jurisdiction puts in force.
 func (h Handlers) WithCountry(country CountryReader) Handlers {
@@ -198,10 +205,4 @@ func decodeJSONObject(raw []byte) (*map[string]any, error) {
 		return nil, err
 	}
 	return &m, nil
-}
-
-// WithPayloadVault lets destructive actions retire sealed booking capabilities.
-func (s Handlers) WithPayloadVault(payloads PayloadPurger) Handlers {
-	s.eraser = s.eraser.WithPayloadVault(payloads)
-	return s
 }

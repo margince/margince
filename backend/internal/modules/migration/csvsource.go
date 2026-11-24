@@ -49,8 +49,8 @@ const (
 // a table nobody chose.
 var ErrObjectNotInSource = errors.New("object is not in this import source")
 
-// SkippedLine is one row the source could not deliver, named by the line a
-// human would open the file to.
+// SkippedLine is one row the source could not deliver, named by the row
+// number a spreadsheet shows (the header is row 1).
 type SkippedLine struct {
 	Line   int
 	Reason string
@@ -278,10 +278,25 @@ func (s *CSVSource) rowFrom(line int, record []string, index map[string]int) (Ro
 		external = strings.TrimSpace(record[at])
 	}
 	if external == "" {
+		external = s.idCell(record, index)
+	}
+	if external == "" {
 		s.skip(line, Why(ReasonRowKeyEmpty, "column", s.sourceKey))
 		return Row{}, false
 	}
 	return Row{ExternalID: s.identityOf(external), Fields: fields, LastSyncedAt: time.Time{}, Line: line}, true
+}
+
+// idCell is the row's own id when its key column is empty and the file maps an
+// id column. An exported contact without an email still names its record.
+func (s *CSVSource) idCell(record []string, index map[string]int) string {
+	for column, target := range s.mapping {
+		at, ok := index[column]
+		if target == "id" && ok && at < len(record) {
+			return strings.TrimSpace(record[at])
+		}
+	}
+	return ""
 }
 
 func (s *CSVSource) skip(line int, why Reason) {
@@ -316,6 +331,9 @@ type openFile struct {
 	records recordReader
 	header  []string
 	key     string
+	// row is the number of the record last read, counting the header as row 1,
+	// which is what a spreadsheet shows.
+	row int
 }
 
 // open reads the header and leaves the reader at the first data record.
@@ -338,15 +356,16 @@ func (s *CSVSource) open(ctx context.Context) (openFile, error) {
 	if err != nil {
 		file.close(ctx)
 		if errors.Is(err, io.EOF) {
-			return openFile{}, fmt.Errorf("%w: the file has no header row", ErrHeaderInvalid)
+			return openFile{}, headerMissing()
 		}
-		return openFile{}, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		return openFile{}, unreadable(err)
 	}
 	if err := validateHeader(header); err != nil {
 		file.close(ctx)
 		return openFile{}, err
 	}
 	file.header = header
+	file.row = 1
 	return file, nil
 }
 
@@ -363,7 +382,7 @@ func (s *CSVSource) openBody(ctx context.Context) (io.ReadCloser, error) {
 			slog.WarnContext(ctx, "closing the import source", "key", s.key, "err", cerr)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+			return nil, unreadable(err)
 		}
 		s.body = body
 	}
@@ -391,7 +410,7 @@ func (f openFile) close(ctx context.Context) {
 }
 
 // walk opens the object and calls visit for each data record, handing it the
-// file line (the header is line 1) and the header index. One reader, one place
+// row number (the header is row 1) and the header index. One reader, one place
 // that knows the file's framing.
 func (s *CSVSource) walk(ctx context.Context, visit func(line int, record []string, index map[string]int) error) error {
 	file, err := s.open(ctx)
@@ -425,17 +444,19 @@ func headerIndex(header []string) map[string]int {
 	return index
 }
 
-// next reads one data record and the file line it starts on.
-func (f openFile) next() (int, []string, error) {
+// next reads one data record and its row number. The number counts records,
+// not file lines: a quoted cell may span several lines, and a spreadsheet
+// still shows one row for it.
+func (f *openFile) next() (int, []string, error) {
 	record, err := f.records.Read()
 	if errors.Is(err, io.EOF) {
 		return 0, nil, io.EOF
 	}
-	// The reader's own position, not a counter. A quoted field may span
-	// several lines, and the Nth record is then not line N+1.
-	line, _ := f.records.FieldPos(0)
+	f.row++
 	if err != nil {
-		return line, nil, fmt.Errorf("%w: line %d: %v", ErrSourceUnreadable, line, err)
+		// A refused file names the physical line instead, because the reader
+		// fixes it in a text editor, inside the cell that never closed.
+		return f.row, nil, unreadable(err)
 	}
-	return line, record, nil
+	return f.row, record, nil
 }

@@ -1083,6 +1083,10 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "stage_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
                     "tagged": {
                       "type": "boolean"
                     },
@@ -1108,6 +1112,10 @@
                       "type": "boolean"
                     },
                     "owner_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "stage_id": {
                       "type": "string",
                       "format": "uuid"
                     },
@@ -3016,6 +3024,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "awaiting_agent": {
+            "type": "boolean"
+          },
           "bundle_id": {
             "type": "string",
             "format": "uuid"
@@ -3169,6 +3180,9 @@
             }
           },
           "diff_hash": {
+            "type": "string"
+          },
+          "effect_failure": {
             "type": "string"
           },
           "effects": {
@@ -3625,6 +3639,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "awaiting_agent": {
+                  "type": "boolean"
+                },
                 "bundle_id": {
                   "type": "string",
                   "format": "uuid"
@@ -3778,6 +3795,9 @@
                   }
                 },
                 "diff_hash": {
+                  "type": "string"
+                },
+                "effect_failure": {
                   "type": "string"
                 },
                 "effects": {
@@ -4589,6 +4609,12 @@
                     "file": {
                       "type": "string"
                     },
+                    "key_columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
                     "object": {
                       "type": "string"
                     }
@@ -5229,6 +5255,9 @@
           "router": {
             "type": "string"
           },
+          "ask_user_first_means": {
+            "type": "string"
+          },
           "actions": {
             "type": "array",
             "items": {
@@ -5710,6 +5739,9 @@
             "type": "boolean"
           },
           "body": {
+            "type": "string"
+          },
+          "communication_context": {
             "type": "string"
           },
           "in_reply_to_activity_id": {
@@ -6763,6 +6795,9 @@
           "base_currency": {
             "type": "string"
           },
+          "call_withheld": {
+            "type": "boolean"
+          },
           "confirmed_date_count": {
             "type": "integer"
           },
@@ -7639,6 +7674,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "awaiting_agent": {
+                  "type": "boolean"
+                },
                 "bundle_id": {
                   "type": "string",
                   "format": "uuid"
@@ -7792,6 +7830,9 @@
                   }
                 },
                 "diff_hash": {
+                  "type": "string"
+                },
+                "effect_failure": {
                   "type": "string"
                 },
                 "effects": {
@@ -11548,6 +11589,10 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "mail_draft": {
+                "type": "integer",
+                "minimum": 0
+              },
               "project": {
                 "type": "integer",
                 "minimum": 0
@@ -11575,6 +11620,7 @@
               "deal",
               "lead",
               "list",
+              "mail_draft",
               "project",
               "record_assignment",
               "sdr_handoff",
@@ -12333,6 +12379,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "awaiting_agent": {
+            "type": "boolean"
+          },
           "bundle_id": {
             "type": "string",
             "format": "uuid"
@@ -12486,6 +12535,9 @@
             }
           },
           "diff_hash": {
+            "type": "string"
+          },
+          "effect_failure": {
             "type": "string"
           },
           "effects": {
@@ -14562,6 +14614,9 @@
               "type": "object"
             },
             "type": "array"
+          },
+          "call_withheld": {
+            "type": "boolean"
           },
           "closing_minor": {
             "type": "integer"
@@ -18131,6 +18186,12 @@
                 "id",
                 "record_type"
               ]
+            }
+          },
+          "types_timed_out": {
+            "type": "array",
+            "items": {
+              "type": "string"
             }
           },
           "types_with_more": {

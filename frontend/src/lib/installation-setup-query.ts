@@ -30,3 +30,10 @@ export function modelBound(setup: Setup | undefined): boolean {
     setup?.steps?.some((s) => s.step === "ai_models" && s.configured) ?? false
   );
 }
+
+/** True only when the read lists the model step as not configured. An answer
+ *  without that step says nothing about the binding, so it is not "unbound". */
+export function modelUnbound(setup: Setup | undefined): boolean {
+  const step = setup?.steps?.find((s) => s.step === "ai_models");
+  return step !== undefined && !step.configured;
+}

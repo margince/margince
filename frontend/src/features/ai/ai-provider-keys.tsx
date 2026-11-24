@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import {
+  KeyTestButton,
+  KeyTestOutcome,
+  useTestProviderKey,
+} from "../../components/ai-provider-key-test";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { QueryGate } from "../../design-system/querystates";
+import { QueryGate, QueryStates } from "../../design-system/querystates";
 import { serviceAccountProblem } from "../../design-system/serviceaccountkeyfield";
 import { type FieldLock, lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
@@ -13,31 +17,29 @@ import { useProviderHealth } from "../../lib/ai-provider-health";
 import { providerName } from "../../lib/ai-provider-names";
 import { providerUsage, useRouting } from "../../lib/ai-routing-query";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { problemMessageOf } from "../../lib/problem";
 import { ProviderRecentCalls } from "./ai-call-figures";
 import {
+  type CredentialKind,
   credentialKindOf,
-  KeyEntry,
+  KeyEntryDialog,
   keyStateLabel,
   keyStateTone,
+  SaveFailure,
 } from "./ai-provider-key-entry";
 import {
   useProviderKeys,
   useRemoveProviderKey,
   useSetProviderKey,
 } from "./ai-provider-key-hooks";
-import {
-  KeyTestButton,
-  KeyTestOutcome,
-  useTestProviderKey,
-} from "./ai-provider-key-test";
 import { isOpenRouter } from "./ai-provider-links";
 import {
   hasProviderSettings,
   ProviderSettingsForm,
+  withLocalProviders,
 } from "./ai-provider-settings";
 import { ProviderSheet } from "./ai-provider-sheet";
 import { ProviderTable } from "./ai-provider-table";
+import { hostMissing } from "./ai-routing-fields";
 import { ProvidersStatus } from "./ai-settings";
 import { PanelTitle } from "./ai-terms";
 import "./ai-settings.css";
@@ -57,6 +59,7 @@ import "./ai-settings.css";
 // shape the routing card uses.
 
 type ProviderStatus = components["schemas"]["AiProviderKeyStatus"];
+type KeyList = components["schemas"]["AiProviderKeyList"];
 
 export function AiProviderKeysCard() {
   const t = useT();
@@ -78,6 +81,13 @@ export function AiProviderKeysCard() {
   // longer see.
   const health = useProviderHealth(canDiagnose).data;
   const usage = routing.data ? providerUsage(routing.data.routing) : null;
+  const unhosted = (provider: string) =>
+    hostMissing(
+      provider,
+      routing.data
+        ? (routing.data.routing.providers?.[provider] ?? {})
+        : undefined,
+    );
   // The provider whose sheet is open, by name so it follows the list as a key
   // is saved rather than holding a copy that goes stale.
   const [opened, setOpened] = useState<string | null>(null);
@@ -101,6 +111,95 @@ export function AiProviderKeysCard() {
     );
   }
 
+  // The rows of one key list. Without a list (the key store is unavailable)
+  // only the local providers draw, so a host stays settable on an install
+  // that has no vault.
+  const renderRows = (list: KeyList | undefined) => {
+    const keyed = list?.providers ?? [];
+    // The status line counts keys, so it reads the list as the server
+    // sent it; the table and sheets also carry the keyless local rows.
+    const providers = withLocalProviders(keyed);
+    const openStatus = providers.find((p) => p.provider === opened);
+    return (
+      <>
+        {list ? (
+          <ProvidersStatus providers={keyed} routing={routing.data?.routing} />
+        ) : null}
+        <ProviderTable
+          providers={providers}
+          canManage={canManage}
+          usage={usage}
+          unhosted={unhosted}
+          health={canDiagnose ? health?.providers : undefined}
+          onOpen={(provider) => {
+            setDraftHost(null);
+            setOpened(provider);
+            // The list stays mounted while sheets open and close, so
+            // a key set elsewhere shows only if opening reads again.
+            query.refetch();
+          }}
+        />
+        {openStatus ? (
+          <ProviderSheet
+            status={openStatus}
+            usage={usage?.get(openStatus.provider)}
+            unhosted={unhosted(openStatus.provider)}
+            health={
+              canDiagnose
+                ? health?.providers.find(
+                    (h) => h.provider === openStatus.provider,
+                  )
+                : undefined
+            }
+            connection={
+              <>
+                <ProviderConnection
+                  status={openStatus}
+                  canManage={canManage}
+                  lock={lockFor(
+                    list?.locks,
+                    `ai.provider_keys_${openStatus.provider}`,
+                    t,
+                  )}
+                />
+                {/* Drawn once the stored settings are read: the form
+                    starts from them, and one started empty would save
+                    an empty entry over what is stored. */}
+                {hasProviderSettings(openStatus.provider) && routing.data && (
+                  <ProviderSettingsForm
+                    key={openStatus.provider}
+                    provider={openStatus.provider}
+                    routing={routing.data.routing}
+                    canManage={canManage}
+                    onHostChange={setDraftHost}
+                  />
+                )}
+              </>
+            }
+            figures={
+              <ProviderRecentCalls
+                provider={openStatus.provider}
+                broker={
+                  openStatus.provider === "openai_compatible" &&
+                  isOpenRouter(
+                    draftHost ??
+                      routing.data?.routing.providers?.[openStatus.provider]
+                        ?.base_url ??
+                      "",
+                  )
+                }
+              />
+            }
+            onClose={() => {
+              setDraftHost(null);
+              setOpened(null);
+            }}
+          />
+        ) : null}
+      </>
+    );
+  };
+
   // Rows rather than a stack of forms. Every vendor asks the same three-part
   // question — who, whether it is keyed, and the way to change that — and a
   // reader auditing the page travels one column instead of reading six open
@@ -111,90 +210,18 @@ export function AiProviderKeysCard() {
         <PanelTitle term="provider">{t("aiProviderKeys.title")}</PanelTitle>
       }
     >
-      <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
-        {(list) => {
-          const openStatus = list.providers.find((p) => p.provider === opened);
-          return (
-            <>
-              <ProvidersStatus
-                providers={list.providers}
-                routing={routing.data?.routing}
-              />
-              <ProviderTable
-                providers={list.providers}
-                canManage={canManage}
-                usage={usage}
-                health={canDiagnose ? health?.providers : undefined}
-                onOpen={(provider) => {
-                  setDraftHost(null);
-                  setOpened(provider);
-                  // The list stays mounted while sheets open and close, so
-                  // a key set elsewhere shows only if opening reads again.
-                  query.refetch();
-                }}
-              />
-              {openStatus ? (
-                <ProviderSheet
-                  status={openStatus}
-                  usage={usage?.get(openStatus.provider)}
-                  health={
-                    canDiagnose
-                      ? health?.providers.find(
-                          (h) => h.provider === openStatus.provider,
-                        )
-                      : undefined
-                  }
-                  connection={
-                    <>
-                      <ProviderConnection
-                        status={openStatus}
-                        canManage={canManage}
-                        lock={lockFor(
-                          list.locks,
-                          `ai.provider_keys_${openStatus.provider}`,
-                          t,
-                        )}
-                      />
-                      {/* Drawn once the stored settings are read: the form
-                          starts from them, and one started empty would save
-                          an empty entry over what is stored. */}
-                      {hasProviderSettings(openStatus.provider) &&
-                        routing.data && (
-                          <ProviderSettingsForm
-                            key={openStatus.provider}
-                            provider={openStatus.provider}
-                            routing={routing.data.routing}
-                            canManage={canManage}
-                            onHostChange={setDraftHost}
-                          />
-                        )}
-                    </>
-                  }
-                  figures={
-                    <ProviderRecentCalls
-                      provider={openStatus.provider}
-                      broker={
-                        openStatus.provider === "openai_compatible" &&
-                        isOpenRouter(
-                          draftHost ??
-                            routing.data?.routing.providers?.[
-                              openStatus.provider
-                            ]?.base_url ??
-                            "",
-                        )
-                      }
-                    />
-                  }
-                  onClose={() => {
-                    setDraftHost(null);
-                    setOpened(null);
-                  }}
-                />
-              ) : null}
-            </>
-          );
-        }}
-      </QueryGate>
+      {query.isError ? (
+        <>
+          <QueryStates query={query} pendingLabel={t("aiProviderKeys.title")}>
+            {null}
+          </QueryStates>
+          {renderRows(undefined)}
+        </>
+      ) : (
+        <QueryGate query={query} pendingLabel={t("aiProviderKeys.title")}>
+          {renderRows}
+        </QueryGate>
+      )}
     </Panel>
   );
 }
@@ -213,8 +240,33 @@ function keyEntryHint(
     : stored;
 }
 
-// The credential controls for ONE vendor, drawn inside its sheet: whether it is
-// keyed, the test, and the paste field that adds, replaces or removes the key.
+// What a vendor's row asks for, by the field's own name. The variable says
+// whether an export seeded the key, so it stays as the hint, verbatim.
+function CredentialName({
+  envVar,
+  kind,
+}: Readonly<{ envVar: string; kind: CredentialKind }>) {
+  const t = useT();
+  if (envVar === "") {
+    return <span className="ai-provider-who">{"\u2014"}</span>;
+  }
+  return (
+    <span className="ai-provider-who">
+      <span className="t-name">
+        {t(
+          kind === "service_account"
+            ? "serviceAccountKey.label"
+            : "aiProviderKeys.field",
+        )}
+      </span>
+      <span className="ai-provider-env t-caption">{envVar}</span>
+    </span>
+  );
+}
+
+// The credential controls for one vendor, drawn inside its sheet. They show
+// whether it is keyed, the test, and the dialog that adds, replaces or removes
+// the key.
 function ProviderConnection({
   status,
   canManage,
@@ -228,10 +280,10 @@ function ProviderConnection({
   const t = useT();
   const [value, setValue] = useState("");
   const [confirming, setConfirming] = useState(false);
-  // Whether this row's paste field is open. Folded by default: the row is a
-  // READING of whether the vendor is keyed, and six open password boxes make a
-  // page nobody can audit at a glance.
+  // Whether this row's paste field is open, in a dialog. The row only reads
+  // whether the vendor is keyed; six open password boxes cannot be audited.
   const [editing, setEditing] = useState(false);
+  const formId = useId();
   // Set by a Save press on a service-account key the browser can already tell
   // is not one; cleared as soon as the reader edits it.
   const [refusal, setRefusal] = useState<MessageKey | undefined>();
@@ -266,8 +318,8 @@ function ProviderConnection({
   }, [save.isSuccess, remove.isSuccess, resetTest]);
 
   const busy = save.isPending || remove.isPending;
-  // Trimmed here as well as on the server, so the button does not offer to
-  // submit a key that is only whitespace.
+  // Trimmed here as well as on the server, so a key that is only whitespace
+  // reads as empty and Save says it is required.
   const trimmed = value.trim();
   const failure = save.error ?? remove.error;
   // A vendor with no variable name is one this build reaches without a
@@ -277,50 +329,51 @@ function ProviderConnection({
 
   const entryHint = keyEntryHint(status, t);
   const adminOnly = canManage ? undefined : t("aiProviderKeys.adminOnly");
-  // Save and Remove, the same pair whichever field holds the secret.
+  const closeEntry = () => {
+    // Closing drops what was typed. A credential left in state would come back
+    // when the dialog opens again.
+    setValue("");
+    setRefusal(undefined);
+    setEditing(false);
+  };
+  // A lock that engages while the dialog is open closes it like Cancel. The
+  // typed secret must not wait in state for the lock to lift.
+  if (editing && lock.disabled) {
+    closeEntry();
+  }
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    // The other mutation's failure is no longer the current story; without
+    // this its Callout stays under the row it did not come from.
+    remove.reset();
+    const problem =
+      trimmed === ""
+        ? "record.fieldRequired"
+        : kind === "service_account"
+          ? serviceAccountProblem(trimmed)
+          : undefined;
+    if (problem) {
+      save.reset();
+      setRefusal(problem);
+      event.currentTarget
+        .querySelector<HTMLElement>("input, textarea")
+        ?.focus();
+      return;
+    }
+    save.mutate(
+      { provider: status.provider, kind, secret: trimmed },
+      {
+        // Cleared on success only: a failed save leaves what was typed so it
+        // can be retried without being re-pasted. The dialog closes on the
+        // same success, because the question it was opened to answer has been
+        // answered.
+        onSuccess: closeEntry,
+      },
+    );
+  };
+  // Cancel, Remove and Save, the same trio whichever field holds the secret.
   const verbs = (
     <>
-      <Button
-        variant="primary"
-        // `pending` on the control that is waiting, `disabled` only
-        // for the reasons it may not be pressed at all. A button
-        // carrying both is natively disabled, which drops the focus
-        // and announces nothing — see Button's own note on the
-        // precedence.
-        pending={save.isPending}
-        disabled={!canManage || remove.isPending || trimmed === ""}
-        onClick={() => {
-          // The other mutation's failure is no longer the current
-          // story; without this its Callout stays under the row it
-          // did not come from.
-          remove.reset();
-          const problem =
-            kind === "service_account"
-              ? serviceAccountProblem(trimmed)
-              : undefined;
-          if (problem) {
-            save.reset();
-            setRefusal(problem);
-            return;
-          }
-          save.mutate(
-            { provider: status.provider, kind, secret: trimmed },
-            {
-              // Cleared on success only: a failed save leaves what
-              // was typed so it can be retried without being
-              // re-pasted. The row folds shut on the same success,
-              // because the question it was opened to answer has
-              // been answered.
-              onSuccess: () => {
-                setValue("");
-                setEditing(false);
-              },
-            },
-          );
-        }}
-      >
-        {t("aiProviderKeys.save")}
-      </Button>
       {status.configured ? (
         <Button
           variant="danger"
@@ -336,6 +389,21 @@ function ProviderConnection({
           {t("aiProviderKeys.remove")}
         </Button>
       ) : null}
+      <Button disabled={busy} onClick={closeEntry}>
+        {t("create.cancel")}
+      </Button>
+      <Button
+        variant="primary"
+        type="submit"
+        form={formId}
+        // `pending` marks the control that is waiting, `disabled` only the
+        // reasons it may not be pressed at all. A button with both is natively
+        // disabled, which drops focus and announces nothing.
+        pending={save.isPending}
+        disabled={!canManage || remove.isPending}
+      >
+        {t("aiProviderKeys.save")}
+      </Button>
     </>
   );
 
@@ -346,15 +414,7 @@ function ProviderConnection({
         data-testid={`ai-provider-key-${status.provider}`}
       >
         <div className="ai-provider">
-          <span className="ai-provider-who">
-            {/* The variable is the only thing that says HOW a key reached the
-                vault, and an operator debugging a vendor wants to know whether
-                an export seeded it. Verbatim, because it is a name to be typed
-                somewhere else exactly as it reads here. */}
-            <span className="ai-provider-env">
-              {keyless ? "\u2014" : status.env_var}
-            </span>
-          </span>
+          <CredentialName envVar={status.env_var} kind={kind} />
           <Badge tone={keyStateTone(status, keyless)}>
             {t(keyStateLabel(status, keyless, kind))}
           </Badge>
@@ -364,17 +424,7 @@ function ProviderConnection({
                 <KeyTestButton provider={status.provider} test={test} />
               )}
               <Button
-                // Closing DROPS what was typed. The field holds a credential,
-                // and one left in state comes back the next time the row is
-                // opened — on a screenshare, or for whoever is at the desk next.
-                onClick={() => {
-                  if (editing) {
-                    setValue("");
-                    setRefusal(undefined);
-                  }
-                  setEditing((open) => !open);
-                }}
-                aria-expanded={editing}
+                onClick={() => setEditing(true)}
                 reason={lock.disabled ? lock.reason : adminOnly}
               >
                 {status.configured
@@ -385,30 +435,26 @@ function ProviderConnection({
           )}
         </div>
         <KeyTestOutcome test={test} keyHeld={status.configured} />
-        {editing && !lock.disabled && (
-          <KeyEntry
-            kind={kind}
-            configured={status.configured}
-            value={value}
-            disabled={!canManage || busy}
-            hint={entryHint}
-            refusal={refusal}
-            onChange={(next) => {
-              setRefusal(undefined);
-              setValue(next);
-            }}
-            verbs={verbs}
-          />
-        )}
-        {failure ? (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("aiProviderKeys.saveFailed")}
-          >
-            {problemMessageOf(failure, t)}
-          </Callout>
-        ) : null}
+        <KeyEntryDialog
+          open={editing}
+          kind={kind}
+          formId={formId}
+          configured={status.configured}
+          value={value}
+          disabled={!canManage || busy}
+          busy={busy}
+          hint={entryHint}
+          refusal={refusal}
+          failure={failure}
+          onChange={(next) => {
+            setRefusal(undefined);
+            setValue(next);
+          }}
+          onSubmit={submit}
+          onClose={closeEntry}
+          actions={verbs}
+        />
+        {!editing && <SaveFailure failure={failure} />}
       </div>
       <ConfirmModal
         open={confirming}

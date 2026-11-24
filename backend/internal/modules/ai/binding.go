@@ -12,6 +12,8 @@ package ai
 import (
 	"slices"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -58,12 +60,24 @@ type binding struct {
 	// decisions is the bound decisions lane, nil when the config binds none —
 	// the state in which Decide is exactly CompleteStructured.
 	decisions *decisionLane
+	// public is the anonymous profile of this binding's models and providers.
+	public PublicProfile
+	// ladders is the config's reordering of a task's rungs, nil for none.
+	ladders map[Task][]Tier
 	// generation identifies THIS binding among the ones this Router has
 	// served, and it is what the result cache scopes its entries to. It is
 	// deliberately not derived from the config: rebinding to an identical
 	// config still rebuilds every client, and two runs of the same config
 	// are still two different sets of provider connections.
 	generation uint64
+}
+
+// ladder is task's rungs under this binding, and false for no task.
+func (b *binding) ladder(task Task) ([]Tier, bool) {
+	if _, known := taskLadders[task]; !known {
+		return nil, false
+	}
+	return RoutingConfig{TaskLadders: b.ladders}.Ladder(task), true
 }
 
 // binding returns the configuration this call must serve itself from. Load it
@@ -92,6 +106,7 @@ func (r *Router) binding() *binding {
 // may stand a fake in for it; every site must still hand one over.
 func (b binding) withConfig(cfg RoutingConfig, decisions *decisionLane) binding {
 	b.decisions = decisions
+	b.ladders = cfg.TaskLadders
 	// ParseRouting defaults 0→defaultEmbedDimensions, but a programmatic
 	// RoutingConfig built without it (a hand-assembled test fixture) reaches
 	// construction with Dimensions still 0 — default here too so a bound embed
@@ -105,6 +120,7 @@ func (b binding) withConfig(cfg RoutingConfig, decisions *decisionLane) binding 
 	b.configHash = b.configSnapshot.Hash
 	b.tierRouting, b.sent = brokerRouting(cfg), &sentSnapshots{}
 	b.credentialVersion = cfg.credentialVersion
+	b.public = NewPublicProfile("configured", cfg)
 	return b
 }
 
@@ -168,6 +184,49 @@ func (r *Router) install(next binding) {
 // Empty on a Router assembled without one, which is every unit fixture and an
 // installation whose keys come from the environment alone.
 func (r *Router) CredentialVersion() string { return r.binding().credentialVersion }
+
+// Bound reports whether the Router serves a stored or declared binding. An
+// unbound one refuses every call and is what an installation without AI holds.
+func (r *Router) Bound() bool {
+	return r.binding().public.State != crmcontracts.AssistantProfileStateUnconfigured
+}
+
+// Unbind returns the Router to serving nothing, as when the stored binding is
+// removed. The provider it named is not called again, and a call
+// is refused as on a role that booted with none.
+func (r *Router) Unbind() {
+	replaced := r.binding().providers()
+	r.install(binding{public: NewPublicProfile("unconfigured", RoutingConfig{})})
+	r.cache.clear()
+	for _, provider := range replaced {
+		sharedProviderHealth.forget(provider)
+	}
+}
+
+// ServesOnlyFake reports whether every bound lane is the offline fake, the
+// dev binding a stored one never replaces by being absent.
+func (r *Router) ServesOnlyFake() bool {
+	for _, ref := range r.binding().boundModels() {
+		if ref.Provider != ProviderFake {
+			return false
+		}
+	}
+	return true
+}
+
+// refuseUnbound is the answer every model call gets before a binding exists:
+// the 409 ai_not_configured. It rides httperr, so a surface that returns the
+// error as it came says the same.
+func (r *Router) refuseUnbound() error {
+	if r.Bound() {
+		return nil
+	}
+	return httperr.ErrNotConfigured
+}
+
+// ConfiguredProfile is the public profile of the binding served now, so the
+// profile reads follow a rebind the way the lanes do.
+func (r *Router) ConfiguredProfile() PublicProfile { return r.binding().public }
 
 // RoutingVersion is the digest of the ROUTING CONFIG this Router is serving —
 // the value a caller compares against the stored one to decide whether it has

@@ -2,6 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en } from "../../i18n/en";
 import { COMPANY, project, project360 } from "../../testing/projects.fixtures";
 import {
   emptyPage,
@@ -37,16 +40,19 @@ type Story = StoryObj<typeof ProjectScreen>;
 // does not fail — `installFetchStub` answers it with an empty page — so a story
 // missing a route renders green with silently empty cards, which is exactly the
 // defect the catalog exists to catch.
-function installPage(view: unknown) {
+function installPage(view: unknown, seat?: Parameters<typeof meRoute>[0]) {
   installFetchStub({
     // The grants the page's verbs ask before they draw — a rep working their
     // own projects, which is the seat the fixture's `writable: true` describes.
     // Without them the page draws its refused branch, which the record suite
     // asserts and no story here is named for.
-    "GET /me": meRoute({
-      project: ["read", "create", "update", "delete"],
-      deal: ["read", "create"],
-    }),
+    "GET /me": meRoute(
+      seat ?? {
+        project: ["read", "create", "update", "delete"],
+        deal: ["read", "create"],
+      },
+    ),
+    "PATCH /activities/a-1": () => jsonResponse({ id: "a-1", version: 2 }),
     "GET /projects/pr-1/360": () => jsonResponse(view),
     "GET /projects/pr-1": () => jsonResponse(project()),
     "GET /field-history": () => jsonResponse(emptyPage),
@@ -134,6 +140,51 @@ export const Page: Story = {
   ),
 };
 
+// Snooze on the Next bar confirms with the new deadline and an Undo.
+export const SnoozedWithUndo: Story = {
+  render: () => {
+    installPage(
+      project360({
+        commitments: {
+          data: [
+            {
+              activity_id: "a-1",
+              subject: "Send the kickoff agenda",
+              due_at: "2027-07-03T09:00:00Z",
+              assignee_id: "u-me",
+              assignee_name: "Me",
+              due_has_time: true,
+              version: 1,
+              overdue: false,
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        },
+      }),
+      {
+        project: ["read", "update"],
+        activity: ["read", "update"],
+      },
+    );
+    return (
+      <StoryProviders>
+        <ToastProvider>
+          <ProjectScreen id="pr-1" />
+          <ToastRegion />
+        </ToastProvider>
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Snooze/ }),
+    );
+    await expect(
+      await screen.findByRole("button", { name: en["common.undo"] }),
+    ).toBeTruthy();
+  },
+};
+
 // A reader whose role holds the project grant but not the contracts or the
 // deal figures: the cards say so rather than reading as empty.
 export const PageWithheld: Story = {
@@ -199,3 +250,53 @@ export const PageClosed: Story = {
     }),
   ),
 };
+
+// The menu's Edit project opens the project's fields in the same dialog the
+// details sections save through.
+export const EditProject: Story = {
+  render: page(project360()),
+  play: async ({ canvasElement }) => {
+    const user = userEvent.setup();
+    const canvas = within(canvasElement);
+    await user.click(
+      await canvas.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Edit project" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Edit project" });
+    await waitFor(() => expect(dialog).toBeVisible());
+    await expect(
+      within(dialog).getByRole("textbox", { name: /^Project name/ }),
+    ).toHaveValue("CRM rollout");
+  },
+};
+
+// The server refuses an archived project's 360, so the page draws from the row:
+// the archived sentence, and the history the shell hands in (none here).
+function refusedPage(row: unknown) {
+  return () => {
+    installFetchStub({
+      "GET /me": meRoute({ project: ["read", "update"] }),
+      "GET /projects/pr-1/360": () =>
+        jsonResponse({ title: "Not found", status: 404 }, 404),
+      "GET /projects/pr-1": () =>
+        row
+          ? jsonResponse(row)
+          : jsonResponse({ title: "Not found", status: 404 }, 404),
+    });
+    return (
+      <StoryProviders>
+        <ProjectScreen id="pr-1" />
+      </StoryProviders>
+    );
+  };
+}
+
+/** An archived project, opened from Show archived on the list. */
+export const Archived: Story = {
+  render: refusedPage(project({ archived_at: "2026-11-01T09:00:00Z" })),
+};
+
+/** An address that names no project the reader can see. */
+export const NotFound: Story = { render: refusedPage(null) };

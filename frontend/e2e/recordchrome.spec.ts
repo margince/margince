@@ -190,7 +190,7 @@ test.describe("the record's column holds still", () => {
 
   // The sweep's company has no counted sections, so no tab held the hidden
   // ", " before its count, and only that span escaped a static strip.
-  test("does not pan sideways on a company whose counted tabs overflow the strip at 390px", async ({
+  test("does not pan sideways on a company whose counted tabs are too many for the strip at 390px", async ({
     page,
   }) => {
     const empty = { data: [], page: { has_more: false, total: 0 } };
@@ -214,11 +214,18 @@ test.describe("the record's column holds still", () => {
     const measured = await strip.evaluate((element) => ({
       overflow: element.scrollWidth - element.clientWidth,
       hiddenText: element.querySelectorAll(".sr-only").length,
+      tabsOnRow: element.querySelectorAll("[data-tab]").length,
     }));
     expect(
+      await strip
+        .getByRole("button", { name: de["record.tabs.moreLabel"] })
+        .count(),
+      "the tabs are too many for the row, so some fold behind More",
+    ).toBe(1);
+    expect(
       measured.overflow,
-      "the strip fits, so nothing sits past its edge",
-    ).toBeGreaterThan(0);
+      "a folded strip holds nothing past its edge",
+    ).toBeLessThanOrEqual(0);
     expect(
       measured.hiddenText,
       "no tab holds a count's hidden separator",
@@ -268,49 +275,6 @@ test.describe("a refused rename of the record's name", () => {
         await type(refusal),
         "the refusal of a rename is set in the name's heading type",
       ).toBe(await type(page.locator("body")));
-    });
-  }
-});
-
-// A shell banner shortens the scroller the record stands in. The details card
-// caps its height to that scroller. At the end of a scroll in a short window,
-// its top stays in view under the banner instead of being cut off by it.
-test.describe("the details card clears a shell banner", () => {
-  for (const record of RECORDS) {
-    test(`on a ${record.name} at the end of a scroll in a short window`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width: 1440, height: 600 });
-      await openRecord(page, record.route, { license: "rejected" });
-      await expect(page.locator(".appbanner")).toHaveCount(1);
-      await expect(page.locator(".record-aside")).toBeVisible();
-
-      const scrolled = await page
-        .locator(".main > .scroll")
-        .evaluate((scroller) => {
-          scroller.scrollTop = scroller.scrollHeight;
-          return scroller.scrollTop;
-        });
-      expect(scrolled, "the record is too short to scroll").toBeGreaterThan(0);
-
-      const scroller = await page.locator(".main > .scroll").boundingBox();
-      const details = await page
-        .locator(".record-split-details")
-        .first()
-        .boundingBox();
-      expect(scroller).not.toBeNull();
-      expect(details).not.toBeNull();
-      if (!scroller || !details) {
-        return;
-      }
-      expect(
-        details.y,
-        "the details card's top is cut by the scroller under the banner",
-      ).toBeGreaterThanOrEqual(scroller.y - 1);
-      expect(
-        details.y + details.height,
-        "the details card runs past the scroller's foot",
-      ).toBeLessThanOrEqual(scroller.y + scroller.height + 1);
     });
   }
 });

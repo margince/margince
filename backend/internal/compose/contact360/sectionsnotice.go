@@ -34,9 +34,28 @@ func (s *Service) noticeDutiesSection(ctx context.Context, tx pgx.Tx, contactID 
 	for _, id := range reviews {
 		reviewIDs = append(reviewIDs, openapi_types.UUID(id))
 	}
+	confirmed, err := s.consent.ConfirmedNoticeSourceTx(ctx, tx, contactID)
+	if err != nil {
+		return err
+	}
 	out.PrivacySourceReviews = &reviewIDs
 	out.PrivacyNoticeDuties = &wire
+	out.PrivacyConfirmedSource = confirmedSourceWire(confirmed)
 	return nil
+}
+
+func confirmedSourceWire(source *consent.ConfirmedNoticeSource) *crmcontracts.ContactConfirmedSource {
+	if source == nil {
+		return nil
+	}
+	out := &crmcontracts.ContactConfirmedSource{
+		CaseId: openapi_types.UUID(source.CaseID), SourceKind: source.Kind,
+		SourceObtainedAt: source.ObtainedAt, ConfirmedAt: source.ConfirmedAt,
+	}
+	if source.ConfirmedBy != nil {
+		out.ConfirmedBy = source.ConfirmedBy.RecordWire()
+	}
+	return out
 }
 
 func (said momentCopy) noticeDutyMoment(now time.Time, page *crmcontracts.Contact360) (crmcontracts.ContactMoment, bool) {

@@ -51,7 +51,7 @@ it("creates a monetary commitment in minor units and refuses an incomplete targe
   await user.click(await screen.findByRole("button", { name: "Set target" }));
   const dialog = within(await screen.findByRole("dialog"));
   expect(dialog.getByRole("button", { name: "Set target" })).toBeDisabled();
-  await dialog.findByRole("combobox", { name: "Metrics" });
+  await dialog.findByRole("combobox", { name: "Metric" });
   // Sales won filters by pipeline, so its target may be held to one.
   expect(dialog.getByRole("combobox", { name: "Pipeline" })).toBeEnabled();
   fireEvent.change(dialog.getByLabelText(/Year/), {
@@ -62,10 +62,7 @@ it("creates a monetary commitment in minor units and refuses an incomplete targe
     dialog.getByRole("combobox", { name: /Month starting/ }),
     "October",
   );
-  await user.type(
-    dialog.getByRole("spinbutton", { name: /^Target/ }),
-    "1250.25",
-  );
+  await user.type(dialog.getByRole("textbox", { name: /^Target/ }), "1250.25");
   await user.type(dialog.getByLabelText(/Reason/), "Agreed October commitment");
   await user.click(dialog.getByRole("button", { name: "Set target" }));
   await waitFor(() =>
@@ -107,8 +104,8 @@ it("revises a count target without rescaling it or changing its identity", async
   expect(dialog.getByLabelText(/Year/)).toBeDisabled();
   // Meetings count every pipeline, so the editor offers none.
   expect(dialog.queryByRole("combobox", { name: "Pipeline" })).toBeNull();
-  expect(dialog.getByRole("spinbutton", { name: /^Target/ })).toHaveValue(40);
-  fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
+  expect(dialog.getByRole("textbox", { name: /^Target/ })).toHaveValue("40");
+  fireEvent.change(dialog.getByRole("textbox", { name: /^Target/ }), {
     target: { value: "45" },
   });
   await user.type(dialog.getByLabelText(/Reason/), "Additional capacity");
@@ -189,9 +186,14 @@ it("publishes stage qualification and capture contexts with a reason and version
   await user.click(screen.getByRole("button", { name: "Add capture" }));
   const pipelinePickers = screen.getAllByRole("combobox", { name: "Pipeline" });
   await pickOption(user, pipelinePickers[pipelinePickers.length - 1], "Sales");
-  expect(
+  // An empty reason is refused on the press, named on the field, and not sent.
+  await user.click(
     screen.getByRole("button", { name: "Save reporting settings" }),
-  ).toBeDisabled();
+  );
+  expect(screen.getByLabelText(/Reason/)).toHaveAccessibleDescription(
+    "This field is required.",
+  );
+  expect(publish).not.toHaveBeenCalled();
   await user.type(
     screen.getByLabelText(/Reason/),
     "Align qualification across markets",
@@ -419,7 +421,7 @@ it("offers only fiscal-quarter start months and submits the selected boundary", 
     screen.getAllByRole("option").map((option) => option.textContent),
   ).toEqual(["February", "May", "August", "November"]);
   await user.click(screen.getByRole("option", { name: "November" }));
-  await user.type(dialog.getByRole("spinbutton", { name: /^Target/ }), "1200");
+  await user.type(dialog.getByRole("textbox", { name: /^Target/ }), "1200");
   await user.type(
     dialog.getByRole("textbox", { name: /Reason/ }),
     "Agreed fiscal-quarter target",
@@ -462,7 +464,7 @@ it("filters targets on the server and resets a paged result when status changes"
   await waitFor(() =>
     expect(targetQueries().at(-1)?.get("cursor")).toBe("next-page"),
   );
-  await user.click(screen.getByRole("button", { name: "Target retired" }));
+  await user.click(screen.getByRole("button", { name: "Retired targets" }));
   await waitFor(() =>
     expect(targetQueries().at(-1)?.get("retired")).toBe("true"),
   );

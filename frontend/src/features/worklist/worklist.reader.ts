@@ -2,8 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { summaryFieldsLine } from "../../design-system/approvalsummary";
-import { INTL_LOCALE } from "../../format/format";
+import { listFormat } from "../../format/formatters";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import {
   actorAttribution,
@@ -11,6 +12,7 @@ import {
   isAuditActorType,
 } from "../../lib/auditactor";
 import { runReasonWords } from "../../lib/automationrun";
+import { valueFor } from "../../lib/labelfor";
 import type { Viewer } from "../../lib/worklistcopy";
 import {
   domainQuestionHeading,
@@ -18,17 +20,32 @@ import {
 } from "./worklist.domaincopy";
 import type { WorklistItem } from "./worklist.queries";
 
+// Why an approved change did not take effect, by the code the server sends
+// beside its English sentence. worklist.reader.test.ts reads the codes from Go.
+export const EFFECT_FAILURE_WORDS: Readonly<Record<string, MessageKey>> = {
+  approval_lapsed: "worklist.effectFailure.approval_lapsed",
+  effect_not_run: "worklist.effectFailure.effect_not_run",
+  effect_unconfirmed: "worklist.effectFailure.effect_unconfirmed",
+  follow_up_failed: "worklist.effectFailure.follow_up_failed",
+  window_not_widened: "worklist.effectFailure.window_not_widened",
+};
+
 /**
- * A row's supporting line where the server sent a code for it: a failed
- * automation's reason in the reader's language, since `detail` is English.
+ * A row's supporting line where the server sent a code for it, in the reader's
+ * language, since `detail` is English. An unknown code keeps `detail`.
  */
 export function codedDetail(
   item: WorklistItem,
   t: Translator,
 ): string | undefined {
-  return item.source === "automation_run" && item.run_reason_code
-    ? runReasonWords(item.run_reason_code, t)
-    : item.detail;
+  if (item.source === "automation_run" && item.run_reason_code) {
+    return runReasonWords(item.run_reason_code, t);
+  }
+  const failure =
+    item.source === "failed_approval" && item.effect_failure_code
+      ? valueFor(EFFECT_FAILURE_WORDS, item.effect_failure_code, undefined)
+      : undefined;
+  return failure ? t(failure) : item.detail;
 }
 
 export function noticeDetail(
@@ -36,7 +53,9 @@ export function noticeDetail(
   viewer: Viewer | undefined,
   t: Translator,
 ): string | undefined {
-  if (item.source === "automation_run") return codedDetail(item, t);
+  if (item.source === "automation_run" || item.source === "failed_approval") {
+    return codedDetail(item, t);
+  }
   if (item.summary_parts) {
     return (
       summaryFieldsLine(item.summary_parts, summaryWords(t)) ?? item.detail
@@ -115,7 +134,7 @@ export function sharedResponsibility(
   );
   if (names.length === owner.users.length) {
     return t("worklist.owner.shared", {
-      names: new Intl.ListFormat(INTL_LOCALE[locale], {
+      names: listFormat(locale, {
         style: "long",
         type: "conjunction",
       }).format(names),

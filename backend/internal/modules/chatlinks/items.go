@@ -42,8 +42,6 @@ func admits(verbosity, tier string) bool {
 type Event struct {
 	EventID    ids.UUID
 	EventType  string
-	EntityType string
-	EntityID   ids.UUID
 	ActivityID *ids.UUID
 	Tier       string
 	Detail     map[string]any
@@ -55,8 +53,6 @@ type Event struct {
 type Item struct {
 	ID         ids.UUID
 	EventType  string
-	EntityType string
-	EntityID   ids.UUID
 	ActivityID *ids.UUID
 	Detail     map[string]any
 	CreatedAt  time.Time
@@ -82,14 +78,14 @@ func (s *Store) RecordEvent(ctx context.Context, ev Event) error {
 		for _, link := range links {
 			if admits(link.Verbosity, ev.Tier) {
 				if _, err := tx.Exec(ctx, `INSERT INTO chat_post_item
-					(link_id, event_id, event_type, entity_type, entity_id, activity_id, tier, detail)
-					VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+					(link_id, event_id, event_type, activity_id, detail)
+					VALUES ($1, $2, $3, $4, $5)
 					ON CONFLICT DO NOTHING`,
-					link.ID, ev.EventID, ev.EventType, ev.EntityType, ev.EntityID, ev.ActivityID, ev.Tier, detail); err != nil {
+					link.ID, ev.EventID, ev.EventType, ev.ActivityID, detail); err != nil {
 					return err
 				}
 			}
-			if err := s.flush.EnqueueFlushTx(ctx, tx, link.ID); err != nil {
+			if err := s.jobs.EnqueueFlushTx(ctx, tx, link.ID); err != nil {
 				return err
 			}
 		}
@@ -180,14 +176,14 @@ func rewritesOf(ctx context.Context, tx pgx.Tx, linkID ids.UUID) ([]Rewrite, err
 }
 
 func queryItems(ctx context.Context, tx pgx.Tx, where string, args ...any) ([]Item, error) {
-	rows, err := tx.Query(ctx, `SELECT id, event_type, entity_type, entity_id, activity_id, detail, created_at
+	rows, err := tx.Query(ctx, `SELECT id, event_type, activity_id, detail, created_at
 		FROM chat_post_item WHERE `+where, args...)
 	if err != nil {
 		return nil, err
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (Item, error) {
 		var it Item
-		err := row.Scan(&it.ID, &it.EventType, &it.EntityType, &it.EntityID, &it.ActivityID, &it.Detail, &it.CreatedAt)
+		err := row.Scan(&it.ID, &it.EventType, &it.ActivityID, &it.Detail, &it.CreatedAt)
 		return it, err
 	})
 }
@@ -201,7 +197,7 @@ func (s *Store) MarkPosted(ctx context.Context, linkID, postID ids.UUID, message
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE chat_post_item
-			SET post_id = $2, message_id = NULLIF($3, ''), posted_at = now(), last_error = NULL
+			SET post_id = $2, message_id = NULLIF($3, ''), posted_at = now()
 			WHERE link_id = $1 AND id = ANY($4) AND posted_at IS NULL`, linkID, postID, messageID, items)
 		return err
 	})
@@ -216,19 +212,6 @@ func (s *Store) MarkRewritten(ctx context.Context, linkID ids.UUID, messageID st
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE chat_post_item SET message_id = NULL
 			WHERE link_id = $1 AND message_id = $2 AND withdrawn_at IS NOT NULL`, linkID, messageID)
-		return err
-	})
-}
-
-// RecordFailure counts a failed post on its items, keeping the error class
-// only, never the chat's answer.
-func (s *Store) RecordFailure(ctx context.Context, linkID ids.UUID, items []ids.UUID, reason string) error {
-	if err := auth.RequireSystem(ctx); err != nil {
-		return err
-	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `UPDATE chat_post_item SET attempts = attempts + 1, last_error = left($3, 500)
-			WHERE link_id = $1 AND id = ANY($2)`, linkID, items, reason)
 		return err
 	})
 }
@@ -251,7 +234,7 @@ func (s *Store) Withdraw(ctx context.Context, activityID ids.UUID) error {
 			return err
 		}
 		for _, link := range links {
-			if err := s.flush.EnqueueFlushTx(ctx, tx, link); err != nil {
+			if err := s.jobs.EnqueueFlushTx(ctx, tx, link); err != nil {
 				return err
 			}
 		}

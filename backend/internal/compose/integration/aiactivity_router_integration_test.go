@@ -78,7 +78,6 @@ func (f *routerFixture) call(t *testing.T, task ai.Task, mutate func(*ai.Call)) 
 		Provider:             "anthropic",
 		ModelID:              "claude-cheap",
 		ServedIdentitySource: "response",
-		RequestFingerprint:   "fp",
 		LatencyMS:            1200,
 	}
 	if mutate != nil {
@@ -292,7 +291,6 @@ func TestACallTheRouterCannotAnnounceIsStillTraced(t *testing.T) {
 		LogicalCallID: ids.NewV7(), Attempt: 1, IsTerminal: true, Kind: "completion",
 		CorrelationID: &corr, Task: ai.TaskSummarize, Tier: ai.TierCheapCloud,
 		Provider: "anthropic", ModelID: "claude-cheap", ServedIdentitySource: "response",
-		RequestFingerprint: "fp",
 	}}); err != nil {
 		t.Fatalf("an unannounceable call failed its trace: %v", err)
 	}
@@ -399,7 +397,7 @@ func TestConcurrentCallsOfOneTaskAllReachTheProjection(t *testing.T) {
 				Provider: "anthropic", ModelID: "claude-cheap", ServedIdentitySource: "response",
 				// The last one to land wins the row, so every worker carries a
 				// distinguishable outcome rather than all of them agreeing.
-				RequestFingerprint: "fp", ErrorSentinel: racingSentinel(i),
+				ErrorSentinel: racingSentinel(i),
 			}})
 		}()
 	}

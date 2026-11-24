@@ -12,68 +12,6 @@
  * this sheet is Brief's own voice — the briefing block, the readings' place,
  * the shapes inside the rail's panels, and the queue drawer's band. */
 
-/* Content stays readable throughout arrival; motion never delays its paint. */
-@keyframes brief-arrive {
-  from {
-    transform: translateY(var(--space-2));
-  }
-  to {
-    transform: none;
-  }
-}
-/* The SLOT arrives, not the tile inside it: every reading's cell is the link
-   or button that opens it, so a delay keyed on `.stat-card` landed on an only
-   child and every slot arrived at once. */
-.glance.arrive,
-.brief-readings .stat-strip > *,
-.brief-main > *,
-.brief-rail > * {
-  animation: brief-arrive var(--dur-enter) var(--ease-out) both;
-}
-/* THE ORDER THE PAGE IS READ IN is the order it arrives in: the work the
-   morning is for, then the day's five readings under it, then the
-   follow-through. A delay keyed to the old order left the readings landing
-   before the panel they now sit beneath. */
-.brief-readings .stat-strip > *:nth-child(1) {
-  animation-delay: var(--dur-move);
-}
-.brief-readings .stat-strip > *:nth-child(2) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 0.5);
-}
-.brief-readings .stat-strip > *:nth-child(3) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap));
-}
-.brief-readings .stat-strip > *:nth-child(4) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 1.5);
-}
-.brief-readings .stat-strip > *:nth-child(5) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 2);
-}
-.brief-main > * {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap));
-}
-/* The first decision paints when its data arrives, ahead of the surrounding motion. */
-.brief-main > .brief-first {
-  animation: none;
-}
-.brief-rail > :nth-child(1) {
-  animation-delay: calc(var(--dur-move) + var(--dur-tap));
-}
-.brief-rail > :nth-child(2) {
-  animation-delay: calc(var(--dur-move) + var(--dur-state));
-}
-.brief-rail > :nth-child(n + 3) {
-  animation-delay: calc(var(--dur-move) + var(--dur-move));
-}
-@media (prefers-reduced-motion: reduce) {
-  .glance.arrive,
-  .brief-readings .stat-strip > *,
-  .brief-main > *,
-  .brief-rail > * {
-    animation: none;
-  }
-}
-
 /* ── The briefing ──────────────────────────────────────────────────────────
  * Small facts over a one-line greeting, the day in one sentence under it, and
  * the view's dial at the end. Quiet, so the cards below carry the page. */
@@ -104,7 +42,7 @@
   min-width: 0;
   margin: 0;
   font: var(--fontHeadingLarge);
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
   text-wrap: balance;
 }
 .glance-greeting-lead:empty {
@@ -178,19 +116,19 @@
 }
 
 /* ── The frame ─────────────────────────────────────────────────────────────
- * Both views hold one reading width rather than the window's, so a wide
- * screen gets margins instead of longer lines. */
+ * The page's own column (`.wrap`) sets its width, as on every capped page. */
 .brief-frame {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  max-width: 70rem;
-  margin-inline: auto;
-  padding-block-start: var(--space-6);
 }
-/* The frame contains the day's decision, which paints before its other sections move. */
-.brief-wrap > .brief-frame {
-  animation: none;
+/* The day block rises without fading: the browser counts content at opacity 0
+   as unpainted, and Home's paint budget is timed on this block. */
+@media (prefers-reduced-motion: no-preference) {
+  .brief-main > .brief-first {
+    animation-name: ds-arrive-rise;
+    animation-duration: var(--dur-move);
+  }
 }
 .brief-morning > .brief-main {
   gap: var(--space-12);
@@ -276,21 +214,21 @@
   justify-self: end;
   padding-top: 0;
 }
-/* The whole row is the door, so the arrow shows where a pointer rests. A
-   thumb has no hover, so it keeps every arrow in view. */
+/* The arrow is what tells a row that opens from one that does not, so it is
+   always drawn: quiet at rest, in the door's ink where a pointer or focus is. */
 @media (hover: hover) {
   .brief-rail .stat-card-narrow-row .stat-card-arrow {
-    opacity: 0;
+    color: var(--textSecondary);
   }
   .brief-rail .stat-card-narrow-row:hover .stat-card-arrow,
   .brief-rail .stat-card-open:focus-visible .stat-card-arrow {
-    opacity: 1;
+    color: var(--accentText);
   }
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .brief-rail .stat-card-narrow-row .stat-card-arrow {
     transition:
-      opacity var(--dur-state) var(--ease-out),
+      color var(--dur-state) var(--ease-out),
       transform var(--dur-state) var(--ease-out);
   }
 }
@@ -549,9 +487,11 @@
   overflow-wrap: anywhere;
 }
 
+.magic-line-sep,
 .magic-line-subject {
   margin-inline-start: var(--space-2);
   color: var(--textSecondary);
+  overflow-wrap: anywhere;
 }
 
 .magic-line-controls {
@@ -619,18 +559,11 @@
   margin-bottom: 0;
 }
 
-/* The two caveats: what could not be read, above the summary, and what was
-   left out, under the lanes. Both are lists of captions and neither wants a
-   bullet. */
-.magic-withheld,
-.magic-notshown {
+/* The sources the receipt could not read, above the lanes: captions, no bullet. */
+.magic-withheld {
   list-style: none;
   margin: 0 0 var(--space-3);
   padding: 0;
-}
-
-.magic-notshown {
-  margin: 0;
 }
 
 /* An opened line: one row per record, its name and its undo on one line, the
@@ -724,16 +657,6 @@
   list-style: none;
 }
 
-/* ── The work column ──────────────────────────────────────────────────────
- * The cards stand on the page itself: a pane around them would be a card
- * holding cards. The rail's cards stand on the page the same way. */
-.brief-morning > .page-pane {
-  --padPane: 0px;
-  border-color: transparent;
-  background: none;
-  box-shadow: none;
-  padding: 0;
-}
 .brief-morning > .brief-main {
   display: flex;
   flex-direction: column;
@@ -855,7 +778,6 @@
   box-sizing: border-box;
   border: 2px solid var(--ai);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
 }
 .brief-done-change:not([data-state="open"])::before {
@@ -959,6 +881,7 @@
 /* The name moves to its own line whole rather than breaking after the lead. */
 .glance-greeting-name {
   display: inline-block;
+  max-inline-size: 100%;
   text-wrap: balance;
 }
 

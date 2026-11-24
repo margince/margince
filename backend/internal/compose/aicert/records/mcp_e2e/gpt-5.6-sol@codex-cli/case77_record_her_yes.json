@@ -11,13 +11,78 @@
   "system_prompt": "cli-default",
   "search": "semantic",
   "self_judged": false,
+  "stamp": {
+    "scenario": "6b94d627bb2b88e4",
+    "tools": "c118b782ecf4f275",
+    "instructions": "c5c644eee9719be0",
+    "judge": "claude-haiku-5-5",
+    "harness": "024566e70b0c3db3",
+    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
+    "ran_at": "2026-11-22T04:36:10Z",
+    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
+    "graded_at": "2026-11-22T09:56:55Z"
+  },
   "usage": {
-    "input_tokens": 52558,
-    "output_tokens": 3873,
+    "input_tokens": 76276,
+    "output_tokens": 4096,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 561920,
+    "cache_read_input_tokens": 738176,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
+  },
+  "tools_by_run": [
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "read_details",
+        "read_record",
+        "read_workspace",
+        "resolve_entities",
+        "search_records",
+        "whoami"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "read_details",
+        "read_record",
+        "read_workspace",
+        "resolve_entities",
+        "search_records"
+      ]
+    }
+  ],
+  "efficiency": {
+    "runs": 2,
+    "calls": {
+      "median": 14,
+      "min": 13,
+      "max": 15
+    },
+    "refused": {
+      "median": 6,
+      "min": 6,
+      "max": 6
+    },
+    "prompt_tokens": {
+      "median": 407226,
+      "min": 341150,
+      "max": 473302
+    },
+    "output_tokens": {
+      "median": 2048,
+      "min": 2041,
+      "max": 2055
+    }
   }
 }

@@ -17,8 +17,8 @@ import (
 )
 
 // One open deal on a project, and a mail the model judges by the verdict
-// given. Only a confident "about" files the mail, and the project follows the
-// deal only then.
+// given. Only a confident "about" files the mail, marked relevant by the
+// classifier, and the project follows the deal only then.
 func TestASuggestedDealIsFiledOnlyOnAConfidentAnswer(t *testing.T) {
 	for _, c := range []struct {
 		name       string
@@ -44,6 +44,7 @@ func TestASuggestedDealIsFiledOnlyOnAConfidentAnswer(t *testing.T) {
 
 			if c.filed {
 				wantDeals(t, e, "topic1@acme.example", deal)
+				wantMark(t, e, "topic1@acme.example", deal, "relevant/classifier")
 				if got := linkedProject(t, e, "topic1@acme.example"); got != rollout.ID {
 					t.Fatalf("the filed mail is on project %s, want the deal's %s", got, rollout.ID)
 				}
@@ -57,6 +58,28 @@ func TestASuggestedDealIsFiledOnlyOnAConfidentAnswer(t *testing.T) {
 				t.Fatalf("the model was asked %d times over two captures, want once: the memo holds the answer", asked)
 			}
 		})
+	}
+}
+
+// A mail every model declines is remembered like a doubtful answer. It files on
+// no deal, and a later capture under the same prompt does not ask again.
+func TestADeclinedTopicCheckIsNotAskedAgain(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme rollout")
+	env.topic.withheld = true
+	raw := mailFrom("alice@acme.example", "declined1@acme.example", "", "Invoice for the maintenance hours")
+	env.sync(t, raw)
+	first := env.topic.asked()
+	if first == 0 {
+		t.Fatal("the topic check never asked the model, so this proves nothing about a decline")
+	}
+	env.sync(t, raw)
+	wantDeals(t, e, "declined1@acme.example")
+	if asked := env.topic.asked(); asked != first {
+		t.Fatalf("the model was asked %d times over two captures, want %d: the memo holds the decline", asked, first)
 	}
 }
 

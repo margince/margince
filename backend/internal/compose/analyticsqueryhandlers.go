@@ -66,10 +66,21 @@ func (h analyticsQueryHandlers) GetAnalyticsSchema(w http.ResponseWriter, r *htt
 			Name:         name,
 			GroupBy:      entity.FieldNames(analyticsquery.KindDimension),
 			Measures:     entity.FieldNames(analyticsquery.KindMeasure),
+			Money:        analyticsMoneyOf(entity),
 			CustomFields: analyticsCustomFieldsOf(entity),
 		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// analyticsMoneyOf is Entity.Money in the contract's words, which spell the
+// same two values.
+func analyticsMoneyOf(entity analyticsquery.Entity) map[string]crmcontracts.AnalyticsEntityMoney {
+	out := map[string]crmcontracts.AnalyticsEntityMoney{}
+	for name, currency := range entity.Money() {
+		out[name] = crmcontracts.AnalyticsEntityMoney(currency)
+	}
+	return out
 }
 
 // RunAnalyticsQuery implements POST /analytics/query.
@@ -121,7 +132,7 @@ func (h analyticsQueryHandlers) ListReportRuns(
 ) {
 	var after *storekit.Cursor
 	if params.Cursor != nil && *params.Cursor != "" {
-		cursor, err := storekit.DecodeCursor(*params.Cursor)
+		cursor, err := storekit.DecodeCursor("analytics_queries", *params.Cursor)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return
@@ -158,7 +169,7 @@ func (h analyticsQueryHandlers) ListReportRuns(
 	}
 	if more {
 		last := runs[len(runs)-1]
-		next, err := storekit.EncodeCursor(last.AskedAt, last.ID)
+		next, err := storekit.EncodeCursor("analytics_queries", last.AskedAt, last.ID)
 		if err != nil {
 			httperr.Write(w, r, err)
 			return

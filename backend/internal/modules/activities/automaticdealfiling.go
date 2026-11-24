@@ -34,9 +34,12 @@ const (
 // taken only if the activity still has no deal link under its row lock. A deal
 // link that landed first, a human's included, is kept and reported. The link
 // is written with its audit row, the evidence given, and the relink event a
-// filing's consumers read.
-func FileOnDealIfUnfiledTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any) (DealFiling, error) {
-	in := RelinkActivityInput{EntityType: linkEntityDeal, EntityID: deal, unfiledOnly: true, evidence: evidence}
+// filing's consumers read. A non-empty relevance is the classifier's mark on
+// the new link.
+func FileOnDealIfUnfiledTx(
+	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any, relevance string,
+) (DealFiling, error) {
+	in := RelinkActivityInput{EntityType: linkEntityDeal, EntityID: deal, unfiledOnly: true, evidence: evidence, relevance: relevance}
 	wrote, _, err := relinkActivityRow(ctx, tx, id, in, linkColumn(linkEntityDeal))
 	switch {
 	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
@@ -66,6 +69,27 @@ func FileOnLeadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, lead ids.UU
 	return wrote, err
 }
 
+// FileOnProjectTx is the automatic project filing. It is the guarded relink
+// write of one project link, taken only while the activity has none. It writes
+// the audit row, the evidence given and the relink event, and answers whether
+// the link landed.
+// A link already there, a row gone or a refused writer all answer false.
+// A link inherited from a deal is stamped here, because the relink write
+// leaves that stamp to the member doors.
+func FileOnProjectTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, project ids.UUID, evidence map[string]any) (bool, error) {
+	in := RelinkActivityInput{EntityType: linkEntityProject, EntityID: project, unfiledOnly: true, evidence: evidence}
+	wrote, _, err := relinkActivityRow(ctx, tx, id, in, linkColumn(linkEntityProject))
+	switch {
+	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
+		return false, nil
+	case err != nil || !wrote:
+		return false, err
+	case inheritedRelink(in):
+		return true, StampCorrespondenceForProject(ctx, tx, id, project)
+	}
+	return true, nil
+}
+
 // RetractMachineLeadTx takes one lead link off an activity, only while no human
 // or agent ever filed the activity under that lead or took it off.
 func RetractMachineLeadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, lead ids.UUID, evidence map[string]any) (bool, error) {
@@ -73,8 +97,8 @@ func RetractMachineLeadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, lea
 	return retractMachineLinkTx(ctx, tx, id, linkEntityLead, lead, human, evidence)
 }
 
-// RetractMachineDealTx takes one deal link off an activity, only while no human
-// or agent ever filed the activity on a deal.
+// RetractMachineDealTx takes one deal link off an activity. It does so only
+// while no human or agent ever filed the activity on a deal or marked a link.
 func RetractMachineDealTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any) (bool, error) {
 	human := filingByHand{sql: provenance.HumanDealFilingSQL("$1"), args: []any{id}}
 	return retractMachineLinkTx(ctx, tx, id, linkEntityDeal, deal, human, evidence)

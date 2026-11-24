@@ -137,11 +137,13 @@ var toolRoleFixtures = map[string]func(p *recordPool) map[string]any{
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
-	"get_ownership_offer":        onRecord("offered_company"),
-	"withdraw_ownership_offer":   onRecord("offered_company"),
-	"get_ownership_request":      onRecord("requested_company"),
-	"withdraw_ownership_request": onRecord("requested_company"),
-	"reactivate_user":            byID("deactivated_user"),
+	"get_ownership_offer":          onRecord("offered_company"),
+	"withdraw_ownership_offer":     onRecord("offered_company"),
+	"get_ownership_request":        onRecord("requested_company"),
+	"withdraw_ownership_request":   onRecord("requested_company"),
+	"get_edit_access_request":      onRecord("edit_asked_company"),
+	"withdraw_edit_access_request": onRecord("edit_asked_company"),
+	"reactivate_user":              byID("deactivated_user"),
 	"update_member": func(p *recordPool) map[string]any {
 		user := p.take("user")
 		return map[string]any{"id": user, "request_body": map[string]any{"email": p.fact(user, "email"), "expected_updated_at": p.fact(user, "updated_at")}}
@@ -177,6 +179,10 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"answer_calendar_invitation": byID("calendar_invitation"),
 	"decline_activity_deal": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("inbound_email"), "request_body": map[string]any{"deal_id": p.take("deal")}}
+	},
+	"set_activity_deal_relevance": func(p *recordPool) map[string]any {
+		note := p.take("deal_note")
+		return map[string]any{"id": note, "request_body": map[string]any{"deal_id": p.fact(note, "deal"), "deal_relevance": "unrelated"}}
 	},
 	"set_thread_audience":     func(p *recordPool) map[string]any { return map[string]any{"thread_key": p.take("captured_thread")} },
 	"hide_deal_document":      dealDocument,
@@ -274,6 +280,17 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 		}
 		return map[string]any{"id": template, "request_body": map[string]any{"version": version, "questions": questions}}
 	},
+	"create_activity_review_template": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{
+			"label": "Sweep win review", "outcome": "won",
+			"questions": []any{map[string]any{"key": "why", "label": "Why did we win?", "type": "text", "required": true}},
+		}}
+	},
+	// An omitted jurisdiction defaults to the country, and this binary compiles
+	// no pack for it.
+	"create_legal_entity": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"jurisdiction": namedValues["jurisdiction"]}}
+	},
 	"update_legal_review_settings": func(*recordPool) map[string]any {
 		return map[string]any{"request_body": map[string]any{"enabled": true}}
 	},
@@ -284,6 +301,9 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	},
 	"correct_deal_close_day": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("lost_deal"), "request_body": map[string]any{"closed_on": pastDay(p)}}
+	},
+	"move_deal_pipeline": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{"pipeline_id": p.take("pipeline")}}
 	},
 	"create_deal_outcome_review": func(p *recordPool) map[string]any {
 		deal := p.take("lost_deal")
@@ -420,6 +440,9 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 		}}
 	},
 	"request_ownership_transfer": func(p *recordPool) map[string]any {
+		return map[string]any{"record_type": "contact", "id": p.take("stranger_contact")}
+	},
+	"request_edit_access": func(p *recordPool) map[string]any {
 		return map[string]any{"record_type": "contact", "id": p.take("stranger_contact")}
 	},
 	"replace_deal_products": func(p *recordPool) map[string]any {

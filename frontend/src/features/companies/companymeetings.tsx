@@ -3,6 +3,7 @@
 
 import type { NextMeeting } from "../../components/meetingrows";
 import { RecordMeetings } from "../../components/recordmeetings";
+import { useCan } from "../../lib/capability";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { Company360View } from "./companies";
 import { upcomingMeeting } from "./companynextmeeting";
@@ -46,12 +47,14 @@ export function CompanyMeetingsTab({
   // The same rule the figures strip's Next meeting cell reads, so the tab and
   // the strip never name two different meetings.
   const zone = useViewerZone();
+  const canReadActivity = useCan("activity", "read");
   return (
     <RecordMeetings
       entity="company"
       recordId={companyId}
       view={view}
       loading={loading}
+      startListWhileLoading={loading && canReadActivity}
       next={view && nextMeetingOf(view, zone)}
       onBriefMeeting={onBriefMeeting}
     />

@@ -7,10 +7,14 @@
 #   Freitag") and discusses one topic WITHOUT one. Reporting both would mean the
 #   reader is listing everything it sees rather than what was promised.
 #
+# The prompt carries his email because a contact with no email, phone or LinkedIn
+# URL is refused, and a meeting is logged with a contact, never a company alone.
+#
 # The transcript arrives as TEXT in the prompt, which is the same boundary the
 # deck's hosts draw: Plaud is the assistant's business and the server cannot
 # tell a paste from an upload.
 name: case1_log_it
+title: Log it while it is fresh
 criteria: [8]
 
 # WRITES: the author's own statement that this case changes the world. It is not
@@ -22,7 +26,8 @@ writes: true
 
 prompt: |
   Just left Kugellager-online. Met Matthias Ortner, went well, they want to move
-  forward. Here is the transcript from Plaud, put it all in the CRM:
+  forward. His card says m.ortner@kugellager-online.test. Here is the transcript
+  from Plaud, put it all in the CRM:
 
   Matthias: Danke für die Übersicht zu den Lieferzeiten.
   Lars: Wie sieht es mit dem Thema Verpackung aus?
@@ -30,7 +35,9 @@ prompt: |
   Matthias: Passt, dann schauen wir uns das nächste Woche an.
 
 # The meeting has to be recorded; change_activities log and create_record with
-# record_type activity both do it, so either holds.
+# record_type activity both do it, so either holds. The run picks the subject and
+# may add a task beside it, so no end-state entry can name the meeting: the call
+# that writes it is its only trace.
 must_call:
   - create_record|log_activity
 must_call_with:

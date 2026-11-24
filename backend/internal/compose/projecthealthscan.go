@@ -30,7 +30,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
-	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -217,16 +216,17 @@ func (s *ProjectHealthScan) judge(ctx context.Context, candidate healthCandidate
 // hasOverdueTask answers whether an open task filed under the project is past
 // its due date. Tasks the product minted for itself are left out, because a
 // reminder nobody promised is no commitment that slipped. The sweep is ordered
-// soonest due first, undated last, so the first task alone answers.
+// slipped first, so the first task alone answers.
 func (s *ProjectHealthScan) hasOverdueTask(ctx context.Context, tx pgx.Tx, id ids.ProjectID, now time.Time) (bool, error) {
 	entityType := string(datasource.RecordProject)
 	tasks, _, err := s.activities.ListOpenTasksTx(ctx, tx, activities.ListOpenTasksInput{
 		AsOf: now, EntityType: &entityType, EntityID: &id.UUID, Limit: 1, ExcludeSystemMinted: true,
+		MostRecentlySlippedFirst: true,
 	})
 	if err != nil {
 		return false, err
 	}
-	return len(tasks) > 0 && deadline.Passed(tasks[0].DueAt, now), nil
+	return len(tasks) > 0 && tasks[0].Overdue, nil
 }
 
 // projectHealthFinding is what the two rules say of one project.

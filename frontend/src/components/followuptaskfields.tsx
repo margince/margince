@@ -1,7 +1,7 @@
 import { Checkbox, Field, TextInput } from "../design-system/atoms";
 import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { clockOrBlank, TimeInput } from "../design-system/timeinput";
-import { dueInstant } from "../format/calendarday";
+import { dueDayBounds, dueInstant } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { useDateTimePreferences } from "../format/preferences";
 import { formatClockTime, timePattern } from "../format/timepattern";
@@ -23,6 +23,7 @@ export function FollowUpTaskFields({
   records?: readonly AssignedRecord[];
 }>) {
   const t = useT();
+  const readerZone = useViewerZone();
   const patch = (change: Partial<TaskDraft>) => {
     if (value) onChange({ ...value, ...change });
   };
@@ -55,7 +56,8 @@ export function FollowUpTaskFields({
               <DateInput
                 {...control}
                 value={isoOrBlank(value.day)}
-                onChange={(event) => patch({ day: event.target.value })}
+                {...dueDayBounds(readerZone)}
+                onChange={(event) => patch(dueDayChange(event.target.value))}
               />
             )}
           </Field>
@@ -81,6 +83,14 @@ export function FollowUpTaskFields({
       )}
     </>
   );
+}
+
+/**
+ * What changes when a task's due day is edited. A cleared day takes the time
+ * with it, because a time with no day names nothing and its box is locked.
+ */
+export function dueDayChange(day: string): { day: string; time?: string } {
+  return day === "" ? { day, time: "" } : { day };
 }
 
 /**
@@ -126,6 +136,9 @@ export function TaskTimeField({
       {(control) => (
         <TimeInput
           {...control}
+          // A fresh box once the day is gone, so a refused text does not
+          // outlive the day that made the time meaningful.
+          key={day === "" ? "no-day" : "day"}
           value={clockOrBlank(value)}
           disabled={day === ""}
           onChange={(event) => onChange(event.target.value)}

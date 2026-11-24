@@ -147,7 +147,7 @@ func (c *carryEnv) purpose(t *testing.T, key string, doubleOptIn bool) ids.Purpo
 	if err == nil {
 		return id
 	}
-	created, err := c.consent.CreatePurpose(c.admin, key, key, doubleOptIn)
+	created, err := c.consent.CreatePurpose(c.admin, key, key, doubleOptIn, "")
 	if err != nil {
 		t.Fatalf("creating purpose %s: %v", key, err)
 	}
@@ -462,13 +462,13 @@ func TestAMergeCarriesDoubleOptInHistory(t *testing.T) {
 	c := setupCarry(t)
 	retired := c.contactAt(t, "DOI Retired", "doi@carry.test")
 	survivor := c.contactAt(t, "DOI Survivor", "doi-survivor@carry.test")
-	purpose, err := c.consent.CreatePurpose(c.admin, "doi_carry_newsletter", "Newsletter", true)
+	purpose, err := c.consent.CreatePurpose(c.admin, "doi_carry_newsletter", "Newsletter", true, "")
 	if err != nil {
 		t.Fatalf("creating the purpose: %v", err)
 	}
 	if _, err := c.e.Pool.Exec(context.Background(), `
 		INSERT INTO consent_doi_token (contact_id, purpose_id, token_hash, expires_at)
-		VALUES ($1, $2, 'doi-carry-hash', now() + interval '1 day')`, retired, purpose.ID); err != nil {
+		VALUES ($1, $2, encode(sha256('doi-carry-hash'), 'hex'), now() + interval '1 day')`, retired, purpose.ID); err != nil {
 		t.Fatal(err)
 	}
 

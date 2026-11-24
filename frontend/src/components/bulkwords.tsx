@@ -12,6 +12,7 @@ import { type PluralBase, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CLAIM_SETTLED_KEYS } from "../lib/activitykeys";
 import { labelFor } from "../lib/labelfor";
+import { stageNames, usePipelines } from "../lib/pipelines.queries";
 import type { BulkChangeRequest, Translate } from "./bulkchange";
 import { OwnerName } from "./entityref";
 
@@ -108,6 +109,9 @@ function noChangeReason(verb: BulkVerb): MessageKey {
   if (isTagVerb(verb)) {
     return "bulk.reason.no_change_tag";
   }
+  if (verb === "move_stage") {
+    return "bulk.reason.no_change_stage";
+  }
   return "bulk.reason.no_change";
 }
 
@@ -118,6 +122,8 @@ const REFUSAL_CODES: Readonly<Record<string, MessageKey>> = {
   locked: "bulk.refusal.locked",
   anchor_protected: "bulk.refusal.anchor_protected",
   required: "bulk.refusal.required",
+  deal_closed: "bulk.refusal.deal_closed",
+  stage_not_in_pipeline: "bulk.refusal.stage_not_in_pipeline",
 };
 
 export function SkipReason({
@@ -139,6 +145,15 @@ export function SkipReason({
     return <span>{t(known)}</span>;
   }
   return <span>{skip.message ?? t(SKIP_REASONS.refused)}</span>;
+}
+
+// The stage a deal stands on, named in the reader's language from the pipelines
+// every deal list already holds.
+function StageState({ stageId }: Readonly<{ stageId?: string }>) {
+  const t = useT();
+  const pipelines = usePipelines();
+  const name = stageId ? stageNames(pipelines.data ?? []).get(stageId) : "";
+  return <span>{name || t("bulk.stateStageUnnamed")}</span>;
 }
 
 export function SampleState({
@@ -169,6 +184,9 @@ export function SampleState({
         {state.task_id ? t("bulk.stateNewTask") : t("bulk.stateNoTask")}
       </span>
     );
+  }
+  if (verb === "move_stage") {
+    return <StageState stageId={state.stage_id} />;
   }
   if (verb === "complete") {
     return (
@@ -226,6 +244,15 @@ function besideWords(
       return {
         title: t("bulk.titleCreateTask", { unit }),
         confirm: t("bulk.confirmCreateTask"),
+        danger: false,
+      };
+    case "move_stage":
+      return {
+        title: t("bulk.titleMoveStage", {
+          unit,
+          stage: request.stage?.name ?? "",
+        }),
+        confirm: t("bulk.confirmMoveStage"),
         danger: false,
       };
     case "complete":

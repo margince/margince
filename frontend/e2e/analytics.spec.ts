@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
+import { foldedTabs, sectionControl } from "./foldedtabs";
 import { mockApi } from "./seed";
 
 /**
@@ -64,10 +65,11 @@ test.describe("Analytics sections", () => {
       "analytics.sectionForecast",
       "analytics.sectionPipeline",
       "analytics.sectionPerformance",
+      "analytics.sectionAccounts",
       "analytics.sectionDelivery",
     ] as const) {
       await expect(
-        strip.getByRole("button", { name: t(key) }),
+        await sectionControl(page, strip, t(key)),
         `the ${t(key)} section has no control`,
       ).toBeVisible();
     }
@@ -79,7 +81,7 @@ test.describe("Analytics sections", () => {
       ["analytics.sectionPerformance", "reporting.bookings_trend"],
       ["analytics.sectionDelivery", "analytics.reportProjectsByPhase"],
     ] as const) {
-      await strip.getByRole("button", { name: t(key), exact: true }).click();
+      await (await sectionControl(page, strip, t(key))).click();
       await expect(
         page.getByText(t(expected)).first(),
         `pressing ${t(key)} drew no ${t(expected)} — the control routes nowhere`,
@@ -99,18 +101,19 @@ test.describe("Analytics sections", () => {
     // rule visible: a build that showed an ops tab to everyone would fail
     // here rather than look complete.
     //
-    // The four assertions above are what makes this safe to assert. A count of
-    // zero passes on a page that rendered nothing at all, so an absence is only
-    // evidence once something PRESENT has been seen on the same strip — which
-    // is why these come after the loop rather than standing alone.
+    // A count of zero also passes on a page that drew nothing. So these run
+    // after the sections above were seen on the same strip.
+    const folded = await foldedTabs(page, strip);
     for (const key of [
       "analytics.sectionOutcomes",
       "analytics.sectionCoverage",
     ] as const) {
-      await expect(
-        strip.getByRole("button", { name: t(key) }),
-        `${t(key)} is drawn for a reader who cannot use it`,
-      ).toHaveCount(0);
+      for (const place of folded ? [strip, folded] : [strip]) {
+        await expect(
+          place.getByRole("button", { name: t(key) }),
+          `${t(key)} is drawn for a reader who cannot use it`,
+        ).toHaveCount(0);
+      }
     }
   });
 

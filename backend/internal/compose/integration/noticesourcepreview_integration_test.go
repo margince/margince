@@ -86,7 +86,7 @@ func sourceReviewFixture(t *testing.T) *sourceReviewEnv {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Source Evidence Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Source Evidence Example", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatal(status)
 	}
 	apptest.DriveNoticeCase(t, e, contact.ID)
@@ -227,7 +227,7 @@ func TestSourceEvidenceRejectsFutureAndUnrelatedRecordsAndUnknownOriginals(t *te
 			var other struct {
 				ID string `json:"id"`
 			}
-			if status := f.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": "Unrelated Example", "source": "manual"}, nil, &other); status != http.StatusCreated {
+			if status := f.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Unrelated Example", "source": "manual"}, nil, &other); status != http.StatusCreated {
 				t.Fatal(status)
 			}
 			contact = other.ID

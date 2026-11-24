@@ -87,3 +87,27 @@ func worksOnSQL(table, alias string, me, teams int) string {
 		OR %[4]s)`,
 		alias, memberIdentitySQL(me), teams, liveGrantSQL(table, alias+".id", "", me, teams))
 }
+
+// OwnedOrSharedClause narrows a read to the rows the caller owns or holds a
+// live record grant on. A teammate's row is left out: this is for data that
+// belongs to the owner, not to the team. An all-rows actor is unbounded and
+// gets the empty clause. It filters and never widens: the read's own scope
+// clause still applies.
+func OwnedOrSharedClause(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
+	if !shareableTables[table] {
+		return "", fmt.Errorf("auth: %q is not a shareable table", table)
+	}
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return "", err
+	}
+	if Unbounded(p) {
+		return "", nil
+	}
+	if p.UserID.IsZero() {
+		return "FALSE", nil
+	}
+	me, teams := arg(p.UserID), arg(p.TeamIDs)
+	return fmt.Sprintf(`(%[1]s.owner_id IN (%[2]s) OR %[3]s)`,
+		alias, memberIdentitySQL(me), liveGrantSQL(table, alias+".id", "", me, teams)), nil
+}

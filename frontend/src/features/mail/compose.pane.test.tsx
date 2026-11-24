@@ -2,23 +2,29 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { en } from "../../i18n/en";
-import { draftButton } from "../../testing/composedraft.testkit";
+import { pressDraft } from "../../testing/composedraft.testkit";
 import { steppedClock } from "../../testing/steppedclock";
-import { ComposeModal } from "./compose";
 import {
   type Activity,
   activity202,
   findThreadChoice,
+  installComposeClock,
   jsonResponse,
   pickWhy,
+  pressSend,
   render,
   stubRoutes,
   WHY_ASK,
   WHY_LABEL,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -43,7 +49,7 @@ describe("what the composer says this message is", () => {
   it("asks nothing on a reply, and says why not", async () => {
     stubRoutes({ "GET /activities/act-1": () => jsonResponse(inbound) });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -59,12 +65,13 @@ describe("what the composer says this message is", () => {
   });
 
   it("sends a reply with no claim at all", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /activities/act-1": () => jsonResponse(inbound),
       "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -74,11 +81,11 @@ describe("what the composer says this message is", () => {
     );
 
     await screen.findByText(/Replying to “Re: Q3”/);
-    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
-    await userEvent.tab();
-    await userEvent.type(screen.getByLabelText("Subject"), "Re: quote");
+    await user.type(screen.getByLabelText("To"), "a@x.com");
+    await user.tab();
+    await user.type(screen.getByLabelText("Subject"), "Re: quote");
     writeMessage("Body", "Attached.");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend(user);
 
     await waitFor(() =>
       expect(
@@ -95,6 +102,7 @@ describe("what the composer says this message is", () => {
   });
 
   it("drops a stale answer when the composer moves onto a reply", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // On a reply the question never renders. So a composer that passed its own
     // state through would look correct, as the state is empty when nothing set
     // it. It stops looking correct once a reader answers on an unanchored
@@ -118,7 +126,7 @@ describe("what the composer says this message is", () => {
           <button type="button" onClick={() => setAnchored(true)}>
             anchor it
           </button>
-          <ComposeModal
+          <ComposeWindow
             activityId={anchored ? "act-1" : undefined}
             entityType="contact"
             entityId="p-1"
@@ -131,16 +139,16 @@ describe("what the composer says this message is", () => {
     render(<Harness />);
 
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await pickWhy(WHY_LABEL.marketing);
+    await pickWhy(user, WHY_LABEL.marketing);
 
-    await userEvent.click(screen.getByRole("button", { name: "anchor it" }));
+    await user.click(screen.getByRole("button", { name: "anchor it" }));
     await screen.findByText(/Replying to “Re: Q3”/);
 
-    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
-    await userEvent.tab();
-    await userEvent.type(screen.getByLabelText("Subject"), "Re: quote");
+    await user.type(screen.getByLabelText("To"), "a@x.com");
+    await user.tab();
+    await user.type(screen.getByLabelText("Subject"), "Re: quote");
     writeMessage("Body", "Attached.");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend(user);
 
     await waitFor(() =>
       expect(
@@ -153,11 +161,12 @@ describe("what the composer says this message is", () => {
   });
 
   it("asks on a first message, and sends what the reader answered", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         open
@@ -166,12 +175,12 @@ describe("what the composer says this message is", () => {
     );
 
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
-    await userEvent.tab();
-    await userEvent.type(screen.getByLabelText("Subject"), "Hello");
+    await user.type(screen.getByLabelText("To"), "a@x.com");
+    await user.tab();
+    await user.type(screen.getByLabelText("Subject"), "Hello");
     writeMessage("Body", "First contact.");
-    await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await pressSend(user);
 
     await waitFor(() =>
       expect(sent.find((r) => r.key === "POST /emails")).toBeTruthy(),
@@ -184,6 +193,7 @@ describe("what the composer says this message is", () => {
   });
 
   it("refuses to send a first message until the reader says why", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let sent = false;
     stubRoutes({
       "POST /emails": () => {
@@ -192,7 +202,7 @@ describe("what the composer says this message is", () => {
       },
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         open
@@ -200,11 +210,11 @@ describe("what the composer says this message is", () => {
       />,
     );
 
-    await userEvent.type(await screen.findByLabelText("To"), "a@x.com");
-    await userEvent.tab();
-    await userEvent.type(screen.getByLabelText("Subject"), "Hello");
+    await user.type(await screen.findByLabelText("To"), "a@x.com");
+    await user.tab();
+    await user.type(screen.getByLabelText("Subject"), "Hello");
     writeMessage("Body", "First contact.");
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend(user);
 
     expect(
       await screen.findByText("Select the reason for contact."),
@@ -253,7 +263,7 @@ describe("the composer's conversation pane", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -297,7 +307,7 @@ describe("the composer's conversation pane", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -318,7 +328,7 @@ describe("the composer's conversation pane", () => {
     if (!quote) throw new Error("selected quote is absent");
     expect(within(quote).getByText(second.body ?? "")).toBeTruthy();
     expect(within(quote).queryByText(threaded.body ?? "")).toBeNull();
-    await user.click(draftButton());
+    await pressDraft(user);
     await waitFor(() =>
       expect(
         sent.some((call) => call.key === "POST /activities/act-2/draft-email"),
@@ -343,7 +353,7 @@ describe("the composer's conversation pane", () => {
     };
     stubRoutes({ "GET /activities/act-1": () => jsonResponse(colleague) });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -362,13 +372,14 @@ describe("the composer's conversation pane", () => {
   });
 
   it("marks the thread it is answering in the menu above the fields", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "GET /activities/act-1": () => jsonResponse(threaded),
       "GET /activities": () =>
         jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -378,9 +389,7 @@ describe("the composer's conversation pane", () => {
     );
 
     // The thread the draft answers is marked in the menu the bar opens.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Change$/ }),
-    );
+    await user.click(await screen.findByRole("button", { name: /Change$/ }));
     expect(
       await within(threadMenu()).findByRole("button", { pressed: true }),
     ).toBeTruthy();
@@ -388,6 +397,7 @@ describe("the composer's conversation pane", () => {
   });
 
   it("draws a message it may not read as a held place, not a gap", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A thread can run through an audience this reader is not in. Dropping the
     // row would make the conversation look continuous when it is not. The
     // reply would be written into a silence the writer cannot see.
@@ -404,7 +414,7 @@ describe("the composer's conversation pane", () => {
         jsonResponse({ data: [threaded, withheld], page: { has_more: false } }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -415,14 +425,14 @@ describe("the composer's conversation pane", () => {
 
     // The words the draft answers are quoted under it; the withheld one is
     // not, since nobody here may read it.
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Show selected message" }),
     );
     expect(
       await screen.findByText("The signed order is attached."),
     ).toBeTruthy();
     // The menu still holds the withheld message's place in the thread.
-    await userEvent.click(screen.getByRole("button", { name: /Change$/ }));
+    await user.click(screen.getByRole("button", { name: /Change$/ }));
     await waitFor(() =>
       expect(
         threadMenu().querySelectorAll(".compose-threadlist-others > li"),
@@ -431,6 +441,7 @@ describe("the composer's conversation pane", () => {
   });
 
   it("anchors nothing until the reader picks a thread", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // Nothing is chosen on the reader's behalf: the threads are offered and
     // the reader takes one.
     stubRoutes({
@@ -441,7 +452,7 @@ describe("the composer's conversation pane", () => {
       "GET /activities/act-1": () => jsonResponse(threaded),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="o-1"
         open
@@ -450,15 +461,13 @@ describe("the composer's conversation pane", () => {
     );
 
     expect(await screen.findByText("New thread")).toBeTruthy();
-    const choice = await findThreadChoice(/Re: Q3/);
+    const choice = await findThreadChoice(user, /Re: Q3/);
     expect(choice.getAttribute("aria-pressed")).toBe("false");
     expect(screen.queryByRole("button", { name: "New email" })).toBeNull();
 
     // Taking one marks it as the thread the draft answers, with a way back.
-    await userEvent.click(choice);
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Change$/ }),
-    );
+    await user.click(choice);
+    await user.click(await screen.findByRole("button", { name: /Change$/ }));
     const menu = within(threadMenu());
     await waitFor(() =>
       expect(
@@ -471,6 +480,7 @@ describe("the composer's conversation pane", () => {
   });
 
   it("draws no thread for a reply to a note", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A timeline row offers Write email on a note as readily as Reply on a
     // mail. A note offered as a thread would claim to be an exchange.
     const note: Activity = { ...threaded, kind: "note" };
@@ -478,7 +488,7 @@ describe("the composer's conversation pane", () => {
       "GET /activities/act-1": () => jsonResponse(note),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -495,11 +505,12 @@ describe("the composer's conversation pane", () => {
       ).not.toHaveLength(0),
     );
     await screen.findByText(/^About: /);
-    await userEvent.click(screen.getByRole("button", { name: /Change$/ }));
+    await user.click(screen.getByRole("button", { name: /Change$/ }));
     expect(threadMenu().querySelectorAll(".compose-threadrow")).toHaveLength(0);
   });
 
   it("shows a mail with no thread as the one message it is", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // Capture assigns a thread key only where a provider reported a
     // conversation. A mail without one is a conversation of one message.
     // Asking the server for every activity that has no thread is the wrong
@@ -509,7 +520,7 @@ describe("the composer's conversation pane", () => {
       "GET /activities/act-1": () => jsonResponse(loose),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -518,7 +529,7 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Show selected message" }),
     );
     await waitFor(() =>
@@ -560,7 +571,7 @@ describe("the composer's conversation pane", () => {
       },
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="o-1"
         open
@@ -612,13 +623,14 @@ describe("the composer's conversation pane", () => {
 it.each([false, true])(
   "uses the initial reason and lets the sender change it: %s",
   async (change) => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(activity202, 202),
       "GET /deals/d-1": () =>
         jsonResponse({ id: "d-1", name: "Open negotiation", status: "open" }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         initialDealId="d-1"
@@ -628,13 +640,13 @@ it.each([false, true])(
       />,
     );
     const reason = await screen.findByRole("combobox", { name: WHY_ASK });
-    expect(reason.textContent).toContain(en["compose.why.activeDeal"]);
-    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
-    await userEvent.tab();
-    await userEvent.type(screen.getByLabelText("Subject"), "Meeting proposal");
+    expect(reason.textContent).toContain(en["compose.why.openDeal"]);
+    await user.type(screen.getByLabelText("To"), "a@x.com");
+    await user.tab();
+    await user.type(screen.getByLabelText("Subject"), "Meeting proposal");
     writeMessage("Body", "Please choose a time.");
-    if (change) await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    if (change) await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await pressSend(user);
     await waitFor(() =>
       expect(sent.find((r) => r.key === "POST /emails")).toBeTruthy(),
     );

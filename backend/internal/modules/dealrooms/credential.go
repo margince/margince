@@ -5,10 +5,11 @@ package dealrooms
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // How long an invitation credential stands before it lapses. A week is the same
@@ -55,6 +56,5 @@ func mintCredential() (raw string, digest []byte, err error) {
 // clause, never read back and compared in Go — so there is no timing question
 // to answer here and no constant-time compare to get wrong.
 func digestOfCredential(raw string) []byte {
-	sum := sha256.Sum256([]byte(raw))
-	return sum[:]
+	return storekit.TokenHashBytes(raw)
 }

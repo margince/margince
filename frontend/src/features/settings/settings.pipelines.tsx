@@ -231,8 +231,14 @@ function NewPipeline({
       invalidate="pipelines"
       screen="settings"
       stay
-      reason={refusal}
+      requires={{ object: "pipeline", action: "create" }}
+      refusedReason={refusal}
       onCreated={(created) => onOpen(created.id)}
+      conflict={{
+        field: "name",
+        code: "pipeline_name_taken",
+        sentence: t("pipeline.nameTaken"),
+      }}
       // A new pipeline lands last and already holds the two ways out. Its
       // ladder is open stages plus the close.
       create={async (values) => {
@@ -332,7 +338,7 @@ function PipelineDetail({
   return (
     <Panel
       title={
-        <span ref={title} tabIndex={-1}>
+        <span ref={title} tabIndex={-1} className="arrival-focus">
           {pipeline.name}
         </span>
       }
@@ -355,6 +361,11 @@ function PipelineDetail({
               recordKey="pipeline"
               record={{ id: pipeline.id, name: pipeline.name }}
               fields={RENAME_FIELDS}
+              conflict={{
+                field: "name",
+                code: "pipeline_name_taken",
+                sentence: t("pipeline.nameTaken"),
+              }}
               update={async (values) => {
                 return unwrap(
                   await api.PATCH("/pipelines/{id}", {

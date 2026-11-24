@@ -17,14 +17,14 @@ import { calendarDay, todayIn } from "../../format/calendarday";
 import {
   formatAnalyticsMoney,
   formatDate,
-  formatDateTime,
+  formatDue,
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useHealthScope } from "../../lib/healthscope";
 import { valueFor } from "../../lib/labelfor";
 import { useMemberNames } from "../../lib/membernames";
-import { usePipelines } from "../../lib/pipelines.queries";
+import { stageNames, usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import type { SalesProgress } from "./progress.queries";
@@ -121,11 +121,7 @@ export function useDealColumns(
   const { locale } = useLocale();
   const [today] = useState(() => todayIn(progress.timezone));
   const pipelines = usePipelines();
-  const stages = new Map(
-    (pipelines.data ?? []).flatMap((pipeline) =>
-      (pipeline.stages ?? []).map((stage) => [stage.id, stage.name] as const),
-    ),
-  );
+  const stages = stageNames(pipelines.data ?? []);
   const names = useMemberNames(
     rows
       .flatMap((row) => [
@@ -194,7 +190,13 @@ export function useDealColumns(
             ? names.get(task.assignee_id)
             : undefined;
         const due = task.due_at
-          ? formatDateTime(task.due_at, locale, progress.timezone)
+          ? formatDue(
+              task.due_at,
+              task.due_has_time ?? undefined,
+              locale,
+              progress.timezone,
+              task.due_intent,
+            )
           : undefined;
         return (
           <span className="progress-work-stack">

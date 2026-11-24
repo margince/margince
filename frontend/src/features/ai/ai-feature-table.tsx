@@ -7,7 +7,9 @@ import { RowOpen } from "../../design-system/rowopen";
 import { forReader } from "../../format/collate";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { aiTaskLabel } from "../../lib/ai-task-label";
-import { tierLabel, tierRank } from "./ai-decision-labels";
+import { tierLabel, tierRank } from "../../lib/ai-tier-label";
+import { CertificationBadge } from "./ai-certification-badge";
+import { executionModeLabel } from "./ai-decision-labels";
 import { decisionFirstOrder } from "./ai-feature-order";
 import type { LaneKeyGap } from "./ai-lane-state";
 import {
@@ -190,6 +192,8 @@ function TaskCell({
       ) : null}
       <TaskName
         name={name}
+        task={row.task}
+        mode={executionModeLabel(row.execution_mode, t)}
         summary={row.summary}
         details={
           <TaskDetails
@@ -202,6 +206,7 @@ function TaskCell({
           />
         }
       />
+      <CertificationBadge certification={row.certification} />
       {editable ? null : <ImpactBadge row={row} />}
     </span>
   );

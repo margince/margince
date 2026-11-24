@@ -27,7 +27,7 @@ Totals are the same for everyone. You can read a team's totals without being in 
 The **Deals** board itself also shows each stage's total and weighted total at the top of its column. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
 ### What analytics sections are there?
-The Analytics tabs are **Overview**, **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **Account coverage**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. When the row is too narrow, the last tabs move into a **More** menu at its end. The tab you have open stays on the row. The date range and pipeline you choose stay set when you change tabs.
+The Analytics tabs are **Overview**, **Performance**, **SDR outcomes**, **Leads**, **Partners**, **Forecast**, **Pipeline**, **Company coverage**, **My outcomes** and **Delivery**. At the end of the tab row, **Reports** opens the saved reports and the **Setup** menu holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get. When the row is too narrow, the last tabs move into a **More** menu at its end. The tab you have open stays on the row. The date range and pipeline you choose stay set when you change tabs.
 
 The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. When you can see no deal yet, Performance, Pipeline and Forecast say **No deals to report on yet** and offer **Open Deals**. The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts. It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
 
@@ -64,7 +64,7 @@ To close a forecast link in Margince before its 30 days run out, open **Analytic
    It also shows when the link was created and when it expires.
 2. Press **Close link** on the link's row, then **Close link** again in **Close this link?**.
 
-The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
+The row leaves the list, and anyone who opens the link is refused. Only you see and close the links you issued. Right after **Create link**, **Close link** in the **Your link** dialog does the same. A link also stops on its own after 30 days, or when you lose forecast access. Leaving **Your link** without copying does not close the link; it cannot be shown again, and it stays open until one of these happens. Also called: revoke a share, cancel a report link, stop sharing, see my shared links.
 
 ### How do I see a win rate or export a report?
 **Performance** offers a closed win rate with a smallest group size, and a CSV export under its rules; see [Performance and saved sales reports](sales-reporting.md).
@@ -74,9 +74,9 @@ To get deal rows out, open **Filters and views** → **New filter** → **Deals*
 
 When sales reporting is turned on, **Reports** and the **Setup** menu (**Targets** and **Metric definitions**) follow the Analytics tabs. The Performance, SDR outcomes, Leads and Partners tabs lead with graphs. Saving, scheduling and comparisons of editions are in [Sales reporting](sales-reporting.md).
 
-Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, it says it measures one user’s records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet. The section is part of the address, so a link to one opens it.
+Two sections appear only for some seats. **My outcomes** is for a seat that sees only its own records, such as a rep. Under a wider view, this section counts one person’s own records. **Data coverage** is for a seat with permission to see it, even on a new installation where no check has run yet. The section is part of the address, so a link to one opens it.
 
-**Account coverage** lists the accounts at risk among the records you chose, in three views. **Single-contact deals** are open deals where messages or meetings went both ways with at most one contact on the deal within 90 days. **Untouched in pipeline** are accounts with an open deal and no exchange either way in the last 21 days. **Won but silent** are accounts with a deal won in the last 180 days, no open deal and no exchange in the last 30 days. The line under the filters prints these limits, and an admin changes them under **Setup** → **Metric definitions**. A row opens a side panel with the facts behind the verdict, and a deal whose contacts you may not all see is not judged.
+**Company coverage** lists the companies at risk among the records you chose, in three views. **Single-contact deals** are open deals with a logged activity, where messages or meetings went both ways with at most one contact within 90 days. **Untouched in pipeline** are companies with an open deal and no exchange either way in the last 21 days. **Won but silent** are companies with a deal won in the last 180 days, no open deal and no exchange in the last 30 days. The line under the filters prints these limits, and an admin changes them under **Setup** → **Metric definitions**. A row opens a side panel with the facts behind the verdict, and a deal whose contacts you may not all see is not judged.
 
 ## Overview
 
@@ -100,7 +100,7 @@ A zero, a hidden figure, a failed one and a day that cannot be read each say so 
 
 Under details, **How your outcomes developed** shows more weekly history, and **What happened to your handoffs** follows the ones you sent in the period. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
-**Team prospecting** has the record scope, a **Date range** of this or last week or month, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
+**Team prospecting** has the record scope, a **Date range** of this week or month or the last completed week, month, quarter or year, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
 
 Under it come what holds the team up: waiting handoffs, handoffs sent back or turned down, and leads waiting for a reply. Each opens its own list, and the reasons count the decisions made in the period.
 
@@ -138,9 +138,9 @@ missing, this line is not shown.
 It names no currency, because one report can show deals in their own currency
 beside totals turned into yours.
 
-Activity reports count meetings and tasks, never email. Messages, calls and
-notes are not counted either. An activity report or custom question that asks
-for one of those kinds is refused, and the refusal names the kinds you can use.
+Activity reports count meetings and tasks, never email. Messages, calls and notes are not counted either. An activity report or custom question that asks for one of those kinds is refused, and the refusal names the kinds you can use.
+
+A custom report can group or filter by **Year**, **Quarter** or **Month**. Won and lost deals count in the period they closed. Meetings and tasks count in the period they happened, and one logged with only a date counts on that date. Periods follow the company's time zone, so a deal won late on the last evening of the year counts in that year. Year and quarter follow the financial year: in a year that opens in April, March is in the fourth quarter. A month is the same month whatever the financial year.
 
 ## Explain this number
 
@@ -173,7 +173,8 @@ for the whole open pipeline. **Forecast by probability** sits beside the tables.
 **Open deals by stage**: one row per stage, in pipeline order. It shows the
 stage, how many deals, and the value without and with weighting. Every figure
 is turned into one base currency, so a stage is one row with no currency
-column.
+column. A deal with no exchange rate or no value is left out of a total, and a
+note says how many deals and why. Such a figure carries a **Partial** mark.
 
 **Forecast by probability**: a tile per band (0%, 1 to 29%, 30 to 59%, 60 to
 89%, 90% or more). Each shows the raw total as the value
@@ -195,15 +196,13 @@ two rows.
 The share is of the open pipeline in the same currency. It shows only when the
 list holds every row and no deal is hidden from you.
 
-Where not every deal has an amount, a note says "{priced} of {total} priced".
-
 ## Performance
 
 **Performance** shows sales won, target progress when targets are set, trends and pipeline charts. The figures and charts sit on one sheet, and progress to target for each member sits beside them. The **Filters** chip holds **Product**, **Sales initiative**, **Country · company address**, **Industry** and **Value basis**, and opens by itself when one of them is set. **View records**, at the foot of each chart with data, opens its evidence, and each chart offers a table of numbers. Small groups are held back rather than shown as zero. See [Performance and saved sales reports](sales-reporting.md).
 
 The default **SDR outcomes** tab follows your workflow: first qualifications without handoffs, or accepted handoffs when used. It also shows held meetings, first response time and leads still waiting for a reply. The period’s count includes only leads that came in during that period. Saved reports keep their chosen figures.
 
-**Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures.
+**Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. It also counts introductions made and meetings booked for colleagues, as [Sales reporting](sales-reporting.md) explains. A tab is not offered when your role cannot read its figures.
 
 ## My outcomes
 
@@ -263,7 +262,7 @@ The **Forecast** section of Analytics answers one question (where will this peri
 
 | Reading | What kind of claim it is |
 |---|---|
-| **Manager forecast** | Somebody's view. No forecast reads "No manager forecast submitted" |
+| **Manager forecast** | Somebody's view. No forecast reads "No manager forecast submitted". A reader who may not see it is told nothing about one |
 | **Likely** | Open deals at 90% or more with a confirmed expected close date in the period, counted in full |
 | **Weighted** | Each open deal's value times its probability |
 | **Already won** | Value of deals that closed won in the period |
@@ -299,7 +298,7 @@ quarter in its place.
 **"A call is the amount you expect to close. It records your number and changes
 no deal."**
 
-To record a call, press **Update forecast**. Fill **Expected total for this period** (in the base currency) and a **Supporting note**, then press **Save forecast**. The call is filed against the period *and* the records you are looking at.
+To record a call, press **Update forecast**. Fill **Expected total for this period** (in the base currency) and a **Supporting note**, then press **Save forecast**. The call is filed against the period *and* the records you are looking at. **Save forecast** stays off until you type an amount. To call nothing, type 0.
 
 Each new call is kept beside the ones before it. None is written over, and the first call of a period is recorded the same way.
 
@@ -384,7 +383,7 @@ capture.
 A share lets more colleagues know a link exists; it never changes what anybody
 is allowed to read. Whoever opens it must sign in with their own account, and the
 numbers are worked out under *their* permissions. Two colleagues opening one
-link can rightly see different figures.
+link can rightly see different figures. A live view shows the manager forecast as the **Forecast** section would show it to you. A snapshot uses the forecast for where the period lands, but does not show it.
 
 The link is shown once ("The link is shown only once. Copy it now; it cannot be
 retrieved later.") and stops working after 30 days.

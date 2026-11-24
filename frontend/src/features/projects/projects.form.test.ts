@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   mapProjectCreate,
   mapProjectUpdate,
@@ -44,7 +45,16 @@ describe("projectFields", () => {
       "company_id",
       "owner_id",
       "description",
+      "started_at",
       "target_end_date",
+    ]);
+    expect(edit.map((field) => field.key)).toEqual([
+      "name",
+      "owner_id",
+      "description",
+      "started_at",
+      "target_end_date",
+      "ended_at",
     ]);
     expect(edit.map((field) => field.key)).not.toContain("company_id");
     expect(edit.map((field) => field.key)).toContain("owner_id");
@@ -60,6 +70,7 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
         company_id: "o-1",
         owner_id: "",
         description: "",
+        started_at: "2026-10-01",
         target_end_date: "2026-12-31",
       }),
     ).toEqual({
@@ -67,6 +78,7 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
       company_id: "o-1",
       owner_id: null,
       description: null,
+      started_at: "2026-10-01",
       target_end_date: "2026-12-31",
       key: "RO",
       phase: null,
@@ -81,14 +93,51 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
       key: "ACME",
       owner_id: "",
       description: "Phase two",
+      started_at: "2026-10-20",
       target_end_date: "",
+      ended_at: "",
     });
     expect(patch).toEqual({
       name: undefined,
       owner_id: null,
       description: "Phase two",
+      started_at: "2026-10-20",
       target_end_date: null,
+      ended_at: null,
     });
     expect("phase" in patch).toBe(false);
+  });
+});
+
+// The name column holds a label of 120 characters, counted as the server
+// counts them, in both dialogs.
+describe("the project name field", () => {
+  const t = (key: string) => `<${key}>`;
+  const nameField = (mode: "create" | "edit") =>
+    projectFields(t, { owner: { owners: [], me: "u-me" }, mode }).find(
+      (field) => field.key === "name",
+    );
+
+  it("takes a name of exactly the label limit in characters, emoji included", () => {
+    const atLimit = `${"a".repeat(TEXT_LIMITS.label - 1)}🚀`;
+    for (const mode of ["create", "edit"] as const) {
+      const name = nameField(mode);
+      expect(name?.maxLength).toBeUndefined();
+      expect(name?.validate?.(atLimit)).toBeUndefined();
+    }
+  });
+
+  it("counts the name as the server stores it, without its edge spaces", () => {
+    const padded = ` ${"a".repeat(TEXT_LIMITS.label)}\u0085`;
+    for (const mode of ["create", "edit"] as const) {
+      expect(nameField(mode)?.validate?.(padded)).toBeUndefined();
+    }
+  });
+
+  it("refuses a name past the label limit in characters", () => {
+    const over = `${"a".repeat(TEXT_LIMITS.label)}🚀`;
+    for (const mode of ["create", "edit"] as const) {
+      expect(nameField(mode)?.validate?.(over)).toBeTruthy();
+    }
   });
 });

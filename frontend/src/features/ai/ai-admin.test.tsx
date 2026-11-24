@@ -145,6 +145,9 @@ it("previews both fields before writing the allowance with its revision", async 
   await user.click(
     await screen.findByRole("button", { name: "Edit allowance" }),
   );
+  expect(
+    screen.getByRole("dialog", { name: "Monthly AI allowance" }),
+  ).toBeTruthy();
   const field = screen.getByLabelText("Tokens per full user per month");
   await user.clear(field);
   await user.type(field, "20000000");
@@ -158,12 +161,60 @@ it("previews both fields before writing the allowance with its revision", async 
   expect(writes).toHaveLength(0);
   await user.click(screen.getByRole("button", { name: "Save allowance" }));
   await screen.findByText("Allowance saved");
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(writes).toEqual([
     {
       config: { tokens_per_full_user: 20000000, company_monthly_tokens: null },
       expected_revision: "budget-v1",
     },
   ]);
+});
+it("says at the field what is wrong with an allowance, and why Preview is held", async () => {
+  const user = userEvent.setup({ delay: null });
+  const { mock } = mount();
+  await user.click(
+    await screen.findByRole("button", { name: "Edit allowance" }),
+  );
+  const field = screen.getByLabelText("Tokens per full user per month");
+  await user.clear(field);
+  await user.type(field, "1.5");
+  expect(field).toHaveAccessibleDescription(
+    /Enter a whole number for Tokens per full user per month\./,
+  );
+  expect(screen.getByText("Fix the marked fields to preview.")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  const company = screen.getByLabelText("Fixed company total (optional)");
+  await user.type(company, "-1");
+  expect(company).toHaveAccessibleDescription(
+    /Fixed company total must be from 1 to 1,000,000,000,000\./,
+  );
+
+  await user.clear(field);
+  await user.type(field, " 5 ");
+  await user.clear(company);
+  expect(screen.queryByText("Fix the marked fields to preview.")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Preview effects" }));
+  await waitFor(() =>
+    expect(
+      mock.mock.calls.filter(
+        ([input, init]) => new Request(input, init).method === "POST",
+      ),
+    ).toHaveLength(1),
+  );
+});
+it("says one token in the singular", async () => {
+  mount(undefined, false, {
+    ...status,
+    budget: {
+      ...status.budget,
+      config: { ...status.budget.config, tokens_per_full_user: 1 },
+    },
+  });
+  expect(
+    await screen.findByText(
+      "Active full users: 2 × 1 token per user per month.",
+    ),
+  ).toBeTruthy();
 });
 // A carrier the server could not count is named as such, never as zero: a
 // zero would read as "nothing waiting" on a queue nobody looked at.
@@ -241,7 +292,7 @@ it("reads a task's resolved chain with no edit control", async () => {
   );
   const user = userEvent.setup({ delay: null });
   expect(await openTaskDetails(user, feature.display_name)).toHaveTextContent(
-    `${feature.task} · ${feature.execution_mode}`,
+    `${feature.task} · While the user waits`,
   );
   await user.click(screen.getByRole("button", { name: /example-model/ }));
   expect(
@@ -395,6 +446,51 @@ it("puts decision-first rows on top, then rows that declare a skip, then the res
       first,
     );
   }
+});
+
+it("says per task what the records say about the model a tier serves", async () => {
+  const user = userEvent.setup({ delay: null });
+  const [lead] = feature.effective_candidates;
+  if (!lead) throw new Error("the feature fixture carries no candidate");
+  const withCertification = (
+    task: string,
+    certification?: {
+      verdict: "certified" | "supported_degraded" | "not_supported";
+      current: boolean;
+    },
+  ) => ({
+    ...feature,
+    task,
+    display_name: `Activity ${task}`,
+    effective_candidates: [{ ...lead, model: "m-1", certification }],
+  });
+  render(
+    <LocaleProvider initial="en">
+      <AiFeatureTable
+        rows={[
+          withCertification("a", { verdict: "certified", current: true }),
+          withCertification("b", { verdict: "not_supported", current: true }),
+          withCertification("c", {
+            verdict: "supported_degraded",
+            current: false,
+          }),
+          withCertification("d"),
+        ]}
+      />
+    </LocaleProvider>,
+  );
+  expect(await openTaskDetails(user, "Activity a")).toHaveTextContent(
+    "m-1 is certified for this task.",
+  );
+  expect(await openTaskDetails(user, "Activity b")).toHaveTextContent(
+    "m-1 is not certified for this task. It is still used",
+  );
+  expect(await openTaskDetails(user, "Activity c")).toHaveTextContent(
+    "reduced quality. The record predates the current prompts.",
+  );
+  expect(await openTaskDetails(user, "Activity d")).toHaveTextContent(
+    "m-1 has not been measured for this task with these settings.",
+  );
 });
 
 it("shows a badge only for a departure, and no disclosure for a single candidate", async () => {

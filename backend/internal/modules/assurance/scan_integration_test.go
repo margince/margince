@@ -232,7 +232,7 @@ func TestARunWithUnreadableInputsStillExists(t *testing.T) {
 		},
 		DefaultConfig())
 
-	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)
+	got, err := scanner.Scan(ctx, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("the scan refused to run: %v — a missing run is the one answer that "+
 			"tells nobody anything", err)
@@ -284,14 +284,14 @@ func TestAFixedRecordClearsItsFindingOnTheNextScan(t *testing.T) {
 		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
 	// The rep moves the close date forward; tonight the condition is gone.
 	future := time.Now().UTC().AddDate(0, 0, 20)
 	subjects[0].ExpectedClose = &future
-	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)
+	got, err := scanner.Scan(ctx, time.Now().UTC())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -339,7 +339,7 @@ func TestADeferredFindingSurvivesItsConditionClearing(t *testing.T) {
 		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -365,7 +365,7 @@ func TestADeferredFindingSurvivesItsConditionClearing(t *testing.T) {
 	// Tonight the condition goes away on its own.
 	future := time.Now().UTC().AddDate(0, 0, 20)
 	subjects[0].ExpectedClose = &future
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -404,7 +404,7 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 			return coverage(ctx, tx, now)
 		},
 		DefaultConfig())
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -418,7 +418,7 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 			{Source: "offers", State: CoverageUnavailable},
 		}
 	}
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -439,7 +439,7 @@ func TestAFindingWhoseSourceWentUnreadStaysOpen(t *testing.T) {
 	// absence is a looked-at fact, and the finding clears.
 	subjects[0].OfferTotalMinor = &amount
 	coverage = checkedCoverage
-	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)
+	got, err := scanner.Scan(ctx, time.Now().UTC())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -490,7 +490,7 @@ func (e *scanEnv) seedDealOwnedBy(t *testing.T, owner ids.UUID) string {
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'Assurance subject', 'open', $2, $3, $4, 'seed', 'test')`,
+		VALUES ($1, 'Assurance subject', 'open', $2, $3, $4, 'manual', 'test')`,
 		id, owner, e.pipeline, e.stage); err != nil {
 		t.Fatalf("seeding an open deal: %v", err)
 	}
@@ -540,13 +540,13 @@ func TestAFindingReopensWhenItsDealRejoinsTheEligibleSet(t *testing.T) {
 	scanner := NewScanner(e.store,
 		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
 	e.depart(t, dealID)
 	subjects = nil
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.statusOf(t, dealID); got != ExceptionSubjectDeparted {
@@ -555,7 +555,7 @@ func TestAFindingReopensWhenItsDealRejoinsTheEligibleSet(t *testing.T) {
 
 	e.rejoin(t, dealID)
 	subjects = []Subject{subject}
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.statusOf(t, dealID); got != "open" {
@@ -595,14 +595,14 @@ func TestAFindingWhoseDealLeftTheEligibleSetIsClosedAsDeparted(t *testing.T) {
 		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
 
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
 	// The rep wins it, so it leaves the set the pass reads.
 	e.depart(t, departingID)
 	subjects = []Subject{subject(stayingID)}
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -637,12 +637,12 @@ func TestAPassThatReadNoDealsClosesNothingAsDeparted(t *testing.T) {
 	scanner := NewScanner(e.store,
 		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 
 	subjects = nil
-	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(ctx, time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.statusOf(t, liveID); got != "open" {
@@ -699,7 +699,7 @@ func TestNeitherClosingSweepRunsForAReaderWhoMayNotUpdate(t *testing.T) {
 	scanner := NewScanner(e.store,
 		func(context.Context, pgx.Tx, time.Time, []SourceCoverage) ([]Subject, error) { return subjects, nil },
 		checkedCoverage, DefaultConfig())
-	if _, err := scanner.Scan(e.as(), time.Now().UTC(), nil); err != nil {
+	if _, err := scanner.Scan(e.as(), time.Now().UTC()); err != nil {
 		t.Fatal(err)
 	}
 

@@ -28,6 +28,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/cldrzone"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -69,6 +70,9 @@ type confirmMailInput struct {
 	tokenRowID ids.UUID
 	link       string
 	expiresAt  time.Time
+	// asksNews is false for a details check whose recipient may not be asked
+	// about news in the same mail.
+	asksNews bool
 }
 
 // stageConfirmMail renders the registered wording and stages it, on the
@@ -98,7 +102,7 @@ func (s *Store) stageConfirmMail(
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("consent: sealing the one-time confirm link: %w", err)
 	}
-	deliveryID, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
+	deliveryID, err := s.queueControllerMailTx(ctx, tx, ConfirmationSend{
 		ContactID: in.contactID,
 		LeadID:    in.leadID,
 		Recipient: in.recipient,
@@ -129,15 +133,19 @@ func (s *Store) renderConfirmMail(
 			return Rendered{}, "", err
 		}
 	}
-	expiresAt := in.expiresAt
-	if !expiresAt.IsZero() {
-		expiresAt = expiresAt.In(s.mailZone(ctx, tx))
-	}
-	rendered, category, err := renderTemplateContext(templateForLinkKind(in.kind), expiresAt, language, purpose)
+	expiry, err := s.linkExpiryTx(ctx, tx, in)
 	if err != nil {
 		return Rendered{}, "", err
 	}
-	rendered, err = s.controllerView(ctx, tx, rendered, category, in.recipient)
+	rendered, category, err := renderTemplate(templateForLinkKind(in.kind, in.asksNews), expiry, language, purpose)
+	if err != nil {
+		return Rendered{}, "", err
+	}
+	who := ruleSubject{Kind: entityContact, ID: in.contactID.String()}
+	if !in.leadID.IsZero() {
+		who = ruleSubject{Kind: entityLead, ID: in.leadID.String()}
+	}
+	rendered, err = s.controllerView(ctx, tx, rendered, category, in.recipient, who)
 	return rendered, category, err
 }
 
@@ -153,12 +161,14 @@ func (s *Store) renderConfirmMail(
 // from us, under a category that a stopped contact's suppression refuses — so
 // the notice would either ask a question it must not ask, or not be sent at
 // all, and both failures are quiet.
-func templateForLinkKind(kind string) string {
-	switch kind {
-	case LinkConsentConfirmation:
+func templateForLinkKind(kind string, asksNews bool) string {
+	switch {
+	case kind == LinkConsentConfirmation:
 		return TemplateConsentConfirmation
-	case LinkPrivacyNotice:
+	case kind == LinkPrivacyNotice:
 		return TemplatePrivacyNotice
+	case !asksNews:
+		return TemplateRecordCheck
 	}
 	return TemplateRecordConfirmation
 }
@@ -222,16 +232,25 @@ func (s *Store) sendLanguage(ctx context.Context, tx pgx.Tx, picked string) stri
 }
 
 // replyLanguage is the language of a linkless mail that answers the subject's
-// own act, such as an opt-out receipt. It is the language of the last link mail
-// staged for them, else the installation's: what they last read from us. A link
-// minted with no mail, as a booking without a lane mints one, was never read.
+// own act, such as an opt-out receipt. A pack that follows the recipient
+// decides it first. Else it is the language of the last link mail staged for
+// them, else the installation's: what they last read from us. A link minted
+// with no mail, as a booking without a lane mints one, was never read.
 func (s *Store) replyLanguage(ctx context.Context, tx pgx.Tx, sub subject) string {
+	pack, err := subjectPackLanguageTx(ctx, tx, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
+	if err != nil {
+		slog.WarnContext(ctx, "the subject's pack language could not be read; answering in the last one they read",
+			"cause", err)
+	}
+	if pack != "" {
+		return pack
+	}
 	column := subjectColumnContact
 	if sub.entityType == entityLead {
 		column = subjectColumnLead
 	}
 	var last string
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT coalesce((SELECT t.question_locale
 		                   FROM confirm_token t
 		                   JOIN comms_outbound o ON o.link_id = t.id
@@ -245,6 +264,32 @@ func (s *Store) replyLanguage(ctx context.Context, tx pgx.Tx, sub subject) strin
 		return last
 	}
 	return s.mailLanguage(ctx, tx)
+}
+
+// linkExpiryTx is when the link stops working, on the recipient's clock where
+// their record names a country with one zone, else on the installation's.
+func (s *Store) linkExpiryTx(ctx context.Context, tx pgx.Tx, in confirmMailInput) (linkExpiry, error) {
+	if in.expiresAt.IsZero() {
+		return linkExpiry{}, nil
+	}
+	who := ruleSubject{Kind: entityContact, ID: in.contactID.String()}
+	if !in.leadID.IsZero() {
+		who = ruleSubject{Kind: entityLead, ID: in.leadID.String()}
+	}
+	country, err := recipientCountryTx(ctx, tx, who)
+	if err != nil {
+		return linkExpiry{}, err
+	}
+	if country.Known() {
+		zone, single, err := cldrzone.CountryZone(string(country.Code))
+		if err != nil {
+			return linkExpiry{}, err
+		}
+		if single {
+			return linkExpiry{at: in.expiresAt.In(zone), country: string(country.Code)}, nil
+		}
+	}
+	return linkExpiry{at: in.expiresAt.In(s.mailZone(ctx, tx))}, nil
 }
 
 // mailZone is the zone a controller mail prints a time in: the installation's,

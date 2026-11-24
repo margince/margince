@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { DateRangeText } from "../../components/relationshiprows";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -9,33 +10,34 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
-import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
+import { useFieldFaults } from "../../design-system/savepage";
+import { useLocale, useT } from "../../i18n";
+import { blankRequired, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
 import { searchCompanyCandidates } from "./contactemployers";
+import {
+  type EmploymentStatusChoice,
+  EmploymentStatusFields,
+  employmentDateFaults,
+} from "./employmentstatusfields";
 import "../../design-system/querystates.css";
 
 type Item = components["schemas"]["EmploymentImportItem"];
 type Request = components["schemas"]["EmploymentImportRequest"];
 type Contact360 = components["schemas"]["Contact360"];
 
-export function ImportedEmploymentHistory({
-  view,
-  canEdit,
-}: Readonly<{ view: Contact360; canEdit: boolean }>) {
-  const t = useT();
-  const client = useQueryClient();
+// The bought episodes no linked employment answers yet. The panel's empty line
+// reads this too, so it cannot call the panel empty while episodes still show.
+export function useEmploymentImport(view: Contact360, enabled: boolean) {
   const id = view.contact.id;
   const hasEvidence =
     view.provider_profiles?.some(
       (profile) => profile.current_employment || profile.job_history.length > 0,
     ) ?? false;
-  const key = ["employmentImport", id];
   const reading = useQuery({
-    queryKey: key,
-    enabled: hasEvidence,
+    queryKey: ["employmentImport", id],
+    enabled: enabled && hasEvidence,
     queryFn: async () => {
       return unwrap(
         await api.GET("/contacts/{id}/employment-import", {
@@ -44,6 +46,34 @@ export function ImportedEmploymentHistory({
       );
     },
   });
+  const linkedIds = new Set(
+    view.employments?.data.map((role) => role.relationship_id),
+  );
+  const outstanding = hasEvidence
+    ? (reading.data?.items ?? []).filter(
+        (item) =>
+          item.state !== "dismissed" &&
+          (!item.relationship_id || !linkedIds.has(item.relationship_id)),
+      )
+    : [];
+  return { hasEvidence, reading, outstanding };
+}
+
+export type EmploymentImport = ReturnType<typeof useEmploymentImport>;
+
+export function ImportedEmploymentHistory({
+  view,
+  canEdit,
+  imported,
+}: Readonly<{
+  view: Contact360;
+  canEdit: boolean;
+  imported: EmploymentImport;
+}>) {
+  const t = useT();
+  const client = useQueryClient();
+  const id = view.contact.id;
+  const { hasEvidence, reading, outstanding } = imported;
   const [resolving, setResolving] = useState<Item | null>(null);
   const apply = useMutation({
     mutationFn: async ({
@@ -71,14 +101,6 @@ export function ImportedEmploymentHistory({
     },
   });
   if (!hasEvidence) return null;
-  const linkedIds = new Set(
-    view.employments?.data.map((role) => role.relationship_id),
-  );
-  const outstanding = (reading.data?.items ?? []).filter(
-    (item) =>
-      item.state !== "dismissed" &&
-      (!item.relationship_id || !linkedIds.has(item.relationship_id)),
-  );
   const groups = new Map<string, Item[]>();
   for (const item of outstanding) {
     const company = item.company_id ?? item.company_name.toLowerCase();
@@ -126,8 +148,11 @@ export function ImportedEmploymentHistory({
             <div key={item.key} className="form-stack">
               <span>{item.role || t("field.unset")}</span>
               <span className="t-caption">
-                {[item.started, item.ended].filter(Boolean).join(" – ")} ·{" "}
-                {t(`employment.status.${item.employment_status}`)} ·{" "}
+                <DateRangeText
+                  start={item.started ?? ""}
+                  end={item.ended ?? ""}
+                />{" "}
+                · {t(`employment.status.${item.employment_status}`)} ·{" "}
                 {item.provider}
               </span>
               {item.state !== "linked" && (
@@ -225,12 +250,14 @@ function EmploymentMatchModal({
   onSave: (body: Request) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const heading = useId();
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
   const [domain, setDomain] = useState(item.domain ?? "");
   const [started, setStarted] = useState(item.started ?? "");
   const [ended, setEnded] = useState(item.ended ?? "");
-  const [status, setStatus] = useState<"current" | "former" | "">(
+  const [status, setStatus] = useState<EmploymentStatusChoice>(
     item.employment_status === "unknown" ? "" : item.employment_status,
   );
   return (
@@ -238,7 +265,7 @@ function EmploymentMatchModal({
       <Heading size="large" id={heading} className="t-h2 modal-title">
         {t("employment.resolve")}
       </Heading>
-      <div className="form-stack">
+      <div className="form-stack" ref={faultsRoot}>
         <p>
           {item.company_name} · {item.role}
         </p>
@@ -249,7 +276,10 @@ function EmploymentMatchModal({
               aria-describedby={control["aria-describedby"]}
               searchTargets={searchCompanyCandidates}
               selected={company}
-              onPick={setCompany}
+              onPick={(next) => {
+                setCompany(next);
+                faults.edited("domain");
+              }}
               disabled={pending}
             />
           )}
@@ -258,54 +288,51 @@ function EmploymentMatchModal({
           <Field
             label={t("employment.website")}
             hint={t("employment.websiteHint")}
+            required
+            error={faults.of("domain")}
           >
             {(control) => (
               <TextInput
                 {...control}
                 value={domain}
-                onChange={(event) => setDomain(event.target.value)}
+                onChange={(event) => {
+                  setDomain(event.target.value);
+                  faults.edited("domain");
+                }}
                 disabled={pending}
               />
             )}
           </Field>
         )}
-        <Field label={t("employment.start")} hint={t("employment.dateHint")}>
+        <Field
+          label={t("employment.start")}
+          hint={t("employment.dateHint")}
+          error={faults.of("start")}
+        >
           {(control) => (
             <TextInput
               {...control}
               value={started}
-              onChange={(e) => setStarted(e.target.value)}
-              disabled={pending}
-            />
-          )}
-        </Field>
-        <Field label={t("employment.end")} hint={t("employment.dateHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={ended}
-              onChange={(e) => setEnded(e.target.value)}
-              disabled={pending}
-            />
-          )}
-        </Field>
-        <Field label={t("employment.statusLabel")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={status}
-              placeholder={t("employment.keepImportedStatus")}
-              onChange={(value) => {
-                if (value === "current" || value === "former") setStatus(value);
+              onChange={(e) => {
+                setStarted(e.target.value);
+                faults.edited("start");
               }}
-              options={[
-                { value: "current", label: t("employment.status.current") },
-                { value: "former", label: t("employment.status.former") },
-              ]}
               disabled={pending}
             />
           )}
         </Field>
+        <EmploymentStatusFields
+          status={status}
+          onStatusChange={setStatus}
+          end={ended}
+          onEndChange={(next) => {
+            setEnded(next);
+            faults.edited("end");
+          }}
+          endError={faults.of("end")}
+          disabled={pending}
+          statusPlaceholder={t("employment.keepImportedStatus")}
+        />
         <ErrorLine error={error} />
       </div>
       <div className="actions">
@@ -314,13 +341,20 @@ function EmploymentMatchModal({
         </Button>
         <Button
           variant="primary"
-          disabled={
-            pending ||
-            (!company && !domain.trim()) ||
-            !/^$|^\d{4}-\d{2}(-\d{2})?$/.test(started) ||
-            !/^$|^\d{4}-\d{2}(-\d{2})?$/.test(ended)
-          }
-          onClick={() =>
+          disabled={pending}
+          onClick={() => {
+            const found = new Map([
+              ...(company
+                ? []
+                : blankRequired(locale, {
+                    domain: [t("employment.website"), domain],
+                  })),
+              ...employmentDateFaults(locale, t, {
+                start: started,
+                end: ended,
+              }),
+            ]);
+            if (faults.show(found)) return;
             onSave({
               action: "resolve",
               resolve_group: true,
@@ -330,8 +364,8 @@ function EmploymentMatchModal({
               employment_status: status || undefined,
               started,
               ended,
-            })
-          }
+            });
+          }}
         >
           {t("employment.saveMatch")}
         </Button>

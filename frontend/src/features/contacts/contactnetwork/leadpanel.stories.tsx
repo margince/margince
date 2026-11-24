@@ -58,11 +58,19 @@ function route(over: Partial<RouteCandidate> = {}): RouteCandidate {
 // The panel is handed the blocked sentence by its tab, which reads it off the
 // route's availability; the story asks the same helper so the label is the one
 // the tab would draw.
-function Lead({ candidate }: Readonly<{ candidate: RouteCandidate }>) {
+function Lead({
+  candidate,
+  alternatives,
+}: Readonly<{
+  candidate: RouteCandidate;
+  alternatives?: readonly RouteCandidate[];
+}>) {
   const t = useT();
   return (
     <LeadPanel
       route={candidate}
+      alternatives={alternatives}
+      roles={{ via: "Account Executive", target: "Head of Fleet" }}
       targetName="Dana Buyer"
       targetId="contact-dana"
       blocked={availabilityLabel(candidate.availability, t)}
@@ -71,7 +79,10 @@ function Lead({ candidate }: Readonly<{ candidate: RouteCandidate }>) {
   );
 }
 
-function draw(candidate: RouteCandidate) {
+function draw(
+  candidate: RouteCandidate,
+  alternatives?: readonly RouteCandidate[],
+) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({
@@ -81,7 +92,7 @@ function draw(candidate: RouteCandidate) {
     });
     return (
       <StoryProviders>
-        <Lead candidate={candidate} />
+        <Lead candidate={candidate} alternatives={alternatives} />
       </StoryProviders>
     );
   };
@@ -135,6 +146,57 @@ export const ThroughAContact: Story = {
  *  the button is gone, because the server would refuse a second ask. */
 export const AlreadyRequested: Story = {
   render: draw(route({ availability: "already_requested" })),
+};
+
+/** The other ways in, ranked under the recommendation in the same card. */
+export const WithOtherRoutes: Story = {
+  render: draw(route(), [
+    route({
+      route_id: `direct:${PHILIPP}`,
+      via_user_id: PHILIPP,
+      via_display_name: "Martin Weber",
+      strength_bucket: "weak",
+      evidence: {
+        interactions_90d: 2,
+        two_way: false,
+        days_since_last: 91,
+      },
+    }),
+  ]),
+};
+
+/** Long subjects: each receipt keeps to one line under the figures, its
+ *  subject truncating and its date always on screen. */
+export const LongReceipts: Story = {
+  render: draw(
+    route({
+      receipts: [
+        {
+          activity_id: "018f3a1b-0000-7000-8000-0000000000e2",
+          subject:
+            "Durchlauf / Abnahme Einsatzplanungsmodul für die Standorte Nord und Süd",
+          occurred_at: "2026-08-28T09:00:00Z",
+          occurred_precision: "instant",
+          kind: "meeting",
+        },
+        {
+          activity_id: "018f3a1b-0000-7000-8000-0000000000e3",
+          subject:
+            "Durchlauf / Abnahme Einsatzplanungsmodul für die Standorte Nord und Süd",
+          occurred_at: "2026-08-27T09:00:00Z",
+          occurred_precision: "instant",
+          kind: "email",
+        },
+        {
+          activity_id: "018f3a1b-0000-7000-8000-0000000000e4",
+          subject: "Re: Hinweis + Frage",
+          occurred_at: "2026-08-21T09:00:00Z",
+          occurred_precision: "instant",
+          kind: "email",
+        },
+      ],
+    }),
+  ),
 };
 
 export const StrongDirectDark: Story = {

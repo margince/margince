@@ -44,10 +44,11 @@ import (
 // mail the installation cannot account for — which is the exact gap this table
 // exists to close.
 func recordBasis(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolution, req commsauthz.Request, w packRules) error {
-	if !res.Supported || res.Basis == "" {
+	if !res.Supported || res.Basis == "" || res.Basis == commsauthz.BasisConsent {
 		// Nothing was concluded, so there is nothing to stand behind. An
 		// unsupported resolution falls through to the legacy verdict, whose own
-		// grounds are already recorded as consent rows.
+		// grounds are already recorded as consent rows. A consent ground is
+		// such a row already.
 		return nil
 	}
 	by, err := storekit.CapturedBy(ctx)

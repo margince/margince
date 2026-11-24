@@ -1,51 +1,35 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import type { ReactNode } from "react";
-import { api } from "../../api/client";
-import { Button, EmptyState } from "../../design-system/atoms";
+import { EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DataTable } from "../../design-system/datatable";
-import { ErrorLine } from "../../design-system/errorline";
-import { SurfaceState } from "../../design-system/surfacestate";
-import {
-  formatAnalyticsMoneyOrAbsent,
-  formatAnalyticsNumber,
-  formatDateTime,
-  MONEY_ABSENT,
-} from "../../format/format";
-import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { QueryGate } from "../../design-system/querystates";
+import { formatAnalyticsNumber, formatDateTime } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
-import { labelFor } from "../../lib/labelfor";
-import { ProblemError, throwProblem } from "../../lib/problem";
-import { derivationColumns, ExcludedNote } from "./analytics.explain";
-import { ExplainDrawer } from "./analytics.explain.drawer";
+import { ExcludedNote } from "./analytics.explain";
+import { measureCell } from "./analytics.questions.cell";
 import {
-  type Namer,
-  shortId,
-  useValueNamer,
-} from "./analytics.questions.names";
+  isMoneyField,
+  isNativeMoneyField,
+  type MoneyFields,
+  measureReading,
+  moneyFieldsOf,
+} from "./analytics.questions.money";
+import { type Namer, useValueNamer } from "./analytics.questions.names";
+import { RowExplain } from "./analytics.questions.rowexplain";
 import {
   type AnalyticsAnswer,
   type AnalyticsQuery,
   type AnswerRow,
-  analyticsFieldLabel,
   type CustomLabels,
   columnLabel,
-  explainGroup,
-  isMoneyField,
-  isNativeMoneyField,
   isWithheldRow,
   measureOfColumn,
-  measureReading,
-  moneyCurrency,
   QUESTION_LIMIT,
-  REFUSAL_KEY,
-  refusalOf,
 } from "./analytics.questions.vocab";
-
-type Translate = ReturnType<typeof useT>;
+import { useAnalyticsSchema } from "./analytics.schema";
 
 const NO_LABELS: CustomLabels = new Map();
 
@@ -54,35 +38,6 @@ export type ExplainSource =
   | Readonly<{ kind: "query"; query: AnalyticsQuery }>
   | Readonly<{ kind: "run"; runId: string }>;
 
-function measureCell(
-  query: AnalyticsQuery,
-  column: string,
-  row: AnswerRow,
-  baseCurrency: string | null,
-  locale: Locale,
-  t: Translate,
-): ReactNode {
-  const measure = measureOfColumn(query, column);
-  const value = row[column];
-  if (!measure || typeof value !== "number") {
-    return value == null ? MONEY_ABSENT : String(value);
-  }
-  const reading = measureReading(measure, row, query, baseCurrency);
-  if (reading.kind === "mixed") {
-    return t("analytics.q.mixedCurrencies");
-  }
-  if (reading.kind === "noBase") {
-    return t("analytics.noBaseCurrency");
-  }
-  return (
-    <span className="t-num">
-      {reading.kind === "money"
-        ? formatAnalyticsMoneyOrAbsent(value, reading.currency, locale)
-        : formatAnalyticsNumber(value, locale)}
-    </span>
-  );
-}
-
 // Whether any shown cell reads the way asked: an amount summed across
 // currencies, or a converted one with no base currency to state it in.
 function anyReading(
@@ -90,6 +45,7 @@ function anyReading(
   query: AnalyticsQuery,
   answer: AnalyticsAnswer,
   baseCurrency: string | null,
+  money: MoneyFields,
 ): boolean {
   return answer.rows.some(
     (row) =>
@@ -98,7 +54,7 @@ function anyReading(
         const measure = measureOfColumn(query, column);
         return (
           measure !== undefined &&
-          measureReading(measure, row, query, baseCurrency).kind === kind
+          measureReading(measure, row, query, baseCurrency, money).kind === kind
         );
       }),
   );
@@ -109,6 +65,7 @@ type CellFrame = Readonly<{
   namer: Namer;
   source?: ExplainSource;
   baseCurrency: string | null;
+  money: MoneyFields;
   withheldGroups: number;
   fieldLabels: CustomLabels;
 }>;
@@ -129,7 +86,7 @@ function AnswerCell({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const { query, namer, baseCurrency, withheldGroups } = frame;
+  const { query, namer, baseCurrency, money, withheldGroups } = frame;
   if (isWithheldRow(row)) {
     return first
       ? plural("analytics.q.withheldGroups", withheldGroups, {
@@ -139,7 +96,7 @@ function AnswerCell({
   }
   const cell = (query.group_by ?? []).includes(column)
     ? namer(column, row[column])
-    : measureCell(query, column, row, baseCurrency, locale, t);
+    : measureCell(query, column, row, baseCurrency, money, locale, t);
   if (!first || frame.source === undefined) {
     return <>{cell}</>;
   }
@@ -156,13 +113,24 @@ function AnswerCell({
  * as zeros or dropped: each is null in every column, so a row apiece repeats
  * one sentence, and how many there are is already on the wire.
  */
-export function AnswerTable({
-  query,
-  answer,
-  baseCurrency,
-  source,
-  fieldLabels = NO_LABELS,
-}: Readonly<{
+export function AnswerTable(props: AnswerProps) {
+  const t = useT();
+  const schema = useAnalyticsSchema();
+  // The schema says which measures are amounts, so no cell is drawn before it
+  // arrives. A raw minor-unit figure reads as a hundred times the money.
+  return (
+    <QueryGate query={schema} pendingLabel={t("common.loading")}>
+      {(vocabulary) => (
+        <MoneyAnswerTable
+          {...props}
+          money={moneyFieldsOf(vocabulary.entities, props.query.entity)}
+        />
+      )}
+    </QueryGate>
+  );
+}
+
+type AnswerProps = Readonly<{
   query: AnalyticsQuery;
   answer: AnalyticsAnswer;
   baseCurrency: string | null;
@@ -171,7 +139,16 @@ export function AnswerTable({
   source?: ExplainSource;
   /** The administrator's names for the installation's own fields. */
   fieldLabels?: CustomLabels;
-}>) {
+}>;
+
+function MoneyAnswerTable({
+  query,
+  answer,
+  baseCurrency,
+  money,
+  source,
+  fieldLabels = NO_LABELS,
+}: AnswerProps & Readonly<{ money: MoneyFields }>) {
   const t = useT();
   const { locale } = useLocale();
   const plural = usePlural();
@@ -191,6 +168,7 @@ export function AnswerTable({
     namer,
     source,
     baseCurrency: answerCurrency,
+    money,
     withheldGroups,
     fieldLabels,
   };
@@ -201,8 +179,8 @@ export function AnswerTable({
       {query.measures.some(
         (measure) =>
           measure.field &&
-          isMoneyField(measure.field) &&
-          !isNativeMoneyField(measure.field),
+          isMoneyField(measure.field, money) &&
+          !isNativeMoneyField(measure.field, money),
       ) &&
         answer.base_currency &&
         answer.rate_date && (
@@ -223,7 +201,7 @@ export function AnswerTable({
           {t("analytics.q.withheldBody")}
         </Callout>
       )}
-      {anyReading("mixed", query, answer, answerCurrency) && (
+      {anyReading("mixed", query, answer, answerCurrency, money) && (
         <Callout
           tone="info"
           kind="standing"
@@ -232,7 +210,7 @@ export function AnswerTable({
           {t("analytics.q.mixedBody")}
         </Callout>
       )}
-      {anyReading("noBase", query, answer, answerCurrency) && (
+      {anyReading("noBase", query, answer, answerCurrency, money) && (
         <Callout
           tone="info"
           kind="standing"
@@ -268,227 +246,5 @@ export function AnswerTable({
         </p>
       )}
     </>
-  );
-}
-
-function rowFigure(
-  query: AnalyticsQuery,
-  row: AnswerRow,
-  namer: Namer,
-  t: Translate,
-) {
-  const groupBy = query.group_by ?? [];
-  if (groupBy.length === 0) {
-    return t("analytics.q.allRecords");
-  }
-  return groupBy.map((field) => namer(field, row[field])).join(", ");
-}
-
-function RowExplain({
-  frame,
-  source,
-  row,
-  children,
-}: Readonly<{
-  frame: CellFrame;
-  source: ExplainSource;
-  row: AnswerRow;
-  children: ReactNode;
-}>) {
-  const t = useT();
-  const { query, namer, baseCurrency, fieldLabels } = frame;
-  const group = explainGroup(query, row);
-  return (
-    <ExplainDrawer
-      figure={rowFigure(query, row, namer, t)}
-      body={(opens) => (
-        <ExplainRecords
-          key={opens}
-          source={source}
-          query={query}
-          group={group}
-          baseCurrency={baseCurrency}
-          fieldLabels={fieldLabels}
-        />
-      )}
-    >
-      {children}
-    </ExplainDrawer>
-  );
-}
-
-async function readExplanation(
-  source: ExplainSource,
-  group: unknown[] | undefined,
-) {
-  const body = group === undefined ? {} : { group };
-  const { data, error } =
-    source.kind === "run"
-      ? await api.POST("/analytics/runs/{run_id}/cells/explain", {
-          params: { path: { run_id: source.runId } },
-          body,
-        })
-      : await api.POST("/analytics/explain", {
-          body: { query: source.query, ...body },
-        });
-  if (error) {
-    throwProblem(error);
-  }
-  return data;
-}
-
-/**
- * The records behind one cell, read under the reader's own authority. A
- * withheld cell has nothing to open, and a capped list says it is capped.
- */
-function ExplainRecords({
-  source,
-  query,
-  group,
-  baseCurrency,
-  fieldLabels,
-}: Readonly<{
-  source: ExplainSource;
-  query: AnalyticsQuery;
-  group: unknown[] | undefined;
-  baseCurrency: string | null;
-  fieldLabels: CustomLabels;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const plural = usePlural();
-  const explanation = useQuery({
-    queryKey: ["analytics-explain", source, group ?? null],
-    queryFn: () => readExplanation(source, group),
-  });
-  const data = explanation.data;
-  const namer = useValueNamer(query.entity, data?.columns ?? [], data?.labels);
-  if (explanation.isError) {
-    return (
-      <QuestionFailure
-        error={explanation.error}
-        onRetry={() => explanation.refetch()}
-      />
-    );
-  }
-  const state = explanationState(data);
-  return (
-    <>
-      {data?.truncated && (
-        <p className="t-caption">
-          {plural("analytics.q.explainTruncated", data.rows.length, {
-            count: formatAnalyticsNumber(data.rows.length, locale),
-          })}
-        </p>
-      )}
-      <SurfaceState
-        state={state}
-        emptyLabel={t("analytics.q.explainEmpty")}
-        loadingLabel={t("analytics.q.explainLoading")}
-        detail={{ withheldReason: t("analytics.q.explainWithheld") }}
-      >
-        {data && (
-          <DataTable
-            label={t("explain.sources")}
-            // The report drawer's column rule: the record's name leads, and
-            // its id goes once every row has a name.
-            columns={derivationColumns(data).map((column) => ({
-              key: column,
-              header: recordHeader(t, column, fieldLabels),
-              render: (row: AnswerRow) =>
-                recordCell(column, row, {
-                  query,
-                  namer,
-                  baseCurrency,
-                  locale,
-                }),
-            }))}
-            rows={data.rows}
-            rowKey={(row) => String(row.id ?? data.rows.indexOf(row))}
-          />
-        )}
-      </SurfaceState>
-    </>
-  );
-}
-
-function explanationState(
-  data: { withheld: boolean; rows: unknown[] } | undefined,
-): "loading" | "withheld" | "empty" | "ready" {
-  if (!data) return "loading";
-  if (data.withheld) return "withheld";
-  return data.rows.length === 0 ? "empty" : "ready";
-}
-
-function recordHeader(
-  t: Translate,
-  column: string,
-  fieldLabels: CustomLabels,
-): string {
-  if (column === "label") return t("analytics.q.record");
-  if (column === "id") return t("analytics.q.recordId");
-  return analyticsFieldLabel(t, column, fieldLabels);
-}
-
-// A record is named by the server, under the reader's grants, so the drawer
-// reads nothing per row. One it may not name keeps a short id.
-function recordCell(
-  column: string,
-  row: AnswerRow,
-  frame: Readonly<{
-    query: AnalyticsQuery;
-    namer: Namer;
-    baseCurrency: string | null;
-    locale: Locale;
-  }>,
-): ReactNode {
-  const value = row[column];
-  if (column === "label") {
-    return typeof value === "string" ? value : "";
-  }
-  if (column === "id" && typeof value === "string") {
-    return <span title={value}>{shortId(value)}</span>;
-  }
-  const currency = moneyCurrency(column, row, frame.query, frame.baseCurrency);
-  if (currency !== undefined && typeof value === "number") {
-    return formatAnalyticsMoneyOrAbsent(value, currency, frame.locale);
-  }
-  return frame.namer(column, value);
-}
-
-/**
- * Why a question was not answered. A refusal is guidance, not a fault: the
- * heading says in the reader's language what kind of refusal it is, and the
- * engine's own account follows, the smallest change that would have worked
- * first. Anything else is an ordinary failure, in the reader's words.
- */
-export function QuestionFailure({
-  error,
-  onRetry,
-}: Readonly<{ error: unknown; onRetry?: () => void }>) {
-  const t = useT();
-  const refusal =
-    error instanceof ProblemError ? refusalOf(error.problem) : null;
-  if (!refusal) {
-    return (
-      <ErrorLine
-        error={error}
-        actions={
-          onRetry ? (
-            <Button onClick={onRetry}>{t("common.retry")}</Button>
-          ) : undefined
-        }
-      />
-    );
-  }
-  return (
-    <Callout
-      tone="info"
-      kind="outcome"
-      title={t(labelFor(REFUSAL_KEY, refusal.kind))}
-    >
-      {refusal.suggest !== "" && <p>{refusal.suggest}</p>}
-      {refusal.message !== "" && <p>{refusal.message}</p>}
-    </Callout>
   );
 }

@@ -6,6 +6,8 @@ import { ToastProvider } from "../design-system/toast";
 import { BriefFeed } from "../features/brief/brief.feed";
 import { BriefGlance } from "../features/brief/brief.glance";
 import { WorklistRow } from "../features/worklist/worklist.row";
+import { formatTimeOfDay } from "../format/format.dates";
+import { browserZone } from "../format/timezone";
 import { en } from "../i18n/en";
 import {
   failedApprovalRow,
@@ -137,6 +139,19 @@ it("shows dates and does not repeat the ranking comparator", () => {
   expect(screen.queryByText(/Above the next/)).toBeNull();
 });
 
+it("says the reader is caught up, and when Margince last looked, on a complete clear read", () => {
+  stubApi({});
+  const day = readingsDay({}, []);
+  render(<BriefFeed day={day} state="ready" />);
+  expect(
+    screen.getByRole("heading", { name: en["brief.feed.caughtUp"] }),
+  ).toBeTruthy();
+  const time = formatTimeOfDay(day.as_of, "en", browserZone());
+  expect(
+    screen.getByText(new RegExp(`Margince checked at ${time}`)),
+  ).toBeTruthy();
+});
+
 it("does not claim an empty agenda when a source failed", () => {
   stubApi({});
   const day = readingsDay({}, []);
@@ -144,7 +159,7 @@ it("does not claim an empty agenda when a source failed", () => {
     { source: "task", reason: "failed", category: "tasks" },
   ];
   render(<BriefFeed day={day} state="ready" />);
-  expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
+  expect(screen.queryByText(en["brief.feed.caughtUp"])).toBeNull();
   // The sentence stands in the section.
   expect(
     screen.getByText(en["brief.feed.incomplete"]).closest("#brief-today"),
@@ -220,7 +235,7 @@ it.each([false, true])(
   },
 );
 
-it("leads the row in hand's one line with the agent's move, and ends it with its menu", () => {
+it("starts the row in hand's line with its details, then the agent's move, and ends it with its menu", () => {
   stubApi({});
   const { container } = render(
     <BriefFeed
@@ -235,17 +250,17 @@ it("leads the row in hand's one line with the agent's move, and ends it with its
       .querySelector(".worklist-row-acts")
       ?.querySelectorAll("button, a") ?? []),
   ];
-  // The card is finished on its answer, so the answer opens the line. Then the
-  // way into what the row is about and Done; the row's menu, holding the other
-  // set-asides, closes it.
+  // The way into what the row is about is drawn first, so it comes first in
+  // the page too. Then the card's answer and Done; the row's menu, holding the
+  // other set-asides, closes it.
   const draft = lead.getByRole("link", {
     name: en["worklist.verb.draft_reply_now"],
   });
   expect(draft.className).toContain("btn-ai");
-  expect(line.at(0)).toBe(draft);
-  expect(line.at(1)).toBe(
+  expect(line.at(0)).toBe(
     lead.getByRole("button", { name: en["brief.focus.context"] }),
   );
+  expect(line.at(1)).toBe(draft);
   expect(line.at(-2)).toBe(
     lead.getByRole("button", { name: en["worklist.disposition.verb.handled"] }),
   );
@@ -471,7 +486,7 @@ it.each(["stalled", "closing_soon", "opportunity"])(
       card
         .getByRole("link", { name: en["deal.openDeal"] })
         .getAttribute("href"),
-    ).toBe("/#/deals/deal-expansion");
+    ).toBe("/#/deals/deal-expansion?from=worklist");
   },
 );
 

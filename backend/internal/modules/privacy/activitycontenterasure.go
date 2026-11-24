@@ -114,14 +114,11 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	}
 	// The external identities this message answered to, through the helper the
 	// Art. 17 cascade also calls — see retireActivityIdentities for why they
-	// cannot be left behind. The noise act keeps them as its tombstone and
-	// erases only the meeting proposals.
-	retire := retireActivityIdentities
-	if act.keepsMessageIdentity {
-		retire = eraseMeetingProposals
-	}
-	if err := retire(ctx, tx, []ids.UUID{id}); err != nil {
-		return err
+	// cannot be left behind. The noise act keeps them as its tombstone.
+	if !act.keepsMessageIdentity {
+		if err := retireActivityIdentities(ctx, tx, []ids.UUID{id}); err != nil {
+			return err
+		}
 	}
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
@@ -139,7 +136,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		map[extdecl.RecordKind][]ids.UUID{extdecl.Activity: {id}}); err != nil {
 		return err
 	}
-	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject, e.payloads)
+	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject)
 }
 
 // PurgeContentDerivedFromNoiseTx destroys everything the text of hidden noise
@@ -200,6 +197,13 @@ var (
 		approvalWithdrawal: ReleasedSourceWithdrawal,
 		collateralReason:   "controller release: the record's content was erased",
 		cause:              causeControllerRelease,
+	}
+	// aControllerReviewedArchive is a controller deleting archived records
+	// whose purpose has ended. Nothing reaches it on a schedule.
+	aControllerReviewedArchive = erasureAct{
+		approvalWithdrawal: ReleasedSourceWithdrawal,
+		collateralReason:   "archive review: the controller deleted the record's content",
+		cause:              causeArchiveReview,
 	}
 	// aNoiseVerdictHid is the capture sweep destroying mail a noise verdict hid
 	// and nobody brought back within the undo window.

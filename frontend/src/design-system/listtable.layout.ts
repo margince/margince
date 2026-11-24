@@ -15,15 +15,16 @@ import {
   useState,
 } from "react";
 import { readStoredJson, STORAGE_KEYS, writeStored } from "../lib/storage";
-import { useNumericFloors } from "./listtable.floors";
+import { MIN_COLUMN_WIDTH } from "./listheader";
+import { useColumnFloors } from "./listtable.floors";
 
 /**
  * How the table divides its width when the reader has not resized anything.
  * Sized to its content, a name column with an avatar and a badge takes half
  * the page. So each column takes a share weighted by what it holds.
  *
- * The minimum binds per column, and a header longer than its column wraps. A
- * `share` of null takes its minimum in pixels: a column of translated buttons.
+ * The minimum binds per column, and a header longer than its column wraps
+ * between its words. A `share` of null takes its minimum in pixels: a column of translated buttons.
  */
 type ColumnSize = Readonly<{
   share: number | null;
@@ -31,27 +32,35 @@ type ColumnSize = Readonly<{
   // For a value whose length hardly changes. The width past it goes to the text
   // columns, or to the trailing gap once only capped columns are left.
   max?: number;
+  // Taken from the room past every minimum before any other column grows, so a
+  // narrow page spends its spare pixels on the name. Columns carrying it split it.
+  first?: number;
 }>;
 
+// The minimums let the seven default columns of Contacts or Companies, German
+// headers included, fit a 1024px window with the rail folded and a scrollbar.
 const COLUMN_SIZES: Readonly<
   Record<
     | "identity"
     | "numeric"
     | "date"
     | "colleague"
+    | "score"
     | "standard"
     | "verbs"
     | "menu",
     ColumnSize
   >
 > = {
-  identity: { share: 2.4, min: 200 },
+  identity: { share: 2.4, min: 180, first: 400 },
   numeric: { share: 0.9, min: 110, max: 200 },
   // "28. Sept. 2027" in German, the longest abbreviated date this tree ships.
   date: { share: 0.8, min: 120, max: 150 },
   // A 20px avatar beside a full name.
   colleague: { share: 1, min: 150, max: 240 },
-  standard: { share: 1.3, min: 130 },
+  // A score of up to three digits under a one-word header and its sort arrow.
+  score: { share: null, min: 80 },
+  standard: { share: 1.3, min: 120 },
   // Two labelled ghost buttons side by side in the longest locale this tree
   // ships: German turns "Edit product" into "Produkt bearbeiten".
   verbs: { share: null, min: 320 },
@@ -65,7 +74,7 @@ export type SizedColumn = Readonly<{
   fixed?: boolean;
   numeric?: boolean;
   verbs?: boolean | "menu";
-  holds?: "date" | "colleague";
+  holds?: "date" | "colleague" | "score";
 }>;
 
 /**
@@ -85,14 +94,14 @@ export function widthWorthAdopting(
 }
 
 /**
- * A column's size, raised to its floor. The floor is the widest figure a
- * numeric column holds, so no figure is cut short to fit a share.
+ * A column's size, raised to its floor: the widest figure a numeric column
+ * holds, or its header's longest word. No figure or word is cut to fit a share.
  */
 function boundsOf(column: SizedColumn, floors: Widths): ColumnSize {
   const size = sizeOf(column);
   const floor = floors[column.key] ?? 0;
   return {
-    share: size.share,
+    ...size,
     min: Math.max(size.min, floor),
     max: size.max === undefined ? undefined : Math.max(size.max, floor),
   };
@@ -149,7 +158,7 @@ function widthsIn(value: unknown): Record<string, number> | null {
   );
 }
 
-function floorsIn(value: unknown): NumericFloors {
+function floorsIn(value: unknown): ColumnFloors {
   if (typeof value !== "object" || value === null) {
     return NO_FLOORS;
   }
@@ -172,12 +181,13 @@ function writeWidths(key: string | undefined, widths: Record<string, number>) {
 type Widths = Readonly<Record<string, number>>;
 
 /**
- * The widest figure of each numeric column: held since the table mounted, and
- * on screen now. A dragged width answers only to the figures on screen.
+ * Each column's floor held since the table mounted, from its figures and its
+ * header, and each numeric column's widest figure on screen now. A dragged
+ * width answers only to the figures on screen.
  */
-export type NumericFloors = Readonly<{ held: Widths; onScreen: Widths }>;
+export type ColumnFloors = Readonly<{ held: Widths; onScreen: Widths }>;
 
-const NO_FLOORS: NumericFloors = { held: {}, onScreen: {} };
+const NO_FLOORS: ColumnFloors = { held: {}, onScreen: {} };
 
 /** Every shown column's width, and where the row stops shrinking. */
 export type ColumnLayout = Readonly<{
@@ -199,25 +209,44 @@ export function columnLayout(
   shown: readonly SizedColumn[],
   widths: Widths,
   available: number,
-  floors: NumericFloors = NO_FLOORS,
+  floors: ColumnFloors = NO_FLOORS,
 ): ColumnLayout {
-  const sizeOf = (column: SizedColumn) => boundsOf(column, floors.held);
+  const boundsAt = (column: SizedColumn) => boundsOf(column, floors.held);
   const fixedWidth = (column: SizedColumn) => {
     const resized = widths[column.key];
     // A width the reader set is theirs. A figure on screen raises it, since a
     // figure cut short reads as a different number.
     if (resized) {
-      return Math.max(resized, floors.onScreen[column.key] ?? 0);
+      // A width stored before the minimum rose is clamped on every read. A verbs
+      // column states its own width, so it keeps what it measured.
+      const least = column.verbs ? 0 : MIN_COLUMN_WIDTH;
+      return Math.max(resized, least, floors.onScreen[column.key] ?? 0);
     }
-    const { share, min } = sizeOf(column);
+    const { share, min } = boundsAt(column);
     return share === null ? min : undefined;
   };
   const shared = shown.filter((column) => fixedWidth(column) === undefined);
+  const growsFirst = (column: SizedColumn) =>
+    fixedWidth(column) === undefined && boundsAt(column).first !== undefined;
+  const takenFromRoom = (column: SizedColumn) =>
+    growsFirst(column)
+      ? boundsAt(column).min - sizeOf(column).min
+      : (fixedWidth(column) ?? boundsAt(column).min);
+  const roomFirst =
+    (available -
+      shown.reduce((total, column) => total + takenFromRoom(column), 0)) /
+    Math.max(1, shown.filter(growsFirst).length);
+  const limitsOf = (column: SizedColumn): ColumnSize => {
+    const size = boundsAt(column);
+    return size.first === undefined
+      ? size
+      : { ...size, min: Math.max(size.min, Math.min(size.first, roomFirst)) };
+  };
   const held = new Map<string, number>();
   const pinnedWidth = (column: SizedColumn) =>
     fixedWidth(column) ?? held.get(column.key);
   const shareOf = (column: SizedColumn) =>
-    pinnedWidth(column) === undefined ? (sizeOf(column).share ?? 0) : 0;
+    pinnedWidth(column) === undefined ? (limitsOf(column).share ?? 0) : 0;
   const sum = (of: (column: SizedColumn) => number) =>
     shown.reduce((total, column) => total + of(column), 0);
   // The shares divide what the pinned columns leave, not the whole width, or
@@ -231,13 +260,13 @@ export function columnLayout(
     const shareWidth = (column: SizedColumn) =>
       (spareOf() * shareOf(column)) / sum(shareOf);
     const short = free.filter(
-      (column) => shareWidth(column) < sizeOf(column).min,
+      (column) => shareWidth(column) < limitsOf(column).min,
     );
     if (short.length > 0) {
-      return short.map((column) => [column.key, sizeOf(column).min]);
+      return short.map((column) => [column.key, limitsOf(column).min]);
     }
     return free.flatMap((column): [string, number][] => {
-      const { max } = sizeOf(column);
+      const { max } = limitsOf(column);
       return max !== undefined && shareWidth(column) > max
         ? [[column.key, max]]
         : [];
@@ -381,7 +410,7 @@ export function useColumnWidths(
   };
   const { widths, ...resize } = useResizedWidths(widthsKey, measured);
   const available = useAvailableWidth(refs.scroller, drawsOwnTable);
-  const floorsRead = useNumericFloors(shown, refs.head);
+  const floorsRead = useColumnFloors(shown, refs.head);
   const floors = useMemo(() => floorsIn(JSON.parse(floorsRead)), [floorsRead]);
   return { ...columnLayout(shown, widths, available, floors), ...resize };
 }
@@ -389,10 +418,10 @@ export function useColumnWidths(
 /**
  * The frozen identity column's edge. It casts a shadow only once columns have
  * slid under it, since a shadow over open space reads as a seam. CSS cannot
- * know where the frozen column ends or how tall the body is, so both are set.
+ * know where the frozen column ends or how tall the rows are, so both are set.
  */
 export function useFrozenEdge(
-  scroller: RefObject<HTMLDivElement | null>,
+  body: HTMLDivElement | null,
   shownCount: number,
   dense: boolean,
 ) {
@@ -401,15 +430,21 @@ export function useFrozenEdge(
   // the effect reads.
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only deps
   useEffect(() => {
-    const body = scroller.current;
     if (!body) {
       return;
     }
+    // On the shadow, since one set on the scroller restyles every cell. Reads
+    // come before writes, so no write forces a layout.
+    const edge = body.querySelector<HTMLElement>(":scope > .lt-freeze");
+    const table = body.querySelector(":scope > table");
     const measure = () => {
       const frozen = body.querySelector("thead .lt-identity");
       const width = frozen ? frozen.getBoundingClientRect().width : 0;
-      body.style.setProperty("--lt-freeze", `${Math.round(width)}px`);
-      body.style.setProperty("--lt-body", `${body.clientHeight}px`);
+      // The rows' height, not the box's: the shade stops where the rows do.
+      const rows = table ? table.getBoundingClientRect().height : 0;
+      const height = Math.min(body.clientHeight, rows);
+      edge?.style.setProperty("--lt-freeze", `${Math.round(width)}px`);
+      edge?.style.setProperty("--lt-body", `${height}px`);
     };
     measure();
     // Without an observer the numbers stay right for this render and stop
@@ -419,12 +454,15 @@ export function useFrozenEdge(
     }
     const observer = new ResizeObserver(measure);
     observer.observe(body);
+    if (table) {
+      observer.observe(table);
+    }
     const frozen = body.querySelector("thead .lt-identity");
     if (frozen) {
       observer.observe(frozen);
     }
     return () => observer.disconnect();
-  }, [shownCount, dense]);
+  }, [body, shownCount, dense]);
   return {
     shifted,
     onScroll: (event: UIEvent<HTMLDivElement>) => {
@@ -433,33 +471,5 @@ export function useFrozenEdge(
         setShifted(next);
       }
     },
-  };
-}
-
-/**
- * The presentation dials of the Display menu: which optional columns stand,
- * and how tight the rows are. Local state, unlike the query dials.
- */
-export function useColumnDisplay(
-  columns: readonly Readonly<{ key: string; initiallyHidden?: boolean }>[],
-) {
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(
-    () => new Set(columns.flatMap((c) => (c.initiallyHidden ? [c.key] : []))),
-  );
-  const [dense, setDense] = useState(false);
-  return {
-    hidden,
-    onToggleColumn: (key: string) =>
-      setHidden((prev) => {
-        const next = new Set(prev);
-        if (next.has(key)) {
-          next.delete(key);
-        } else {
-          next.add(key);
-        }
-        return next;
-      }),
-    dense,
-    onDense: () => setDense(!dense),
   };
 }

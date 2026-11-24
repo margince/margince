@@ -3,6 +3,7 @@ import {
   formatAnalyticsHours,
   formatAnalyticsMoney,
   formatAnalyticsNumber,
+  formatAnalyticsPercentPoints,
   formatDateAbbrev,
   formatDateAbbrevRange,
   formatDateTime,
@@ -68,7 +69,8 @@ export function reportingAmount(
     return currency ? formatAnalyticsMoney(value, currency, locale) : "—";
   if (unit === "hours") return formatAnalyticsHours(value, locale);
   if (unit === "ratio") return formatNumber(value, locale);
-  return `${formatAnalyticsNumber(value, locale)}${unit === "percent" ? "%" : ""}`;
+  if (unit === "percent") return formatAnalyticsPercentPoints(value, locale);
+  return formatAnalyticsNumber(value, locale);
 }
 
 // Names a metric as the catalog does, in the reader's language.

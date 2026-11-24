@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // overdueTask is one open task past its due date, on whichever record it was
@@ -227,9 +228,9 @@ func overdueTasksBy(
 	// The scope is computed once, in the inner select, and OFFSET 0 keeps the
 	// planner from pulling it up into a copy per reference of t.visible.
 	query := fmt.Sprintf(`
-		SELECT DISTINCT ON (t.key) t.key, t.subject, t.assignee, t.due, t.visible,
+		SELECT DISTINCT ON (t.key) t.key, t.subject, t.system_text, t.assignee, t.due, t.visible,
 		       bool_or(NOT t.visible) OVER (PARTITION BY t.key) AS dropped
-		  FROM (SELECT l.%[1]s AS key, coalesce(a.subject, '') AS subject,
+		  FROM (SELECT l.%[1]s AS key, coalesce(a.subject, '') AS subject, a.system_text,
 		               coalesce(u.display_name, '') AS assignee, `+storekit.TaskDueSQL("a")+` AS due,
 		               a.id, coalesce((%[5]s), false) AS visible
 		          FROM activity a
@@ -237,7 +238,7 @@ func overdueTasksBy(
 		          LEFT JOIN app_user u ON u.id = a.assignee_id
 		                 AND `+identity.LiveMemberSQL("u")+`
 		         WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
-		           AND `+storekit.TaskDueSQL("a")+` IS NOT NULL AND `+storekit.TaskDueSQL("a")+` < $%[4]d
+		           AND `+storekit.TaskDueBeforeSQL("a", "$%[4]d")+`
 		           AND %[6]s AND %[7]s OFFSET 0) t
 		 ORDER BY t.key, t.visible DESC, t.due, t.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,
@@ -253,9 +254,11 @@ func overdueTasksBy(
 		var key ids.UUID
 		var task overdueTask
 		var visible, dropped bool
-		if err := rows.Scan(&key, &task.Subject, &task.Who, &task.DueAt, &visible, &dropped); err != nil {
+		var written *systemtext.Message
+		if err := rows.Scan(&key, &task.Subject, &written, &task.Who, &task.DueAt, &visible, &dropped); err != nil {
 			return nil, false, fmt.Errorf("scan an overdue task: %w", err)
 		}
+		task.Subject = written.SubjectIn(task.Subject, systemtext.Locale(ctx))
 		if dropped {
 			complete = false
 		}

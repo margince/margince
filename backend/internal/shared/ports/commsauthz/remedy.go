@@ -24,37 +24,35 @@ const (
 // means nothing can. Every Reason constant has an entry, written out even when
 // empty. A reason added without one fails TestEveryReasonDeclaresItsRemedy
 // instead of becoming a silent dead end.
+//
+// Policy findings remain on record after a human directs one message.
+// Transport failures and an unknown recipient still need a real repair.
 var remedies = map[string][]Remedy{
+	ReasonFooterIncomplete:               {RemedyException},
 	ReasonNoEvidence:                     {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonDealNotRequested:               {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonLegacyTransactionalUnevidenced: {RemedyAnswer, RemedyFact, RemedyException},
-	// Absolute for rollout modes (absoluteDenials), yet a sender's answer can
-	// correct the request that caused it. The two are different axes.
-	ReasonUnknownPurpose:             {RemedyAnswer},
-	ReasonClaimContradictsResolution: {RemedyAnswer},
-	// No answer or fact supplies marketing consent.
-	ReasonNoMarketingConsent: {RemedyException},
+	ReasonUnknownPurpose:                 {RemedyAnswer, RemedyException},
+	ReasonClaimContradictsResolution:     {RemedyAnswer, RemedyException},
+	ReasonNoMarketingConsent:             {RemedyException},
+	ReasonLawfulBasisUnconfirmed:         {RemedyException},
 
-	// The subject's own stop: nobody sends past it, an admin included. A stop
-	// recorded by mistake is corrected on the record, which lifts the refusal.
-	ReasonObjection:        {},
-	ReasonRestricted:       {},
-	ReasonSubjectRequest:   {},
-	ReasonConsentWithdrawn: {},
-	// A request recorded after the objection lifts it, which is the rep
-	// confirming with the contact, not anybody sending past it.
-	ReasonOptedOutAfterRequest: {},
-	// Prior consent is the only route where the recipient's country says so
-	// (messaging.Rules.ConsentOnly), and the advertising ceiling of such a
-	// country clears with time. Nobody sends past either.
-	ReasonMarketingConsentRequired:    {},
-	ReasonMarketingPermissionRequired: {},
-	ReasonFrequencyCapReached:         {},
+	ReasonMarketingConsentRequired:    {RemedyException},
+	ReasonMarketingPermissionRequired: {RemedyException},
+	ReasonFrequencyCapReached:         {RemedyException},
+	ReasonUnconfirmedDOI:              {RemedyException},
 
-	// Correct the address, confirmation or subject before checking a new send.
-	ReasonHardBounce:     {},
-	ReasonUnconfirmedDOI: {},
-	ReasonNoSubject:      {},
+	ReasonObjection:            {RemedyException},
+	ReasonRestricted:           {RemedyException},
+	ReasonSubjectRequest:       {RemedyException},
+	ReasonConsentWithdrawn:     {RemedyException},
+	ReasonOptedOutAfterRequest: {RemedyException},
+
+	ReasonHardBounce: {},
+	ReasonNoSubject:  {},
+	// The subject is edited or the recipients split; nothing overrules a label.
+	ReasonSubjectLabelMissing:   {},
+	ReasonSubjectLabelsConflict: {},
 
 	// Allows, not refusals.
 	ReasonAllowed:           {},
@@ -72,11 +70,8 @@ func HasRemedy(reason string, remedy Remedy) bool {
 	return slices.Contains(remedies[reason], remedy)
 }
 
-// ExceptionMayAnswer reports whether a recorded one-message exception may stand
-// over every refusal in this set. Staging and dispatch both ask it, so a stop
-// or an admin-only refusal recorded after the exception was given still stops
-// the message. givenByAdmin is the exception's own record of who gave it, never
-// the authority of whoever is sending now.
+// ExceptionMayAnswer checks whether a recorded one-message decision may answer every finding.
+// Current facts and message scope are rechecked by consent before the decision is spent.
 func (s DecisionSet) ExceptionMayAnswer(givenByAdmin bool) bool {
 	if len(s.Decisions) == 0 {
 		return false

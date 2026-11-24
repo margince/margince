@@ -7,15 +7,22 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
 import { companyReferenceQuery } from "../components/entityref.queries";
+import { NO_SUCH_RUN } from "../features/import/importrun";
 import {
   ConnectivityError,
   reportReached,
   reportUnreached,
   watchConnectivity,
 } from "../lib/connectivity";
-import { EmptySuccessError, ProblemError, throwProblem } from "../lib/problem";
+import {
+  EmptySuccessError,
+  ProblemError,
+  SHOWN_REFUSALS,
+  throwProblem,
+} from "../lib/problem";
 import {
   createQueryClient,
+  LIVE_ANSWER_CURRENT_MS,
   liveInterval,
   liveOnMount,
   liveOnReturn,
@@ -156,7 +163,7 @@ describe("the query client defaults", () => {
   // asked, because a change can get one wrong and the other right.
   //
   // The predicates, not the defaults they are installed as. What they are
-  // wired to is proved end to end in features/records/liverecord.test.tsx,
+  // wired to is proved end to end in testing/liverecord.test.tsx,
   // which drives each record page's own read through this client.
   it("repeats a record read, and nothing else", () => {
     expect(liveInterval({ queryKey: ["contact360", "p-1"] })).toBe(60_000);
@@ -194,7 +201,7 @@ describe("the query client defaults", () => {
     );
   });
 
-  it("re-reads a live work read on mount unless it is the prefetched answer, under a second old", () => {
+  it("re-reads a live work read on mount unless it is the prefetched answer of this load", () => {
     const day = { queryKey: ["worklist", "handled"], queryHash: "day" };
     const at = (dataUpdatedAt: number) => ({
       ...day,
@@ -202,8 +209,12 @@ describe("the query client defaults", () => {
     });
     expect(liveOnMount(at(10_000), 10_100)).toBe("always");
     notePrefetched("day", 10_000);
-    expect(liveOnMount(at(10_000), 10_999)).toBe(true);
-    expect(liveOnMount(at(10_000), 11_000)).toBe("always");
+    expect(liveOnMount(at(10_000), 10_000 + LIVE_ANSWER_CURRENT_MS - 1)).toBe(
+      true,
+    );
+    expect(liveOnMount(at(10_000), 10_000 + LIVE_ANSWER_CURRENT_MS)).toBe(
+      "always",
+    );
     expect(liveOnMount(at(10_500), 10_600)).toBe("always");
     expect(
       liveOnMount(
@@ -276,6 +287,24 @@ describe("the query client defaults", () => {
 
     expect(reported).toHaveBeenCalledTimes(1);
     expect(reported.mock.calls[0]?.[1]).toBeInstanceOf(Error);
+  });
+
+  // The run page's not found state is the case in the product.
+  it("leaves out a refusal the read's surface shows as its own state", async () => {
+    const reported = vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = createQueryClient();
+    const refuse = (status: number) =>
+      client.fetchQuery({
+        queryKey: ["shown-refusal", status],
+        queryFn: () => throwProblem({ status, detail: "not found" }),
+        meta: { [SHOWN_REFUSALS]: NO_SUCH_RUN },
+      });
+
+    await expect(refuse(404)).rejects.toThrow(ProblemError);
+    await expect(refuse(422)).rejects.toThrow(ProblemError);
+    expect(reported).not.toHaveBeenCalled();
+    await expect(refuse(403)).rejects.toThrow(ProblemError);
+    expect(reported).toHaveBeenCalledTimes(1);
   });
 });
 

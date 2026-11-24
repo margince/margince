@@ -50,6 +50,7 @@ type RouteVerb struct {
 	AnswerSchema json.RawMessage
 	// AskUserFirst is true when the app confirms the act before it runs.
 	AskUserFirst bool
+	Egress       bool
 }
 
 // RouteCall is one route-backed call as its route takes it.
@@ -168,7 +169,6 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	for _, name := range slices.Sorted(maps.Keys(properties)) {
 		members = append(members, strconv.Quote(name)+":"+properties[name])
 	}
-	egress := v.Scope.Egresses()
 	answer := v.AnswerSchema
 	if v.Method != http.MethodGet {
 		answer = writeAnswerSchema(answer)
@@ -176,11 +176,14 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: v.Verb, Title: v.Summary, Version: toolVersionV1,
 		Description:   v.Summary + " (" + v.Method + " " + v.Pattern + ", as the app does it.)",
-		RequiredScope: v.Scope, Tier: mcp.TierAutoExecute, Egress: egress, AskUserFirst: v.AskUserFirst,
-		Unlisted:         true,
-		OpenAPIOp:        v.Op,
-		UnkeyedArguments: unkeyed,
-		MaxArgsBytes:     maxArgs,
+		RequiredScope: v.Scope, Tier: mcp.TierAutoExecute, Egress: v.Egress, AskUserFirst: v.AskUserFirst,
+		Unlisted: true,
+		// The route's own answer schema decides: one that names only ids, numbers,
+		// dates and closed sets of words holds nothing someone wrote.
+		ProductMadeAnswer: !CarriesFreeText(v.AnswerSchema),
+		OpenAPIOp:         v.Op,
+		UnkeyedArguments:  unkeyed,
+		MaxArgsBytes:      maxArgs,
 		InputSchema: schema(`{"type":"object","required":` + mustJSON(required) + `,"properties":{` +
 			strings.Join(members, ",") + `},"additionalProperties":false}`),
 		OutputSchema: answer,
@@ -417,13 +420,14 @@ func (d describeRouterActions) routers() []string {
 func (d describeRouterActions) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: describeRouterActionsName, Title: "Describe a router's actions", Version: toolVersionV1,
+		ProductMadeAnswer: true,
 		Description: "Lists what each action of one router takes: its path ids, if_version, and the " +
 			"JSON schema of its body, as the app's own route defines them. Name action to read one; a large " +
 			"router's whole list is long.",
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "describeRouterActions",
 		OutputSchema: schema(`{"type":"object","required":["router","actions"],"properties":{` +
-			`"router":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
+			`"router":{"type":"string"},"ask_user_first_means":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
 			`"required":["action","does","route"],"properties":{"action":{"type":"string"},` +
 			`"does":{"type":"string"},"route":{"type":"string"},"ids":{"type":"array","items":{"type":"string"}},` +
 			`"query":{"type":"array","items":{"type":"string"}},"if_version":{"type":"boolean"},` +
@@ -456,41 +460,8 @@ func (d describeRouterActions) Handle(_ context.Context, in json.RawMessage) (js
 		Router string `json:"router"`
 		Action string `json:"action"`
 	}
-	if err := json.Unmarshal(in, &args); err != nil || !slices.Contains(d.routers(), args.Router) {
-		return nil, &BadArgsError{Field: "router", Cause: fmt.Errorf("router must be one of %s", strings.Join(d.routers(), ", "))}
+	if err := json.Unmarshal(in, &args); err != nil {
+		return nil, &BadArgsError{Field: catalogRouterArg, Cause: err}
 	}
-	actions := []routeActionShape{}
-	for _, v := range d.verbs {
-		if v.Router != args.Router || (args.Action != "" && v.Action != args.Action) {
-			continue
-		}
-		shape := routeActionShape{
-			Action: v.Action, Does: v.Summary, Route: v.Method + " " + v.Pattern, IDs: v.PathParams,
-			IfVersion: v.IfMatch, AskUserFirst: v.AskUserFirst,
-		}
-		for _, q := range v.Query {
-			shape.Query = append(shape.Query, q.Name)
-		}
-		if v.Body && len(v.BodySchema) > 0 {
-			shape.Body = v.BodySchema
-		}
-		shape.UploadsAFile = v.UploadField != ""
-		actions = append(actions, shape)
-	}
-	if args.Action != "" && len(actions) == 0 {
-		// A client that reads tool schemas from a file has no inputSchema at hand.
-		// An action the router runs itself is described from its own spec.
-		spec, runs := d.runs(args.Router, args.Action)
-		if !runs {
-			return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
-				"router %s has no action %s; read_workspace with topic=actions and this router lists the ones it has",
-				args.Router, args.Action)}
-		}
-		actions = append(actions, routeActionShape{
-			Action: args.Action, Does: spec.Description, Route: routerRunRoute,
-			AskUserFirst: spec.AskUserFirst, Body: spec.InputSchema,
-		})
-	}
-	slices.SortFunc(actions, func(a, b routeActionShape) int { return strings.Compare(a.Action, b.Action) })
-	return json.Marshal(map[string]any{"router": args.Router, "actions": actions})
+	return d.catalog(args.Router, args.Action)
 }

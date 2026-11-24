@@ -26,6 +26,7 @@ package meetingbrief
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"slices"
 	"time"
@@ -37,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -89,7 +91,7 @@ type FiledDeal struct {
 // historyColumns reads one conversation of historyCandidates, through the
 // mailbox-copy grouping: a mail several colleagues captured is one conversation.
 var historyColumns = `
-	SELECT a.id, a.kind, COALESCE(a.subject, ''), COALESCE(a.direction, ''),
+	SELECT a.id, a.kind, COALESCE(a.subject, ''), COALESCE(` + activities.WriterSideSQL("a", "copies.copy_readable") + `, ''),
 	       a.occurred_at, a.occurred_precision = 'day', COALESCE(a.thread_key, ''),
 	       -- Filing is read over every copy the row stands for, each one the
 	       -- reader may open: each colleague files their own copy.
@@ -105,7 +107,8 @@ var historyColumns = `
 	         FROM deal fd
 	         WHERE fd.archived_at IS NULL AND %[2]s AND EXISTS (
 	           SELECT 1 FROM activity_link ol WHERE ol.deal_id = fd.id AND ol.activity_id = ANY(copies.copy_ids))
-	       ), '[]'::json) AS filed
+	       ), '[]'::json) AS filed,
+	       copies.` + connector.CopyFoldFullColumn + `
 	FROM %[3]s
 	-- The id breaks a tie on the timestamp. Two conversations captured in the
 	-- same second are common (one sync writes a thread), and without this the
@@ -116,7 +119,7 @@ var historyColumns = `
 	LIMIT %[4]d`
 
 var historyCandidates = `a.archived_at IS NULL
-	  AND a.kind <> 'task'
+	  AND %[7]s
 	  AND a.id <> $%[1]d
 	  AND %[2]s
 	  AND %[3]s
@@ -142,22 +145,47 @@ var historyCandidates = `a.archived_at IS NULL
 func (s *Service) readHistory(
 	ctx context.Context, tx pgx.Tx, room meeting, project *ids.ProjectID, now time.Time,
 ) ([]HistoryIn, error) {
-	if len(room.Room) == 0 {
+	return s.readHistoryOf(ctx, tx, room, project, now, room.Room, historyCap)
+}
+
+// readHistoryOf is readHistory for any set of contacts: the room's own, or the
+// colleagues at its company. One reader keeps the row scope, the audience arm,
+// the mailbox-copy grouping and the exchange predicate in one place.
+func (s *Service) readHistoryOf(
+	ctx context.Context, tx pgx.Tx, room meeting, project *ids.ProjectID, now time.Time,
+	contactIDs []ids.UUID, limit int,
+) ([]HistoryIn, error) {
+	if len(contactIDs) == 0 {
 		return nil, nil
 	}
+	for _, foldRows := range connector.FoldBounds(limit) {
+		history, full, err := s.readHistoryAt(ctx, tx, room, project, now, contactIDs, limit, foldRows)
+		if err != nil || foldRows == 0 || !connector.FoldIncomplete(len(history), limit, full) {
+			return history, err
+		}
+	}
+	return nil, errors.New("the account history read never ran unbounded")
+}
+
+// readHistoryAt is readHistoryOf with the fold bounded to foldRows candidates,
+// or unbounded at zero. Its second result says the fold saw every candidate.
+func (s *Service) readHistoryAt(
+	ctx context.Context, tx pgx.Tx, room meeting, project *ids.ProjectID, now time.Time,
+	contactIDs []ids.UUID, limit, foldRows int,
+) ([]HistoryIn, bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 
 	scope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if scope == "" {
 		scope = scopeAll
 	}
 	readable, err := auth.ActivityAudienceArm(ctx, "a", arg)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if readable == "" {
 		readable = scopeAll
@@ -171,47 +199,50 @@ func (s *Service) readHistory(
 	// Before the room, and happened by now: a brief read weeks early must not fold
 	// in what comes before the room. A meeting counts once it took place, as in priormeetings.go.
 	opens := fmt.Sprintf("$%d", arg(room.Opens))
-	happened := occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
+	nowAt := fmt.Sprintf("$%d", arg(now))
+	happened := occurredday.HappenedSQL("a", nowAt)
 	reach := now
 	if room.Opens.Before(reach) {
 		reach = room.Opens
 	}
 	floor := fmt.Sprintf("$%d", arg(reach.AddDate(0, -historyMonths, 0)))
-	attendeePos := arg(room.Room)
+	attendeePos := arg(contactIDs)
 	within := projectWithinPredicate("a", "hw", project, arg)
 	otherDeal, err := scopeFor(ctx, "deal", "fd", arg)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	candidates := fmt.Sprintf(historyCandidates,
-		roomPos, occurredday.WithinSQL("a", floor, opens), happened, attendeePos, scope, within)
+		roomPos, occurredday.WithinSQL("a", floor, opens), happened, attendeePos, scope, within,
+		relstrength.InteractionCountsAtSQL("a", nowAt))
 	// A held meeting's invitation mail is the meeting, as History reads it. Only
 	// behind a meeting every reader may open, so no readable mail hides behind one.
 	candidates += " AND " + activities.InvitationFoldSQL(candidates, auth.WorkspaceAudienceSQL("a")+" AND a.restricted_at IS NULL")
-	from := connector.MailCopyGroupFrom(ctx, "activity", "a", candidates, readable, arg)
-	rows, err := tx.Query(ctx, fmt.Sprintf(historyColumns, dealPos, otherDeal, from, historyCap), args...)
+	from := connector.MailCopyGroupBoundedFrom(ctx, "activity", "a", candidates, readable, connector.FoldBound{Rows: foldRows}, arg)
+	rows, err := tx.Query(ctx, fmt.Sprintf(historyColumns, dealPos, otherDeal, from, limit), args...)
 	if err != nil {
-		return nil, fmt.Errorf("read the account history: %w", err)
+		return nil, false, fmt.Errorf("read the account history: %w", err)
 	}
 	defer rows.Close()
 
 	return scanHistory(rows)
 }
 
-func scanHistory(rows pgx.Rows) ([]HistoryIn, error) {
+func scanHistory(rows pgx.Rows) ([]HistoryIn, bool, error) {
 	var history []HistoryIn
+	full := true
 	for rows.Next() {
 		var row HistoryIn
 		var id ids.UUID
 		var readableRow bool
 		var filed []byte
 		if err := rows.Scan(&id, &row.Kind, &row.Subject, &row.Direction,
-			&row.At, &row.DateOnly, &row.ThreadKey, &row.OnDeal, &readableRow, &filed); err != nil {
-			return nil, fmt.Errorf("read the account history: %w", err)
+			&row.At, &row.DateOnly, &row.ThreadKey, &row.OnDeal, &readableRow, &filed, &full); err != nil {
+			return nil, false, fmt.Errorf("read the account history: %w", err)
 		}
 		if err := json.Unmarshal(filed, &row.Filed); err != nil {
-			return nil, fmt.Errorf("read the deals a conversation is filed under: %w", err)
+			return nil, false, fmt.Errorf("read the deals a conversation is filed under: %w", err)
 		}
 		row.ID = id.String()
 		row.Withheld = !readableRow
@@ -224,9 +255,9 @@ func scanHistory(rows pgx.Rows) ([]HistoryIn, error) {
 		history = append(history, row)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("read the account history: %w", err)
+		return nil, false, fmt.Errorf("read the account history: %w", err)
 	}
-	return history, nil
+	return history, full, nil
 }
 
 // fileUnderDeal settles which history rows are on the brief's deal and which

@@ -3,16 +3,15 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { type ReactNode, useCallback, useState } from "react";
+import { useState } from "react";
 import { api } from "../../api/client";
+import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
 import { SendPermission } from "../../components/sendpermission";
-import { Button, Card } from "../../design-system/atoms";
 import {
   DecisionCard,
   DecisionStatusChip,
   type DecisionStatusLabels,
 } from "../../design-system/decisioncard";
-import { ErrorLine } from "../../design-system/errorline";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { useToast } from "../../design-system/toast";
 import { AutonomyDot } from "../../design-system/trust";
@@ -24,24 +23,25 @@ import {
   type Approval,
   invalidateApprovalViews,
 } from "../../lib/approvals.queries";
+import { useReaderApproval } from "../../lib/approvalstagenames";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { recordRoute } from "../../lib/entity";
+import { hideHomeRows } from "../../lib/homerows";
 import {
   isAlreadyDecided,
   isVersionSkew,
   ProblemError,
   unwrap,
 } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
+import { useUnsavedGuard } from "../../lib/unsavedclaims";
 import { useSendPermission } from "../../lib/usesendpermission";
 import { ApprovalDetailModal } from "./approvaldetail";
 import {
   cardRecords,
   DecideOutcome,
   editableSeed,
-  editableStrings,
-  StagedEditor,
+  StagedEditDialog,
 } from "./approvaleditor";
 import { ApprovalEvidence } from "./approvalevidence";
 import {
@@ -49,9 +49,16 @@ import {
   approvalExpiryLabel,
   approvalLabel,
   decisionSkewKey,
+  editableStrings,
+  requiredMailFields,
 } from "./approvalkind";
+import {
+  announceApproval,
+  editedAwayFromProposal,
+  MailboxBlocked,
+} from "./approvalmail";
 import { rowLabels, useApprovalDisplay } from "./approvalproposal";
-import { approvalAcceptable } from "./approvalresponsibility";
+import { approvalAcceptable, mailCannotBeSent } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import {
@@ -59,6 +66,7 @@ import {
   refusalToast,
   useHeldRejection,
 } from "./heldrejection";
+import { LegalReviewRequestRow } from "./legalreviewrequestrow";
 import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
@@ -66,50 +74,16 @@ import "./approvalrow.css";
 // carries the one outcome the row cannot show itself.
 //
 // The row is the CANONICAL 🟡 affordance: per-row approve/reject plus the
-// inline staged-draft editor. String fields of the proposed_change are editable
-// and go up as edited_payload, which the server RE-ADMITS from scratch
-// (re-tiered, re-RBAC'd, new diff_hash — ADR-0036); an edit can never silently
-// escalate the effect. A 409 version-skew comes back as an honest "the world
-// changed, re-stage" row error; a 409 already-decided drops the stale row
+// staged-draft editor, in a dialog. String fields of the proposed_change are
+// editable and go up as edited_payload. The server admits that payload again
+// from scratch (new tier, RBAC and diff_hash, ADR-0036), so an edit can never
+// silently escalate the effect. A 409 version-skew comes back as a "the world
+// changed, re-stage" row error. A 409 already-decided drops the stale row
 // instead of offering a re-stage retry.
 //
 // It lives beside the approvals queries rather than inside any one screen
 // because several surfaces draw it: the workspace-wide decisions queue, Brief,
 // and the company record's decisions panel.
-
-// Shared decision sink (AC-6, cross-surface): owns the screen-level state that
-// must OUTLIVE the row that triggered it — a decide invalidates the pending
-// list, which unmounts the row before it could render its own note. Every
-// surface drawing an ApprovalRow consumes it so it shows the honest
-// already-decided note; it may not live in ApprovalRow (it unmounts).
-//
-// The approve response still carries an approval token. It is not shown to
-// anybody: an agent redeems its own staging by re-issuing the call under
-// `X-Approval-Token`, and the runner's resume path loads the staged proposal
-// server-side — so no human has ever needed to carry the string, while being
-// handed an irrecoverable secret made every approval look like a key ceremony.
-export function useDecisionSink(): {
-  onAlreadyDecided: () => void;
-  decidedNote: ReactNode;
-} {
-  const t = useT();
-  const [alreadyDecided, setAlreadyDecided] = useState(false);
-  const onAlreadyDecided = useCallback(() => setAlreadyDecided(true), []);
-  const decidedNote = alreadyDecided ? (
-    <Card as="div" inset className="approval-decided">
-      <ErrorLine
-        actions={
-          <Button onClick={() => setAlreadyDecided(false)}>
-            {t("decision.dismiss")}
-          </Button>
-        }
-      >
-        {t("decision.alreadyDecided")}
-      </ErrorLine>
-    </Card>
-  ) : null;
-  return { onAlreadyDecided, decidedNote };
-}
 
 // The status chip's words. Spelled per surface like every other label bag here:
 // what a countdown or a verdict is CALLED belongs to the screen showing it.
@@ -127,7 +101,16 @@ function statusLabels(
   };
 }
 
-export function ApprovalRow({
+function findEditOpener(cardTestId: string, editLabel: string) {
+  const card = `[data-testid="${cardTestId}"]`;
+  return (
+    document.querySelector<HTMLElement>(
+      `${card} [aria-label="${editLabel}"]`,
+    ) ?? document.querySelector<HTMLElement>(`${card} button`)
+  );
+}
+
+function DecidableApprovalRow({
   approval,
   decided,
   onAlreadyDecided,
@@ -180,8 +163,17 @@ export function ApprovalRow({
     marketingPurpose: staged?.marketingPurpose,
     consentPurpose: staged?.consentPurpose,
     evidence: staged?.evidence,
+    draft: staged?.draft,
     enabled: !decided && staged !== undefined,
   });
+
+  // The server marks a mail its sender cannot send. approvalAcceptable then
+  // withholds the verbs here and on every other surface that decides it.
+  const mailboxBlocked = mailCannotBeSent(approval, decided);
+
+  // An agent-drafted mail to a recipient with no lawful basis on record waits
+  // for the approver to confirm the warning, as the composer does.
+  const lawfulBasis = useLawfulBasisGate(permission.preview);
 
   // Where an approved change can be put back, and where it cannot.
   //
@@ -199,23 +191,6 @@ export function ApprovalRow({
     approval.target_entity_type,
     approval.target_entity_id,
   );
-
-  // An undo like any other: it lives ACTION_TOAST_MS, held while hovered or
-  // focused. Only on approve: a rejection changed nothing to put back.
-  const showUndoOffer = (verdict: "approve" | "reject") => {
-    if (verdict !== "approve" || !undoTarget) {
-      return;
-    }
-    // The verb goes through `action`: the region draws it on its own ground,
-    // and withdraws the message once it has been pressed.
-    toast.show(t("decision.applied"), {
-      action: {
-        kind: "undo",
-        label: t("decision.undoOnRecord"),
-        onAct: () => navigate(undoTarget),
-      },
-    });
-  };
 
   const decide = useMutation({
     mutationFn: async (input: {
@@ -237,12 +212,16 @@ export function ApprovalRow({
         }),
       );
     },
-    onSuccess: (_data, input) => {
+    onMutate: () =>
+      hideHomeRows(queryClient, [{ source: "approval", id: approval.id }]),
+    onSettled: (_data, _error, _input, settle) => settle?.(),
+    onSuccess: (data, input) => {
       void invalidateApprovalViews(queryClient);
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
       }
-      showUndoOffer(input.verdict);
+      if (input.verdict === "approve")
+        announceApproval(toast, t, data, undoTarget);
     },
     onError: (error) => {
       const problem = error instanceof ProblemError ? error.problem : null;
@@ -293,14 +272,30 @@ export function ApprovalRow({
     setEditing(true);
   };
 
+  const acceptable = approvalAcceptable(approval);
+  // A mail must say something: the fields it cannot send without.
+  const required = requiredMailFields(staged !== undefined, strings);
+
+  // The editor closes only once the server took the decision, so a refusal
+  // leaves the typed text where it was.
+  // Typed text the decision panel's Escape, X and backdrop must ask about.
+  useUnsavedGuard(
+    editedAwayFromProposal(editing, strings, change, draft),
+    `approval-edit:${approval.id}`,
+  );
+
   const approveEdited = () => {
-    if (!approvalAcceptable(approval)) return;
-    held.announce();
-    decide.mutate({
-      verdict: "approve",
-      editedPayload: { ...change, ...draft },
+    if (!acceptable) return;
+    lawfulBasis.gate(() => {
+      held.announce();
+      decide.mutate(
+        {
+          verdict: "approve",
+          editedPayload: { ...change, ...draft },
+        },
+        { onSuccess: () => setEditing(false) },
+      );
     });
-    setEditing(false);
   };
 
   const reRead = () => {
@@ -308,10 +303,25 @@ export function ApprovalRow({
     decide.reset();
   };
 
+  const outcomeShown = (shown: boolean) => (
+    <DecideOutcome
+      shown={shown}
+      decide={decide}
+      skewKey={skewKey}
+      alreadyDecided={alreadyDecided}
+      onReRead={reRead}
+    />
+  );
+  const cardTestId = `approval-card-${approval.id}`;
+  // The card's verbs are not mounted while the editor is open, so the dialog
+  // names the Edit control it will find once they are back.
+  const editOpener = () => findEditOpener(cardTestId, t("trust.edit"));
+
   return (
     <DecisionCard
       approval={approval}
       layout="row"
+      testId={cardTestId}
       className="approval-row"
       display={display}
       detail={
@@ -369,8 +379,12 @@ export function ApprovalRow({
       }
       editor={
         editing ? (
-          <StagedEditor
-            disabled={!approvalAcceptable(approval)}
+          <StagedEditDialog
+            outcome={outcomeShown(true)}
+            returnFocusTo={editOpener}
+            unsaved={editedAwayFromProposal(editing, strings, change, draft)}
+            disabled={!acceptable}
+            required={required}
             acceptLabel={approvalAcceptLabel(
               approval.kind,
               plural,
@@ -392,14 +406,15 @@ export function ApprovalRow({
         ) : undefined
       }
       onAccept={
-        approvalAcceptable(approval)
-          ? () => {
-              held.announce();
-              decide.mutate({
-                verdict: "approve",
-                editedPayload: linkedIn?.edited,
-              });
-            }
+        acceptable
+          ? () =>
+              lawfulBasis.gate(() => {
+                held.announce();
+                decide.mutate({
+                  verdict: "approve",
+                  editedPayload: linkedIn?.edited,
+                });
+              })
           : undefined
       }
       // Offered only where the kind has something a reader may change. Disabled
@@ -422,6 +437,7 @@ export function ApprovalRow({
             decided={decided}
             disabled={decide.isPending}
           />
+          <MailboxBlocked blocked={mailboxBlocked} />
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}
@@ -429,12 +445,7 @@ export function ApprovalRow({
               unanswered={permission.unanswered}
             />
           )}
-          <DecideOutcome
-            decide={decide}
-            skewKey={skewKey}
-            alreadyDecided={alreadyDecided}
-            onReRead={reRead}
-          />
+          {outcomeShown(!editing)}
         </>
       }
     >
@@ -443,6 +454,25 @@ export function ApprovalRow({
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
       />
+      {lawfulBasis.dialog}
     </DecisionCard>
   );
+}
+
+/** One staged proposal as a row. A legal review request has its own presentation. */
+export function ApprovalRow(
+  rowProps: Parameters<typeof DecidableApprovalRow>[0],
+) {
+  const readerApproval = useReaderApproval();
+  const props = { ...rowProps, approval: readerApproval(rowProps.approval) };
+  if (props.approval.kind === "legal_review_request") {
+    return (
+      <LegalReviewRequestRow
+        approval={props.approval}
+        decided={props.decided}
+        extraInvalidateKeys={props.extraInvalidateKeys}
+      />
+    );
+  }
+  return <DecidableApprovalRow {...props} />;
 }

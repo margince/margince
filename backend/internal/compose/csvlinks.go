@@ -20,25 +20,27 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importkeys"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // linkKey is one ref of one record type.
 type linkKey struct{ Object, Key string }
 
 // linkAnswer is what a ref resolved to. Pending is a row of this upload that
-// will land but has not yet, which only the dry run sees.
+// will land but has not yet, which only the dry run sees. PendingRef names that
+// row alone, however the link spelled it, so two spellings of one row agree.
 type linkAnswer struct {
-	ID      ids.UUID
-	Pending bool
-	Found   bool
-	Why     migration.Reason
+	ID         ids.UUID
+	Pending    bool
+	PendingRef string
+	Found      bool
+	Why        migration.Reason
 }
 
 // resolves reports whether the link can be written when the run lands.
@@ -57,9 +59,14 @@ type linkResolver struct {
 	// refused holds the rows of this run that were skipped, so a link to one
 	// says so instead of claiming the row never existed.
 	refused map[linkKey]bool
-	// pendingNatural holds the natural keys of those rows (a contact's email,
-	// a company's domain), so a link written with one resolves as the commit's does.
-	pendingNatural map[linkKey]bool
+	// pendingNatural maps the natural keys of those rows (a contact's email,
+	// a company's domain) to the ref naming the row. A link by natural key then
+	// resolves as the commit's does, and folds with a link by ref.
+	pendingNatural map[linkKey]string
+	// claims are the unique keys of the run's landing rows (newRecordRefusal).
+	claims importkeys.Ledger
+	// batch is what the test run's landing rows leave, for the duplicate check.
+	batch contacts.Batch
 	// landed holds the rows of this slice that named their record by id, so a
 	// link answers before the identity map is read.
 	landed map[linkKey]ids.UUID
@@ -77,19 +84,28 @@ type linkResolver struct {
 }
 
 func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
+	return resolverOn(migration.NewRunStore(db), db.Pool(), sourceSystem)
+}
+
+// fresh is a resolver over the same run with nothing pending, claimed or cached.
+func (r *linkResolver) fresh() *linkResolver { return resolverOn(r.identities, r.pool, r.sourceSystem) }
+
+func resolverOn(identities *migration.RunStore, pool *pgxpool.Pool, sourceSystem string) *linkResolver {
 	r := &linkResolver{
 		sourceSystem:   sourceSystem,
-		identities:     migration.NewRunStore(db),
-		pool:           db.Pool(),
+		identities:     identities,
+		pool:           pool,
 		pending:        map[linkKey]bool{},
 		refused:        map[linkKey]bool{},
-		pendingNatural: map[linkKey]bool{},
+		pendingNatural: map[linkKey]string{},
+		claims:         importkeys.Ledger{},
 		landed:         map[linkKey]ids.UUID{},
 		cache:          map[linkKey]linkAnswer{},
 		employers:      map[string]employerCandidate{},
 		names:          map[string]pendingName{},
 	}
 	r.byBinding, r.byNaturalKey, r.byID = r.bindingOf, r.naturalKeyOf, r.visibleByID
+	r.batch.NameKey = employerKey
 	return r
 }
 
@@ -142,10 +158,11 @@ func naturalKeyFor(object, raw string) (linkKey, bool) {
 }
 
 // markNaturalPending records the natural key of a row the dry run predicts will
-// land. A link naming it by email or domain then resolves before the row exists.
-func (r *linkResolver) markNaturalPending(object, raw string) {
+// land. A link naming it by email or domain then resolves before the row
+// exists, and answers with ref.
+func (r *linkResolver) markNaturalPending(object, raw, ref string) {
 	if key, ok := naturalKeyFor(object, raw); ok {
-		r.pendingNatural[key] = true
+		r.pendingNatural[key] = strings.TrimSpace(ref)
 		clear(r.cache)
 	}
 }
@@ -215,10 +232,12 @@ func (r *linkResolver) resolveLink(ctx context.Context, object, raw string) (lin
 
 func (r *linkResolver) lookup(ctx context.Context, key linkKey) (linkAnswer, error) {
 	if r.pending[key] {
-		return linkAnswer{Pending: true}, nil
+		return linkAnswer{Pending: true, PendingRef: rowRef(key.Key)}, nil
 	}
-	if natural, ok := naturalKeyFor(key.Object, key.Key); ok && r.pendingNatural[natural] {
-		return linkAnswer{Pending: true}, nil
+	if natural, ok := naturalKeyFor(key.Object, key.Key); ok {
+		if ref, pending := r.pendingNatural[natural]; pending {
+			return linkAnswer{Pending: true, PendingRef: ref}, nil
+		}
 	}
 	if id, ok := r.landed[key]; ok {
 		return linkAnswer{ID: id, Found: true}, nil
@@ -289,21 +308,28 @@ func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (li
 	}
 	// A domain holds no space, so a name such as "Acme Inc." skips the read.
 	if strings.Contains(key, ".") && !strings.ContainsRune(key, ' ') {
-		answer, err := r.visibleByDomain(ctx, canonicalFor(fieldDomain, key))
-		if err != nil || answer.Found {
-			return answer, err
+		id, found, err := importkeys.VisibleDomainHolder(ctx, r.pool, canonicalFor(fieldDomain, key))
+		if err != nil || found {
+			return linkAnswer{ID: id, Found: found}, err
 		}
 	}
 	hit, err := r.employerFor(ctx, employerKey(key))
 	return employerAnswer(hit, key), err
 }
 
+// rowRef and employerRef are the two kinds of pending identity. Each starts
+// with its own kind, so no row ref a file spells can equal an implied employer.
+// The name folds, so two spellings of an employer agree.
+func rowRef(ref string) string { return "row:" + strings.TrimSpace(ref) }
+
+func employerRef(name string) string { return "employer:" + employerKey(name) }
+
 // employerAnswer reads a name's candidates as a link. One links, and several is
 // a question for a human. None falls through to the next step.
 func employerAnswer(hit employerCandidate, name string) linkAnswer {
 	switch {
 	case hit.count == 1 && hit.pending:
-		return linkAnswer{Pending: true}
+		return linkAnswer{Pending: true, PendingRef: employerRef(name)}
 	case hit.count == 1:
 		return linkAnswer{ID: hit.id.UUID, Found: true}
 	case hit.count > 1:
@@ -311,41 +337,6 @@ func employerAnswer(hit employerCandidate, name string) linkAnswer {
 	default:
 		return linkAnswer{}
 	}
-}
-
-// visibleByDomain finds the live company holding a domain inside the caller's
-// row scope. A domain is unique among live rows, so one row is the whole answer.
-func (r *linkResolver) visibleByDomain(ctx context.Context, domain string) (linkAnswer, error) {
-	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
-		return linkAnswer{}, err
-	}
-	var answer linkAnswer
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		domainPos := arg(domain)
-		scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
-		if err != nil {
-			return err
-		}
-		if scope == "" {
-			scope = "TRUE"
-		}
-		err = tx.QueryRow(ctx, storekit.SQLf(`
-			SELECT o.id FROM company_domain d JOIN company o ON o.id = d.company_id
-			 WHERE d.domain = $%d AND d.archived_at IS NULL
-			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL AND %s
-			 LIMIT 1`, domainPos, scope), args...).Scan(&answer.ID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		answer.Found = err == nil
-		return err
-	})
-	if err != nil {
-		return linkAnswer{}, fmt.Errorf("import: finding the linked company: %w", err)
-	}
-	return answer, nil
 }
 
 // naturalKeyField is the column holding a row's natural key. It is empty when

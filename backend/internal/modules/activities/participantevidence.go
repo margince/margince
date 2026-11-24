@@ -43,6 +43,7 @@ func CountParticipantEvidence(ctx context.Context, q datatask.Querier, maximum i
 	return count, err
 }
 
+// A sweep by row id takes no meeting's attendee lock; the hourly evidence pass corrects it.
 func storeParticipantEvidenceRows(ctx context.Context, tx pgx.Tx, rows pgx.Rows) ([]ids.UUID, int, error) {
 	keys, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
@@ -54,7 +55,7 @@ func storeParticipantEvidenceRows(ctx context.Context, tx pgx.Tx, rows pgx.Rows)
 	if err := lockParticipantEvidenceParents(ctx, tx, keys); err != nil {
 		return nil, 0, err
 	}
-	// Match the parent cascade's lock order before the trigger takes its snapshot.
+	// Match the parent copy trigger's lock order before the stamp trigger takes its snapshot.
 	tag, err := tx.Exec(ctx, `UPDATE activity_participant ap SET domain_evidence_parent_version=NULL,
  domain_evidence_at=NULL,domain_evidence_precision=NULL,domain_evidence_visible=NULL
  WHERE id=ANY(@ids) AND `+storekit.ParticipantEvidenceMissingSQL("ap"), pgx.StrictNamedArgs{participantEvidenceIDsParam: keys})

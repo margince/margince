@@ -51,6 +51,9 @@ const amountField = "amount_minor"
 // stageIDColumn is the deal's stage, as a stage move writes and audits it.
 const stageIDColumn = "stage_id"
 
+// pipelineIDColumn is the deal's pipeline, which only a move between pipelines writes.
+const pipelineIDColumn = "pipeline_id"
+
 // lineItemsField is the field a refusal about a whole set of lines points at.
 const lineItemsField = "line_items"
 
@@ -87,6 +90,10 @@ const (
 // partnerAttributionField names the wire field both attribution refusals
 // point at.
 const partnerAttributionField = "partner_attribution"
+
+// wonWithoutContractReasonField is why a deal was won with no signed contract,
+// as the wire field and the deal column both name it.
+const wonWithoutContractReasonField = "won_without_contract_reason"
 
 // PartnerAttributionUnpairedError maps to 422: an attribution describes a
 // partner, so a deal that names none has nothing to attribute.

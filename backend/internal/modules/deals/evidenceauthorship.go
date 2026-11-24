@@ -77,17 +77,22 @@ func (s *Store) ReconcileEvidenceAuthorship(ctx context.Context, own OwnDomainRe
 // authorshipSweepPlace is where the last unscoped run stopped. A run cut short
 // by the job timeout resumes from there instead of reading its prefix again.
 func (s *Store) authorshipSweepPlace(ctx context.Context) (ids.UUID, error) {
-	var after *ids.UUID
-	if err := s.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT after_evidence_id FROM deal_authorship_sweep_cursor`).Scan(&after)
-	}); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	var place authorshipSweepPlace
+	if err := s.Tx(ctx, func(tx pgx.Tx) (err error) {
+		place, _, err = storekit.InstallationStateTx[authorshipSweepPlace](ctx, tx, storekit.StateDealAuthorshipSweepCursor)
+		return err
+	}); err != nil {
 		return ids.UUID{}, fmt.Errorf("deals: reading where the authorship pass stopped: %w", err)
 	}
-	if after == nil {
+	if place.After == nil {
 		return ids.UUID{}, nil
 	}
-	return *after, nil
+	return *place.After, nil
+}
+
+// authorshipSweepPlace is the last evidence row the pass inspected. Nil starts at the first.
+type authorshipSweepPlace struct {
+	After *ids.UUID `json:"after_evidence_id"`
 }
 
 // authorshipPlaceAfter is the position to keep once a page is done. A full page
@@ -104,13 +109,8 @@ func authorshipPlaceAfter(after ids.UUID, scanned int) *ids.UUID {
 
 // storeAuthorshipSweepPlaceTx records the position the page leaves behind.
 func storeAuthorshipSweepPlaceTx(ctx context.Context, tx pgx.Tx, after ids.UUID, scanned int) error {
-	place := authorshipPlaceAfter(after, scanned)
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO deal_authorship_sweep_cursor (singleton, after_evidence_id, updated_at)
-		VALUES (true, $1, now())
-		ON CONFLICT (singleton) DO UPDATE
-		   SET after_evidence_id = EXCLUDED.after_evidence_id, updated_at = EXCLUDED.updated_at`,
-		place); err != nil {
+	place := authorshipSweepPlace{After: authorshipPlaceAfter(after, scanned)}
+	if err := storekit.StoreInstallationStateTx(ctx, tx, storekit.StateDealAuthorshipSweepCursor, place); err != nil {
 		return fmt.Errorf("deals: storing where the authorship pass stopped: %w", err)
 	}
 	return nil

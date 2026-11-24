@@ -86,6 +86,7 @@ export const BuilderText: Story = {
       <FieldBuilder
         object="company"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -93,12 +94,9 @@ export const BuilderText: Story = {
   ),
 };
 
-// The builder in dark, for the consent callout it always carries. The DDL
-// preview is a `.cf-ddl` chip painting `--bgElevated` INSIDE a warning-toned
-// Callout: an elevated ground nested in a tint, which is the composite that has
-// no reason to keep its separation once both tokens re-resolve. The autonomy dot
-// in the callout title is colour-only as well, and it is what marks this as a
-// confirm-tier action against a live table.
+// The builder in dark, for the consent callout it always carries. The autonomy
+// dot in the callout title is colour-only, and it marks this as a confirm-tier
+// action.
 export const BuilderTextDark: Story = {
   globals: { theme: "dark" },
   render: () => (
@@ -106,6 +104,7 @@ export const BuilderTextDark: Story = {
       <FieldBuilder
         object="company"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -121,6 +120,7 @@ export const BuilderCurrency: Story = {
       <FieldBuilder
         object="deal"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -128,9 +128,12 @@ export const BuilderCurrency: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByLabelText("Label"), "Ceiling");
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: "Label" }),
+      "Ceiling",
+    );
     await pickType(canvasElement, "Currency");
-    await canvas.findByLabelText("Currency code");
+    await canvas.findByRole("textbox", { name: "Currency code" });
   },
 };
 
@@ -142,6 +145,7 @@ export const BuilderPicklist: Story = {
       <FieldBuilder
         object="deal"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -149,7 +153,10 @@ export const BuilderPicklist: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByLabelText("Label"), "Stage reason");
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: "Label" }),
+      "Stage reason",
+    );
     await pickType(canvasElement, "Picklist");
     const [first] = await canvas.findAllByLabelText("Option label");
     if (first === undefined) throw new Error("the picklist drew no option");
@@ -169,6 +176,7 @@ export const BuilderRefusal: Story = {
       <FieldBuilder
         object="company"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -177,7 +185,7 @@ export const BuilderRefusal: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
-      canvas.getByLabelText("Label"),
+      canvas.getByRole("textbox", { name: "Label" }),
       "Link to parent account",
     );
     // The refusal is STANDING — true of the label as it stands, and redrawn on
@@ -373,7 +381,10 @@ export const CardObjectPickerPhone: Story = {
 // because nothing is keyed on it.
 const chooseMultiple: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
-  await userEvent.type(canvas.getByLabelText("Label"), "Capabilities");
+  await userEvent.type(
+    canvas.getByRole("textbox", { name: "Label" }),
+    "Capabilities",
+  );
   await pickType(canvasElement, "Multiple choice");
   const [first] = await canvas.findAllByLabelText("Option label");
   if (first === undefined) throw new Error("the choice list drew no option");

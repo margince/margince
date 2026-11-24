@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -182,7 +183,7 @@ func TestGmailConnectorSyncsAnActivity(t *testing.T) {
 		t.Fatalf("DueConnections past the pacing clock = %+v, want the one connection %s", due, connID)
 	}
 
-	if err := registry.Disconnect(grantCtx, "gmail"); err != nil {
+	if err := registry.Disconnect(grantCtx, capturemod.ProviderMailbox("gmail")); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
 	after, err := registry.Connections(grantCtx)

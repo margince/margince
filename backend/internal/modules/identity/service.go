@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"sync/atomic"
 	"time"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -76,10 +75,10 @@ type Service struct {
 	// composed the reader behaves exactly as one whose policy is off, so the
 	// password path stays open. See ssoenforcement.go.
 	requireSSO func(ctx context.Context) (bool, error)
-	// requireMFA answers whether this installation makes a second factor
-	// mandatory. Nil when unwired — no enforcement, and Authenticate then reads
-	// nothing extra per request. See mfachallenge.go.
-	requireMFA func(ctx context.Context) (bool, error)
+	// admissionSettings reads the settings Authenticate applies, require-MFA
+	// among them, in the caller's transaction. Nil when unwired: no MFA
+	// enforcement. See mfachallenge.go.
+	admissionSettings func(ctx context.Context, tx pgx.Tx) (AdmissionSettings, error)
 	// challengeEpochKey keys a member's credential epoch with the challenge
 	// signing key. Unset, no challenge can be completed.
 	challengeEpochKey func(material string) string
@@ -196,34 +195,6 @@ type BootstrapInput struct {
 	Timezone      string
 }
 
-// The password bound, shared by every path that accepts one. Counted in RUNES:
-// a four-emoji password is sixteen bytes and would clear a byte floor of twelve
-// while being a quarter of the length the floor intends. Named here
-// because this is where the two provisioning paths meet; the reset endpoint
-// states the same numbers in the message it shows a human.
-const (
-	minPasswordLen = 12
-	maxPasswordLen = 256
-)
-
-// passwordLengthError is the ONE spelling of the 12–256 rule for every Go
-// caller that accepts a password. Counted in RUNES: a four-emoji password is
-// sixteen bytes and would clear a byte floor of twelve while being a quarter of
-// the length the floor intends.
-//
-// It returns the field-shaped refusal the surfaces render, so a caller does not
-// restate the numbers in prose that can drift from the check.
-func passwordLengthError(field, pw string) error {
-	if n := utf8.RuneCountInString(pw); n < minPasswordLen || n > maxPasswordLen {
-		return &values.ParseError{
-			Field:   field,
-			Code:    "length",
-			Message: fmt.Sprintf("the password must be %d–%d characters", minPasswordLen, maxPasswordLen),
-		}
-	}
-	return nil
-}
-
 // normalize parse-don't-validates the tenant-root inputs in place. The timezone
 // drives every date-boundary sweep, so a malformed value here would haunt the
 // whole installation's lifetime and is rejected before any row is written.
@@ -241,6 +212,10 @@ func (in *BootstrapInput) normalize() error {
 		return err
 	}
 	in.AdminEmail = adminEmail.String()
+	in.AdminName = displayNameLine(in.AdminName)
+	if err := validateDisplayName(in.AdminName); err != nil {
+		return err
+	}
 	// The floor every path that sets a password already applies —
 	// deployconfig checks it when reading bootstrap_admin's file, the reset
 	// endpoint checks it on redemption. It belongs HERE too, because a claim
@@ -248,7 +223,10 @@ func (in *BootstrapInput) normalize() error {
 	// route: without it, `"admin_password": ""` mints a loginable root account.
 	// Stated once at the point both provisioning paths converge rather than a
 	// third time at a call site.
-	return passwordLengthError("admin_password", in.AdminPassword)
+	if err := passwordRuleError("admin_password", in.AdminPassword); err != nil {
+		return err
+	}
+	return passwordEmailError("admin_password", in.AdminPassword, in.AdminEmail)
 }
 
 // SeedSystemRoles lays down the compiled-in role set, and assigns nothing.
@@ -341,18 +319,12 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 	if err != nil {
 		return Identity{}, err
 	}
-	// Read before the tx (like the login gates), so the per-request enrolment
-	// check below runs only when the installation actually requires a factor.
-	requireMFA, err := s.mfaMandatory(ctx)
-	if err != nil {
-		return Identity{}, err
-	}
 	id := Identity{WorkspaceID: wsID}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// note: a session is keyed by its opaque token, not exposed as a
 		// first-class entity id — its row id has no kind and stays ids.UUID.
 		var sessionID ids.UUID
-		var providerAuthenticated bool
+		var providerAuthenticated, stampDue bool
 		var userID ids.UserID
 		// The locale and the zone ride the session read because /me carries
 		// both: the SPA needs to know which catalog to render before it draws
@@ -363,7 +335,8 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		err := tx.QueryRow(ctx,
 			`SELECT s.id, u.id, u.email, u.display_name, u.seat_type, u.must_change_password,
 			        u.locale, u.timezone, u.timezone_chosen, u.timezone_set_by, u.greeting_name, u.avatar_object_key,
-			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), ''), s.provider_authenticated
+			        coalesce((SELECT value #>> '{}' FROM setting WHERE key = $2), ''), s.provider_authenticated,
+			        (s.last_seen_at IS NULL OR s.last_seen_at < now() - $3::interval)
 			 FROM session s
 			 JOIN app_user u ON u.id = s.user_id
 			 WHERE s.token_hash = $1
@@ -371,7 +344,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
 			   AND `+LiveMemberSQL("u")+``,
-			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.TimezoneChosen, &id.TimezoneSetBy, &id.GreetingName, &id.AvatarKey, &id.WorkspaceName, &providerAuthenticated)
+			tokenHash, Name.Key(), stampInterval.String()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &timezone, &id.TimezoneChosen, &id.TimezoneSetBy, &id.GreetingName, &id.AvatarKey, &id.WorkspaceName, &providerAuthenticated, &stampDue)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -402,26 +375,32 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		if loadErr != nil {
 			return loadErr
 		}
-		if id.IndividualPerformance, err = IndividualPerformanceTx(ctx, tx); err != nil {
+		applied, err := s.admission(ctx, tx)
+		if err != nil {
 			return err
 		}
+		id.IndividualPerformance = applied.IndividualPerformance
 		// Provider sessions rely on the provider’s MFA policy, even when the
 		// same member also has a password session requiring enrolment.
-		if requireMFA && !providerAuthenticated {
+		if !providerAuthenticated && applied.RequireMFA {
 			confirmed, err := hasConfirmedMFA(ctx, tx, userID)
 			if err != nil {
 				return err
 			}
 			id.MustEnrolMFA = !confirmed
 		}
-		// Keep concurrent requests off the session row lock while authentication reads run.
-		if _, err := tx.Exec(ctx,
+		// Written last, to keep concurrent requests off the session row lock while
+		// the reads run. The UPDATE repeats the age test, so a burst that read
+		// stampDue together still writes once; the idle window ends up to a minute early.
+		if !stampDue {
+			return nil
+		}
+		_, err = tx.Exec(ctx,
 			`UPDATE session SET last_seen_at = now(),
 			   idle_expires_at = least(now() + $2::interval, expires_at)
-			 WHERE id = $1`, sessionID, idleTTL.String()); err != nil {
-			return err
-		}
-		return nil
+			 WHERE id = $1 AND (last_seen_at IS NULL OR last_seen_at < now() - $3::interval)`,
+			sessionID, idleTTL.String(), stampInterval.String())
+		return err
 	})
 	if err != nil {
 		return Identity{}, err

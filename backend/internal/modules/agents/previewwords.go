@@ -179,7 +179,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"create_company_record": {
 		en: "Authorizes the proposing caller to create this company once with the displayed values. Current permissions and duplicate identities are checked again.",
-		de: "Erlaubt dem vorschlagenden Aufrufer, dieses Unternehmen einmal mit den angezeigten Werten anzulegen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
+		de: "Erlaubt dem vorschlagenden Aufrufer, dieses Unternehmen einmal mit den angezeigten Werten zu erstellen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
 		vi: "Cho phép bên đề xuất tạo công ty này một lần với các giá trị hiển thị. Quyền hiện tại và danh tính trùng được kiểm tra lại.",
 	},
 	"create_contact_employer": {
@@ -189,7 +189,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"create_contact_record": {
 		en: "Authorizes the proposing caller to create this contact once with the displayed values. Current permissions and duplicate identities are checked again.",
-		de: "Erlaubt dem vorschlagenden Aufrufer, diesen Kontakt einmal mit den angezeigten Werten anzulegen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
+		de: "Erlaubt dem vorschlagenden Aufrufer, diesen Kontakt einmal mit den angezeigten Werten zu erstellen. Aktuelle Berechtigungen und doppelte Identitäten werden erneut geprüft.",
 		vi: "Cho phép bên đề xuất tạo bản ghi liên hệ này một lần với các giá trị hiển thị. Quyền hiện tại và danh tính trùng được kiểm tra lại.",
 	},
 	"create_deal_record": {
@@ -199,7 +199,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"create_lead_record": {
 		en: "Authorizes the proposing caller to create this lead once with the displayed values. Creation checks current permissions and duplicate identities again.",
-		de: "Erlaubt dem vorschlagenden Aufrufer, diesen Lead einmal mit den angezeigten Werten anzulegen. Beim Anlegen werden Berechtigungen und doppelte Identitäten erneut geprüft.",
+		de: "Erlaubt dem vorschlagenden Aufrufer, diesen Lead einmal mit den angezeigten Werten zu erstellen. Beim Erstellen werden Berechtigungen und doppelte Identitäten erneut geprüft.",
 		vi: "Cho phép bên đề xuất tạo lead này một lần với các giá trị hiển thị. Khi tạo, quyền và danh tính trùng được kiểm tra lại.",
 	},
 	"create_offer_draft": {
@@ -229,7 +229,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"fill_empty_lead_fields": {
 		en: "Fills only the empty lead fields shown above. Existing values and the email address stay unchanged; no second lead is created.",
-		de: "Ergänzt nur die oben gezeigten leeren Lead-Felder. Vorhandene Werte und die E-Mail-Adresse bleiben erhalten; es wird kein zweiter Lead angelegt.",
+		de: "Ergänzt nur die oben gezeigten leeren Lead-Felder. Vorhandene Werte und die E-Mail-Adresse bleiben erhalten; es wird kein zweiter Lead erstellt.",
 		vi: "Chỉ điền các trường trống của lead được hiển thị ở trên. Giá trị hiện có và địa chỉ email được giữ nguyên; không tạo hồ sơ thứ hai.",
 	},
 	"geocode_if_enabled": {
@@ -274,7 +274,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"member_private_audiences_retained": {
 		en: "Mail and activities keep their own audience. Activity already shared with a transferred record’s readers may become discoverable to the recipient.",
-		de: "E-Mails und Aktivitäten behalten ihre Freigaben. Bereits freigegebene Aktivitäten können mit übertragenen Datensätzen für das neu zuständige Mitglied sichtbar werden.",
+		de: "E-Mails und Aktivitäten behalten ihren eigenen Kreis von Lesenden. Bereits geteilte Aktivitäten können mit übertragenen Datensätzen für das neu zuständige Mitglied sichtbar werden.",
 		vi: "Email và hoạt động giữ nguyên phạm vi chia sẻ. Thành viên nhận có thể tìm thấy hoạt động đã chia sẻ với các thành viên có quyền xem hồ sơ được bàn giao.",
 	},
 	"member_source_signed_out": {
@@ -364,7 +364,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"promote_propose_company": {
 		en: "Creates no company from the typed name. The contact shows the name as a company to link or create.",
-		de: "Legt aus dem eingetippten Namen kein Unternehmen an. Der Kontakt zeigt den Namen als Unternehmen zum Verknüpfen oder Anlegen.",
+		de: "Erstellt aus dem eingetippten Namen kein Unternehmen. Der Kontakt zeigt den Namen als Unternehmen zum Verknüpfen oder Erstellen.",
 		vi: "Không tạo công ty từ tên đã nhập. Liên hệ hiển thị tên này như một công ty cần liên kết hoặc tạo.",
 	},
 	"promote_queue_duplicate_review": {
@@ -374,7 +374,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"queue_duplicate_review": {
 		en: "Creates a duplicate candidate for review alongside the new record.",
-		de: "Legt neben dem neuen Datensatz einen Dublettenvorschlag zur Prüfung an.",
+		de: "Erstellt neben dem neuen Datensatz einen Dublettenvorschlag zur Prüfung.",
 		vi: "Tạo đề xuất trùng lặp để kiểm tra cùng với bản ghi mới.",
 	},
 	"queue_vat_check": {
@@ -424,7 +424,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"resolve_contact_employer": {
 		en: "Resolves the employer from the company or work address, reuses or creates the company, and links employment. Uncertain domains wait for review; eligible enrichment follows company settings.",
-		de: "Ermittelt den Arbeitgeber aus dem Unternehmen oder der geschäftlichen Adresse, verwendet ein vorhandenes Unternehmen oder legt es an und verknüpft die Beschäftigung. Unklare Domains warten auf Prüfung; die Anreicherung folgt den Einstellungen des Unternehmens.",
+		de: "Ermittelt den Arbeitgeber aus dem Unternehmen oder der geschäftlichen Adresse, verwendet ein vorhandenes Unternehmen oder erstellt es und verknüpft die Beschäftigung. Unklare Domains warten auf Prüfung; die Anreicherung folgt den Einstellungen des Unternehmens.",
 		vi: "Xác định nơi làm việc từ công ty hoặc địa chỉ công việc, dùng lại hoặc tạo công ty rồi liên kết việc làm. Tên miền chưa rõ sẽ chờ xem xét; việc bổ sung thông tin tuân theo cài đặt của công ty.",
 	},
 	"restore_lead_archive_contact": {
@@ -444,7 +444,7 @@ var effectSentences = map[string]cardWords{
 	},
 	"reuse_existing_record": {
 		en: "The source key already identifies this record. The call returns it without creating another record.",
-		de: "Der Quellschlüssel bezeichnet bereits diesen Datensatz. Der Aufruf gibt ihn zurück, ohne einen weiteren anzulegen.",
+		de: "Der Quellschlüssel bezeichnet bereits diesen Datensatz. Der Aufruf gibt ihn zurück, ohne einen weiteren zu erstellen.",
 		vi: "Khóa nguồn đã xác định bản ghi này. Lệnh trả về bản ghi đó mà không tạo thêm bản ghi.",
 	},
 	"send_without_human_signature": {

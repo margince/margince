@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { MONEY_ABSENT } from "../format/format";
 import {
+  calendarDayFieldsAnUpdateWrites,
+  fieldsARecordUpdateWrites,
+} from "../testing/updatebodies";
+import {
   type HistoryValueCtx,
   historyValue,
   isMinorUnitField,
@@ -47,6 +51,29 @@ describe("historyValue", () => {
       }
     },
   );
+
+  it("names the stored codes of a company and a lead in both languages", () => {
+    expect(historyValue("lifecycle", "former_customer", ctx())).toBe(
+      "Former customer",
+    );
+    expect(historyValue("margin_tier", "tier2_20", ctx())).not.toBe("tier2_20");
+    expect(historyValue("trigger", "human_qualify", ctx())).toBe(
+      "Qualified manually",
+    );
+    expect(
+      historyValue("trigger", "human_qualify", ctx({ locale: "de" })),
+    ).toBe("Manuell qualifiziert");
+  });
+
+  it("names a partner stage through the stage list, or leaves its key", () => {
+    const named = ctx({
+      nameOf: (key) => (key === "board_review" ? "Board review" : undefined),
+    });
+    expect(historyValue("relationship_stage", "board_review", named)).toBe(
+      "Board review",
+    );
+    expect(historyValue("relationship_stage", "no_fit", named)).toBe("no_fit");
+  });
 
   it("names a change of time precision in words, not wire spellings", () => {
     expect(historyValue("occurred_precision", "day", ctx())).toBe("Date only");
@@ -141,6 +168,33 @@ describe("historyValue", () => {
     );
   });
 
+  // A calendar day names no instant, so no zone moves it to a neighbour.
+  it("renders a calendar day the way the record page dates it, in every zone", () => {
+    for (const zone of ["Pacific/Kiritimati", "Pacific/Honolulu"]) {
+      expect(historyValue("target_end_date", "2026-01-01", ctx({ zone }))).toBe(
+        "1 Jan 2026",
+      );
+    }
+  });
+
+  // Both ways, from the contract: every `format: date` column an update writes
+  // reads as a day, and no other column's text is mistaken for one.
+  it("dates exactly the columns the contract declares as calendar days", () => {
+    const days = new Set(calendarDayFieldsAnUpdateWrites());
+    expect(days).toContain("target_end_date");
+    const written = [...fieldsARecordUpdateWrites().values()].flat();
+    for (const field of written) {
+      const shown = historyValue(field, "2026-01-01", ctx());
+      expect(shown === "1 Jan 2026", field).toBe(days.has(field));
+    }
+  });
+
+  it("leaves a day-shaped value that names no real day as stored", () => {
+    expect(historyValue("target_end_date", "2026-02-31", ctx())).toBe(
+      "2026-02-31",
+    );
+  });
+
   it("renders a JSON array as its items joined with a comma", () => {
     expect(historyValue("tags", '["customer"]', ctx())).toBe("customer");
     expect(historyValue("tags", '["customer","partner"]', ctx())).toBe(
@@ -170,6 +224,36 @@ describe("historyValue", () => {
         ctx(),
       ),
     ).toBe("example.com");
+  });
+
+  // Older rows recorded the after image with the input's own field names, and
+  // the history still reads them.
+  it("renders email and phone rows recorded with capitalised keys", () => {
+    expect(
+      historyValue(
+        "emails",
+        '[{"Email":"ada@example.com","EmailType":"work","IsPrimary":true,"Position":0,"VouchedNotCorresponded":false}]',
+        ctx(),
+      ),
+    ).toBe("ada@example.com (Work)");
+    expect(
+      historyValue(
+        "phones",
+        '[{"IsPrimary":false,"Phone":"+49301234567","PhoneType":"mobile","Position":0}]',
+        ctx(),
+      ),
+    ).toBe("+49301234567 (Mobile)");
+  });
+
+  it("renders social links as their addresses, and no link as absent", () => {
+    expect(
+      historyValue(
+        "social",
+        '{"linkedin":"https://www.linkedin.com/in/ada"}',
+        ctx(),
+      ),
+    ).toBe("https://www.linkedin.com/in/ada");
+    expect(historyValue("social", '{"linkedin":null}', ctx())).toBeNull();
   });
 
   it("renders a row of an unknown shape as its JSON, never as [object Object]", () => {

@@ -64,8 +64,8 @@ type AgentSpec struct {
 const SweepQuietDays = 14
 
 // Catalog is the V1 agent set (B-EP06.22): the Morning Brief and the
-// overnight at-risk sweep — the two judgment tasks Surface A and the
-// deterministic workflow path structurally cannot do.
+// overnight at-risk sweep. Neither a user's AI assistant nor the
+// deterministic workflow path can do these two judgment tasks.
 //
 // The entries carry NO Tools: that half is declared in api/ai-tasks.yaml and
 // joined on by compose's scheduledAgents(). A caller that ranges this directly
@@ -76,8 +76,8 @@ func Catalog() []AgentSpec {
 			Name: "morning_brief",
 			Goal: "Prepare the existing Morning Brief of the user this run acts for. First call read_brief. " +
 				"Its items are the queue already ranked for them; do not assemble a workspace-wide list. " +
-				"Read the evidence for those items, then call annotate_brief with one concise narrative " +
-				"and grounded findings: why each item matters, what changed and the next move. " +
+				"Read every record an item cites in its evidence_ids, its activities as well as its deal, then call annotate_brief ONCE, with one concise narrative " +
+				"and a grounded finding for every item in that same call: why it matters, what changed and the next move. " +
 				"An item with a previous_rank was already on this queue on the run's previous_local_day: " +
 				"say what has changed since then rather than reporting it as new. An item without one may " +
 				"simply not have ranked that day, so do not call it new either. " +
@@ -96,8 +96,9 @@ func Catalog() []AgentSpec {
 				"granted this sweep is swept by nobody, so do not read or log on a deal outside that list. " +
 				"A deal the retrieved context mentions is one example, not the sweep, so do not " +
 				"read or log on it before that list. " +
-				"Then read each listed deal and log ONE note " +
-				"activity per at-risk deal. Its subject names the risk; its body states the finding and " +
+				"Then read each listed deal, call catch_me_up_on on it and read_record each recent touch it lists, and log ONE note " +
+				"activity per at-risk deal, linked to that deal (links: [{entity_type: deal, entity_id: <its deal_id>}]). " +
+				"Its subject names the risk in a few words; its body states the finding and " +
 				"the evidence (cite the records you read). A note without a body is refused. " +
 				"Do not advance stages, send anything, or archive anything.",
 			SeedQuery:           "risk or stalled or blocked or overdue or quiet",

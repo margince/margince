@@ -30,6 +30,7 @@ const connected: FinanceSummary = {
   company_id: "o-1",
   state: "connected",
   provider: "offline_demo",
+  provider_name: "Demo accounting",
   last_synced_at: "2026-08-10T06:00:00Z",
   net_invoiced: { amount_minor: 1_864_200, currency: "EUR" },
   open_balance: { amount_minor: 240_000, currency: "EUR" },
@@ -90,6 +91,16 @@ function Finance({
 
 export const Connected: Story = {
   render: () => <Finance summary={connected} lifecycle="customer" />,
+};
+
+// A source whose unit declares no name is named generically, never by its key.
+export const UnnamedSource: Story = {
+  render: () => (
+    <Finance
+      summary={{ ...connected, provider_name: undefined }}
+      lifecycle="customer"
+    />
+  ),
 };
 
 // §6 State B: the card that must never look like "€0 open" — the reason the

@@ -21,8 +21,9 @@ import type { MessageKey } from "../../i18n/en";
 import { dealRecordKeys } from "../../lib/activitykeys";
 import { ENTITY } from "../../lib/entity";
 import { useHealthScope } from "../../lib/healthscope";
+import { fromHere } from "../../lib/navigatefrom";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
-import { navigate, routeHash } from "../../lib/router";
+import { routeHash } from "../../lib/router";
 import type { Project } from "../projects/projects.form";
 import "./deal360/deal360.css";
 
@@ -292,14 +293,15 @@ export function StartDeliveryPrompt({ deal }: Readonly<{ deal: Deal }>) {
       }
       return input.project;
     },
-    onSuccess: (project) => {
+    onMutate: fromHere,
+    onSuccess: (project, _input, from) => {
       for (const queryKey of dealRecordKeys(deal.id)) {
         queryClient.invalidateQueries({ queryKey });
       }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
       queryClient.invalidateQueries({ queryKey: ["project", project.id] });
       queryClient.invalidateQueries({ queryKey: ["projects"] });
-      navigate({ screen: "projects", id: project.id });
+      from.navigate({ screen: "projects", id: project.id });
     },
     // Whatever landed before the failure is real: re-read both records so
     // the offer below says what is still owed rather than what was owed.

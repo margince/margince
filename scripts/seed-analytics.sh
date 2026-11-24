@@ -29,15 +29,16 @@ set -euo pipefail
 ROOT="$(git rev-parse --show-toplevel)"
 # shellcheck source=scripts/lib-devstate.sh
 . "$ROOT/scripts/lib-devstate.sh"
+# shellcheck source=scripts/lib-devready.sh
+. "$ROOT/scripts/lib-devready.sh"
 
 # The seed rewrites installation settings, so it reaches only the stack this
 # worktree runs. No API_BASE override: the target is the recorded stack whose
 # API process runs from this checkout, on localhost.
 [[ -z "${API_BASE:-}" ]] || { echo "seed-analytics: API_BASE is not taken; the seed finds this worktree's stack itself" >&2; exit 1; }
 SLUG="$(dev_resolve_slug "${DEV_SLUG:-}")"
-STATE_ENV="$(dev_state_dir "$SLUG")/env"
-[[ -f "$STATE_ENV" ]] || { echo "seed-analytics: no recorded stack for slug '$SLUG' — start it with make dev from this worktree" >&2; exit 1; }
-BACKEND_PID="$(sed -n 's/^BACKEND_PID=//p' "$STATE_ENV")"
+BACKEND_PID="$(dev_recorded_stack BACKEND_PID)" \
+  || { echo "seed-analytics: no recorded stack for slug '$SLUG' — start it with make dev from this worktree" >&2; exit 1; }
 api_cwd="$(lsof -a -p "${BACKEND_PID:-0}" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
 [[ "$api_cwd" = "$ROOT" ]] || { echo "seed-analytics: the API of stack '$SLUG' does not run from $ROOT, so it is not this worktree's stack" >&2; exit 1; }
 API_BASE="$(dev_app_base_url)"
@@ -122,8 +123,7 @@ iso_in_hours() {
 }
 
 echo "== seed-analytics: stack =="
-curl -fsS --max-time 10 "$API_BASE/readyz" >/dev/null 2>&1 \
-  || fail "$API_BASE/readyz is not answering — start the stack first (make dev)"
+dev_require_app "$API_BASE" || exit 1
 as_admin
 echo "  OK: signed in as $ADMIN_EMAIL at $API_BASE"
 
@@ -228,7 +228,7 @@ deal() {
   if [[ -z "$id" ]]; then
     expect "201" "POST /deals ($ref)" "$(api POST /deals "$(jq -n --argjson f "$fields" \
       --arg p "$PIPELINE_ID" --arg k "$KEY" --arg r "$ref" \
-      '{pipeline_id:$p, source:"seed", source_system:$k, source_id:$r} + $f')")"
+      '{pipeline_id:$p, source:"api", source_system:$k, source_id:$r} + $f')")"
     id="$(jq -r '.id' "$workdir/body")"
   fi
   printf '%s' "$id"

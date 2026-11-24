@@ -4,12 +4,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { act, cleanup, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { de } from "../i18n/de";
 import { en } from "../i18n/en";
+import { navigateReplacing } from "../lib/router";
+import { replaceDial } from "../lib/urlstate";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { AgentRail } from "./agentrail";
 
@@ -175,6 +177,15 @@ async function openPanel(answers: Answers = {}, locale: "en" | "de" = "en") {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.doUnmock("./agentpanel");
+});
+
+// The rail's lazy panel keeps the module it first loads. Loaded after a case
+// resets the modules, it reads another i18n instance and speaks its default.
+beforeAll(async () => {
+  await openPanel();
+  cleanup();
+  vi.unstubAllGlobals();
 });
 
 describe("the agent panel's hierarchy", () => {
@@ -230,16 +241,16 @@ describe("the agent panel's hierarchy", () => {
     );
   });
 
-  // The log opens the AI usage page, which a seat without the diagnostics read
+  // The log opens the AI call log, which a seat without the diagnostics read
   // grant cannot open. Offering it would send a rep to a refusal.
   it("offers the full log only to a seat that can open it", async () => {
     const rep = await openPanel({ allow: { license: ["read"] } });
     expect(rep.querySelector("a.link-button")).toBeNull();
     cleanup();
     const admin = await openPanel();
-    expect(admin.querySelector("a.link-button")?.textContent).toBe(
-      en["agent.panel.fullLog"],
-    );
+    const log = admin.querySelector("a.link-button");
+    expect(log?.textContent).toBe(en["agent.panel.fullLog"]);
+    expect(log?.getAttribute("href")).toBe("/#/settings/model-calls");
   });
 
   // The Core's vocabulary is five machine words and this is the one place they
@@ -251,8 +262,11 @@ describe("the agent panel's hierarchy", () => {
     );
     cleanup();
     const german = await openPanel({}, "de");
-    expect(german.querySelector(".arpstate")?.textContent).toBe(
-      de["agent.state.idle"],
+    // The German catalog loads after the first paint, which is in English.
+    await waitFor(() =>
+      expect(german.querySelector(".arpstate")?.textContent).toBe(
+        de["agent.state.idle"],
+      ),
     );
     expect(de["agent.state.idle"]).not.toBe(en["agent.state.idle"]);
   });
@@ -268,14 +282,199 @@ describe("the agent panel's hierarchy", () => {
     expect(opened.textContent?.match(/\$1\.20/g)).toHaveLength(1);
   });
 
+  // German alone would print a bare "$", which names no country's dollar.
+  it("writes the figure with the same currency symbol in both languages", async () => {
+    const english = await openPanel({ priced: true });
+    await waitFor(() =>
+      expect(english.querySelector(".arpmoney b")?.textContent).toBe("US$1.20"),
+    );
+    cleanup();
+    const german = await openPanel({ priced: true }, "de");
+    await waitFor(() =>
+      expect(german.querySelector(".arpmoney b")?.textContent).toBe(
+        "1,20\u00a0US$",
+      ),
+    );
+  });
+
   // The claim is the last thing on the surface because it is the only line no
   // read produced: a standing promise rather than news. AC-shell-8 holds that
   // it is SAID; this holds where.
   it("ends with the privacy claim", async () => {
     const opened = await openPanel();
-    expect(opened.lastElementChild?.className).toContain("arclaim");
+    expect(
+      opened.querySelector(".arpbody")?.lastElementChild?.className,
+    ).toContain("arclaim");
   });
 });
+
+// Folded, the rail hides the line and the figure, so the row's tip says both,
+// as every folded row's tip says its label.
+describe("the agent row's tip", () => {
+  it("says the line and the month's figure on the folded rail", async () => {
+    stubApi({ priced: true });
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <nav className="rail collapsed">
+            <AgentRail />
+          </nav>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const row = container.querySelector(".arhit");
+    if (!row) throw new Error("no .arhit row in the rendered tree");
+    await waitFor(() =>
+      expect(container.querySelector(".arspend")).not.toBeNull(),
+    );
+
+    await user.hover(row);
+
+    const tip = container.querySelector(".navtip[role='tooltip']");
+    expect(tip?.textContent).toContain(
+      container.querySelector(".arline")?.textContent ?? "missing line",
+    );
+    expect(tip?.textContent).toContain("US$1.20");
+
+    await user.unhover(row);
+    expect(container.querySelector(".navtip")).toBeNull();
+  });
+});
+
+describe("the agent panel's focus", () => {
+  it("takes focus in on the press that opened it and gives it back on Escape", async () => {
+    const opened = await openPanel();
+    // The title, not the record the live line happens to name.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(opened.querySelector(".arptitle")),
+    );
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(document.activeElement?.className).toBe("artoggle");
+  });
+
+  // The admin seat is offered "Full log". The shared panel focus would take
+  // that link as its first stop if the panel mounted in the opening commit.
+  it("lands on the title again when it opens a second time", async () => {
+    await openPanel();
+    await userEvent.keyboard("{Escape}");
+    expect(document.activeElement?.className).toBe("artoggle");
+
+    await userEvent.keyboard("{Enter}");
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        document.querySelector(".arpanel .arptitle"),
+      ),
+    );
+  });
+
+  it("names the panel it opens, and says the agent's state beside its name", async () => {
+    const opened = await openPanel();
+    const toggle = document.querySelector(".artoggle");
+
+    expect(toggle?.getAttribute("aria-controls")).toBe(opened.id);
+    const said = document.getElementById(
+      toggle?.getAttribute("aria-describedby") ?? "",
+    );
+    expect(said?.textContent).toContain(en["agent.state.idle"]);
+  });
+
+  it("goes back to the orb on Shift+Tab from the title it opened on", async () => {
+    const opened = await openPanel();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(opened.querySelector(".arptitle")),
+    );
+
+    await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+
+    expect(document.activeElement?.className).toBe("artoggle");
+  });
+
+  // The panel's code arrives after the press. These hold that code back, so
+  // the reader can act while it is on its way.
+  it("takes focus in once its code arrives, when the reader stayed on the button", async () => {
+    const panel = await railWithHeldPanel();
+    await panel.press();
+
+    panel.release();
+
+    const opened = await panel.opened();
+    await waitFor(() =>
+      expect(opened.contains(document.activeElement)).toBe(true),
+    );
+  });
+
+  it("leaves focus where the reader moved it while its code was on its way", async () => {
+    const panel = await railWithHeldPanel();
+    await panel.press();
+    const elsewhere = document.getElementById("elsewhere");
+    act(() => elsewhere?.focus());
+
+    panel.release();
+
+    await panel.opened();
+    expect(document.activeElement).toBe(elsewhere);
+  });
+});
+
+// The rail as a fresh module whose panel import waits for `release`: the lazy
+// panel keeps its first import, so each case needs its own.
+async function railWithHeldPanel() {
+  let release: () => void = () => undefined;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  vi.resetModules();
+  vi.doMock("./agentpanel", async (importOriginal) => {
+    await held;
+    return importOriginal();
+  });
+  const { AgentRail: HeldRail } = await import("./agentrail");
+  const { LocaleProvider: HeldLocale } = await import("../i18n");
+  // The fresh modules hold their own catalogs, which the setup file never filled.
+  await (await import("../i18n/catalogs")).loadLocale("en");
+  stubApi({});
+  const user = userEvent.setup();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const { container } = render(
+    <QueryClientProvider client={client}>
+      <HeldLocale initial="en">
+        <HeldRail />
+        <button type="button" id="elsewhere">
+          Elsewhere
+        </button>
+      </HeldLocale>
+    </QueryClientProvider>,
+  );
+  return {
+    press: async () => {
+      const trigger = await waitFor(() => {
+        const button = container.querySelector<HTMLElement>(".artoggle");
+        if (!button)
+          throw new Error("no .artoggle button in the rendered tree");
+        return button;
+      });
+      await user.click(trigger);
+      expect(document.activeElement).toBe(trigger);
+      expect(document.querySelector(".arpanel")).toBeNull();
+    },
+    release: () => act(release),
+    opened: () =>
+      waitFor(() => {
+        const opened = document.querySelector(".arpanel");
+        if (!opened) throw new Error("The agent panel has not loaded");
+        return opened;
+      }),
+  };
+}
 
 describe("the agent panel's report", () => {
   // The mark used to carry the orb's CURRENT tone at a fading opacity, so a
@@ -319,12 +518,8 @@ describe("the agent panel's report", () => {
     );
   });
 
-  // A quiet line rather than a dashed plate: the dashes read as a tile whose
-  // number failed to load, which is the opposite of what an all-clear says.
-  //
-  // And its OWN sentence. The head's resting line says "Nothing needs attention" on
-  // exactly the installation this section is empty on, so the two stood on one
-  // panel saying the same four words.
+  // Dashes would read as a tile that failed to load, and the head's resting
+  // line may already say the all-clear in its own words.
   it("says the all-clear as a plain line, undashed and in its own words", async () => {
     const opened = await openPanel();
     await waitFor(() =>
@@ -441,5 +636,16 @@ describe("work the rail cannot name", () => {
     expect(coreState()).toBe("idle");
     expect(runningSection(opened)).toBeUndefined();
     expect(opened.textContent).not.toContain(en["agent.panel.unnamedLive"]);
+  });
+});
+
+describe("the agent panel over a page that changes", () => {
+  it("closes once the page under it is another one", async () => {
+    globalThis.history.replaceState(null, "", "#/deals");
+    await openPanel();
+    act(() => replaceDial("stage", "won"));
+    expect(document.querySelector(".arpanel")).not.toBeNull();
+    act(() => navigateReplacing({ screen: "contacts" }));
+    expect(document.querySelector(".arpanel")).toBeNull();
   });
 });

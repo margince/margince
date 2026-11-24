@@ -6,10 +6,20 @@ import {
   type ExtensionEntryDescriptor,
   extensions,
 } from "@composition/extensions";
-import { type EntityKind, isEntityKind } from "./entity";
+import {
+  type EntityKind,
+  type ExtensionEntityKind,
+  isEntityKind,
+  isExtensionEntityKind,
+} from "./entity";
 import { EXTENSION_SCREEN } from "./extensions";
-import { type Route, useRoute } from "./router";
-import { NO_URL_PARAMS, type UrlParams, useUrlParams } from "./urlstate";
+import { type Route, routeHash, useRoute } from "./router";
+import {
+  hashWithParams,
+  NO_URL_PARAMS,
+  type UrlParams,
+  useUrlParams,
+} from "./urlstate";
 
 // A unit's entries: the ways into its own screen that core screens offer. The
 // unit declares the slot, the copy key, the glyph and the view. The screen that
@@ -36,7 +46,10 @@ export type ExtensionEntrySlot = (typeof EXTENSION_ENTRY_SLOTS)[number];
 export type UnitEntry = ExtensionEntryDescriptor & { readonly unit: string };
 
 /** The record an entry was pressed on, handed to the unit for prefill. */
-export type EntryRecord = { readonly type: EntityKind; readonly id: string };
+export type EntryRecord = {
+  readonly type: EntityKind | ExtensionEntityKind;
+  readonly id: string;
+};
 
 // The query keys a unit screen reads the record from. Spelled once, so the
 // writer below and the reader in useEntryContext cannot drift.
@@ -64,6 +77,25 @@ export function entryRoute(entry: UnitEntry): Route {
   };
 }
 
+/**
+ * The address of a unit's own record: its screen at the view the kind
+ * declared, with the record in the query. The unit is the middle part of
+ * `ext:<unit>:<kind>`.
+ */
+export function extensionRecordHref(
+  kind: ExtensionEntityKind,
+  id: string,
+  view: string | undefined,
+): string {
+  const [, unit] = kind.split(":");
+  const route: Route = {
+    screen: EXTENSION_SCREEN,
+    id: unit,
+    id2: view || undefined,
+  };
+  return hashWithParams(routeHash(route), entryParams({ type: kind, id }));
+}
+
 /** The query an entry hands the unit: the record it was pressed on, if any. */
 export function entryParams(record: EntryRecord | undefined): UrlParams {
   if (!record) {
@@ -77,15 +109,18 @@ export function entryParams(record: EntryRecord | undefined): UrlParams {
 
 /**
  * The record a unit screen was opened on, or null. A hand-typed address can
- * name any kind, so one this app does not route to reads as no record.
+ * name any kind, so one that is neither a core kind nor spelled as a unit's
+ * kind reads as no record.
  */
 export function entryRecordFromParams(params: UrlParams): EntryRecord | null {
   const type = params.get(ENTRY_RECORD_TYPE_PARAM);
   const id = params.get(ENTRY_RECORD_ID_PARAM);
-  if (!type || !id || !isEntityKind(type)) {
+  if (!type || !id) {
     return null;
   }
-  return { type, id };
+  return isEntityKind(type) || isExtensionEntityKind(type)
+    ? { type, id }
+    : null;
 }
 
 /**

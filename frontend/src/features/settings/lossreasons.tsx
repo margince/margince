@@ -5,7 +5,6 @@ import { useId, useState } from "react";
 import { rowsOf } from "../../api/rows";
 import { Button, EmptyState, OverflowMenu } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { KeyCode } from "../../design-system/keyedname";
 import { NameDialog, nameRefusal } from "../../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
@@ -228,7 +227,6 @@ export function LossReasonsCard() {
         )}
         label={t("acqSources.addLabel")}
         initial={naming.mode === "rename" ? naming.reason.label : ""}
-        hint={naming.mode === "rename" && <KeyCode code={naming.reason.key} />}
         confirmLabel={t(
           naming.mode === "rename"
             ? "leadSources.renameSave"

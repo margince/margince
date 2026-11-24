@@ -190,6 +190,11 @@ describe("a confirm page names the seeded purposes in the reader's language", ()
           ...SUBSCRIPTION,
           purpose_key: "marketing_email",
           purpose_label: "Marketing email",
+          frequency: "monthly",
+          controller: {
+            legal_name: "Beispiel GmbH",
+            privacy_page: "https://beispiel.test/datenschutz",
+          },
         });
       }
       const body = request ? await request.text() : String(init?.body);
@@ -203,7 +208,10 @@ describe("a confirm page names the seeded purposes in the reader's language", ()
       await screen.findByRole("heading", { name: "Produktneuigkeiten" }),
     ).toBeInTheDocument();
     const shown =
-      "Bestätigen Sie, dass Sie Produktneuigkeiten erhalten möchten.";
+      "Bestätigen Sie, dass Beispiel GmbH Ihren Namen und Ihre E-Mail-Adresse verwenden darf, " +
+      "um Ihnen etwa einmal im Monat Produktneuigkeiten per E-Mail zu senden. Sie können Ihre " +
+      "Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen. Informationen zu " +
+      "Ihren Rechten: https://beispiel.test/datenschutz.";
     expect(screen.getByText(shown)).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: "Abonnement bestätigen" }),
@@ -314,7 +322,7 @@ describe("the page speaks the language the mail was sent in", () => {
   });
 });
 
-const VI_INVALID_LINK = VIETNAMESE["confirm.invalidLink"];
+const VI_INVALID_LINK = VIETNAMESE["confirm.deadLinkBody"];
 
 describe("an expired link still speaks the language its mail was sent in", () => {
   afterEach(() => {
@@ -377,7 +385,10 @@ describe("a privacy notice discloses who answers, why, what, to whom and for how
     expect(screen.getByText("Your email address")).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Emails, meetings and calls with you: taken out of daily use after 3 years.",
+        "Emails, meetings and calls with you: kept for 3 years from when they were recorded, " +
+          "then moved to an archive with restricted access to answer legal claims and keep " +
+          "business records. They are deleted when they are no longer needed for this purpose, " +
+          "when you ask, or when your record is deleted.",
       ),
     ).toBeInTheDocument();
     expect(
@@ -487,7 +498,9 @@ describe("the confirm pages name the controller and sit in the public frame", ()
     render(<ConfirmDetailsScreen token="tok-de-retention" />, "de");
 
     expect(
-      await screen.findByText(/nach 3 Jahren aus der täglichen Nutzung/),
+      await screen.findByText(
+        /nach 3 Jahren ab der Erfassung in ein Archiv mit eingeschränktem Zugriff verschoben/,
+      ),
     ).toBeInTheDocument();
   });
 });

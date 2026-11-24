@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
+import { steppedClock } from "../testing/steppedclock";
 import { QuickCaptureAction } from "./quickcapture";
 
 const emptyPage = { data: [], page: { next_cursor: null, has_more: false } };
@@ -42,6 +43,7 @@ function stubApi() {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -67,6 +69,12 @@ describe("Quick capture", () => {
 
     await user.click(screen.getByTestId("quick-capture"));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    expect(document.activeElement).toHaveAccessibleDescription(
+      expect.stringContaining("Add at least one email, phone or LinkedIn URL."),
+    );
+    expect(posted).toHaveLength(0);
+    await user.type(screen.getByLabelText("Email"), "dana@example.test");
     await user.type(
       screen.getByRole("combobox", { name: "Company" }),
       "Brandt Automotive GmbH",
@@ -78,5 +86,34 @@ describe("Quick capture", () => {
     await waitFor(() =>
       expect(client.getQueryState(companiesList)?.isInvalidated).toBe(true),
     );
+  });
+
+  it("puts the cursor back in Full name once a contact is saved", async () => {
+    // The saved toast dismisses itself on a timer, so the clock is the test's.
+    const user = steppedClock();
+    stubApi();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            <QuickCaptureAction />
+            <ToastRegion />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+
+    await user.click(screen.getByTestId("quick-capture"));
+    const fullName = await screen.findByLabelText("Full name *");
+    await user.type(fullName, "Dana Buyer");
+    await user.type(screen.getByLabelText("Email"), "dana@example.test");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(await screen.findByText("Dana Buyer saved")).toBeInTheDocument();
+    await waitFor(() => expect(fullName).toHaveValue(""));
+    expect(fullName).toHaveFocus();
   });
 });

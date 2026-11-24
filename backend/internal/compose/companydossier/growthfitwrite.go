@@ -97,6 +97,7 @@ type modelInput struct {
 	// row stays uncitable, so a claim can cite the value only through the
 	// profile field when one exists.
 	Industry      string                             `json:"industry,omitempty"`
+	SizeBand      string                             `json:"size_band,omitempty"`
 	ProfileFields []crmcontracts.CompanyProfileField `json:"profile_field"`
 	Facts         []crmcontracts.CompanyFact         `json:"fact"`
 }
@@ -109,7 +110,7 @@ type modelInput struct {
 // raise. An empty prompt would still reach the model fenced, and the grounding
 // filter refuses the reply that came back from it.
 func encodeInput(in Input, lang string) string {
-	encoded, _ := json.Marshal(modelInput{Industry: contacts.IndustryWords(in.Industry, textlang.Lang(lang)), ProfileFields: in.ProfileFields, Facts: in.Facts}) //nolint:errchkjson // plain structs of scalars; marshal cannot fail
+	encoded, _ := json.Marshal(modelInput{Industry: contacts.IndustryWords(in.Industry, textlang.Lang(lang)), SizeBand: in.SizeBand, ProfileFields: in.ProfileFields, Facts: in.Facts}) //nolint:errchkjson // plain structs of scalars; marshal cannot fail
 	return string(encoded)
 }
 
@@ -190,7 +191,7 @@ func WriteGrowthFit(ctx context.Context, lane Completer, in Input,
 	}
 	assessed, err := assessWithModel(ctx, lane, in, selfConfirmed, now, lang)
 	if err != nil {
-		// The declared degrade posture (on_budget_exhausted: degrade), not a
+		// The interactive degrade posture (execution_mode: interactive), not a
 		// swallowed error. A lane that is unavailable, over budget, or
 		// answering unparseable JSON must not take the panel down: the reader
 		// gets the floor's abstention, labelled as the floor's.

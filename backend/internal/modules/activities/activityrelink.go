@@ -28,10 +28,18 @@ import (
 func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (wrote, held bool, err error) {
 	// The relink target is a client-supplied reference (H1), and moving an
 	// activity onto it is an ATTACH: the record it lands on gains the activity.
+	project, err := lockDealRelink(ctx, tx, in)
+	if err != nil {
+		return false, false, err
+	}
 	if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
 		return false, false, err
 	}
-	return relinkActivityRow(ctx, tx, id, in, column)
+	wrote, held, err = relinkActivityRow(ctx, tx, id, in, column)
+	if err != nil || !wrote {
+		return wrote, held, err
+	}
+	return wrote, held, fileRelinkedDealProject(ctx, tx, id, project)
 }
 
 // deleteVisibleLinksOfType drops the activity's links of one entity type and
@@ -92,8 +100,11 @@ func deleteVisibleLinksOfType(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 //
 // A moved row is marked relinked_at. No calendar roster retires it after that,
 // so the organiser's next sync cannot destroy a link a member chose. It keeps
-// roster_seat, so the roster that settled it still records the guest's answer.
+// its roster seats, so a calendar that lists it still records the guest's answer.
 func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.ActivityID, target ids.UUID, displaced []ids.UUID) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, id.UUID); err != nil {
+		return err
+	}
 	if err := unbindDisplacedSenders(ctx, tx, id, target, displaced); err != nil {
 		return err
 	}

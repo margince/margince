@@ -53,14 +53,15 @@ func (s *Service) cardAndTimeline(
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
 	in := project(canonical, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.loc, f.lang)
+	fingerprint, err := Fingerprint(in, userID.UUID, s.routing(), f.now, f.loc, f.lang)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
+	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy, f.now)
 	if verdict.serve {
 		card := verdict.card
 		card.MailCoverage = f.mailCoverage
+		card.OurReply = ourReplyOnCard(f)
 		if current, ok := unansweredInbound(f); ok {
 			card.RequestBasis = requestBasis(f, current, basisCurrentRequest)
 		}
@@ -88,6 +89,7 @@ func (s *Service) cardAndTimeline(
 		GeneratedAt: card.GeneratedAt,
 		GeneratedBy: card.GeneratedBy,
 		Card:        card,
+		FactsOnly:   policy.factsOnly && verdict.askModel && s.lane != nil,
 	}); err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}

@@ -19,6 +19,7 @@ package consent
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -233,8 +234,8 @@ func TestADecisionRecordsTheDataProtectionCountryOfItsEntity(t *testing.T) {
 
 	branch := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, branch); err != nil {
+		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'vn', 'human:x')`, branch); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `
@@ -270,8 +271,8 @@ func TestTransmitKeepsTheStagedDataProtectionCountry(t *testing.T) {
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return installation, nil }))
 	branch := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
-		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'human:x')`, branch); err != nil {
+		INSERT INTO legal_entity (id, display_name, legal_name, country, jurisdiction, captured_by)
+		VALUES ($1, 'Branch', 'Branch Ltd', 'vn', 'vn', 'human:x')`, branch); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := e.owner.Exec(context.Background(), `
@@ -293,5 +294,49 @@ func TestTransmitKeepsTheStagedDataProtectionCountry(t *testing.T) {
 	sent := dataProtectionOf(t, e, delivery, "transmit")
 	if staged == nil || *staged != "vn" || sent == nil || *sent != *staged {
 		t.Errorf("staging recorded %v and transmit %v, want vn for both", staged, sent)
+	}
+}
+
+// TestADecisionRecordsTheDigestOfACompiledPack: both phases name the source the
+// pack was compiled from. The CHECK refuses a digest beside two codes or no
+// version, or in any spelling but lower-case hex.
+func TestADecisionRecordsTheDigestOfACompiledPack(t *testing.T) {
+	e := setupResolve(t)
+	digest := strings.Repeat("5e", 32)
+	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "re", Version: 6, Digest: digest})
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET address_country = 'RE' WHERE id = $1`, e.contact); err != nil {
+		t.Fatal(err)
+	}
+	delivery := e.plantDelivery(t)
+	stageThenTransmit(t, e, delivery, stagedSubject, stagedBody)
+
+	for _, phase := range []string{"staging", "transmit"} {
+		var recorded *string
+		if err := e.owner.QueryRow(context.Background(), `
+			SELECT ruleset_digest FROM communication_decision
+			 WHERE delivery_id = $1 AND phase = $2 LIMIT 1`, delivery, phase).Scan(&recorded); err != nil {
+			t.Fatalf("reading the %s decision: %v", phase, err)
+		}
+		if recorded == nil || *recorded != digest {
+			t.Errorf("the %s decision recorded digest %v, want %s", phase, recorded, digest)
+		}
+	}
+	version := 6
+	for _, bad := range []struct {
+		name    string
+		digest  string
+		version *int
+		codes   []string
+	}{
+		{"a digest beside a fold", digest, nil, []string{"re", "rf"}},
+		{"a digest in upper case", strings.ToUpper(digest), &version, []string{"re"}},
+		{"a digest with no version", digest, nil, []string{"re"}},
+	} {
+		if _, err := e.owner.Exec(context.Background(), `
+			UPDATE communication_decision SET ruleset_version = $2, ruleset_digest = $3, ruleset_codes = $4
+			 WHERE delivery_id = $1`, delivery, bad.version, bad.digest, bad.codes); err == nil {
+			t.Errorf("%s was accepted", bad.name)
+		}
 	}
 }

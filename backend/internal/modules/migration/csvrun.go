@@ -71,6 +71,9 @@ type RunMapping struct {
 	// the file needs no links column. Both the test and the commit read them
 	// from here.
 	PresetLinks []PresetLink `json:"preset_links,omitempty"`
+	// ObjectChosenBy is how the upload typed a file that named no type. A save
+	// that names the object is the reader's choice, and clears it.
+	ObjectChosenBy string `json:"object_chosen_by,omitempty"`
 }
 
 // PresetLink names one record a run files every activity under.
@@ -169,7 +172,7 @@ func (s *RunStore) ResumeApproved(ctx context.Context, id RunID, version int, en
 	var run Run
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		err := stageTransition(ctx, tx, id, moveResume, runChange{
-			version: version, approved: true, queue: true, literals: []string{"error = NULL"},
+			version: version, approved: true, queue: true, literals: []string{errorCleared},
 		})
 		if err != nil {
 			return err
@@ -245,7 +248,7 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, vie
 		where += storekit.SQLf(` AND status = $%d`, arg(StatusPending))
 	}
 	if cursor != "" {
-		after, err := storekit.DecodeCursor(cursor)
+		after, err := storekit.DecodeCursor("csv_import_rows", cursor)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -277,7 +280,7 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, vie
 	}
 	runs = runs[:limit]
 	last := runs[limit-1]
-	next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+	next, err := storekit.EncodeCursor("csv_import_rows", last.CreatedAt, last.ID)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -286,7 +289,7 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, vie
 
 // stagedColumns is what scanStaged reads, in its order.
 const stagedColumns = `id, connector, status, source_ref, checkpoint, created_at, updated_at,
-			mapping, report, undo_report, error, captured_by,
+			mapping, report, undo_report, error, error_refusal, captured_by,
 			version, coalesce(draft_step, ''), coalesce(approved_by, ''), approved_at, superseded_by,
 			source_released_at IS NOT NULL, job_attempt, actor, attempt_correlation_id,
 			coalesce(phase, ''), coalesce(phase_object, ''), progress,
@@ -299,12 +302,13 @@ func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 		report     []byte
 		undoReport []byte
 		runErr     *string
+		refusal    []byte
 		actor      []byte
 		progress   []byte
 	)
 	dest := []any{
 		&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
-		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy,
+		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &refusal, &run.CapturedBy,
 		&run.Version, &run.DraftStep, &run.ApprovedBy, &run.ApprovedAt, &run.SupersededBy, &run.SourceReleased,
 		&run.JobAttempt, &actor, &run.AttemptCorrelationID, &run.Phase, &run.PhaseObject, &progress,
 		&run.StartedAt, &run.FinishedAt, &run.ProgressAt, &run.HeartbeatAt, &run.ReadAt,
@@ -317,6 +321,12 @@ func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 	}
 	if runErr != nil {
 		run.Error = *runErr
+	}
+	if len(refusal) > 0 {
+		run.ErrorRefusal = &StopRefusal{}
+		if err := json.Unmarshal(refusal, run.ErrorRefusal); err != nil {
+			return Run{}, fmt.Errorf("reading the refusal of import run %s: %w", run.ID, err)
+		}
 	}
 	if len(mapping) > 0 {
 		var m RunMapping

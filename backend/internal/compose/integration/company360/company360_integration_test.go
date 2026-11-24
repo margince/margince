@@ -439,7 +439,7 @@ func TestCompany360NextMeetingParticipantsHideACapturePrivateContact(t *testing.
 		e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role)
 			VALUES ($1, $2, 'attendee')`, meeting, contact)
 	}
-	// The visible contact ALSO holds a second role. uq_activity_participant is
+	// The visible contact holds a second role too. uq_activity_participant_identity is
 	// unique on (activity, role, contact), so one contact legitimately has several
 	// rows on one meeting — a captured mail makes its sender both `from` and
 	// `attendee`. Without this the fixture has one row per contact and cannot

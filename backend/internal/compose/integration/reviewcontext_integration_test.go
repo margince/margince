@@ -62,7 +62,7 @@ func sendCold(t *testing.T, c *consentEnv, who coldContact) (int, string) {
 	}
 	status := c.Call(t, "POST", "/v1/emails", AnyMap{
 		"subject":         "About your order",
-		"body":            "Here is the quote you asked for.",
+		"body":            "Here are the order details you asked for.",
 		"to":              []string{who.address},
 		"links":           []AnyMap{{"entity_type": "contact", "entity_id": who.contactID}},
 		"consent_purpose": "business_correspondence",
@@ -101,7 +101,7 @@ func TestAFirsthandStatementLetsTheRefusedMessageGo(t *testing.T) {
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/context", AnyMap{
 		"subject_id":  who.contactID,
 		"kind":        "requested_by_subject",
-		"note":        "Rang about the March order and asked me to send the quote by email.",
+		"note":        "Rang about the March order and asked me to send the details by email.",
 		"occurred_at": rang,
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("recording the statement → %d, want 200", status)

@@ -200,6 +200,11 @@ var heldScopeMarkers = []string{
 	"EnsureActivityContentVisible", "EnsureActivityContentVisibleLive",
 	"EnsureActivityWritable",
 	"correspondenceFloorPredicate", "handelsbriefShielded",
+	// keptActivitySQL is the third floor predicate: it keeps a held row out of a
+	// destructive statement.
+	"keptActivitySQL",
+	// judgeableAudienceSQL (activities/owedaudience.go) filters restricted_at IS NULL.
+	"judgeableAudienceSQL", "JudgeableAudienceTx", "ShareableAudience", "ShareableAudienceTx",
 }
 
 // literalMarkers exclude a held row in the FUNCTION that carries them, not

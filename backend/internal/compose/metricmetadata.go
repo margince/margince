@@ -17,7 +17,7 @@ func reportingMetricMetadata(spec metricSpec, language textlang.Lang) crmcontrac
 	switch out.Id {
 	case reportingMeetingsHeld, reportingAcceptedOpportunities, reportingLeadsCreated, reportingLeadStatusMoves,
 		reportingLeadsPromoted, reportingLeadsQualified, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadsAwaitingResponseNow, reportingPartnerCommission, reportingPartnerActivity,
-		reportingLeadCohortOutcomes:
+		reportingLeadCohortOutcomes, reportingAccountProgression, reportingSourceQuality, reportingIntroductionsMade, reportingMeetingsBookedForColleagues:
 	case reportingPartnerPipeline, reportingPartnerWon, reportingStageConversion:
 		filters = append(filters, "pipeline")
 	default:
@@ -35,7 +35,7 @@ func reportingMetricMetadata(spec metricSpec, language textlang.Lang) crmcontrac
 	out.ReadObject = &spec.object
 	minimum := 0
 	switch out.Id {
-	case reportingStageAge, reportingClosedWinRate, reportingLeadFirstResponse, reportingStageConversion, reportingLeadCohortOutcomes:
+	case reportingStageAge, reportingClosedWinRate, reportingLeadFirstResponse, reportingStageConversion, reportingLeadCohortOutcomes, reportingAccountProgression, reportingSourceQuality:
 		minimum = analyticsquery.PercentileSampleFloor
 	}
 	out.MinimumCohort = &minimum
@@ -56,11 +56,13 @@ func reportingMetricMetadata(spec metricSpec, language textlang.Lang) crmcontrac
 // on any of them withholds.
 func reportingRequiredFields(metric crmcontracts.ReportingMetricID) []string {
 	switch metric {
-	case reportingMeetingsHeld:
+	case reportingMeetingsHeld, reportingMeetingsBookedForColleagues:
 		return reportingMeetingFields()
+	case reportingIntroductionsMade:
+		return []string{"introducer_user_id", "introduced_at"}
 	case reportingAcceptedOpportunities:
 		return []string{"accepted_credit"}
-	case reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadsQualified, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadsAwaitingResponseNow, reportingLeadCohortOutcomes:
+	case reportingLeadsCreated, reportingLeadStatusMoves, reportingLeadsPromoted, reportingLeadsQualified, reportingLeadFirstResponse, reportingLeadsAwaitingResponse, reportingLeadsAwaitingResponseNow, reportingLeadCohortOutcomes, reportingAccountProgression, reportingSourceQuality:
 		return reportingLeadFields(metric)
 	case reportingPartnerActivity:
 		return []string{companyDisplayName, fieldOwnerID, partnerLastActivity, partnerCertStatus}

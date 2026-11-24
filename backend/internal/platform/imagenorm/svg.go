@@ -295,7 +295,14 @@ func drawSVG(src []byte) (image.Image, error) {
 	if err := refuseLossySVG(src); err != nil {
 		return nil, err
 	}
-	icon, err := oksvg.ReadIconStream(bytes.NewReader(splitImplicitPathRepeats(src)), oksvg.WarnErrorMode)
+	painted, err := resolveSVGPaint(src)
+	if err != nil {
+		return nil, err
+	}
+	if err := refuseRewrittenSVG(src, painted); err != nil {
+		return nil, err
+	}
+	icon, err := oksvg.ReadIconStream(bytes.NewReader(splitImplicitPathRepeats(painted)), oksvg.WarnErrorMode)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrUnsupported, err)
 	}
@@ -363,4 +370,16 @@ func refuseUnsafeSVG(src []byte) error {
 			return fmt.Errorf("%w: the SVG references other elements with <use>", ErrUnsupported)
 		}
 	}
+}
+
+// refuseRewrittenSVG runs the safety checks again on the document the paint
+// rewrite produced, so nothing the rewrite emits escapes them.
+func refuseRewrittenSVG(src, painted []byte) error {
+	if bytes.Equal(src, painted) {
+		return nil
+	}
+	if err := refuseUnsafeSVG(painted); err != nil {
+		return err
+	}
+	return refuseLossySVG(painted)
 }

@@ -146,24 +146,21 @@ func project360Commitments(rows []crmcontracts.Project360Commitment, asOf time.T
 		taskID := ids.UUID(c.ActivityId)
 		promise := OpenCommitment{
 			Source: CommitmentFromTask, TaskID: &taskID,
-			Subject: c.Subject, DueAt: c.DueAt,
+			Subject: c.Subject, DueAt: c.DueAt, Overdue: &c.Overdue,
 			AssigneeID: (*ids.UUID)(c.AssigneeId), AssigneeName: orBlank(c.AssigneeName),
 		}
-		out = append(out, promise.wire(asOf))
+		out = append(out, promise.wire(asOf, nil))
 	}
 	return out
 }
 
-func project360Activities(rows []crmcontracts.Activity) []Project360Activity {
+func project360Activities(rows []crmcontracts.Activity, writerSide ActivityWriterSide) []Project360Activity {
 	out := make([]Project360Activity, 0, len(rows))
 	for _, a := range rows {
-		item := Project360Activity{
+		out = append(out, Project360Activity{
 			ActivityID: ids.UUID(a.Id), Kind: string(a.Kind), Subject: orBlank(a.Subject), OccurredAt: a.OccurredAt,
-		}
-		if a.Direction != nil {
-			item.Direction = string(*a.Direction)
-		}
-		out = append(out, item)
+			Direction: writerSide(a),
+		})
 	}
 	return out
 }

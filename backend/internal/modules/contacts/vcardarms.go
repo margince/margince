@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // updateMatchedByCard applies a card to the contact it matched exactly.
@@ -88,6 +89,7 @@ func (s *Store) updateMatchedByCard(
 		return err
 	}
 	result.Fields = updatedReport(entry, st, held, address)
+	result.Reason = withTitleNote(result.Reason, entry, result.Fields)
 	return nil
 }
 
@@ -110,13 +112,17 @@ func (s *Store) updateMatchedByCard(
 // follows a refusal undoes the contact as if it had never been minted.
 func (s *Store) createFromCard(
 	ctx context.Context, tx pgx.Tx, entry VCardEntry,
-	source ids.UUID, result *VCardResult,
+	target cardTarget, result *VCardResult,
 ) error {
-	contact, err := s.CreateContactTx(ctx, tx, contactFromVCard(entry), CustomColumns{})
+	input := contactFromVCard(entry)
+	if target.employer != nil {
+		input.Employer = EmployerChoice{CompanyID: target.employer, Role: input.Title, Source: vcardSource}
+	}
+	contact, err := s.CreateContactTx(ctx, tx, input, CustomColumns{})
 	if err != nil {
 		return err
 	}
-	narrowed, err := sourceIsNarrowed(ctx, tx, source)
+	narrowed, err := sourceIsNarrowed(ctx, tx, target.source)
 	if err != nil {
 		return err
 	}
@@ -129,12 +135,16 @@ func (s *Store) createFromCard(
 	}
 	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 	result.Outcome = VCardCreated
+	if !HasContactChannel(contactFromVCard(entry)) {
+		result.Reason = "Imported without email, phone or LinkedIn URL; add one to reach this contact."
+	}
 	result.ContactID = &created
 	url, err := s.completeCardCreate(ctx, tx, contact, entry)
 	if err != nil {
 		return err
 	}
 	result.Fields = createdReport(contact, entry, url)
+	result.Reason = withTitleNote(result.Reason, entry, result.Fields)
 	return nil
 }
 
@@ -262,4 +272,18 @@ func proposeModelReadCard(ctx context.Context, tx pgx.Tx, source ids.UUID, resul
 	}
 	result.Outcome = VCardProposed
 	return nil
+}
+
+// requireImportCompany refuses an import into a company before any card is
+// written. A company the caller cannot read answers 422 naming company_id, as a
+// contact created with it does. An employment edge the caller may not write
+// refuses the whole file, not each created card in turn.
+func (s *Store) requireImportCompany(ctx context.Context, company ids.CompanyID) error {
+	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
+		return err
+	}
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		_, err := matchNamedEmployer(ctx, tx, EmployerChoice{CompanyID: &company})
+		return err
+	})
 }

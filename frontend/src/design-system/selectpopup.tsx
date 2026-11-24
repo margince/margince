@@ -10,6 +10,7 @@ import { contentSizedPopupBox, type PopupFrame } from "./anchoredpopup";
 import { besideTheTrigger } from "./portalfocus";
 import type { SelectOption } from "./select";
 import type { Listbox } from "./selectlistbox";
+import { useTopLayer } from "./toplayer";
 
 // A list this long scrolls, so the open list gets a box that narrows it. A
 // first-letter jump finds one name; the box finds a part of any word.
@@ -54,6 +55,7 @@ export function SelectPopup({
   labelledBy?: string;
 }>) {
   const { popup: popupRef, listboxId } = listbox;
+  useTopLayer(popupRef, !filter);
   if (filter) {
     return (
       <FilteredPopup
@@ -73,6 +75,7 @@ export function SelectPopup({
     // would announce twice; the field names both the combobox and list.
     <div
       ref={popupRef}
+      popover="manual"
       className="select-popup"
       data-portal-panel=""
       id={listboxId}
@@ -174,6 +177,7 @@ function FilteredPopup({
   filter: ListFilter;
   labelledBy?: string;
 }>) {
+  useTopLayer(popupRef, true);
   const t = useT();
   const focusOnOpen = useCallback((box: HTMLInputElement | null) => {
     box?.focus({ preventScroll: true });
@@ -205,6 +209,7 @@ function FilteredPopup({
   return (
     <div
       ref={popupRef}
+      popover="manual"
       className="select-popup select-popup-filtered"
       data-portal-panel=""
       data-motion={animate ? "in" : "none"}

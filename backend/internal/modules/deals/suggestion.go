@@ -73,12 +73,15 @@ type SuggestionDraft struct {
 	// NameHint is which evidence leads, as a code: the suggested deal is named
 	// after the company and this hint, never after text read out of a message.
 	NameHint string
-	// AmountMinor and Currency travel together or not at all: an amount is
-	// proposed only when a finished document reading stated both.
+	// AmountMinor and Currency travel together or not at all. An amount is
+	// proposed only when a finished document reading stated both. An explicit
+	// request's budget also proposes one.
 	AmountMinor *int64
 	Currency    *string
-	Confidence  float64
-	Evidence    []SuggestionEvidence
+	// CloseDate is the day an explicit request says the buyer decides.
+	CloseDate  *time.Time
+	Confidence float64
+	Evidence   []SuggestionEvidence
 	// DuplicateOf lists the companies an open duplicate candidate pairs with
 	// CompanyID: the same business filed twice, not yet merged.
 	DuplicateOf []ids.UUID
@@ -206,18 +209,27 @@ func RecordSuggestionTx(ctx context.Context, tx pgx.Tx, d SuggestionDraft) (bool
 	if err != nil {
 		return false, err
 	}
+	var args []any
+	arg := func(v any, cast string) string {
+		args = append(args, v)
+		return fmt.Sprintf("$%d::%s", len(args), cast)
+	}
+	company := arg(d.CompanyID, "uuid")
+	row := strings.Join([]string{
+		company, arg(pipelineID, "uuid"), arg(stageID, "uuid"), arg(d.NameHint, "text"),
+		arg(d.AmountMinor, "bigint"), arg(d.Currency, "text"), arg(d.CloseDate, "date"), arg(d.Confidence, "numeric"),
+		arg(suggestionFingerprint(d.CompanyID, d.Evidence), "text"), arg(len(d.Evidence), "integer"),
+		arg(through, "timestamptz"), arg(by, "text"),
+	}, ", ")
 	var id ids.UUID
 	err = tx.QueryRow(ctx, `
 		INSERT INTO deal_suggestion (company_id, pipeline_id, proposed_stage_id, name_hint,
-		       proposed_amount_minor, currency, confidence, fingerprint, evidence_count,
+		       proposed_amount_minor, currency, proposed_close_date, confidence, fingerprint, evidence_count,
 		       evidence_through, captured_by)
-		SELECT $1::uuid, $2::uuid, $3::uuid, $4::text, $5::bigint, $6::text, $7::numeric, $8::text,
-		       $9::integer, $10::timestamptz, $11::text
-		 WHERE `+SuggestableCompanyClause("$1::uuid")+`
+		SELECT `+row+`
+		 WHERE `+SuggestableCompanyClause(company)+`
 		ON CONFLICT DO NOTHING
-		RETURNING id`,
-		d.CompanyID, pipelineID, stageID, d.NameHint, d.AmountMinor, d.Currency,
-		d.Confidence, suggestionFingerprint(d.CompanyID, d.Evidence), len(d.Evidence), through, by,
+		RETURNING id`, args...,
 	).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
@@ -318,7 +330,7 @@ func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx, buyerEligible f
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	stands, err := suggestionVisibleClause(ctx, arg, "")
+	stands, err := suggestionVisibleClause(ctx, "s", arg, "")
 	if err != nil {
 		return 0, err
 	}

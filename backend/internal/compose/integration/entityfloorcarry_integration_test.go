@@ -95,19 +95,19 @@ func TestMovingToAnEntityWithoutAFloorKeepsTheDefaultFloor(t *testing.T) {
 	}
 }
 
-// The further entity keeps six years and the default none. Its country then
-// changes to one with no floor: mail it already held keeps six years.
-func TestAnEntityCountryChangeCarriesTheOldFloor(t *testing.T) {
+// The further entity keeps six years and the default none. Its jurisdiction
+// then changes to one with no floor: mail it already held keeps six years.
+func TestAnEntityJurisdictionChangeCarriesTheOldFloor(t *testing.T) {
 	f := newEntityFloorFixture(t, "zk", "aq")
 	f.assign(t, f.entity.ID)
 	held := f.colleagueMail(t)
 	version := f.entity.Version
-	if _, err := f.store.UpdateLegalEntity(f.governor(), f.entity.ID, contacts.LegalEntityInput{Country: new("bv")}, &version); err != nil {
-		t.Fatalf("changing the entity's country: %v", err)
+	if _, err := f.store.UpdateLegalEntity(f.governor(), f.entity.ID, contacts.LegalEntityInput{Jurisdiction: new("bv")}, &version); err != nil {
+		t.Fatalf("changing the entity's jurisdiction: %v", err)
 	}
 	f.retentionPass(t)
 	if f.erased(t, held) {
-		t.Fatal("mail held under the entity's six-year floor was erased once its country changed; the old floor must carry")
+		t.Fatal("mail held under the entity's six-year floor was erased once its jurisdiction changed; the old floor must carry")
 	}
 }
 

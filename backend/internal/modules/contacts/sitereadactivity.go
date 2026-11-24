@@ -223,6 +223,21 @@ func (sr SiteRead) activitySettledAt() *time.Time {
 // one: a closed occurrence is not claiming to work, so it has nothing to go
 // stale.
 func emitSiteReadActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, sr SiteRead, lease time.Duration) error {
+	payload, err := siteReadActivityPayload(ctx, tx, sr, lease)
+	if err != nil {
+		return err
+	}
+	if err := storekit.EmitPipelinePayload(ctx, tx, ledgerID, payload); err != nil {
+		return fmt.Errorf("publish website read activity: %w", err)
+	}
+	return nil
+}
+
+// siteReadActivityPayload is the announcement of one dossier row, before it is
+// published. It carries no position: only logSiteReadProgress adds one, because
+// pages_read of a row that has just been claimed again still holds the
+// previous attempt's count.
+func siteReadActivityPayload(ctx context.Context, tx pgx.Tx, sr SiteRead, lease time.Duration) (crmcontracts.InternalEventAiTaskStateChanged, error) {
 	payload := crmcontracts.InternalEventAiTaskStateChanged{
 		Source: SiteReadActivitySource,
 		// The dossier's own id. One company is read many times over its life
@@ -248,7 +263,7 @@ func emitSiteReadActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, sr 
 	if sr.CompanyID != nil {
 		label, err := siteReadSubjectLabel(ctx, tx, sr.CompanyID.UUID)
 		if err != nil {
-			return err
+			return payload, err
 		}
 		subject := openapi_types.UUID(sr.CompanyID.UUID)
 		subjectType := entityCompany
@@ -258,10 +273,7 @@ func emitSiteReadActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, sr 
 			payload.SubjectLabel = &label
 		}
 	}
-	if err := storekit.EmitPipelinePayload(ctx, tx, ledgerID, payload); err != nil {
-		return fmt.Errorf("publish website read activity: %w", err)
-	}
-	return nil
+	return payload, nil
 }
 
 // siteReadSubjectLabel is what the read is ABOUT, named the way the product
@@ -295,4 +307,27 @@ func logSiteReadActivity(ctx context.Context, tx pgx.Tx, sr SiteRead, lease time
 		return fmt.Errorf("log website read state change: %w", err)
 	}
 	return emitSiteReadActivity(ctx, tx, ledgerID, sr, lease)
+}
+
+// logSiteReadProgress announces how many pages a running read has committed.
+// No total goes with it. The crawl's queue grows as links are found.
+// The page cap is a ceiling the read often stops short of, so neither is a length.
+func logSiteReadProgress(ctx context.Context, tx pgx.Tx, sr SiteRead, lease time.Duration) error {
+	payload, err := siteReadActivityPayload(ctx, tx, sr, lease)
+	if err != nil {
+		return err
+	}
+	pages := sr.PagesRead
+	payload.Processed = &pages
+	ledgerID, err := storekit.LogSystem(ctx, tx, "ai_task.state_changed", map[string]any{
+		auditKeySource: SiteReadActivitySource, "occurrence_key": sr.ID.String(),
+		"state": sr.Status, "attempt": sr.Attempt, "processed": pages,
+	})
+	if err != nil {
+		return fmt.Errorf("log website read progress: %w", err)
+	}
+	if err := storekit.EmitPipelinePayload(ctx, tx, ledgerID, payload); err != nil {
+		return fmt.Errorf("publish website read progress: %w", err)
+	}
+	return nil
 }

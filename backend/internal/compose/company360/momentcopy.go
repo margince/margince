@@ -3,11 +3,20 @@
 
 package company360
 
-import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+import (
+	"time"
 
-type momentCopy struct{ langcopy.Spoken }
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
+)
 
-func momentCopyFor(language string) momentCopy { return momentCopy{langcopy.For(language)} }
+type momentCopy struct {
+	langcopy.Spoken
+	zone *time.Location
+}
+
+func momentCopyFor(language string) momentCopy {
+	return momentCopy{Spoken: langcopy.For(language), zone: time.UTC}
+}
 
 var momentWords = struct {
 	TaskUndated    langcopy.Phrase
@@ -25,8 +34,8 @@ var momentWords = struct {
 	OweThem:        langcopy.Phrase{En: "You owe them: %s", De: "Sie schulden ihnen: %s", Vi: "Bạn cần thực hiện cho họ: %s"},
 	OweNamed:       langcopy.Phrase{En: "You owe %s: %s", De: "Sie schulden %s: %s", Vi: "Bạn cần thực hiện cho %s: %s"},
 	PromiseUndated: langcopy.Phrase{En: "Promised with no due date. Stays open until somebody does it or closes it.", De: "Zugesagt ohne Fälligkeitsdatum. Die Zusage bleibt offen, bis jemand sie erfüllt oder schließt.", Vi: "Đã cam kết nhưng chưa có hạn. Cam kết vẫn mở cho đến khi có người thực hiện hoặc đóng lại."},
-	NothingOwed:    langcopy.Phrase{En: "Nothing is owed to this account", De: "Keine offenen Zusagen gegenüber diesem Unternehmen", Vi: "Không có cam kết nào chưa thực hiện với công ty này"},
-	NothingDue:     langcopy.Phrase{En: "No promise to this account is open or coming due.", De: "Keine Zusage gegenüber diesem Unternehmen ist offen oder wird demnächst fällig.", Vi: "Không có cam kết nào với công ty này đang mở hoặc sắp đến hạn."},
+	NothingOwed:    langcopy.Phrase{En: "Nothing is owed to this company", De: "Keine offenen Zusagen gegenüber diesem Unternehmen", Vi: "Không có cam kết nào chưa thực hiện với công ty này"},
+	NothingDue:     langcopy.Phrase{En: "No promise to this company is open or coming due.", De: "Keine Zusage gegenüber diesem Unternehmen ist offen oder wird demnächst fällig.", Vi: "Không có cam kết nào với công ty này đang mở hoặc sắp đến hạn."},
 	Log:            langcopy.Phrase{En: "Log something", De: "Aktivität erfassen", Vi: "Ghi lại hoạt động"},
 	OpenContact:    langcopy.Phrase{En: "Open the contact", De: "Kontakt öffnen", Vi: "Mở liên hệ"},
 	OpenDeal:       langcopy.Phrase{En: "Open the deal", De: "Deal öffnen", Vi: "Mở giao dịch"},

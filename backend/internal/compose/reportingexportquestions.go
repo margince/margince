@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
@@ -81,8 +82,8 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 				continue
 			}
 			unit, currency, coverage := money.of(measure, row)
-			value := csvAnswerNumber(row[column])
-			if coverage != "ok" {
+			value := reportingcsv.AnswerCell(row[column], unit == reportingMoney, currency)
+			if coverage != "ok" && coverage != reportingPartial {
 				value = ""
 			}
 			rows = append(rows, cell(questionCell{label: label, value: value, unit: unit, currency: currency, context: column, coverage: coverage}))
@@ -92,7 +93,8 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 }
 
 // answerMoney reads a money measure the way the screen does. A converted
-// amount is in the base currency. A native one is in its row's own currency.
+// amount, one with a coverage count, is in the base currency. A native one is
+// in its row's own currency.
 type answerMoney struct {
 	spec reportSpec
 	base string
@@ -101,20 +103,26 @@ type answerMoney struct {
 // of gives a measure's unit and currency, or a coverage saying why no single
 // currency applies. A count of a money field is a count, not money.
 func (m answerMoney) of(measure analyticsquery.Measure, row map[string]any) (unit, currency, coverage string) {
-	if !strings.HasSuffix(measure.Field, "_minor") || measure.Fn == analyticsquery.CountAll || measure.Fn == analyticsquery.CountDistinct {
+	if measure.Fn == analyticsquery.CountAll || measure.Fn == analyticsquery.CountDistinct {
 		return "", "", "ok"
 	}
-	if m.spec.nativeMeasures[measure.Field] {
+	if m.spec.perRowCurrency(measure.Field) != nil {
 		own, _ := row[fieldCurrency].(string)
 		if own == "" {
 			return "", "", "mixed_currency"
 		}
-		return reportingMinorUnits, own, "ok"
+		return reportingMoney, own, "ok"
+	}
+	if _, converted := m.spec.sumCoverage[measure.Field]; !converted {
+		return "", "", "ok"
 	}
 	if m.base == "" {
 		return "", "", "no_base_currency"
 	}
-	return reportingMinorUnits, m.base, "ok"
+	if analyticsquery.LeavesOut(row, measure.Column()) {
+		return reportingMoney, m.base, reportingPartial
+	}
+	return reportingMoney, m.base, "ok"
 }
 
 // groupLabel names a row by its group keys, a company or project by the name
@@ -133,18 +141,4 @@ func groupLabel(groupBy []string, row map[string]any, labels *crmcontracts.Analy
 		}
 	}
 	return strings.Join(parts, " · ")
-}
-
-// csvAnswerNumber writes a measure as the analytics answer carried it.
-//
-//craft:ignore naked-any an answer row's values are schemaless JSON, decoded as any
-func csvAnswerNumber(value any) string {
-	switch number := value.(type) {
-	case nil:
-		return ""
-	case float64:
-		return reportingCSVNumber(&number)
-	default:
-		return formulacell.Guard(fmt.Sprint(number))
-	}
 }

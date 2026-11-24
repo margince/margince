@@ -36,7 +36,7 @@ A relationship is marked inbound only, outbound only, or both ways. A pulse, col
 
 Editing identity, choosing the default address and resolving where the contact works stay with the parts that already do them.
 
-While the contact is in an open duplicate case, the record header shows a **Possible duplicates** button with a count (`components/contactcase.entry.tsx`). The count is the number of other contacts of the case that the reader can see. The button opens the same review the Worklist case row opens, so both places merge through one decision. It does not show when the contact is in no case, or when the case is merged or gone.
+While the contact is in an open duplicate case, the record header shows a **Possible duplicates** button with a count (`components/contactcase.entry.tsx`). The count is the number of other contacts of the case that the reader can see. A case too large to list in full shows the listed number with a plus, such as 25+. The button opens the same review the Worklist case row opens, so both places merge through one decision. It does not show when the contact is in no case, or when the case is merged or gone. A merge from this button says so in a message and opens the contact kept.
 
 ## Permission to write
 
@@ -63,7 +63,9 @@ contact-scoped queue as Home, with the same grants and row scope. **Review priva
 case itself in Settings → Privacy, so the Worklist page limit does not hide it. Closed cases and
 notices already queued for delivery do not ask for another notice.
 
-The waiting and gone-quiet cards rest on our last message (`last_outbound_activity_id`). Their
+The waiting and gone-quiet cards rest on our last message (`last_outbound_activity_id`). Neither
+shows once `last_contact_at` is later than that message: a meeting or call held since, or their
+reply, ends the wait (`heardSince` in `momentawaiting.go`). Their
 **Done** writes `handled` on it through `PUT /activities/{id}/disposition`, the reader state the
 Worklist's Done writes. `activities.OwnMessageDoneState` says whether this reader has hidden the
 message, and whether the writer would take a Done from them. The writer takes it when the reader
@@ -72,7 +74,7 @@ sent the message and it is still the newest one either way with a contact it wen
 (`backend/internal/compose/contact360/momentowndone.go`).
 
 The **Open tasks** card under the bar lists `next_steps` without what the bar draws. `nextBarChoice` in `contacttoday.tsx` answers both,
-so no task shows twice.
+so no task shows twice. With nothing left to list, the card is not drawn. A section the reader may not see still draws it, and says so.
 
 The last-touch fields (`last_inbound_at`, `last_outbound_at`, `relationship_direction` and the rest)
 come from `contact360.LastTouchFor` in `backend/internal/compose/contact360/lasttouch.go`. It counts

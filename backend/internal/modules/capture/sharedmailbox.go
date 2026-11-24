@@ -85,7 +85,7 @@ func sharedMailboxAllowedTx(ctx context.Context, tx pgx.Tx, connection ids.UUID)
 	  FROM capture_connection c WHERE c.id = $1 AND c.archived_at IS NULL AND c.status IN ('connected','error')`,
 		connection).Scan(&live)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !live) {
-		return fmt.Errorf("capture: the shared mailbox is no longer connected to a live reader team: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("the shared mailbox is no longer connected to a live reader team: %w", apperrors.ErrPermissionDenied)
 	}
 	return err
 }

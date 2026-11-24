@@ -10,7 +10,11 @@ import {
   commercialPreviewDisplay,
   stagedDealMove,
 } from "../../lib/approvalpreview";
-import { humanizeKind } from "./approvalkind";
+import {
+  CONTACT_EMPLOYER_DISPLAY,
+  textRow,
+} from "./approvaldisplay.employerchange";
+import { displayValue } from "./approvaldisplay.value";
 import {
   commitmentResponsibility,
   followUpDoerRow,
@@ -34,11 +38,6 @@ const CLOSE_DATE_FLAGS = {
   unrealistic_soon: "approval.field.closeDateFlag.unrealistic_soon",
   unrealistic_stale: "approval.field.closeDateFlag.unrealistic_stale",
 } as const satisfies Readonly<Record<string, MessageKey>>;
-
-// A field whose value is already a word, under its caption.
-function textRow(field: string, label: MessageKey): DisplayField {
-  return { field, label, as: "text" };
-}
 
 export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
   {
@@ -117,8 +116,7 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         as: "text",
       },
     ],
-    // Is this address a contact worth keeping? The address and who it belongs to
-    // are the question; the disposition, owner and activity ids are plumbing.
+    // Is this address a contact worth keeping? Address and owner are the question.
     capture_counterparty: [
       { field: "display_name", label: "approval.field.name", as: "text" },
       { field: "email", label: "approval.field.email", as: "text" },
@@ -126,16 +124,19 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     ],
     // A colleague's request: the summary names who asked and what it moves.
     contact_share: [],
-    ownership_transfer: [textRow("note", "approval.field.note")],
-    // Two records that look like one contact. The names are the comparison; the
-    // position and the title beside them are what "Use as job title" weighs.
-    linkedin_match: [
-      textRow("connection_name", "approval.field.connection_name"),
-      textRow("connection_company", "approval.field.connection_company"),
-      textRow("connection_position", "approval.field.connection_position"),
-      textRow("contact_name", "approval.field.contact_name"),
-      textRow("contact_title", "approval.field.contact_title"),
+    edit_access: [],
+    legal_review_request: [],
+    task_due_date: [
+      { field: "summary", label: "approval.field.step", as: "text" },
+      { field: "due_date", label: "approval.field.due_date", as: "date" },
     ],
+    ownership_transfer: [textRow("note", "approval.field.note")],
+    // The summary already says which stage the deal would move to; the skipped
+    // stages are the part a reader has to weigh before saying yes.
+    deal_proposal_stage: [
+      textRow("skipped_stage_names", "approval.field.skipped_stages"),
+    ],
+    ...CONTACT_EMPLOYER_DISPLAY,
     // A message that was scheduled and then stopped. Why it stopped is the whole
     // question, and the SUMMARY already carries that sentence: the server maps
     // the reason code to prose in one place (compose/scheduledsendheld.go,
@@ -299,54 +300,6 @@ export function displayFields(kind: string): readonly DisplayField[] {
   return Object.hasOwn(DISPLAY_FIELDS, kind)
     ? (DISPLAY_FIELDS[kind] ?? [])
     : [];
-}
-
-/**
- * One declared field against one payload, ready for the card to draw.
- *
- * Returns null for a field the payload does not carry, which is ordinary
- * rather than exceptional: `previous_close_date` is absent on a deal that
- * never had one, and `expected_prior_rate` on the first rate ever recorded.
- * The card drops those rather than printing an empty row, so the reader sees
- * what is true instead of a blank where a fact would be.
- */
-function displayValue(
-  entry: DisplayField,
-  raw: unknown,
-  t: Translator,
-  formatDay: (value: string) => string,
-): string | null {
-  if (raw === null || raw === undefined) {
-    return null;
-  }
-  if (entry.as === "enum") {
-    // A list or a single code, both spelled the same way on the wire across
-    // kinds: `flags` is an array, `reason` is one string.
-    const codes = Array.isArray(raw) ? raw : [raw];
-    const words = codes.flatMap((code) => {
-      if (typeof code !== "string" || code === "") {
-        return [];
-      }
-      const key = entry.optionLabels?.[code];
-      // An unmapped code degrades to its own words rather than vanishing. A
-      // finding the server raised and the card silently dropped would tell the
-      // reader less than an unpolished word does.
-      return [key ? t(key) : humanizeKind(code)];
-    });
-    return words.length > 0 ? words.join(", ") : null;
-  }
-  if (typeof raw !== "string") {
-    // Numbers reach the reader as their own digits; anything structured is not
-    // a value this tier can caption, so it is left out rather than JSON-dumped
-    // under a label that would then be lying about what it introduces.
-    return typeof raw === "number" || typeof raw === "boolean"
-      ? String(raw)
-      : null;
-  }
-  if (raw.trim() === "") {
-    return null;
-  }
-  return entry.as === "date" ? formatDay(raw) : raw;
 }
 
 /**

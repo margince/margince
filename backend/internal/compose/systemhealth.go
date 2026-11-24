@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/adminadmit"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -36,12 +37,14 @@ const (
 	healthProcessing    = crmcontracts.HealthSourceConditionProcessing
 	healthRetrying      = crmcontracts.HealthSourceConditionRetrying
 	healthClear         = crmcontracts.HealthSourceConditionClear
+	healthInformation   = crmcontracts.HealthSourceConditionInformation
 	healthUnknown       = crmcontracts.HealthSourceConditionUnknown
 	healthWorkspace     = crmcontracts.HealthSourceScopeWorkspace
 	healthInstallation  = crmcontracts.HealthSourceScopeInstallation
 	healthReadObject    = "job_health"
 	healthDataTasks     = "data_task"
 	healthSearchID      = string(crmcontracts.HealthActionDestinationSearch)
+	healthUnplacedID    = "unplaced"
 )
 
 type healthRead struct {
@@ -73,7 +76,7 @@ func (s Server) GetSystemHealth(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	ctx, cancel := context.WithTimeout(ctx, healthReadTimeout)
+	ctx, cancel := context.WithTimeout(ctx, adminadmit.ReadTimeout)
 	defer cancel()
 	out := composeHealth(ctx, s.healthReads(), utcNow)
 	if s.originProbe != nil && auth.Allows(ctx, healthReadObject, principal.ActionRead) {
@@ -191,6 +194,7 @@ func (s Server) healthReads() []healthRead {
 		{healthSearchID, "embedding_reindex", s.searchSummary},
 		{"updates", healthDataTasks, s.updatesSummary},
 		{"providers", "ai_diagnostics", s.providersSummary},
+		{healthUnplacedID, "ai_diagnostics", s.unplacedSummary},
 	}
 }
 

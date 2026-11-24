@@ -10,6 +10,9 @@ package comms
 // asked about nobody.
 
 import (
+	"maps"
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -114,5 +117,29 @@ func TestIsChannelReadsTheRowsShapeNotItsEmptiness(t *testing.T) {
 	// And nothing may transmit to it: the gate refuses the recipient outright.
 	if err := consentRecipients(erased)[0].Validate(); err == nil {
 		t.Error("a scrubbed channel recipient validated; an erased subject could still be messaged")
+	}
+}
+
+// The connections screen badges a mailbox that can send from its own copy of
+// mailSendScopes (frontend/src/lib/connector-status.ts). A provider missing
+// there is never offered as a sender, and a wrong scope disagrees with the
+// pre-flight. test_mailbox is a QC-only connector the screen never shows.
+func TestTheFrontendSendScopeTableMirrorsMailSendScopes(t *testing.T) {
+	source, err := os.ReadFile("../../../../frontend/src/lib/connector-status.ts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	table := regexp.MustCompile(`(?s)const SEND_SCOPES[^=]*= \{(.*?)\};`).FindSubmatch(source)
+	if len(table) != 2 {
+		t.Fatal("SEND_SCOPES missing from connector-status.ts")
+	}
+	got := map[string]string{}
+	for _, entry := range regexp.MustCompile(`(?m)^\s*([a-z_]+):\s*"([^"]+)",?\s*$`).FindAllSubmatch(table[1], -1) {
+		got[string(entry[1])] = string(entry[2])
+	}
+	want := maps.Clone(mailSendScopes)
+	delete(want, "test_mailbox")
+	if !maps.Equal(got, want) {
+		t.Errorf("connector-status.ts SEND_SCOPES = %v, want %v", got, want)
 	}
 }

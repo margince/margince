@@ -1,0 +1,268 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package eu
+
+import (
+	"reflect"
+	"slices"
+	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
+)
+
+// TestNewDeclaresTheGoBDFloors pins the statutory content: the §147
+// AO/HGB retention floors as CALENDAR years. A changed span or class
+// name here is a legal-content change and must be deliberate.
+func TestNewDeclaresTheGoBDFloors(t *testing.T) {
+	var p jurisdiction.Pack
+	for _, pack := range New().Jurisdictions {
+		if pack.Code() == "de" {
+			p = pack
+		}
+	}
+	if p == nil {
+		t.Fatal("the unit carries no jurisdiction pack for de")
+	}
+	want := map[jurisdiction.RetentionClassName]jurisdiction.Period{
+		jurisdiction.CommercialCorrespondence: {Years: 6},
+		jurisdiction.AccountingRecords:        {Years: 8},
+	}
+	classes := p.Retention().Classes()
+	if len(classes) != len(want) {
+		t.Fatalf("pack declares %d retention classes, want %d", len(classes), len(want))
+	}
+	for _, c := range classes {
+		keep, known := want[c.Name]
+		if !known {
+			t.Errorf("unexpected retention class %q", c.Name)
+			continue
+		}
+		if c.Keep != keep {
+			t.Errorf("class %s keeps %s, want %s (statutory floor, calendar years)", c.Name, c.Keep, keep)
+		}
+	}
+}
+
+// The German messaging matrix, asserted rather than described.
+//
+// This is the rule set a reviewer ratifies, so each claim it makes is a test:
+// what §7(3) requires before advertising without consent, what Art. 13 puts on
+// a first message, and — as load-bearing as either — the three obligations
+// German law does NOT impose, which a reader comparing packs must be able to
+// tell apart from an omission.
+
+// UWG §7(3) permits email advertising to an existing customer only where all
+// four conditions hold. The pack declares all four; declaring three would be an
+// exception the engine applies while checking less than the statute asks, which
+// is worse than none because it looks lawful.
+//
+// Read off New(), not off messagingRules(): what binds an installation is the
+// rule set compose registers out of the extension, and asserting the helper
+// would leave New() free to ship a different one. A pack that declared four
+// conditions in a function nobody wires and three in the one it does is a
+// §7(3) that looks lawful in its own tests.
+//
+// This asserts the declaration and no more. A pack states rules and the core
+// evaluates them. This unit cannot reach the evaluator: it is unexported in
+// internal/modules/consent, and backend cannot import this module back without
+// a cycle. The consent integration tests run the route itself.
+func TestTheExistingCustomerExceptionCarriesAllFourConditions(t *testing.T) {
+	rules := germanRules(t)
+	if len(rules.MarketingExceptions) != 1 {
+		t.Fatalf("%d marketing exceptions declared, want exactly the §7(3) one", len(rules.MarketingExceptions))
+	}
+	e := rules.MarketingExceptions[0]
+	if e.Kind != messaging.ExistingCustomer {
+		t.Fatalf("exception kind = %q, want existing_customer", e.Kind)
+	}
+	for _, c := range []struct {
+		name string
+		set  bool
+	}{
+		{"sale evidence (address obtained in connection with a sale)", e.RequiresSaleEvidence},
+		{"collection-time opt-out notice", e.RequiresCollectionTimeOptOut},
+		{"similarity to what was bought", e.RequiresSimilarity},
+		{"no standing objection", e.RequiresNoObjection},
+	} {
+		if !c.set {
+			t.Errorf("§7(3) requires %s and the pack does not ask the engine to check it", c.name)
+		}
+	}
+}
+
+// Art. 13 at first contact: who is writing, who answers about the data, and how
+// to say stop. The objection route is marketing-scoped because §7(3) requires it
+// at every use rather than only the first.
+func TestAFirstMessageDisclosesTheController(t *testing.T) {
+	want := map[messaging.DisclosureKind]bool{
+		messaging.ControllerIdentity: false,
+		messaging.PrivacyContact:     false,
+		messaging.ObjectionRoute:     true,
+	}
+	got := map[messaging.DisclosureKind]bool{}
+	for _, d := range germanRules(t).Disclosures {
+		got[d.Kind] = d.MarketingOnly
+	}
+	for kind, marketingOnly := range want {
+		scope, declared := got[kind]
+		if !declared {
+			t.Errorf("a first message does not disclose %q", kind)
+			continue
+		}
+		if scope != marketingOnly {
+			t.Errorf("%q is marketing-only=%v, want %v", kind, scope, marketingOnly)
+		}
+	}
+}
+
+// German law imposes no subject prefix on commercial email, no statutory
+// frequency ceiling, and owes no acknowledgement for an opt-out. The zero
+// values say so, and this test is what makes the silence deliberate: a reader
+// comparing this pack against one that DOES impose them can tell a considered
+// absence from a forgotten field.
+func TestGermanyImposesNoPrefixNoCapAndNoAcknowledgement(t *testing.T) {
+	rules := germanRules(t)
+	if rules.SubjectPrefix != "" {
+		t.Errorf("the pack prefixes advertising subjects with %q; German law requires no marking", rules.SubjectPrefix)
+	}
+	if rules.FrequencyCap != nil {
+		t.Errorf("the pack caps advertising at %+v; German law sets no statutory ceiling", rules.FrequencyCap)
+	}
+	if rules.OptOutAcknowledgement {
+		t.Error("the pack promises an opt-out acknowledgement; German law owes none")
+	}
+}
+
+// A reply stays a reply for a year and a deal follow-up for six months. Neither
+// bounds a same-thread reply — the subject wrote to us and did not withdraw —
+// so these windows only reach an UNPROMPTED follow-up. A pack that shortened
+// them would be refusing correspondence rather than restricting advertising.
+func TestTheWindowsBoundAnUnpromptedFollowUp(t *testing.T) {
+	rules := germanRules(t)
+	if rules.ReplyWindow != 365*24*time.Hour {
+		t.Errorf("reply window = %s, want twelve months", rules.ReplyWindow)
+	}
+	if rules.DealFollowUpWindow != 182*24*time.Hour {
+		t.Errorf("deal follow-up window = %s, want six months", rules.DealFollowUpWindow)
+	}
+	if rules.DealFollowUpWindow >= rules.ReplyWindow {
+		t.Error("a deal follow-up outlasts a reply, which inverts which evidence is stronger")
+	}
+}
+
+// The declared rules pass the published validator, which is what the boot
+// preflight runs. A pack that composed and then failed at boot would be found
+// by an operator rather than by this suite.
+func TestTheDeclaredRulesPassThePublishedValidator(t *testing.T) {
+	if err := germanRules(t).Validate(); err != nil {
+		t.Errorf("the German rules would be refused at boot: %v", err)
+	}
+}
+
+// Germany adds no deadline shorter than the GDPR month, and says so with its
+// citation rather than by leaving the kinds out.
+func TestGermanyGivesEveryRequestKindOneCalendarMonth(t *testing.T) {
+	sets := New().SubjectRights
+	if len(sets) != 1 || sets[0].Jurisdiction != "de" {
+		t.Fatalf("declaration carries subject-rights sets %+v, want Germany's alone", sets)
+	}
+	if err := sets[0].Validate(); err != nil {
+		t.Fatalf("the German deadlines do not validate: %v", err)
+	}
+	for _, kind := range []subjectrights.RequestKind{subjectrights.Access, subjectrights.Rectify, subjectrights.Erasure} {
+		if got := sets[0].Deadlines[kind]; got != (subjectrights.Deadline{Period: jurisdiction.Period{Months: 1}}) {
+			t.Errorf("%s deadline = %+v, want one calendar month", kind, got)
+		}
+	}
+}
+
+// Every listed document is embedded, valid, and in both languages: an original
+// to sign and a copy to read.
+func TestThePackShipsEachDocumentInGermanAndEnglish(t *testing.T) {
+	docs := New().Documents
+	if err := compliancedocs.ValidateSet(docs); err != nil {
+		t.Fatalf("the documents do not validate: %v", err)
+	}
+	languages := map[string]int{}
+	for _, d := range docs {
+		languages[d.Language]++
+	}
+	if languages["de"] != 5 || languages["en"] != 5 {
+		t.Fatalf("documents per language = %v, want five German originals and five English copies", languages)
+	}
+}
+
+// TestTheCompiledRulesAreTheV2Rules pins every value of the compiled rule set.
+// Provenance, the digest, instruments and citations describe the policy source
+// and decide no send, so they are left out.
+func TestTheCompiledRulesAreTheV2Rules(t *testing.T) {
+	want := messaging.Rules{
+		Jurisdiction:                  "de",
+		Version:                       2,
+		RecordConfirmationWithoutNews: true,
+		ReplyWindow:                   365 * 24 * time.Hour,
+		DealFollowUpWindow:            182 * 24 * time.Hour,
+		MarketingExceptions: []messaging.MarketingException{{
+			Kind:                         messaging.ExistingCustomer,
+			RequiresSaleEvidence:         true,
+			RequiresCollectionTimeOptOut: true,
+			RequiresSimilarity:           true,
+			RequiresNoObjection:          true,
+		}},
+		Disclosures: []messaging.Disclosure{
+			{Kind: messaging.ControllerIdentity},
+			{Kind: messaging.PrivacyContact},
+			{Kind: messaging.ObjectionRoute, MarketingOnly: true},
+		},
+	}
+	got := germanRules(t)
+	got.Provenance, got.Digest, got.Instruments, got.Citations = messaging.Provenance{}, "", nil, nil
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("the compiled rules differ from the v2 rules:\n got %+v\nwant %+v", got, want)
+	}
+}
+
+// Marketing mail without consent is refused under UWG § 7(2) Nr. 2, and a
+// message with no reason for contact on record under GDPR Art. 6(1).
+func TestTheGermanRefusalsCiteTheirLaw(t *testing.T) {
+	r := germanRules(t)
+	for code, want := range map[string]string{
+		"marketing_permission_required": "Gesetz gegen den unlauteren Wettbewerb (UWG) § 7 Abs. 2 Nr. 2",
+		"no_compatible_evidence":        "Regulation (EU) 2016/679 (GDPR) Art. 6(1)",
+	} {
+		i := slices.IndexFunc(r.Citations, func(c messaging.Citation) bool { return c.Code == code })
+		if i < 0 {
+			t.Errorf("%s cites no law", code)
+			continue
+		}
+		cited, err := r.ResolveCitation(r.Citations[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := cited.Instrument + " " + cited.Provision; got != want || cited.SourceURL == "" {
+			t.Errorf("%s cites %q at %q, want %q with a source", code, got, cited.SourceURL, want)
+		}
+	}
+}
+
+// germanRules is the one rule set New() ships for Germany. The engine
+// registers every set, so a second one for de is a second answer about German
+// law.
+func germanRules(t *testing.T) messaging.Rules {
+	t.Helper()
+	var found []messaging.Rules
+	for _, r := range New().Messaging {
+		if r.Jurisdiction == "de" {
+			found = append(found, r)
+		}
+	}
+	if len(found) != 1 {
+		t.Fatalf("New() ships %d messaging rule sets for de, want exactly one", len(found))
+	}
+	return found[0]
+}

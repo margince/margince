@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
+import { useAddedNotice } from "./addednotice";
 import {
   contactCompanyField,
   contactCreateFields,
@@ -43,15 +44,20 @@ async function createContact(
 
 // The full contact form. On a company's page the company is already chosen,
 // so its box is left out and the company goes as `company_id`.
+// The reader stays on the company to add the next one.
 export function NewContactAction({
   company,
   listCreate,
+  refusalId,
 }: Readonly<{
   company?: HomeCompany;
   listCreate?: Readonly<{ open: boolean }>;
+  // See CreateAction: the page's one sentence saying why.
+  refusalId?: string;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
+  const added = useAddedNotice();
   const cf = useObjectCustomFields("contact", "create");
   const fields = contactCreateFields(t).filter(
     (field) => company === undefined || field.key !== contactCompanyField.key,
@@ -59,8 +65,11 @@ export function NewContactAction({
   return (
     <CreateAction
       label={t("create.contact")}
+      requires={{ object: "contact", action: "create" }}
+      refusalId={refusalId}
       invalidate={company?.listKey ?? "contacts"}
       screen="contacts"
+      stay={company !== undefined}
       listCreate={listCreate}
       create={(values, rows, key, extra) =>
         createContact(
@@ -72,7 +81,11 @@ export function NewContactAction({
           extra,
         )
       }
-      onCreated={() => void refreshCompaniesAfterContact(queryClient)}
+      onCreated={(contact) => {
+        void refreshCompaniesAfterContact(queryClient);
+        if (company)
+          added(contact.full_name, { screen: "contacts", id: contact.id });
+      }}
       resolveExisting={(_code, id) => ({ screen: "contacts", id })}
       refusalNotice={leadHeldNoticeFor}
       fields={[...fields, ...cf.formFields]}

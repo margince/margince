@@ -46,11 +46,22 @@ func keepCorroborated(ctx context.Context, tx pgx.Tx, c CompanyCandidate,
 	}
 	kept := ranked[:0:0]
 	for _, rival := range ranked {
-		if rival.SameBrand || shared[rival.CompanyID] {
+		if filesOnName(rival, shared[rival.CompanyID]) {
 			kept = append(kept, rival)
 		}
 	}
 	return kept, nil
+}
+
+// filesOnName is the fuzzy tier's rule for a name rival over the review bar.
+// The two names are one brand, or the two companies share a fact.
+func filesOnName(rival CompanyCandidateScore, sharesFact bool) bool {
+	return rival.SameBrand || sharesFact
+}
+
+// sameStreet says two companies stand at one street address.
+func sameStreet(own, held companyEvidence) bool {
+	return own.addressKey != "" && own.addressKey == held.addressKey
 }
 
 // companyEvidence is what one company could share with another.
@@ -89,7 +100,7 @@ func companiesSharingEvidence(ctx context.Context, tx pgx.Tx, c CompanyCandidate
 	var numbers []string
 	for _, rival := range rivals {
 		held := evidence[rival]
-		if held.sharesContact || (own.addressKey != "" && own.addressKey == held.addressKey) {
+		if held.sharesContact || sameStreet(own, held) {
 			shared[rival] = true
 			continue
 		}

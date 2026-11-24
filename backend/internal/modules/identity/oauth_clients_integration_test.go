@@ -14,8 +14,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/bearer"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -108,7 +108,7 @@ func TestAnAdminRegisteredClientAlwaysGetsASecretStoredAsItsDigest(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if stored == nil || *stored != bearer.Digest(secret) {
+	if stored == nil || *stored != storekit.TokenHash(secret) {
 		t.Errorf("stored hash %v, want the digest of the secret returned", stored)
 	}
 }
@@ -121,7 +121,7 @@ func TestADeletedMetadataDocumentClientComesBackAndADisabledOneDoesNot(t *testin
 	plain := e.body
 	e.body = func(url string) string { fetches.Add(1); return plain(url) }
 	clientID := e.docs.URL + "/client.json"
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatal(err)
 	}
 	admin := e.actorWith(t, fullAgentClientGrant)
@@ -130,7 +130,7 @@ func TestADeletedMetadataDocumentClientComesBackAndADisabledOneDoesNot(t *testin
 	if err := e.svc.DeleteAgentClient(e.ctx, admin, row.ID); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatalf("the next sign-in after a delete → %v, want the document fetched again", err)
 	}
 	if fetches.Load() != 2 {
@@ -144,7 +144,7 @@ func TestADeletedMetadataDocumentClientComesBackAndADisabledOneDoesNot(t *testin
 	if _, err := e.svc.SetAgentClientDisabled(e.ctx, admin, row.ID, true); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.svc.resolveCIMDClient(e.ctx, clientID); err != nil {
+	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
 		t.Fatal(err)
 	}
 	if fetches.Load() != 2 {

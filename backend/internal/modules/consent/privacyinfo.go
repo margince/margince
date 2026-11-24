@@ -39,6 +39,11 @@ type PrivacyInformation struct {
 	// AcquiredAt is the actual acquisition date, including a later source assessment.
 	// Capture time orders unknown history but does not stand in for acquisition.
 	AcquiredAt *time.Time
+	// StatedSource is where the user who created the contact by hand said it
+	// came from. StatedSourceNote holds their own words. Both are empty when
+	// nothing was given, so "source unknown" on the page means unknown.
+	StatedSource     string
+	StatedSourceNote string
 	// Purposes are what the installation uses this contact's data for, by
 	// published name. PurposeKeys holds each one's key at the same index, so a
 	// page can name the purposes the product seeds in its reader's language.
@@ -46,6 +51,8 @@ type PrivacyInformation struct {
 	PurposeKeys []string
 	// PurposeBases is why each purpose may use the data, at the same index.
 	PurposeBases []string
+	// PurposeSince is when each consent basis was granted, at the same index.
+	PurposeSince []*time.Time
 	// Rights are the codes a page renders in its own language.
 	Rights []string
 	// Controller is who answers for the data; DataCategories, Recipients and
@@ -61,7 +68,7 @@ type PrivacyInformation struct {
 func newDisclosure() PrivacyInformation {
 	return PrivacyInformation{
 		Rights: subjectRights(), Recipients: disclosureRecipients(),
-		Purposes: []string{}, PurposeKeys: []string{}, PurposeBases: []string{},
+		Purposes: []string{}, PurposeKeys: []string{}, PurposeBases: []string{}, PurposeSince: []*time.Time{},
 		DataCategories: []string{}, Retention: []RetentionRule{},
 	}
 }
@@ -112,7 +119,10 @@ func (s *Store) assembleDisclosure(
 		} else if err != nil {
 			return fmt.Errorf("consent: reading how this contact was obtained: %w", err)
 		}
-		return readControllerTx(ctx, tx, &out)
+		if err := readStatedSourceTx(ctx, tx, contactID, &out); err != nil {
+			return err
+		}
+		return readControllerTx(ctx, tx, &out, ruleSubject{Kind: entityContact, ID: contactID.String()})
 	})
 	if err != nil {
 		return out, err
@@ -133,7 +143,7 @@ func (s *Store) assembleLeadDisclosure(ctx context.Context, leadID ids.LeadID) (
 			return fmt.Errorf("consent: reading when this lead was obtained: %w", err)
 		}
 		out.AcquiredAt = &capturedAt
-		return readControllerTx(ctx, tx, &out)
+		return readControllerTx(ctx, tx, &out, ruleSubject{Kind: entityLead, ID: leadID.String()})
 	})
 	if err != nil {
 		return out, err
@@ -181,4 +191,20 @@ func (s *Store) PrivacyInformationFor(
 		return s.assembleLeadDisclosure(ctx, ref.LeadID)
 	}
 	return s.assembleDisclosure(ctx, ref.ContactID)
+}
+
+// readStatedSourceTx reads the source the user who created the contact by
+// hand stated, from the first acquisition row that carries one.
+func readStatedSourceTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, out *PrivacyInformation) error {
+	err := tx.QueryRow(ctx, `
+		SELECT stated_source, coalesce(note, '') FROM contact_acquisition_evidence
+		 WHERE contact_id = $1 AND stated_source IS NOT NULL
+		 ORDER BY captured_at, id LIMIT 1`, contactID).Scan(&out.StatedSource, &out.StatedSourceNote)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("consent: reading the source stated for this contact: %w", err)
+	}
+	return nil
 }

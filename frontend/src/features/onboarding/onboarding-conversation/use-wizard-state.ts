@@ -1,11 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
-import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
-import { throwProblem } from "../../../lib/problem";
+import { useAddressWriters } from "../../../lib/urlstate";
 import type { CompanyForm } from "../onboarding";
 import { wizardStateBody, writeWizardState } from "../onboarding";
-import { ONBOARDING_PROGRESS_KEY } from "../onboarding-progress";
+import { onboardingProgressOptions } from "../onboarding-progress";
 import { isCompanyField } from "./company-proposal";
 
 // Minimal wizard-state persistence for the conversational shell: the server
@@ -27,6 +26,8 @@ type SavedState = {
   voiceSkipped: boolean;
   connectSkipped: boolean;
   draft: OnboardingState["company_draft"] | null;
+  /** The server's row once the journey is complete, which no write changes. */
+  finished: OnboardingState | null;
 };
 
 export type WizardPersistInput = Readonly<{
@@ -50,9 +51,14 @@ const FRESH_STATE: SavedState = {
   voiceSkipped: false,
   connectSkipped: false,
   draft: null,
+  finished: null,
 };
 
-function fromServerState(data: OnboardingState): SavedState {
+function fromServerState(data: OnboardingState | null): SavedState {
+  // Nothing persisted yet: the first write starts at version 0.
+  if (data === null) {
+    return FRESH_STATE;
+  }
   return {
     version: typeof data.version === "number" ? data.version : 0,
     sourceMode: data.source_mode ?? null,
@@ -64,19 +70,8 @@ function fromServerState(data: OnboardingState): SavedState {
     voiceSkipped: Boolean(data.voice_skipped),
     connectSkipped: Boolean(data.connect_skipped),
     draft: data.company_draft ?? null,
+    finished: data.step === "complete" ? data : null,
   };
-}
-
-async function loadSavedState(): Promise<SavedState> {
-  const { data, error, response } = await api.GET("/onboarding/state");
-  if (error) {
-    if (response.status !== 404) {
-      throwProblem(error);
-    }
-    // 404 = nothing persisted yet: the first write starts at version 0.
-    return FRESH_STATE;
-  }
-  return fromServerState(data);
 }
 
 // A blank conversational field never clobbers a value an earlier session
@@ -131,30 +126,62 @@ export function useWizardStatePersist() {
   const saved = useRef<SavedState | null>(null);
   const queue = useRef<Promise<boolean>>(Promise.resolve(true));
   const client = useQueryClient();
+  const { navigateReplacing } = useAddressWriters();
 
   const persist = useCallback(
     (input: WizardPersistInput): Promise<boolean> => {
       queue.current = queue.current.then(async () => {
         try {
-          saved.current ??= await loadSavedState();
-          const written = await writeMerged(saved.current, input);
+          saved.current ??= fromServerState(
+            await client.fetchQuery({
+              ...onboardingProgressOptions,
+              staleTime: Number.POSITIVE_INFINITY,
+            }),
+          );
+          let written: OnboardingState;
+          try {
+            written =
+              saved.current.finished ??
+              (await writeMerged(saved.current, input));
+          } catch {
+            // A refused write reads the row again: another tab may have
+            // finished the journey, and the next write needs its version.
+            const fresh = await client.fetchQuery({
+              ...onboardingProgressOptions,
+              staleTime: 0,
+            });
+            saved.current = fromServerState(fresh);
+            if (fresh?.step !== "complete") {
+              return false;
+            }
+            written = fresh;
+          }
           saved.current = fromServerState(written);
           // The app shell gates on this same entry: a completion it never
           // learned of would send the finished journey straight back here.
-          client.setQueryData(ONBOARDING_PROGRESS_KEY, written);
+          client.setQueryData(onboardingProgressOptions.queryKey, written);
+          if (written.step === "complete" && input.step !== "complete") {
+            // Another tab finished the journey, so this one goes Home too.
+            navigateReplacing({ screen: "home" });
+            return false;
+          }
           return true;
         } catch {
           // Best-effort by design: the act must never stall on state
           // persistence. The caller learns via the false result (the proposal
-          // join is gated on it and falls back to the site-read snapshot);
-          // resetting forces a fresh version sync on the next attempt.
+          // join is gated on it and falls back to the site-read snapshot).
+          // Invalidating forces a fresh version sync on the next attempt.
           saved.current = null;
+          void client.invalidateQueries({
+            queryKey: onboardingProgressOptions.queryKey,
+            refetchType: "none",
+          });
           return false;
         }
       });
       return queue.current;
     },
-    [client],
+    [client, navigateReplacing],
   );
 
   return { persist };

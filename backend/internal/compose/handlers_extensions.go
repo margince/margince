@@ -77,15 +77,31 @@ func composedExtensionInventory(exts []extension.Extension, verbs []extension.Ve
 			Name:        string(e.Name),
 			Version:     string(e.Version),
 			Description: string(e.Description),
-			RbacObjects: unitRbacObjects(e.Name, verbs),
+			RbacObjects: unitRbacObjects(e, verbs),
 			Routes:      unitRoutes(e.Name, verbs),
 			Jobs:        unitJobs(e.Name, jobs),
+			Needs:       unitNeeds(e),
 		})
 	}
 	slices.SortFunc(out, func(a, b crmcontracts.ComposedExtension) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 	return out
+}
+
+// unitNeeds lists what the unit declares it borrows from the core, sorted by
+// capability. Nil for a unit that declares none, so the field is absent on the
+// wire rather than an empty promise.
+func unitNeeds(e extension.Extension) *[]crmcontracts.ComposedExtensionNeed {
+	if len(e.Needs) == 0 {
+		return nil
+	}
+	needs := make([]crmcontracts.ComposedExtensionNeed, 0, len(e.Needs))
+	for _, need := range e.Needs {
+		needs = append(needs, crmcontracts.ComposedExtensionNeed{Capability: string(need.Capability), Reason: need.Reason})
+	}
+	slices.SortFunc(needs, func(a, b crmcontracts.ComposedExtensionNeed) int { return strings.Compare(a.Capability, b.Capability) })
+	return &needs
 }
 
 // unitRbacObjects collects the distinct objects this unit's operations gate on.
@@ -97,15 +113,26 @@ func composedExtensionInventory(exts []extension.Extension, verbs []extension.Ve
 // underscores, so `crm-demo`/`widget` and `crm`/`demo_widget` derive one name
 // (see extrbac.go). Splitting the prefix back apart would attribute an object to
 // the wrong unit; the verb carries its declaring unit as data and cannot.
-func unitRbacObjects(unit extension.Name, verbs []extension.Verb) []string {
+//
+// A record kind the unit declares adds its own object, read off the declaration
+// for the same reason. Without it the role editor cannot place the object under
+// its unit.
+func unitRbacObjects(unit extension.Extension, verbs []extension.Verb) []string {
 	seen := map[string]bool{}
 	out := []string{}
 	for _, v := range verbs {
-		if v.Unit != unit || v.RbacObject == "" || seen[v.RbacObject] {
+		if v.Unit != unit.Name || v.RbacObject == "" || seen[v.RbacObject] {
 			continue
 		}
 		seen[v.RbacObject] = true
 		out = append(out, v.RbacObject)
+	}
+	for _, k := range unit.RecordKinds {
+		object := extension.RecordKindObject(unit.Name, k.Kind)
+		if !seen[object] {
+			seen[object] = true
+			out = append(out, object)
+		}
 	}
 	slices.Sort(out)
 	return out

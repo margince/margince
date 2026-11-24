@@ -227,6 +227,7 @@ export function RosterPicker({
   teamsQuery,
   partial,
   filteredRoster,
+  searching,
   held,
   subject,
   t,
@@ -239,6 +240,9 @@ export function RosterPicker({
   // the complete list of who there is to share with.
   partial: boolean;
   filteredRoster: RosterSubject[];
+  // Whether a search narrowed the list, so an empty list means no match rather
+  // than nobody to share with.
+  searching: boolean;
   // The grant each subject already holds on this record, by `subjectKey`.
   held: ReadonlyMap<string, RecordGrant>;
   subject: RosterSubject | null;
@@ -281,7 +285,9 @@ export function RosterPicker({
   if (filteredRoster.length === 0) {
     return (
       <>
-        <p data-testid="share-roster-empty">{t("share.rosterEmpty")}</p>
+        <p data-testid="share-roster-empty">
+          {t(searching ? "share.rosterNoMatch" : "share.rosterEmpty")}
+        </p>
         {/* "Nobody matches" over a roster that stopped early is the reader
             being told the subject they are looking for does not exist, on the
             strength of pages nothing read. */}

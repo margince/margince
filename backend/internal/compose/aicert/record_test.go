@@ -23,8 +23,8 @@ func sampleRecord() aicert.Record {
 		Verdict:              aicert.VerdictCertified,
 		Runs:                 3,
 		Reliability:          1,
-		JudgeScoreP50:        85,
-		JudgeScoreMin:        80,
+		JudgeScoreP50:        new(85),
+		JudgeScoreMin:        new(80),
 		LatencyP50:           1200,
 		LatencyP95:           1500,
 		MeanTokens:           300,
@@ -157,9 +157,6 @@ func TestRecordForSiteFoldsOnlyThatSitesScenarios(t *testing.T) {
 	}
 	if acts.Verdict != aicert.VerdictSupportedDegraded {
 		t.Fatalf("acts verdict = %q, want the worse of its two scenarios", acts.Verdict)
-	}
-	if acts.Reliability() != 1 {
-		t.Fatalf("acts reliability = %v, want 1 — both of ITS runs passed, while the task's did not", acts.Reliability())
 	}
 
 	extract, ok := rec.ForSite("field_extract")

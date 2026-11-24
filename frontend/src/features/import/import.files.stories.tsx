@@ -73,13 +73,51 @@ const ZIP_PROFILE = {
   ignored: [{ file: "products.csv", reason: "unknown_name" }],
 };
 
-function wizard() {
+// One CSV whose name names no type, as the server profiled it. Its header
+// types it, or leaves it untyped, or the reader names its type.
+function csvProfile(
+  headers: readonly string[],
+  object: string,
+  chosenBy?: "columns" | "none",
+) {
+  return {
+    run_id: `019ff-${object}`,
+    source_ref: `ws/import/${object}`,
+    object,
+    ...(chosenBy ? { object_chosen_by: chosenBy } : null),
+    file_name: "export.csv",
+    rows_profiled: 500,
+    row_count: 4812,
+    columns: headers.map((header) => ({ header, fill_rate: 1, samples: [] })),
+    suggested_mapping: {},
+    targets: [],
+  };
+}
+
+// Each upload answers the next profile in turn, and the last one after that.
+function wizard(
+  profiles: readonly object[] = [ZIP_PROFILE],
+  refuseCancel = false,
+) {
+  let uploads = 0;
   installFetchStub({
     "GET /me": meRoute({ import_run: ["create", "read", "update"] }),
     "GET /imports/format": () => jsonResponse(formatFixture),
     "GET /imports": () =>
       jsonResponse({ data: recentRunsFixture, page: { has_more: false } }),
-    "POST /imports/sources": () => jsonResponse(ZIP_PROFILE),
+    "POST /imports/sources": () =>
+      jsonResponse(profiles[Math.min(uploads++, profiles.length - 1)]),
+    "POST /imports/019ff-lead/cancel": () =>
+      refuseCancel
+        ? jsonResponse(
+            {
+              status: 403,
+              code: "permission_denied",
+              detail: "This draft is not yours to cancel.",
+            },
+            403,
+          )
+        : jsonResponse({ status: "cancelled" }),
   });
   return (
     <StoryProviders>
@@ -99,6 +137,15 @@ async function dropZip(canvasElement: HTMLElement) {
   });
 }
 
+async function dropCsv(canvasElement: HTMLElement) {
+  const canvas = within(canvasElement);
+  await userEvent.upload(
+    await canvas.findByLabelText("Upload your data"),
+    new File(["email\n"], "export.csv"),
+  );
+  await canvas.findByLabelText("Source name");
+}
+
 /** The drop zone the hub and the first step share. */
 export const DropZone: Story = {
   render: () => (
@@ -108,24 +155,33 @@ export const DropZone: Story = {
   ),
 };
 
+/** A drop zone for one contact's activities, which takes one CSV. */
+export const DropZoneCsvOnly: Story = {
+  render: () => (
+    <StoryProviders>
+      <ImportDropzone csvOnly sizeLimitMb={10} onPick={() => undefined} />
+    </StoryProviders>
+  ),
+};
+
 /** The first step, before a file. */
-export const Upload: Story = { render: wizard };
+export const Upload: Story = { render: () => wizard() };
 
 /** Each file with its detected type, the file left out, and the source name. */
 export const CheckingFiles: Story = {
-  render: wizard,
+  render: () => wizard(),
   play: ({ canvasElement }) => dropZip(canvasElement),
 };
 
 export const CheckingFilesDark: Story = {
   globals: { theme: "dark" },
-  render: wizard,
+  render: () => wizard(),
   play: ({ canvasElement }) => dropZip(canvasElement),
 };
 
 /** One tab per file in import order; a chosen field shows its marks. */
 export const MappingColumns: Story = {
-  render: wizard,
+  render: () => wizard(),
   play: async ({ canvasElement }) => {
     await dropZip(canvasElement);
     await userEvent.click(
@@ -152,4 +208,59 @@ export const MappingTable: Story = {
       />
     </StoryProviders>
   ),
+};
+
+/** A CSV named for no type, typed Contacts by its header, and said so. */
+export const TypeFromColumns: Story = {
+  render: () =>
+    wizard([csvProfile(["email", "company_ref"], "contact", "columns")]),
+  play: ({ canvasElement }) => dropCsv(canvasElement),
+};
+
+/** A CSV whose name and header name no type: none is chosen, Next waits. */
+export const NoTypeFound: Story = {
+  render: () => wizard([csvProfile(["Notes", "email"], "lead", "none")]),
+  play: ({ canvasElement }) => dropCsv(canvasElement),
+};
+
+export const NoTypeFoundDark: Story = {
+  globals: { theme: "dark" },
+  render: () => wizard([csvProfile(["Notes", "email"], "lead", "none")]),
+  play: ({ canvasElement }) => dropCsv(canvasElement),
+};
+
+/** A source name with characters the server refuses, and Next held back. */
+export const SourceNameRefused: Story = {
+  render: () => wizard(),
+  play: async ({ canvasElement }) => {
+    await dropZip(canvasElement);
+    const field = within(canvasElement).getByLabelText("Source name");
+    await userEvent.clear(field);
+    await userEvent.type(field, "wiz ünïcödé!");
+  },
+};
+
+/** Another type for the CSV: the new draft opens, and the old one's cancel
+ * was refused, so the Files step says it is still there. */
+export const RetypedCancelRefused: Story = {
+  render: () =>
+    wizard(
+      [
+        csvProfile(["Notes", "email"], "lead", "none"),
+        csvProfile(["Notes", "email"], "contact"),
+      ],
+      true,
+    ),
+  play: async ({ canvasElement }) => {
+    await dropCsv(canvasElement);
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("combobox", { name: "Record type for export.csv" }),
+    );
+    // The listbox is portalled to the body, outside the story's canvas.
+    await userEvent.click(
+      await within(document.body).findByRole("option", { name: "Contacts" }),
+    );
+    await canvas.findByText("The earlier draft of this file was not canceled");
+  },
 };

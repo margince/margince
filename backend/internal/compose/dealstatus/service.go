@@ -48,16 +48,17 @@ const laneDeadline = 15 * time.Second
 
 // Service gathers the facts, writes the card, and caches it per reader.
 type Service struct {
-	pool           *pgxpool.Pool
-	deals          *deals.Store
-	activities     *activities.Store
-	rooms          *dealrooms.Store
-	seatsOf        SeatReader
-	seatBatch      SeatBatchReader
-	mailCoverage   mailcoverage.Reader
-	lane           Completer
-	routingVersion string
-	now            func() time.Time
+	pool             *pgxpool.Pool
+	deals            *deals.Store
+	activities       *activities.Store
+	rooms            *dealrooms.Store
+	seatsOf          SeatReader
+	seatBatch        SeatBatchReader
+	mailCoverage     mailcoverage.Reader
+	managerStandings ManagerStandings
+	lane             Completer
+	routingVersion   func() string
+	now              func() time.Time
 }
 
 // NewService binds the reads. Each store carries its own gates.
@@ -79,10 +80,19 @@ func (s *Service) WithSeats(read SeatReader) *Service {
 
 // WithLane binds the deal_health lane that writes the card's words. Without
 // it every card is the deterministic floor, which is a working card.
-func (s *Service) WithLane(lane Completer, routingVersion string) *Service {
+// routingVersion is read per card, so a rebind moves the fingerprint.
+func (s *Service) WithLane(lane Completer, routingVersion func() string) *Service {
 	s.lane = lane
 	s.routingVersion = routingVersion
 	return s
+}
+
+// routing is the binding the card is fingerprinted under; empty with no lane.
+func (s *Service) routing() string {
+	if s.routingVersion == nil {
+		return ""
+	}
+	return s.routingVersion()
 }
 
 // facts are the inputs the card is written from.
@@ -206,9 +216,9 @@ type cacheVerdict struct {
 
 // decideFromCache reads the stored card and says whether it still stands.
 func (s *Service) decideFromCache(
-	ctx context.Context, userID ids.UserID, dealID ids.DealID, fingerprint string, refresh bool, now time.Time,
+	ctx context.Context, userID ids.UserID, dealID ids.DealID, fingerprint string, policy cardReadPolicy, now time.Time,
 ) cacheVerdict {
-	if refresh {
+	if policy.refresh {
 		return cacheVerdict{askModel: true}
 	}
 	cached, found, err := s.cached(ctx, userID, dealID)
@@ -217,8 +227,13 @@ func (s *Service) decideFromCache(
 		// card is derived content and writing it again is the whole fallback.
 		return cacheVerdict{askModel: true}
 	}
-	if cached.Fingerprint == fingerprint {
+	if cached.Fingerprint == fingerprint && (policy.factsOnly || !cached.FactsOnly) {
 		return cacheVerdict{card: cached.Card, serve: true}
+	}
+	if cached.FactsOnly {
+		// The call floor counts from a model call, and this card made none. The
+		// model it skipped is still owed, so a facts-only rewrite stays marked.
+		return cacheVerdict{askModel: true}
 	}
 	return cacheVerdict{askModel: now.Sub(cached.GeneratedAt) >= modelCallFloor}
 }

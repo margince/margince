@@ -1,5 +1,5 @@
 import type { Locale } from "../i18n";
-import { INTL_LOCALE } from "./format";
+import { relativeTimeFormat } from "./formatters";
 
 /**
  * An instant as an offset from `now` in the largest whole unit, in the reader's
@@ -19,7 +19,7 @@ export function formatRelativeTime(
       : abs >= 3_600
         ? (["hour", 3_600] as const)
         : (["minute", 60] as const);
-  return new Intl.RelativeTimeFormat(INTL_LOCALE[locale], {
+  return relativeTimeFormat(locale, {
     numeric: "auto",
   }).format(Math.trunc(seconds / size), unit);
 }

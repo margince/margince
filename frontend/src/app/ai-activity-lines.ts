@@ -248,6 +248,12 @@ export const ACTIVITY_LINE: Readonly<
   rewrite: notDisplayed(
     "the rewritten words replace the rep's own in the field they pressed the button under; a rail line would announce text already on screen",
   ),
+  extension_task: notDisplayed(
+    "the answer returns to the extension screen that asked for it, under the reader's own eyes; a rail line would announce a result already on screen",
+  ),
+  chat_task_reading: notDisplayed(
+    "the reading runs while the rep files the chat, and its change shows in Done for you with Undo; a rail line would announce it twice",
+  ),
   nl_search: notDisplayed(
     "a plain-words filter answers in the builder the reader pressed it from, under their own eyes; a rail line would announce a result already on screen",
   ),
@@ -280,9 +286,9 @@ export const PANEL_HEADING: Readonly<Record<"running", MessageKey>> = {
  * PARTIAL on purpose, where `ACTIVITY_LINE` is total: a named variant is not
  * something every kind can have. Most occurrences are about no single record,
  * and the ones that are only carry a name when their emitter sends
- * `subject_label` — the document reading names its document, the website
- * read names its company, and the summary sites name the company, contact or
- * meeting they were asked about. A total map here would demand copy for
+ * `subject_label`. The document reading names its document, the website read
+ * its company, and the summary sites the company, contact or meeting. A reply
+ * draft names the message's subject line, and an offer draft its deal. A total map here would demand copy for
  * sentences no server can produce, which is the boilerplate the notDisplayed
  * branch exists to avoid.
  *
@@ -330,5 +336,24 @@ export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
     done: "agent.activity.siteReadNamed.done",
     degraded: "agent.activity.siteReadNamed.degraded",
     failed: "agent.activity.siteReadNamed.failed",
+  },
+  // The subject line of the message being answered, which is how the reader
+  // finds that thread in their inbox.
+  draft_reply: {
+    queued: "agent.activity.draftReplyNamed.queued",
+    running: "agent.activity.draftReplyNamed.running",
+    stalled: "agent.activity.draftReplyNamed.stalled",
+    done: "agent.activity.draftReplyNamed.done",
+    degraded: "agent.activity.draftReplyNamed.degraded",
+    failed: "agent.activity.draftReplyNamed.failed",
+  },
+  // The deal's name: an offer is drafted for one deal.
+  offer_draft: {
+    queued: "agent.activity.offerDraftNamed.queued",
+    running: "agent.activity.offerDraftNamed.running",
+    stalled: "agent.activity.offerDraftNamed.stalled",
+    done: "agent.activity.offerDraftNamed.done",
+    degraded: "agent.activity.offerDraftNamed.degraded",
+    failed: "agent.activity.offerDraftNamed.failed",
   },
 };

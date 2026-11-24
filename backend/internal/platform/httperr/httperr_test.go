@@ -75,7 +75,7 @@ func TestWrite_infrastructureCauseNeverReachesTheWire(t *testing.T) {
 }
 
 func TestWrite_malformedCursorIsAClientFault(t *testing.T) {
-	_, err := storekit.DecodeCursor("garbage!!")
+	_, err := storekit.DecodeCursor("list", "garbage!!")
 	if err == nil {
 		t.Fatal("garbage cursor decoded")
 	}

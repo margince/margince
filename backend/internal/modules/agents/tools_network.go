@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -223,9 +224,10 @@ type companyCoverageTool struct{ read CoverageReader }
 func (t companyCoverageTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "company_coverage", Title: "Relationship coverage on a deal", Version: toolVersionV1,
-		Description:   companyCoverageCopy.render(),
-		Instead:       companyCoverageCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       companyCoverageCopy.render(),
+		Instead:           companyCoverageCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "getDealCoverage",
 		InputSchema: schema(`{"type":"object","properties":{
 			"deal_id":{"type":"string","format":"uuid","description":"The deal to assess"}},
@@ -271,7 +273,9 @@ func (t companyCoverageTool) Handle(ctx context.Context, in json.RawMessage) (js
 	}
 	noteDerivedContent(ctx)
 	noteEvidence(ctx, datasource.EntityDeal, args.DealID)
-	for _, seat := range answer.Stakeholders {
+	for i, seat := range answer.Stakeholders {
+		// A typed role would read to the model as a buying role it repeats.
+		answer.Stakeholders[i].Role = dealrole.Recorded(seat.Role)
 		noteEvidence(ctx, datasource.EntityContact, seat.ContactID)
 	}
 	return json.Marshal(answer)
@@ -284,9 +288,10 @@ type introPathTool struct{ list IntroPathLister }
 func (t introPathTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "intro_path_to", Title: "Find a warm introduction path", Version: toolVersionV1,
-		Description:   introPathToCopy.render(),
-		Instead:       introPathToCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
+		ProductMadeAnswer: true,
+		Description:       introPathToCopy.render(),
+		Instead:           introPathToCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true,
 		OpenAPIOp: "listIntroPaths",
 		InputSchema: schema(`{"type":"object","properties":{
 			"company_id":{"type":"string","format":"uuid","description":"The company to find a warm route into"}},
@@ -345,9 +350,10 @@ type atRiskTool struct{ list AtRiskLister }
 func (t atRiskTool) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "at_risk_relationships", Title: "Relationships going cold", Version: toolVersionV1,
-		Description:   atRiskRelationshipsCopy.render(),
-		Instead:       atRiskRelationshipsCopy.Instead,
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		ProductMadeAnswer: true,
+		Description:       atRiskRelationshipsCopy.render(),
+		Instead:           atRiskRelationshipsCopy.Instead,
+		RequiredScope:     principal.ScopeRead, Tier: mcp.TierAutoExecute,
 		Unlisted:     true,
 		OpenAPIOp:    "listAtRiskRelationships",
 		InputSchema:  schema(`{"type":"object","properties":{"owner_id":{"type":"string","format":"uuid","description":"Narrow to deals owned by this member; existing read scope still applies"}},"additionalProperties":false}`),
