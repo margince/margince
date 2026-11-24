@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // SlowStatement watches this database for the longest statement running past
@@ -52,13 +54,8 @@ func watchSlow(ctx context.Context, conn *pgx.Conn, after time.Duration, seen ch
 		}
 		// Its own deadline, so stopping the watch never cuts a read in half.
 		probe, done := context.WithTimeout(context.WithoutCancel(ctx), after/4)
-		var next slowSeen
-		err := conn.QueryRow(probe, `SELECT query, extract(epoch FROM now() - query_start)::float8,
-		  octet_length(query) >= pg_size_bytes(current_setting('track_activity_query_size')) - 1,
-		  COALESCE(wait_event_type || ':' || wait_event, ''), cardinality(pg_blocking_pids(pid))
-		  FROM pg_stat_activity WHERE datname = current_database() AND state = 'active'
-		  AND pid <> pg_backend_pid() AND now() - query_start > make_interval(secs => $1)
-		  ORDER BY query_start LIMIT 1`, after.Seconds()).Scan(&next.query, &next.seconds, &next.cut, &next.waitsOn, &next.blockers)
+		found, err := testdb.LongestRunning(probe, conn, after)
+		next := slowSeen{query: found.Query, seconds: found.Seconds, cut: found.Cut, waitsOn: found.WaitsOn, blockers: found.Blockers}
 		done()
 		switch {
 		case err == nil && next.seconds > longest.seconds:
