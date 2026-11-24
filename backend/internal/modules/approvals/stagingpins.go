@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // resolveTargetVersion reads the staged target's CURRENT version inside the
@@ -114,4 +115,15 @@ func (s *Service) resolveStagingPins(ctx context.Context, tx pgx.Tx, in StageInp
 	}
 	pins.context, err = s.stagedContextDigest(ctx, tx, in)
 	return pins, err
+}
+
+// PinTarget answers the version a staging of this call would pin, read now with
+// the same waivers. A confirmation binds it without staging a row
+// (agents/confirmcode.go). pinned is false where staging would take no pin.
+func (s *Service) PinTarget(ctx context.Context, kind, targetType string, targetID ids.UUID) (version int64, pinned bool, err error) {
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		version, pinned, err = resolveTargetVersion(ctx, tx, StageInput{Kind: kind, TargetType: targetType, TargetID: targetID})
+		return err
+	})
+	return version, pinned, err
 }

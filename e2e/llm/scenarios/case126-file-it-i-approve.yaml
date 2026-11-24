@@ -1,9 +1,9 @@
 # CASE 126 — The same move, with the user's yes in the prompt.
 #
-# The mirror of case 125. The move onto the project stages, and the user has
-# already said yes, so the agent may release its own staged call and must then
-# repeat the call with the approval's id: approving alone moves nothing. The end
-# state reads the mail on the project.
+# The mirror of case 122. Over MCP the move onto the project answers a preview and
+# a confirm_code, and the user has already said yes. So the agent repeats the call
+# with the code, and nothing waits in the approval inbox. The end state reads the
+# mail on the project.
 name: case126_file_it_i_approve
 title: File it on the project, I approve
 criteria: [1]
@@ -26,6 +26,9 @@ may_call:
   - relink_activity
   - relink_activities
   - decide_approvals
+
+must_call_matching:
+  - relink_activity~confirm_code || relink_activities~confirm_code
 
 must_end_with:
   - activity "Abnahmeprotokoll Leitstand Goslar" on project "Leitstand Goslar" records=1

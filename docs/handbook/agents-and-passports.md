@@ -147,6 +147,10 @@ AI names the address Margince reads. Someone who talks the AI round could make
 it reach an address nobody holding the passport ever picked. That is a question
 about where your data goes, so it waits.
 
+When you work with your AI assistant in a chat, it asks you there. It tells you
+what would change and acts only after you say yes. Nothing appears in your
+approvals. A scheduled agent with nobody watching still puts it in your approvals.
+
 The waits below apply only to automatic work with no passport behind it.
 **Folding one tag into another.** A merge renames a word on every record
 carrying it, and renaming it back does not undo it.

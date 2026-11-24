@@ -93,6 +93,19 @@ caller, tool or set of arguments, or one older than ten minutes, gets the questi
 through the client, so it only decides what the client could decide by itself. A change a human must approve still
 goes to the approval inbox. A client with no form support, or a server with no key, gets the answer it had before.
 
+**Confirming in the conversation.** A tool marked `WaitsEvenForItsUser` waits for a human even when the agent acts
+as its user. Over MCP, when that user is in the conversation, the call does not stage. Its first answer is a refusal
+that says what would change and carries a `confirm_code`, in the text and under `_meta` `margince/confirm` with
+`next_steps`. After the user says yes, the agent sends the same call again with `confirm_code`. It runs once.
+
+The code is signed with the `connector_state_key`. It holds the caller's principal, passport and connection, the
+tool, the argument digest and the version the preview read. A code for another caller or call, a used code, or one
+older than 15 minutes is refused, and the agent asks for a new preview. Redis makes each code single-use. A run that
+fails before it commits gives the code back.
+
+No form is needed, so every client can confirm this way. Without the key or Redis, and over REST, such a call stages
+into the approval inbox as before.
+
 `check_client` measures whether a client can answer such a form. It is off until a seat with `agent_client` update
 turns it on in Settings → MCP. Then `tools/list` names it only for a passport whose human is an admin, and any other
 caller gets the unknown-tool answer. The tool has no REST route, because a REST caller cannot answer a form.

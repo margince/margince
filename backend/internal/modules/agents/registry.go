@@ -290,7 +290,7 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	// human's approval is consumed and refusing would burn it on a call that
 	// never happened and can never be redeemed again — so the charge is absorbed
 	// there instead, the same asymmetry a committed write takes.
-	if err == nil && res.ApprovalID.IsZero() {
+	if err == nil && res.ApprovalID.IsZero() && res.ConfirmCode == "" {
 		if chargeErr := r.chargeCall(ctx, spec, nothingHasHappenedYet); chargeErr != nil {
 			return nil, 0, chargeErr
 		}
@@ -302,8 +302,15 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 	// idempotent retry replays its recorded result before that.
 	case err == nil, !res.ApprovalID.IsZero() && errors.Is(err, apperrors.ErrRequiresApproval) && r.approvals != nil:
 		return r.runClaimed(ctx, t, spec, res)
+	// The user's yes in the conversation releases it like an approval (confirmcode.go).
+	case res.ConfirmCode != "" && confirmsInConversation(ctx, spec.WaitsEvenForItsUser, err):
+		return r.runClaimed(ctx, t, spec, res)
+	case res.ConfirmCode != "" && errors.Is(err, apperrors.ErrRequiresApproval):
+		return nil, 0, errConfirmCodeNotHere
 	case !errors.Is(err, apperrors.ErrRequiresApproval) || r.approvals == nil:
 		return nil, 0, err
+	case confirmsInConversation(ctx, spec.WaitsEvenForItsUser, err):
+		return nil, 0, r.previewInConversation(ctx, t, spec, args, res.DiffHash, err)
 	default:
 		// Staged, and deliberately BEFORE any claim: a call that did not run
 		// must not leave a key held, and the retry that redeems the approval is
@@ -351,35 +358,15 @@ func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	return r.handle(redeemed, t, spec, res, attempt)
 }
 
-// redeemPresented consumes the approval a retry asserts, and answers the
-// context marked as released. A call presenting none passes through: whether
-// one was REQUIRED is the gate's question, already answered above.
-//
-// The redeemed call's ceiling is charged HERE, where the redemption is known to
-// have succeeded, and absorbed rather than refused — the human's approval is
-// consumed by this point, and refusing would burn it on a call that never
-// happened and can never be redeemed again.
-func (r *Registry) redeemPresented(ctx context.Context, spec mcp.ToolSpec, res reserved) (context.Context, error) {
-	if res.ApprovalID.IsZero() {
-		return ctx, nil
-	}
-	if r.approvals == nil {
-		return ctx, fmt.Errorf("this call presents an approval_id, but this surface has no approvals to redeem it against: %w", apperrors.ErrApprovalTokenInvalid)
-	}
-	marked, _, _, err := RedeemAndMark(ctx, r.approvals, res.ApprovalID, spec.Name, res.DiffHash)
-	if err != nil {
-		return ctx, err
-	}
-	r.ChargeRedeemedCall(marked, spec)
-	return marked, nil
-}
-
 // handle runs an admitted call, seals its answer, and records what a claimed
 // retry key produced. Only here is it known that the tool ran and what it said.
 func (r *Registry) handle(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved, attempt string) (json.RawMessage, int, error) {
 	work, committed := database.WatchCommits(ctx)
 	sealed, records, err := r.runAndSeal(work, t, spec, res.Args)
 	r.settleRun(ctx, spec, res, attempt, sealed, records, err, committed)
+	if err != nil && !committed() {
+		r.releaseUnusedConfirmCode(ctx)
+	}
 	return sealed, records, err
 }
 
