@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { READ_BY_AN_OUTSIDER } from "../../scripts/lib/german-catalogs";
-import { join } from "node:path";
 import { plantedFindings as planted, srcDir, treeOf } from "../tree";
 import {
   buyerPageFiles,
@@ -126,9 +126,7 @@ describe("the buyer's page is its entry and the deal files it imports", () => {
 describe("the address-register rule", () => {
   it("reports a planted value through its own corpus and across", () => {
     const text = 'export const de = { "a.b": "Speichern Sie." };\n';
-    expect(
-      planted(rule, [{ path: coreCatalog, area: "src", text }]),
-    ).toContain(
+    expect(planted(rule, [{ path: coreCatalog, area: "src", text }])).toContain(
       'addresses the reader as Sie or Ihr: frontend/src/i18n/de.ts a.b: "Sie" mid-sentence in Speichern Sie.',
     );
   });

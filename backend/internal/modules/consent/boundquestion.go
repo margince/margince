@@ -63,8 +63,8 @@ var errPageOlderThanQuestion = &apperrors.VersionSkewError{
 
 // servedQuestionTx resolves the question this link pinned, in the link's
 // language, with its fields filled. A pin with no published row is served in
-// this build's wording for the pinned key, so a correspondence link never falls
-// back to the page's advertising sentence; its bound row stays zero.
+// this build's wording for the pinned key. So a correspondence link never falls
+// back to the page's advertising sentence. Its bound row stays zero.
 func (s *Store) servedQuestionTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef) (ServedQuestion, boundQuestion, bool, error) {
 	bound, found, err := publishedQuestionForLinkTx(ctx, tx, ref)
 	if err != nil {
@@ -100,9 +100,9 @@ func (s *Store) servedQuestionFor(ctx context.Context, ref ConfirmRef) (*ServedQ
 	return out, err
 }
 
-// wordingForGrantTx decides what an answer through a confirm link records: the
-// served question where the link pinned one, else the client's sentence. A
-// served question with no published row names no version. Both
+// wordingForGrantTx decides what an answer through a confirm link records. A
+// link that pinned a published question records it. Any other records the
+// client's sentence with no version. Both
 // confirm-link doors call it. A withdrawal is never refused over its words.
 func (s *Store) wordingForGrantTx(
 	ctx context.Context, tx pgx.Tx, ref ConfirmRef, in ConfirmSubmission,
@@ -111,14 +111,11 @@ func (s *Store) wordingForGrantTx(
 	if err != nil {
 		return GrantWording{}, err
 	}
-	if !found {
+	if !found || bound.VersionID.IsZero() {
 		return GrantWording{Text: in.MarketingWording}, nil
 	}
 	if in.MarketingChoice == string(StateGranted) && in.MarketingWording != served.Text {
 		return GrantWording{}, errPageOlderThanQuestion
-	}
-	if bound.VersionID.IsZero() {
-		return GrantWording{Text: served.Text}, nil
 	}
 	version := bound.Version
 	return GrantWording{Text: served.Text, Version: &version, VersionID: bound.VersionID}, nil
@@ -163,8 +160,8 @@ func (s *Store) questionFieldsTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef)
 
 // fillQuestion puts the fields into a published question. A purpose or
 // frequency with no value keeps its placeholder. The controller is "the sender"
-// when the installation has stated no name, and with no privacy page the
-// sentence that points to it is left out rather than printed with no link.
+// when the installation has stated no name. With no privacy page, the sentence
+// that points to it is left out rather than printed with no link.
 func fillQuestion(text string, f questionFields) string {
 	if f.privacyPage == "" {
 		text = withoutRightsSentence(text)
@@ -266,11 +263,11 @@ type boundQuestion struct {
 // grants keep the weaker evidence they already had, because refusing somebody's
 // consent over our own missing bookkeeping would be the wrong way round.
 //
-// A link that DOES name a version and locale with nothing published for them is
-// the other case: this installation asked a question it never published, or
-// publishing has not run. The grant still stands — the subject clicked a real
-// link and answered a real question — but it is logged rather than folded in
-// with the expected case, and servedQuestionTx asks it in this build's words.
+// The other case is a link that names a version and locale with nothing
+// published for them. This installation asked a question it never published,
+// or publishing has not run. The grant still stands, since the subject clicked
+// a real link and answered a real question. It is logged apart from the
+// expected case, and servedQuestionTx asks it in this build's words.
 func publishedQuestionForLinkTx(
 	ctx context.Context, tx pgx.Tx, ref ConfirmRef,
 ) (boundQuestion, bool, error) {

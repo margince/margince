@@ -129,8 +129,8 @@ func TestAnAdvertisingConsentStatesItsFrequency(t *testing.T) {
 }
 
 // A correspondence link whose pinned question has no published row is still
-// asked the correspondence question, never the page's advertising fallback, and
-// its grant records those words with no published row named.
+// asked the correspondence question, never the page's advertising fallback.
+// Its grant records those words and names no published row.
 func TestAnUnpublishedPinStillAsksTheCorrespondenceQuestion(t *testing.T) {
 	e := setupResolve(t)
 	seedDefaultCatalog(t, e.owner)
