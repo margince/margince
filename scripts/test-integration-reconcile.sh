@@ -43,7 +43,7 @@ newest_attempt_artifacts "$ARTIFACTS" || fail "the artifacts under $ARTIFACTS co
 # The expected shard count comes from the shards' own meta (INTEGRATION_SHARD's
 # N, i.e. the CI matrix size) — no second copy of the number to drift. Any
 # present shard works as the source; 1..N must then all be present and agree.
-first_meta="$(find "$ARTIFACTS" -mindepth 2 -maxdepth 2 -path '*/integration-shard-*/meta.txt' | LC_ALL=C sort | head -n1)"
+first_meta="$(find "$ARTIFACTS" -mindepth 2 -maxdepth 2 -path '*/integration-shard-*/meta.txt' | LC_ALL=C sort | sed -n 1p)"
 [[ -n "$first_meta" ]] || fail "no integration-shard-*/meta.txt under $ARTIFACTS — no shard artifact was downloaded"
 TOTAL="$(sed -n 's/^total=//p' "$first_meta")"
 [[ "$TOTAL" =~ ^[0-9]+$ && "$TOTAL" -ge 1 ]] || fail "unparsable total= in $first_meta"

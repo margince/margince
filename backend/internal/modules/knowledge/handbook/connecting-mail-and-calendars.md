@@ -85,6 +85,8 @@ Each document is read once. Margince also does this for notes it already read. M
 
 Connect meeting notes with the same Google account as your calendar. Notes are read only for meetings in that account's calendar, and the row says so when the two accounts differ.
 
+Google may show **Error 400: redirect_uri_mismatch** when you connect meeting notes. Then ask your admin to add the meeting-notes address to the Google app and turn on the Google Docs API. The admin finds the addresses under Settings → **Sign-in and security** → **Sign-in apps** → **Set up Google app**. Reconnecting your account does not help until then.
+
 If you untick the permission on the Google screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**. The same happens when Google later refuses it.
 
 To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar keep running, and notes already on a meeting stay. Disconnecting the whole account stops it too.

@@ -92,7 +92,8 @@ if ! bash "$CHECK" v1.0.0-rc.1 2026-11-02 true "$WORK/extensions" >/dev/null 2>&
 	echo 'FAIL: a pre-release with a stale layer was refused, and a candidate only reports it'
 	FAILURES=$((FAILURES + 1))
 fi
-if ! bash "$CHECK" v1.0.0-rc.1 2026-11-02 true "$WORK/extensions" 2>&1 | grep -q 'de/de.md was last checked on 2026-01-01'; then
+rc_out="$(bash "$CHECK" v1.0.0-rc.1 2026-11-02 true "$WORK/extensions" 2>&1)"
+if ! grep -q 'de/de.md was last checked on 2026-01-01' <<<"$rc_out"; then
 	echo 'FAIL: a pre-release did not name its stale layer'
 	FAILURES=$((FAILURES + 1))
 fi
