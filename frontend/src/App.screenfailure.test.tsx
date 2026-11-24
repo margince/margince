@@ -11,8 +11,8 @@ import {
 } from "./testing/appharness";
 
 // A routed screen that throws while it renders, inside the real shell. The
-// composed screen registry is the one place a test can put its own screen
-// behind a real route without stubbing the dispatch it is testing.
+// composed screen registry lets a test put its own screen behind a real
+// route. The dispatch under test stays unstubbed.
 const fragile = vi.hoisted(() => ({ broken: true }));
 
 vi.mock("@composition/extensions", () => ({
