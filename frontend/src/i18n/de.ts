@@ -2298,7 +2298,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.capture_credential_backfill":
     "Aktualisierung der E-Mail-Verbindung",
   "systemJob.capture_personal_purge": "Entfernung privater E-Mails",
-  "systemJob.capture_purge_receipt": "Beleg zur E-Mail-Entfernung",
+  "systemJob.capture_purge_receipt":
+    "Fehlende Löschbelege für E-Mails nachtragen",
   "systemJob.capture_part_slim_worker": "Bereinigung des E-Mail-Speichers",
   "systemJob.capture_trace_sweep": "Bereinigung der E-Mail-Spuren",
   "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
@@ -3905,7 +3906,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.existing_customer":
     "Der Kontakt hat bei dir gekauft und wurde dabei auf sein Widerspruchsrecht gegen Werbung hingewiesen",
   "consent.reason.opt_out_allowed":
-    "Werbung ist hier erlaubt, bis der Kontakt widerspricht, und kein Widerspruch ist erfasst",
+    "Werbung ist erlaubt, bis der Kontakt widerspricht. Es ist kein Widerspruch erfasst.",
   "consent.reason.qualifying.inbound_message":
     "Der Kontakt hat dir am {date} geschrieben",
   "consent.reason.qualifying.inquiry": "Der Kontakt hat am {date} angefragt",
@@ -8603,14 +8604,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
-  "countryQuestion.title": "In welchem Land ist {address}?",
+  "countryQuestion.title":
+    "In welchem Land ist der Kontakt {address} ansässig?",
   "countryQuestion.body":
-    "Einige Länder erlauben Werbung, bis sich der Kontakt abmeldet. Der Kontakt hat kein Land, deshalb verlangt Margince die Einwilligung, die überall sonst nötig ist. Deine Antwort wird am Kontakt gespeichert.",
+    "Manche Länder erlauben Werbung, bis sich der Kontakt abmeldet. Für diesen Kontakt ist kein Land hinterlegt. Deshalb verlangt Margince die Einwilligung, die sonst überall nötig ist. Deine Antwort wird beim Kontakt gespeichert.",
   "countryQuestion.label": "Land",
   "countryQuestion.none": "Land wählen",
   "countryQuestion.save": "Land speichern",
   "countryQuestion.alreadySet":
-    "Der Kontakt hat inzwischen ein Land. Die Prüfung wurde erneut gestellt.",
+    "Für den Kontakt ist inzwischen ein Land hinterlegt. Die Versandprüfung läuft erneut.",
   "lawfulBasis.title": "Keine gültige Grundlage erfasst",
   "lawfulBasis.body":
     "Für diesen Kontakt ist keine nach vietnamesischem Recht gültige Grundlage erfasst: weder seine Einwilligung noch ein Fall, in dem das Gesetz die Verarbeitung ohne sie erlaubt. Du sendest auf eigenes Risiko.",
