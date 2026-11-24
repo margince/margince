@@ -10,31 +10,12 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/compose/resetfault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// errResetDrainTimedOut refuses a reset whose drain window expired with a job
-// still running. A reset that reports success while rows survive leaves a state
-// nobody can describe. It is raised before anything is deleted, so the deferred
-// resume restores the fleet unchanged.
-var errResetDrainTimedOut = drainTimedOutError{}
-
-type drainTimedOutError struct{}
-
-func (drainTimedOutError) Error() string {
-	return "data reset: a background job outlived the drain window"
-}
-
-func (drainTimedOutError) Unwrap() error { return apperrors.ErrConflict }
-
-func (drainTimedOutError) MessageFault() (code, message string) {
-	return "reset_drain_timed_out", "Background jobs were still running, so nothing was deleted and the queues are running again. Run the reset again."
-}
 
 // ResetRuntime is the non-Postgres runtime a data reset must clear: the job
 // queue, the event bus, and the cache-flush announcement. Each member is a
@@ -102,7 +83,7 @@ func (h dataResetHandlers) runRuntimePhase(ctx context.Context, rt ResetRuntime,
 			return counts, err
 		}
 		if !drained {
-			return counts, errResetDrainTimedOut
+			return counts, resetfault.DrainTimedOut
 		}
 	}
 	if err := clearOutbox(); err != nil {
@@ -132,38 +113,9 @@ func (h dataResetHandlers) runRuntimePhase(ctx context.Context, rt ResetRuntime,
 // on purpose: this is one queue-resume round trip, not a drain.
 const resetResumeTimeout = 15 * time.Second
 
-// resumeFailedError reports that the fleet pause a reset took could not be
-// lifted. It outranks the reset's own answer: an admin told only to retry would
-// wait on queues that never run. completed says whether the reset had finished.
-type resumeFailedError struct {
-	cause     error
-	completed bool
-}
-
-func (e resumeFailedError) Error() string {
-	return fmt.Sprintf("data reset: resuming the queues: %v", e.cause)
-}
-
-func (resumeFailedError) Unwrap() error { return apperrors.ErrConflict }
-
-func (e resumeFailedError) MessageFault() (code, message string) {
-	state := "The reset did not finish."
-	if e.completed {
-		state = "The reset finished."
-	}
-	return "reset_queues_not_resumed", state + " The background job queues could not be started again and may still be paused." +
-		" Run the reset again: it pauses and then resumes the queues. If that fails too, check that the database is reachable and restart the worker."
-}
-
-// resumeResetQueues lifts the fleet pause a reset took. It runs from a deferred
-// path on every exit, because a pause with nobody left to lift it wedges every
-// queue in the installation.
-//
-// It runs detached from the request, under its own deadline. A client that
-// abandons the request must not leave the fleet paused.
-//
-// A failure is logged and returned, so the caller can tell the admin whatever
-// else the reset reported.
+// resumeResetQueues lifts the fleet pause from a deferred path on every exit,
+// detached from the request so an abandoned client cannot leave the fleet
+// paused. A failure is logged and returned for the caller to report.
 func resumeResetQueues(ctx context.Context, logger *slog.Logger, rt ResetRuntime) error {
 	if rt.ResumeQueues == nil {
 		return nil

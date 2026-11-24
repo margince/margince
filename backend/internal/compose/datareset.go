@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/resetfault"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -156,7 +157,7 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 	// having paused nothing, so it can no longer lift a pause it never took.
 	defer func() {
 		if resumeErr := resumeResetQueues(ctx, logger, rt); resumeErr != nil {
-			err = resumeFailedError{cause: resumeErr, completed: err == nil}
+			err = resetfault.ResumeFailed{Cause: resumeErr, Completed: err == nil}
 		}
 	}()
 
