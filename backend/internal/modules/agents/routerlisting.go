@@ -82,7 +82,9 @@ func (r *Registry) ForListing(spec mcp.ToolSpec) mcp.ToolSpec {
 		return spec
 	}
 	spec.InputSchema = schema
-	return spec
+	// The schema is built again from the targets' own wording, so it is worded
+	// for the listing again, as Listed words it.
+	return r.lister().listed(spec)
 }
 
 // routerChoices names every action of a router, and none for a tool that is

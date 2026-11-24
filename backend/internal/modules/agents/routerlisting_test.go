@@ -39,7 +39,7 @@ func newRareListingFixture(t *testing.T) *rareListingFixture {
 	f := &rareListingFixture{r: NewRegistry(nil, auth.NewGate(fullSeatAuthority{})), router: router, listed: sets[router][0]}
 	f.common = &argsTool{spec: targetSpec("common_verb", principal.ScopeWrite, mcp.TierAutoExecute)}
 	f.common.spec.InputSchema = json.RawMessage(`{"type":"object","properties":{` +
-		`"shared":{"type":"string","enum":["a"]},"listed_only":{"type":"integer"}},"additionalProperties":false}`)
+		`"shared":{"type":"string","enum":["a"]},"listed_only":{"type":"integer","description":"Count it with rare_verb."}},"additionalProperties":false}`)
 	f.ranRare = &argsTool{spec: targetSpec("rare_verb", principal.ScopeWrite, mcp.TierAutoExecute)}
 	f.ranRare.spec.InputSchema = json.RawMessage(`{"type":"object","required":["rare_only"],"properties":{` +
 		`"shared":{"type":"string","enum":["b"]},"rare_only":{"type":"string"}},"additionalProperties":false}`)
@@ -227,5 +227,40 @@ func TestARouterListsConfirmCodeForTheActionsThatTakeIt(t *testing.T) {
 	code, listed := doc.Properties[confirmCodeArg]
 	if !listed || !strings.HasPrefix(code.Description, "confirm only") {
 		t.Errorf("the router lists confirm_code as %+v (listed %v), want it scoped to the confirm action", code, listed)
+	}
+}
+
+// The MCP listing names a target verb the way every other listing does: as its
+// router's action, never as a tool the listing does not offer.
+func TestTheShortenedListingNamesATargetVerbAsItsRoutersAction(t *testing.T) {
+	f := newRareListingFixture(t)
+	spec, _ := f.r.Spec(f.router)
+	catalog, err := f.r.ActionCatalog(f.router)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, text := range map[string]string{
+		"listing": string(f.r.ForListing(f.r.Listed(spec)).InputSchema), "action catalog": string(catalog),
+	} {
+		if strings.Contains(text, "with rare_verb") || !strings.Contains(text, rareInProcess) {
+			t.Errorf("the %s words the target verb as a tool of its own: %s", name, text)
+		}
+	}
+}
+
+// A router that picks its action by another member says so where it says how
+// to call it.
+func TestTheCallGuideNamesTheMemberARouterPicksItsActionBy(t *testing.T) {
+	for _, tc := range []struct {
+		selector func(string) string
+		want     string
+	}{
+		{func(string) string { return "topic" }, "with topic and"},
+		{nil, "with action and"},
+	} {
+		d := describeRouterActions{selector: tc.selector}
+		if got := howToCall(d.selectorOf("read_workspace")); !strings.Contains(got, tc.want) {
+			t.Errorf("the call guide reads %q, want it to say %q", got, tc.want)
+		}
 	}
 }

@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 243.0 KB |
+| Tool catalog | 243.1 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 63619 |
+| Approx. wire tokens | 63630 |
 | Largest tool | `read_details` (15.8 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -38,7 +38,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
 | **Description + input schema** | **197.8 KB** | **81%** | **the recurring cost** |
 
-Output schemas are the largest part of the total and are never sent to a model;
+Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
 
 ## Index
@@ -2272,12 +2272,12 @@ actions decide_commission, disqualify, transfer_projects.)
           "type": "string"
         },
         "pipeline_id": {
-          "description": "Choose from the workspace's pipeline list with list_pipelines.",
+          "description": "Choose from the workspace's pipeline list with read_workspace with topic=pipelines.",
           "format": "uuid",
           "type": "string"
         },
         "stage_id": {
-          "description": "Choose an open stage from the workspace's pipeline list with list_pipelines.",
+          "description": "Choose an open stage from the workspace's pipeline list with read_workspace with topic=pipelines.",
           "format": "uuid",
           "type": "string"
         }
