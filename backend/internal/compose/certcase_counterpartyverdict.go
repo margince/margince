@@ -121,11 +121,11 @@ func (c *counterpartyVerdictCase) Run(ctx context.Context, completer aitasks.Com
 	run := verdictRun{Replies: brain.replies, Settled: ledger.settled, Confidence: ledger.measured.Confidence, Retired: ledger.retired}
 	var unusable *unusableVerdictAnswer
 	switch {
+	case brain.failed != nil:
+		return trace, fmt.Errorf("capture_counterparty_verdict/verdict: %w", brain.failed)
 	case err == nil:
 	case errors.As(err, &unusable):
 		run.Unusable = unusable.Error()
-	case brain.failed != nil:
-		return trace, fmt.Errorf("capture_counterparty_verdict/verdict: %w", err)
 	default:
 		run.Refused = err.Error()
 	}

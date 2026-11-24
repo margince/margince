@@ -21,8 +21,14 @@ var agentLoopSite = aitasks.Site{Task: ai.TaskAgentLoop, Variant: "morning_brief
 // backend/internal, as "compose/certcase_agentloop.go".
 func agentLoopWalk(t *testing.T, edits map[string]func(string) string) *checkWalk {
 	t.Helper()
+	return siteWalk(t, agentLoopSite, "agentLoopCase", edits)
+}
+
+// siteWalk walks the check of one site's case type in package compose.
+func siteWalk(t *testing.T, site aitasks.Site, typeName string, edits map[string]func(string) string) *checkWalk {
+	t.Helper()
 	index := newSourceIndex(t)
-	index.declared = declaredDependencies(t, agentLoopSite)
+	index.declared = declaredDependencies(t, site)
 	index.overlay = map[string]string{}
 	for rel, edit := range edits {
 		path := filepath.Join(backendRoot, "internal", filepath.FromSlash(rel))
@@ -37,7 +43,7 @@ func agentLoopWalk(t *testing.T, edits map[string]func(string) string) *checkWal
 		index.overlay[path] = changed
 	}
 	pkg := index.load(t, modulePath+"/internal/compose")
-	return index.walkOf(t, pkg, "agentLoopCase")
+	return index.walkOf(t, pkg, typeName)
 }
 
 func replaceOnce(old, repl string) func(string) string {
@@ -117,5 +123,34 @@ func TestAnAgentLoopCheckHashesTheToolSpecsItReplaysThrough(t *testing.T) {
 	}
 	if got := declaredDependencies(t, aitasks.Site{Task: ai.TaskCaptureClassify, Variant: "classify", Kind: ai.SiteKindOneShot}); got != nil {
 		t.Errorf("a one-shot site declares %v, want nothing", got)
+	}
+}
+
+// The full-path cases record what the production pass stored, so the floors and
+// the re-ask the pass applies decide the grade. A change there moves the check;
+// the database ledger's transactions, which a certification run never builds,
+// move nothing.
+func TestAFloorOrADatabaseChangeMovesTheFullPathChecksAsItShould(t *testing.T) {
+	classify := aitasks.Site{Task: ai.TaskCaptureClassify, Variant: "classify", Kind: ai.SiteKindOneShot}
+	counterparty := aitasks.Site{Task: ai.TaskCaptureCounterpartyVerdict, Variant: "verdict", Kind: ai.SiteKindOneShot}
+	for _, tc := range []struct {
+		name     string
+		site     aitasks.Site
+		typeName string
+		edits    map[string]func(string) string
+		moves    bool
+	}{
+		{"the classify floor", classify, "captureClassifyCase",
+			map[string]func(string) string{"compose/captureclassify.go": replaceOnce("classifyConfidenceFloor = 0.7", "classifyConfidenceFloor = 0.9")}, true},
+		{"the verdict floor", counterparty, "counterpartyVerdictCase",
+			map[string]func(string) string{"compose/captureverdict.go": replaceOnce("verdictConfidenceFloor = 0.7", "verdictConfidenceFloor = 0.9")}, true},
+		{"the database apply", counterparty, "counterpartyVerdictCase",
+			map[string]func(string) string{"compose/captureverdictapply.go": replaceOnce("is not a sender kind", "is no sender kind")}, false},
+	} {
+		base := walkDigest(t, siteWalk(t, tc.site, tc.typeName, nil))
+		moved := walkDigest(t, siteWalk(t, tc.site, tc.typeName, tc.edits)) != base
+		if moved != tc.moves {
+			t.Errorf("%s: moved = %v, want %v", tc.name, moved, tc.moves)
+		}
 	}
 }

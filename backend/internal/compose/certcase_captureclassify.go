@@ -324,6 +324,10 @@ func (c *captureClassifyCase) Run(ctx context.Context, completer aitasks.Complet
 	run := classifyRun{Replies: brain.replies, Messages: backlog.outcomes()}
 	var unusable *unusableClassifyAnswer
 	switch {
+	// The pass swallows a withheld answer and a deferral, so a failed call is read
+	// off the recorder and not off the error.
+	case brain.failed != nil:
+		return trace, fmt.Errorf("capture_classify/classify: %w", brain.failed)
 	case errors.As(err, &unusable):
 		run.Unusable = unusable.Error()
 	case err != nil:

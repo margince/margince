@@ -84,29 +84,46 @@ func TestEverySiteCheckIsStamped(t *testing.T) {
 	}
 }
 
-// declaredDependencies are the functions a site's check takes as one dependency.
+// declaredDependencies are what a site's check takes as one dependency.
+//
 // The replay of an agent_loop run reads the tool surface through the specs the
 // registry publishes, so the registry's builder is hashed as those specs. Walking
 // it instead reaches every store and service the registry wires, which no
 // grading depends on.
+//
+// A certification run of the counterparty site settles through an in-memory
+// ledger. The database ledger is a type it never builds, so its transactions are
+// no part of the grade.
 func declaredDependencies(t *testing.T, site aitasks.Site) map[string]string {
 	t.Helper()
-	if site.Kind != ai.SiteKindAgentLoop {
-		return nil
+	switch {
+	case site.Kind == ai.SiteKindAgentLoop:
+		return map[string]string{modulePath + "/internal/compose.agentLoopRegistry": agentToolSpecsDigest(t, site.Variant)}
+	case site.Task == ai.TaskCaptureCounterpartyVerdict:
+		return map[string]string{modulePath + "/internal/compose.databaseVerdictLedger": "not built by a certification run"}
 	}
-	goal, tools, err := compose.AgentToolFacts(site.Variant)
+	return nil
+}
+
+// agentToolSpecsDigest is the digest of an agent's goal, its tools' specs and its
+// step budget, which the replay of its run reads.
+func agentToolSpecsDigest(t *testing.T, agent string) string {
+	t.Helper()
+	goal, tools, err := compose.AgentToolFacts(agent)
 	if err != nil {
-		t.Fatalf("site %s/%s: %v", site.Task, site.Variant, err)
+		t.Fatalf("agent %s: %v", agent, err)
 	}
+	spec, _ := compose.ScheduledAgentSpecByName(agent)
 	body, err := json.Marshal(struct {
-		Goal  string                  `json:"goal"`
-		Tools []compose.AgentToolFact `json:"tools"`
-	}{goal, tools})
+		Goal   string                  `json:"goal"`
+		Budget any                     `json:"budget"`
+		Tools  []compose.AgentToolFact `json:"tools"`
+	}{goal, spec.Budget, tools})
 	if err != nil {
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256(body)
-	return map[string]string{modulePath + "/internal/compose.agentLoopRegistry": hex.EncodeToString(sum[:])}
+	return hex.EncodeToString(sum[:])
 }
 
 // caseTypeOf prepares site's case from its first scenario and answers the
@@ -258,16 +275,27 @@ func (x *sourceIndex) checkDigest(t *testing.T, root reflect.Type) string {
 	return x.digestOf(t, pkg, named.Name())
 }
 
-// walkOf is everything the Evaluate of typeName in pkg reaches.
+// runWalked are the cases whose grade turns on code only their Run reaches. A
+// full-path case records what the production pass stored, and Evaluate reads that
+// record. So the floors and the re-ask the pass applies decide the grade.
+var runWalked = map[string][]string{
+	"captureClassifyCase":     {"Run"},
+	"counterpartyVerdictCase": {"Run"},
+}
+
+// walkOf is everything the Evaluate of typeName in pkg reaches, and the Run of a
+// case in runWalked.
 func (x *sourceIndex) walkOf(t *testing.T, pkg *sourcePackage, typeName string) *checkWalk {
 	t.Helper()
 	walk := &checkWalk{
 		index: x, seen: map[ast.Node]string{}, types: map[string]bool{}, selected: map[string]bool{},
 		fieldTypes: map[string][]string{}, fieldCalls: map[string]map[string]bool{}, declaredHit: map[string]string{},
 	}
-	for _, method := range pkg.methods["Evaluate"] {
-		if receiverName(method) == typeName {
-			walk.visit(t, pkg, method)
+	for _, name := range append([]string{"Evaluate"}, runWalked[typeName]...) {
+		for _, method := range pkg.methods[name] {
+			if receiverName(method) == typeName {
+				walk.visit(t, pkg, method)
+			}
 		}
 	}
 	if len(walk.seen) == 0 {

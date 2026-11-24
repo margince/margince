@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -390,12 +391,19 @@ func TestVerdictCaseRefusesASenderTheEngineSettlesFromItsAddress(t *testing.T) {
 // A call that never completed fails the run, so a provider outage is not scored
 // as a sender nobody could judge.
 func TestVerdictCaseFailsTheRunWhenACallFails(t *testing.T) {
-	prepared, err := counterpartyVerdictCases{}.Prepare(verdictFixture(t), verdictExpectation(t, capture.KindContact))
-	if err != nil {
-		t.Fatal(err)
-	}
-	broken := errors.New("provider unreachable")
-	if _, err = prepared.Run(context.Background(), failingCompleter{err: broken}); !errors.Is(err, broken) {
-		t.Fatalf("Run error = %v, want the completer's own", err)
+	for name, broken := range map[string]error{
+		"a plain error":     errors.New("provider unreachable"),
+		"a provider outage": ai.ErrProviderDown,
+		"a withheld answer": model.ErrOutputWithheld,
+	} {
+		t.Run(name, func(t *testing.T) {
+			prepared, err := counterpartyVerdictCases{}.Prepare(verdictFixture(t), verdictExpectation(t, capture.KindContact))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = prepared.Run(context.Background(), failingCompleter{err: broken}); !errors.Is(err, broken) {
+				t.Fatalf("Run error = %v, want the completer's own", err)
+			}
+		})
 	}
 }

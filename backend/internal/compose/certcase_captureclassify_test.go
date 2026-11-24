@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -559,14 +560,23 @@ func TestClassifyCaseCountsAMessageLeftUnderTheFloorAgainstTheModel(t *testing.T
 // A call that never completed is the lane's problem and no measurement of the
 // model. It fails the run and does not score the batch as unlabeled.
 func TestClassifyCaseFailsTheRunWhenACallFails(t *testing.T) {
-	prepared, err := captureClassifyCases{}.Prepare(classifyFixtureJSON(t), classifyExpectation(t, "commitment", "meeting"))
-	if err != nil {
-		t.Fatalf("preparing the case: %v", err)
-	}
-	broken := errors.New("provider unreachable")
-	_, err = prepared.Run(context.Background(), failingCompleter{err: broken})
-	if !errors.Is(err, broken) {
-		t.Fatalf("Run error = %v, want the completer's own", err)
+	// A withheld answer and a deferral are swallowed by the pass itself, which
+	// stamps or pauses and returns no error. The run must still fail.
+	for name, broken := range map[string]error{
+		"a plain error":     errors.New("provider unreachable"),
+		"a provider outage": ai.ErrProviderDown,
+		"a deferral":        ai.ErrBudgetDeferred,
+		"a withheld answer": model.ErrOutputWithheld,
+	} {
+		t.Run(name, func(t *testing.T) {
+			prepared, err := captureClassifyCases{}.Prepare(classifyFixtureJSON(t), classifyExpectation(t, "commitment", "meeting"))
+			if err != nil {
+				t.Fatalf("preparing the case: %v", err)
+			}
+			if _, err = prepared.Run(context.Background(), failingCompleter{err: broken}); !errors.Is(err, broken) {
+				t.Fatalf("Run error = %v, want the completer's own", err)
+			}
+		})
 	}
 }
 
