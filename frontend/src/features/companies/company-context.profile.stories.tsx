@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { act, useState } from "react";
+import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { StoryProviders } from "../../testing/story-utils";
@@ -90,13 +90,13 @@ export const EscapeAsksBeforeDiscarding: Story = {
   play: async () => {
     const user = userEvent.setup();
     const drawer = within(await screen.findByRole("dialog"));
-    await user.type(
-      drawer.getByRole("textbox", { name: "Company name" }),
-      " Group",
+    const name = drawer.getByRole("textbox", { name: "Company name" });
+    await user.type(name, " Group");
+    // Dispatched by hand: Storybook wraps its key presses in act, and the
+    // question opening under one suspends on the copy catalog and warns.
+    name.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
     );
-    // Awaited: Escape reaches the drawer through a window listener, and the
-    // question it opens may suspend on the catalog inside the press's act.
-    await act(() => user.keyboard("{Escape}"));
     const question = await screen.findByRole("dialog", {
       name: "Discard unsaved changes?",
     });

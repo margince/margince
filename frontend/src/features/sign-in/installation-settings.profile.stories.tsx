@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { act, useState } from "react";
+import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { DateFormatsProvider } from "../../app/dateformats";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
@@ -140,9 +140,11 @@ export const EscapeAsksBeforeDiscarding: Story = {
     const zone = drawer.getByRole("textbox", { name: "Company time zone" });
     await user.clear(zone);
     await user.type(zone, "Europe/Vienna");
-    // Awaited: Escape reaches the drawer through a window listener, and the
-    // question it opens may suspend on the catalog inside the press's act.
-    await act(() => user.keyboard("{Escape}"));
+    // Dispatched by hand: Storybook wraps its key presses in act, and the
+    // question opening under one suspends on the copy catalog and warns.
+    zone.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
     const question = await screen.findByRole("dialog", {
       name: "Discard unsaved changes?",
     });
