@@ -79,10 +79,11 @@ func carriesLiveRecordBesides(ctx context.Context, tx pgx.Tx, link Link, kind st
 }
 
 // recordLive reports whether the deal or project exists and is not archived.
-// kind is RecordDeal or RecordProject, each also its table.
+// kind is RecordDeal or RecordProject, each also its table. The row is held
+// until tx ends, so a restore cannot land between this read and the release.
 func recordLive(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) (bool, error) {
 	var live bool
-	err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT archived_at IS NULL FROM %s WHERE id = $1`,
+	err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT archived_at IS NULL FROM %s WHERE id = $1 FOR SHARE`,
 		pgx.Identifier{kind}.Sanitize()), id).Scan(&live)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil

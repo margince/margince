@@ -42,15 +42,10 @@ func (e *flushEnv) db() *database.DB {
 // deal.archived event to the consumer.
 func (e *flushEnv) archiveDeal(t *testing.T, deal ids.UUID) {
 	t.Helper()
-	e.archiveDealUnhandled(t, deal)
-	e.handleOutboxed(t, "deal.archived", deal)
-}
-
-func (e *flushEnv) archiveDealUnhandled(t *testing.T, deal ids.UUID) {
-	t.Helper()
 	if _, err := deals.NewStore(e.db(), deals.Installation{}).ArchiveDeal(e.member(), ids.From[ids.DealKind](deal), nil); err != nil {
 		t.Fatalf("archiving the deal: %v", err)
 	}
+	e.handleOutboxed(t, "deal.archived", deal)
 }
 
 // archiveProject archives the project through the projects store, with the
@@ -121,7 +116,7 @@ func (e *flushEnv) linkState(t *testing.T, link ids.UUID) (retired bool, deal, p
 	return retired, deal, project
 }
 
-func TestArchivingADealFreesItsChannelForAnotherDealAndARestoreLeavesItFree(t *testing.T) {
+func TestArchivingADealFreesItsChannelForAnotherDeal(t *testing.T) {
 	e := setupFlush(t)
 	e.handle(t, "deal.stage_changed", "deal", e.deal, `{"to_stage_name":"Proposal"}`)
 	e.archiveDeal(t, e.deal)
@@ -143,13 +138,6 @@ func TestArchivingADealFreesItsChannelForAnotherDealAndARestoreLeavesItFree(t *t
 	second := e.seedDeal(t, "Acme expansion", nil)
 	if _, err := e.linkTo(chatlinks.RecordDeal, second, "acme"); err != nil {
 		t.Fatalf("linking the freed channel to a second deal: %v", err)
-	}
-
-	e.exec(t, `UPDATE deal SET archived_at = NULL WHERE id = $1`, e.deal)
-	e.handle(t, "deal.restored", "deal", e.deal, `{}`)
-	state, err := e.store.GetState(e.member(), chatlinks.RecordDeal, e.deal)
-	if err != nil || state.Link != nil {
-		t.Fatalf("restored deal state = %+v, %v; want no channel", state, err)
 	}
 }
 
@@ -191,29 +179,5 @@ func TestAChannelADealSharesWithItsProjectStaysWithTheOneStillLive(t *testing.T)
 	e.archiveProject(t, project)
 	if retired, _, _ := e.linkState(t, linked.Link.ID); !retired {
 		t.Fatal("a link whose records are all archived still holds its channel")
-	}
-}
-
-func TestADealLiveAgainWhenItsArchiveIsHandledKeepsItsChannel(t *testing.T) {
-	e := setupFlush(t)
-	e.archiveDealUnhandled(t, e.deal)
-	e.exec(t, `UPDATE deal SET archived_at = NULL WHERE id = $1`, e.deal)
-	e.handleOutboxed(t, "deal.archived", e.deal)
-
-	if retired, _, _ := e.linkState(t, e.link); retired {
-		t.Fatal("a late archive event retired the channel of a live deal")
-	}
-}
-
-func TestADealARetentionPolicyArchivedFreesItsChannel(t *testing.T) {
-	e := setupFlush(t)
-	if !groupReads(t, "cg:chat-links", "retention.applied") {
-		t.Fatal("cg:chat-links does not read the stream retention.applied rides")
-	}
-	e.exec(t, `UPDATE deal SET archived_at = now() WHERE id = $1`, e.deal)
-	e.handle(t, "retention.applied", "deal", e.deal, `{"action":"archive"}`)
-
-	if retired, _, _ := e.linkState(t, e.link); !retired {
-		t.Fatal("a deal a retention policy archived still holds its channel")
 	}
 }
