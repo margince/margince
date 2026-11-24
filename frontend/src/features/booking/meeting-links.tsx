@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { Button, EmptyState, OverflowMenu } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { CellStack } from "../../design-system/cellstack";
+import { CopyAction } from "../../design-system/clipboardcopy";
 import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -17,7 +18,10 @@ import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { PROVIDER_VIDEO_APP, VIDEO_APP_NAME } from "../../lib/booking-video";
-import { useCopyBookingLink } from "../../lib/bookinglinkcopy";
+import {
+  useCopyBookingLink,
+  useMarkBookingShared,
+} from "../../lib/bookinglinkcopy";
 import { navigate } from "../../lib/router";
 import {
   bookingPagePaused,
@@ -116,22 +120,8 @@ export function BookingLinksCard({ profile }: Readonly<{ profile: Profile }>) {
           bleed
           fold
           label={t("scheduling.linksTitle")}
-          rows={[
-            ...new Set([
-              profile.duration_minutes,
-              ...(profile.offered_lengths ?? []),
-            ]),
-          ].map((minutes) => ({
-            ...profile,
-            duration_minutes: minutes,
-            public_url:
-              minutes === profile.duration_minutes
-                ? profile.public_url
-                : profile.public_url
-                  ? `${profile.public_url}?l=${minutes}`
-                  : undefined,
-          }))}
-          rowKey={(row) => `${row.slug}-${row.duration_minutes}`}
+          rows={[profile]}
+          rowKey={(row) => row.slug ?? ""}
           columns={[
             {
               key: "link",
@@ -139,16 +129,13 @@ export function BookingLinksCard({ profile }: Readonly<{ profile: Profile }>) {
               grow: true,
               fold: "title",
               render: (row) => (
-                <LinkCell
-                  profile={row}
-                  main={row.duration_minutes === profile.duration_minutes}
-                />
+                <LinkCell profile={row} main={bookingLengths(row).length > 1} />
               ),
             },
             {
               key: "length",
               header: t("scheduling.col.length"),
-              render: (row) => <LengthCell minutes={row.duration_minutes} />,
+              render: (row) => <LengthCell profile={row} />,
             },
             {
               key: "video",
@@ -227,8 +214,16 @@ function videoText(t: Translator, profile: Profile): string {
   return VIDEO_APP_NAME[PROVIDER_VIDEO_APP[profile.provider]];
 }
 
-// Each extra length is a row of its own; only the link's own length is the
-// main link.
+// The lengths the main link offers its guest, its default first, as the
+// server lists them on the public page.
+function bookingLengths(profile: Profile): number[] {
+  return [
+    ...new Set([profile.duration_minutes, ...(profile.offered_lengths ?? [])]),
+  ];
+}
+
+// Beside a main link that offers several lengths, the link's own address
+// names its default length.
 function LinkCell({
   profile,
   main,
@@ -252,12 +247,38 @@ function LinkCell({
   );
 }
 
-function LengthCell({ minutes }: Readonly<{ minutes: number }>) {
+// Every length the main link offers. An extra length keeps a link of its own
+// (?l=N) that opens the page at that length, so a host can still share it.
+function LengthCell({ profile }: Readonly<{ profile: Profile }>) {
+  const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  return plural("scheduling.minutes", minutes, {
-    count: formatNumber(minutes, locale),
-  });
+  const markShared = useMarkBookingShared();
+  return (
+    <CellStack>
+      {bookingLengths(profile).map((minutes) => {
+        const length = plural("scheduling.minutes", minutes, {
+          count: formatNumber(minutes, locale),
+        });
+        return (
+          <span key={minutes}>
+            {length}
+            {minutes !== profile.duration_minutes && profile.public_url && (
+              <CopyAction
+                text={`${profile.public_url}?l=${minutes}`}
+                labels={{
+                  copy: t("scheduling.copyLengthLink", { length }),
+                  copied: t("scheduling.copied"),
+                  remedy: t("scheduling.copyFallback"),
+                }}
+                onCopied={markShared}
+              />
+            )}
+          </span>
+        );
+      })}
+    </CellStack>
+  );
 }
 
 function RowStatus({

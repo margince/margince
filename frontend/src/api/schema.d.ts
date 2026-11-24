@@ -43699,7 +43699,10 @@ export interface components {
             logo_url?: string;
             title: string;
             location: string;
+            /** @description The length this page books: the one `l` asked for when the page offers it, else the default. */
             duration_minutes: number;
+            /** @description Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal. */
+            offered_lengths?: number[];
             enabled: boolean;
             /** @description True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page. */
             paused: boolean;

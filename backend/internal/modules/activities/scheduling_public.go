@@ -477,9 +477,31 @@ func (h Handlers) captureBookingConsent(w http.ResponseWriter, r *http.Request, 
 	return true
 }
 
+// bookingLength is the profile at the length a guest asked for, or at its
+// default when the page does not offer that length.
 func bookingLength(profile crmcontracts.SchedulingProfile, requested *int) crmcontracts.SchedulingProfile {
-	if requested != nil && (profile.DurationMinutes == *requested || (profile.OfferedLengths != nil && slices.Contains(*profile.OfferedLengths, *requested))) {
-		profile.DurationMinutes = *requested
-	}
+	profile.DurationMinutes = offeredLength(bookingLengths(profile), requested)
 	return profile
+}
+
+// bookingLengths are the meeting lengths a page offers, its default first.
+func bookingLengths(profile crmcontracts.SchedulingProfile) []int {
+	lengths := []int{profile.DurationMinutes}
+	if profile.OfferedLengths != nil {
+		for _, length := range *profile.OfferedLengths {
+			if !slices.Contains(lengths, length) {
+				lengths = append(lengths, length)
+			}
+		}
+	}
+	return lengths
+}
+
+// offeredLength is the length a booking runs at: the requested one when
+// lengths offers it, else the default that lengths names first.
+func offeredLength(lengths []int, requested *int) int {
+	if requested != nil && slices.Contains(lengths, *requested) {
+		return *requested
+	}
+	return lengths[0]
 }

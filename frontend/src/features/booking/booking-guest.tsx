@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -21,6 +26,7 @@ import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useBookingIntent, useBookingTitle } from "./booking-common";
 import { throwBookingProblem } from "./booking-errors";
+import { useGuestLength } from "./booking-guest-length";
 import {
   dayRefusal,
   dayWindow,
@@ -70,15 +76,9 @@ export function BookingGuestScreen({
   const [zone, setZone] = useState(() =>
     preview ? readerZone : browserZone(),
   );
-  const [requestedLength] = useState(() => {
-    const raw =
-      new URLSearchParams(globalThis.location.search).get("l") ??
-      new URLSearchParams(globalThis.location.hash.split("?")[1]).get("l");
-    const length = Number(raw);
-    return !preview && !proposalToken && Number.isInteger(length) && length > 0
-      ? length
-      : undefined;
-  });
+  const [requestedLength, pickLength] = useGuestLength(
+    preview || Boolean(proposalToken),
+  );
   const intent = useBookingIntent();
   const client = useQueryClient();
   const [now] = useState(() => Date.now());
@@ -93,6 +93,8 @@ export function BookingGuestScreen({
     queryKey: preview
       ? ["scheduling-profile"]
       : ["public-booking-profile", hostSlug, proposalToken, requestedLength],
+    // A new length reads the page again; the page stays in view meanwhile.
+    placeholderData: keepPreviousData,
     select: (value) => ({
       ...value,
       host_name: value.host_name ?? "",
@@ -105,7 +107,7 @@ export function BookingGuestScreen({
     }),
     queryFn: async () => {
       if (preview) {
-        return unwrap(await api.GET("/scheduling/profile"));
+        return { ...unwrap(await api.GET("/scheduling/profile")), lengths: [] };
       }
       if (proposalToken) {
         const data = unwrap(
@@ -113,7 +115,7 @@ export function BookingGuestScreen({
             params: { path: { token: proposalToken } },
           }),
         );
-        return { ...data.profile, proposal: data };
+        return { ...data.profile, proposal: data, lengths: [] };
       }
       const data = unwrap(
         await api.GET("/public/booking/{host_slug}/profile", {
@@ -123,7 +125,7 @@ export function BookingGuestScreen({
           },
         }),
       );
-      return { ...data, proposal: null };
+      return { ...data, proposal: null, lengths: data.offered_lengths ?? [] };
     },
   });
   const needsCalendar =
@@ -296,6 +298,12 @@ export function BookingGuestScreen({
                       <GuestHost
                         host={host}
                         videoApp={host.video_app}
+                        lengths={host.lengths}
+                        onLength={(length) => {
+                          pickLength(length);
+                          setPickedDay("");
+                          setSelected(null);
+                        }}
                         selected={selected}
                         zone={zone}
                         onZone={setZone}

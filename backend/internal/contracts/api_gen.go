@@ -62923,7 +62923,9 @@ type PublicOriginStatus struct {
 // every other field holds a neutral value (empty text, zero duration, `enabled: false`, no
 // `video_app`), so the guest learns nothing about the calendar behind the page.
 type PublicSchedulingProfile struct {
-	CompanyName     string `json:"company_name"`
+	CompanyName string `json:"company_name"`
+
+	// DurationMinutes The length this page books: the one `l` asked for when the page offers it, else the default.
 	DurationMinutes int    `json:"duration_minutes"`
 	Enabled         bool   `json:"enabled"`
 	HostName        string `json:"host_name"`
@@ -62931,6 +62933,9 @@ type PublicSchedulingProfile struct {
 
 	// LogoUrl Absolute public logo URL when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl *string `json:"logo_url,omitempty"`
+
+	// OfferedLengths Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal.
+	OfferedLengths *[]int `json:"offered_lengths,omitempty"`
 
 	// Paused True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page.
 	Paused bool   `json:"paused"`

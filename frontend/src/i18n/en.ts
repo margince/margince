@@ -1841,6 +1841,7 @@ export const en = {
   "scheduling.retryHelp":
     "Retry sends the same invitation again, so the guest does not get a second one.",
   "book.videoApp": "{app} · link in your invite",
+  "book.lengthChoice": "Meeting length",
   "scheduling.pickDay": "Choose a day",
   "scheduling.changeTime": "Change time",
   "scheduling.confirmAt": "Confirm {day}, {time}",
@@ -22989,6 +22990,7 @@ export const en = {
   "scheduling.videoNotSet": "Not set",
   "scheduling.video.ownShort": "Your own link",
   "scheduling.mainLink": "(main link)",
+  "scheduling.copyLengthLink": "Copy the {length} link",
   "scheduling.linkActions": "More actions for {name}",
   "scheduling.editLink": "Edit link",
   "scheduling.createLink": "Create booking link",

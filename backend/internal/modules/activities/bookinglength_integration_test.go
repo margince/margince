@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -101,4 +103,35 @@ func TestOfferedLengthsReachAvailabilityAndTheActualReservation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTheMainLinkOffersEveryLengthAndAPausedOrProposalPageNone(t *testing.T) {
+	f := newInvitationFixture(t)
+	handlers := Handlers{store: f.store}
+	profile := savePage(t, f, true)
+	profile.OfferedLengths = new([]int{45, 30, 15})
+	profile, err := f.store.SaveSchedulingProfile(f.ctx, profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, requested := range []*int{nil, new(45), new(47)} {
+		reply := httptest.NewRecorder()
+		handlers.GetPublicSchedulingProfile(reply, httptest.NewRequest(http.MethodGet, "/profile", nil).WithContext(f.ctx), *profile.Slug, crmcontracts.GetPublicSchedulingProfileParams{L: requested})
+		var guest crmcontracts.PublicSchedulingProfile
+		if err := json.Unmarshal(reply.Body.Bytes(), &guest); err != nil || guest.OfferedLengths == nil || !slices.Equal(*guest.OfferedLengths, []int{30, 45, 15}) {
+			t.Fatalf("l=%v: %d %s, want lengths [30 45 15]", requested, reply.Code, reply.Body.String())
+		}
+	}
+	link, err := f.store.CreateProposal(f.ctx, crmcontracts.MeetingProposalRequest{ContactId: f.request.ContactId, AttendeeEmail: f.request.AttendeeEmail, Subject: "Walkthrough", DurationMinutes: 60})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if proposal := getPublicProposal(f.ctx, t, handlers, strings.Split(link.URL, "proposal-")[1]); proposal.Profile.OfferedLengths != nil {
+		t.Fatalf("a proposal offered the page's lengths %v", *proposal.Profile.OfferedLengths)
+	}
+	profile.Enabled = false
+	if _, err := f.store.SaveSchedulingProfile(f.ctx, profile); err != nil {
+		t.Fatal(err)
+	}
+	assertPausedForGuest(t, guestProfile(t, f, *profile.Slug))
 }

@@ -60204,7 +60204,11 @@ components:
         logo_url: { type: string, description: Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. }
         title: { type: string }
         location: { type: string }
-        duration_minutes: { type: integer }
+        duration_minutes: { type: integer, description: "The length this page books: the one `l` asked for when the page offers it, else the default." }
+        offered_lengths:
+          type: array
+          items: { type: integer }
+          description: Every meeting length the host's booking page offers, the default first. Pass one as `l` to book at that length. Absent on a paused page and on a meeting proposal.
         enabled: { type: boolean }
         paused: { type: boolean, description: "True when the page takes no bookings now: the host turned bookings off, or the calendar behind it cannot take them. The availability and booking calls then answer as for an unknown page." }
         video_app: { type: string, enum: [google_meet, microsoft_teams], x-extensible-enum: true, description: Present when new meetings get a video call link from the host's calendar. }

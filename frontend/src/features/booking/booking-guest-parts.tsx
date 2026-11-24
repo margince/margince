@@ -15,6 +15,7 @@ import {
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { SegmentedControl } from "../../design-system/segmentedcontrol";
 import {
   formatDateTime,
   formatDayMonth,
@@ -71,6 +72,8 @@ function HostLine({
 export function GuestHost({
   host,
   videoApp,
+  lengths,
+  onLength,
   selected,
   zone,
   onZone,
@@ -83,6 +86,10 @@ export function GuestHost({
     location: string;
   }>;
   videoApp?: VideoApp;
+  // The lengths a guest may pick between, the default first; with one or none
+  // the page states its length instead.
+  lengths?: readonly number[];
+  onLength?: (length: number) => void;
   selected: GuestSlot | null;
   zone: string;
   onZone: (zone: string) => void;
@@ -90,17 +97,32 @@ export function GuestHost({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const minutes = (length: number) =>
+    t("co.recent.minutes", { count: formatNumber(length, locale) });
   return (
     <section className="bookguest-host">
       <p className="t-caption">{host.host_name}</p>
       <Heading as="h1" size="large">
         {host.title}
       </Heading>
-      <HostLine icon={<Clock aria-hidden="true" />}>
-        {t("co.recent.minutes", {
-          count: formatNumber(host.duration_minutes, locale),
-        })}
-      </HostLine>
+      {lengths && lengths.length > 1 && onLength ? (
+        <div className="bookguest-line">
+          <Clock aria-hidden="true" />
+          <SegmentedControl
+            label={t("book.lengthChoice")}
+            options={lengths.map(String)}
+            labels={Object.fromEntries(
+              lengths.map((length) => [String(length), minutes(length)]),
+            )}
+            value={String(host.duration_minutes)}
+            onChange={(next) => onLength(Number(next))}
+          />
+        </div>
+      ) : (
+        <HostLine icon={<Clock aria-hidden="true" />}>
+          {minutes(host.duration_minutes)}
+        </HostLine>
+      )}
       {videoApp ? (
         <HostLine icon={<Video aria-hidden="true" />}>
           {t("book.videoApp", { app: VIDEO_APP_NAME[videoApp] })}

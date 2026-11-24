@@ -59,7 +59,9 @@ func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	profile = h.store.brandSchedulingProfile(r.Context(), page.HostUserID, profile)
-	httperr.WriteJSON(w, http.StatusOK, publicProfile(bookingLength(profile, params.L), nil))
+	out := publicProfile(bookingLength(profile, params.L), nil)
+	out.OfferedLengths = new(bookingLengths(profile))
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // GetPublicMeetingInvitation withholds provider URLs from the guest projection.
