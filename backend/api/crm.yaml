@@ -697,8 +697,8 @@ paths:
           description: >
             Installation reset to first-boot state.
 
-            Five of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`,
-            `objects_deleted` and `drain_timed_out` — exist here and not in the retired upstream
+            Four of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`
+            and `objects_deleted` — exist here and not in the retired upstream
             copy of this contract, and that is deliberate rather than drift anyone should
             reconcile away. A reset clears the job queue, the event bus, the Redis counters and
             the object bytes, and an operator who is told only how many table rows went has no way
@@ -719,7 +719,7 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [status, tables_cleared, jobs_deleted, streams_purged, cache_keys_deleted, objects_deleted, drain_timed_out]
+                required: [status, tables_cleared, jobs_deleted, streams_purged, cache_keys_deleted, objects_deleted]
                 properties:
                   status: { type: string, example: reset }
                   tables_cleared: { type: integer }
@@ -739,12 +739,6 @@ paths:
                   objects_deleted:
                     type: integer
                     description: Objects removed from the blob store under this workspace's key prefix.
-                  drain_timed_out:
-                    type: boolean
-                    description: >
-                      True when a job was still running when the bounded drain window expired. The reset
-                      proceeded — a long pass must not make an installation unresettable — and the surviving
-                      job's completion write will fail against rows that no longer exist.
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
           description: >
@@ -760,6 +754,13 @@ paths:
             does not exist here. Checked before authentication, so it is a 404 rather than
             a 403 for every caller — the answer discloses nothing about who asked. The body
             is the standard problem document.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: >
+            Refused with nothing deleted: another reset is running, or a background job was still
+            running when the bounded drain window expired. The queues run again; run the reset again.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }

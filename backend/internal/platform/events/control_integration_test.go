@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -155,5 +157,56 @@ func TestSubscribeResetReturnsPromptlyAfterCancel(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("the subscriber did not return after cancel — goroutine leaked")
+	}
+}
+
+// A subscription that Redis drops under a live process must come back: the
+// kill closes the server side of every pub/sub connection, and the next reset
+// announcement still reaches the callback.
+func TestSubscribeResetResubscribesAfterRedisDropsTheConnection(t *testing.T) {
+	ctx, rdb := purgeTestRedis(t)
+	got := make(chan ids.UUID, 1)
+	runCtx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		SubscribeReset(runCtx, rdb, slog.New(slog.NewTextHandler(io.Discard, nil)), func(w ids.UUID) { got <- w })
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Error("SubscribeReset did not return after cancellation")
+		}
+	})
+
+	// Pub/sub delivers only to a confirmed subscriber, so publish until the
+	// first message lands before dropping the connection.
+	awaitReset(t, ctx, rdb, got, ids.NewV7())
+	if err := rdb.Do(ctx, "CLIENT", "KILL", "TYPE", "pubsub").Err(); err != nil {
+		t.Fatalf("CLIENT KILL: %v", err)
+	}
+	awaitReset(t, ctx, rdb, got, ids.NewV7())
+}
+
+// awaitReset republishes ws until the subscriber reports it, because an
+// announcement made while the subscription is down is lost by design.
+func awaitReset(t *testing.T, ctx context.Context, rdb *redis.Client, got <-chan ids.UUID, ws ids.UUID) {
+	t.Helper()
+	deadline := time.After(20 * time.Second)
+	for {
+		if err := PublishReset(ctx, rdb, ws); err != nil {
+			t.Fatalf("PublishReset: %v", err)
+		}
+		select {
+		case w := <-got:
+			if w == ws {
+				return
+			}
+		case <-time.After(300 * time.Millisecond):
+		case <-deadline:
+			t.Fatalf("workspace %s never reached the subscriber", ws)
+		}
 	}
 }

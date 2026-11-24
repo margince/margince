@@ -154,28 +154,37 @@ func (s *s3Store) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// DeletePrefix lists the prefix recursively and removes objects one at a
-// time so a single failure is attributable to the key that caused it, rather
-// than a batch call obscuring which object failed mid-sweep. A removal error
-// stops the sweep and returns the count so far, leaving the prefix partially
-// deleted; DeletePrefix is idempotent, so a retry with the same prefix safely
-// finishes it.
+// DeletePrefix lists every version and delete marker under the prefix and
+// removes each one by version id, so a versioned bucket keeps no retrievable
+// copy of what a reset or an erasure meant to destroy. On an unversioned bucket
+// the listing holds one entry per object and the result is the same as before.
+//
+// Removal is one call per version so a single failure is attributable to the
+// key that caused it. A failure stops the sweep and returns the count so far,
+// leaving the prefix partially deleted; DeletePrefix is idempotent, so a retry
+// with the same prefix safely finishes it. The count is of distinct keys that
+// held at least one real version, the same number an unversioned bucket gives.
 func (s *s3Store) DeletePrefix(ctx context.Context, prefix string) (int, error) {
 	if prefix == "" || !strings.HasSuffix(prefix, "/") {
 		return 0, ErrInvalidPrefix
 	}
 	deleted := 0
+	lastCounted := ""
 	for obj := range s.client.ListObjects(ctx, s.bucket, minio.ListObjectsOptions{
-		Prefix:    prefix,
-		Recursive: true,
+		Prefix:       prefix,
+		Recursive:    true,
+		WithVersions: true,
 	}) {
 		if obj.Err != nil {
 			return deleted, fmt.Errorf("blobstore: listing %s: %w", prefix, obj.Err)
 		}
-		if err := s.client.RemoveObject(ctx, s.bucket, obj.Key, minio.RemoveObjectOptions{}); err != nil {
+		if err := s.client.RemoveObject(ctx, s.bucket, obj.Key, minio.RemoveObjectOptions{VersionID: obj.VersionID}); err != nil {
 			return deleted, fmt.Errorf("blobstore: removing %s: %w", obj.Key, err)
 		}
-		deleted++
+		if !obj.IsDeleteMarker && obj.Key != lastCounted {
+			deleted++
+			lastCounted = obj.Key
+		}
 	}
 	return deleted, nil
 }

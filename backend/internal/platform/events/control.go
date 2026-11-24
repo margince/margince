@@ -8,9 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -41,12 +43,51 @@ func PublishReset(ctx context.Context, rdb *redis.Client, ws ids.UUID) error {
 }
 
 // SubscribeReset runs until ctx is canceled, invoking fn for every reset
-// announcement. An unparseable payload is logged and skipped rather than
-// killing the loop, because a control channel that dies on one bad message
-// stops flushing caches for the life of the process — but the skip is never
-// silent, so an encoding drift between publishers is observable.
-func SubscribeReset(ctx context.Context, rdb *redis.Client, log *slog.Logger, fn func(ids.UUID)) error {
-	return subscribeResetWithReady(ctx, rdb, log, fn, nil)
+// announcement. A subscription that fails to start or drops later is logged and
+// opened again after a jittered backoff, because a process whose control channel
+// stays dead serves pre-reset cached answers until it restarts. Announcements
+// published while it was down are lost (pub/sub keeps no history); the caches'
+// own TTLs retire what they held.
+//
+// An unparseable payload is logged and skipped rather than killing the loop,
+// because a control channel that dies on one bad message stops flushing caches
+// for the life of the process — but the skip is never silent, so an encoding
+// drift between publishers is observable.
+func SubscribeReset(ctx context.Context, rdb *redis.Client, log *slog.Logger, fn func(ids.UUID)) {
+	superviseReset(ctx, log, func(ctx context.Context, ready chan<- struct{}) error {
+		return subscribeResetWithReady(ctx, rdb, log, fn, ready)
+	}, backoff.Sleep)
+}
+
+const (
+	resubscribeBase    = time.Second
+	resubscribeCeiling = 30 * time.Second
+)
+
+// superviseReset reopens a subscription until ctx ends. The failure count
+// restarts from zero once an attempt got as far as a confirmed subscription, so
+// a long-lived subscription that drops once retries quickly instead of inheriting
+// the delay of failures from hours ago. sleep is injected so a test does not wait.
+func superviseReset(ctx context.Context, log *slog.Logger, run func(context.Context, chan<- struct{}) error, sleep func(context.Context, time.Duration) error) {
+	failures := 0
+	for ctx.Err() == nil {
+		ready := make(chan struct{})
+		err := run(ctx, ready)
+		if ctx.Err() != nil {
+			return
+		}
+		select {
+		case <-ready:
+			failures = 0
+		default:
+		}
+		delay := backoff.Jittered(failures, resubscribeBase, resubscribeCeiling)
+		failures++
+		log.Error("bus: the reset control subscription ended; resubscribing", "error", err, "retry_in", delay)
+		if sleep(ctx, delay) != nil {
+			return
+		}
+	}
 }
 
 // errSubscriptionClosed distinguishes "the Redis subscription channel closed

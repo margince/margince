@@ -11,12 +11,14 @@ package compose
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -252,24 +254,38 @@ func TestTheResumeOutlivesTheAbandonedResetRequest(t *testing.T) {
 	}
 }
 
-func TestDrainTimeoutIsReportedAndDoesNotFailTheReset(t *testing.T) {
+func TestADrainTimeoutRefusesTheResetBeforeAnythingIsDeleted(t *testing.T) {
+	var deleted []string
+	resumed := false
 	rt := ResetRuntime{
 		QuiesceQueues: func(context.Context) (bool, error) { return false, nil },
-		ResumeQueues:  func(context.Context) error { return nil },
-		PurgeQueue:    func(context.Context, ids.UUID) (int, error) { return 3, nil },
-		PurgeBus:      func(context.Context) (int, int, error) { return 12, 41, nil },
-		SignalReset:   func(context.Context, ids.UUID) error { return nil },
+		ResumeQueues:  func(context.Context) error { resumed = true; return nil },
+		PurgeQueue:    func(context.Context, ids.UUID) (int, error) { deleted = append(deleted, "jobs"); return 3, nil },
+		PurgeBus:      func(context.Context) (int, int, error) { deleted = append(deleted, "bus"); return 12, 41, nil },
+		SignalReset:   func(context.Context, ids.UUID) error { deleted = append(deleted, "signal"); return nil },
 	}
+	clearOutbox := func() error { deleted = append(deleted, "outbox"); return nil }
 
-	counts, err := runPhase(rt, func(*resetCounts) error { return nil })
-	if err != nil {
-		t.Fatalf("a drain timeout must not fail the reset: %v", err)
+	_, err := resetHandlers(rt).runQuiesced(context.Background(), ids.NewV7(), clearOutbox, func(*resetCounts) error {
+		deleted = append(deleted, "sweep")
+		return nil
+	})
+
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("err = %v, want a conflict so the admin gets a 409 and can run the reset again", err)
 	}
-	if !counts.DrainTimedOut {
-		t.Error("DrainTimedOut = false; the operator would never learn a job was still running")
+	fault, ok := errors.AsType[apperrors.MessageFault](err)
+	if !ok {
+		t.Fatalf("err = %v carries no message for the admin", err)
 	}
-	if counts.JobsDeleted != 3 || counts.StreamsPurged != 12 || counts.CacheKeys != 41 {
-		t.Errorf("counts = %+v; every surface's tally must reach the response", counts)
+	if _, message := fault.MessageFault(); !strings.Contains(message, "Run the reset again") {
+		t.Errorf("message = %q, want it to tell the admin to run the reset again", message)
+	}
+	if len(deleted) != 0 {
+		t.Errorf("a refused reset still ran %v", deleted)
+	}
+	if !resumed {
+		t.Error("the queues were not resumed after the refusal")
 	}
 }
 

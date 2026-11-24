@@ -52,7 +52,6 @@ type resetDataResponse struct {
 	StreamsPurged  int    `json:"streams_purged"`
 	CacheKeys      int    `json:"cache_keys_deleted"`
 	ObjectsDeleted int    `json:"objects_deleted"`
-	DrainTimedOut  bool   `json:"drain_timed_out"`
 }
 
 // dataResetHandlers is the callable the non-production "reset data" HTTP
@@ -193,7 +192,7 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 	logger.Info("data reset complete", "workspace_id", wsID,
 		"tables_cleared", counts.TablesCleared, "jobs_deleted", counts.JobsDeleted,
 		"streams_purged", counts.StreamsPurged, "cache_keys_deleted", counts.CacheKeys,
-		"objects_deleted", counts.ObjectsDeleted, "drain_timed_out", counts.DrainTimedOut,
+		"objects_deleted", counts.ObjectsDeleted,
 		"secrets_purged", counts.SecretsPurged)
 	return counts, nil
 }
@@ -318,7 +317,6 @@ func resetEvidence(counts resetCounts) map[string]any {
 		"jobs_deleted":       counts.JobsDeleted,
 		"streams_purged":     counts.StreamsPurged,
 		"cache_keys_deleted": counts.CacheKeys,
-		"drain_timed_out":    counts.DrainTimedOut,
 		// Sealed credentials redeemed from the vault. Like objects_deleted this
 		// is tallied after the commit, so the number this row carries is the
 		// count the sweep COLLECTED — the work the reset committed itself to —
@@ -407,7 +405,6 @@ func (h dataResetHandlers) ResetData(w http.ResponseWriter, r *http.Request) {
 		StreamsPurged:  counts.StreamsPurged,
 		CacheKeys:      counts.CacheKeys,
 		ObjectsDeleted: counts.ObjectsDeleted,
-		DrainTimedOut:  counts.DrainTimedOut,
 	})
 }
 

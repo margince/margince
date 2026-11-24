@@ -11252,8 +11252,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.resetDataConfirmName": "Gib diesen Unternehmensnamen ein:",
   "settings.resetDataResult":
     "Gelöscht: Tabellen {tables}, Job-Einträge {jobs}, Event-Streams {streams}, Cache-Schlüssel {keys}, gespeicherte Dateien {objects}.",
-  "settings.resetDataDrainWarning":
-    "Als das Zurücksetzen begann, lief ein Hintergrund-Job. Der Job schlägt an den gelöschten Daten fehl und protokolliert einen harmlosen Fehler.",
 
   "settings.jobs": "Hintergrund-Jobs",
   "settings.jobsSub":

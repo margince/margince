@@ -13,8 +13,28 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// errResetDrainTimedOut refuses a reset whose drain window expired with a job
+// still running. Sweeping anyway would leave that job writing against rows that
+// no longer exist, and a reset that reports success while rows survive leaves a
+// state nobody can describe. It is raised before anything is deleted, so the
+// deferred resume restores a fleet that is exactly as it was.
+var errResetDrainTimedOut = drainTimedOutError{}
+
+type drainTimedOutError struct{}
+
+func (drainTimedOutError) Error() string {
+	return "data reset: a background job outlived the drain window"
+}
+
+func (drainTimedOutError) Unwrap() error { return apperrors.ErrConflict }
+
+func (drainTimedOutError) MessageFault() (code, message string) {
+	return "reset_drain_timed_out", "Background jobs were still running, so nothing was deleted and the queues are running again. Run the reset again."
+}
 
 // ResetRuntime is the non-Postgres runtime a data reset must clear: the job
 // queue, the event bus, and the cache-flush announcement. Each member is a
@@ -48,7 +68,6 @@ type resetCounts struct {
 	StreamsPurged  int
 	CacheKeys      int
 	ObjectsDeleted int
-	DrainTimedOut  bool
 	// SecretsPurged counts the sealed credentials redeemed from the vault.
 	SecretsPurged int
 	// secretRefs carries the handles collected inside the sweep's transaction
@@ -82,7 +101,9 @@ func (h dataResetHandlers) runRuntimePhase(ctx context.Context, rt ResetRuntime,
 		if err != nil {
 			return counts, err
 		}
-		counts.DrainTimedOut = !drained
+		if !drained {
+			return counts, errResetDrainTimedOut
+		}
 	}
 	if err := clearOutbox(); err != nil {
 		return counts, err

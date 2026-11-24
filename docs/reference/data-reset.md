@@ -66,9 +66,8 @@ that no longer exist. So the endpoint also does these steps:
 1. **Pauses every job queue and drains it**, for at most 10 seconds. `river_queue` carries the
    pause, so the api quiets the queues the *worker* process owns.
 
-   A drain that is not done in time never fails the reset, so a long pass cannot block a reset. It
-   sets `drain_timed_out` in the response, the audit evidence and the log. The write that would
-   mark the job done then fails against the wiped rows.
+   A drain that is not done in time refuses the reset with a 409 before anything is deleted. The
+   queues run again and the admin runs the reset once more.
 2. **Drains the staged outbox**: the `event_outbox` rows of this workspace, in a separate
    transaction *before* the streams are purged. The outbox relay is not part of the jobs the pause
    stopped.
@@ -121,8 +120,7 @@ The 200 body reports what was cleared:
 - `jobs_deleted`: job rows in every state, history included, not how many jobs wait;
 - `streams_purged`: stream *keys*, not entries;
 - `cache_keys_deleted`: dedupe marks plus budget counters;
-- `objects_deleted`;
-- `drain_timed_out`.
+- `objects_deleted`.
 
 The same counts go into the `audit_log` evidence, but not `objects_deleted`. The object purge cannot
 join the transaction that writes the audit row.
