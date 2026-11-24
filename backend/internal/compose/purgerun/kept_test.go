@@ -37,9 +37,8 @@ func TestTheBreakdownCountsEachReasonApart(t *testing.T) {
 	}
 }
 
-// A rule that kept nothing is not advertised: shown beside a zero it reads as
-// the rule that applied to this deletion, when nothing of the owner's was
-// commercial correspondence at all.
+// A rule that kept nothing is not advertised. Shown beside a zero, it reads as
+// the rule that applied to this deletion, when no message was commercial.
 func TestTheStatutoryRuleIsNamedOnlyWhenItKeptSomething(t *testing.T) {
 	sixYears := privacy.FloorPolicy{Current: jurisdiction.RetentionClass{
 		Name: jurisdiction.CommercialCorrespondence, Keep: jurisdiction.Period{Years: 6}, Anchor: jurisdiction.AnchorCalendarYearEnd,
