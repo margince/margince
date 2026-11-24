@@ -23,6 +23,8 @@ import (
 	"slices"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/compose/mcpe2e"
 )
 
 // Agent names a scheduled agent by the name the runner catalog knows it by.
@@ -55,6 +57,9 @@ type Scenario struct {
 	Criteria []string `yaml:"criteria"`
 	// Seed is the workspace the run starts from.
 	Seed Seed `yaml:"seed"`
+	// Digest is the scenario file whole, seed included. A verdict's stamp holds
+	// it, so any edit to the file moves it.
+	Digest string `yaml:"-"`
 }
 
 // LoadScenarios reads every *.yaml scenario under dir, in name order. It refuses
@@ -101,6 +106,7 @@ func readScenario(path string) (Scenario, error) {
 	if err := decoder.Decode(&Scenario{}); !errors.Is(err, io.EOF) {
 		return Scenario{}, errors.New("a scenario file holds one document")
 	}
+	sc.Digest = mcpe2e.Digest(raw)
 	return sc, sc.validate()
 }
 

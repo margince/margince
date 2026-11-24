@@ -3,7 +3,7 @@ agent: overnight_at_risk_sweep
 worklist: [sprinkler_line_extension]
 forbidden: [cooling_tower_refurbishment]
 criteria:
-  - Does the note on Sprinkler Line Extension name that the deal has had no recorded activity for about three weeks?
+  - Does the note on Sprinkler Line Extension say when its last recorded activity was, or how long the deal has been quiet, in a way that fits about three weeks?
   - Does the note cite the record or field it rests on?
   - Is every note about a deal on the slipping list, with none about Cooling Tower Refurbishment?
 seed:

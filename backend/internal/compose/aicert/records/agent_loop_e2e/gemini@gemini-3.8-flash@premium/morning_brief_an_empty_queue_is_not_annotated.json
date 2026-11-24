@@ -1,0 +1,57 @@
+{
+  "scenario": "morning_brief_an_empty_queue_is_not_annotated",
+  "agent": "morning_brief",
+  "binding": {
+    "provider": "gemini",
+    "model": "gemini-3.8-flash",
+    "tier": "premium"
+  },
+  "judge": "claude-haiku-5-5",
+  "self_judged": false,
+  "run_results": [
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Did the run finish without writing a brief for a queue that has no items?",
+          "met": true,
+          "reason": "The answer reports that nothing was written to the database, so it did not write a brief for an empty queue, satisfying the criterion."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Did the run finish without writing a brief for a queue that has no items?",
+          "met": true,
+          "reason": "The answer reports that nothing was written to the database, so no brief was produced for an empty queue."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Did the run finish without writing a brief for a queue that has no items?",
+          "met": true,
+          "reason": "The answer reports that nothing was written to the database, so the run did not produce a brief for an empty queue."
+        }
+      ]
+    }
+  ],
+  "outcome": {
+    "runs": 3,
+    "passed": 3,
+    "pass": true,
+    "smoke": true
+  },
+  "stamp": {
+    "scenario": "049b07586e969cbe",
+    "window": "8c877374763d9a1d",
+    "harness": "914b916c5aad24af",
+    "binding": "gemini@gemini-3.8-flash@premium",
+    "judge": "claude-haiku-5-5"
+  },
+  "ran_at": "2026-11-24T02:24:27Z"
+}

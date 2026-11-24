@@ -37,10 +37,11 @@ const (
 // processSpawners are the directories whose non-test code may import os/exec,
 // each with what running a subprocess there costs.
 var processSpawners = gatekit.Waive(map[string]string{
-	"internal/compose/aicert":      "the cert lane's claude_cli judge runs `claude -p`, a subscription-billed CLI a product process must never reach",
-	"internal/compose/integration": "a benchmark record reads the host's CPU and memory through sysctl, in the integration-tagged harness only",
-	"tools/gen-composition":        "the composition generator asks GOROOT's go for the module graph at build time, never at runtime",
-	"tools/check-generators-twice": "the gate runs the tree's generators and git as a build step, never at runtime",
+	"internal/compose/agentloope2e": "the paid agent_loop lane runs e2e/llm/judge_cli.py on python3 to ask its judge, in the opt-in lane and the report tool only",
+	"internal/compose/aicert":       "the cert lane's claude_cli judge runs `claude -p`, a subscription-billed CLI a product process must never reach",
+	"internal/compose/integration":  "a benchmark record reads the host's CPU and memory through sysctl, in the integration-tagged harness only",
+	"tools/gen-composition":         "the composition generator asks GOROOT's go for the module graph at build time, never at runtime",
+	"tools/check-generators-twice":  "the gate runs the tree's generators and git as a build step, never at runtime",
 })
 
 // harnessSourceFile is one parsed non-test Go file and the directory it sits in.

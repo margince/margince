@@ -1,0 +1,87 @@
+{
+  "scenario": "overnight_sweep_one_quiet_deal_is_not_the_book",
+  "agent": "overnight_at_risk_sweep",
+  "binding": {
+    "provider": "gemini",
+    "model": "gemini-3.1-flash-lite",
+    "tier": "cheap_cloud"
+  },
+  "judge": "claude-haiku-5-5",
+  "self_judged": false,
+  "run_results": [
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the note on Sprinkler Line Extension say when its last recorded activity was, or how long the deal has been quiet, in a way that fits about three weeks?",
+          "met": true,
+          "reason": "The note states the deal has lacked activity since 2026-11-02, which is 22 days before the 2026-11-24 reference date and so fits about three weeks."
+        },
+        {
+          "criterion": "Does the note cite the record or field it rests on?",
+          "met": true,
+          "reason": "The note cites the deal by name and ID, and it cites the external note by its record ID (01a20b73-960c-721b-a21b-d90cd7b6d670) and the 2026-11-02 date it relies on."
+        },
+        {
+          "criterion": "Is every note about a deal on the slipping list, with none about Cooling Tower Refurbishment?",
+          "met": true,
+          "reason": "The only note written is about Sprinkler Line Extension, and no note mentions Cooling Tower Refurbishment, so every note concerns a deal on the slipping list and none concerns the excluded deal."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the note on Sprinkler Line Extension say when its last recorded activity was, or how long the deal has been quiet, in a way that fits about three weeks?",
+          "met": true,
+          "reason": "The note states the last activity was on 2026-11-02, which is 22 days before the 2026-11-24 date, fitting the roughly three-week gap."
+        },
+        {
+          "criterion": "Does the note cite the record or field it rests on?",
+          "met": true,
+          "reason": "The note explicitly cites its sources, attributing the last-activity date to the deal record and the single-threaded finding to the network risk analysis."
+        },
+        {
+          "criterion": "Is every note about a deal on the slipping list, with none about Cooling Tower Refurbishment?",
+          "met": true,
+          "reason": "The answer logs a note only on 'Sprinkler Line Extension' (the slipping deal) and writes nothing about 'Cooling Tower Refurbishment', so every note is about a slipping-list deal and none concern the cooling tower deal."
+        }
+      ]
+    },
+    {
+      "failures": null,
+      "criteria": [
+        {
+          "criterion": "Does the note on Sprinkler Line Extension say when its last recorded activity was, or how long the deal has been quiet, in a way that fits about three weeks?",
+          "met": true,
+          "reason": "The note states the last recorded activity was 2026-11-02, which is 22 days before 2026-11-24, roughly three weeks, so it fits the criterion."
+        },
+        {
+          "criterion": "Does the note cite the record or field it rests on?",
+          "met": true,
+          "reason": "The note cites the Sprinkler Line Extension deal's lack of activity since 2026-11-02 and the deal coverage risk report's single-threaded signal, both traceable to the seeded records, so it rests on identifiable records and fields."
+        },
+        {
+          "criterion": "Is every note about a deal on the slipping list, with none about Cooling Tower Refurbishment?",
+          "met": true,
+          "reason": "The only note written is on Sprinkler Line Extension, the stale deal that fits a slipping list, and none is on Cooling Tower Refurbishment, though the slipping list itself is not shown in the answer."
+        }
+      ]
+    }
+  ],
+  "outcome": {
+    "runs": 3,
+    "passed": 3,
+    "pass": true,
+    "smoke": true
+  },
+  "stamp": {
+    "scenario": "97edd6f934c130c6",
+    "window": "b282df2d3edab3a6",
+    "harness": "914b916c5aad24af",
+    "binding": "gemini@gemini-3.1-flash-lite@cheap_cloud",
+    "judge": "claude-haiku-5-5"
+  },
+  "ran_at": "2026-11-24T02:48:45Z"
+}
