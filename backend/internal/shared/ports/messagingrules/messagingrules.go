@@ -52,12 +52,18 @@ type (
 	ContactMeans = pub.ContactMeans
 	// PurposeClass names a class of consent purpose.
 	PurposeClass = pub.PurposeClass
+	// MarketingMode says whether advertising needs consent or is allowed until a refusal.
+	MarketingMode = pub.MarketingMode
 )
 
 // The published constants, re-exported.
 const (
 	// ExistingCustomer is the sale-derived advertising exception.
 	ExistingCustomer = pub.ExistingCustomer
+	// MarketingOptIn needs the recipient's consent before advertising.
+	MarketingOptIn = pub.MarketingOptIn
+	// MarketingOptOut allows advertising until the recipient refuses.
+	MarketingOptOut = pub.MarketingOptOut
 	// ControllerIdentity is who is writing.
 	ControllerIdentity = pub.ControllerIdentity
 	// PrivacyContact is who answers about the data.
@@ -140,6 +146,19 @@ func For(code jurisdiction.Code) (Rules, bool) {
 		return Rules{}, false
 	}
 	return clone(r), true
+}
+
+// AnyOptOut reports whether a registered jurisdiction allows advertising until
+// the recipient refuses. A recipient whose country is unknown could be in one.
+func AnyOptOut() bool {
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, r := range rules {
+		if r.MarketingMode.OptOut() {
+			return true
+		}
+	}
+	return false
 }
 
 // Strictest folds the applicable jurisdictions into the one rule set the
@@ -249,6 +268,11 @@ func stricter(a, b Rules) Rules {
 	}
 	out.FrequencyCap = tighterCap(a.FrequencyCap, b.FrequencyCap)
 	out.ConsentOnly = a.ConsentOnly || b.ConsentOnly
+	// Opt-out only where both sides allow it: a country that wants consent keeps
+	// asking for it in a send both govern.
+	if !a.MarketingMode.OptOut() || !b.MarketingMode.OptOut() {
+		out.MarketingMode = ""
+	}
 	out.OptOutAcknowledgement = a.OptOutAcknowledgement || b.OptOutAcknowledgement
 	out.OptOutAcknowledgementWithin = shorterWindow(a.OptOutAcknowledgementWithin, b.OptOutAcknowledgementWithin)
 	// A floor either side requires holds, so the longer one wins.

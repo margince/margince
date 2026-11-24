@@ -1,4 +1,4 @@
-<!-- describes: backend/internal/modules/consent backend/internal/shared/ports/messagingrules backend/internal/platform/messagingpolicy backend/internal/compose/extensionpolicy.go backend/internal/compose/requirementcheck.go backend/internal/modules/activities/previewsend.go backend/internal/modules/activities/footerassessment.go backend/internal/modules/activities/draftcontent.go -->
+<!-- describes: backend/internal/modules/consent backend/internal/shared/ports/messagingrules backend/internal/platform/messagingpolicy backend/internal/compose/extensionpolicy.go backend/internal/compose/requirementcheck.go backend/internal/modules/consent/countryquestion.go backend/internal/modules/activities/previewsend.go backend/internal/modules/activities/footerassessment.go backend/internal/modules/activities/draftcontent.go -->
 # Where a pack's rules are read
 
 A messaging policy pack is data: one country's `messaging.Rules`, compiled from the Markdown in an
@@ -59,6 +59,28 @@ the marketing exception from the recipient's pack alone. `ConfirmSendWithoutLawf
 A pack that sets `data-protection-follows-recipient` also takes the disclosures, the privacy page,
 the mail language and the request deadlines for its recipients, whatever country the sender is in.
 `recipientpack.go` holds that rule too.
+
+## Opt-in and opt-out advertising
+
+`marketing-mode` says what a recipient who has said nothing is owed. A pack that states none is
+opt-in: advertising needs their consent or an exception the pack grants. A pack that states
+`opt_out` allows advertising until they refuse.
+
+`packRulesFor` in `backend/internal/modules/consent/authorizewindows.go` reads the mode from the
+recipient's pack alone, and `marketingVerdict` in `backend/internal/modules/consent/verdict.go`
+and `decideLeadOnItsRecord` in `backend/internal/modules/consent/authorizelead.go` apply it. An
+objection, an unsubscribe, a withdrawal and a suppression block before the mode is read, so they win
+in either mode. Mail that is not advertising never reads it. An opt-out allow records no lawful
+basis, because none of the recorded values names "allowed until refused". Its reason code is
+`opt_out_allowed`. `Strictest` keeps opt-out only where every pack that binds a send states it.
+
+A recipient with no usable country gets no pack and so needs consent. Where an installed pack is
+opt-out, that refusal could become an allow. The preview then sets `ask_country` on the recipient
+(`countryCouldChangeTheAnswer` in `backend/internal/modules/consent/countryquestion.go`), and the
+composer asks the sender for the country. The answer is saved on the contact through the ordinary
+contact edit, so it is audited like any other change, and the preview is asked again. No question
+shows when the record states a country, when the sender cleared or stated one for the message, when
+the refusal is not for want of consent, or when no installed pack is opt-out.
 
 ## The send preview
 
@@ -160,3 +182,15 @@ Each decision row records the rules that judged its recipient. `rulesetStamp` in
 its `ruleset_version` and `ruleset_digest`, the SHA-256 of the policy sources the set was compiled
 from. So a question about one decision is answered by the code, the version and the digest, and
 the digest tells which policy text produced the rules.
+
+## The United States pack
+
+`extensions/us/policy/us/us.md` states the CAN-SPAM Act (15 U.S.C. 7701 et seq.) and the Federal
+Trade Commission's rule under it (16 CFR Part 316). It is opt-out, grants no exception and sets no
+label or cap. A commercial message owes a way to decline and the sender's postal address. The
+postal address is the legal name and address of `controller_identity`, which the pack owes on
+advertising only. `owedDisclosures` in `backend/internal/modules/consent/disclosurerender.go` reads
+that disclosure from a recipient's pack when it is advertising-only, so a sender from a country
+whose own pack asks for no address still owes it to a US recipient. The pack states no
+data-protection key, because the United States has no federal law like the GDPR. A sender's own
+country keeps its data-protection rules for the lawful basis.

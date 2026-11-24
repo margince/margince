@@ -39,6 +39,9 @@ func bindingOnly(r Rules) Rules {
 // treats an empty list as an absent one.
 func normalised(r Rules) Rules {
 	r = clone(r)
+	if !r.MarketingMode.OptOut() {
+		r.MarketingMode = ""
+	}
 	for i := range r.Disclosures {
 		r.Disclosures[i].Means = setOf(r.Disclosures[i].Means)
 	}

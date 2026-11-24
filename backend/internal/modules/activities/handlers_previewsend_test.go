@@ -7,6 +7,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -68,6 +69,28 @@ func TestThePreviewMarksTheAddressTheSendWouldFile(t *testing.T) {
 	}
 	if got := out.Recipients[1].NewContact; got != nil {
 		t.Errorf("new_contact for an address on file = %v, want absent", *got)
+	}
+}
+
+// The country question reaches the wire only for a recipient the caller can
+// read, because the answer is saved on that record.
+func TestThePreviewAsksForACountryOnlyForARecipientTheCallerCanRead(t *testing.T) {
+	t.Parallel()
+	contact := ids.NewV7()
+	asking := commsauthz.Decision{
+		Recipient: connector.Recipient{Email: "dana@example.test"}, SubjectKind: "contact", SubjectID: contact,
+		Verdict: commsauthz.VerdictDeny, ReasonCode: commsauthz.ReasonMarketingPermissionRequired, AsksCountry: true,
+	}
+	readable := previewResponse(SendPreview{
+		Decisions:        commsauthz.DecisionSet{Decisions: []commsauthz.Decision{asking}},
+		readableSubjects: map[previewSubject]bool{{kind: "contact", id: contact}: true},
+	})
+	if got := readable.Recipients[0].AskCountry; got == nil || !*got {
+		t.Errorf("ask_country for a readable contact = %v, want true", got)
+	}
+	unreadable := previewResponse(SendPreview{Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{asking}}})
+	if got := unreadable.Recipients[0].AskCountry; got != nil {
+		t.Errorf("ask_country for a contact the caller cannot read = %v, want absent", *got)
 	}
 }
 

@@ -254,6 +254,12 @@ type Decision struct {
 	// recipient would ask about, zero when none can be asked.
 	ConsentPurpose ids.UUID
 
+	// AsksCountry says the record states no country for this recipient, the
+	// refusal is for want of marketing consent, and an installed pack allows
+	// advertising until a refusal. The recipient's country could therefore turn
+	// it into an allow. Only a preview fills it.
+	AsksCountry bool
+
 	// Citations are the provisions shown for each code, resolved when the
 	// decision was taken: the recipient's pack's first, then the sending
 	// entity's. A review stores what it shows, so a later pack never rewrites it.

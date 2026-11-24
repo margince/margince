@@ -20,6 +20,7 @@ package consent
 import (
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
@@ -51,6 +52,14 @@ type packRules struct {
 	// marketingException is the exception this jurisdiction allows. It is nil
 	// for a pack that declares none and for the baseline.
 	marketingException *messaging.MarketingException
+	// optOut is the country's mode: advertising is allowed until the recipient
+	// refuses. It is false for the baseline, which keeps consent required.
+	optOut bool
+}
+
+// marketingContext is what a marketing verdict reads from the pack.
+func (w packRules) marketingContext(entity ids.UUID) MarketingContext {
+	return MarketingContext{Exception: w.marketingException, SendingEntity: entity, OptOut: w.optOut}
 }
 
 // packRulesFor answers the rules that bind a message to a recipient in this
@@ -71,6 +80,7 @@ func packRulesFor(country RecipientCountry) packRules {
 	if !applicable {
 		return out
 	}
+	out.optOut = rules.MarketingMode.OptOut()
 	// THE EXCEPTION IS THE PACK'S TO DECLARE, and a jurisdiction that declares
 	// none grants none. A declared one still grants nothing today: the verdict
 	// refuses it and names it in the reason.

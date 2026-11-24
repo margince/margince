@@ -3904,6 +3904,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.reason.no_consent": "Keine Einwilligung erfasst",
   "consent.reason.existing_customer":
     "Der Kontakt hat bei dir gekauft und wurde dabei auf sein Widerspruchsrecht gegen Werbung hingewiesen",
+  "consent.reason.opt_out_allowed":
+    "Werbung ist hier erlaubt, bis der Kontakt widerspricht, und kein Widerspruch ist erfasst",
   "consent.reason.qualifying.inbound_message":
     "Der Kontakt hat dir am {date} geschrieben",
   "consent.reason.qualifying.inquiry": "Der Kontakt hat am {date} angefragt",
@@ -8601,6 +8603,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das betrifft {count} von {total} Empfangsadressen.",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
+  "countryQuestion.title": "In welchem Land ist {address}?",
+  "countryQuestion.body":
+    "Einige Länder erlauben Werbung, bis sich der Kontakt abmeldet. Der Kontakt hat kein Land, deshalb verlangt Margince die Einwilligung, die überall sonst nötig ist. Deine Antwort wird am Kontakt gespeichert.",
+  "countryQuestion.label": "Land",
+  "countryQuestion.none": "Land wählen",
+  "countryQuestion.save": "Land speichern",
+  "countryQuestion.failed":
+    "Das Land wurde nicht gespeichert. Versuche es erneut.",
   "lawfulBasis.title": "Keine gültige Grundlage erfasst",
   "lawfulBasis.body":
     "Für diesen Kontakt ist keine nach vietnamesischem Recht gültige Grundlage erfasst: weder seine Einwilligung noch ein Fall, in dem das Gesetz die Verarbeitung ohne sie erlaubt. Du sendest auf eigenes Risiko.",
@@ -20211,6 +20221,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.strip.yesterday": "Gestern",
   "contact.strip.days": "{count} Tage",
   "contact.consent.fact.existingCustomer": "Bestandskunde, Werbung erlaubt",
+  "contact.consent.fact.optOutAllowed":
+    "Werbung erlaubt, bis der Kontakt widerspricht",
   "contact.consent.fact.saidWeMayWrite": "Erlaubnis zu schreiben erfasst",
   "contact.consent.fact.businessContact": "Aktueller Geschäftskontakt erfasst",
   "contact.consent.fact.serviceMessages": "Servicenachrichten erlaubt",

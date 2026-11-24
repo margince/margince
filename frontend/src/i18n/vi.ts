@@ -3778,6 +3778,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.reason.no_consent": "Chưa ghi nhận đồng ý",
   "consent.reason.existing_customer":
     "Họ đã mua hàng của bạn và khi đó đã được báo rằng họ có thể từ chối quảng cáo",
+  "consent.reason.opt_out_allowed":
+    "Quảng cáo được phép ở đây cho đến khi họ từ chối, và chưa có lời từ chối nào được ghi nhận",
   "consent.reason.qualifying.inbound_message": "Họ đã viết cho bạn ngày {date}",
   "consent.reason.qualifying.inquiry": "Họ đã gửi yêu cầu ngày {date}",
   "consent.reason.qualifying.in_person":
@@ -8385,6 +8387,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.appliesToSome_other":
     "Điều này áp dụng cho {count} trên {total} người nhận.",
   "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
+  "countryQuestion.title": "{address} ở quốc gia nào?",
+  "countryQuestion.body":
+    "Một số quốc gia cho phép quảng cáo cho đến khi liên hệ hủy đăng ký. Liên hệ này chưa có quốc gia, nên Margince đòi sự đồng ý như ở mọi nơi khác. Câu trả lời của bạn được lưu vào liên hệ.",
+  "countryQuestion.label": "Quốc gia",
+  "countryQuestion.none": "Chọn quốc gia",
+  "countryQuestion.save": "Lưu quốc gia",
+  "countryQuestion.failed": "Chưa lưu được quốc gia. Hãy thử lại.",
   "lawfulBasis.title": "Chưa ghi nhận căn cứ hợp lệ",
   "lawfulBasis.body":
     "Chưa ghi nhận căn cứ hợp lệ theo pháp luật Việt Nam cho liên hệ này: không có sự đồng ý của họ, cũng không có trường hợp pháp luật cho phép xử lý mà không cần sự đồng ý. Nếu gửi, bạn tự chịu rủi ro.",
@@ -19658,6 +19667,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.strip.yesterday": "Hôm qua",
   "contact.strip.days": "{count} ngày",
   "contact.consent.fact.existingCustomer": "Khách hàng hiện có, được tiếp thị",
+  "contact.consent.fact.optOutAllowed": "Được quảng cáo cho đến khi họ từ chối",
   "contact.consent.fact.saidWeMayWrite": "Đã ghi nhận cho phép viết thư",
   "contact.consent.fact.businessContact":
     "Đã ghi nhận liên lạc kinh doanh gần đây",
