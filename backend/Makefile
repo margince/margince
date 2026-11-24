@@ -910,7 +910,7 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		-out-kinds internal/compose/jobkinds_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-worklist -contract api/worklist-kinds.yaml \
 		-out-go internal/compose/attention/kinds_gen.go -out-frontend ../frontend/src/lib/worklistkinds.gen.ts
-	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go -tier-out internal/modules/ai/tiercert_gen.go
+	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/attemptlimitcmd -out internal/modules/ai/attemptlimits_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/taskgradecmd -out internal/modules/ai/taskgrades_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-modelsetups -out ../frontend/src/lib/modelsetups.gen.ts -out-go internal/modules/ai/stockpresets_gen.go
