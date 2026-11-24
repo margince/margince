@@ -719,7 +719,7 @@ paths:
               schema:
                 type: object
                 additionalProperties: false
-                required: [status, tables_cleared, jobs_deleted, streams_purged, cache_keys_deleted, objects_deleted]
+                required: [status, tables_cleared, jobs_deleted, streams_purged, cache_keys_deleted, objects_deleted, drain_timed_out]
                 properties:
                   status: { type: string, example: reset }
                   tables_cleared: { type: integer }
@@ -739,6 +739,12 @@ paths:
                   objects_deleted:
                     type: integer
                     description: Objects removed from the blob store under this workspace's key prefix.
+                  drain_timed_out:
+                    type: boolean
+                    deprecated: true
+                    description: >
+                      Always false. A reset whose job drain timed out is refused with 409 before anything is
+                      deleted, so a successful reset never has this state. Kept so existing clients keep parsing.
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
           description: >

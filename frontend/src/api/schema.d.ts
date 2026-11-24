@@ -65857,6 +65857,11 @@ export interface operations {
                         cache_keys_deleted: number;
                         /** @description Objects removed from the blob store under this workspace's key prefix. */
                         objects_deleted: number;
+                        /**
+                         * @deprecated
+                         * @description Always false. A reset whose job drain timed out is refused with 409 before anything is deleted, so a successful reset never has this state. Kept so existing clients keep parsing.
+                         */
+                        drain_timed_out: boolean;
                     };
                 };
             };

@@ -52,6 +52,9 @@ type resetDataResponse struct {
 	StreamsPurged  int    `json:"streams_purged"`
 	CacheKeys      int    `json:"cache_keys_deleted"`
 	ObjectsDeleted int    `json:"objects_deleted"`
+	// DrainTimedOut is always false: a timed-out drain refuses the reset, and the
+	// field stays so existing clients keep parsing the body.
+	DrainTimedOut bool `json:"drain_timed_out"`
 }
 
 // dataResetHandlers is the callable the non-production "reset data" HTTP
