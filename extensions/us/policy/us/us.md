@@ -1,6 +1,6 @@
 ---
 jurisdiction: us
-version: 1
+version: 2
 created: 2026-11-24
 instruments:
   - name: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)"

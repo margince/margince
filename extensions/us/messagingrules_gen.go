@@ -13,7 +13,7 @@ import (
 func messagingRules() []messaging.Rules {
 	return []messaging.Rules{{
 		Jurisdiction: "us",
-		Version:      1,
+		Version:      2,
 		Instruments: []messaging.Instrument{{
 			Name:          "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
 			EffectiveFrom: time.Date(2004, time.January, 1, 0, 0, 0, 0, time.UTC),
@@ -66,6 +66,6 @@ func messagingRules() []messaging.Rules {
 			Instrument: "CAN-SPAM Act of 2003 (15 U.S.C. 7701 et seq.)",
 			Provision:  "15 U.S.C. 7704(a)(4)(A)",
 		}},
-		Digest: "b41bc796c045d1d66d9611bb48ace6929ab97a85187f1db7248fbd74163a0837",
+		Digest: "73e5542acc63eb284b0b9cb39e1424d45f5b02072aab3ad0de79e3b9e9074dac",
 	}}
 }
