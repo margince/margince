@@ -135,6 +135,30 @@ export const zoneFinding: components["schemas"]["HealthFinding"] = {
   observed_at: HEALTH_AT,
   action: { destination: "regional", available: true },
 };
+export const footerFinding: components["schemas"]["HealthFinding"] = {
+  id: "footer:footer_incomplete:0193a3c4-0000-7000-8000-000000000001",
+  source: "footer",
+  code: "footer_incomplete",
+  condition: "waiting_human",
+  requires_action: true,
+  urgency: 1,
+  scope: "workspace",
+  impact: "measured",
+  responsible: "administrator",
+  recovery: "footer",
+  count: 3,
+  unit: "messages",
+  observed_at: HEALTH_AT,
+  footer_gap: {
+    legal_entity_id: "0193a3c4-0000-7000-8000-000000000001",
+    legal_entity_name: "Beispiel GmbH",
+    is_default: true,
+    missing: ["privacy_contact", "objection_route"],
+    held_by_user: 2,
+    held_in_background: 1,
+  },
+  action: { destination: "disclosures", available: true },
+};
 export const attentionReport: Report = {
   ...healthReport,
   assessment: "attention",
