@@ -131,10 +131,13 @@ var verdictOfGrade = map[string]string{
 // leadDisagreement says how the task's grade and its lead candidate's verdict
 // disagree about the one model both describe, or "" when they agree.
 func leadDisagreement(row crmcontracts.AiFeatureRoute) string {
-	if row.Certification == nil || len(row.NormalCandidates) == 0 {
+	if row.Task == string(TaskEmbeddings) || (row.Certification == nil && len(row.EffectiveCandidates) == 0) {
 		return ""
 	}
-	grade, lead := *row.Certification, row.NormalCandidates[0]
+	if row.Certification == nil || len(row.EffectiveCandidates) == 0 {
+		return "a grade without a lead model, or a lead model without a grade"
+	}
+	grade, lead := *row.Certification, row.EffectiveCandidates[0]
 	switch {
 	case grade.Model != lead.Model:
 		return "the grade names " + grade.Model + ", the lead candidate " + lead.Model
@@ -153,22 +156,34 @@ func leadDisagreement(row crmcontracts.AiFeatureRoute) string {
 }
 
 // Every stock preset binds a lead model to every task. The task's grade and
-// the lead candidate's verdict are two views of that model, so they agree.
+// the lead candidate's verdict are two views of that model, so they agree in
+// every budget band and in a preview that moves to another preset.
 func TestEveryStockPresetGradesEachTaskAsItsLeadCandidate(t *testing.T) {
-	for _, name := range slices.Sorted(maps.Keys(stockPresets)) {
+	names := slices.Sorted(maps.Keys(stockPresets))
+	for i, name := range names {
 		cfg, err := ParsePreset([]byte(stockPresets[name]))
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
+		proposed, err := ParsePreset([]byte(stockPresets[names[(i+1)%len(names)]]))
+		if err != nil {
+			t.Fatalf("%s: %v", names[(i+1)%len(names)], err)
+		}
 		graded := 0
-		for _, row := range FeatureRoutes(cfg, cfg, BandNormal) {
-			if row.Certification != nil {
-				graded++
-			}
-			if why := leadDisagreement(row); why != "" {
-				t.Errorf("%s, %s: %s", name, row.Task, why)
+		check := func(view string, rows []crmcontracts.AiFeatureRoute) {
+			for _, row := range rows {
+				if row.Certification != nil {
+					graded++
+				}
+				if why := leadDisagreement(row); why != "" {
+					t.Errorf("%s, %s, %s: %s", name, view, row.Task, why)
+				}
 			}
 		}
+		for _, band := range []string{BandNormal, BandDegraded, BandQueued} {
+			check(band, FeatureRoutes(cfg, cfg, band))
+		}
+		check("preview", compareFeatureRoutes(cfg, proposed, BandNormal, BandNormal))
 		if graded == 0 {
 			t.Errorf("%s grades no task, so the check above compared nothing", name)
 		}

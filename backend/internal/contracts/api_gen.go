@@ -35458,9 +35458,9 @@ type AiFeatureRoute struct {
 	BudgetExempt bool `json:"budget_exempt"`
 
 	// Certification The certification grade of the model that answers this feature first (the lead of
-	// `normal_candidates`), read from the committed certification records by the readiness
+	// `effective_candidates`), read from the committed certification records by the readiness
 	// report's rule: the worst grade over every site the feature ships, and not measured when
-	// any site has no record for that model. Absent when no model is bound, and for embeddings.
+	// any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
 	Certification *AiTaskCertification `json:"certification,omitempty"`
 
 	// Decides The task declares a decision form, so a decision model may answer it first and its decision timeout applies.
@@ -36199,9 +36199,9 @@ type AiStatus struct {
 type AiTask string
 
 // AiTaskCertification The certification grade of the model that answers this feature first (the lead of
-// `normal_candidates`), read from the committed certification records by the readiness
+// `effective_candidates`), read from the committed certification records by the readiness
 // report's rule: the worst grade over every site the feature ships, and not measured when
-// any site has no record for that model. Absent when no model is bound, and for embeddings.
+// any site has no record for that model. Absent when no model is bound or the budget blocks the feature, and for embeddings.
 type AiTaskCertification struct {
 	// Grade ready — clears the certification bar, so rely on it; usable_with_care — mostly right, so have someone look over what it produces; not_reliable — wrong too often or below the quality bar; not_measured — no record grades this model on every site of the feature. docs/reference/ai-certification.md states the bars.
 	Grade string `json:"grade"`
