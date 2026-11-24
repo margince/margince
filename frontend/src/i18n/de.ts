@@ -14369,6 +14369,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "buyer.previewReadOnly":
     "Eine Vorschau ist schreibgeschützt. Schließe diesen Tab, um zur Seite des Deal Rooms zurückzukehren.",
   "buyer.closedNote": "Dieser Raum ist jetzt schreibgeschützt.",
+  "buyer.readOnly": "Sie haben für diesen Raum nur Lesezugriff.",
   "buyer.stewardUnknown": "Ihre Ansprechperson",
   "buyer.signOut": "Abmelden",
   "buyer.signedInAs": "Angemeldet als {name}.",
@@ -14465,7 +14466,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "threads.newLabel": "Neuer Thread",
   "threads.requireChangeLabel": "Dieses Dokument muss geändert werden",
   "threads.open": "Absenden",
-  "threads.readOnly": "Du hast nur Lesezugriff.",
   "deal360.blocker": "Blocker",
   "deal360.buyer": "Was die Käuferseite will",
   "deal360.verdict.live": "Im Plan",
