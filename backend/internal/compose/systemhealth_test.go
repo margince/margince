@@ -14,6 +14,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/margince/margince/backend/internal/compose/healthrank"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -138,7 +139,7 @@ func TestHealthFindingOrderingIsTransitiveWithMissingCounts(t *testing.T) {
 	for _, a := range findings {
 		for _, b := range findings {
 			for _, c := range findings {
-				if healthFindingLess(a, b) && healthFindingLess(b, c) && !healthFindingLess(a, c) {
+				if healthrank.FindingLess(a, b) && healthrank.FindingLess(b, c) && !healthrank.FindingLess(a, c) {
 					t.Fatalf("nontransitive: %s < %s < %s", a.Id, b.Id, c.Id)
 				}
 			}

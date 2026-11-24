@@ -3456,6 +3456,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.add": "Beziehung hinzufügen",
   "rel.seatOnDeal": "Zu einem Deal hinzufügen",
   "rel.addStakeholder": "Stakeholder hinzufügen",
+  "rel.stakeholderOffer.title": "Die Kontakte dieser Mail zum Deal hinzufügen?",
+  "rel.stakeholderOffer.body":
+    "Als Stakeholder landet ihre nächste Mail von selbst beim Deal. Entferne den Haken bei allen, die nicht dazugehören.",
+  "rel.stakeholderOffer.legend": "Kontakte auf dieser Mail",
+  "rel.stakeholderOffer.confirm": "Zum Deal hinzufügen",
+  "rel.stakeholderOffer.decline": "Jetzt nicht",
+  "rel.stakeholderOffer.noneTicked":
+    "Setze bei mindestens einem Kontakt einen Haken.",
+  "rel.stakeholderOffer.added": "Zum Deal hinzugefügt",
+  "rel.stakeholderOffer.unread":
+    "Die Mail ist beim Deal. Margince konnte nicht lesen, wer auf ihr steht, und schlägt daher niemanden vor.",
   "rel.dealStakeholders": "Stakeholder",
   "rel.dealStakeholdersEmpty": "Keine Stakeholder zu diesem Deal",
   "rel.employerUnavailable":
@@ -15684,6 +15695,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "captureActivity.filing.core.retracted":
     "Das CRM hat die Deal-Zuordnung zurückgenommen: {reason}",
   "captureActivity.filing.basis.project": "das Projekt der Mail",
+  "captureActivity.filing.basis.chosen_thread":
+    "ein Deal, den ein Mitglied für eine frühere Mail im Thread gewählt hat",
   "captureActivity.filing.basis.thread": "eine frühere Mail im Thread",
   "captureActivity.filing.basis.sole_open_deal":
     "der einzige offene Deal des Unternehmens",
@@ -23928,7 +23941,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Dokumentenauswertung",
   "aiTask.name.draft_reply": "Antwortentwurf",
   "aiTask.name.enrich": "Ergänzung aus Signaturen",
-  "aiTask.name.extension_task": "KI-Aufgabe einer Erweiterung",
   "aiTask.name.growth_fit": "Bewertung der Unternehmenseignung",
   "aiTask.name.nl_search": "Suche in natürlicher Sprache",
   "aiTask.name.offer_draft": "Angebotsentwurf",
@@ -24534,6 +24546,34 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.openModels": "Modelle öffnen",
   "health.openConnections": "Verbindungen öffnen",
   "health.openRegional": "Region und Kalender öffnen",
+  "health.source.footer": "Firmenangaben in der Mail-Fußzeile",
+  "health.code.footer_complete":
+    "Jede Mail-Fußzeile enthält die nötigen Firmenangaben",
+  "health.code.footer_incomplete": "In Mail-Fußzeilen fehlen Firmenangaben",
+  "health.footerIncompleteFor":
+    "{entity}: In Mail-Fußzeilen fehlen Firmenangaben",
+  "health.footerDefaultEntity": "Die Standard-Rechtseinheit",
+  "health.effect.footer":
+    "Mails, die diese Angaben zeigen müssen, werden zur Prüfung zurückgehalten. Wer sie geschrieben hat, kann sie mit Begründung trotzdem senden. Ein Versand im Hintergrund, etwa eine Terminerinnerung, entfällt.",
+  "health.footerNext":
+    "Ergänze die fehlenden Angaben. Die Warnung verschwindet, sobald sie vollständig sind.",
+  "health.recovery.footer":
+    "Jede Firmenangabe, die die Rechtspakete verlangen, ist eingetragen.",
+  "health.footerMissing": "Fehlende Angaben",
+  "health.footerHeldByUser":
+    "Seit der letzten Änderung zurückgehaltene Sendungen von Mitgliedern",
+  "health.footerHeldInBackground":
+    "Seit der letzten Änderung zurückgehaltene oder entfallene Sendungen im Hintergrund",
+  "health.footerDetail.controller_identity": "Firmenname und Postanschrift",
+  "health.footerDetail.privacy_contact": "Datenschutzkontakt",
+  "health.footerDetail.objection_route": "Weg zum Widerspruch",
+  "health.footerDetail.advertiser_contact": "Kontakt des Werbenden",
+  "health.footerDetail.entity_name": "Firmenname",
+  "health.measure.messages_one": "{count} Nachricht",
+  "health.measure.messages_other": "{count} Nachrichten",
+  "health.openLegalEntities": "Rechtseinheiten öffnen",
+  "health.openCompanyProfile": "Firmenprofil öffnen",
+  "health.openDisclosures": "Rechtsraum öffnen",
   "health.unit.runs": "Läufe",
   "health.history": "Aufbewahrter Fehlerverlauf",
   "health.historyWindow":

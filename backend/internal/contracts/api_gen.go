@@ -1957,7 +1957,6 @@ const (
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
-	AiTaskExtensionTask                 AiTask = "extension_task"
 	AiTaskGrowthFit                     AiTask = "growth_fit"
 	AiTaskNlSearch                      AiTask = "nl_search"
 	AiTaskOfferDraft                    AiTask = "offer_draft"
@@ -2017,8 +2016,6 @@ func (e AiTask) Valid() bool {
 	case AiTaskDraftReply:
 		return true
 	case AiTaskEnrich:
-		return true
-	case AiTaskExtensionTask:
 		return true
 	case AiTaskGrowthFit:
 		return true
@@ -14646,23 +14643,32 @@ func (e HandoffAssigneeStatus) Valid() bool {
 
 // Defines values for HealthActionDestination.
 const (
-	HealthActionDestinationConfiguration HealthActionDestination = "configuration"
-	HealthActionDestinationConnections   HealthActionDestination = "connections"
-	HealthActionDestinationDiagnostics   HealthActionDestination = "diagnostics"
-	HealthActionDestinationModels        HealthActionDestination = "models"
-	HealthActionDestinationRegional      HealthActionDestination = "regional"
-	HealthActionDestinationSearch        HealthActionDestination = "search"
-	HealthActionDestinationUpdates       HealthActionDestination = "updates"
+	HealthActionDestinationCompanyProfile HealthActionDestination = "company_profile"
+	HealthActionDestinationConfiguration  HealthActionDestination = "configuration"
+	HealthActionDestinationConnections    HealthActionDestination = "connections"
+	HealthActionDestinationDiagnostics    HealthActionDestination = "diagnostics"
+	HealthActionDestinationDisclosures    HealthActionDestination = "disclosures"
+	HealthActionDestinationLegalEntities  HealthActionDestination = "legal_entities"
+	HealthActionDestinationModels         HealthActionDestination = "models"
+	HealthActionDestinationRegional       HealthActionDestination = "regional"
+	HealthActionDestinationSearch         HealthActionDestination = "search"
+	HealthActionDestinationUpdates        HealthActionDestination = "updates"
 )
 
 // Valid indicates whether the value is a known member of the HealthActionDestination enum.
 func (e HealthActionDestination) Valid() bool {
 	switch e {
+	case HealthActionDestinationCompanyProfile:
+		return true
 	case HealthActionDestinationConfiguration:
 		return true
 	case HealthActionDestinationConnections:
 		return true
 	case HealthActionDestinationDiagnostics:
+		return true
+	case HealthActionDestinationDisclosures:
+		return true
+	case HealthActionDestinationLegalEntities:
 		return true
 	case HealthActionDestinationModels:
 		return true
@@ -14837,6 +14843,7 @@ func (e HealthFindingScope) Valid() bool {
 const (
 	HealthFindingUnitItems     HealthFindingUnit = "items"
 	HealthFindingUnitMailboxes HealthFindingUnit = "mailboxes"
+	HealthFindingUnitMessages  HealthFindingUnit = "messages"
 	HealthFindingUnitRecords   HealthFindingUnit = "records"
 	HealthFindingUnitRuns      HealthFindingUnit = "runs"
 	HealthFindingUnitThreads   HealthFindingUnit = "threads"
@@ -14850,6 +14857,8 @@ func (e HealthFindingUnit) Valid() bool {
 		return true
 	case HealthFindingUnitMailboxes:
 		return true
+	case HealthFindingUnitMessages:
+		return true
 	case HealthFindingUnitRecords:
 		return true
 	case HealthFindingUnitRuns:
@@ -14857,6 +14866,33 @@ func (e HealthFindingUnit) Valid() bool {
 	case HealthFindingUnitThreads:
 		return true
 	case HealthFindingUnitUpdates:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for HealthFooterGapMissing.
+const (
+	HealthFooterGapMissingAdvertiserContact  HealthFooterGapMissing = "advertiser_contact"
+	HealthFooterGapMissingControllerIdentity HealthFooterGapMissing = "controller_identity"
+	HealthFooterGapMissingEntityName         HealthFooterGapMissing = "entity_name"
+	HealthFooterGapMissingObjectionRoute     HealthFooterGapMissing = "objection_route"
+	HealthFooterGapMissingPrivacyContact     HealthFooterGapMissing = "privacy_contact"
+)
+
+// Valid indicates whether the value is a known member of the HealthFooterGapMissing enum.
+func (e HealthFooterGapMissing) Valid() bool {
+	switch e {
+	case HealthFooterGapMissingAdvertiserContact:
+		return true
+	case HealthFooterGapMissingControllerIdentity:
+		return true
+	case HealthFooterGapMissingEntityName:
+		return true
+	case HealthFooterGapMissingObjectionRoute:
+		return true
+	case HealthFooterGapMissingPrivacyContact:
 		return true
 	default:
 		return false
@@ -34917,6 +34953,9 @@ type AiActivityItem struct {
 	// until the projection's retention window closes over them — narrowing the filter would
 	// refuse a query that still has answers.
 	//
+	// `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+	// AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
+	//
 	// Its own schema because the item that reports a kind and the query that asks for kinds
 	// must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
 	// edits one.
@@ -35006,6 +35045,9 @@ type AiActivityItemState string
 // also what a caller may FILTER on, and rows written before they were retired are served
 // until the projection's retention window closes over them — narrowing the filter would
 // refuse a query that still has answers.
+//
+// `extension_task` is RETIRED for the same reason: the task was removed, and an extension's
+// AI task now reports under its own `ext_<unit>_<task>` name. `ai.RetiredTasks` lists it.
 //
 // Its own schema because the item that reports a kind and the query that asks for kinds
 // must be ONE list — two copies of a vocabulary are two vocabularies as soon as somebody
@@ -53518,12 +53560,12 @@ type HandoverCounts struct {
 type HealthAction struct {
 	Available bool `json:"available"`
 
-	// Destination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+	// Destination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.
 	Destination HealthActionDestination `json:"destination"`
 	Reason      *string                 `json:"reason,omitempty"`
 }
 
-// HealthActionDestination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone.
+// HealthActionDestination Where the finding is acted on. `regional` is the Company settings part that holds the installation timezone. `legal_entities` is the Company settings part that lists the legal entities, and `company_profile` the one that names the company. `disclosures` is the jurisdiction page that holds the company details every mail discloses.
 type HealthActionDestination string
 
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
@@ -53596,6 +53638,9 @@ type HealthFinding struct {
 	Count           *int                   `json:"count,omitempty" minimum:"0"`
 	FirstObservedAt *time.Time             `json:"first_observed_at,omitempty"`
 
+	// FooterGap A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete.
+	FooterGap *HealthFooterGap `json:"footer_gap,omitempty"`
+
 	// Id Stable identity of the source condition and affected scope.
 	Id                string              `json:"id"`
 	Impact            HealthFindingImpact `json:"impact"`
@@ -53632,6 +53677,26 @@ type HealthFindingScope string
 
 // HealthFindingUnit defines model for HealthFinding.Unit.
 type HealthFindingUnit string
+
+// HealthFooterGap A legal entity whose mail owes a company detail nobody stated. A send that owes it is held for review with `footer_incomplete`, and a background send is dropped. The finding goes once the details are complete.
+type HealthFooterGap struct {
+	// HeldByUser Sends a user pressed that were held for this since the details last changed.
+	HeldByUser int `json:"held_by_user" minimum:"0"`
+
+	// HeldInBackground Background sends, such as a meeting reminder, that were held or dropped for this since the details last changed.
+	HeldInBackground int                `json:"held_in_background" minimum:"0"`
+	IsDefault        bool               `json:"is_default"`
+	LegalEntityId    openapi_types.UUID `json:"legal_entity_id"`
+
+	// LegalEntityName Empty for a default entity that states no name.
+	LegalEntityName string `json:"legal_entity_name"`
+
+	// Missing The owed disclosure kinds with no text, then `entity_name` for a default entity with neither a display name nor a legal name.
+	Missing []HealthFooterGapMissing `json:"missing"`
+}
+
+// HealthFooterGapMissing defines model for HealthFooterGap.Missing.
+type HealthFooterGapMissing string
 
 // HealthSource defines model for HealthSource.
 type HealthSource struct {

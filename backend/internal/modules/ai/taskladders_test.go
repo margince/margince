@@ -80,6 +80,44 @@ func TestATaskLadderOrderMustReorderARealTasksOwnRungs(t *testing.T) {
 	}
 }
 
+// A binding that orders a retired task still loads from the store. It also
+// passes the check the environment value takes, and keeps the other orders. An
+// unknown name that was never a task is still refused.
+func TestAnOrderOfARetiredTaskLoadsAndAnUnknownOneIsRefused(t *testing.T) {
+	cfg, err := ParseRouting([]byte(reorderedRouting))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := cfg
+	stored.TaskLadders = map[Task][]Tier{TaskAgentLoop: cfg.Ladder(TaskAgentLoop), "extension_task": {TierPremium, TierCheapCloud}}
+
+	loaded, err := FromStored(stored, nil)
+	if err != nil {
+		t.Fatalf("FromStored refused an order of a retired task: %v", err)
+	}
+	if _, kept := loaded.TaskLadders["extension_task"]; kept {
+		t.Error("the retired task's order was kept")
+	}
+	if got, want := loaded.Ladder(TaskAgentLoop), []Tier{TierPremium, TierCheapCloud}; !slices.Equal(got, want) {
+		t.Errorf("agent_loop walks %v after the load, want %v", got, want)
+	}
+	if _, still := stored.TaskLadders["extension_task"]; !still {
+		t.Error("the load changed the stored document it was handed")
+	}
+	if err := validateStoredRouting(stored); err != nil {
+		t.Errorf("the setting's check refused an order of a retired task: %v", err)
+	}
+
+	typo := cfg
+	typo.TaskLadders = map[Task][]Tier{"agent_lop": {TierPremium, TierCheapCloud}}
+	if _, err := FromStored(typo, nil); err == nil || !strings.Contains(err.Error(), "task_ladders") {
+		t.Errorf("loading an unknown task's order: err = %v, want a task_ladders refusal", err)
+	}
+	if err := validateStoredRouting(typo); err == nil || !strings.Contains(err.Error(), "task_ladders") {
+		t.Errorf("saving an unknown task's order: err = %v, want a task_ladders refusal", err)
+	}
+}
+
 // An installation bound tier for tier to a committed preset takes its task
 // order. One bound otherwise, or already ordering its tasks, keeps its own.
 func TestAStockBindingAdoptsItsPresetsTaskOrderAndACustomOneDoesNot(t *testing.T) {
