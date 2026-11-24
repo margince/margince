@@ -282,23 +282,116 @@ describe("the agent panel's hierarchy", () => {
     expect(opened.textContent?.match(/\$1\.20/g)).toHaveLength(1);
   });
 
+  // German alone would print a bare "$", which names no country's dollar.
+  it("writes the figure with the same currency symbol in both languages", async () => {
+    const english = await openPanel({ priced: true });
+    await waitFor(() =>
+      expect(english.querySelector(".arpmoney b")?.textContent).toBe("US$1.20"),
+    );
+    cleanup();
+    const german = await openPanel({ priced: true }, "de");
+    await waitFor(() =>
+      expect(german.querySelector(".arpmoney b")?.textContent).toBe(
+        "1,20\u00a0US$",
+      ),
+    );
+  });
+
   // The claim is the last thing on the surface because it is the only line no
   // read produced: a standing promise rather than news. AC-shell-8 holds that
   // it is SAID; this holds where.
   it("ends with the privacy claim", async () => {
     const opened = await openPanel();
-    expect(opened.lastElementChild?.className).toContain("arclaim");
+    expect(
+      opened.querySelector(".arpbody")?.lastElementChild?.className,
+    ).toContain("arclaim");
+  });
+});
+
+// Folded, the rail hides the line and the figure, so the row's tip says both,
+// as every folded row's tip says its label.
+describe("the agent row's tip", () => {
+  it("says the line and the month's figure on the folded rail", async () => {
+    stubApi({ priced: true });
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <nav className="rail collapsed">
+            <AgentRail />
+          </nav>
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    const row = container.querySelector(".arhit");
+    if (!row) throw new Error("no .arhit row in the rendered tree");
+    await waitFor(() =>
+      expect(container.querySelector(".arspend")).not.toBeNull(),
+    );
+
+    await user.hover(row);
+
+    const tip = container.querySelector(".navtip[role='tooltip']");
+    expect(tip?.textContent).toContain(
+      container.querySelector(".arline")?.textContent ?? "missing line",
+    );
+    expect(tip?.textContent).toContain("US$1.20");
+
+    await user.unhover(row);
+    expect(container.querySelector(".navtip")).toBeNull();
   });
 });
 
 describe("the agent panel's focus", () => {
   it("takes focus in on the press that opened it and gives it back on Escape", async () => {
     const opened = await openPanel();
+    // The title, not the record the live line happens to name.
     await waitFor(() =>
-      expect(opened.contains(document.activeElement)).toBe(true),
+      expect(document.activeElement).toBe(opened.querySelector(".arptitle")),
     );
 
     await userEvent.keyboard("{Escape}");
+
+    expect(document.activeElement?.className).toBe("artoggle");
+  });
+
+  // The admin seat is offered "Full log". The shared panel focus would take
+  // that link as its first stop if the panel mounted in the opening commit.
+  it("lands on the title again when it opens a second time", async () => {
+    await openPanel();
+    await userEvent.keyboard("{Escape}");
+    expect(document.activeElement?.className).toBe("artoggle");
+
+    await userEvent.keyboard("{Enter}");
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        document.querySelector(".arpanel .arptitle"),
+      ),
+    );
+  });
+
+  it("names the panel it opens, and says the agent's state beside its name", async () => {
+    const opened = await openPanel();
+    const toggle = document.querySelector(".artoggle");
+
+    expect(toggle?.getAttribute("aria-controls")).toBe(opened.id);
+    const said = document.getElementById(
+      toggle?.getAttribute("aria-describedby") ?? "",
+    );
+    expect(said?.textContent).toContain(en["agent.state.idle"]);
+  });
+
+  it("goes back to the orb on Shift+Tab from the title it opened on", async () => {
+    const opened = await openPanel();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(opened.querySelector(".arptitle")),
+    );
+
+    await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
 
     expect(document.activeElement?.className).toBe("artoggle");
   });
@@ -425,12 +518,8 @@ describe("the agent panel's report", () => {
     );
   });
 
-  // A quiet line rather than a dashed plate: the dashes read as a tile whose
-  // number failed to load, which is the opposite of what an all-clear says.
-  //
-  // And its OWN sentence. The head's resting line says "Nothing needs attention" on
-  // exactly the installation this section is empty on, so the two stood on one
-  // panel saying the same four words.
+  // Dashes would read as a tile that failed to load, and the head's resting
+  // line may already say the all-clear in its own words.
   it("says the all-clear as a plain line, undashed and in its own words", async () => {
     const opened = await openPanel();
     await waitFor(() =>

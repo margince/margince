@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { StoryProviders } from "../../testing/story-utils";
 import {
@@ -54,13 +54,15 @@ export const ManualSetupDark: Story = {
   globals: { theme: "dark" },
 };
 
+const SAVED_PROFILE: CompanyInput = {
+  display_name: "Havbris AS",
+  website: "havbris.example",
+  offer_summary: "Coastal ferry maintenance contracts.",
+  icp: "Municipal ferry operators.",
+};
+
 function EditProfile() {
-  const [form, setForm] = useState<CompanyInput>({
-    display_name: "Havbris AS",
-    website: "havbris.example",
-    offer_summary: "Coastal ferry maintenance contracts.",
-    icp: "Municipal ferry operators.",
-  });
+  const [form, setForm] = useState<CompanyInput>(SAVED_PROFILE);
   return (
     <StoryProviders>
       <CompanyProfileDialog
@@ -69,8 +71,9 @@ function EditProfile() {
         pending={false}
         error={null}
         refusedAt={undefined}
+        dirty={JSON.stringify(form) !== JSON.stringify(SAVED_PROFILE)}
         onChange={setForm}
-        onClose={() => undefined}
+        onClose={() => setForm(SAVED_PROFILE)}
         onSubmit={() => undefined}
       />
     </StoryProviders>
@@ -79,6 +82,27 @@ function EditProfile() {
 
 /** The profile's one edit drawer, opened from the Products and services row. */
 export const EditDrawer: Story = { render: () => <EditProfile /> };
+
+// A changed draft and Escape: the drawer asks before it throws the draft away.
+// Cancel discards at once.
+export const EscapeAsksBeforeDiscarding: Story = {
+  render: () => <EditProfile />,
+  play: async () => {
+    const user = userEvent.setup();
+    const drawer = within(await screen.findByRole("dialog"));
+    const name = drawer.getByRole("textbox", { name: "Company name" });
+    await user.type(name, " Group");
+    // Dispatched by hand: Storybook wraps its key presses in act, and the
+    // question opening under one suspends on the copy catalog and warns.
+    name.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await waitFor(() => expect(question).toBeVisible());
+  },
+};
 
 export const EditDrawerDark: Story = {
   ...EditDrawer,

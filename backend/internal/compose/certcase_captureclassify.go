@@ -5,33 +5,26 @@ package compose
 
 // The certification case for capture_classify/classify.
 //
-// It certifies the shipped path rather than a description of it: the request
-// comes from classifyRequest, the same builder the engine calls, and the reply
-// is judged by validateClassifyPayload, the same validator the engine applies. A
-// case that rebuilt either would measure a copy, and a copy stays green through
-// the change that breaks the original.
-//
-// What the expectation MEANS here: one label per fixture message, in fixture
-// order. Production asks for exactly one label per message, so a per-message
-// claim is the only expectation that says as much as the site answers. Position
-// is the identity the corpus can name because the ids are minted here and the
-// fixture supplies no key of its own — and the obvious candidate, the subject,
-// is not unique in a real backlog, so a keyed expectation would be a second
-// thing to keep true and one that silently stops matching.
+// It certifies the shipped path rather than a description of it. It drives the
+// engine's own pass over an in-memory backlog. The request comes from
+// classifyRequest and the engine's validator reads the reply. The floor and the
+// solo re-ask run as they ship. A case that rebuilt any of them would measure a copy.
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
-	"github.com/margince/margince/backend/internal/compose/usableanswer"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -82,13 +75,6 @@ func (captureClassifyCases) Site() aitasks.Site {
 		Kind:    ai.SiteKindOneShot,
 	}
 }
-
-// CertifiedScope narrows the record to the one call this case makes, because
-// labeling one backlog batch is not always one call. The engine re-asks every
-// below-floor message SOLO on the next rung of the routing ladder, and the label
-// a row ends up wearing — or the decision to leave it unlabeled — can come from
-// that second answer. A run measures the first.
-func (captureClassifyCases) CertifiedScope() string { return aitasks.ScopeSingleCall }
 
 // Prepare turns one batch and the labels the scenario expects into a runnable
 // case, MINTING an activity id per message rather than reading it from either.
@@ -221,58 +207,165 @@ type captureClassifyCase struct {
 	expected []classifyExpected
 }
 
-// Run issues the one request this site sends. It sends it bare: production wraps
-// the same request in the shape-retry when the brain supports one, and re-asks a
-// below-floor message solo on the next rung of the routing ladder. A case that
-// did either would certify the answer a model gives after being told to try
-// again rather than the answer it gives.
-func (c *captureClassifyCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
-	req := classifyRequest(c.batch)
-	trace := aitasks.Trace{Requests: []model.Request{req}}
-	resp, err := completer.Complete(ctx, req)
+// What the pass left a message as. A message the pass has not settled stays open.
+const (
+	classifySettledLabeled  = "labeled"
+	classifySettledUnsure   = "unsure"
+	classifySettledDeclined = "declined"
+	classifySettledOpen     = "open"
+)
+
+// classifyOutcome is what the pass stored for one message.
+type classifyOutcome struct {
+	Settled string `json:"settled"`
+	Label   string `json:"label,omitempty"`
+	Reply   string `json:"reply,omitempty"`
+}
+
+// classifyRun is what a run records. It holds the replies the model gave, in the
+// order the pass asked, and what the pass stored for each message in fixture order.
+// An unreadable reply ends the pass and is kept apart, since it counts against the
+// model.
+type classifyRun struct {
+	Replies  []string          `json:"replies"`
+	Messages []classifyOutcome `json:"messages,omitempty"`
+	Unusable string            `json:"unusable,omitempty"`
+}
+
+// classifyBacklog is the backlog the pass reads and the label store it writes,
+// in memory. A row leaves the backlog when the pass labels or stamps it, as it
+// does in the database.
+type classifyBacklog struct {
+	rows    []unlabeledMessage
+	settled map[ids.UUID]classifyOutcome
+}
+
+func (b *classifyBacklog) UnlabeledCaptureMessages(_ context.Context, _ string, limit, _ int) ([]unlabeledMessage, error) {
+	var out []unlabeledMessage
+	for _, row := range b.rows {
+		if _, done := b.settled[row.ID]; !done && len(out) < limit {
+			out = append(out, row)
+		}
+	}
+	return out, nil
+}
+
+func (b *classifyBacklog) settle(id ids.UUID, outcome classifyOutcome) (bool, error) {
+	if !slices.ContainsFunc(b.rows, func(row unlabeledMessage) bool { return row.ID == id }) {
+		return false, nil
+	}
+	b.settled[id] = outcome
+	return true, nil
+}
+
+func (b *classifyBacklog) SetCaptureLabel(_ context.Context, id ids.UUID, label string, _ int64) (bool, error) {
+	return b.settle(id, classifyOutcome{Settled: classifySettledLabeled, Label: label})
+}
+
+func (b *classifyBacklog) SetCaptureLabelAndReply(_ context.Context, id ids.UUID, label string, _ int64, verdict, _ string) (bool, error) {
+	return b.settle(id, classifyOutcome{Settled: classifySettledLabeled, Label: label, Reply: verdict})
+}
+
+func (b *classifyBacklog) MarkCaptureLabelDeclined(_ context.Context, id ids.UUID, _ string) (bool, error) {
+	return b.settle(id, classifyOutcome{Settled: classifySettledDeclined})
+}
+
+func (b *classifyBacklog) MarkCaptureLabelUnsure(_ context.Context, id ids.UUID, _ string, _ int64) (bool, error) {
+	return b.settle(id, classifyOutcome{Settled: classifySettledUnsure})
+}
+
+// outcomes is what the pass stored for each message, in fixture order.
+func (b *classifyBacklog) outcomes() []classifyOutcome {
+	out := make([]classifyOutcome, len(b.rows))
+	for i, row := range b.rows {
+		out[i] = classifyOutcome{Settled: classifySettledOpen}
+		if settled, ok := b.settled[row.ID]; ok {
+			out[i] = settled
+		}
+	}
+	return out
+}
+
+// classifyRecorder is the brain the pass asks through. It records every request
+// and reply. It does not implement the shape-retry seam, so each call goes out bare.
+// A case that retried would certify the answer a model gives after being told to
+// try again.
+type classifyRecorder struct {
+	completer aitasks.Completer
+	requests  []model.Request
+	replies   []string
+	// failed is the completer's own failure. It stays apart from an answer the pass
+	// refused, because a call that never completed is the lane's problem and no
+	// measurement of the reply.
+	failed error
+}
+
+func (r *classifyRecorder) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+	r.requests = append(r.requests, req)
+	resp, err := r.completer.Complete(ctx, req)
 	if err != nil {
+		r.failed = err
+		return model.Response{}, err
+	}
+	r.replies = append(r.replies, resp.Text)
+	return resp, nil
+}
+
+// Run drives the production pass over an in-memory backlog of this batch. The
+// batch call, the confidence floor, the solo re-ask and the stamp of a message the
+// models decline all happen as in production. The cap is the product default, which
+// is what pays for those re-asks. The calls go bare, through classifyRecorder.
+func (c *captureClassifyCase) Run(ctx context.Context, completer aitasks.Completer) (aitasks.Trace, error) {
+	brain := &classifyRecorder{completer: completer}
+	backlog := &classifyBacklog{rows: c.batch, settled: map[ids.UUID]classifyOutcome{}}
+	pass := &CaptureClassifier{store: backlog, brain: brain, log: slog.New(slog.DiscardHandler)}
+	err := pass.RunWorkspace(ctx, capture.DefaultClassifyPassCap)
+	trace := aitasks.Trace{Requests: brain.requests}
+	run := classifyRun{Replies: brain.replies, Messages: backlog.outcomes()}
+	var unusable *unusableClassifyAnswer
+	switch {
+	// The pass swallows a withheld answer and a deferral, so a failed call is read
+	// off the recorder and not off the error.
+	case brain.failed != nil:
+		return trace, fmt.Errorf("capture_classify/classify: %w", brain.failed)
+	case errors.As(err, &unusable):
+		run.Unusable = unusable.Error()
+	case err != nil:
 		return trace, fmt.Errorf("capture_classify/classify: %w", err)
 	}
-	trace.Output = resp.Text
+	output, err := json.Marshal(run)
+	if err != nil {
+		return trace, fmt.Errorf("capture_classify/classify: recording the run: %w", err)
+	}
+	trace.Output = string(output)
 	return trace, nil
 }
 
-// Evaluate applies the engine's own checks in the engine's own order — parse,
-// then validateClassifyPayload against the batch that was asked about — and only
-// then asks whether the labels are the ones the scenario expects. The order is
-// the meaning: a reply that fails the validator has no labels to disagree with,
-// and every way a batch reply can break the id contract is unusable rather than
-// wrong.
-//
-// The confidence floor is deliberately not applied. It is the engine's decision
-// about what to do with an answer it already believes — re-ask it solo — not a
-// judgement on whether the answer is usable, and a case that folded it in would
-// report a hedged correct label as a broken reply.
+// Evaluate asks whether the pass left each message with the expected label. A
+// reply the pass could not read is invalid. The rest is wrong by what the pass
+// stored. A message left unsure or declined is one the pass would not label,
+// whatever the model said first. The floor counts, as part of what ships.
 func (c *captureClassifyCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
-	var payload classifyPayload
-	if err := json.Unmarshal([]byte(ai.Unfence(trace.Output)), &payload); err != nil {
+	var run classifyRun
+	if err := json.Unmarshal([]byte(trace.Output), &run); err != nil {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: fmt.Sprintf("the run was not recorded: %v", err)}
+	}
+	if run.Unusable != "" {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: run.Unusable}
+	}
+	if len(run.Messages) != len(c.batch) {
 		return aitasks.Outcome{
 			Result: aitasks.OutcomeInvalid,
-			Detail: fmt.Sprintf("unparseable model output: %v", err),
+			Detail: fmt.Sprintf("the run recorded %d messages for a batch of %d", len(run.Messages), len(c.batch)),
 		}
 	}
-	if msg := validateClassifyPayload(payload, c.batch); msg != "" {
-		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
-	}
-	// The engine drops an answer it cannot use and asks again; certification
-	// still counts that answer against the model.
-	if msg := usableanswer.FirstFault(payload.Results, classifyResult.fault); msg != "" {
-		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
-	}
-	// validateClassifyPayload admits exactly one result per requested id: every
-	// result carries a requested id, none repeats one, and none is missing.
-	if disagreements := c.disagreements(payload); len(disagreements) > 0 {
+	if disagreements := c.disagreements(run.Messages); len(disagreements) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(disagreements, "; ")}
 	}
 	return aitasks.Outcome{Result: aitasks.OutcomeAccepted}
 }
 
-// disagreements names every message the reply labels otherwise than the scenario
+// disagreements names every message the pass stored otherwise than the scenario
 // expects, in fixture order. All of them, not the first: a run that labeled one
 // message right and two wrong is not the near miss one line would read as.
 //
@@ -280,14 +373,15 @@ func (c *captureClassifyCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 // expectation was written. The minted id would name nothing a scenario author
 // could look up, and the subject is captured text that has no business being
 // echoed into a record.
-func (c *captureClassifyCase) disagreements(payload classifyPayload) []string {
-	answered := make(map[string]classifyResult, len(payload.Results))
-	for _, r := range resolveClassifyRefs(payload.Results, c.batch) {
-		answered[r.ID] = r
-	}
+func (c *captureClassifyCase) disagreements(stored []classifyOutcome) []string {
 	var out []string
-	for i, m := range c.batch {
-		if differs := c.expected[i].disagreement(answered[m.ID.String()]); differs != "" {
+	for i, outcome := range stored {
+		expect := c.expected[i]
+		if outcome.Settled != classifySettledLabeled && expect.Label != "" {
+			out = append(out, fmt.Sprintf("message %d was left %s, with no label, where the scenario expects %q", i+1, outcome.Settled, expect.Label))
+			continue
+		}
+		if differs := expect.disagreement(classifyResult{Label: outcome.Label, Reply: outcome.Reply}); differs != "" {
 			out = append(out, fmt.Sprintf("message %d %s", i+1, differs))
 		}
 	}

@@ -5,9 +5,10 @@ import { useId } from "react";
 import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { companyTabRoute } from "../lib/companytab";
 import { IMPORT_ID } from "../lib/importpage";
-import { routeHash } from "../lib/router";
-import { hashWithParams } from "../lib/urlstate";
+import { parseHash, routeHash } from "../lib/router";
+import { hashWithParams, parseParams } from "../lib/urlstate";
 import { useActionRefusal } from "../lib/writerefusal";
 
 /** The address dial that names the company an import files its new contacts under. */
@@ -30,6 +31,17 @@ export function vcardImportHref(companyId?: string): string {
   return companyId === undefined
     ? page
     : hashWithParams(page, new Map([[VCARD_COMPANY_DIAL, companyId]]));
+}
+
+/** Where Back leads from the import with no history behind it: the Contacts
+ *  tab of the company `address` names, or undefined for a plain import. */
+export function vcardImportParent(address: string): string | undefined {
+  const route = parseHash(address);
+  const companyId = parseParams(address).get(VCARD_COMPANY_DIAL);
+  if (route.screen !== "contacts" || route.id !== IMPORT_ID || !companyId) {
+    return undefined;
+  }
+  return routeHash(companyTabRoute(companyId, "contacts"));
 }
 
 /**

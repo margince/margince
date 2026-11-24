@@ -35,7 +35,7 @@ import {
 } from "../../components/recordlist";
 import { Avatar, Badge, Button } from "../../design-system/atoms";
 import type { ListChip } from "../../design-system/listsurface";
-import { CellStrip } from "../../design-system/listtable";
+import { CellStrip, useListRefusal } from "../../design-system/listtable";
 import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
@@ -52,6 +52,7 @@ import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useActionRefusal } from "../../lib/writerefusal";
 import {
   SavedViewsFailure,
   SaveViewAction,
@@ -102,6 +103,9 @@ export function CompaniesScreen({
   const queryClient = useQueryClient();
   const toast = useToast();
   const pageName = usePageName("companies");
+  const refusal = useListRefusal(
+    useActionRefusal({ object: "company", action: "create" }),
+  );
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const cf = useObjectCustomFields("company", "create");
@@ -190,6 +194,7 @@ export function CompaniesScreen({
           viewerId,
           unit: "unit.companies",
         })}
+        refusal={refusal}
         action={
           <>
             <Button onClick={() => navigate({ screen: "partners" })}>
@@ -198,6 +203,7 @@ export function CompaniesScreen({
             <CreateAction
               label={t("create.company")}
               requires={{ object: "company", action: "create" }}
+              refusalId={refusal?.id}
               invalidate="companies"
               screen="companies"
               listCreate={{ open: startCreating }}

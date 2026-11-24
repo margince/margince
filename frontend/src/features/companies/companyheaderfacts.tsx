@@ -10,6 +10,7 @@ import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
 import { companyWebsite, displayHost } from "./companyheader";
+import "./companyheaderfacts.css";
 
 // The lines under the account's name.
 
@@ -55,7 +56,7 @@ export function CompanyHeadLines({
         </AppLink>
       )}
       {wayIn?.contributor_contact_id && (
-        <span>
+        <span className="co-headline-way">
           {t("co.pulse.strongestLead")}{" "}
           {/* No space before the tail: it opens with its own comma. */}
           {named ? (

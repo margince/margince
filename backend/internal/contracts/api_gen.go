@@ -39654,6 +39654,9 @@ type BoughtField struct {
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
 // on a read means they have never chosen, absent on a write means leave it alone.
 type BriefDelivery struct {
+	// ClearRoutineMailTeam True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422.
+	ClearRoutineMailTeam *bool `json:"clear_routine_mail_team,omitempty"`
+
 	// CombineRoutineEmail Combine eligible notices and current actions with the weekly message when it is ready, using one routine email per reporting day. Defaults to false; class opt-outs remain effective.
 	CombineRoutineEmail *bool `json:"combine_routine_email,omitempty"`
 
@@ -39675,7 +39678,7 @@ type BriefDelivery struct {
 	// RoutineMailScope Optional chosen scope; team content is checked against live team-review authority at delivery.
 	RoutineMailScope *BriefDeliveryRoutineMailScope `json:"routine_mail_scope,omitempty"`
 
-	// RoutineMailTeamId The selected live team for team or combined scope. Personal scope ignores a retained selection.
+	// RoutineMailTeamId The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
 	RoutineMailTeamId *openapi_types.UUID `json:"routine_mail_team_id,omitempty"`
 
 	// WeeklyDelivery The same, for the weekly review.
@@ -43408,8 +43411,11 @@ type CompanyFinanceSummary struct {
 	// Absent under the same sample floor the median observes: a shape drawn from one invoice would state a payment habit the number beside it refuses to.
 	PaymentBehaviour *[]int `json:"payment_behaviour,omitempty"`
 
-	// Provider Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected.
+	// Provider Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected.
 	Provider *string `json:"provider,omitempty"`
+
+	// ProviderName The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 
 	// RecentInvoices The five most recent invoices (FIN-LIM-4); `truncated` says whether there are more.
 	RecentInvoices *[]FinanceInvoice `json:"recent_invoices,omitempty"`
@@ -45404,6 +45410,11 @@ type Contact360 struct {
 		Page PageInfo   `json:"page"`
 	} `json:"next_steps,omitempty"`
 
+	// PrivacyConfirmedSource The source a reviewer last confirmed for this contact, from the newest confirmed
+	// privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+	// privacy_notice_duties section.
+	PrivacyConfirmedSource *ContactConfirmedSource `json:"privacy_confirmed_source,omitempty"`
+
 	// PrivacyNoticeDuties Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
 	PrivacyNoticeDuties *[]ContactNoticeDuty `json:"privacy_notice_duties,omitempty"`
 
@@ -45854,6 +45865,23 @@ type ContactCaseSkippedOwner struct {
 
 // ContactCaseSkippedOwnerReason defines model for ContactCaseSkippedOwner.Reason.
 type ContactCaseSkippedOwnerReason string
+
+// ContactConfirmedSource The source a reviewer last confirmed for this contact, from the newest confirmed
+// privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+// privacy_notice_duties section.
+type ContactConfirmedSource struct {
+	CaseId      openapi_types.UUID `json:"case_id"`
+	ConfirmedAt time.Time          `json:"confirmed_at"`
+
+	// ConfirmedBy Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists.
+	ConfirmedBy *PrincipalAttribution `json:"confirmed_by,omitempty"`
+
+	// SourceKind The confirmed kind: one of `AssessNoticeSource.kind`.
+	SourceKind string `json:"source_kind"`
+
+	// SourceObtainedAt The acquisition date the reviewer confirmed; null when they confirmed none.
+	SourceObtainedAt *time.Time `json:"source_obtained_at"`
+}
 
 // ContactConsentGuard Facts recorded for this contact, per purpose and channel, with their reason.
 // This summary does not authorize a message. Each message is checked for its
@@ -48766,7 +48794,12 @@ type CustomerPayments struct {
 	// LinkedCompanies Readable, live linked companies eligible for the payment overview.
 	LinkedCompanies int      `json:"linked_companies" minimum:"0"`
 	Page            PageInfo `json:"page"`
-	Provider        *string  `json:"provider,omitempty"`
+
+	// Provider The accounting source's key. Show `provider_name` to a reader.
+	Provider *string `json:"provider,omitempty"`
+
+	// ProviderName The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 
 	// State Why the figures are what they are — the six cases a company page must keep
 	// apart, because five of them look identical if you only render the numbers.
@@ -52587,7 +52620,12 @@ type FinanceConnection struct {
 	LastAttemptAt *time.Time         `json:"last_attempt_at,omitempty"`
 	LastErrorCode *string            `json:"last_error_code,omitempty"`
 	LastSuccessAt *time.Time         `json:"last_success_at,omitempty"`
-	Provider      string             `json:"provider"`
+
+	// Provider The source's key. Show `provider_name` to a reader.
+	Provider string `json:"provider"`
+
+	// ProviderName The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 
 	// Status `connecting` until the first sync finishes; `error` when the last one failed.
 	Status FinanceConnectionStatus `json:"status"`
@@ -52649,6 +52687,9 @@ type FinanceSourceOption struct {
 
 	// Provider The source's key, stored on every mirrored row.
 	Provider string `json:"provider"`
+
+	// ProviderName The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
+	ProviderName *string `json:"provider_name,omitempty"`
 }
 
 // FinanceSourceState defines model for FinanceSourceState.
@@ -68851,6 +68892,9 @@ type SettingsAvailability struct {
 
 	// Reporting Whether reporting is enabled in this installation.
 	Reporting *bool `json:"reporting,omitempty"`
+
+	// VatRegister True when this installation consults the EU VAT register, so `POST /companies/{id}/vat-check` can queue a check. Absent or false means that request answers 404, and a client offers no check.
+	VatRegister *bool `json:"vat_register,omitempty"`
 }
 
 // SettleClaimRequest How a claim finished.
@@ -73197,7 +73241,7 @@ type WebFormCreated struct {
 	// and `tally` one this installation minted when none was.
 	Sender WebFormSender `json:"sender"`
 
-	// SigningSecret The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once.
+	// SigningSecret The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent.
 	SigningSecret  *string             `json:"signing_secret,omitempty"`
 	State          WebFormCreatedState `json:"state"`
 	SuccessMessage *string             `json:"success_message,omitempty"`
@@ -76355,6 +76399,12 @@ type Conflict = Problem
 // ControllerMailRefused RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type ControllerMailRefused = Problem
 
+// FileForbidden RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type FileForbidden = Problem
+
+// FileNotFound RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type FileNotFound = Problem
+
 // Forbidden RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Forbidden = Problem
 
@@ -78335,9 +78385,10 @@ type ListCompaniesParams struct {
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
-	// in the record list's own columns. The list must be one the caller may find and of this
-	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-	// the caller's row scope still applies to every row.
+	// in the record list's own columns. A list the caller cannot find, or any list while lists
+	// are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+	// record type answers `422`. Sharing a list never widens what the read shows: the caller's
+	// row scope still applies to every row.
 	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -79488,9 +79539,10 @@ type ListContactsParams struct {
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
-	// in the record list's own columns. The list must be one the caller may find and of this
-	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-	// the caller's row scope still applies to every row.
+	// in the record list's own columns. A list the caller cannot find, or any list while lists
+	// are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+	// record type answers `422`. Sharing a list never widens what the read shows: the caller's
+	// row scope still applies to every row.
 	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -80671,9 +80723,10 @@ type ListDealsParams struct {
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
-	// in the record list's own columns. The list must be one the caller may find and of this
-	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-	// the caller's row scope still applies to every row.
+	// in the record list's own columns. A list the caller cannot find, or any list while lists
+	// are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+	// record type answers `422`. Sharing a list never widens what the read shows: the caller's
+	// row scope still applies to every row.
 	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -81747,9 +81800,10 @@ type ListLeadsParams struct {
 
 	// ListId Only the members of this list — a Shortlist's chosen records, or the records a Live List's
 	// filter selects now — narrowed before sorting and paging, so the page is the list's members
-	// in the record list's own columns. The list must be one the caller may find and of this
-	// record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-	// the caller's row scope still applies to every row.
+	// in the record list's own columns. A list the caller cannot find, or any list while lists
+	// are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+	// record type answers `422`. Sharing a list never widens what the read shows: the caller's
+	// row scope still applies to every row.
 	ListId *ListMembershipFilter `form:"list_id,omitempty" json:"list_id,omitempty"`
 
 	// Sort Sort spec: ONE field, `-` prefix = descending (e.g. `-updated_at`). The house
@@ -103963,6 +104017,9 @@ type ServerInterface interface {
 	// Anonymous reachability probe for external uptime monitors.
 	// (GET /status)
 	GetStatus(w http.ResponseWriter, r *http.Request)
+	// Reachability probe for a monitor that sends HEAD.
+	// (HEAD /status)
+	HeadStatus(w http.ResponseWriter, r *http.Request)
 	// One open tag suggestion the caller may see, with the mail and notes it cites.
 	// (GET /tag-suggestions/{id})
 	GetTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
@@ -104182,7 +104239,7 @@ type ServerInterface interface {
 	// List the website forms that land leads in this installation.
 	// (GET /web-forms)
 	ListWebForms(w http.ResponseWriter, r *http.Request, params ListWebFormsParams)
-	// Create a website form (returns a minted signing secret once).
+	// Create a website form; a human sees its minted signing secret once.
 	// (POST /web-forms)
 	CreateWebForm(w http.ResponseWriter, r *http.Request)
 	// Archive a website form; its address stops taking submissions.
@@ -110419,6 +110476,12 @@ func (_ Unimplemented) GetStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Reachability probe for a monitor that sends HEAD.
+// (HEAD /status)
+func (_ Unimplemented) HeadStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // One open tag suggestion the caller may see, with the mail and notes it cites.
 // (GET /tag-suggestions/{id})
 func (_ Unimplemented) GetTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
@@ -110857,7 +110920,7 @@ func (_ Unimplemented) ListWebForms(w http.ResponseWriter, r *http.Request, para
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Create a website form (returns a minted signing secret once).
+// Create a website form; a human sees its minted signing secret once.
 // (POST /web-forms)
 func (_ Unimplemented) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -156206,6 +156269,20 @@ func (siw *ServerInterfaceWrapper) GetStatus(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// HeadStatus operation middleware
+func (siw *ServerInterfaceWrapper) HeadStatus(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HeadStatus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetTagSuggestion operation middleware
 func (siw *ServerInterfaceWrapper) GetTagSuggestion(w http.ResponseWriter, r *http.Request) {
 
@@ -159467,6 +159544,8 @@ func (siw *ServerInterfaceWrapper) ListWebForms(w http.ResponseWriter, r *http.R
 func (siw *ServerInterfaceWrapper) CreateWebForm(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -164307,6 +164386,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/status", wrapper.GetStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Head(options.BaseURL+"/status", wrapper.HeadStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/tag-suggestions/{id}", wrapper.GetTagSuggestion)

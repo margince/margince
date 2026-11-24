@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ReactNode } from "react";
-import { userEvent, within } from "storybook/test";
+import type { CSSProperties, ReactNode } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { GrantSpec } from "../testing/mefixture";
 import {
   installFetchStub,
@@ -41,6 +41,8 @@ type Answers = Readonly<{
    *  from nowhere else, so a story for one is a story about this feed. */
   running?: readonly unknown[];
   recent?: readonly unknown[];
+  /** The failures nobody has acknowledged; the error state is read from here. */
+  faults?: readonly unknown[];
   /** Live work across every kind; absent is a body that does not say. */
   liveTotal?: number;
   /** A mailbox import in flight, as the connections read reports it. */
@@ -90,12 +92,8 @@ const OPERATOR: GrantSpec = {
 // about an installation posture rather than about what this seat may read.
 const SPEND_READER: GrantSpec = { ...OPERATOR, ai_diagnostics: ["read"] };
 
-// Every fixture below is an OFFSET from this, in minutes, so it has to be the
-// moment the catalog is opened rather than the moment the file was written. A
-// frozen literal here was already reading as "4 minutes ago" for a call that
-// happened last month, and the resting rotation now ages a settled run out
-// after a few hours (agentrail-resting.ts) — so a fixed date would quietly
-// empty the settled half of every story on this page.
+// Every fixture below is an offset from the moment the catalog opens: the
+// rotation ages a settled run out after hours (agentrail-resting.ts).
 const NOW = Date.now();
 
 function callRow(task: string, minutesAgo: number, index: number) {
@@ -119,18 +117,23 @@ function callRow(task: string, minutesAgo: number, index: number) {
   };
 }
 
-// The three feet the block has to look right in, named by the class the shell
-// puts on the rail (app/shell.tsx) — the stylesheet keys the reduction off that
-// state, so a story that dressed itself would be showing a rail this app never
-// renders.
-type RailState = "expanded" | "collapsed" | "leveled";
+// The two feet the block has to look right in, named by the class the shell
+// puts on the rail (app/shell.tsx). The stylesheet keys the fold off that
+// state, so a story that dressed itself would show a rail the app never draws.
+type RailState = "expanded" | "collapsed";
+
+// The shell sets `--railW` on `.app`, which a story does not render.
+type RailWidth = CSSProperties & Readonly<{ "--railW": string }>;
 
 function Rail({
   state,
   children,
 }: Readonly<{ state: RailState; children: ReactNode }>) {
+  const width: RailWidth = {
+    "--railW": state === "collapsed" ? "var(--railWShut)" : "var(--railWOpen)",
+  };
   return (
-    <nav className={`rail ${state}`}>
+    <nav className={`rail ${state}`} style={width}>
       <div className="grow" />
       <div className="railagent">{children}</div>
     </nav>
@@ -220,6 +223,7 @@ function story(
         jsonResponse({
           running: answers.running ?? [],
           recent: answers.recent ?? [],
+          faults: answers.faults ?? [],
           ...(answers.liveTotal === undefined
             ? {}
             : { live_total: answers.liveTotal }),
@@ -290,15 +294,12 @@ type Story = StoryObj<typeof AgentRail>;
  *  the afternoon: one true reading, and it is "Nothing needs attention". The
  *  line holds it; no standing advice rotates in beside it.
  *
- *  It is also the block's last line with no figure on it: this seat holds no
- *  `ai_diagnostics:read`, so the row carries the chevron alone. The row is what
- *  makes that state legible — the disclosure keeps its place instead of moving
- *  up into the corner when there is nothing to spend beside it. */
+ *  It is also the block with no figure under the line: this seat holds no
+ *  `ai_diagnostics:read`, so the line ends the block. */
 export const Idle: Story = { render: story(HEALTHY) };
 
-/** The month's spend, on the block's last line with the chevron that opens the
- *  panel behind it: one figure, the scope it was spent in, and the disclosure,
- *  all on one baseline. The seat is an administrator holding
+/** The month's spend under the line: one figure and the scope it was spent in,
+ *  on one baseline. The seat is an administrator holding
  *  `ai_diagnostics:read`, which is the only seat the server serves it to. */
 export const SpendReported: Story = {
   render: story({ ...HEALTHY, pricedMinor: 1_240 }, "expanded", SPEND_READER),
@@ -354,13 +355,16 @@ export const UnnamedWork: Story = {
   play: openThePanel,
 };
 
+const FAILED_BRIEF = settled(240, { state: "failed" });
+
 /** Error: the overnight brief failed. It holds the orb until the panel has
  *  been opened, because a run that broke at four in the morning was seen by
  *  nobody. */
 export const RunFailed: Story = {
   render: story({
     ...HEALTHY,
-    recent: [occurrence({ state: "failed" })],
+    recent: [FAILED_BRIEF],
+    faults: [FAILED_BRIEF],
   }),
 };
 
@@ -441,15 +445,8 @@ export const IdleRotationDark: Story = {
 };
 
 /**
- * What the agent got done, rotating.
- *
- * Three runs that settled in the last hour, and the line walks them rather than
- * pinning the newest. Pinning is what this used to do, and the cost only showed
- * up hours later: one sentence about one contact, in the corner of every screen,
- * from the moment it landed until midnight. A run ages out of this rotation
- * after a few hours while staying in the panel's recap all day
- * (agentrail-resting.ts) — the two answer different questions, and only one of
- * them is a status light.
+ * What the agent got done: three runs that settled in the last hour, walked in
+ * turn. A run leaves this rotation after hours and the panel's recap at midnight.
  */
 export const FinishedWorkRotation: Story = {
   render: story({
@@ -478,30 +475,34 @@ export const NothingHasRunYet: Story = {
 };
 
 /** The collapsed rail: the orb is the whole report at 56px, the words and the
- *  chevron gone. */
+ *  figure gone. */
 export const CollapsedRail: Story = {
   render: story(HEALTHY, "collapsed"),
 };
 
-/** The rail showing one section's entries: the agent keeps its foot, at the size
- *  that says it is still reporting without leading a list it is not about. */
-export const LeveledRail: Story = {
-  render: story(HEALTHY, "leveled"),
-};
-
 /**
- * The panel open, showing the recap, the runtime row and the workspace section
- * together — the detail the block itself has no room for, with the panel's one
- * control in its foot.
+ * The panel open: the recap, the runtime row and the workspace section, with
+ * the panel's one control, the lit edge switch, in its foot.
  *
- * That switch governs the lit window edge, and it is deliberately the only
- * story it gets: the preference is one per browser (`agent-edge-preference.ts`),
- * so a second story that opened with it off would set it off for every other
- * story in the catalog after it. Its two appearances are `Switch`'s own.
+ * The only story for that switch. Its preference is one per browser, so a
+ * story that turned it off would turn it off for every story after it.
  */
 export const PanelOpen: Story = {
   render: story({ ...HEALTHY, approvals: 3, recent: A_DAYS_WORK }),
-  play: openThePanel,
+  play: async (context) => {
+    const cores = () => document.querySelectorAll(".core").length;
+    await expect(cores()).toBe(1);
+    await openThePanel(context);
+    const head = await waitFor(() => {
+      const found = document.querySelector(".arphead .arporb");
+      if (!found) throw new Error("the panel head has no orb");
+      return found;
+    });
+    await expect(head.getAttribute("data-core-state")).toBe(
+      document.querySelector(".arblock")?.getAttribute("data-core-state"),
+    );
+    await expect(cores()).toBe(2);
+  },
 };
 
 /**

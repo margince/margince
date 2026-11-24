@@ -203,14 +203,22 @@ func ThreadNewestReplySQL(inbound, until string) string {
 // SplitRepliesSQL joins row to every reply we sent on a new topic that answers
 // a message of anchor's conversation. Such a reply carries a key of its own,
 // and its delivery names the message it answers. The caller adds more tests.
+//
+// The walk starts at the deliveries that name a message of the conversation,
+// and reaches the reply by its id. OFFSET 0 keeps that order. Left free, the
+// planner starts at activity by the caller's own tests: the correspondent and
+// the kind. A busy correspondent then costs a bitmap over every later message
+// of that kind, for each request, although few deliveries name an answered
+// message.
 func SplitRepliesSQL(row, anchor string) string {
 	origin, send := "origin_"+row, "split_"+row
-	return `activity ` + origin + `
-	  JOIN comms_outbound ` + send + ` ON ` + send + `.answers_activity_id = ` + origin + `.id
+	return `(SELECT ` + send + `.activity_id FROM comms_outbound ` + send + `
+	     JOIN activity ` + origin + ` ON ` + origin + `.id = ` + send + `.answers_activity_id
+	    WHERE ` + origin + `.thread_key = ` + anchor + `.thread_key
+	      AND ` + origin + `.kind = ` + anchor + `.kind
+	      AND ` + origin + `.channel_provider IS NOT DISTINCT FROM ` + anchor + `.channel_provider OFFSET 0) ` + send + `
 	  JOIN activity ` + row + ` ON ` + row + `.id = ` + send + `.activity_id
-	 WHERE ` + anchor + `.thread_key <> '' AND ` + origin + `.thread_key = ` + anchor + `.thread_key
-	   AND ` + origin + `.kind = ` + anchor + `.kind
-	   AND ` + origin + `.channel_provider IS NOT DISTINCT FROM ` + anchor + `.channel_provider`
+	 WHERE ` + anchor + `.thread_key <> ''`
 }
 
 // NormalisedSubjectSQL is a subject with its reply prefixes and outer spaces

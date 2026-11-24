@@ -32,9 +32,8 @@ export function stubSession(
   });
 }
 
-/** The block in the real `.app` frame and top bar: `--topbarH` and
- *  `--pageGutter` are declared on `.app`, and the menu's drop offset reads
- *  `--topbarH`, so a bare bar draws the wrong height, gutter and offset. */
+/** The block in the real `.app` frame and top bar: the frame sets the bar's
+ *  layout, so a bare bar draws the wrong height, gutter and drop offset. */
 export function TopBarTrail({ children }: Readonly<{ children: ReactNode }>) {
   const searchRef = useRef<HTMLButtonElement>(null);
   return (

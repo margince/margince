@@ -21,36 +21,21 @@ test.beforeEach(async ({ page }) => {
 
 type Page = import("@playwright/test").Page;
 
-// The reporting timezone, edited in the dialog the company card's verb opens.
-//
-// Chosen over the account page's sign-off because THIS draft is the one that
-// outlives its dialog: dismissing the dialog keeps what was typed, so an
-// unsaved edit is still unsaved on the way out of the page — which is the state
-// the guard exists to notice. A sign-off half-typed into a dialog nobody
-// reopened is discarded by design, so it never reaches the guard at all.
-const timezone = (page: Page) =>
-  page.getByRole("textbox", { name: de["installationSettings.timezone"] });
+// The signature layout on Company profile → Email. The page's save bar holds
+// its draft, so the edit is still unsaved on the way out of the page.
+const SIGNATURE_LAYOUT = "<p><b>{name}</b></p>";
 
-const editTimezone = (page: Page) =>
-  page.getByRole("button", {
-    name: de["installationSettings.editField"].replace(
-      "{field}",
-      de["installationSettings.timezone"],
-    ),
-  });
+const template = (page: Page) =>
+  page.getByRole("textbox", { name: de["signatureTemplate.label"] });
 
-// Types into the dialog and closes it again, leaving the draft behind on a page
-// with nothing open over it — which is what makes the navigation below possible.
-// The address the product MINTS for this page. The old `#/settings/admin/general`
-// still resolves, but it resolves by REDIRECTING to this one, so a test that
-// navigated by the old spelling would be asserting the guard against an address
-// the app rewrites out from under it.
-const typeAndCloseDialog = async (page: Page, zone: string) => {
-  await page.goto("/#/settings/company/regional");
-  await editTimezone(page).click();
-  await timezone(page).fill(zone);
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
+// The address the product MINTS for this page, not one it redirects from, so
+// the guard is asserted against an address the app keeps.
+const typeIntoTemplate = async (page: Page, text: string) => {
+  await page.route(/\/v1\/email-signature-template$/, (route) =>
+    route.fulfill({ json: { template: SIGNATURE_LAYOUT } }),
+  );
+  await page.goto("/#/settings/company/email");
+  await template(page).fill(text);
 };
 
 // Selected by destination rather than by name: this link's accessible name is
@@ -61,7 +46,7 @@ const leaveSettings = (page: Page) => page.locator('a[href="/#/home"]').click();
 test("a settings draft holds the page when the reader leaves for another screen", async ({
   page,
 }) => {
-  await typeAndCloseDialog(page, "Europe/Vienna");
+  await typeIntoTemplate(page, "<p>{name} at Brandt</p>");
 
   // Out of settings entirely, which is the move the old guard could not see.
   // The brand link is the way out: while settings is open the rail holds the
@@ -75,20 +60,65 @@ test("a settings draft holds the page when the reader leaves for another screen"
   // address back, so the reader is where their work is.
   await page.keyboard.press("Escape");
   await expect(asking).toBeHidden();
-  await expect(page).toHaveURL(/#\/settings\/company\/regional$/);
-  // The draft survived the question: reopening the dialog shows what was typed
-  // rather than the value the server still holds.
-  await editTimezone(page).click();
-  await expect(timezone(page)).toHaveValue("Europe/Vienna");
+  await expect(page).toHaveURL(/#\/settings\/company\/email$/);
+  await expect(template(page)).toHaveValue("<p>{name} at Brandt</p>");
 });
 
 test("discarding leaves for the screen the reader asked for", async ({
   page,
 }) => {
-  await typeAndCloseDialog(page, "Europe/Ber");
+  await typeIntoTemplate(page, "<p>{name}</p><p>Brandt</p>");
   await leaveSettings(page);
 
-  await page.getByRole("button", { name: /verwerfen/i }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /verwerfen/i })
+    .click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page).toHaveURL(/#\/home$/);
+});
+
+// The reporting time zone, edited in the dialog the company card's verb opens.
+const timezone = (page: Page) =>
+  page.getByRole("textbox", { name: de["installationSettings.timezone"] });
+
+const editTimezone = (page: Page) =>
+  page.getByRole("button", {
+    name: de["installationSettings.editField"].replace(
+      "{field}",
+      de["installationSettings.timezone"],
+    ),
+  });
+
+test("Cancel discards a settings dialog's draft, so leaving the page asks nothing", async ({
+  page,
+}) => {
+  await page.goto("/#/settings/company/regional");
+  await editTimezone(page).click();
+  const saved = await timezone(page).inputValue();
+  await timezone(page).fill("Europe/Vienna");
+  await page.getByRole("button", { name: de["create.cancel"] }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  await editTimezone(page).click();
+  await expect(timezone(page)).toHaveValue(saved);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+
+  await leaveSettings(page);
+  await expect(page).toHaveURL(/#\/home$/);
+});
+
+test("Escape over a changed settings dialog asks before it discards", async ({
+  page,
+}) => {
+  await page.goto("/#/settings/company/regional");
+  await editTimezone(page).click();
+  await timezone(page).fill("Europe/Vienna");
+  await page.keyboard.press("Escape");
+
+  const question = page.getByRole("dialog", { name: de["unsaved.title"] });
+  await expect(question).toBeVisible();
+  await question.getByRole("button", { name: de["unsaved.discard"] }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
 });

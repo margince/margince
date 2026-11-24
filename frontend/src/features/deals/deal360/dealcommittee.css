@@ -91,7 +91,6 @@
 
 /* The mark sits on the name's line. */
 .dc-dot {
-  corner-shape: round;
   flex: 0 0 auto;
   inline-size: 12px;
   block-size: 12px;

@@ -96,7 +96,7 @@ type inputs struct {
 func loadInputs(root string, door Door) (inputs, error) {
 	in := inputs{door: door, tools: map[string]json.RawMessage{}, catalog: map[string]json.RawMessage{}, routers: map[string]string{}}
 	var err error
-	if in.judge, err = canonicalJudge(root); err != nil {
+	if in.judge, err = JudgeModel(root); err != nil {
 		return inputs{}, err
 	}
 	if in.harness, in.parsers, err = digestHarness(root); err != nil {
@@ -109,10 +109,10 @@ func loadInputs(root string, door Door) (inputs, error) {
 		}
 		return in, nil
 	case DoorREST:
-		if in.restTools, err = digestFiles(root, restTools); err != nil {
+		if in.restTools, err = DigestFiles(root, restTools); err != nil {
 			return inputs{}, err
 		}
-		if in.instructions, err = digestFiles(root, restSkill); err != nil {
+		if in.instructions, err = DigestFiles(root, restSkill); err != nil {
 			return inputs{}, err
 		}
 		return in, nil
@@ -142,7 +142,7 @@ func (in *inputs) loadMCP(root string) error {
 	if err != nil {
 		return err
 	}
-	in.instructions = digest([]byte(info.Instructions + "\x00" + served))
+	in.instructions = Digest([]byte(info.Instructions + "\x00" + served))
 	for _, entry := range info.Tools.Tools {
 		// The generator's indentation is not tool copy.
 		canonical, err := CanonicalJSON(entry)
@@ -218,9 +218,9 @@ func CanonicalJSON(raw json.RawMessage) (json.RawMessage, error) {
 	return json.Marshal(parsed)
 }
 
-// canonicalJudge is the judge a run uses unless E2E_LLM_JUDGE_MODEL names
+// JudgeModel is the judge a run uses unless E2E_LLM_JUDGE_MODEL names
 // another; the lane files the one that actually judged (e2e/llm/check.py).
-func canonicalJudge(root string) (string, error) {
+func JudgeModel(root string) (string, error) {
 	var table struct {
 		Judge struct {
 			Routes map[string]struct {
@@ -237,13 +237,13 @@ func canonicalJudge(root string) (string, error) {
 	return "", fmt.Errorf("%s names no judge model", candidatesFile)
 }
 
-// digestFiles is one digest over several files. Each is framed by its name and
+// DigestFiles is one digest over several files. Each is framed by its name and
 // length, so bytes moved from one file to the next still move the digest.
-func digestFiles(root string, names []string) (string, error) {
+func DigestFiles(root string, names []string) (string, error) {
 	return digestFilesWith(root, names, nil)
 }
 
-// digestFilesWith is digestFiles where a file named in instead stands for its
+// digestFilesWith is DigestFiles where a file named in instead stands for its
 // given text.
 func digestFilesWith(root string, names []string, instead map[string]string) (string, error) {
 	sum := sha256.New()
@@ -282,8 +282,8 @@ func (in inputs) stampOf(sc scenario) (Stamp, error) {
 		return Stamp{}, fmt.Errorf("stamping %s: %w", sc.name, err)
 	}
 	stamp := Stamp{
-		Scenario:     digest(sc.body),
-		Tools:        digest(tools),
+		Scenario:     Digest(sc.body),
+		Tools:        Digest(tools),
 		Instructions: in.instructions,
 		Harness:      in.harness,
 		Parsers:      in.parsers,
@@ -350,7 +350,8 @@ func (s Stamp) Moved(current Stamp, driver string) []string {
 	return moved
 }
 
-func digest(body []byte) string {
+// Digest is the short digest of one body.
+func Digest(body []byte) string {
 	sum := sha256.Sum256(body)
 	return short(sum[:])
 }

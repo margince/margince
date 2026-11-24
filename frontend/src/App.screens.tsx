@@ -255,7 +255,7 @@ export function UnknownAddress() {
   const { screen } = firstAvailableRoute(useHiddenCoreFeatures());
   const name = usePageName(screen);
   return (
-    <div className="wrap">
+    <div className="wrap narrow">
       <EmptyState>
         <p>{t("shell.unknownAddress")}</p>
         <Button variant="link" onClick={() => navigate({ screen })}>

@@ -92,7 +92,7 @@ export function SettingsPage({
       )}
       <SettingsSavePage>
         <Frame id={page.id}>
-          <div key={tab} className="settings-stack arrive-stack">
+          <div key={tab} className="settings-stack page-pane arrive-stack">
             {/* Shown once, and only on a page where the reader can change
               nothing. Without it they would have to infer that from disabled
               cards. */}

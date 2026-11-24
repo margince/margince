@@ -2130,6 +2130,9 @@ paths:
         past 120 characters (`too_long`), the limit of every company name typed by hand.
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
+        A parent that already sits below this company answers 422 `parent_company_below` on
+        `parent_company_id`, with `params.name` naming that company. A parent that is the company itself
+        answers 422 `parent_company_self` on `parent_company_id`.
 
         Needs the passport permission Change records.
 
@@ -2313,8 +2316,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -2340,8 +2343,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -3445,8 +3448,8 @@ paths:
           content:
             application/pdf:
               schema: {type: string, format: binary}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '429':
           description: The caller fetched 20 invoice documents in the current one-minute window.
@@ -10912,9 +10915,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/FileForbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/FileNotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters:
@@ -11054,8 +11057,8 @@ paths:
             text/csv:
               schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Export this edition's permitted frozen metrics, chart readings and kept question answers.
   /search/data-answer:
@@ -12957,6 +12960,42 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: List the website forms that land leads in this installation.
+    post:
+      tags: [WebForms]
+      operationId: createWebForm
+      security: [{bearerAuth: []}]
+      summary: Create a website form; a human sees its minted signing secret once.
+      description: |-
+        Mints the form's public key, the last segment of its intake address
+        `POST /v1/public/forms/{form_key}`. A `server` form answers its own signing secret in
+        `signing_secret`, once; no read returns it again. So does a `typeform` or `tally` form
+        sent without `sender_secret`: the secret is then typed into the builder's webhook. Only a
+        human gets that secret: an agent's answer leaves `signing_secret` out, so no secret
+        enters a model transcript. Its user then shows one with Make a new secret on the form in
+        Settings > Website forms (`POST /v1/web-forms/{id}/rotate-secret`). An agent that sends
+        `sender_secret`, websites, consent or a privacy notice is refused with `403`, as on an
+        update: those stay with its user. A
+        `webflow` form stores the secret Webflow issued, sent in `sender_secret` now or on a
+        later update; until then it refuses every post. Every signed
+        sender needs a secret store on this installation; without one it answers 422 on `sender`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateWebFormRequest'}
+      responses:
+        '201':
+          description: The created form, plus the signing secret once whenever this installation minted it.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/WebFormCreated'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /web-forms/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -14591,8 +14630,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -14737,8 +14776,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -16262,8 +16301,8 @@ paths:
             application/octet-stream:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
   /capture/activity:
     get:
       tags: [Capture]
@@ -22708,7 +22747,7 @@ paths:
           content:
             application/pdf:
               schema: {type: string, format: binary}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: >-
@@ -23661,8 +23700,8 @@ paths:
             text/csv:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
   /analytics/context:
     get:
       tags: [Reports]
@@ -25812,7 +25851,7 @@ paths:
           content:
             application/octet-stream:
               schema: {type: string, format: binary}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Attachments]
@@ -26086,7 +26125,7 @@ paths:
             application/zip:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
   /imports/{id}:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -26258,8 +26297,8 @@ paths:
             text/csv:
               schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /imports/{id}/approve:
@@ -26981,8 +27020,8 @@ paths:
             application/octet-stream:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /knowledge/corpora/{id}/ask:
     parameters:
@@ -27186,9 +27225,10 @@ components:
       description: |-
         Only the members of this list — a Shortlist's chosen records, or the records a Live List's
         filter selects now — narrowed before sorting and paging, so the page is the list's members
-        in the record list's own columns. The list must be one the caller may find and of this
-        record type; otherwise `404` or `422`. Sharing a list never widens what the read shows:
-        the caller's row scope still applies to every row.
+        in the record list's own columns. A list the caller cannot find, or any list while lists
+        are off, narrows to no rows, as an unknown `tag_id` or `owner_id` does. A list of another
+        record type answers `422`. Sharing a list never widens what the read shows: the caller's
+        row scope still applies to every row.
     IncludeArchived:
       name: include_archived
       in: query
@@ -27305,6 +27345,32 @@ components:
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
+    FileNotFound:
+      description: |-
+        No such file in this workspace, or out of RBAC scope. A browser tab that opened the file's
+        link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
+        instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          examples:
+            notFound:
+              value: {type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found.}
+        text/html:
+          schema: {type: string}
+    FileForbidden:
+      description: |-
+        Authenticated, but the role lacks the grant for this file (`code: permission_denied`). A
+        browser tab that opened the file's link (an `Accept` that prefers `text/html`) reads a short
+        page in the reader's language instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          examples:
+            denied:
+              value: {type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action.}
+        text/html:
+          schema: {type: string}
     NotFound:
       description: No such resource in this workspace (or out of RBAC scope).
       content:
@@ -27872,6 +27938,14 @@ components:
             state: {type: string, enum: [throttled, blocked, paused_all]}
             since: {type: [string, 'null'], format: date-time}
             until: {type: [string, 'null'], format: date-time}
+    WebFormCreated:
+      allOf:
+        - $ref: '#/components/schemas/WebForm'
+        - type: object
+          properties:
+            signing_secret:
+              type: string
+              description: The signing secret this installation minted for a `server`, `typeform` or `tally` form, shown this once and only to a human, never to an agent.
     WebFormListResponse:
       type: object
       required: [data, secrets_available]
@@ -27880,6 +27954,32 @@ components:
           type: array
           items: {$ref: '#/components/schemas/WebForm'}
         secrets_available: {type: boolean, description: 'Whether this installation can store a secret, which every sender but `browser` needs.'}
+    CreateWebFormRequest:
+      type: object
+      required: [name, sender]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        sender: {$ref: '#/components/schemas/WebFormSender'}
+        sender_secret: {type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.'}
+        allowed_origins:
+          type: array
+          maxItems: 20
+          items: {type: string, maxLength: 300}
+          description: Required, and only allowed, for a `browser` form.
+        lead_origin: {type: [string, 'null']}
+        owner_id: {type: [string, 'null'], format: uuid}
+        product_id: {type: [string, 'null'], format: uuid, description: 'The product every lead this form creates is interested in. Omit it or send null to capture leads with no product.'}
+        field_map:
+          type: object
+          maxProperties: 40
+          additionalProperties: {type: string}
+        consent_required: {type: boolean, default: false}
+        consent_policy_version: {type: [string, 'null'], maxLength: 200}
+        consent_wording: {type: [string, 'null'], maxLength: 2000}
+        privacy_notice: {type: [string, 'null'], maxLength: 500}
+        privacy_notice_url: {type: [string, 'null'], format: uri, pattern: '^[Hh][Tt][Tt][Pp][Ss]://[^/?#:@][^/?#@]*([/?#]|$)', maxLength: 2000}
+        redirect_url: {type: [string, 'null'], maxLength: 2000}
+        success_message: {type: [string, 'null'], maxLength: 500}
     UpdateWebFormRequest:
       type: object
       properties:
@@ -34038,13 +34138,21 @@ components:
       required: [provider, description]
       properties:
         provider: {type: string, description: "The source's key, stored on every mirrored row."}
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
         description: {type: string, description: "What the extension unit supplying it says it is for."}
     FinanceConnection:
       type: object
       required: [id, provider, status, connected_at]
       properties:
         id: {type: string, format: uuid}
-        provider: {type: string}
+        provider: {type: string, description: "The source's key. Show `provider_name` to a reader."}
+        provider_name:
+          type: string
+          description: >-
+            The source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names it another way, never by the key.
         status:
           type: string
           enum: [connecting, active, error]
@@ -34086,7 +34194,11 @@ components:
         access_scope:
           type: string
           description: Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined.
-        provider: {type: string}
+        provider: {type: string, description: 'The accounting source''s key. Show `provider_name` to a reader.'}
+        provider_name:
+          type: string
+          description: >-
+            The accounting source's name for a reader, as its unit declares it. Absent when the unit declares none; a client then names no source rather than show the key.
         last_synced_at: {type: string, format: date-time}
         linked_companies:
           type: integer
@@ -34151,7 +34263,11 @@ components:
         provider:
           type: [string, 'null']
           description: >-
-            Which accounting source this came from, in the source's own words ("offline_demo"). Rendered as a label beside the figures so a reader knows what they are looking at; absent when nothing is connected.
+            Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected.
+        provider_name:
+          type: [string, 'null']
+          description: >-
+            The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key.
         last_synced_at:
           type: [string, 'null']
           format: date-time
@@ -35433,6 +35549,8 @@ components:
           type: array
           description: Unresolved disclosure work for this contact, in deadline order. Absent when privacy-request read authority is withheld.
           items: {$ref: '#/components/schemas/ContactNoticeDuty'}
+        privacy_confirmed_source:
+          $ref: '#/components/schemas/ContactConfirmedSource'
         consent:
           type: object
           description: Per-purpose state. The proof log stays at `GET /contacts/{id}/consent` — this is the guard, not the ledger.
@@ -40123,6 +40241,21 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Project360PhaseTransition'}}
         phase_durations: {type: array, items: {$ref: '#/components/schemas/Project360PhaseDuration'}}
+    ContactConfirmedSource:
+      type: object
+      description: |-
+        The source a reviewer last confirmed for this contact, from the newest confirmed
+        privacy-notice case. Absent when no source was ever confirmed, and withheld with the
+        privacy_notice_duties section.
+      required: [case_id, source_kind, source_obtained_at, confirmed_at]
+      properties:
+        case_id: {type: string, format: uuid}
+        source_kind: {type: string, description: 'The confirmed kind: one of `AssessNoticeSource.kind`.'}
+        source_obtained_at: {type: [string, 'null'], format: date-time, description: 'The acquisition date the reviewer confirmed; null when they confirmed none.'}
+        confirmed_at: {type: string, format: date-time}
+        confirmed_by:
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          description: Read from the confirm's audit row. Absent for an agent reader, and when that row no longer exists.
     PrincipalAttribution:
       type: object
       description: |-
@@ -48190,7 +48323,13 @@ components:
         routine_mail_team_id:
           type: string
           format: uuid
-          description: The selected live team for team or combined scope. Personal scope ignores a retained selection.
+          description: >-
+            The selected live team for team or combined scope. Personal scope ignores a retained selection. A team that does not exist, is archived or is not one the caller may review is refused with 422 `delivery_team_gone` on this field.
+        clear_routine_mail_team:
+          type: boolean
+          writeOnly: true
+          description: >-
+            True removes the selected team, and a team or combined scope falls back to `personal`. Sent together with `routine_mail_team_id` it is refused with 422.
         weekly_delivery_day:
           type: integer
           minimum: 1

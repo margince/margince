@@ -83,6 +83,7 @@ func New() extension.Extension {
 		Migrations: migrations,
 		FinanceSources: []extension.FinanceSource{{
 			Provider:        "offline_demo",
+			DisplayName:     "Demo accounting",
 			Check:           check,
 			Customers:       customers,
 			InvoicesFor:     invoicesFor,

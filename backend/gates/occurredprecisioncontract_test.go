@@ -64,6 +64,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml AssessNoticeSource.obtained_at":                         "The privacy user enters a source date; this does not copy a captured activity timestamp.",
 	"api/crm.yaml NoticeCase.source_obtained_at":                          "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",
 	"api/crm.yaml NoticeCaseReview.source_obtained_at":                    "This view reads the same human source date as NoticeCase, not a captured activity timestamp.",
+	"api/crm.yaml ContactConfirmedSource.source_obtained_at":              "The contact page reads the same human source date as NoticeCase, not a captured activity timestamp.",
 	"api/crm.yaml HealthFinding.first_observed_at":                        "when operational evidence first recorded a condition, not an activity time",
 	"api/crm.yaml OptOutRecordStop.stopped_at":                            "when a stop took effect, the suppression row's own write instant",
 	"api/crm.yaml OptOutReceiptRecord.sent_at":                            "when the provider accepted a controller receipt, the delivery row's own instant",
@@ -221,7 +222,7 @@ var instantTimeNames = gatekit.Waive(map[string]string{
 	"paid_at": actStamp, "disposed_at": actStamp, "signed_in_at": actStamp, "visited_at": actStamp,
 	"previous_visit_at": actStamp, "baseline_at": actStamp, "asked_at": actStamp,
 	"name_dropped_at": actStamp, "responded_at": actStamp, "renewed_at": actStamp,
-	"link_requested_at": actStamp, "double_opt_in_confirmed_at": actStamp, "state_at": actStamp,
+	"link_requested_at": actStamp, "double_opt_in_confirmed_at": actStamp, "confirmed_at": actStamp, "state_at": actStamp,
 	"refuted_at": actStamp, "left_at": actStamp, "received_at": actStamp, "acquired_at": actStamp, "done_at": actStamp,
 
 	"started_at": spanStamp, "ended_at": spanStamp, "start_at": spanStamp, "end_at": spanStamp,

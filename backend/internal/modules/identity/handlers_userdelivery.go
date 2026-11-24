@@ -77,6 +77,7 @@ func deliveryToWire(d Delivery) crmcontracts.BriefDelivery {
 // before this is reached.
 func deliveryFromWire(body crmcontracts.BriefDelivery) Delivery {
 	out := Delivery{RoutineTime: body.RoutineDeliveryTime, QuietDay: body.QuietDayNotice, HourLocal: body.DeliveryHourLocal, WeeklyDay: body.WeeklyDeliveryDay, CombineRoutine: body.CombineRoutineEmail}
+	out.ClearTeam = body.ClearRoutineMailTeam != nil && *body.ClearRoutineMailTeam
 	if body.RoutineMailScope != nil {
 		scope := string(*body.RoutineMailScope)
 		out.Scope = &scope

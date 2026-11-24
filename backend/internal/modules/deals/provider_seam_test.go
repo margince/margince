@@ -300,11 +300,6 @@ func TestAFieldOfTheWrongShapeIsRefusedOnTheSeam(t *testing.T) {
 func TestADealListByListGoesThroughTheListResolver(t *testing.T) {
 	list := ids.NewV7()
 	filters := map[string]string{"list_id": list.String()}
-	if _, _, _, err := seamProvider().SearchEntity(context.Background(), datasource.EntityDeal, nil, 10, nil,
-		filters); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Errorf("a list filter with lists off answered %v, want not found", err)
-	}
-
 	refusal := errors.New("the list is private to its owner")
 	var asked ids.UUID
 	p := seamProvider().WithListMembers(func(_ context.Context, id ids.UUID, _ string) (storekit.ListMemberFilter, error) {

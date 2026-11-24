@@ -218,12 +218,10 @@ function voicesIn(tree: CensusTree): Voices {
       gate,
       "SPOKEN_BY_THE_READER_PREFIXES",
     ),
-    // German's Sie families, plus the public booking form a guest fills in,
-    // which Vietnamese alone addresses as an outsider.
-    readByAnOutsider: [
-      ...declaredStrings(parsedAt(tree, germanCatalogs), "READ_BY_AN_OUTSIDER"),
-      "book.",
-    ],
+    readByAnOutsider: declaredStrings(
+      parsedAt(tree, germanCatalogs),
+      "READ_BY_AN_OUTSIDER",
+    ),
     serverWorded: serverWordedKeys(),
   };
 }

@@ -36,7 +36,7 @@
   .worklist-columns {
     display: grid;
     grid-template-columns: 14rem minmax(0, 1fr);
-    column-gap: var(--space-6);
+    column-gap: var(--gapPanes);
     align-items: start;
   }
   .worklist-lanes {
@@ -159,10 +159,9 @@
    capped control the rule below is here to release. A descendant cannot widen
    the box it sits in. */
 @media (max-width: 720px) {
-  /* Matched on the same selector the row band uses, because that one is more
-     specific: a bare `.worklist-header-dials` here lost to it and the group
-     kept its content width at 390px. */
-  .worklist-header-line > .worklist-header-dials {
+  /* Matched as specifically as the row band's rule, which a bare
+     `.worklist-header-dials` loses to, wherever the head puts the pair. */
+  :is(.worklist-header-line, .worklist-header-cuts) > .worklist-header-dials {
     flex: 1 1 100%;
     /* The pair is one row where a row fits. At this width it does not, and a
        segmented control squeezed beside a picker is worse than either on its

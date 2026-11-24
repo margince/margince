@@ -129,6 +129,49 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
   });
 });
 
+describe("CompanyScreen — a refused domain in the reader's words", () => {
+  it("shows the domain refusal under the domain rows, not the API's text", async () => {
+    const apiText =
+      "not a host name (labels of letters, digits and inner hyphens, with a dot)";
+    stubFetch(async (url, method) => {
+      if (method === "PATCH") {
+        return jsonResponse(
+          {
+            title: "Unprocessable",
+            status: 422,
+            code: "validation_error",
+            detail: apiText,
+            details: {
+              errors: [
+                { field: "domain", code: "domain_malformed", message: apiText },
+              ],
+            },
+          },
+          422,
+        );
+      }
+      if (url.includes("/activities")) {
+        return jsonResponse({ data: [] });
+      }
+      return jsonResponse(company);
+    });
+    render(<CompanyScreen id="o-1" />);
+
+    const user = userEvent.setup();
+    const about = await openSection(user, "About");
+    await user.click(within(about).getByRole("button", { name: "Add domain" }));
+    await user.type(within(about).getByLabelText("Domain *"), "not a domain");
+    await user.click(within(about).getByRole("button", { name: "Save" }));
+
+    expect(
+      await within(about).findByText(
+        "This is not a domain. Enter one such as example.com.",
+      ),
+    ).toBeTruthy();
+    expect(within(about).queryByText(apiText)).toBeNull();
+  });
+});
+
 // The PATCH mapping sends `domains` only when the set changed. Untouched edits
 // omit it, and removing every row sends `[]` (clear all). The API tells the two apart.
 describe("mapCompanyUpdate — domains change detection (P1)", () => {

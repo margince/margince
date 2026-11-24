@@ -20,7 +20,7 @@ import { formatDateTime } from "../../format/format";
 import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
 import { useLocale, useT } from "../../i18n";
-import { actorAttribution } from "../../lib/auditactor";
+import { actorAttribution, qualifierPhrase } from "../../lib/auditactor";
 import { useCan } from "../../lib/capability";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
@@ -244,9 +244,7 @@ function AuditActor({
   const who = actorAttribution(entry, viewer.id);
   const label =
     who.name ?? (who.labelKey ? t(who.labelKey) : (who.identifier ?? ""));
-  const qualifier = who.qualifierName
-    ? t("audit.viaNamed", { client: who.qualifierName })
-    : who.qualifierKey && t(who.qualifierKey);
+  const qualifier = qualifierPhrase(who, t);
   const caption = [label === who.identifier ? "" : who.identifier, qualifier]
     .filter(Boolean)
     .join(" · ");

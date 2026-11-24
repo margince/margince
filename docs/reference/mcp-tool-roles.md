@@ -43,7 +43,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 32✓ 15✗ | 11✓ 36✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 39 | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 34✓ 5✗ | 39✓ 0✗ |
-| [Admin settings](#admin-settings) | 116 | 116✓ 0✗ | 10✓ 106✗ | 0✓ 116✗ | 83✓ 33✗ | 0✓ 116✗ | 0✓ 116✗ |
+| [Admin settings](#admin-settings) | 117 | 117✓ 0✗ | 10✓ 107✗ | 0✓ 117✗ | 84✓ 33✗ | 0✓ 117✗ | 0✓ 117✗ |
 | [The user's own account and security](#the-users-own-account-and-security) | 18 | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 17✓ 1✗ | 18✓ 0✗ |
 | [Agent governance](#agent-governance) | 4 | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 3✓ 1✗ | 4✓ 0✗ |
 | [Operator and system](#operator-and-system) | 16 | 16✓ 0✗ | 0✓ 16✗ | 0✓ 16✗ | 16✓ 0✗ | 0✓ 16✗ | 0✓ 16✗ |
@@ -962,6 +962,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
 | `change_settings.archive_web_form` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
+| `change_settings.create_web_form` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.handle_website_inquiries` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.update_web_form` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 
@@ -1738,6 +1739,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Capture and integration rules | `change_capture.remove_consumer_mail_domain` | `remove_consumer_mail_domain` | `capture_settings.update` |
 | Capture and integration rules | `change_capture.remove_workspace_email_domain` | `remove_workspace_email_domain` | `capture_settings.update` |
 | Web forms | `change_settings.archive_web_form` | `archive_web_form` | `integrations.delete` |
+| Web forms | `change_settings.create_web_form` | `create_web_form` | `integrations.create` |
 | Web forms | `change_settings.handle_website_inquiries` | `handle_website_inquiries` | `activity.create` `activity.read` `activity.update` `automation.read` `automation.update` `contact.read` `integrations.read` `integrations.update` `lead.read` `relationship.read` |
 | Web forms | `change_settings.update_web_form` | `update_web_form` | `integrations.update` |
 | Extensions | `read_workspace.extension_settings` | `get_extension_settings` | `extension_access.read` `installation_settings.read` |

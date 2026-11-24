@@ -33,8 +33,8 @@ const (
 	classifyBatchSize = 10
 	// classifyBodyLimit truncates each body for the prompt (AIRT-PARAM-35).
 	classifyBodyLimit = 1500
-	// classifyConfidenceFloor: below it the item is re-asked SOLO on the
-	// routing ladder's fallback rather than guessed in-batch (§2.8).
+	// classifyConfidenceFloor: below it the item is re-asked SOLO rather than
+	// guessed in-batch.
 	classifyConfidenceFloor = 0.7
 	// classifierUnreported stands where a provider named no model. Spelled out
 	// rather than left empty so a stored row says "we do not know what judged
@@ -61,11 +61,30 @@ var replyVerdicts = map[string]bool{
 // writes them only through its store.
 type CaptureClassifier struct {
 	pool  *pgxpool.Pool
-	store *activities.Store
+	store captureLabelStore
 	caps  *capture.PassCaps
 	brain completer
 	log   *slog.Logger
 }
+
+// captureLabelStore is the part of the activities store the pass reads and
+// writes. The certification case stands an in-memory backlog behind it, so the
+// pass it certifies is the one that ships, folds and floors included.
+type captureLabelStore interface {
+	UnlabeledCaptureMessages(ctx context.Context, ruleset string, limit, bodyLimit int) ([]unlabeledMessage, error)
+	SetCaptureLabel(ctx context.Context, id ids.UUID, label string, readVersion int64) (bool, error)
+	SetCaptureLabelAndReply(ctx context.Context, id ids.UUID, label string, readVersion int64, verdict, classifier string) (bool, error)
+	MarkCaptureLabelDeclined(ctx context.Context, id ids.UUID, ruleset string) (bool, error)
+	MarkCaptureLabelUnsure(ctx context.Context, id ids.UUID, ruleset string, readVersion int64) (bool, error)
+}
+
+// unusableClassifyAnswer is a model reply the pass could not read: it did not
+// parse, or it broke the id contract. It is told apart from a failed call so a
+// certification run can count it against the model.
+type unusableClassifyAnswer struct{ err error }
+
+func (e *unusableClassifyAnswer) Error() string { return e.err.Error() }
+func (e *unusableClassifyAnswer) Unwrap() error { return e.err }
 
 // NewCaptureClassifier builds the engine over the pool and one model lane.
 func NewCaptureClassifier(pool *pgxpool.Pool, brain completer, log *slog.Logger) *CaptureClassifier {
@@ -307,10 +326,10 @@ func (c *CaptureClassifier) ask(ctx context.Context, batch []unlabeledMessage) (
 	}
 	var payload classifyPayload
 	if err := json.Unmarshal([]byte(ai.Unfence(resp.Text)), &payload); err != nil {
-		return nil, "", fmt.Errorf("classify: unparseable model output: %w", err)
+		return nil, "", &unusableClassifyAnswer{fmt.Errorf("classify: unparseable model output: %w", err)}
 	}
 	if msg := validateClassifyPayload(payload, batch); msg != "" {
-		return nil, "", fmt.Errorf("classify: %s", msg)
+		return nil, "", &unusableClassifyAnswer{fmt.Errorf("classify: %s", msg)}
 	}
 	return resolveClassifyRefs(payload.Results, batch), judgeOf(resp), nil
 }

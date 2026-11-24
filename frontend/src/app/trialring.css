@@ -1,8 +1,15 @@
-/* The trial's ring over the orb's box. It sits outside the import ring the orb
-   draws for itself, so the two can show at once without touching. */
+/* A ring gap and a half out from the ball, clear of the import ring. The
+   circle is RADIUS (38) of the box's 100 units, so the box is r / 0.38. */
 .artrialring {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  width: calc(
+    (var(--arGlass) * var(--coreBall) / 2 + 1.5 * var(--coreRingGap)) /
+    0.38
+  );
+  aspect-ratio: 1;
+  translate: -50% -50%;
   pointer-events: none;
   --trialTone: var(--accent);
 }
@@ -73,7 +80,6 @@
   height: 16px;
   padding-inline: var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--trialTone);
   color: var(--textOnStatusControl);
   font: var(--fontBodySmall);

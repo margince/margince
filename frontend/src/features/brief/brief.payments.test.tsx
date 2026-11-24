@@ -371,3 +371,33 @@ it("does not introduce an accounting panel when the first read fails", async () 
   await waitFor(() => expect(client.isFetching()).toBe(0));
   expect(container.textContent).toBe("");
 });
+
+it("names the accounting source the way a reader knows it, never by its key", async () => {
+  servePayments(
+    customerPayments({
+      provider: "offline_demo",
+      provider_name: "Demo accounting",
+      last_synced_at: "2026-11-02T09:00:00Z",
+    }),
+  );
+  render(<CustomerPaymentsCard />);
+  expect(
+    await screen.findByText(/^From Demo accounting · synced/),
+  ).toBeTruthy();
+  expect(screen.queryByText(/offline_demo/)).toBeNull();
+});
+
+it("names no source when the source declares no name", async () => {
+  servePayments(
+    customerPayments({
+      provider: "offline_demo",
+      provider_name: undefined,
+      last_synced_at: "2026-11-02T09:00:00Z",
+    }),
+  );
+  render(<CustomerPaymentsCard />);
+  expect(
+    await screen.findByText(/^From your accounting system · synced/),
+  ).toBeTruthy();
+  expect(screen.queryByText(/offline_demo/)).toBeNull();
+});

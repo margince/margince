@@ -25,6 +25,10 @@ A deal and its project share a channel. Linking a deal whose project has no chan
 project. When a deal gets a project later, the deal's channel takes the project in, unless that
 project already has a channel of its own.
 
+Archiving a deal or project takes it out of its link. A link that still carries a live record stays
+with it. A link left with none is retired, which frees the channel. `cg:chat-links` does this on
+`deal.archived`, `project.archived` and `retention.applied`. A restore does not bring the link back.
+
 ## From an event to a post
 
 1. The consumer `cg:chat-links` finds the deals and projects an event touches. An offer or contract

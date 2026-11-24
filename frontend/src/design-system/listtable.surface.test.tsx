@@ -106,6 +106,33 @@ describe("the page's name in the header", () => {
   });
 });
 
+// The reason for a refused verb sits under the head, so the head keeps one row
+// and the verb names the reason as its description.
+describe("a refused head action", () => {
+  it("says why under the head, and the refused verb is described by it", () => {
+    const { container } = render(
+      <ListTable
+        title="Companies"
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        refusal={{ id: "why-refused", text: "Your seat is read-only." }}
+        action={
+          <button type="button" disabled aria-describedby="why-refused">
+            New company
+          </button>
+        }
+      />,
+    );
+    const why = screen.getByText("Your seat is read-only.");
+    expect(container.querySelector(".lt-head")?.contains(why)).toBe(false);
+    expect(
+      screen.getByRole("button", { name: "New company" }),
+    ).toHaveAccessibleDescription("Your seat is read-only.");
+  });
+});
+
 describe("a folded header's verbs are live", () => {
   function stubNarrowViewport() {
     vi.stubGlobal("matchMedia", (query: string) => ({

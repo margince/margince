@@ -7,6 +7,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /web-forms` | listWebForms | List the website forms that land leads in this installation. | Read records | at once |
+| `POST /web-forms` | createWebForm | Create a website form; a human sees its minted signing secret once. | Change records | at once |
 | `GET /web-forms/{id}` | getWebForm | Get one website form. | Read records | at once |
 | `PATCH /web-forms/{id}` | updateWebForm | Change a website form, pause it or resume it. | Change records | at once |
 | `DELETE /web-forms/{id}` | archiveWebForm | Archive a website form; its address stops taking submissions. | Change records | at once |

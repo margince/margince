@@ -419,3 +419,50 @@ describe("a whole number typed in a box", () => {
     }
   });
 });
+
+describe("a company form's refusals in the reader's words", () => {
+  it("names the chosen parent that already sits below the company", () => {
+    const fault = {
+      field: "parent_company_id",
+      code: "parent_company_below",
+      message: "this company is above the chosen parent",
+      params: { name: "Acme Berlin" },
+    };
+    expect(faultSentence(fault, "en")).toBe(
+      "Acme Berlin is already below this company.",
+    );
+    expect(faultSentence(fault, "de")).toBe(
+      "Acme Berlin steht bereits unter diesem Unternehmen.",
+    );
+  });
+
+  it("says a company cannot be its own parent", () => {
+    const fault = {
+      field: "parent_company_id",
+      code: "parent_company_self",
+      message: "a company cannot be its own parent; choose another company",
+    };
+    for (const locale of ["en", "de", "vi"] as const) {
+      expect(faultSentence(fault, locale)).toBe(
+        translate(locale, "create.parentCompanySelf"),
+      );
+    }
+    expect(faultSentence(fault, "en")).toBe(
+      "A company cannot be its own parent. Choose another.",
+    );
+  });
+
+  it("asks for a domain instead of describing host-name labels", () => {
+    const fault = {
+      field: "domain",
+      code: "domain_malformed",
+      message:
+        "not a host name (labels of letters, digits and inner hyphens, with a dot)",
+    };
+    for (const locale of ["en", "de", "vi"] as const) {
+      expect(faultSentence(fault, locale)).toBe(
+        translate(locale, "create.domainMalformed"),
+      );
+    }
+  });
+});

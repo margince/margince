@@ -100,6 +100,7 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			EmbeddingReindex: h.EmbedReindexAvailable(),
 			Lists:            &h.listsAvailable,
 			Reporting:        &reportingAvailable,
+			VatRegister:      &h.vatRegisterAvailable,
 		},
 	}
 }

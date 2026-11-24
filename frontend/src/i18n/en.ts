@@ -1695,20 +1695,19 @@ export const en = {
   "scheduling.saveTime": "Confirm new time",
   "scheduling.hostRecovery":
     "Reconnect your calendar if needed, then retry. The time remains reserved while delivery is uncertain.",
-  "scheduling.guestRecovery":
+  "book.recovery":
     "The host needs to check this invitation. Your booking request is saved.",
-  "scheduling.deliveryUnknown":
+  "book.deliveryUnknown":
     "The server did not return an invitation. Check with the host before trying again.",
-  "scheduling.personalGuest":
+  "book.personalGuest":
     "This invitation is for the recipient of this link. The meeting will use the email address chosen by the host.",
-  "scheduling.proposalGreeting": "Hello,",
-  "scheduling.proposalChoose": "Choose a time here, or find another opening:",
-  "scheduling.proposalReply":
-    "You can also reply with a time that works for you.",
+  "book.proposalGreeting": "Hello,",
+  "book.proposalChoose": "Choose a time here, or find another opening:",
+  "book.proposalReply": "You can also reply with a time that works for you.",
   "scheduling.method": "How to arrange the meeting",
   "scheduling.propose": "Propose times",
   "scheduling.sharePersonal": "Share a personal link",
-  "scheduling.savedRequest":
+  "book.savedRequest":
     "Your meeting request is saved. Open it to check the invitation, change the time or cancel.",
   "scheduling.openMeeting": "View your meeting",
   "scheduling.emailReminder": "Email reminder one hour before",
@@ -1791,7 +1790,7 @@ export const en = {
 
   "scheduling.invite": "Send an invite",
   "scheduling.contact": "Who are you meeting?",
-  "scheduling.guestAgenda": "What would you like to discuss?",
+  "book.agenda": "What would you like to discuss?",
   "scheduling.agenda": "Message for your guest",
   "scheduling.chooseTime": "Choose a time",
   "scheduling.date": "Starting date",
@@ -1815,8 +1814,7 @@ export const en = {
   "scheduling.book": "Confirm meeting",
   "scheduling.pausedUnavailable":
     "{host} is not taking bookings through this page right now.",
-  "scheduling.unavailable":
-    "This booking page is unavailable. Contact your host.",
+  "book.unavailable": "This booking page is unavailable. Contact your host.",
   "scheduling.publicUrlMissing":
     "Set a public address for this installation before sharing external booking links.",
   "scheduling.new": "Book a meeting",
@@ -1842,13 +1840,19 @@ export const en = {
   "scheduling.attentionTitle": "The calendar did not accept the invitation",
   "scheduling.retryHelp":
     "Retry sends the same invitation again, so the guest does not get a second one.",
-  "scheduling.videoApp": "{app} · link in your invite",
+  "book.videoApp": "{app} · link in your invite",
   "scheduling.pickDay": "Choose a day",
   "scheduling.changeTime": "Change time",
   "scheduling.confirmAt": "Confirm {day}, {time}",
   "scheduling.suggestedTimes": "Suggested times",
-  "scheduling.noTimesDay": "No free times on this day. Choose another day.",
-  "scheduling.noTimesMonth": "No free times this month. Try the next month.",
+  "book.noTimesDay": "No free times on this day. Choose another day.",
+  "book.noTimesMonth": "No free times this month. Try the next month.",
+  "book.noTimes": "No available times in this window. Try another date.",
+  "book.rescheduleHelp":
+    "Your current time stays reserved until the calendar confirms the change.",
+  "book.meetingChanged":
+    "The meeting changed. Review the updated details and try again.",
+  "book.cancelConfirm": "The meeting will be canceled.",
   "conversationSuggestions.title": "On this conversation, not in Margince yet",
   "conversationSuggestions.add": "Add as contact",
   "conversationSuggestions.limited":
@@ -2724,7 +2728,6 @@ export const en = {
   "shell.companyLogoAria": "{company} home, powered by Margince",
   "shell.poweredBy": "Powered by Margince",
   "shell.searchEverything": "Search or ask Margince",
-  "shell.breadcrumbAria": "Breadcrumb",
   "shell.back": "Back",
   "shell.backToSetup": "Back to setup",
   "shell.license.none": "No license",
@@ -3493,7 +3496,6 @@ export const en = {
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
   "ref.memberLeft": "{name} (left)",
-  "ref.leadUnnamed": "Unnamed lead",
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
@@ -4430,6 +4432,9 @@ export const en = {
   "finance.moreInvoices": "More invoices in the accounting system",
   "finance.syncedFrom": "From {provider} · synced {when}",
   "finance.fromNeverSynced": "From {provider} · not yet synced",
+  "finance.syncedFromAccounting": "From your accounting system · synced {when}",
+  "finance.fromAccountingNeverSynced":
+    "From your accounting system · not yet synced",
   "finance.status.draft": "Draft",
   "finance.status.open": "Open",
   "finance.status.partiallyPaid": "Partially paid",
@@ -6342,6 +6347,8 @@ export const en = {
   "deal.editDetails": "Edit details",
   "deal.meetNeedsCompany":
     "This deal has no company yet. Add one under Edit details to book a meeting.",
+  "deal.meetCompanyWithheld":
+    "The company on this deal is not shared with you, so a meeting cannot be booked from here.",
   "deal.committee.card": "Committee",
   "deal.committee.change": "Change or remove stakeholders",
   "deal.links.card": "Links",
@@ -7692,7 +7699,6 @@ export const en = {
     "A .vcf file, the contact export format of phones and mail clients, or a photo of one or more business cards. A vCard comes from its owner, so imported vCards skip approval. A photo is read by a model and can be wrong, so every card read from a photo waits for your approval.",
   "vcardImport.choose": "Select file or photo",
   "vcardImport.working": "Reading cards…",
-  "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
   "vcardImport.failed": "The cards were not imported.",
   "vcardImport.outcome.created": "Added",
@@ -7705,7 +7711,6 @@ export const en = {
   "vcardImport.field.kept": "Record value kept",
   "vcardImport.field.notInCard": "Not in the card",
   "vcardImport.next": "Next vCard",
-  "vcardImport.backToCompany": "Back to the company",
   "vcardImport.forCompany": "Contacts created from these cards work for",
   "vcardImport.companyPhotoTitle": "Photos are not filed under a company",
   "vcardImport.companyPhoto":
@@ -7765,6 +7770,11 @@ export const en = {
     "This value was erased at its owner’s request and cannot be stored again.",
   "create.linkedinMalformed":
     "This is not a link. Paste the address of the LinkedIn page.",
+  "create.domainMalformed":
+    "This is not a domain. Enter one such as example.com.",
+  "create.parentCompanyBelow": "{name} is already below this company.",
+  "create.parentCompanySelf":
+    "A company cannot be its own parent. Choose another.",
   "create.linkedinNotLinkedin": "Enter a link to a page on linkedin.com.",
   "create.linkedinNotProfile":
     "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
@@ -8827,6 +8837,13 @@ export const en = {
   "tasks.completeNamed": "Mark {subject} done",
   "tasks.snooze": "Snooze 1 day",
   "tasks.moveTo": "Move to",
+  "tasks.move": "Move",
+  "tasks.moveAnyway": "Move anyway",
+  "tasks.moveSame": "The task is already due then. Pick another day or time.",
+  "tasks.movePastTitle": "Date in the past",
+  "tasks.movePastBody": "Moving the task to this date makes it overdue.",
+  "tasks.movedTo": "Moved to {when}",
+  "tasks.moveUndoFailed": "Task was not moved back. Retry.",
   "tasks.remind.menu": "Remind me",
   "tasks.remind.inAnHour": "In 1 hour",
   "tasks.remind.tomorrowMorning": "Tomorrow morning",
@@ -9795,6 +9812,8 @@ export const en = {
   "delivery.scope.combined": "My work and selected team",
   "delivery.teamHelp":
     "Choose a team before enabling its view. Access is checked again when mail is sent.",
+  "delivery.noTeam": "No team",
+  "delivery.teamGone": "This team no longer exists. Choose another.",
   "delivery.weekday1": "Monday",
   "delivery.weekday2": "Tuesday",
   "delivery.weekday3": "Wednesday",
@@ -11798,6 +11817,11 @@ export const en = {
     "Nobody has confirmed the recorded source of this contact’s details yet.",
   "notice.source.onRecord": "On record",
   "notice.source.needsConfirmation": "Source needs confirmation",
+  "notice.source.confirmedSource": "{source} on {date}",
+  "notice.source.confirmedBy": "Confirmed by {actor} on {date}",
+  "notice.source.confirmedByYou": "Confirmed by you on {date}",
+  "notice.source.confirmedAt": "Confirmed on {date}",
+  "notice.source.saved": "Source confirmed",
   "notice.source.contactExplanation":
     "A privacy officer confirms where their details came from.",
   "notice.rule.art13": "Art. 13 notice",
@@ -14215,8 +14239,8 @@ export const en = {
   "book.returnRequestAction": "Send me the link",
   "book.returnRequestSent":
     "Check your inbox. If this address can be stored again, a link to confirm is on its way.",
-  "book.attendee": "Attendee email",
-  "book.subject": "Meeting via Margince",
+  "scheduling.attendeeEmail": "Attendee email",
+  "scheduling.defaultSubject": "Meeting via Margince",
   "book.name": "Your name",
   "book.email": "Your email",
   "book.consentWording":
@@ -14287,8 +14311,8 @@ export const en = {
     "Access to this room has expired. Contact {steward} if you need it again.",
   "buyer.eyebrow": "Deal Room",
   "buyer.closed": "This room is closed. Its content is kept as a record.",
-  "buyer.previewBannerTitle": "You are previewing this room",
-  "buyer.previewBanner":
+  "room.previewBannerTitle": "You are previewing this room",
+  "room.previewBanner":
     "This is the buyer’s view. You can read everything but change nothing.",
   "buyer.previewReadOnly":
     "A preview is read-only. Close this tab to return to the Deal Room page.",
@@ -18539,6 +18563,7 @@ export const en = {
   "ownDomains.confirmLabel": "Confirm {domain}",
 
   "financeSource.title": "Accounting source",
+  "financeSource.unnamed": "Unnamed source",
   "financeSource.sub":
     "Margince reads invoices and payments from an accounting system and shows them on each company’s Finance tab. It never writes to the source.",
   "financeSource.readOnly":

@@ -28,7 +28,11 @@ import {
 import { Button, OptionCount } from "./atoms";
 import { OverflowMenu } from "./overflowmenu";
 import { useFocusKeptOnFold, useFoldedTabs } from "./recordtabs.fold";
-import { type ClippedEdges, useClippedEdges } from "./scrollregion";
+import {
+  type ClippedEdges,
+  clippedClass,
+  useClippedEdges,
+} from "./scrollregion";
 import "./recordtabs.css";
 
 // What every strip carries, whatever it chooses between.
@@ -253,11 +257,5 @@ export function RecordTabs<Option extends string>({
 // The strip hides its scrollbar, so an end that hides tabs fades instead. A tab
 // cut at that edge then reads as one of more, not as the last.
 function stripClass(edges: ClippedEdges) {
-  return [
-    "recordtabs-strip",
-    edges.start ? "is-clipped-start" : "",
-    edges.end ? "is-clipped-end" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  return clippedClass("recordtabs-strip", edges);
 }

@@ -1,11 +1,14 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { type ListColumn, ListTable } from "./listtable";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 function render(ui: ReactNode) {
   return rtlRender(<LocaleProvider initial="en">{ui}</LocaleProvider>);
@@ -114,6 +117,30 @@ describe("a short list that hides its chrome", () => {
     render(<Short rows={[]} problem="The rows could not be read." />);
     expect(screen.getByText("The rows could not be read.")).toBeTruthy();
     expect(screen.queryByText("No rows yet.")).toBeNull();
+  });
+
+  // The grid mounts only once rows replace the empty line. Its frozen column
+  // must still cast a shadow its own width.
+  it("measures the frozen edge of a grid that mounts after its empty line", () => {
+    const box = Element.prototype.getBoundingClientRect;
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: Element) {
+        return this.matches("thead .lt-identity")
+          ? new DOMRect(0, 0, 180, 40)
+          : box.call(this);
+      },
+    );
+    const { container, rerender } = render(<Short rows={[]} />);
+    expect(container.querySelector(".lt-freeze")).toBeNull();
+
+    rerender(
+      <LocaleProvider initial="en">
+        <Short rows={testRows(3)} />
+      </LocaleProvider>,
+    );
+
+    const edge = container.querySelector<HTMLElement>(".lt-freeze");
+    expect(edge?.style.getPropertyValue("--lt-freeze")).toBe("180px");
   });
 
   it("keeps every dial past the smallest page size", () => {
