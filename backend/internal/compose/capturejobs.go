@@ -253,6 +253,16 @@ func (w *counterpartyVerdictWorker) judgeWorkspace(ctx context.Context, workspac
 	if w.purger == nil {
 		return nil
 	}
+	// Before the personal purge, so a failure there does not hold back a
+	// receipt a stopped owner purge is owed.
+	receipts, err := w.purger.SweepMissingReceipts(wsCtx, purgeReceiptGrace)
+	if err != nil {
+		return err
+	}
+	if receipts > 0 && w.log != nil {
+		w.log.InfoContext(ctx, "capture purge: wrote the receipt of purges that stopped before it",
+			"workspace", workspace.String(), "receipts", receipts)
+	}
 	destroyed, err := w.purger.SweepPersonalMail(wsCtx, capture.DefaultPersonalPurgeWindows())
 	if err != nil {
 		return err

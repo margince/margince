@@ -157,22 +157,27 @@ func (p *CapturePurger) Purge(ctx context.Context, exclusionID ids.UUID, preview
 // destroy runs the cascade for a selection the caller confirmed and then
 // writes the receipt.
 func (p *CapturePurger) destroy(ctx context.Context, exclusionID, seat ids.UUID, rule capture.Exclusion, workspaceScoped bool, subject capture.PurgeSubject, minted []ids.UUID, outcome PurgeOutcome) (PurgeOutcome, error) {
+	ctx, err := p.cascade(ctx, exclusionID, seat, rule, workspaceScoped, subject, minted)
+	if err != nil {
+		return PurgeOutcome{}, err
+	}
+	// After the cascade: carryOut commits per item, so a receipt written first
+	// would certify a plan and not an act. If this write fails, the per-item
+	// rows still hold the trail and SweepMissingReceipts writes the receipt.
+	return p.auditPurgeReceipt(ctx, exclusionID, outcome)
+}
+
+// cascade carries the selection out with every audit row it writes stamped
+// with the rule's id as batch_id, which is how the receipt and the sweep find
+// the rows of one purge. It returns the stamped context for the receipt.
+func (p *CapturePurger) cascade(ctx context.Context, exclusionID, seat ids.UUID, rule capture.Exclusion, workspaceScoped bool, subject capture.PurgeSubject, minted []ids.UUID) (context.Context, error) {
 	reason := privacy.PurgeOwnerRule
 	if workspaceScoped {
 		reason = privacy.PurgeWorkspaceRule
 	}
-	anonymised, err := p.carryOut(ctx, subject, minted, p.stillPurgeable(seat, rule), seat, reason)
-	if err != nil {
-		return PurgeOutcome{}, err
-	}
-	outcome.Anonymised = anonymised // the recheck inside the cascade can skip some
-	// After the cascade: carryOut commits per item, so a receipt written first
-	// would certify a plan and not an act. If this write fails, the
-	// per-activity rows still hold the trail and the caller is told it failed.
-	if err := p.auditPurgeReceipt(ctx, exclusionID, outcome); err != nil {
-		return PurgeOutcome{}, err
-	}
-	return outcome, nil
+	ctx = storekit.WithBatch(ctx, exclusionID)
+	_, err := p.carryOut(ctx, subject, minted, p.stillPurgeable(seat, rule), seat, reason)
+	return ctx, err
 }
 
 // purgeableContacts is what a seat's rule purge anonymises. Only this seat's

@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
@@ -87,24 +89,34 @@ func keptBreakdown(subject capture.PurgeSubject, policy privacy.FloorPolicy) Kep
 	return kept
 }
 
-// auditPurgeReceipt records what the owner was told, from the same struct they
-// were told it from.
+// auditPurgeReceipt records what the purge did, from the same struct the
+// owner is told it from, and returns that struct with the counts the trail
+// holds.
 //
 // There is ONE set of numbers: an operator reading the trail and the colleague
 // reading their screen are looking at the same count. A discrepancy between
 // them would be worse than either alone, because it would make both
 // unbelievable.
 //
+// Destroyed, Released and Anonymised are counted from the per-message rows the
+// cascade wrote, so a message the recheck skipped is not certified as gone.
+// Skipped and Kept describe what the purge chose not to touch, which no row
+// records, so they stay as selected.
+//
 // Held by: TestThePurgeReceiptAndTheAuditRowCannotDisagree
 // (backend/internal/compose/capturepurge_integration_test.go)
 //
 // The rule is the subject: a purge is an act performed against one exclusion
-// rule, and the per-activity rows above already say what happened to each
-// message. This is the summary those rows do not add up to on their own, since
-// nothing writes a row for a message it deliberately did NOT touch.
-func (p *CapturePurger) auditPurgeReceipt(ctx context.Context, ruleID ids.UUID, outcome PurgeOutcome) error {
-	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		_, err := storekit.AuditWithEvidence(ctx, tx, "archive", "capture_exclusion", ruleID, nil, nil,
+// rule, and the per-message rows say what happened to each message. This is the
+// summary those rows do not add up to on their own.
+func (p *CapturePurger) auditPurgeReceipt(ctx context.Context, ruleID ids.UUID, outcome PurgeOutcome) (PurgeOutcome, error) {
+	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		tally, err := lockRuleAndTallyTx(ctx, tx, ruleID)
+		if err != nil {
+			return err
+		}
+		outcome.Destroyed, outcome.Released, outcome.Anonymised = tally.destroyed, tally.released, tally.anonymised
+		_, err = storekit.AuditWithEvidence(ctx, tx, "archive", "capture_exclusion", ruleID, nil, nil,
 			map[string]any{
 				"destroyed": outcome.Destroyed, "released": outcome.Released,
 				"skipped": outcome.Skipped, "anonymised": outcome.Anonymised,
@@ -114,4 +126,121 @@ func (p *CapturePurger) auditPurgeReceipt(ctx context.Context, ruleID ids.UUID, 
 			})
 		return err
 	})
+	return outcome, err
+}
+
+// purgeTally is what the per-message rows of one purge say was done.
+type purgeTally struct{ destroyed, released, anonymised int }
+
+// purgeTrailRows selects the rows the cascade writes for one rule (@rule, its
+// batch_id) that no receipt covers yet: an erase per destroyed message, an
+// archive per released one and an anonymize per stripped contact. A receipt
+// covers every row older than itself, and the row lock on the rule keeps a
+// second receipt from being written between the count and the write.
+const purgeTrailRows = `a.batch_id = @rule AND ` + purgeRowKinds
+
+const purgeRowKinds = `((a.action = 'erase' AND a.entity_type = 'activity')
+	  OR (a.action = 'archive' AND a.entity_type = 'activity' AND a.after ? 'released_by')
+	  OR (a.action = 'anonymize' AND a.entity_type = 'contact'))
+	AND a.occurred_at > ` + lastReceiptAt
+
+// lastReceiptAt is when the rule's latest receipt was written. The evidence
+// key tells a receipt from the rule's other archive rows.
+const lastReceiptAt = `coalesce((SELECT max(r.occurred_at) FROM audit_log r
+	WHERE r.entity_type = 'capture_exclusion' AND r.entity_id = a.batch_id
+	  AND r.action = 'archive' AND r.evidence ? 'destroyed'), '-infinity')`
+
+// lockRuleAndTallyTx counts the uncovered rows under a lock on the rule.
+// The lock is what makes the live receipt and the sweep exclusive: whichever
+// takes it second finds the first one's receipt and counts nothing.
+func lockRuleAndTallyTx(ctx context.Context, tx pgx.Tx, ruleID ids.UUID) (purgeTally, error) {
+	var locked ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT id FROM capture_exclusion WHERE id = @rule FOR UPDATE`,
+		pgx.StrictNamedArgs{"rule": ruleID}).Scan(&locked); err != nil {
+		return purgeTally{}, fmt.Errorf("capture purge: locking the rule for its receipt: %w", err)
+	}
+	var t purgeTally
+	err := tx.QueryRow(ctx, `
+		SELECT count(DISTINCT a.entity_id) FILTER (WHERE a.action = 'erase'),
+		       count(DISTINCT a.entity_id) FILTER (WHERE a.action = 'archive'),
+		       count(DISTINCT a.entity_id) FILTER (WHERE a.action = 'anonymize')
+		  FROM audit_log a WHERE `+purgeTrailRows,
+		pgx.StrictNamedArgs{"rule": ruleID}).Scan(&t.destroyed, &t.released, &t.anonymised)
+	if err != nil {
+		return purgeTally{}, fmt.Errorf("capture purge: counting what the purge did: %w", err)
+	}
+	return t, nil
+}
+
+// receiptlessPurges lists the rules with purge rows no receipt covers, the
+// newest of which is older than the grace period. A younger row may belong to
+// a purge still running, whose own receipt is about to be written.
+func receiptlessPurges(ctx context.Context, tx pgx.Tx, grace time.Duration, limit int) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT a.batch_id FROM audit_log a
+		  JOIN capture_exclusion e ON e.id = a.batch_id
+		 WHERE `+purgeRowKinds+`
+		 GROUP BY a.batch_id
+		HAVING max(a.occurred_at) < now() - make_interval(secs => @grace_secs)
+		 LIMIT @limit`,
+		pgx.StrictNamedArgs{"grace_secs": grace.Seconds(), "limit": limit})
+	if err != nil {
+		return nil, fmt.Errorf("capture purge: finding purges without a receipt: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+// SweepMissingReceipts writes the receipt of every purge whose per-message rows
+// exist and whose receipt does not, because the process stopped between the
+// cascade and the receipt. It counts the rows, so the receipt states what was
+// deleted. What the purge chose not to touch left no row, so a recovered
+// receipt carries no kept counts and says so with `recovered`.
+//
+// Running it again writes nothing: the first run's receipt covers the rows.
+func (p *CapturePurger) SweepMissingReceipts(ctx context.Context, grace time.Duration) (int, error) {
+	ctx = principal.SystemActing(ctx, receiptSweepActor)
+	var rules []ids.UUID
+	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) (err error) {
+		rules, err = receiptlessPurges(ctx, tx, grace, personalSweepBatch)
+		return err
+	}); err != nil {
+		return 0, err
+	}
+	written := 0
+	for _, rule := range rules {
+		wrote, err := p.writeRecoveredReceipt(ctx, rule)
+		if err != nil {
+			return written, err
+		}
+		if wrote {
+			written++
+		}
+	}
+	return written, nil
+}
+
+// purgeReceiptGrace is how long a purge's last row must have stood before the
+// sweep treats the purge as stopped. A running purge commits per message and
+// writes its receipt last, well inside this.
+const purgeReceiptGrace = time.Hour
+
+// receiptSweepActor is the system principal a recovered receipt is written as.
+const receiptSweepActor = "system:capture-purge-receipt"
+
+func (p *CapturePurger) writeRecoveredReceipt(ctx context.Context, ruleID ids.UUID) (bool, error) {
+	wrote := false
+	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+		tally, err := lockRuleAndTallyTx(ctx, tx, ruleID)
+		if err != nil || tally == (purgeTally{}) {
+			return err
+		}
+		wrote = true
+		_, err = storekit.AuditWithEvidence(ctx, tx, "archive", "capture_exclusion", ruleID, nil, nil,
+			map[string]any{
+				"destroyed": tally.destroyed, "released": tally.released,
+				"anonymised": tally.anonymised, "recovered": true,
+			})
+		return err
+	})
+	return wrote, err
 }
