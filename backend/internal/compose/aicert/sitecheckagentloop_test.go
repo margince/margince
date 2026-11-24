@@ -59,8 +59,8 @@ func TestTheAgentLoopCheckDoesNotReachTheStoresBehindTheToolRegistry(t *testing.
 }
 
 // What cannot change how a run is graded moves no digest, and what can does. The
-// first two edits are the ones that made the records stale for nothing; the
-// rest are real grading dependencies, so a walk that skipped too much fails here.
+// first two edits made the records stale for nothing. The rest are real grading
+// dependencies, so a walk that skipped too much fails here.
 func TestOnlyAGradingChangeMovesTheAgentLoopCheck(t *testing.T) {
 	base := walkDigest(t, agentLoopWalk(t, nil))
 	for name, edits := range map[string]map[string]func(string) string{

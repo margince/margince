@@ -3,13 +3,11 @@
 
 package compose
 
-// What the classify case owes the certification lane: it issues the request the
-// engine issues, it judges the reply with the batch-fidelity validator the
-// engine judges it with, and it separates the three things a reply can be. A
-// batch reply breaks in ways a single answer cannot — a label for a message
-// nobody sent, one message answered twice, one left out — and every one of them
-// is unusable rather than wrong. A case that collapsed them into "wrong" would
-// report a broken batch contract as a quality problem.
+// What the classify case owes the certification lane: it drives the production
+// pass over an in-memory backlog. The request, the validator, the floor and the
+// solo re-ask are then the engine's own. It also separates three things a run can
+// be. A batch reply breaks in ways a single answer cannot: a label for a message
+// nobody sent, one answered twice, one left out. Each is unusable, not wrong.
 
 import (
 	"context"
@@ -190,10 +188,13 @@ func TestClassifyCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			wantDetail: "missing from the results",
 		},
 		{
-			name:       "a label outside the closed vocabulary",
+			// The pass drops an answer it cannot use and asks about the message alone. A
+			// second unusable answer leaves it unsure. That is what the product serves, and
+			// what the case counts against the model.
+			name:       "a label outside the closed vocabulary, asked again and still outside it",
 			answer:     classifyAnswer("spam", "meeting"),
-			wantResult: aitasks.OutcomeInvalid,
-			wantDetail: "is not commitment|meeting|other",
+			wantResult: aitasks.OutcomeWrongAnswer,
+			wantDetail: `message 1 was left unsure, with no label, where the scenario expects "commitment"`,
 		},
 		{
 			name:       "a reply that is not the required JSON",
@@ -505,4 +506,72 @@ func TestClassifyCaseRefusesAFixtureCarryingQuotedMail(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "current message") {
 		t.Fatalf("a fixture with quoted mail prepared: %v", err)
 	}
+}
+
+// classifyVerdictAt is one labeled message at the confidence given.
+func classifyVerdictAt(id, label string, confidence float64) string {
+	return fmt.Sprintf(`{"id":%q,"label":%q,"confidence":%v}`, id, label, confidence)
+}
+
+// A message answered below the floor in the batch is asked about alone, and the
+// case judges the label that second answer gives. The floor is the engine's, so a
+// case that skipped the re-ask would score the hedged first answer.
+func TestClassifyCaseJudgesTheLabelTheSoloReAskGives(t *testing.T) {
+	answer := func(requested []string) string {
+		if len(requested) == 1 {
+			return classifyReplyText(classifyVerdictAt(requested[0], "meeting", 0.9))
+		}
+		return classifyReplyText(classifyVerdictAt(requested[0], "commitment", 0.9), classifyVerdictAt(requested[1], "other", 0.4))
+	}
+	outcome, trace := runClassifyCase(t, []string{"commitment", "meeting"}, answer)
+
+	if outcome.Result != aitasks.OutcomeAccepted {
+		t.Fatalf("Result = %q (%s), want accepted: the re-ask labeled it meeting", outcome.Result, outcome.Detail)
+	}
+	if len(trace.Requests) != 2 {
+		t.Fatalf("the trace carries %d requests, want the batch and one solo re-ask", len(trace.Requests))
+	}
+	if requested, _ := requestedIDsIn(trace.Requests[0]); len(requested) != 2 {
+		t.Errorf("the first request asks about %v, want the whole batch", requested)
+	}
+	if requested, _ := requestedIDsIn(trace.Requests[1]); len(requested) != 1 {
+		t.Errorf("the second request asks about %v, want the one message left under the floor", requested)
+	}
+}
+
+// A message still under the floor when asked alone is stamped and not labeled.
+// The run is wrong by the label it did not give, however right its first guess.
+func TestClassifyCaseCountsAMessageLeftUnderTheFloorAgainstTheModel(t *testing.T) {
+	answer := func(requested []string) string {
+		results := make([]string, 0, len(requested))
+		for i, id := range requested {
+			results = append(results, classifyVerdictAt(id, []string{"commitment", "meeting"}[i%2], 0.4))
+		}
+		return classifyReplyText(results...)
+	}
+	outcome, _ := runClassifyCase(t, []string{"commitment", "meeting"}, answer)
+
+	if outcome.Result != aitasks.OutcomeWrongAnswer || !strings.Contains(outcome.Detail, "message 1 was left unsure") {
+		t.Fatalf("Result = %q (%s), want a wrong answer naming the message left unsure", outcome.Result, outcome.Detail)
+	}
+}
+
+// A call that never completed is the lane's problem and no measurement of the
+// model. It fails the run and does not score the batch as unlabeled.
+func TestClassifyCaseFailsTheRunWhenACallFails(t *testing.T) {
+	prepared, err := captureClassifyCases{}.Prepare(classifyFixtureJSON(t), classifyExpectation(t, "commitment", "meeting"))
+	if err != nil {
+		t.Fatalf("preparing the case: %v", err)
+	}
+	broken := errors.New("provider unreachable")
+	_, err = prepared.Run(context.Background(), failingCompleter{err: broken})
+	if !errors.Is(err, broken) {
+		t.Fatalf("Run error = %v, want the completer's own", err)
+	}
+}
+
+type failingCompleter struct{ err error }
+
+func (f failingCompleter) Complete(context.Context, model.Request) (model.Response, error) {
+	return model.Response{}, f.err
 }

@@ -23,8 +23,8 @@ type AgentToolFact struct {
 
 // AgentToolFacts is the goal of a scheduled agent and the published spec of each
 // tool it may use. A check that replays a run reads the tools only through
-// these, so it hashes them where it would otherwise walk the registry's builder
-// and every store behind it.
+// these. So it hashes them, and never walks the registry's builder and every
+// store behind it.
 func AgentToolFacts(agent string) (goal string, tools []AgentToolFact, err error) {
 	spec, ok := ScheduledAgentSpecByName(agent)
 	if !ok {

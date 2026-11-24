@@ -163,13 +163,13 @@ type sourcePackage struct {
 type sourceIndex struct {
 	fset *token.FileSet
 	pkgs map[string]*sourcePackage
-	// declared names a function the walk takes as one dependency: its body is
-	// not walked, and the digest it maps to is hashed in its place, as
-	// "package.name". A tool registry builder is one, since a check reads the
-	// tools only through the specs they publish.
+	// declared names a function the walk takes as one dependency, as
+	// "package.name". Its body is not walked, and the digest it maps to is hashed
+	// instead. A tool registry builder is one: a check reads the tools only
+	// through the specs they publish.
 	declared map[string]string
 	// overlay serves a file's text from here instead of from disk, by the path
-	// load reads it at, so a test can change a function and watch a digest.
+	// load reads it at. A test changes a function this way and watches a digest.
 	overlay map[string]string
 }
 

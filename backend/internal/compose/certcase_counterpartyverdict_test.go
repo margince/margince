@@ -331,3 +331,71 @@ func TestTaskCensusBindsTheVerdictCase(t *testing.T) {
 		t.Errorf("the bound case serves %+v, want %+v", bound.Site(), site)
 	}
 }
+
+// verdictReplyAt is one answer at the confidence given.
+func verdictReplyAt(id, verdict string, confidence float64) string {
+	return fmt.Sprintf(`{"results":[{"id":%q,"verdict":%q,"confidence":%v}]}`, id, verdict, confidence)
+}
+
+// An answer under its floor is asked about again, and the kind the case judges is
+// the one the engine applies after that second answer.
+func TestVerdictCaseJudgesTheKindTheEngineAppliesAfterTheReAsk(t *testing.T) {
+	asked := 0
+	answer := func(id string) string {
+		asked++
+		if asked == 1 {
+			return verdictReplyAt(id, capture.KindSpam, 0.4)
+		}
+		return verdictReplyAt(id, capture.KindContact, 0.95)
+	}
+	outcome, trace := runVerdictCase(t, capture.KindContact, answer)
+
+	if outcome.Result != aitasks.OutcomeAccepted {
+		t.Fatalf("Result = %q (%s), want accepted: the re-ask answered contact", outcome.Result, outcome.Detail)
+	}
+	if len(trace.Requests) != 2 {
+		t.Fatalf("the trace carries %d requests, want the first ask and the re-ask", len(trace.Requests))
+	}
+}
+
+// A sender still under the floor on the re-ask goes to a human. The model is
+// wrong by the kind it did not settle, and nobody is exposed by it, so it is not
+// a leak.
+func TestVerdictCaseCountsASenderRetiredToAHumanAgainstTheModel(t *testing.T) {
+	outcome, _ := runVerdictCase(t, capture.KindContact, func(id string) string {
+		return verdictReplyAt(id, capture.KindContact, 0.5)
+	})
+
+	if outcome.Result != aitasks.OutcomeWrongAnswer || outcome.Leak {
+		t.Fatalf("Result = %q leak=%v (%s), want a wrong answer that is no leak", outcome.Result, outcome.Leak, outcome.Detail)
+	}
+	if !strings.Contains(outcome.Detail, "retired the sender to a human") {
+		t.Errorf("Detail = %q, want it to say the sender was retired", outcome.Detail)
+	}
+}
+
+// The engine decides a shared mailbox from its address and asks no model, so a
+// scenario about one would measure nothing: Prepare names it.
+func TestVerdictCaseRefusesASenderTheEngineSettlesFromItsAddress(t *testing.T) {
+	raw, err := json.Marshal(counterpartyVerdictFixture{Email: "support2@example.com", Subject: "ticket", Body: "text"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = counterpartyVerdictCases{}.Prepare(raw, verdictExpectation(t, capture.KindContact))
+	if err == nil || !strings.Contains(err.Error(), "asks no model") {
+		t.Fatalf("Prepare error = %v, want it to name an address the engine settles without a model", err)
+	}
+}
+
+// A call that never completed fails the run, so a provider outage is not scored
+// as a sender nobody could judge.
+func TestVerdictCaseFailsTheRunWhenACallFails(t *testing.T) {
+	prepared, err := counterpartyVerdictCases{}.Prepare(verdictFixture(t), verdictExpectation(t, capture.KindContact))
+	if err != nil {
+		t.Fatal(err)
+	}
+	broken := errors.New("provider unreachable")
+	if _, err = prepared.Run(context.Background(), failingCompleter{err: broken}); !errors.Is(err, broken) {
+		t.Fatalf("Run error = %v, want the completer's own", err)
+	}
+}
