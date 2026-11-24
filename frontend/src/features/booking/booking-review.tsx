@@ -146,7 +146,7 @@ export function BookingReview({
           onPick={(contact) => onEdit({ contact })}
           searchTargets={searchContacts}
         />
-        <Field label={t("book.attendee")}>
+        <Field label={t("scheduling.attendeeEmail")}>
           {(control) => (
             <TextInput
               {...control}

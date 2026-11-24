@@ -1760,22 +1760,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.saveTime": "Neue Zeit bestätigen",
   "scheduling.hostRecovery":
     "Verbinde deinen Kalender bei Bedarf neu und versuche es erneut. Solange die Zustellung unklar ist, bleibt die Zeit reserviert.",
-  "scheduling.guestRecovery":
-    "Die organisierende Person muss diese Einladung prüfen. Deine Buchungsanfrage ist gespeichert.",
-  "scheduling.deliveryUnknown":
-    "Der Server hat keine Einladung zurückgegeben. Frage bei der organisierenden Person nach, bevor du es erneut versuchst.",
-  "scheduling.personalGuest":
+  "book.recovery":
+    "Die organisierende Person muss diese Einladung prüfen. Ihre Buchungsanfrage ist gespeichert.",
+  "book.deliveryUnknown":
+    "Der Server hat keine Einladung zurückgegeben. Fragen Sie bei der organisierenden Person nach, bevor Sie es erneut versuchen.",
+  "book.personalGuest":
     "Diese Einladung richtet sich an die Person, die diesen Link erhalten hat. Für den Termin wird die von der organisierenden Person angegebene E-Mail-Adresse verwendet.",
-  "scheduling.proposalGreeting": "Hallo,",
-  "scheduling.proposalChoose":
-    "Wähle hier eine Zeit oder finde einen anderen Termin:",
-  "scheduling.proposalReply":
-    "Du kannst auch mit einer passenden Zeit antworten.",
+  "book.proposalGreeting": "Guten Tag,",
+  "book.proposalChoose":
+    "Wählen Sie hier eine Zeit oder finden Sie einen anderen Termin:",
+  "book.proposalReply": "Sie können auch mit einer passenden Zeit antworten.",
   "scheduling.method": "Wie möchtest du den Termin vereinbaren?",
   "scheduling.propose": "Zeiten vorschlagen",
   "scheduling.sharePersonal": "Persönlichen Link teilen",
-  "scheduling.savedRequest":
-    "Deine Terminanfrage ist gespeichert. Öffne die Anfrage, um die Einladung zu prüfen, den Termin zu verschieben oder abzusagen.",
+  "book.savedRequest":
+    "Ihre Terminanfrage ist gespeichert. Öffnen Sie die Anfrage, um die Einladung zu prüfen, den Termin zu verschieben oder abzusagen.",
   "scheduling.openMeeting": "Termin ansehen",
   "scheduling.emailReminder": "E-Mail-Erinnerung eine Stunde vorher",
   "scheduling.reminder.pending": "E-Mail-Erinnerung geplant.",
@@ -1806,9 +1805,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.calendarUnavailable":
     "Der Kalender der organisierenden Person konnte nicht gelesen werden, deshalb wurde nichts angeboten oder geändert. Die organisierende Person kann den in den Termineinstellungen gewählten Kalender prüfen.",
   "scheduling.windowHorizon":
-    "Dieses Datum liegt außerhalb des Buchungszeitraums der organisierenden Person. Wähle ein früheres Datum.",
+    "Dieses Datum liegt außerhalb des Buchungszeitraums der organisierenden Person. Buchbar sind nur frühere Daten.",
   "scheduling.windowNotice":
-    "Dieses Datum liegt vor der erforderlichen Vorlaufzeit. Wähle ein späteres Datum.",
+    "Dieses Datum liegt vor der erforderlichen Vorlaufzeit. Buchbar sind nur spätere Daten.",
   "scheduling.windowLimits":
     "Die Vorlaufzeit lässt keine Zeit im Buchungszeitraum frei. Die organisierende Person muss die Termineinstellungen anpassen.",
   "scheduling.openSettings": "Termineinstellungen öffnen",
@@ -1857,7 +1856,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "scheduling.invite": "Einladung senden",
   "scheduling.contact": "Wen möchtest du treffen?",
-  "scheduling.guestAgenda": "Was möchtest du besprechen?",
+  "book.agenda": "Was möchten Sie besprechen?",
   "scheduling.agenda": "Nachricht an deinen Gast",
   "scheduling.chooseTime": "Zeit auswählen",
   "scheduling.date": "Startdatum",
@@ -1884,8 +1883,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.book": "Termin bestätigen",
   "scheduling.pausedUnavailable":
     "{host} nimmt über diese Seite gerade keine Buchungen an.",
-  "scheduling.unavailable":
-    "Diese Buchungsseite ist nicht verfügbar. Wende dich an die organisierende Person.",
+  "book.unavailable":
+    "Diese Buchungsseite ist nicht verfügbar. Wenden Sie sich an die organisierende Person.",
   "scheduling.publicUrlMissing":
     "Richte eine öffentliche Adresse für diese Installation ein, bevor du externe Buchungslinks teilst.",
   "scheduling.new": "Termin buchen",
@@ -1912,15 +1911,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Kalender hat die Einladung nicht angenommen",
   "scheduling.retryHelp":
     "Ein neuer Versuch sendet dieselbe Einladung erneut. Der Gast erhält also keine zweite Einladung.",
-  "scheduling.videoApp": "{app} · Link in deiner Einladung",
+  "book.videoApp": "{app} · Link in Ihrer Einladung",
   "scheduling.pickDay": "Tag auswählen",
   "scheduling.changeTime": "Zeit ändern",
   "scheduling.confirmAt": "{day}, {time} bestätigen",
   "scheduling.suggestedTimes": "Vorgeschlagene Zeiten",
-  "scheduling.noTimesDay":
-    "An diesem Tag sind keine Zeiten frei. Wähle einen anderen Tag.",
-  "scheduling.noTimesMonth":
-    "In diesem Monat sind keine Zeiten frei. Wähle den nächsten Monat.",
+  "book.noTimesDay":
+    "An diesem Tag sind keine Zeiten frei. Wählen Sie einen anderen Tag.",
+  "book.noTimesMonth":
+    "In diesem Monat sind keine Zeiten frei. Wählen Sie den nächsten Monat.",
+  "book.noTimes":
+    "In diesem Zeitraum sind keine Termine frei. Wählen Sie ein anderes Datum.",
+  "book.rescheduleHelp":
+    "Ihr bisheriger Termin bleibt reserviert, bis der Kalender die Änderung bestätigt.",
+  "book.meetingChanged":
+    "Der Termin wurde geändert. Prüfen Sie die aktuellen Details und versuchen Sie es erneut.",
+  "book.cancelConfirm": "Der Termin wird abgesagt.",
   "conversationSuggestions.title":
     "In dieser Unterhaltung, noch nicht in Margince",
   "conversationSuggestions.add": "Als Kontakt hinzufügen",
@@ -3543,7 +3549,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.linkedinProfileInvalid":
     "Das ist keine LinkedIn-Profiladresse. Gib eine ein, etwa https://www.linkedin.com/in/dein-name.",
   "common.duplicate.slotTaken":
-    "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
+    "Dieser Zeitpunkt ist nicht mehr verfügbar. Einen anderen Zeitpunkt auswählen.",
   "common.retry": "Erneut versuchen",
   "common.goneBackToAnalytics": "Zurück zu Analytics",
   "reporting.sharedForecastGone":
@@ -3553,7 +3559,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.q.gone":
     "Diese Frage gibt es nicht, oder sie ist nicht mit dir geteilt.",
   "book.linkGone":
-    "Diese Buchungsseite ist nicht verfügbar. Frage nach einem neuen Link.",
+    "Diese Buchungsseite ist nicht verfügbar. Fragen Sie nach einem neuen Link.",
   "common.empty": "Hier ist noch nichts.",
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",
@@ -14223,23 +14229,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "book.pageTitle": "Termin mit {host} buchen",
   "book.pageTitleGeneric": "Termin buchen",
-  "book.meetingTitle": "Dein Termin",
-  "book.returnTitle": "Deine Daten wieder speichern",
+  "book.meetingTitle": "Ihr Termin",
+  "book.returnTitle": "Ihre Daten wieder speichern",
   "book.returnBody":
-    "Du hast darum gebeten, deine Daten nach der Löschung wieder zu speichern. Es wird nichts gespeichert, bevor du bestätigst.",
+    "Sie haben darum gebeten, Ihre Daten nach der Löschung wieder zu speichern. Es wird nichts gespeichert, bevor Sie bestätigen.",
   "book.returnStoredAs":
-    "Du wirst als {name} gespeichert, mit dieser Einwilligung:",
+    "Sie werden als {name} gespeichert, mit dieser Einwilligung:",
   "book.returnAction": "Meine Daten wieder speichern",
-  "book.returnDone": "Deine Daten sind wieder gespeichert.",
+  "book.returnDone": "Ihre Daten sind wieder gespeichert.",
   "book.returnSpent":
-    "Dieser Link wurde schon benutzt oder ist abgelaufen. Fordere dort einen neuen an, wo du diesen angefordert hast.",
+    "Dieser Link wurde schon benutzt oder ist abgelaufen. Fordern Sie dort einen neuen an, wo Sie diesen angefordert haben.",
   "book.returnRequestBody":
-    "Deine Daten wurden auf deinen Wunsch gelöscht. Damit sie wieder gespeichert werden, gib deinen Namen und die gelöschte E-Mail-Adresse ein. An diese Adresse geht ein Link, und gespeichert wird erst, wenn du dort bestätigst.",
+    "Ihre Daten wurden auf Ihren Wunsch gelöscht. Damit sie wieder gespeichert werden, geben Sie Ihren Namen und die gelöschte E-Mail-Adresse ein. An diese Adresse geht ein Link, und gespeichert wird erst, wenn Sie dort bestätigen.",
   "book.returnRequestAction": "Link senden",
   "book.returnRequestSent":
-    "Schau in dein Postfach. Wenn diese Adresse wieder gespeichert werden kann, ist ein Link zum Bestätigen unterwegs.",
-  "book.attendee": "E-Mail des Gasts",
-  "book.subject": "Termin über Margince",
+    "Sehen Sie in Ihrem Postfach nach. Wenn diese Adresse wieder gespeichert werden kann, ist ein Link zum Bestätigen unterwegs.",
+  "scheduling.attendeeEmail": "E-Mail des Gasts",
+  "scheduling.defaultSubject": "Termin über Margince",
   "book.name": "Name",
   "book.email": "E-Mail-Adresse",
   "book.consentWording":
@@ -14312,8 +14318,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "buyer.eyebrow": "Deal Room",
   "buyer.closed":
     "Dieser Raum ist geschlossen. Die Inhalte bleiben als Aufzeichnung erhalten.",
-  "buyer.previewBannerTitle": "Du siehst eine Vorschau dieses Raums",
-  "buyer.previewBanner":
+  "room.previewBannerTitle": "Du siehst eine Vorschau dieses Raums",
+  "room.previewBanner":
     "Das ist die Ansicht der Käuferseite. Du kannst alles lesen, aber nichts ändern.",
   "buyer.previewReadOnly":
     "Eine Vorschau ist schreibgeschützt. Schließe diesen Tab, um zur Seite des Deal Rooms zurückzukehren.",

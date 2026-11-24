@@ -1722,20 +1722,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.saveTime": "Xác nhận giờ mới",
   "scheduling.hostRecovery":
     "Kết nối lại lịch nếu cần, rồi thử lại. Thời gian vẫn được giữ trong lúc chưa rõ đã gửi được hay chưa.",
-  "scheduling.guestRecovery":
+  "book.recovery":
     "Người chủ trì cần kiểm tra lời mời này. Đã lưu yêu cầu đặt lịch.",
-  "scheduling.deliveryUnknown":
+  "book.deliveryUnknown":
     "Máy chủ chưa trả về lời mời. Liên hệ người chủ trì trước khi thử lại.",
-  "scheduling.personalGuest":
+  "book.personalGuest":
     "Lời mời này dành cho người nhận liên kết. Cuộc họp sẽ dùng địa chỉ email do người chủ trì chọn.",
-  "scheduling.proposalGreeting": "Xin chào,",
-  "scheduling.proposalChoose": "Chọn giờ tại đây hoặc tìm giờ trống khác:",
-  "scheduling.proposalReply":
-    "Bạn cũng có thể trả lời kèm một thời gian phù hợp.",
+  "book.proposalGreeting": "Xin chào,",
+  "book.proposalChoose": "Chọn giờ tại đây hoặc tìm giờ trống khác:",
+  "book.proposalReply":
+    "Quý khách cũng có thể trả lời kèm một thời gian phù hợp.",
   "scheduling.method": "Cách sắp xếp cuộc họp",
   "scheduling.propose": "Đề xuất thời gian",
   "scheduling.sharePersonal": "Chia sẻ liên kết cá nhân",
-  "scheduling.savedRequest":
+  "book.savedRequest":
     "Đã lưu yêu cầu cuộc họp. Mở yêu cầu để kiểm tra lời mời, đổi giờ hoặc hủy.",
   "scheduling.openMeeting": "Xem cuộc họp",
   "scheduling.emailReminder": "Nhắc qua email một giờ trước",
@@ -1815,7 +1815,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "scheduling.invite": "Gửi lời mời",
   "scheduling.contact": "Bạn sẽ gặp ai?",
-  "scheduling.guestAgenda": "Bạn muốn trao đổi về điều gì?",
+  "book.agenda": "Quý khách muốn trao đổi về điều gì?",
   "scheduling.agenda": "Lời nhắn cho khách",
   "scheduling.chooseTime": "Chọn giờ",
   "scheduling.date": "Ngày bắt đầu",
@@ -1840,7 +1840,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.book": "Xác nhận cuộc họp",
   "scheduling.pausedUnavailable":
     "{host} hiện không nhận đặt lịch qua trang này.",
-  "scheduling.unavailable":
+  "book.unavailable":
     "Trang đặt lịch này không khả dụng. Liên hệ người chủ trì.",
   "scheduling.publicUrlMissing":
     "Thiết lập địa chỉ công khai cho bản cài đặt này trước khi chia sẻ liên kết đặt lịch ra bên ngoài.",
@@ -1866,13 +1866,19 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.attentionTitle": "Lịch không chấp nhận lời mời",
   "scheduling.retryHelp":
     "Thử lại sẽ gửi lại đúng lời mời đó, nên khách sẽ không nhận được lời mời thứ hai.",
-  "scheduling.videoApp": "{app} · liên kết có trong lời mời",
+  "book.videoApp": "{app} · liên kết có trong lời mời",
   "scheduling.pickDay": "Chọn ngày",
   "scheduling.changeTime": "Đổi giờ",
   "scheduling.confirmAt": "Xác nhận {day}, {time}",
   "scheduling.suggestedTimes": "Giờ đề xuất",
-  "scheduling.noTimesDay": "Ngày này không còn giờ trống. Chọn ngày khác.",
-  "scheduling.noTimesMonth": "Tháng này không còn giờ trống. Thử tháng sau.",
+  "book.noTimesDay": "Ngày này không còn giờ trống. Chọn ngày khác.",
+  "book.noTimesMonth": "Tháng này không còn giờ trống. Thử tháng sau.",
+  "book.noTimes": "Không còn giờ trống trong khoảng này. Thử ngày khác.",
+  "book.rescheduleHelp":
+    "Giờ hiện tại vẫn được giữ cho đến khi lịch xác nhận thay đổi.",
+  "book.meetingChanged":
+    "Cuộc họp đã thay đổi. Xem lại thông tin mới và thử lại.",
+  "book.cancelConfirm": "Cuộc họp sẽ bị hủy.",
   "conversationSuggestions.title":
     "Trong cuộc trò chuyện, chưa có trong Margince",
   "conversationSuggestions.add": "Thêm làm liên hệ",
@@ -13859,8 +13865,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "book.returnRequestAction": "Gửi liên kết cho tôi",
   "book.returnRequestSent":
     "Hãy kiểm tra hộp thư. Nếu địa chỉ này có thể được lưu lại, một liên kết xác nhận đang được gửi đến.",
-  "book.attendee": "Email người tham dự",
-  "book.subject": "Cuộc họp qua Margince",
+  "scheduling.attendeeEmail": "Email người tham dự",
+  "scheduling.defaultSubject": "Cuộc họp qua Margince",
   "book.name": "Họ và tên",
   "book.email": "Email",
   "book.consentWording":
@@ -13932,8 +13938,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Quyền truy cập Deal Room này đã hết hạn. Vui lòng liên hệ {steward} nếu quý khách cần truy cập lại.",
   "buyer.eyebrow": "Deal Room",
   "buyer.closed": "Deal Room này đã đóng. Nội dung vẫn được lưu lại làm hồ sơ.",
-  "buyer.previewBannerTitle": "Đang xem trước Deal Room này",
-  "buyer.previewBanner":
+  "room.previewBannerTitle": "Đang xem trước Deal Room này",
+  "room.previewBanner":
     "Đây là giao diện phía người mua. Có thể đọc mọi nội dung nhưng không thể thay đổi.",
   "buyer.previewReadOnly":
     "Bản xem trước chỉ đọc. Đóng tab này để quay lại trang Deal Room.",
