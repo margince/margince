@@ -186,6 +186,24 @@ with `RESET lock_timeout`. The text-limit guards
 the worked example. `TestEveryUnwrappedMigrationOnlySaysRerunnableStatements` refuses any other
 statement in a file with the marker.
 
+## Change a unique index that an upsert names
+
+An `ON CONFLICT (...)` clause names its index by columns. With no matching unique index, Postgres refuses
+the statement (error 42P10). During an update the old and the new binary run side by side, so a one-step
+swap breaks the writes of whichever binary expects the other index. Mail capture is one such writer.
+
+Change such an index in two releases:
+
+1. Release 1 adds the new index and keeps the old one
+   ([build it online](#build-an-index-while-the-app-still-writes)). The code uses the new form in its
+   `ON CONFLICT`. Old binaries still find the old index.
+2. Release 2 drops the old index in a new migration and updates `migrations/testdata/head_catalog.txt`.
+
+If the old index keys off a `COALESCE(col, 'literal')` sentinel, `TestNoUniqueKeyFakesANullWithASentinel`
+reports it in release 1. Declare it in `sentinelIndexesBeingRetired` (`backend/gates/nullsentinelindex_test.go`)
+with a reason that names the release that drops it. The test fails once the declared index is gone, so
+remove the declaration in release 2.
+
 ## Why no one edits a shipped migration
 
 On the `up` path an applied version never runs again. Only `migrate down` runs a version again, by
