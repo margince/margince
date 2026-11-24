@@ -2131,7 +2131,8 @@ paths:
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
         A parent that already sits below this company answers 422 `parent_company_below` on
-        `parent_company_id`, with `params.name` naming that company.
+        `parent_company_id`, with `params.name` naming that company. A parent that is the company itself
+        answers 422 `parent_company_self` on `parent_company_id`.
 
         Needs the passport permission Change records.
 
@@ -2315,8 +2316,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -2342,8 +2343,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -3447,8 +3448,8 @@ paths:
           content:
             application/pdf:
               schema: {type: string, format: binary}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '429':
           description: The caller fetched 20 invoice documents in the current one-minute window.
@@ -10914,9 +10915,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/FileForbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/FileNotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters:
@@ -11056,8 +11057,8 @@ paths:
             text/csv:
               schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Export this edition's permitted frozen metrics, chart readings and kept question answers.
   /search/data-answer:
@@ -14593,8 +14594,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -14739,8 +14740,8 @@ paths:
             image/png:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -16264,8 +16265,8 @@ paths:
             application/octet-stream:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
   /capture/activity:
     get:
       tags: [Capture]
@@ -22710,7 +22711,7 @@ paths:
           content:
             application/pdf:
               schema: {type: string, format: binary}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: >-
@@ -23663,8 +23664,8 @@ paths:
             text/csv:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
   /analytics/context:
     get:
       tags: [Reports]
@@ -25814,7 +25815,7 @@ paths:
           content:
             application/octet-stream:
               schema: {type: string, format: binary}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
     delete:
       tags: [Attachments]
@@ -26088,7 +26089,7 @@ paths:
             application/zip:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
   /imports/{id}:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -26260,8 +26261,8 @@ paths:
             text/csv:
               schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /imports/{id}/approve:
@@ -26983,8 +26984,8 @@ paths:
             application/octet-stream:
               schema: {type: string, format: binary}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/PermissionDenied'}
-        '404': {$ref: '#/components/responses/NotFound'}
+        '403': {$ref: '#/components/responses/FileForbidden'}
+        '404': {$ref: '#/components/responses/FileNotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /knowledge/corpora/{id}/ask:
     parameters:
@@ -27308,6 +27309,32 @@ components:
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
+    FileNotFound:
+      description: |-
+        No such file in this workspace, or out of RBAC scope. A browser tab that opened the file's
+        link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
+        instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          examples:
+            notFound:
+              value: {type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found.}
+        text/html:
+          schema: {type: string}
+    FileForbidden:
+      description: |-
+        Authenticated, but the role lacks the grant for this file (`code: permission_denied`). A
+        browser tab that opened the file's link (an `Accept` that prefers `text/html`) reads a short
+        page in the reader's language instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+          examples:
+            denied:
+              value: {type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action.}
+        text/html:
+          schema: {type: string}
     NotFound:
       description: No such resource in this workspace (or out of RBAC scope).
       content:

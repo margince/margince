@@ -62,6 +62,31 @@ func TestEveryFileRouteIsOneTheContractServesAsAFile(t *testing.T) {
 	}
 }
 
+func TestEveryFileRouteDeclaresThePageItsRefusalsCanBe(t *testing.T) {
+	doc := loadContract(t)
+	declared := 0
+	for route := range fileRoutes {
+		item := doc.Paths.Find(strings.TrimPrefix(route, httpserver.BaseURL))
+		if item == nil || item.Get == nil {
+			t.Errorf("the contract has no GET %s", route)
+			continue
+		}
+		for _, status := range []int{http.StatusForbidden, http.StatusNotFound} {
+			refusal := item.Get.Responses.Status(status)
+			if refusal == nil || refusal.Value == nil {
+				continue
+			}
+			declared++
+			if refusal.Value.Content.Get("text/html") == nil {
+				t.Errorf("GET %s declares a %d without text/html, but a browser tab is answered a page", route, status)
+			}
+		}
+	}
+	if declared == 0 {
+		t.Fatal("no file route declares a 403 or 404, so this read nothing")
+	}
+}
+
 type goneAttachment struct{ crmcontracts.Unimplemented }
 
 func (goneAttachment) DownloadAttachment(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {

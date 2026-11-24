@@ -2365,7 +2365,8 @@ export interface paths {
          *     A `parent_company_id` that names a company the caller cannot read answers 422 naming
          *     `parent_company_id`, the same for a missing record and for one hidden by row scope.
          *     A parent that already sits below this company answers 422 `parent_company_below` on
-         *     `parent_company_id`, with `params.name` naming that company.
+         *     `parent_company_id`, with `params.name` naming that company. A parent that is the company itself
+         *     answers 422 `parent_company_self` on `parent_company_id`.
          */
         patch: operations["updateCompany"];
         trace?: never;
@@ -65049,6 +65050,34 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /**
+         * @description No such file in this workspace, or out of RBAC scope. A browser tab that opened the file's
+         *     link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
+         *     instead of the problem; every other caller gets the problem.
+         */
+        FileNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+                "text/html": string;
+            };
+        };
+        /**
+         * @description Authenticated, but the role lacks the grant for this file (`code: permission_denied`). A
+         *     browser tab that opened the file's link (an `Accept` that prefers `text/html`) reads a short
+         *     page in the reader's language instead of the problem; every other caller gets the problem.
+         */
+        FileForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+                "text/html": string;
+            };
+        };
         /** @description No such resource in this workspace (or out of RBAC scope). */
         NotFound: {
             headers: {
@@ -66493,7 +66522,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["FileForbidden"];
         };
     };
     getAgentOpenAPIDocument: {
@@ -69378,8 +69407,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -69414,8 +69443,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -70796,8 +70825,8 @@ export interface operations {
                     "application/pdf": string;
                 };
             };
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The caller fetched 20 invoice documents in the current one-minute window. */
             429: {
@@ -77632,7 +77661,7 @@ export interface operations {
                     "image/png": string;
                 };
             };
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The logo could not be read. */
             default: {
@@ -79174,7 +79203,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description Rate-limited. */
             429: {
@@ -83013,8 +83042,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
@@ -83041,8 +83070,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -84701,7 +84730,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
+            403: components["responses"]["FileForbidden"];
         };
     };
     listChannelConnections: {
@@ -87593,8 +87622,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -87814,8 +87843,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no logo can be stored or served. */
             501: {
@@ -90781,8 +90810,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
         };
     };
     getLicenseEntitlement: {
@@ -97233,8 +97262,8 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The deployment has no object store configured, so no picture can be stored or served. */
             501: {
@@ -101306,7 +101335,7 @@ export interface operations {
                     "application/pdf": string;
                 };
             };
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
             /** @description The object store (blobstore) is not wired on this deployment — the same unwired-by-omission posture as renderOffer. */
             501: {
@@ -102427,8 +102456,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
         };
     };
     getAnalyticsContext: {
@@ -105205,7 +105234,7 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
-            404: components["responses"]["NotFound"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -105601,7 +105630,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
+            403: components["responses"]["FileForbidden"];
         };
     };
     getImportRun: {
@@ -105779,8 +105808,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
@@ -106830,8 +106859,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
-            403: components["responses"]["PermissionDenied"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["FileForbidden"];
+            404: components["responses"]["FileNotFound"];
             422: components["responses"]["ValidationError"];
         };
     };

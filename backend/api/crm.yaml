@@ -1376,7 +1376,7 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
 
   /openapi.json:
     get:
@@ -3830,7 +3830,8 @@ paths:
         A `parent_company_id` that names a company the caller cannot read answers 422 naming
         `parent_company_id`, the same for a missing record and for one hidden by row scope.
         A parent that already sits below this company answers 422 `parent_company_below` on
-        `parent_company_id`, with `params.name` naming that company.
+        `parent_company_id`, with `params.name` naming that company. A parent that is the company itself
+        answers 422 `parent_company_self` on `parent_company_id`.
       x-mcp-tool: { verb: update_record, record_type: company, tier: auto_execute, scope: write }
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -4083,8 +4084,8 @@ paths:
             image/png:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -4121,8 +4122,8 @@ paths:
             image/png:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -5721,8 +5722,8 @@ paths:
           content:
             application/pdf:
               schema: { type: string, format: binary }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: The caller fetched 20 invoice documents in the current one-minute window.
@@ -11538,7 +11539,7 @@ paths:
           content:
             image/png:
               schema: { type: string, format: binary }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         default:
           description: The logo could not be read.
@@ -12722,7 +12723,7 @@ paths:
             application/octet-stream:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
           description: Rate-limited.
@@ -15734,9 +15735,9 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          $ref: '#/components/responses/Forbidden'
+          $ref: '#/components/responses/FileForbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          $ref: '#/components/responses/FileNotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
       parameters:
@@ -15880,8 +15881,8 @@ paths:
             text/csv:
               schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /search/data-answer:
     post:
@@ -17578,7 +17579,7 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
 
   # ------------------------ /channel-connections ----------------------------
   # Workspace-level messaging-channel bindings (telegram-oa design §5, §9.1/§9.2).
@@ -20382,8 +20383,8 @@ paths:
             image/png:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -20565,8 +20566,8 @@ paths:
             image/png:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no logo can be stored or served.
@@ -23724,8 +23725,8 @@ paths:
             application/octet-stream:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
   /installation/license:
     get:
       tags: [Identity]
@@ -30273,8 +30274,8 @@ paths:
               description: The freshness a 200 for the same request would carry.
               schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: The deployment has no object store configured, so no picture can be stored or served.
@@ -33431,7 +33432,7 @@ paths:
           content:
             application/pdf:
               schema: { type: string, format: binary }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '501':
           description: >-
@@ -34678,8 +34679,8 @@ paths:
             text/csv:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
   /analytics/context:
     get:
       tags: [Reports]
@@ -37768,7 +37769,7 @@ paths:
           content:
             application/octet-stream:
               schema: { type: string, format: binary }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Attachments]
@@ -38288,7 +38289,7 @@ paths:
             application/zip:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
 
   /imports/{id}:
     parameters:
@@ -38484,8 +38485,8 @@ paths:
             text/csv:
               schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '409': { $ref: '#/components/responses/Conflict' }   # the validation pass has not produced a report yet
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -39360,8 +39361,8 @@ paths:
             application/octet-stream:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/PermissionDenied' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '403': { $ref: '#/components/responses/FileForbidden' }
+        '404': { $ref: '#/components/responses/FileNotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Knowledge]
@@ -40292,6 +40293,32 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    FileNotFound:
+      description: |
+        No such file in this workspace, or out of RBAC scope. A browser tab that opened the file's
+        link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
+        instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            notFound:
+              value: { type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found. }
+        text/html:
+          schema: { type: string }
+    FileForbidden:
+      description: |
+        Authenticated, but the role lacks the grant for this file (`code: permission_denied`). A
+        browser tab that opened the file's link (an `Accept` that prefers `text/html`) reads a short
+        page in the reader's language instead of the problem; every other caller gets the problem.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            denied:
+              value: { type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action. }
+        text/html:
+          schema: { type: string }
     NotFound:
       description: No such resource in this workspace (or out of RBAC scope).
       content:

@@ -65,8 +65,11 @@ func prefersHTML(accept string) bool {
 			continue
 		}
 		quality := 1.0
-		if q, err := strconv.ParseFloat(params["q"], 64); err == nil {
-			quality = q
+		if raw, named := params["q"]; named {
+			// RFC 9110 makes a malformed weight invalid, so it counts for nothing.
+			if quality, err = strconv.ParseFloat(raw, 64); err != nil {
+				quality = 0
+			}
 		}
 		switch {
 		case mediaType == "text/html":

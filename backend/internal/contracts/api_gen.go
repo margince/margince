@@ -76324,6 +76324,12 @@ type Conflict = Problem
 // ControllerMailRefused RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type ControllerMailRefused = Problem
 
+// FileForbidden RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type FileForbidden = Problem
+
+// FileNotFound RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type FileNotFound = Problem
+
 // Forbidden RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Forbidden = Problem
 

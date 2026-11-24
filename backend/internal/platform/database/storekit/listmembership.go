@@ -44,4 +44,5 @@ func ResolveListMembership(ctx context.Context, listID *ids.UUID, resolve ListMe
 	return members, err
 }
 
+// noListMembers keeps an unknown or hidden list from telling whether it exists.
 func noListMembers(string, func(any) int) (string, error) { return "FALSE", nil }
