@@ -86,15 +86,12 @@ func TestAMissingCompanyDetailIsAGapUntilItIsStated(t *testing.T) {
 	}
 }
 
-// A held send records its entity and the details it owed, split into sends a
-// user pressed and background sends. A message pressed twice counts once. A
-// marketing-only kind is owed per recipient, so the hold is what names it. An
-// edit to another detail starts the count again and keeps the gap; stating the
-// detail ends it.
+// A held send records its entity and missing details, split by who pressed
+// send. A message pressed twice counts once. An edit to another detail resets
+// the count and keeps the gap; stating the detail ends it.
 //
-// Mutation: skip the row in RecordFooterHoldTx, count log rows instead of
-// intents, drop the occurred_at window, or drop the particularFor filter, and
-// this fails.
+// Mutation: skip the row, count rows instead of intents, drop the occurred_at
+// window or the particularFor filter, and this fails.
 func TestAHeldSendCountsInItsEntitysGapUntilTheDetailsChange(t *testing.T) {
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "xb", messagingrules.Disclosure{Kind: messagingrules.ObjectionRoute, MarketingOnly: true})

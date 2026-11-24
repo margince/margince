@@ -21,9 +21,9 @@ func seat(objects map[string]principal.ObjectGrant) context.Context {
 func TestAFooterGapNamesTheEntityTheMissingDetailsAndTheHeldSends(t *testing.T) {
 	branch := ids.NewV7()
 	base := crmcontracts.HealthFinding{Id: "footer:footer_incomplete", Code: IncompleteCode, RequiresAction: true}
-	f := Finding(seat(nil), base, Gap{Name: "Branch Co", FooterGap: consent.FooterGap{
-		Entity: branch, Missing: []string{"privacy_contact"}, HeldByUser: 2, HeldInBackground: 1,
-	}})
+	f := Finding(seat(nil), base, Gap{
+		Name: "Branch Co", Entity: branch, Missing: []string{"privacy_contact"}, HeldByUser: 2, HeldInBackground: 1,
+	})
 	gap := f.FooterGap
 	if gap == nil || gap.LegalEntityName != "Branch Co" || ids.UUID(gap.LegalEntityId) != branch ||
 		!slices.Equal(gap.Missing, []crmcontracts.HealthFooterGapMissing{"privacy_contact"}) ||
@@ -59,10 +59,10 @@ func TestAFooterGapLeadsToWhereItsFirstDetailIsFilledIn(t *testing.T) {
 }
 
 // A seat that may fill the disclosure page but not the entity record sees the
-// gap with its button off, instead of a button that leads nowhere it can save.
+// gap with its button off. The button would lead to a page it cannot save.
 func TestAFooterButtonIsOffForASeatThatCannotChangeItsPage(t *testing.T) {
 	ops := seat(map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}, "legal_entity": {Read: true}})
-	onEntity := Gap{FooterGap: consent.FooterGap{Missing: []string{"controller_identity"}}}
+	onEntity := Gap{Missing: []string{"controller_identity"}}
 	if f := Finding(ops, crmcontracts.HealthFinding{}, onEntity); f.Action.Available {
 		t.Error("a seat without legal_entity update may open the entity editor")
 	}

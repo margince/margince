@@ -33,10 +33,10 @@ type FooterGap struct {
 // A kind only a recipient's pack owes is known from the holds alone.
 const footerHoldLookback = "90 days"
 
-// FooterGapsTx answers each live legal entity. A missing kind is an
-// obligation DisclosuresFor reports missing for a first message from that
-// entity, or a kind a recent held send recorded whose particular is still
-// empty. The send asks the same two questions, so the answers cannot differ.
+// FooterGapsTx answers each live legal entity. A missing kind is one that
+// DisclosuresFor reports missing for a first message from that entity. It is
+// also a kind a recent held send recorded, while its particular is empty. The
+// send asks the same two questions, so the answers cannot differ.
 // Only a seat that may change the particulars is told.
 func (s *Store) FooterGapsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error) {
 	if err := auth.Require(ctx, controllerParticularsObject, principal.ActionUpdate); err != nil {
@@ -77,7 +77,7 @@ func (s *Store) FooterGapsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error
 }
 
 // footerHoldsTx reads each live entity with the kinds its recent holds
-// recorded, and counts the held messages since its own row or the
+// recorded. It counts the messages held since the entity's row or the
 // installation's particulars last changed. A message pressed twice counts once.
 func footerHoldsTx(ctx context.Context, tx pgx.Tx) ([]FooterGap, error) {
 	rows, err := tx.Query(ctx, `
