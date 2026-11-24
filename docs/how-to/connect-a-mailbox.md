@@ -117,6 +117,10 @@ The meeting-notes connection (`gdocs`) reads the notes and transcripts Google Me
 the same Google OAuth app and environment values as Gmail. On that app's project, turn on the **Google Docs API**,
 and allow `<api-base>/v1/connectors/gdocs/callback` (in dev: `http://localhost:8080/v1/connectors/gdocs/callback`).
 
+Some installs set up their Google app before meeting notes existed. Such an install must add this address and
+turn on the Google Docs API before users connect meeting notes. Without them, Google answers `Error 400: redirect_uri_mismatch`, and
+reconnecting the account does not help.
+
 It asks for `documents.readonly` and `userinfo.email` as its own grant, and never sets `include_granted_scopes`. Put
 both on the consent screen. `documents.readonly` opens one Doc by its id; it cannot list or search Drive. Google
 reviews an app that asks for it before it leaves test mode. `userinfo.email` names the account that connected. The calendar connection keeps
