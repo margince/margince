@@ -68,6 +68,6 @@ func readTeamRequestStandingTx(ctx context.Context, tx pgx.Tx, host, member ids.
 	standing.Request.HostName, standing.Request.Title = schedulingDisplayName(name), stored.Title
 	standing.Pending = state == crmcontracts.SchedulingTeamMemberStatePending
 	words := strings.Join([]string{page.String(), string(state), standing.Request.HostName, standing.Request.Title}, "\x00")
-	standing.Fingerprint = int64(maphash.String(teamRequestSeed, words))
+	standing.Fingerprint = int64(maphash.String(teamRequestSeed, words) >> 1)
 	return standing, nil
 }
