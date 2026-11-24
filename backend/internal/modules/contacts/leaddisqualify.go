@@ -80,6 +80,12 @@ func (s *Store) DisqualifyLead(
 				`DELETE FROM taggable WHERE entity_type = 'lead' AND entity_id = $1`, id); err != nil {
 				return out, fmt.Errorf("drop the lead's tags: %w", err)
 			}
+			// The lead leaves its Shortlists as any archived record does, and each
+			// removal is logged on the list.
+			var dropped storekit.ArchiveCascade
+			if err := dropShortlistMemberships(ctx, tx, &dropped, leadMemberships, id.UUID); err != nil {
+				return out, fmt.Errorf("drop the lead's list memberships: %w", err)
+			}
 			patch := disqualifyLeadPatch(current, in)
 			after := patch.After()
 			if options.releaseSourceKey {

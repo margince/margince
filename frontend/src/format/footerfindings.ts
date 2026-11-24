@@ -56,6 +56,8 @@ function footerKindText(kind: string, t: Translator): string {
       return t("sendPermission.footer.privateLink");
     case "public_opt_out_link":
       return t("sendPermission.footer.publicLink");
+    case "unsubscribe_link":
+      return t("sendPermission.footer.unsubscribeLink");
     default:
       return t("sendPermission.footer.unknown");
   }

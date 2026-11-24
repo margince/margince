@@ -9,10 +9,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/mailhooks"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
@@ -49,8 +51,10 @@ func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
 
 // mailDealRepair is the repair the data task runs and the operator previews.
 func mailDealRepair(pool *pgxpool.Pool) capture.DealRepair {
+	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return capture.DealRepair{
-		Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		Authority:  identity.NewService(pool), Filer: ActivityDealFiler{},
+		Candidates: store, Authority: identity.NewService(pool), Filer: ActivityDealFiler{},
+		AdmitClosed: func(deal ids.UUID) capture.DealCandidates { return store.CandidatesOnly(deal) },
+		Hooks:       mailhooks.New(ComposedExtensions, pool),
 	}
 }

@@ -29,7 +29,7 @@
   background: linear-gradient(
     90deg,
     transparent 0%,
-    color-mix(in srgb, var(--ai) 40%, var(--bgElevated)) 50%,
+    color-mix(in srgb, var(--ai) 40%, var(--bgField)) 50%,
     transparent 100%
   );
   transform: translateX(-100%);

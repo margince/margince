@@ -316,16 +316,7 @@ export function dealRowSelection({
           <DealBulkBar
             deals={chosen.selectedRows}
             stages={stages}
-            // The rows that went through leave the selection. The ones that
-            // refused stay in it, named, so the reader can retry them once
-            // the list has refetched their versions.
-            onDone={(outcomes) =>
-              chosen.replace(
-                outcomes
-                  .filter((outcome) => outcome.error)
-                  .map((outcome) => outcome.id),
-              )
-            }
+            onDone={chosen.clear}
           />
         ),
       };

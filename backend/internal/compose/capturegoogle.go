@@ -148,6 +148,7 @@ func newCaptureRegistryWithGoogle(
 	reg := NewCaptureRegistry(pool, vault, cfg)
 	if appReachable(resolve, c.canSync()) {
 		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPIWithQuota(nil, "", cfg.GmailMailboxQuota, cfg.GmailProjectQuota)).
+			WithBackfillTuning(cfg.historyTuning()).
 			WithBounceSink(newBounceSink(pool)).WithSharedMailboxes(gmail.SharedAuthConfig{}))
 		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
 		reg.Register(gdocs.New(newGdocsAuthorizer(resolve, c), gdocs.NewOwner(nil, "")).WithDocs(gdocs.NewDocsAPI(nil, "")))
@@ -176,7 +177,7 @@ func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig
 	// silently, which reads as an empty inbox rather than as a broken one.
 	google, microsoft := newConnectorAppResolvers(pool, vault, log)
 	reg := newCaptureRegistryWithGoogle(pool, vault, google, c, cfg)
-	registerMicrosoftConnectors(reg, microsoft, g, pool)
+	registerMicrosoftConnectors(reg, microsoft, g, pool, cfg.historyTuning())
 	return reg
 }
 

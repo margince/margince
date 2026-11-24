@@ -21,6 +21,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
+import { REPORT_SCHEMA } from "./analytics.questions.testkit";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -259,6 +260,10 @@ const ROUTES: readonly Route[] = [
   {
     when: ({ url }) => url.endsWith("/me"),
     answer: (_asked, opts) => jsonResponse(meAnswer(opts)),
+  },
+  {
+    when: ({ url }) => url.includes("/analytics/schema"),
+    answer: () => jsonResponse(REPORT_SCHEMA),
   },
   {
     when: ({ url }) => url.includes("/analytics/coverage"),

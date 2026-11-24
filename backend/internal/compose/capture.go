@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/capturetimeline"
 	"github.com/margince/margince/backend/internal/compose/duequestion"
+	"github.com/margince/margince/backend/internal/compose/mailhooks"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
@@ -33,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // gmailScopes are the Google scopes a Gmail connection requests: mail read for
@@ -106,8 +108,13 @@ type CaptureConfig struct {
 	MaxBackfillMonths  int
 	HistoryConcurrency int
 	HistoryHold        bool
-	GmailMailboxQuota  int
-	GmailProjectQuota  int
+	// HistoryPageSize, HistoryFetchWorkers, HistoryLookahead and HistoryPageDelay
+	// are already resolved against their defaults by CaptureConfigFromDeploy. A
+	// zero value, as in a bare construction, keeps the built-in behaviour.
+	HistoryPageSize, HistoryFetchWorkers, HistoryLookahead int
+	HistoryPageDelay                                       time.Duration
+	GmailMailboxQuota                                      int
+	GmailProjectQuota                                      int
 	// Now is the clock the deal question judges a mail's currentness by. Nil
 	// is the wall clock.
 	Now func() time.Time
@@ -171,6 +178,12 @@ var RatesModelPricing = config.Define(config.Spec[map[string]string]{
 	Doc: "Ignored, with a warning at boot; kept so existing files load.",
 })
 
+// historyTuning is the history import's page size and fetching, as the
+// connectors take them.
+func (c CaptureConfig) historyTuning() connector.BackfillTuning {
+	return connector.BackfillTuning{PageSize: c.HistoryPageSize, FetchWorkers: c.HistoryFetchWorkers, Lookahead: c.HistoryLookahead}
+}
+
 // NewCaptureRegistry builds the connector registry; process roles register
 // their compiled-in connectors on it and drive SyncOnce. The vault seals and
 // resolves each connection's credential (nil is valid for a role that only
@@ -190,7 +203,8 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 		// leaves the product's own ceiling, which is what an enumerate-only
 		// construction and every deployment that has not set one get.
 		WithMaxBackfillMonths(cfg.MaxBackfillMonths).
-		WithBackfillAdmission(cfg.HistoryConcurrency, cfg.HistoryHold)
+		WithBackfillAdmission(cfg.HistoryConcurrency, cfg.HistoryHold).
+		WithBackfillPageDelay(cfg.HistoryPageDelay)
 	// The standing IMAP connector needs no deployment config — credentials
 	// are per-connection, vault-sealed — so every capture-capable role
 	// carries it. With a pool it also records the delivery reports the
@@ -315,18 +329,16 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithProjectAttribution(capture.ProjectAttribution{
 			Keys:  ProjectsStore(pool),
 			Stamp: activities.StampCorrespondenceForProject,
+			File:  activities.FileOnProjectTx,
 		}).
 		// The deal rule reads its candidates from the module that owns `deal`,
 		// and asks its one question through the store that owns tasks.
 		WithDealAttribution(capture.DealAttribution{
 			Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-			Ask: whichDealAsker{
-				tasks: activities.NewStore(InstallationDB(pool)),
-				deals: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-				now:   cfg.clock(),
-			}.Ask,
-			Filer: ActivityDealFiler{},
-			Check: NewDealTopicCheck(pool, cfg.DealTopicBrain),
+			Ask:        newWhichDealAsker(pool, cfg.clock()).Ask,
+			Filer:      ActivityDealFiler{},
+			Check:      NewDealTopicCheck(pool, cfg.DealTopicBrain),
+			Hooks:      mailhooks.New(ComposedExtensions, pool),
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives

@@ -134,7 +134,7 @@
      page's ground sat in the strip as a hole. */
   border: 1px solid var(--groundEdge);
   border-radius: var(--r-sm);
-  background: var(--pane);
+  background: var(--bgControl);
   text-align: left;
   cursor: pointer;
   /* What is drawn as a field takes a field's depth: this is a button, but it

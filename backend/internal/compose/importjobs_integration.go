@@ -16,6 +16,7 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -146,3 +147,6 @@ func governedInto[T river.JobArgs](reg *jobRegistry, into *river.Worker[T]) erro
 	*into = jobs.Govern[T](work, spec)
 	return nil
 }
+
+// ForecastStoreForTest is the forecasting store as the server builds it, lens included.
+func ForecastStoreForTest(pool *pgxpool.Pool) *forecasting.Store { return newForecastStoreFor(pool) }

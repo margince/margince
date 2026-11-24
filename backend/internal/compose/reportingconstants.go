@@ -3,6 +3,8 @@
 
 package compose
 
+import "github.com/margince/margince/backend/internal/modules/reporting"
+
 const (
 	reportingStatusField                   = "status"
 	reportingEventPeriod                   = "event_period"
@@ -27,7 +29,7 @@ const (
 	reportingInsufficientSample            = "insufficient_sample"
 	reportingInterval                      = "interval"
 	reportingMonthContext                  = "month"
-	reportingForecastProjection            = "forecast_projection"
+	reportingForecastProjection            = string(reporting.SourceForecastProjection)
 	reportingPartial                       = "partial"
 	reportingForecastLanding               = "forecast_landing"
 	reportingPipelineMovement              = "pipeline_movement"

@@ -320,8 +320,8 @@ cd backend && go test ./internal/compose/ -run TestTheMCPToolCoverageIsPublished
 Each verdict carries a `stamp` of what it measured. It holds a short hash of the scenario file and
 of the published entries of the tools its checks name (`docs/reference/mcp-info.json`). For a
 router, that entry includes the bodies `read_workspace topic=actions` serves. It also holds
-a hash of the server instructions and of the grading harness, the judge model, the commit and the
-time. Before it runs, the lane checks that `mcp-info.json` is what the tree serves.
+a hash of the server instructions, each resource text and the harness, with each parser, the judge, the
+commit and the time. The lane first checks that `mcp-info.json` is what the tree serves.
 
 To grade saved transcripts again, run `check.py --record` with `E2E_LLM_COMMIT` and `E2E_LLM_RAN_AT` set to the run's commit and time, and `E2E_LLM_GRADED_COMMIT` to the commit that grades.
 The stamp then holds `graded_commit` and `graded_at` too. Where the two commits differ, `make e2e-llm-report` and the coverage page say `re-graded`.

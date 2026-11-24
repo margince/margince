@@ -29,6 +29,7 @@ var seatColumns = map[string]bool{
 	colOwnerID:             true,
 	colMeetingCreditedSeat: true,
 	colCreditedSeat:        true,
+	colCreditedSeats:       true,
 }
 
 func namesSeat(spec reportSpec, field string) bool {

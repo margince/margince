@@ -6,7 +6,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## ai_call
 
-32 columns · primary key `(id)` · referenced by 1 foreign key
+33 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -24,6 +24,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `decision_confidence` | `numeric(4,3)` |  |  |
 | `degraded` | `boolean`, default `false` | yes |  |
 | `error_sentinel` | `text` |  |  |
+| `extension` | `text`, default `''::text` | yes |  |
 | `is_terminal` | `boolean`, default `true` | yes |  |
 | `kind` | `text`, default `'completion'::text` | yes | One of `completion`, `embedding`, `decision`. |
 | `latency_ms` | `bigint`, default `0` | yes |  |
@@ -78,8 +79,8 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "served_model": 20000, "subject_type": 20000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "context_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"kind":20000,"model_id":20000,"provider":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "config_hash": 20000, "served_model": 20000, "subject_type": 20000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "context_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"kind":20000,"model_id":20000,"provider":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "extension": 500, "config_hash": 20000, "served_model": 20000, "subject_type": 20000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "context_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"extension":500,"kind":20000,"model_id":20000,"provider":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "task": 20000, "tier": 20000, "model_id": 20000, "provider": 20000, "extension": 500, "config_hash": 20000, "served_model": 20000, "subject_type": 20000, "attempt_reason": 2000, "context_scopes": 20000, "error_sentinel": 20000, "decision_choice": 20000, "served_provider": 20000, "context_fingerprint": 20000, "served_identity_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"attempt_reason":2000,"config_hash":20000,"context_fingerprint":20000,"context_scopes":20000,"decision_choice":20000,"error_sentinel":20000,"extension":500,"kind":20000,"model_id":20000,"provider":20000,"served_identity_source":20000,"served_model":20000,"served_provider":20000,"subject_type":20000,"task":20000,"tier":20000}')`
 
 ## ai_call_config
 

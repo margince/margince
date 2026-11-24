@@ -18,6 +18,7 @@ import { LocaleProvider, useT } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { openViewStep } from "../../testing/listview.testkit";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { leadColumns } from "./leads.columns";
 
@@ -62,6 +63,9 @@ function Cell({
   return <div data-testid="cell">{column.cell(row)}</div>;
 }
 
+// A reader who may open companies, so a linked company is named by its own name.
+const COMPANY_READER: GrantSpec = { lead: ["read"], company: ["read"] };
+
 // The cell sits in a clickable row, as the table draws it. A test can then see
 // whether a click inside the cell also opened the row.
 function renderCell(
@@ -74,6 +78,7 @@ function renderCell(
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ allow: COMPANY_READER }));
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -358,6 +363,7 @@ describe("a lead's row on a phone", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(["me"], meFixture({ allow: COMPANY_READER }));
     render(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">

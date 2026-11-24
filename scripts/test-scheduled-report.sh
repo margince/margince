@@ -334,6 +334,24 @@ expect_split growth GROWTH_RESULT GROWTH_OUTCOME breach \
 expect_split perf PERF_RESULT PERF_OUTCOME breach \
 	"the weekly PERF-3/PERF-7 run could not complete" \
 	"a PERF-3/PERF-7 budget is breaching on main"
+expect_split perf-mid-market PERF_MM_RESULT PERF_MM_OUTCOME breach \
+	"the weekly PERF-3/PERF-7 run on the mid-market tier could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main (mid-market tier)"
+
+# A measure-only dispatch runs with the gate off. Its green is no verdict and its
+# lane failure is not the weekly lane's, so no outcome may open or close an issue,
+# on either tier.
+perf_open="$(printf '10\t%s\n20\t%s\n30\t%s\n40\t%s\n' \
+	"the weekly PERF-3/PERF-7 run on the mid-market tier could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main (mid-market tier)" \
+	"the weekly PERF-3/PERF-7 run could not complete" \
+	"a PERF-3/PERF-7 budget is breaching on main")"
+expect_actions "perf measure-only/a green run closes nothing" "" "$perf_open" \
+	PERF_MEASURE_ONLY=true PERF_MM_RESULT=success PERF_MM_OUTCOME=ok PERF_RESULT=success
+expect_actions "perf measure-only/a breach files nothing" "" "$perf_open" \
+	PERF_MEASURE_ONLY=true PERF_MM_RESULT=failure PERF_MM_OUTCOME=breach
+expect_actions "perf measure-only/a lane failure files nothing" "" "$perf_open" \
+	PERF_MEASURE_ONLY=true PERF_MM_RESULT=failure PERF_MM_OUTCOME=lane-failed
 
 expect_split renovate RENOVATE_RESULT RENOVATE_OUTCOME quiet \
 	"the Renovate liveness check could not run" \

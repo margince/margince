@@ -48,7 +48,7 @@ func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, deal
 		return DealNotWritable, err
 	}
 	// Deal edits may have committed while the candidate read waited for its lock.
-	facts, err := readDealFacts(f.decider, tx, activityID, false)
+	facts, err := readDealFacts(f.decider, tx, activityID, false, f.hooks)
 	if err != nil {
 		return "", err
 	}
@@ -56,7 +56,7 @@ func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, deal
 	if err != nil || current.Outcome != DealLinked || current.Deal != dealID {
 		return DealNotWritable, err
 	}
-	landed, filed, err := f.filer.FileOnDealIfUnfiled(f.writer, tx, activityID, dealID, f.evidence, current.Relevance)
+	landed, filed, err := f.filer.FileOnDealIfUnfiled(f.writer, tx, activityID, dealID, withHookEvidence(f.evidence, current.Hooks), current.Relevance)
 	switch {
 	case err != nil:
 		return "", err
@@ -105,13 +105,14 @@ func mayFileOnDeal(f dealFiling, tx pgx.Tx, dealID ids.UUID) (bool, error) {
 	if err := storekit.LockLastActivityTargets(f.writer, tx, storekit.LastActivityTargets{Deals: []ids.UUID{dealID}}); err != nil {
 		return false, fmt.Errorf("capture: %w", err)
 	}
-	// An archived or closed deal takes no new mail, whoever may see it.
+	// An archived or closed deal takes no new mail, whoever may see it, except
+	// the one closed deal the filing admits.
 	if !auth.ReadGranted(f.decider, "deal") {
 		return false, nil
 	}
 	var open bool
 	if err := tx.QueryRow(f.writer, `SELECT EXISTS (SELECT 1 FROM deal d
-		 WHERE d.id = $1 AND d.status = 'open' AND d.archived_at IS NULL)`, dealID).Scan(&open); err != nil || !open {
+		 WHERE d.id = $1 AND (d.status = 'open' OR d.id = $2) AND d.archived_at IS NULL)`, dealID, f.admit).Scan(&open); err != nil || !open {
 		return false, err
 	}
 	if err := auth.EnsureLinkTarget(f.decider, tx, string(datasource.EntityDeal), dealID); err != nil {

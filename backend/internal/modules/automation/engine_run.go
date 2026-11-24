@@ -152,7 +152,7 @@ func (e *WorkflowEngine) gateAndApply(ctx context.Context, h workflow.Handler, e
 		}
 		return e.passedOverForLapsedSetter(ctx, h, ev)
 	}
-	claimed, err := e.claimRun(ctx, h, ev, plannedJSON, runStatusApplied, nil)
+	claimed, err := e.claimRunForApply(ctx, h, ev, plannedJSON)
 	if err != nil || !claimed {
 		return err
 	}
@@ -271,20 +271,14 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			// `null` over a column that has read SQL NULL for those runs since
 			// they existed — a shape change on a shared path, for no gain.
 			if len(result.Applied) == 0 {
-				_, err := tx.Exec(ctx, `
-					UPDATE workflow_run SET status = 'requires_approval', detail = $3
-					WHERE handler = $1 AND idempotency_key = $2`,
-					h.Spec().Name, runKey(h, ev), detail)
+				_, err := tx.Exec(ctx, runOutcomeSQL[outcomeStaged], h.Spec().Name, runKey(h, ev), detail)
 				return err
 			}
 			appliedJSON, err := json.Marshal(result.Applied)
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'requires_approval', detail = $3, applied = $4
-				WHERE handler = $1 AND idempotency_key = $2`,
-				h.Spec().Name, runKey(h, ev), detail, appliedJSON)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeStagedWithApplied], h.Spec().Name, runKey(h, ev), detail, appliedJSON)
 			return err
 		case errors.Is(applyErr, ErrNoNotificationTransport):
 			// Matched and would have delivered, but no Notifier was wired
@@ -297,9 +291,7 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'skipped', detail = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeSkipped], h.Spec().Name, runKey(h, ev), detail)
 			return err
 		case errors.As(applyErr, &declinedApply):
 			// The handler looked and found nothing to act on — an unroutable
@@ -316,27 +308,21 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'skipped', detail = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeSkipped], h.Spec().Name, runKey(h, ev), detail)
 			return err
 		case applyErr != nil:
-			detail, err := reasonDetail(sanitizedReason(applyErr))
+			detail, err := failureDetail(sanitizedReason(applyErr), !WriteRefused(applyErr))
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET status = 'failed', detail = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), detail)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeFailed], h.Spec().Name, runKey(h, ev), detail)
 			return err
 		default:
 			appliedJSON, err := json.Marshal(result.Applied)
 			if err != nil {
 				return err
 			}
-			_, err = tx.Exec(ctx, `
-				UPDATE workflow_run SET applied = $3
-				WHERE handler = $1 AND idempotency_key = $2`, h.Spec().Name, runKey(h, ev), appliedJSON)
+			_, err = tx.Exec(ctx, runOutcomeSQL[outcomeApplied], h.Spec().Name, runKey(h, ev), appliedJSON)
 			return err
 		}
 	})
@@ -356,13 +342,32 @@ func (e *WorkflowEngine) recordApplyOutcome(ctx context.Context, h workflow.Hand
 // is NOT NULL; a silently-wrong provenance is the honest-hard-case this
 // column guards against).
 func (e *WorkflowEngine) claimRun(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte, status string, detail []byte) (bool, error) {
+	return e.insertRun(ctx, h, ev, planned, status, detail, false)
+}
+
+// applyRetryWindow bounds how long after its first attempt a failed apply may
+// be taken over by a redelivery. The bus redelivers without limit, so a
+// permanent fault must stop re-running and wait for an operator.
+const applyRetryWindow = "1 hour"
+
+// claimRunForApply claims the run before Apply, like claimRun.
+// When the handler declares a replay safe, a run whose Apply failed with a
+// fault that was not a refusal is claimed again. A redelivery then retries the failed notice.
+func (e *WorkflowEngine) claimRunForApply(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte) (bool, error) {
+	return e.insertRun(ctx, h, ev, planned, runStatusApplied, nil, h.Spec().ReplaysAfterFailedApply)
+}
+
+// insertRun claims the (handler, key) row. With reclaim set, a row whose Apply
+// failed and was recorded retryable is taken over inside the window.
+// A refusal would answer the same way again, so it stays terminal.
+func (e *WorkflowEngine) insertRun(ctx context.Context, h workflow.Handler, ev workflow.Event, planned []byte, status string, detail []byte, reclaim bool) (bool, error) {
+	args := []any{h.Spec().Name, runKey(h, ev), ev.ID, planned, status, detail}
+	if reclaim {
+		args = append(args, applyRetryWindow)
+	}
 	claimed := false
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `
-			INSERT INTO workflow_run (handler, idempotency_key, trigger_event, planned, status, detail)
-			VALUES ($1, $2, $3, $4, $5, $6)
-			ON CONFLICT (handler, idempotency_key) DO NOTHING`,
-			h.Spec().Name, runKey(h, ev), ev.ID, planned, status, detail)
+		tag, err := tx.Exec(ctx, claimRunSQL(reclaim), args...)
 		if err != nil {
 			return err
 		}

@@ -59,7 +59,7 @@ var retractableFillSources = map[string]bool{enrichSource: true, siteFieldSource
 // profileFields are the fields those passes can land.
 var profileFields = map[string]bool{
 	fieldTitle: true, fieldPhone: true, fieldRole: true, fieldCompanyName: true,
-	fieldAddress: true, fieldLinkedin: true, fieldWebsite: true,
+	fieldAddress: true, fieldLinkedin: true, fieldWebsite: true, fieldEmail: true,
 }
 
 // fillRetractSource marks the audit row of a retraction, so a later reader can

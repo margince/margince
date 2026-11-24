@@ -23,6 +23,7 @@ const (
 	StateCaptureAnsweredSweepCursor  InstallationStateKey = "capture_answered_sweep_cursor"
 	StateCapturePartyAdmissionCursor InstallationStateKey = "capture_party_admission_cursor"
 	StateDealAuthorshipSweepCursor   InstallationStateKey = "deal_authorship_sweep_cursor"
+	StateStakeholderMailBackfill     InstallationStateKey = "stakeholder_mail_backfill"
 )
 
 // InstallationStateTx reads the row of key into the shape its writer stores.

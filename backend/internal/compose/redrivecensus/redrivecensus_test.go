@@ -19,6 +19,7 @@ package redrivecensus
 // vocabulary, two writes.
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -136,4 +137,23 @@ func everyRegisteredHandler() []workflow.Handler {
 	handlers = append(handlers, contacts.LeadSLAWorkflows(nil)...)
 	handlers = append(handlers, activities.FollowUpWorkflows(nil)...)
 	return append(handlers, activities.OwnershipWorkflows(nil)...)
+}
+
+// replaysAfterFailedApply names the handlers whose Apply may run again after a
+// failed first Apply. stage_change_notify qualifies because its notice's dedupe
+// key is the handler's idempotency key.
+// A handler creating records through the effect claim must never join.
+// Its replay folds on the earlier firing's unconfirmed claim and loses the record.
+var replaysAfterFailedApply = []string{"stage_change_notify"}
+
+func TestOnlyKeyedHandlersReplayAfterAFailedApply(t *testing.T) {
+	t.Parallel()
+	for _, h := range everyRegisteredHandler() {
+		spec := h.Spec()
+		allowed := slices.Contains(replaysAfterFailedApply, spec.Name)
+		if spec.ReplaysAfterFailedApply != allowed {
+			t.Errorf("%q declares ReplaysAfterFailedApply=%v; replaysAfterFailedApply says %v",
+				spec.Name, spec.ReplaysAfterFailedApply, allowed)
+		}
+	}
 }

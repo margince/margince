@@ -61,16 +61,6 @@ func ownerString(owner *ids.UUID) string {
 	return owner.String()
 }
 
-// lowerWinProbability is the downgrade tier's notch: half the probability,
-// floored to a multiple of five, and nothing below ten. 90 goes to 45, 20,
-// 10, 5 and then 0 on successive quiet nights.
-func lowerWinProbability(p int) int {
-	if p < 10 {
-		return 0
-	}
-	return p / 2 / 5 * 5
-}
-
 // setCloseDate assigns the sweep's proposed date only where it differs from the
 // one the deal already claims.
 //
@@ -199,18 +189,13 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 	return "", fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
 }
 
-// downgradeAndReview is the 🔻 tier. A deal nobody has touched has its win
-// probability lowered one notch, and its owner is asked whether it is still
-// real. A probability a colleague set is theirs and is never lowered.
+// downgradeAndReview is the 🔻 tier. The deal's owner is asked whether it is
+// still real. The deal's win probability is not written: the quiet signal
+// moves the one win chance through forecasting.ResolveWinChance.
 func (c *CloseDateCorrector) downgradeAndReview(
 	ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene,
 	proposal CloseDateCorrection, pace closeDatePace, now time.Time, loc *time.Location, runID ids.UUID,
 ) (string, error) {
-	effective, source := cand.winProbability()
-	notched := effective
-	if source != SourceHuman {
-		notched = lowerWinProbability(effective)
-	}
 	// The 🟡 review: gone quiet — still alive? The proposal keeps the
 	// stage-velocity date the assessment computed, on BOTH branches. It
 	// used to be overwritten here with the deal's CURRENT date whenever the
@@ -260,9 +245,6 @@ func (c *CloseDateCorrector) downgradeAndReview(
 		extra[CloseDateRemainingStagesKey] = StagesToGo(cand.remainingOpen)
 	}
 	wrote, err := c.apply(ctx, cand, "downgrade_and_review", EvidenceOf(review, cand.expectedClose), runID, func(p *storekit.Patch, row lockedDeal) {
-		if notched != effective {
-			setWinProbability(p, row.override, row.overrideBy, &notched, SourceMargince)
-		}
 		// A future date stays intact while confidence is reviewed.
 		setCloseDate(p, row.expectedClose, *hygiene.ProposedClose)
 		if !row.provisional && (row.expectedClose == nil || !dateOnly(*row.expectedClose).Equal(*hygiene.ProposedClose)) {

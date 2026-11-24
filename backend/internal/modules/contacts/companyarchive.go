@@ -187,14 +187,7 @@ func retireCompanyCascade(ctx context.Context, tx pgx.Tx, id ids.CompanyID, now 
 		pgx.StrictNamedArgs{archiveRecordKey: id, archiveStateKey: now}); err != nil {
 		return storekit.ArchiveCascade{}, fmt.Errorf("retire company relationships: %w", err)
 	}
-	if err := cascade.DropMemberships(ctx, tx,
-		`WITH gone AS (
-			DELETE FROM list_member WHERE `+companyArchiveMemberships+`
-			RETURNING list_id, entity_type, entity_id, added_by, created_at, note),
-		logged AS (
-			INSERT INTO list_member_event (list_id, entity_type, entity_id, action, reason, actor)
-			SELECT list_id, entity_type, entity_id, 'removed', 'record_archived', @actor FROM gone)
-		SELECT list_id, added_by, created_at, note FROM gone`, id.UUID); err != nil {
+	if err := dropShortlistMemberships(ctx, tx, &cascade, companyArchiveMemberships, id.UUID); err != nil {
 		return storekit.ArchiveCascade{}, fmt.Errorf("drop the account's list memberships: %w", err)
 	}
 	if err := cascade.DropTags(ctx, tx,

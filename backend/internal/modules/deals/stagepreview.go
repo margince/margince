@@ -41,7 +41,7 @@ func (s *Store) PreviewAdvanceDeal(ctx context.Context, id ids.DealID, in Advanc
 		if err != nil {
 			return err
 		}
-		visible, err := finishDealForCaller(ctx, tx, current)
+		visible, err := s.finishDealStamped(ctx, tx, current)
 		if err != nil {
 			return err
 		}

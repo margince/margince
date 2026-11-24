@@ -25,7 +25,7 @@ type SingleRungLadder struct {
 func (cfg RoutingConfig) SingleRungLadders() []SingleRungLadder {
 	var found []SingleRungLadder
 	index := map[routeMeta]int{}
-	for _, task := range AllTasks() {
+	for _, task := range RoutedTasks() {
 		plan, blocked := boundPlan(cfg, task, "")
 		if blocked || len(plan) < 2 {
 			continue

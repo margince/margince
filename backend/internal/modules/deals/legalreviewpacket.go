@@ -104,7 +104,7 @@ func (s *Store) buildReviewPacket(
 	ctx context.Context, tx pgx.Tx, dealID ids.DealID, records packetRecords,
 ) (reviewPacket, error) {
 	var out reviewPacket
-	deal, err := readDealForCaller(ctx, tx, dealID, storekit.LiveOnly, nil)
+	deal, err := s.readDealStamped(ctx, tx, dealID, storekit.LiveOnly, nil)
 	if err != nil {
 		return out, err
 	}

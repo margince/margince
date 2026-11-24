@@ -465,16 +465,15 @@ func preflightSecrets(e extension.Extension) error {
 	return nil
 }
 
-// preflightFailureClasses validates one unit's declared failure vocabulary
-// through the same published ValidateFailureClasses the job layer runs at
-// registration, so a bad class is refused with the unit's name attached.
-//
-// It is preflighted HERE as well as at registration because the registration
-// is keyed by River kind, and a kind names a unit only to somebody who can
-// decode the namespace. The unit is what an operator has to go fix, and the
-// validate phase is the only place that still knows it.
+// preflightFailureClasses validates one unit's declared failure vocabulary and
+// mail hook reasons, so a bad entry is refused with the unit's name attached.
+// The job layer validates the classes again at registration, by kind, which
+// names a unit only to somebody who can decode the namespace.
 func preflightFailureClasses(e extension.Extension) error {
 	if err := extension.ValidateFailureClasses(e.FailureClasses); err != nil {
+		return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+	}
+	if err := e.MailHooks.Validate(); err != nil {
 		return fmt.Errorf("compose: extension %q: %w", e.Name, err)
 	}
 	return nil

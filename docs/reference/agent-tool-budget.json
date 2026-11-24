@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 51741,
-    "median_tool_tokens": 797,
-    "mean_tool_tokens": 1077
+    "tokens": 53316,
+    "median_tool_tokens": 806,
+    "mean_tool_tokens": 1110
   },
   "agents": [
     {
@@ -85,7 +85,11 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4494
+      "tokens": 4600
+    },
+    {
+      "name": "read_reports",
+      "tokens": 3353
     },
     {
       "name": "change_settings",
@@ -94,10 +98,6 @@
     {
       "name": "change_activities",
       "tokens": 2918
-    },
-    {
-      "name": "read_reports",
-      "tokens": 2831
     },
     {
       "name": "read_workspace",
@@ -109,7 +109,11 @@
     },
     {
       "name": "find_records",
-      "tokens": 2041
+      "tokens": 2057
+    },
+    {
+      "name": "change_reports",
+      "tokens": 2014
     },
     {
       "name": "read_view",
@@ -117,19 +121,19 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1870
+      "tokens": 1891
     },
     {
       "name": "change_attention",
-      "tokens": 1775
+      "tokens": 1842
     },
     {
       "name": "send_outbound",
       "tokens": 1678
     },
     {
-      "name": "change_reports",
-      "tokens": 1599
+      "name": "read_analytics",
+      "tokens": 1373
     },
     {
       "name": "run_research",
@@ -148,10 +152,6 @@
       "tokens": 1096
     },
     {
-      "name": "read_analytics",
-      "tokens": 1067
-    },
-    {
       "name": "change_record_parts",
       "tokens": 1017
     },
@@ -164,6 +164,10 @@
       "tokens": 978
     },
     {
+      "name": "bulk_update_records",
+      "tokens": 892
+    },
+    {
       "name": "create_record",
       "tokens": 891
     },
@@ -174,10 +178,6 @@
     {
       "name": "change_relationships",
       "tokens": 816
-    },
-    {
-      "name": "bulk_update_records",
-      "tokens": 798
     },
     {
       "name": "read_lists",
@@ -205,7 +205,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 487
+      "tokens": 515
     },
     {
       "name": "list_approvals",

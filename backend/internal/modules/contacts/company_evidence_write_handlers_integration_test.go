@@ -307,3 +307,90 @@ func TestAnAgentCorrectedFactSurvivesTheNextDeepRead(t *testing.T) {
 	}
 	t.Fatal("the corrected phone fact is gone entirely")
 }
+
+// A confirmation changes no value, so a re-read that took the row back would
+// silently drop the human's agreement. Both sidecars run through the real
+// ApplyDeepRead with a proposal that differs from the stored value.
+func TestAConfirmedClaimSurvivesTheNextDeepRead(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	companyID := seedCompanyWithEvidence(ctx, t, e)
+
+	if _, err := e.store.ConfirmCompanyFact(ctx, companyID, "phone:", FactWriteInput{}); err != nil {
+		t.Fatalf("confirm phone: %v", err)
+	}
+	if _, err := e.store.ConfirmCompanyProfileField(ctx, companyID, "icp", ProfileFieldWriteInput{}); err != nil {
+		t.Fatalf("confirm icp: %v", err)
+	}
+	facts, err := e.store.ListCompanyFacts(ctx, companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields, err := e.store.ListCompanyProfileFields(ctx, companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	phone, hasPhone := factOf(facts, "phone")
+	icp, hasICP := profileFieldOf(fields, "icp")
+	if !hasPhone || !hasICP {
+		t.Fatalf("seeded rows missing before the deep read: phone=%v icp=%v", hasPhone, hasICP)
+	}
+
+	if err := e.store.ApplyDeepRead(ctx, DeepReadProposal{
+		CompanyID:  companyID,
+		SourceURL:  "https://voltaq.test/impressum",
+		SiteReadID: ids.NewV7(),
+		Fields: []DeepReadField{{
+			Field: "icp", Value: "Retail chains", EvidenceSnippet: `"for retail chains"`,
+			SourceURL: "https://voltaq.test/about", Confidence: 0.9,
+		}},
+		Facts: []DeepReadFact{{
+			Category: "company", Field: "phone", Value: "+49 30 0000", ValueKey: "",
+			EvidenceSnippet: `"+49 30 0000"`, SourceURL: "https://voltaq.test/impressum",
+			Confidence: 0.95,
+		}},
+	}); err != nil {
+		t.Fatalf("ApplyDeepRead: %v", err)
+	}
+
+	facts, err = e.store.ListCompanyFacts(ctx, companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fields, err = e.store.ListCompanyProfileFields(ctx, companyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gotPhone, ok := factOf(facts, "phone")
+	if !ok {
+		t.Fatal("the confirmed phone fact is gone after the deep read")
+	}
+	if gotPhone.Value != phone.Value || gotPhone.VerifiedAt == nil || string(gotPhone.Source) != "human" {
+		t.Errorf("phone = %q source %q after a deep read, want the confirmed %q kept as a human's", gotPhone.Value, gotPhone.Source, phone.Value)
+	}
+	gotICP, ok := profileFieldOf(fields, "icp")
+	if !ok {
+		t.Fatal("the confirmed icp field is gone after the deep read")
+	}
+	if gotICP.Value != icp.Value || gotICP.VerifiedAt == nil || string(gotICP.Source) != "human" {
+		t.Errorf("icp = %q source %q after a deep read, want the confirmed %q kept as a human's", gotICP.Value, gotICP.Source, icp.Value)
+	}
+}
+
+func factOf(facts []crmcontracts.CompanyFact, field string) (crmcontracts.CompanyFact, bool) {
+	for _, f := range facts {
+		if string(f.Field) == field {
+			return f, true
+		}
+	}
+	return crmcontracts.CompanyFact{}, false
+}
+
+func profileFieldOf(fields []crmcontracts.CompanyProfileField, field string) (crmcontracts.CompanyProfileField, bool) {
+	for _, f := range fields {
+		if string(f.Field) == field {
+			return f, true
+		}
+	}
+	return crmcontracts.CompanyProfileField{}, false
+}

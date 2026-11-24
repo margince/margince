@@ -80,3 +80,25 @@ func HeaderAt(value string, now time.Time) time.Duration {
 	}
 	return 0
 }
+
+// openAIResetCeiling bounds an OpenAI reset interval. Its daily limits can
+// state hours, which no caller should sleep on.
+const openAIResetCeiling = 10 * time.Minute
+
+// OpenAIReset reads the wait OpenAI states in x-ratelimit-reset-requests and
+// x-ratelimit-reset-tokens ("1s", "6m0s", "20ms"): the longest of the two,
+// capped, or zero when neither reads. Only the OpenAI adapter calls it, because
+// no other provider is known to spell these headers this way; Of stays the
+// reading for everything else.
+func OpenAIReset(resp *http.Response) time.Duration {
+	if resp == nil {
+		return 0
+	}
+	var longest time.Duration
+	for _, name := range []string{"x-ratelimit-reset-requests", "x-ratelimit-reset-tokens"} {
+		if wait, err := time.ParseDuration(strings.TrimSpace(resp.Header.Get(name))); err == nil {
+			longest = max(longest, wait)
+		}
+	}
+	return min(longest, openAIResetCeiling)
+}

@@ -37,6 +37,8 @@ Settings in Margince, by page:
 - How do I book a meeting with a contact, move or cancel it, or fix an invitation that needs attention? → [Meetings and booking](meetings-and-booking.md)
 - My mailbox stopped syncing, or emails stopped coming in: what do I do? → [Connecting your mailbox and calendar](connecting-mail-and-calendars.md)
 - How do I invite a colleague or change a role? → [Seats, roles and who can see what](seats-roles-and-access.md)
+- How do I make a new role, or change what a role can do? → [Roles and permissions](roles-and-permissions.md)
+- How do I turn a kind of notice off, or get it by email? → [Notifications](notifications.md)
 - How many days are left of the trial, and how do I get a licence? → [The trial](the-trial.md)
 - How do I add an AI provider's key, connect OpenRouter, or choose a Vertex location? → [AI providers](ai-providers.md)
 - What happens to an AI task while its provider is down? → [AI providers](ai-providers.md)
@@ -206,6 +208,10 @@ Records, deals and mail in Margince, by page:
   invitation, offering times and sharing personal links. What the invitation
   states mean, and moving, cancelling or retrying a meeting. Reminders, what
   counts as busy, and what a guest sees.
+- [Notifications](notifications.md): the kinds of notice you can set, the choices each one offers, and the
+  browser reminder row.
+- [Roles and permissions](roles-and-permissions.md): the Settings page that lists roles. Making a role, changing
+  its rights and whose records it changes, and archiving or restoring one.
 - [Your own settings](your-own-settings.md): changing your password, display
   name, language and theme, and turning off single-key shortcuts. Your email
   signature, your meetings and booking link, and your writing voice. Your agent

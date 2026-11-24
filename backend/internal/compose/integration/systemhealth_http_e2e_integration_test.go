@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
@@ -399,14 +400,21 @@ func TestSystemHealthBreaksDownTheChangesHomeCannotPlace(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, price := range []int64{200, 300} {
+	// A product price change is upkeep and stays out; a pipeline rename is
+	// not, and is counted.
+	pipeline := ids.From[ids.PipelineKind](uuidOf(t, apptest.DiscoverSeededPipeline(t, e).PipelineID))
+	for i, price := range []int64{200, 300} {
 		if _, err := store.UpdateProduct(ctx, ids.From[ids.ProductKind](ids.UUID(product.Id)), deals.UpdateProductInput{UnitPriceMinor: &price}); err != nil {
+			t.Fatal(err)
+		}
+		name := fmt.Sprintf("Synced pipeline %d", i)
+		if _, err := store.UpdatePipeline(ctx, pipeline, deals.UpdatePipelineInput{Name: &name}); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	source := unplacedSource(t, e)
-	want := []crmcontracts.HealthUnplacedChange{{EntityType: "product", Action: "update", Count: 2}}
+	want := []crmcontracts.HealthUnplacedChange{{EntityType: "pipeline", Action: "update", Count: 2}}
 	if source.Availability != "available" || source.Condition != "information" || source.Code != "unplaced_counted" ||
 		source.Count == nil || *source.Count != 2 || source.UnplacedChanges == nil || !slices.Equal(*source.UnplacedChanges, want) {
 		t.Fatalf("unplaced changes misreported: %+v", source)

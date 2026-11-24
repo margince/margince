@@ -117,69 +117,6 @@ func stampCaptureParticipants(
 	return nil
 }
 
-// RecordAttendeeNames settles the display_name of every participant row on one
-// activity from what the invitation said, and marks the rest as unnamed.
-//
-// It lives here because capture owns no table either — activities does — but
-// this is the module that already writes activity_participant, and a second
-// spelling of that write in compose would be a second place for the column set
-// to drift. The recovery pass in compose reads stored originals and calls this,
-// exactly as it calls StampFurtherParticipants for the rows themselves.
-//
-// EVERY name-less row on the activity is settled, named or not. A row left NULL
-// because the invitation did not name its attendee would be offered to the
-// recovery pass again on its next tick, and the pass would never drain.
-func RecordAttendeeNames(
-	ctx context.Context,
-	tx pgx.Tx,
-	activityID ids.ActivityID,
-	participants []connector.MessageParticipant,
-) error {
-	addresses := make([]string, 0, len(participants))
-	names := make([]string, 0, len(participants))
-	for _, p := range participants {
-		address := correspondence.Fold(p.Email)
-		name := strings.TrimSpace(p.DisplayName)
-		if address == "" || name == "" {
-			continue
-		}
-		addresses = append(addresses, address)
-		names = append(names, name)
-	}
-	if len(addresses) > 0 {
-		if _, err := tx.Exec(ctx, `
-			UPDATE activity_participant ap
-			   SET display_name = inp.display_name
-			  FROM unnest($2::text[], $3::text[]) AS inp(address, display_name)
-			 WHERE ap.activity_id = $1
-			   AND ap.address = inp.address
-			   AND ap.display_name IS NULL`,
-			activityID, addresses, names); err != nil {
-			return fmt.Errorf("capture: recording the name an invitation gave: %w", err)
-		}
-	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE activity_participant SET display_name = ''
-		 WHERE activity_id = $1 AND display_name IS NULL`, activityID); err != nil {
-		return fmt.Errorf("capture: settling the attendees an invitation did not name: %w", err)
-	}
-	return nil
-}
-
-// namesSomebody reports whether any of these parties arrived carrying a name.
-//
-// It is what keeps the naming pass off every ordinary mail capture: mail brings
-// no display name through this path, so without the guard every message would
-// buy a query that can only answer "nobody".
-func namesSomebody(participants []connector.MessageParticipant) bool {
-	for _, p := range participants {
-		if strings.TrimSpace(p.DisplayName) != "" {
-			return true
-		}
-	}
-	return false
-}
-
 // StampFurtherParticipants records everyone in the interaction who is neither
 // the mailbox owner nor the counterparty: the CCs on a thread, the organizer
 // and attendees of a meeting.
@@ -235,6 +172,9 @@ func stampParties(
 ) (int, error) {
 	if !relstrength.IsParticipantKind(kind) || len(participants) == 0 {
 		return 0, nil
+	}
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return 0, err
 	}
 	addresses := make([]string, 0, len(participants))
 	binds := make([]bool, 0, len(participants))
@@ -432,6 +372,9 @@ func insertParticipant(
 	// read off the wire, over a participant row that is a nicety rather than
 	// the point of the write.
 	address = correspondence.Fold(address)
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, address_domain_folded)
 		SELECT $1, $2, $3, NULLIF($4, ''), NULLIF($6, ''), $5, $7

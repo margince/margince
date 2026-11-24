@@ -26,14 +26,23 @@ function setupAnswer(configured: boolean) {
     });
 }
 
-function AiButton() {
+// The gate reads the query client, so it is called below the providers.
+function AiButtonBody() {
   const gate = useConnectAiGate("story-ai-reason");
   return (
-    <StoryProviders>
+    <>
       <Button variant="ai" reasonId={gate.reasonId} onClick={() => undefined}>
         Draft with AI
       </Button>
       {gate.notice}
+    </>
+  );
+}
+
+function AiButton() {
+  return (
+    <StoryProviders>
+      <AiButtonBody />
     </StoryProviders>
   );
 }

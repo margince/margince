@@ -56,9 +56,6 @@ type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 // record, the list it appears in and the 360 that summarizes it all read the
 // value being changed, so all three are refetched rather than left showing the
 // old one until something else happens to invalidate them.
-//
-// Exported for the lifecycle control beside the name (companylifecycle.tsx),
-// so it and the owner flow share one PATCH and one invalidation.
 // Through useMutation rather than a bare async call, so the write is a
 // MUTATION as far as the query client is concerned. The policy that refreshes a
 // record's open history after any successful write hangs off the mutation

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../src/api/schema";
+import { REPORT_SCHEMA } from "../../src/features/analytics/analytics.questions.testkit";
 import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
@@ -422,6 +423,8 @@ export const routes: readonly MockRoute[] = [
   { path: "/availability", handle: reply(booking.availability) },
   { path: "/search", handle: insight.search },
   { path: "/analytics/context", handle: reply(insight.analyticsContext) },
+  // The explain drawer draws no amount before the schema marks the money columns.
+  { path: "/analytics/schema", handle: reply(REPORT_SCHEMA) },
   { path: "/forecast", handle: reply(insight.forecast) },
   { path: "/analytics/framework", handle: reply(reportingStoryFramework) },
   { path: "/analytics/metrics", handle: reply(reportingStoryCatalog) },

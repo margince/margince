@@ -20,7 +20,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--bgElevated);
+  background: var(--bgField);
   color: var(--textPrimary);
   white-space: nowrap;
 }
@@ -44,11 +44,11 @@
 }
 
 /* Withheld: the one state about the reader, drawn as the caution it is. The
-   tint composites over its own --bgElevated so its contrast does not depend on
+   tint composites over its own --bgField so its contrast does not depend on
    which surface a caller put it on — the same reason .badge-warning does. */
 .visibility-withheld {
   background:
-    linear-gradient(var(--warningBg), var(--warningBg)), var(--bgElevated);
+    linear-gradient(var(--warningBg), var(--warningBg)), var(--bgField);
   border-color: transparent;
   color: var(--warningText);
 }

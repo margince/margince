@@ -140,6 +140,17 @@ func wireCandidates(plan []plannedBinding) []crmcontracts.AiRouteCandidate {
 	return out
 }
 
+// withCertification stamps each candidate with the verdict the certification
+// records give the model it names for task. A model no record measured keeps no
+// stamp, which the screen reads as not certified.
+func withCertification(candidates []crmcontracts.AiRouteCandidate, plan []plannedBinding, task Task, profile Profile) {
+	for i, binding := range plan {
+		if cert, ok := TierCertificationFor(task, binding.config, profile); ok {
+			candidates[i].Certification = &crmcontracts.AiRouteCertification{Verdict: cert.Verdict, Current: cert.Current}
+		}
+	}
+}
+
 // leadingTierOf is the rung task is first sent to under cfg, read through the
 // ladder the router walks.
 func leadingTierOf(cfg RoutingConfig, task Task) Tier {
@@ -156,7 +167,7 @@ func FeatureRoutes(normalConfig, effectiveConfig RoutingConfig, band string) []c
 
 func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBand, band string) []crmcontracts.AiFeatureRoute {
 	out := make([]crmcontracts.AiFeatureRoute, 0)
-	tasks := append(AllTasks(), TaskEmbeddings)
+	tasks := append(RoutedTasks(), TaskEmbeddings)
 	for _, task := range tasks {
 		if task != TaskEmbeddings && Status(task) != StatusShipped {
 			continue
@@ -185,6 +196,8 @@ func compareFeatureRoutes(normalConfig, effectiveConfig RoutingConfig, normalBan
 			}
 			row.Certification = leadCertification(task, normal, normalConfig.Profile)
 		}
+		withCertification(row.NormalCandidates, normal, task, normalConfig.Profile)
+		withCertification(row.EffectiveCandidates, effective, task, effectiveConfig.Profile)
 		decisionRoute(&row, effectiveConfig, task, blocked)
 		if decisionLeadChanged(normalConfig, effectiveConfig, task, normalBlocked, row) {
 			row.Impact = withDecisionLeadChange(row.Impact)

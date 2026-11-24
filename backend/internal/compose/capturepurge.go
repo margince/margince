@@ -27,6 +27,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturepurgebind"
+	"github.com/margince/margince/backend/internal/compose/personalsweep"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -327,27 +328,17 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 		return 0, fmt.Errorf("verdict: finding seats with personal mail due: %w", err)
 	}
 	destroyed := 0
-	for _, seat := range seats {
-		var subject capture.PurgeSubject
-		if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	sweeper := personalsweep.Sweeper{
+		Pool: p.pool, Batch: personalSweepBatch, Destroy: p.purgePersonalSelection,
+		Floor: func(ctx context.Context, tx pgx.Tx) (capture.StatutoryFloor, error) {
 			floor, _, err := purgeFloorTx(ctx, tx)
-			if err != nil {
-				return err
-			}
-			subject, err = capture.SelectPersonalPurgeTx(ctx, tx, seat, windows, floor, personalSweepBatch)
-			return err
-		}); err != nil {
-			return destroyed, fmt.Errorf("verdict: selecting personal mail for one seat: %w", err)
-		}
-		// No contacts are anonymised here. A `personal` verdict creates NO
-		// counterparty record in the first place — captureverdict's KindPersonal
-		// arm returns without one — so there is nothing this sweep could match,
-		// and passing a selector that looked for one would either find a contact
-		// somebody made for another reason or find nothing while implying it had
-		// looked.
-		n, err := p.purgePersonalSelection(ctx, subject, seat, windows)
+			return floor, err
+		},
+	}
+	for _, seat := range seats {
+		n, err := sweeper.Seat(ctx, seat, windows)
 		if err != nil {
-			return destroyed, fmt.Errorf("verdict: destroying personal mail: %w", err)
+			return destroyed, err
 		}
 		destroyed += n
 	}

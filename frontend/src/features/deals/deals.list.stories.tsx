@@ -4,10 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { playOpenView } from "../../testing/listview.play";
+import { WRITES_RECORDS } from "../../testing/mefixture";
 import { phoneRow } from "../../testing/phonerow";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { DealsScreen } from "./deals";
@@ -171,12 +173,7 @@ function installBoardStub(pipelines: readonly (typeof sales)[] = [sales]) {
       jsonResponse({
         data: [{ id: "o1", name: "Acme GmbH", archived: false, logo: null }],
       }),
-    "GET /me": () =>
-      jsonResponse({
-        user: { id: "u-9", display_name: "Me" },
-        roles: ["rep"],
-        teams: [],
-      }),
+    "GET /me": meRoute(WRITES_RECORDS),
   });
 }
 

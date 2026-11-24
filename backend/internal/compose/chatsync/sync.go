@@ -67,11 +67,14 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 	}
 	ev := chatlinks.Event{EventID: env.EventID, EventType: env.Type, Tier: tier, Detail: detail}
 	if env.Entity.Type == "activity" {
-		shared, err := s.activityPosts(ctx, env.Entity.ID)
-		if err != nil || !shared {
+		shared, err := s.sharedActivityText(ctx, env.Entity.ID)
+		if err != nil || !shared.ok || shared.sourceSystem == chatlinks.ProviderDispact {
 			return err
 		}
 		ev.ActivityID = &env.Entity.ID
+		if chatChangedField(env.Payload, "relinked") {
+			ev.Tier = activityTier(shared.kind)
+		}
 	}
 	if ev.Deals, ev.Projects, err = s.recordsOf(ctx, env.Entity.Type, env.Entity.ID); err != nil {
 		return err
@@ -97,13 +100,27 @@ var chatLinksPrincipal = principal.Principal{
 // activityPosts reports whether an activity may be posted: shared with the
 // whole workspace, and not one the chat itself delivered.
 func (s *Sync) activityPosts(ctx context.Context, id ids.UUID) (bool, error) {
+	shared, err := s.sharedActivityText(ctx, id)
+	return shared.ok && shared.sourceSystem != chatlinks.ProviderDispact, err
+}
+
+// sharedActivityText reads the activity as a channel may show it.
+func (s *Sync) sharedActivityText(ctx context.Context, id ids.UUID) (sharedText, error) {
 	var shared sharedText
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		shared, err = sharedActivity(ctx, tx, id)
 		return err
 	})
-	return shared.ok && shared.sourceSystem != chatlinks.ProviderDispact, err
+	return shared, err
+}
+
+// activityTier is the tier an activity posts at, by its kind.
+func activityTier(kind string) string {
+	if chatImportantKinds[kind] {
+		return chatlinks.TierImportant
+	}
+	return chatlinks.TierEverything
 }
 
 // withdrawIfNarrowed takes an activity out of the channels it reached once the
@@ -213,12 +230,14 @@ func chatTier(env events.Envelope) (string, map[string]any, bool) {
 		if err := json.Unmarshal(env.Payload, &captured); err != nil {
 			return "", nil, false
 		}
-		if chatImportantKinds[captured.Kind] {
-			return chatlinks.TierImportant, nil, true
-		}
-		return chatlinks.TierEverything, nil, true
+		return activityTier(captured.Kind), nil, true
 	case "activity.updated":
 		fields := chatChangedFields(env.Payload)
+		// A newly filed activity reaches the channel of the record it was filed
+		// on, at the tier its kind earns. HandleEvent reads the kind.
+		if _, relinked := fields["relinked"]; relinked {
+			return chatlinks.TierEverything, nil, true
+		}
 		if fields["meeting_status"] == "held" || fields["is_done"] == true {
 			return chatlinks.TierImportant, map[string]any{detailFields: fields}, true
 		}

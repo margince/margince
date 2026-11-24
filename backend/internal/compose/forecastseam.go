@@ -247,7 +247,7 @@ func forecastScopeFromResolved(resolved ResolvedScope) forecasting.Scope {
 func ForecastPeriodAt(
 	ctx context.Context, tx pgx.Tx, kind forecasting.PeriodKind, at time.Time,
 ) (forecasting.Period, string, error) {
-	zoneName, err := identity.TimezoneOf(ctx, tx)
+	zoneName, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return forecasting.Period{}, "", err
 	}

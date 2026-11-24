@@ -100,7 +100,9 @@ func TestTheDigestClaimIsTakenOnceAndNeverReleased(t *testing.T) {
 		t.Fatal("recording why a morning failed released its claim, so the next tick would send again")
 	}
 
-	// The next local day is a new morning and gets its own.
+	// The next local day is a new morning and gets its own, once the first
+	// message is a day old.
+	e.ageDigestClaims(t, 24*time.Hour)
 	tomorrow, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day.AddDate(0, 0, 1))
 	if err != nil {
 		t.Fatalf("claiming the next morning: %v", err)
@@ -198,5 +200,41 @@ func TestOnlyTheRecipientOrSystemCanClaimADigest(t *testing.T) {
 	claimed, err := e.store.ClaimDigestRun(e.asUser(e.recipient), e.recipient, digestWindow.Day)
 	if err != nil || !claimed {
 		t.Fatalf("own claim = %v, %v", claimed, err)
+	}
+}
+
+func (e *noticeEnv) ageDigestClaims(t *testing.T, by time.Duration) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE notification_digest_run SET mail_attempted_at = mail_attempted_at - $1::interval`, by); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A member who changes zone gets a different date for the same real day. The
+// date label alone would send a second digest. A new edition waits for the gap,
+// whether the new label is later or earlier.
+func TestAZoneChangeDoesNotFileASecondDigestWithinTheGap(t *testing.T) {
+	e := setupNotices(t)
+	first, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day)
+	if err != nil || !first {
+		t.Fatalf("first edition: claimed=%t err=%v", first, err)
+	}
+	for name, label := range map[string]time.Time{
+		"a later date label (moved east)":    digestWindow.Day.AddDate(0, 0, 1),
+		"an earlier date label (moved west)": digestWindow.Day.AddDate(0, 0, -1),
+	} {
+		got, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, label)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got {
+			t.Errorf("%s: a second digest was filed inside the edition gap", name)
+		}
+	}
+	e.ageDigestClaims(t, 21*time.Hour)
+	next, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day.AddDate(0, 0, 1))
+	if err != nil || !next {
+		t.Errorf("after the gap the next day is skipped: claimed=%t err=%v", next, err)
 	}
 }

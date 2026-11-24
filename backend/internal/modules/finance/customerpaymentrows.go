@@ -6,14 +6,12 @@ package finance
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -34,18 +32,12 @@ func customerPaymentRows(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) 
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	connPos := arg(connectionID)
-	// Payment authority is narrower than workspace-readable company identity.
-	var visible strings.Builder
-	for _, scope := range []func(context.Context, string, string, func(any) int) (string, error){
-		auth.ScopeClauseFor, auth.OwnerScopeClauseFor,
-	} {
-		clause, err := scope(ctx, "company", "c", arg)
-		if err != nil {
-			return nil, err
-		}
-		if clause != "" {
-			visible.WriteString(" AND (" + clause + ")")
-		}
+	visible, err := LedgerVisibleClause(ctx, "c", arg)
+	if err != nil {
+		return nil, err
+	}
+	if visible != "" {
+		visible = " AND " + visible
 	}
 	// The live link must still name this company; a remapped customer waits
 	// for its next sync rather than showing its old attribution.
@@ -59,7 +51,7 @@ func customerPaymentRows(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) 
          AND i.company_id = c.id AND i.connection_id = l.connection_id
          AND i.archived_at IS NULL AND i.open_minor > 0
    WHERE c.archived_at IS NULL %s
-   ORDER BY i.due_at ASC NULLS LAST, i.id ASC`, connPos, visible.String()), args...)
+   ORDER BY i.due_at ASC NULLS LAST, i.id ASC`, connPos, visible), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read scoped customer payments: %w", err)
 	}

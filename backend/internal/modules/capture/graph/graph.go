@@ -67,6 +67,8 @@ type Connector struct {
 	// checkpointMessages also checkpoints a round once this many messages
 	// passed since the last one. Zero checkpoints by pages alone.
 	checkpointMessages int
+	// tuning sizes a history page; the zero value keeps the built-in sizes.
+	tuning connector.BackfillTuning
 }
 
 // WithBounceSink returns a copy that records delivery reports instead of
@@ -96,6 +98,15 @@ func (c *Connector) WithClock(now func() time.Time) *Connector {
 func (c *Connector) WithCredentialSink(sink connector.CredentialSink) connector.Connector {
 	copied := *c
 	copied.rotations = sink
+	return &copied
+}
+
+// WithBackfillTuning returns a copy that walks history pages by t. Microsoft
+// allows four requests at once per mailbox, so the fetch workers are held to
+// that however high the setting is.
+func (c *Connector) WithBackfillTuning(t connector.BackfillTuning) *Connector {
+	copied := *c
+	copied.tuning = t
 	return &copied
 }
 

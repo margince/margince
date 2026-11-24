@@ -77,13 +77,10 @@
 package extension
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"regexp"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
@@ -168,63 +165,6 @@ func (n Name) Namespace() (string, error) {
 	}
 	return NamespacePrefix + strings.ReplaceAll(string(n), "-", "_"), nil
 }
-
-// Version is the extension's own version string, expected stable for an
-// unchanged unit: the boot inventory records it and logs a change. It
-// carries no authority (operator decisions bind to digests,
-// never to a version string).
-type Version string
-
-// Validate requires a non-empty, single-line printable string — the
-// inventory writes it into system_log verbatim, so control characters
-// and whitespace framing have no honest reading there.
-func (v Version) Validate() error {
-	if v == "" {
-		return errors.New("extension version is empty — the boot inventory records it")
-	}
-	if strings.TrimSpace(string(v)) != string(v) {
-		return fmt.Errorf("extension version %q carries surrounding whitespace", string(v))
-	}
-	for _, r := range v {
-		if !unicode.IsPrint(r) {
-			return fmt.Errorf("extension version %q carries a non-printable character", string(v))
-		}
-	}
-	return nil
-}
-
-// Description is one operator-facing sentence saying what the unit is for.
-//
-// Required, because the screen that grants a unit's permissions lists every
-// composed unit by name — and a name alone leaves an admin deciding what to
-// grant to something called "de". The author of the unit is the only party who
-// knows the answer, so the declaration is where it has to come from.
-type Description string
-
-// Validate requires a non-empty, single-line printable sentence. The
-// Extensions settings page shows it to an operator as written.
-func (d Description) Validate() error {
-	if strings.TrimSpace(string(d)) == "" {
-		return errors.New("extension description is empty — the access screen lists the unit by it")
-	}
-	if strings.TrimSpace(string(d)) != string(d) {
-		return fmt.Errorf("extension description %q carries surrounding whitespace", string(d))
-	}
-	for _, r := range d {
-		if !unicode.IsPrint(r) {
-			return fmt.Errorf("extension description %q carries a non-printable character", string(d))
-		}
-	}
-	// Runes, not bytes: a German or Vietnamese sentence is well inside the
-	// bound and well past it in UTF-8, and the message says "characters".
-	if n := utf8.RuneCountInString(string(d)); n > maxDescriptionLength {
-		return fmt.Errorf("extension description is %d characters — one sentence, capped at %d", n, maxDescriptionLength)
-	}
-	return nil
-}
-
-// One sentence, not a manual: the screen gives it one line under the unit name.
-const maxDescriptionLength = 200
 
 // Extension is one installed unit's declaration.
 type Extension struct {
@@ -334,17 +274,17 @@ type Extension struct {
 	// operator which secrets a unit expects before it ever runs.
 	Secrets []SecretsRequest
 
+	MailHooks MailHooks // the two mail-capture hooks, see MailHooks
 	// Jobs are the scheduled background jobs the unit contributes: named
 	// cadenced passes that fan out over the fleet, one workspace per tick.
 	// Like a Tool this carries BEHAVIOR only — the cadence, wall clocks,
 	// queue and attempt cap are MECHANICS and live in the unit's
 	// api/jobs.yaml fragment, reaching the process as a JobDeclaration.
 	//
-	// A job is not a tool with a timer, and the difference is who is there
-	// when it runs: nobody. That is why the job seam refuses a confirm-first
-	// tier outright (a confirmation nobody can ever give) and refuses an
-	// outbound scope (autonomous outbound authority on a clock), where the
-	// served-tool seam refuses the same two shapes for weaker reasons.
+	// A job is not a tool with a timer: nobody is there when it runs. So the
+	// job seam refuses a confirm-first tier outright (a confirmation nobody can
+	// ever give) and an outbound scope (autonomous outbound authority on a
+	// clock). The served-tool seam refuses both shapes for weaker reasons.
 	Jobs []Job
 
 	// Subscriptions are the events the unit reacts to: named listeners over the
@@ -409,12 +349,18 @@ type Extension struct {
 	// connect and callback routes are core routes, not the unit's own.
 	OAuthApps []OAuthApp
 
+	// AITasks are the AI tasks the unit runs through Runtime.AI. A task not
+	// listed is refused. The manifest publishes the list.
+	AITasks []AITask
+
 	// SystemReads are the system reads the unit's jobs and subscriptions make
 	// (see systemread.go). A read not listed answers ErrUndeclaredRead. The list
 	// is published in manifest.generated.json, so an operator sees what the unit
 	// reads without opening its source.
 	SystemReads []SystemRead
 
+	// Needs are the core capabilities the unit uses, with a reason each (see need.go).
+	Needs []Need
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
 	// pairs, which a unit supplies with `//go:embed migrations`. A unit
@@ -482,6 +428,8 @@ type Extension struct {
 	// Panels are the unit's components drawn inline on core pages, such as a
 	// deal page's side column. See Panel.
 	Panels []Panel
+	// App is the unit's own screen in the home side drawer. Nil means none.
+	App *App
 
 	// Instrumentation observes the whole process and the browser: logs,
 	// requests, jobs, panics, errors and navigation. See Instrumentation.

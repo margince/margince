@@ -31,6 +31,9 @@ func StampSeatsPastTheCap(
 	partyListIsAttested bool,
 	withheld []connector.MessageParticipant,
 ) error {
+	if err := storekit.LockMeetingAttendeeWrites(ctx, tx, activityID.UUID); err != nil {
+		return err
+	}
 	_, err := stampSeatsPastCap(ctx, tx, activityID, kind, partyListIsAttested, withheld, nil)
 	return err
 }

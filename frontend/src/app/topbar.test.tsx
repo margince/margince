@@ -368,6 +368,14 @@ describe("Top bar trail", () => {
     expect(trail().querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
+  it("leads the Partners page back to Companies, the list it belongs to", () => {
+    renderTopBar({ screen: "partners" }, { onToggle: ignoreToggle });
+    expect(stopTexts()).toEqual(["Companies", "Partners"]);
+    const back = within(trail()).getByRole("link", { name: "Companies" });
+    expect(back.getAttribute("href")).toBe("/#/companies");
+    expect(trail().querySelectorAll('[aria-current="page"]')).toHaveLength(1);
+  });
+
   it("leads a record back to the list it was opened from", () => {
     const client = newClient();
     client.setQueryData(["contact", "ref", ANNA_ID], "Anna Weber");

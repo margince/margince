@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { intentKeys } from "./idempotencykey";
+import { keyedIntents } from "./intentkeys";
 
 const answering = (status: number, code?: string) => (key: string) =>
   Promise.resolve({
@@ -61,5 +62,97 @@ describe("intentKeys", () => {
     await keyed("B", answering(500));
     await keyed("C", answering(500));
     expect((await keyed("A", answering(500))).key).not.toBe(a.key);
+  });
+});
+
+describe("keyedIntents", () => {
+  const spent = (r: { done: boolean }) => r.done;
+
+  it("keeps an unsettled intent's key and drops a settled one", async () => {
+    const keyed = keyedIntents(spent);
+    const seen: string[] = [];
+    const call = (done: boolean) => async (key: string) => {
+      seen.push(key);
+      return { done };
+    };
+    await keyed("a", call(false));
+    await keyed("a", call(true));
+    await keyed("a", call(true));
+    expect(seen[1]).toBe(seen[0]);
+    expect(seen[2]).not.toBe(seen[0]);
+  });
+
+  it("lets a late settle leave a newer key of the same intent alone", async () => {
+    const keyed = keyedIntents(spent);
+    const seen: string[] = [];
+    let release: (v: { done: boolean }) => void = () => undefined;
+    const slow = keyed("a", (key) => {
+      seen.push(key);
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    });
+    await keyed("a", async (key) => {
+      seen.push(key);
+      return { done: true };
+    });
+    await keyed("a", async (key) => {
+      seen.push(key);
+      return { done: false };
+    });
+    release({ done: true });
+    await slow;
+    await keyed("a", async (key) => {
+      seen.push(key);
+      return { done: true };
+    });
+    expect(seen[0]).toBe(seen[1]);
+    expect(seen[2]).not.toBe(seen[0]);
+    expect(seen[3]).toBe(seen[2]);
+  });
+
+  it("holds at most the limit of open intents, oldest dropped first", async () => {
+    const keyed = keyedIntents(spent, 2);
+    const seen = new Map<string, string[]>();
+    const open = (intent: string) =>
+      keyed(intent, async (key) => {
+        seen.set(intent, [...(seen.get(intent) ?? []), key]);
+        return { done: false };
+      });
+    await open("a");
+    await open("b");
+    await open("c");
+    await open("a");
+    expect(seen.get("a")?.[1]).not.toBe(seen.get("a")?.[0]);
+    await open("c");
+    expect(seen.get("c")?.[1]).toBe(seen.get("c")?.[0]);
+  });
+});
+
+describe("randomKey", () => {
+  it("makes a version 4 UUID where randomUUID is absent, as in a sandboxed card frame", async () => {
+    vi.stubGlobal("crypto", {
+      getRandomValues: crypto.getRandomValues.bind(crypto),
+    });
+    try {
+      const keyed = keyedIntents((r: { done: boolean }) => r.done);
+      const seen: string[] = [];
+      await keyed("a", async (key) => {
+        seen.push(key);
+        return { done: true };
+      });
+      await keyed("a", async (key) => {
+        seen.push(key);
+        return { done: true };
+      });
+      for (const key of seen) {
+        expect(key).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+        );
+      }
+      expect(seen[0]).not.toBe(seen[1]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

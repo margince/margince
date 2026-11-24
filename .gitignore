@@ -240,3 +240,4 @@ dump.rdb
 # leaves a __pycache__ beside it — build residue, never product.
 __pycache__/
 *.pyc
+/backend/gen-composition

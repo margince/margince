@@ -3,11 +3,12 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Button, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { useFieldFaults } from "../../design-system/savepage";
+import { FieldEditDialog } from "../../design-system/fieldeditdialog";
 import { formatDateTimeAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useHoldsAdminRole } from "../../lib/capability";
 import { blankRequired, problemMessageOf, unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -41,6 +42,8 @@ type CompanyFact = components["schemas"]["CompanyFact"];
 // two differ in how they are addressed — a profile field by its key, a fact by
 // `<field>:<value_key>` — and in nothing else that matters here.
 export type EvidenceClaim = {
+  // The claimed field's name, which decides who may correct it.
+  field: string;
   value: string;
   source: string;
   verifiedAt?: string | null;
@@ -79,11 +82,18 @@ export function profileFieldsKey(companyId: string) {
   return ["company-profile-fields", companyId] as const;
 }
 
+// The receipt drawer's read of one cited claim. A verdict makes the receipt
+// stale (the badge, the verified line), so settle invalidates this key too.
+export function claimEvidenceKey(companyId: string) {
+  return ["claim-evidence", companyId] as const;
+}
+
 export function profileFieldClaim(
   companyId: string,
   field: ProfileField,
 ): EvidenceClaim {
   return {
+    field: field.field,
     value: field.value,
     source: field.source,
     verifiedAt: field.verified_at,
@@ -122,6 +132,7 @@ export function factClaim(companyId: string, fact: CompanyFact): EvidenceClaim {
   // spelling, not a missing half.
   const factKey = `${fact.field}:${fact.value_key}`;
   return {
+    field: fact.field,
     value: fact.value,
     source: fact.source,
     verifiedAt: fact.verified_at,
@@ -166,8 +177,11 @@ export function EvidenceVerdict({
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const queryClient = useQueryClient();
+  const admin = useHoldsAdminRole();
+  // The installation's own name is an administrator's to change, so a rep who
+  // may confirm it is not offered a correction the server would refuse.
+  const mayCorrect = anchor && claim.field === "display_name" ? admin : true;
   const [correcting, setCorrecting] = useState(false);
-  const [draft, setDraft] = useState(claim.value);
 
   // Both verbs change the sidecar AND, for a canonical field, the company
   // row — so the record read, the list it appears in and the 360 that summarizes
@@ -181,6 +195,7 @@ export function EvidenceVerdict({
       // the page keeps offering a verdict on a claim the human already settled.
       queryClient.invalidateQueries({ queryKey: profileFieldsKey(companyId) }),
       queryClient.invalidateQueries({ queryKey: factsKey(companyId) }),
+      queryClient.invalidateQueries({ queryKey: claimEvidenceKey(companyId) }),
     ]);
   };
   // The claim travels as a variable rather than through these closures: it
@@ -193,16 +208,10 @@ export function EvidenceVerdict({
   const correct = useMutation({
     mutationFn: (edit: Readonly<{ ruled: EvidenceClaim; value: string }>) =>
       edit.ruled.correctPath(edit.value),
-    onSuccess: async () => {
-      setCorrecting(false);
-      await settle();
-    },
+    onSuccess: settle,
   });
-  const reasonFor = (failure: Error | null) =>
-    failure === null ? undefined : problemMessageOf(failure, t);
-  const corrected = reasonFor(correct.error);
-  const confirmed = reasonFor(confirm.error);
-  const [faults, faultsRoot] = useFieldFaults<HTMLSpanElement>();
+  const confirmed =
+    confirm.error === null ? undefined : problemMessageOf(confirm.error, t);
   const valueLabel = t("evidence.correctedValue");
 
   // Already a human's word. Saying who and when is the whole point — a
@@ -233,45 +242,6 @@ export function EvidenceVerdict({
     return null;
   }
 
-  if (correcting) {
-    return (
-      <span className="evidence-verdict" ref={faultsRoot}>
-        <Field
-          label={valueLabel}
-          labelHidden
-          required
-          error={faults.of("value") ?? corrected}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              value={draft}
-              onChange={(event) => {
-                setDraft(event.target.value);
-                faults.edited("value");
-              }}
-            />
-          )}
-        </Field>
-        <Button
-          pending={correct.isPending}
-          busyLabel={t("evidence.saving")}
-          onClick={() => {
-            const blank = blankRequired(locale, { value: [valueLabel, draft] });
-            if (!faults.show(blank)) {
-              correct.mutate({ ruled: claim, value: draft.trim() });
-            }
-          }}
-        >
-          {t("evidence.save")}
-        </Button>
-        <Button onClick={() => setCorrecting(false)}>
-          {t("evidence.cancel")}
-        </Button>
-      </span>
-    );
-  }
-
   return (
     <span className="evidence-verdict">
       <Button
@@ -281,18 +251,32 @@ export function EvidenceVerdict({
       >
         {t("evidence.confirm")}
       </Button>
-      <Button
-        onClick={() => {
-          // A correction abandoned earlier does not speak for this one.
-          correct.reset();
-          faults.show(new Map());
-          setDraft(claim.value);
-          setCorrecting(true);
-        }}
-      >
-        {t("evidence.correct")}
-      </Button>
+      {mayCorrect && (
+        <Button onClick={() => setCorrecting(true)}>
+          {t("evidence.correct")}
+        </Button>
+      )}
       {confirmed && <ErrorLine inline>{confirmed}</ErrorLine>}
+      <FieldEditDialog
+        open={correcting}
+        label={valueLabel}
+        value={claim.value}
+        settle={(draft) => draft.trim()}
+        check={(next) =>
+          blankRequired(locale, { value: [valueLabel, next] }).get("value")
+        }
+        onClose={() => setCorrecting(false)}
+        onSave={(next) => correct.mutateAsync({ ruled: claim, value: next })}
+      >
+        {({ control, draft, setDraft, saving }) => (
+          <TextInput
+            {...control}
+            value={draft}
+            readOnly={saving}
+            onChange={(event) => setDraft(event.target.value)}
+          />
+        )}
+      </FieldEditDialog>
     </span>
   );
 }

@@ -76,7 +76,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-49 columns · primary key `(id)` · referenced by 30 foreign keys
+52 columns · primary key `(id)` · referenced by 30 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -102,6 +102,9 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `lost_reason` | `text` |  | The free note on a lost deal. |
 | `lost_reason_basis` | `text` |  | How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. |
 | `lost_reason_code` | `text` |  | The key from `/loss-reasons` this loss counts under. |
+| `manager_request_reasons` | `text[]` |  |  |
+| `manager_requested_at` | `timestamp with time zone` |  |  |
+| `manager_requested_by` | `uuid` |  |  |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `partner_attribution` | `text` |  | What the partner named by `partner_company_id` did: `sourced` (brought the deal) or `influenced` (helped one we had). |
@@ -251,7 +254,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_correction
 
-19 columns · primary key `(id)` · referenced by 0 foreign keys
+21 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -263,7 +266,9 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `correction` | `text` | yes | One of `auto_apply`, `provisional_confirm`, `downgrade_and_review`, `close_lost`, `deal_close_date`, `deal_amount` and 4 more. |
 | `deal_id` | `uuid` | yes | Points at `deal.id`. |
 | `fields` | `text[]` | yes |  |
+| `note_activity_id` | `uuid` |  | Points at `activity.id`. |
 | `remaining_open_stages` | `text` | yes |  |
+| `reoffered_at` | `timestamp with time zone` |  |  |
 | `reversal_audit_id` | `uuid` |  | Points at `audit_log.id`. |
 | `reversed_at` | `timestamp with time zone` |  |  |
 | `reversed_by` | `text` |  |  |
@@ -281,6 +286,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 |---|---|---|
 | `audit_log_id` | `audit_log` | deleting the parent deletes this row |
 | `deal_id` | `deal` | deleting the parent deletes this row |
+| `note_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 | `reversal_audit_id` | `audit_log` | deleting the parent keeps this row and clears the link |
 | `run_id` | `close_date_run` | deleting the parent keeps this row and clears the link |
 | `stage_history_id` | `deal_stage_history` | deleting the parent keeps this row and clears the link |
@@ -297,6 +303,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 - `deal_correction_audit_once`: `unique, btree (audit_log_id)`
 - `deal_correction_live`: `btree (deal_id, applied_at DESC) WHERE (reversed_at IS NULL)`
+- `deal_correction_note_ix`: `btree (note_activity_id) WHERE (note_activity_id IS NOT NULL)`
 - `deal_correction_pkey`: `unique, btree (id)`
 - `deal_correction_reversed`: `btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL)`
 - `idx_deal_correction_deal`: `btree (deal_id)`
@@ -744,7 +751,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal_suggestion_evidence
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -754,21 +761,22 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `kind` | `text` | yes | One of `meeting`, `signal`, `attachment`. |
 | `occurred_at` | `timestamp with time zone` | yes |  |
 | `signal_id` | `uuid` |  | Points at `signal.id`. |
+| `source_gone` | `boolean`, default `false` | yes |  |
 | `suggestion_id` | `uuid` | yes | Points at `deal_suggestion.id`. |
 
 **Points at**
 
 | Columns | Table | When the parent goes |
 |---|---|---|
-| `activity_id` | `activity` | deleting the parent deletes this row |
-| `attachment_id` | `attachment` | deleting the parent deletes this row |
-| `signal_id` | `signal` | deleting the parent deletes this row |
+| `activity_id` | `activity` | deleting the parent keeps this row and clears the link |
+| `attachment_id` | `attachment` | deleting the parent keeps this row and clears the link |
+| `signal_id` | `signal` | deleting the parent keeps this row and clears the link |
 | `suggestion_id` | `deal_suggestion` | deleting the parent deletes this row |
 
 **Rules**
 
 - `deal_suggestion_evidence_kind_check`: `CHECK ((kind = ANY (ARRAY['meeting', 'signal', 'attachment'])))`
-- `deal_suggestion_evidence_shape`: `CHECK ((((kind = 'meeting') AND (activity_id IS NOT NULL) AND (signal_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'signal') AND (signal_id IS NOT NULL) AND (activity_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'attachment') AND (attachment_id IS NOT NULL) AND (activity_id IS NULL) AND (signal_id IS NULL))))`
+- `deal_suggestion_evidence_shape`: `CHECK ((((kind = 'meeting') AND (signal_id IS NULL) AND (attachment_id IS NULL) AND ((activity_id IS NOT NULL) OR source_gone)) OR ((kind = 'signal') AND (activity_id IS NULL) AND (attachment_id IS NULL) AND ((signal_id IS NOT NULL) OR source_gone)) OR ((kind = 'attachment') AND (activity_id IS NULL) AND (signal_id IS NULL) AND ((attachment_id IS NOT NULL) OR source_gone))))`
 
 **Indexes**
 
@@ -780,12 +788,13 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Triggers**
 
+- `deal_suggestion_evidence_keeps_source_gone`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION deal_suggestion_evidence_keeps_its_source_gone()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000}')`
 
 ## fx_rate
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+7 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -793,16 +802,13 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `from_currency` | `currency_code` | yes |  |
 | `rate` | `numeric(20,10)` | yes | Decimal rate (from -> base), always positive. |
 | `rate_date` | `date` | yes |  |
+| `superseded_at` | `timestamp with time zone` |  |  |
 | `to_currency` | `currency_code` | yes | The workspace base currency. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
-**Rules**
-
-- `fx_rate_pair_day`: `UNIQUE (from_currency, to_currency, rate_date)`
-
 **Indexes**
 
-- `fx_rate_pair_day`: `unique, btree (from_currency, to_currency, rate_date)`
+- `fx_rate_current_pair_day`: `unique, btree (from_currency, to_currency, rate_date) WHERE (superseded_at IS NULL)`
 - `fx_rate_pkey`: `unique, btree (id)`
 
 ## legal_review

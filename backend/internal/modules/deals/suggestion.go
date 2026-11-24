@@ -330,7 +330,7 @@ func SupersedeStaleSuggestionsTx(ctx context.Context, tx pgx.Tx, buyerEligible f
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	stands, err := suggestionVisibleClause(ctx, arg, "")
+	stands, err := suggestionVisibleClause(ctx, "s", arg, "")
 	if err != nil {
 		return 0, err
 	}

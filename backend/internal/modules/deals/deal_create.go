@@ -420,7 +420,7 @@ func (s *Store) createDealInTx(ctx context.Context, tx pgx.Tx, in CreateDealInpu
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventDealCreated{Name: in.Name, Imported: imported, ImportRunId: importRun}); err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("emit deal.created: %w", err)
 	}
-	out, err := readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
+	out, err := s.readDealStamped(ctx, tx, id, storekit.LiveOnly, active)
 	if err != nil {
 		return crmcontracts.Deal{}, fmt.Errorf("read created deal: %w", err)
 	}

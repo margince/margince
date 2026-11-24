@@ -18,7 +18,11 @@ var runAnalyticsQueryCopy = toolCopy{
 	Limits: "Populations, dimensions and measures come from margince://schema/analytics, " +
 		"derived for this seat and answered by describe_analytics_vocabulary; a name outside " +
 		"it is refused with what would work. Money measures are minor units. An omitted scope " +
-		"is this seat's own default population, never the workspace.",
+		"is this seat's own default population, never the workspace. A converted sum adds " +
+		"the deals that convert. When a row's `_coverage.partial` is true, state in words how " +
+		"many deals have no value (`no_value_deals`), how many have no exchange rate " +
+		"(`no_rate_deals`) and which currencies lack one (`missing_currencies`); never " +
+		"quote that sum as complete. A sum of null means no deal converts.",
 	Instead: "run_report answers a prebuilt report by key; query_workspace lists exact " +
 		"records; the forecast tools answer forecast readings and movement. This one is for " +
 		"a novel aggregate no prebuilt report shapes, and for an ad-hoc figure a " +

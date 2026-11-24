@@ -44,6 +44,8 @@ function Drawer({
     <StoryProviders>
       <EvidenceModal
         companyId="o-1"
+        anchor={false}
+        canEdit={false}
         cited={cited}
         onClose={() => {}}
         onStep={onStep}
@@ -178,6 +180,8 @@ function PendingDrawer() {
     <StoryProviders>
       <EvidenceModal
         companyId="o-1"
+        anchor={false}
+        canEdit={false}
         cited={{ entityType: "company", entityId: "company-1" }}
         onClose={() => {}}
       />

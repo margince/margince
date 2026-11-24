@@ -46,6 +46,13 @@
   /* Level 1, a pane on the page ground, and a hairline for its edge. */
   --pane: #fcfffe;
   --paneEdge: #d8e2de;
+  /* The faces a control and a field draw for themselves, at any depth. Copies
+   * of --bgElevated and --pane today, not aliases: a rung moves with the
+   * nesting ladder, and a control face must not follow it. --textInverse is
+   * the ink on a --textPrimary fill. tokens.test.ts holds their contrast. */
+  --bgField: #fbfcfb;
+  --bgControl: #fcfffe;
+  --textInverse: #fbfcfb;
   /* Grounds and hairlines by nesting depth (surfaces.css). Solid is level 1 made
    * opaque, for a band or mark that hides what passes under it. */
   --ladder1: var(--pane);
@@ -815,6 +822,9 @@
   --bgWell: #111815;
   --pane: rgba(239, 247, 244, 0.045);
   --paneEdge: rgba(239, 247, 244, 0.09);
+  --bgField: #161d1a;
+  --bgControl: rgba(239, 247, 244, 0.045);
+  --textInverse: #161d1a;
   /* Each level lifts toward the light on its light rung's hue, and each edge
      keeps its light contrast. Level 4 stops where a state chip still clears AA. */
   --ladder1Solid: #161d1b;
@@ -981,6 +991,9 @@
     --bgWell: #111815;
     --pane: rgba(239, 247, 244, 0.045);
     --paneEdge: rgba(239, 247, 244, 0.09);
+    --bgField: #161d1a;
+    --bgControl: rgba(239, 247, 244, 0.045);
+    --textInverse: #161d1a;
     --ladder1Solid: #161d1b;
     --ladder2: #1c2020;
     --ladder3: #1f2323;

@@ -21,9 +21,9 @@ import (
 // Two spellings of one party on an activity and role become one row there.
 func DataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795401900_participant_addresses_lowercase", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795401900_participant_addresses_lowercase"),
-		Requires: []string{"core/1795401900", "core/1795401903"},
+		ID: "core/1795489500_participant_addresses_lowercase", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795489500_participant_addresses_lowercase"),
+		Requires: []string{"core/1795489500", "core/1795489503"},
 		Steps: []datatask.Step{{
 			Name: "lowercase_addresses", Limit: 200, MinLimit: 1,
 			Audit:         datatask.AuditPolicy{PerRecord: true},

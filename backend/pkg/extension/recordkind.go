@@ -73,6 +73,10 @@ type RecordKindDeclaration struct {
 	// Timeline, when set, puts the kind's rows into the History of the core
 	// record they reference. Core builds the entry; the unit names three columns.
 	Timeline *RecordKindTimeline
+	// View is the path segment under the unit's screen that shows one record of
+	// the kind, or empty for the screen itself. A notice about a record opens
+	// `#/ext/<unit>/<View>` with the record's kind and id in the query.
+	View string
 }
 
 // RecordKindTimeline says how a row of a kind reads as a History entry.
@@ -182,6 +186,9 @@ func (k RecordKindDeclaration) Validate(unit Name) error {
 	}
 	if err := k.validateTimeline(); err != nil {
 		return err
+	}
+	if k.View != "" && !nameGrammar.MatchString(k.View) {
+		return fmt.Errorf("record kind %q view %q must be one path segment of lower-case letters, digits and single hyphens", k.Kind, k.View)
 	}
 	switch k.DeletePolicy {
 	case "", DeleteArchiveOnly, DeleteErasable:

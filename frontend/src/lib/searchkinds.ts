@@ -159,6 +159,24 @@ export function searchFilterLabel(
     : t(SEARCH_FILTER_KEY[type]);
 }
 
+/**
+ * One line per type a grouped answer left out because its search ran out of
+ * time. A type is named by its pill label, so the activity type reads as
+ * "Emails and activities", as the button that narrows to it does.
+ */
+export function searchTimedOutLines(
+  types: readonly string[],
+  t: Translator,
+  directory: KindDirectory,
+): string[] {
+  return types.flatMap((wire) => {
+    const type = searchHitType(wire);
+    return type === undefined
+      ? []
+      : [t("search.timedOut", { kind: searchFilterLabel(type, t, directory) })];
+  });
+}
+
 // The heading a group of these hits carries. One key per member of the contract
 // enum, so a type the server learns to return cannot reach the screen without a
 // name to file it under — the failure that dropped project hits.

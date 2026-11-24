@@ -90,3 +90,21 @@ func TestAnUnwiredReaderDisclosesNothingItCannotBack(t *testing.T) {
 			info.PurposeKeys, info.PurposeBases)
 	}
 }
+
+// A stored row that still holds the retired agreement is shown as the consent
+// it records. The page and the API output both show it, never "no basis".
+func TestAStoredRetiredAgreementIsShownAsConsent(t *testing.T) {
+	e := setupChannelConsent(t)
+	e.store = e.store.WithNoticeHeldReader(&fixedHeld{held: NoticeHeld{
+		Uses: []NoticeUse{{PurposeKey: "business_correspondence", Basis: "vn_subject_agreement"}},
+	}})
+
+	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
+	if !slices.Equal(info.PurposeBases, []string{"consent"}) {
+		t.Fatalf("the page names %v, want the agreement shown as consent", info.PurposeBases)
+	}
+	wire := wirePrivacyInformation(info)
+	if len(wire.PurposeBases) != 1 || string(wire.PurposeBases[0]) != "consent" {
+		t.Errorf("the API output names %v, want [consent]", wire.PurposeBases)
+	}
+}

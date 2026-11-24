@@ -269,29 +269,12 @@ test.describe("company record — visual weight", () => {
     expect(size.actual).toBe(size.expected);
   });
 
-  test("the lifecycle control is a control, not a tag", async ({ page }) => {
-    // A filled button of ~190x48 in State A, sitting beside the name. The
-    // 75x22 pale chip reads as metadata a reader cannot act on.
-    // The header draws it as the design system's dropdown worn as a button
-    // (Select's `button` appearance), not as InlineChoice: that primitive is a
-    // value inside a line of text and is 24px by design, so the header
-    // stopped using it as its control (#6033). Reached by the test id the
-    // header hands the trigger, for the reason the readings row above is:
-    // `.co-standing` was this page's own class and the page stopped drawing
-    // it, so the walk found nothing and threw naming a CONTROL — which sends a
-    // reader looking for a missing control rather than a missing selector. The
-    // primitive's own class would match every other screen's dropdown, and the
-    // copy inside it is German chrome this suite deliberately does not pin.
-    const box = await page
-      .locator('[data-testid="company-lifecycle"]')
-      .first()
-      .boundingBox();
-    if (!box) {
-      throw new Error(
-        "no [data-testid='company-lifecycle'] on the company header — the id moved, or the control did",
-      );
-    }
-    expect(Math.round(box.height)).toBeGreaterThanOrEqual(32);
+  test("the head has no lifecycle select; the side rail holds the field", async ({
+    page,
+  }) => {
+    await expect(page.locator('[data-testid="company-lifecycle"]')).toHaveCount(
+      0,
+    );
   });
 
   // Website, LinkedIn, location, industry, size: five pills under the

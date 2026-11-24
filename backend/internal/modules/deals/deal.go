@@ -435,7 +435,7 @@ func (s *Store) InstallationToday(ctx context.Context) (time.Time, error) {
 // (data-semantics §2 r4), returned as UTC midnight like every scanned
 // date column.
 func (s *Store) installationToday(ctx context.Context, tx pgx.Tx) (time.Time, error) {
-	zone, err := s.installation.Timezone(ctx, tx)
+	zone, err := s.installation.TimezoneApplied(ctx, tx)
 	if err != nil {
 		return time.Time{}, err
 	}

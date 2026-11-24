@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -187,6 +188,12 @@ func (r *Router) Complete(ctx context.Context, task Task, req model.Request) (mo
 	if err := r.admitSubjects(ctx, task, req); err != nil {
 		return model.Response{}, RouteInfo{}, err
 	}
+	if pin := tierPinOf(ctx); pin != "" {
+		if !slices.Contains(ladder, Tier(pin)) {
+			return model.Response{}, RouteInfo{}, fmt.Errorf("ai: task %s has no %q tier", task, pin)
+		}
+		ladder = []Tier{Tier(pin)}
+	}
 	return r.serveCompletion(ctx, task, ladder, req)
 }
 
@@ -240,6 +247,10 @@ func (r *Router) serveAttempt(ctx context.Context, lc *logicalCall, task Task, l
 	}
 	req = r.withTaskThinking(lc, task, req)
 	key, keyErr := cacheKey(wsID, task, req)
+	if pin := tierPinOf(ctx); keyErr == nil && pin != "" {
+		// A pinned rung answers differently from the whole ladder.
+		key += "|tier=" + pin
+	}
 	if keyErr == nil {
 		// The site's own defect, found with the key's: before any provider.
 		req, keyErr = withSiteThinking(req, task)

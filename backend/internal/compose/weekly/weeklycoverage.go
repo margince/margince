@@ -102,7 +102,7 @@ func mayReadPlans(ctx context.Context) (bool, error) {
 func (said teamCopy) planCoverage(
 	ctx context.Context, tx pgx.Tx, owner ids.UUID, start, end time.Time,
 ) (*crmcontracts.WeeklyFigureCoverage, error) {
-	zone, err := identity.TimezoneOf(ctx, tx)
+	zone, err := identity.TimezoneAppliedTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID, asOf ti
 		  SELECT a.id, a.created_at AS began FROM activity a
 		   WHERE a.kind = 'task' AND a.archived_at IS NULL AND a.assignee_id = %[1]s AND (a.is_done OR %[6]s)),
 		owned_meeting AS MATERIALIZED (
-		  SELECT m.id, LEAST(m.created_at, m.occurred_at) AS began FROM activity m
+		  SELECT m.id, LEAST(m.created_at, m.occurred_at) AS began FROM activity m `+storekit.LatestHeldJoinSQL("m")+`
 		   WHERE m.kind = 'meeting' AND m.archived_at IS NULL AND %[4]s),
 		readable_activity AS MATERIALIZED (%[3]s)
 		SELECT
@@ -224,7 +224,7 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID, asOf ti
 		  (SELECT min(began) FROM owned_meeting WHERE id IN (SELECT id FROM readable_activity)),
 		  (SELECT min(COALESCE(l.routed_at, l.created_at)) FROM lead l
 		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+NonImportedLeadSQL+` AND (%[5]s))`,
-		owned, orUnbounded(dealScope), readable, meetingIsTheirsSQL(owned),
+		owned, orUnbounded(dealScope), readable, meetingIsTheirsSQL(storekit.LatestHeldCredit, "m", owned),
 		leadScope, current), args...).
 		Scan(&s.deals, &s.tasks, &s.meetings, &s.leads)
 	if err != nil {
