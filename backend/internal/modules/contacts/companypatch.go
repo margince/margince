@@ -179,23 +179,27 @@ func setCompanyAssessAgainst(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 	return nil
 }
 
-// refuseParentBelow names the chosen parent when it already sits below the company.
+// refuseParentBelow refuses a parent that is the company itself or already sits below it.
 // The walk stops at an ancestor hidden from the caller; the cycle trigger still holds there.
 func refuseParentBelow(ctx context.Context, tx pgx.Tx, company, parent ids.UUID) error {
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return err
 	}
+	if parent == company {
+		return httperr.Validation("parent_company_id", "parent_company_self",
+			"a company cannot be its own parent; choose another company")
+	}
 	var name string
-	args := []any{parent}
-	if err := tx.QueryRow(ctx, "SELECT display_name FROM company WHERE id = "+storekit.Placeholders(args), args...).Scan(&name); err != nil {
+	parentArgs := []any{parent}
+	if err := tx.QueryRow(ctx, "SELECT display_name FROM company WHERE id = "+storekit.Placeholders(parentArgs), parentArgs...).Scan(&name); err != nil {
 		return fmt.Errorf("contacts: reading the chosen parent company: %w", err)
 	}
 	seen := map[ids.UUID]bool{}
 	for step := parent; !seen[step]; {
 		seen[step] = true
 		var above *ids.UUID
-		args := []any{step}
-		if err := tx.QueryRow(ctx, "SELECT parent_company_id FROM company WHERE id = "+storekit.Placeholders(args), args...).Scan(&above); err != nil {
+		stepArgs := []any{step}
+		if err := tx.QueryRow(ctx, "SELECT parent_company_id FROM company WHERE id = "+storekit.Placeholders(stepArgs), stepArgs...).Scan(&above); err != nil {
 			return fmt.Errorf("contacts: reading a parent company's own parent: %w", err)
 		}
 		if above == nil {

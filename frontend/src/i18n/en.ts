@@ -7760,6 +7760,8 @@ export const en = {
   "create.domainMalformed":
     "This is not a domain. Enter one such as example.com.",
   "create.parentCompanyBelow": "{name} is already below this company.",
+  "create.parentCompanySelf":
+    "A company cannot be its own parent. Choose another.",
   "create.linkedinNotLinkedin": "Enter a link to a page on linkedin.com.",
   "create.linkedinNotProfile":
     "Enter a link to someone’s own profile, such as linkedin.com/in/name.",

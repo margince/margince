@@ -436,6 +436,22 @@ describe("a company form's refusals in the reader's words", () => {
     );
   });
 
+  it("says a company cannot be its own parent", () => {
+    const fault = {
+      field: "parent_company_id",
+      code: "parent_company_self",
+      message: "a company cannot be its own parent; choose another company",
+    };
+    for (const locale of ["en", "de", "vi"] as const) {
+      expect(faultSentence(fault, locale)).toBe(
+        translate(locale, "create.parentCompanySelf"),
+      );
+    }
+    expect(faultSentence(fault, "en")).toBe(
+      "A company cannot be its own parent. Choose another.",
+    );
+  });
+
   it("asks for a domain instead of describing host-name labels", () => {
     const fault = {
       field: "domain",

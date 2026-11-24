@@ -30,8 +30,8 @@ func (s *Store) NoticeSourceReviewsTx(ctx context.Context, tx pgx.Tx, contactID 
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
-// requireNoticeSourceRead is the authority every read of a contact's notice
-// sources takes: privacy-request read, and the contact itself in row scope.
+// requireNoticeSourceRead is the authority the contact page's source reads take:
+// privacy-request read, and the contact itself in row scope.
 func requireNoticeSourceRead(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
 	if err := requireDSRAdmin(ctx, principal.ActionRead); err != nil {
 		return err

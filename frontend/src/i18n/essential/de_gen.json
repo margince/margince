@@ -2880,6 +2880,7 @@
   "create.linkedinMalformed": "Das ist kein Link. Füge die Adresse der LinkedIn-Seite ein.",
   "create.domainMalformed": "Das ist keine Domain. Gib eine ein, zum Beispiel example.com.",
   "create.parentCompanyBelow": "{name} steht bereits unter diesem Unternehmen.",
+  "create.parentCompanySelf": "Ein Unternehmen kann nicht sein eigenes übergeordnetes Unternehmen sein. Wähle ein anderes.",
   "create.linkedinNotLinkedin": "Gib einen Link zu einer Seite auf linkedin.com ein.",
   "create.linkedinNotProfile": "Gib einen Link zu einem persönlichen Profil ein, etwa linkedin.com/in/name.",
   "create.dateRangeReversed": "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",

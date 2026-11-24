@@ -7741,6 +7741,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.domainMalformed":
     "Das ist keine Domain. Gib eine ein, zum Beispiel example.com.",
   "create.parentCompanyBelow": "{name} steht bereits unter diesem Unternehmen.",
+  "create.parentCompanySelf":
+    "Ein Unternehmen kann nicht sein eigenes übergeordnetes Unternehmen sein. Wähle ein anderes.",
   "create.linkedinNotLinkedin":
     "Gib einen Link zu einer Seite auf linkedin.com ein.",
   "create.linkedinNotProfile":

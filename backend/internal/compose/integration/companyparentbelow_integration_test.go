@@ -41,6 +41,14 @@ func TestAParentBelowTheCompanyIsRefusedByName(t *testing.T) {
 		t.Fatalf("the refusal names %+v, want parent_company_below on parent_company_id naming Group Berlin Retail", fault)
 	}
 
+	problem.Details.Errors = nil
+	status = e.Call(t, "PATCH", "/v1/companies/"+top, AnyMap{"parent_company_id": top},
+		map[string]string{"If-Match": "1"}, &problem)
+	if status != http.StatusUnprocessableEntity || len(problem.Details.Errors) != 1 ||
+		problem.Details.Errors[0].Field != "parent_company_id" || problem.Details.Errors[0].Code != "parent_company_self" {
+		t.Fatalf("PATCH a company as its own parent → %d %+v, want parent_company_self on parent_company_id", status, problem)
+	}
+
 	if status := e.Call(t, "PATCH", "/v1/companies/"+bottom, AnyMap{"parent_company_id": top},
 		map[string]string{"If-Match": "1"}, nil); status != http.StatusOK {
 		t.Fatalf("moving a company under an unrelated ancestor → %d, want 200", status)

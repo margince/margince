@@ -7555,6 +7555,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.domainMalformed":
     "Đây không phải là tên miền. Hãy nhập một tên miền, ví dụ example.com.",
   "create.parentCompanyBelow": "{name} đã nằm dưới công ty này.",
+  "create.parentCompanySelf":
+    "Một công ty không thể là công ty mẹ của chính nó. Hãy chọn công ty khác.",
   "create.linkedinNotLinkedin":
     "Hãy nhập đường liên kết tới một trang trên linkedin.com.",
   "create.linkedinNotProfile":
