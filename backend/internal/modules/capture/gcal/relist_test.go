@@ -51,6 +51,7 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 		fails   bool
 		stale   bool
 		retired [][]string
+		landed  []string
 	}{
 		{name: "an expired token re-lists", retired: [][]string{{"evt-1", "evt-2"}}, api: func(t *testing.T) *fakeAPI {
 			return &fakeAPI{owner: gcalOwner, deltaErr: ErrSyncTokenGone, initialToken: "fresh", initial: listing(t)}
@@ -64,7 +65,7 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 		{name: "an event of the listing fails to land", failOn: "evt-1", fails: true, api: func(t *testing.T) *fakeAPI {
 			return &fakeAPI{owner: gcalOwner, deltaErr: ErrSyncTokenGone, initialToken: "fresh", initial: listing(t)}
 		}},
-		{name: "a stale list drains the token and retires against the full list alone", stale: true, retired: [][]string{{"evt-1", "evt-2"}}, api: func(t *testing.T) *fakeAPI {
+		{name: "a stale list drains the token and retires against the full list alone", stale: true, retired: [][]string{{"evt-1", "evt-2"}}, landed: []string{"evt-9"}, api: func(t *testing.T) *fakeAPI {
 			drained := eventJSON(t, "evt-9", "confirmed", "Moved", "2026-07-18T10:00:00Z", gcalOwner, "client@acme.com")
 			return &fakeAPI{owner: gcalOwner, deltaToken: "next", delta: [][]byte{drained}, initialToken: "fresh", initial: listing(t)}
 		}},
@@ -93,6 +94,11 @@ func TestOnlyAFullySettledRelistRetiresWhatItLeftOut(t *testing.T) {
 			if want := map[bool]time.Time{true: now, false: listedBefore}[tc.retired != nil]; !tc.fails {
 				if state, err := parseCursor(next); err != nil || !state.ListedAt.Equal(want) {
 					t.Errorf("the cursor dates the listing %v (%v), want %v", state.ListedAt, err, want)
+				}
+			}
+			for _, id := range tc.landed {
+				if !slices.ContainsFunc(sink.recs, func(rec connector.NormalizedRecord) bool { return rec.NaturalKey.SourceID == id }) {
+					t.Errorf("the drained event %s never reached capture", id)
 				}
 			}
 			if !slices.EqualFunc(sink.listings, tc.retired, slices.Equal) {
