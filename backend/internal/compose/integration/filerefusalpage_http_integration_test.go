@@ -16,7 +16,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func openAttachment(t *testing.T, e *apptest.AppEnv, id, accept string) (*http.Response, string) {
+// httpAnswer is what one request answered, read in full.
+type httpAnswer struct {
+	status int
+	header http.Header
+	body   string
+}
+
+func openAttachment(t *testing.T, e *apptest.AppEnv, id, accept string) httpAnswer {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.TS.URL+"/v1/attachments/"+id, nil)
 	if err != nil {
@@ -37,7 +44,7 @@ func openAttachment(t *testing.T, e *apptest.AppEnv, id, accept string) (*http.R
 	if err != nil {
 		t.Fatalf("reading the body: %v", err)
 	}
-	return resp, string(body)
+	return httpAnswer{status: resp.StatusCode, header: resp.Header, body: string(body)}
 }
 
 // A link to a missing attachment, opened in a tab, reads a sentence; the same
@@ -47,19 +54,19 @@ func TestAMissingAttachmentOpenedInATabReadsAPageAndAClientReadsTheProblem(t *te
 	apptest.BootstrapWorkspaceSession(t, e, "File Page", "file-page@fable.test", "Admin")
 	missing := ids.NewV7().String()
 
-	tab, page := openAttachment(t, e, missing, "text/html,application/xhtml+xml,*/*;q=0.8")
-	if tab.StatusCode != http.StatusNotFound || !strings.HasPrefix(tab.Header.Get("Content-Type"), "text/html") {
-		t.Fatalf("the tab got %d %q, want a 404 page", tab.StatusCode, tab.Header.Get("Content-Type"))
+	tab := openAttachment(t, e, missing, "text/html,application/xhtml+xml,*/*;q=0.8")
+	if tab.status != http.StatusNotFound || !strings.HasPrefix(tab.header.Get("Content-Type"), "text/html") {
+		t.Fatalf("the tab got %d %q, want a 404 page", tab.status, tab.header.Get("Content-Type"))
 	}
-	if !strings.Contains(page, "Diese Datei wurde gelöscht oder du hast keinen Zugriff mehr darauf.") {
-		t.Errorf("the page does not say the file is gone in the reader's language:\n%s", page)
+	if !strings.Contains(tab.body, "Diese Datei wurde gelöscht oder du hast keinen Zugriff mehr darauf.") {
+		t.Errorf("the page does not say the file is gone in the reader's language:\n%s", tab.body)
 	}
 
-	client, body := openAttachment(t, e, missing, "application/json")
+	client := openAttachment(t, e, missing, "application/json")
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if err := json.Unmarshal([]byte(body), &problem); err != nil || client.StatusCode != http.StatusNotFound || problem.Code != "not_found" {
-		t.Fatalf("the client got %d %q %s, want the 404 not_found problem", client.StatusCode, client.Header.Get("Content-Type"), body)
+	if err := json.Unmarshal([]byte(client.body), &problem); err != nil || client.status != http.StatusNotFound || problem.Code != "not_found" {
+		t.Fatalf("the client got %d %q %s, want the 404 not_found problem", client.status, client.header.Get("Content-Type"), client.body)
 	}
 }

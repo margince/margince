@@ -22,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
 	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -234,7 +235,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 		publicEdge = srv.routesForTest(publicEdge)
 	}
 	mux.Handle("/v1/", boundByResponseDeadline(
-		privateUnlessStated(publicRecordPreviews(srv, identitySvc)(authH.Middleware(readerDisplayLocale(pool)(publicEdge))))))
+		privateUnlessStated(publicRecordPreviews(srv, identitySvc)(authH.Middleware(readerlocale.Middleware(pool)(publicEdge))))))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/margince/margince/backend/internal/compose/filepage"
 	"github.com/margince/margince/backend/internal/compose/queryguard"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -33,7 +34,7 @@ func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.Midd
 	crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
 		BaseRouter:  router,
-		Middlewares: append(middlewares, announceDeprecatedOperation, fileRefusalPage),
+		Middlewares: append(middlewares, announceDeprecatedOperation, filepage.Refusals(chiRoutePattern)),
 		// The generated default writes err.Error() as text/plain, an
 		// off-contract shape that also leaks the parser's internal text.
 		ErrorHandlerFunc: paramParseError,

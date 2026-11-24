@@ -14,7 +14,7 @@ import (
 )
 
 // probeStatus sends the uptime monitor's request: a client with no cookie jar, so no session.
-func probeStatus(t *testing.T, e *apptest.AppEnv, method string) (*http.Response, []byte) {
+func probeStatus(t *testing.T, e *apptest.AppEnv, method string) httpAnswer {
 	t.Helper()
 	req, err := http.NewRequestWithContext(t.Context(), method, e.TS.URL+"/v1/status", nil)
 	if err != nil {
@@ -33,23 +33,23 @@ func probeStatus(t *testing.T, e *apptest.AppEnv, method string) (*http.Response
 	if err != nil {
 		t.Fatalf("reading the body: %v", err)
 	}
-	return resp, body
+	return httpAnswer{status: resp.StatusCode, header: resp.Header, body: string(body)}
 }
 
 func TestAMonitorSendingHeadToTheStatusProbeHearsWhatGetHears(t *testing.T) {
 	e := apptest.SetupApp(t)
-	if resp, body := probeStatus(t, e, http.MethodHead); resp.StatusCode != http.StatusServiceUnavailable || len(body) != 0 {
-		t.Fatalf("HEAD before bootstrap = %d with %d body bytes, want 503 and none", resp.StatusCode, len(body))
+	if early := probeStatus(t, e, http.MethodHead); early.status != http.StatusServiceUnavailable || early.body != "" {
+		t.Fatalf("HEAD before bootstrap = %d with %d body bytes, want 503 and none", early.status, len(early.body))
 	}
 	apptest.BootstrapWorkspaceSession(t, e, "Status Probe", "status-probe@fable.test", "Admin")
-	get, _ := probeStatus(t, e, http.MethodGet)
-	head, body := probeStatus(t, e, http.MethodHead)
-	if head.StatusCode != http.StatusOK || get.StatusCode != http.StatusOK || len(body) != 0 {
-		t.Fatalf("HEAD = %d with %d body bytes, GET = %d; want both 200 and HEAD bodiless", head.StatusCode, len(body), get.StatusCode)
+	get := probeStatus(t, e, http.MethodGet)
+	head := probeStatus(t, e, http.MethodHead)
+	if head.status != http.StatusOK || get.status != http.StatusOK || head.body != "" {
+		t.Fatalf("HEAD = %d with %d body bytes, GET = %d; want both 200 and HEAD bodiless", head.status, len(head.body), get.status)
 	}
 	for _, header := range []string{"Cache-Control", "Content-Type"} {
-		if head.Header.Get(header) != get.Header.Get(header) {
-			t.Errorf("HEAD sent %s %q, GET %q", header, head.Header.Get(header), get.Header.Get(header))
+		if head.header.Get(header) != get.header.Get(header) {
+			t.Errorf("HEAD sent %s %q, GET %q", header, head.header.Get(header), get.header.Get(header))
 		}
 	}
 }

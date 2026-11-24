@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -149,14 +150,14 @@ func (s Server) GetPublicRecordPreview(w http.ResponseWriter, r *http.Request, k
 }
 
 func (s Server) writeRecordPreview(w http.ResponseWriter, r *http.Request, preview recordPreview, cause error) {
-	s.writePreviewCard(w, r, recordPreviewCard(preview, publicPreviewLocale(r)), "record", cause)
+	s.writePreviewCard(w, r, recordPreviewCard(preview, readerlocale.Anonymous(r)), "record", cause)
 }
 
 // writePreviewCard answers GET and HEAD with the card. A cause sets the status
 // it classifies to; the card still renders, so a browser that reached it
 // still gets its link onward.
 func (s Server) writePreviewCard(w http.ResponseWriter, r *http.Request, card previewCard, kind string, cause error) {
-	card.Locale = publicPreviewLocale(r)
+	card.Locale = readerlocale.Anonymous(r)
 	w.Header().Add("Vary", "Accept-Language")
 	w.Header().Add("Vary", "X-Margince-Display-Locale")
 	status := http.StatusOK

@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -37,18 +38,18 @@ func bookingPreviewSlug(path string) (string, bool) {
 // GetPublicBookingPreview renders the card. The booking edge has already
 // resolved the slug and bound the public booking principal.
 func (s Server) GetPublicBookingPreview(w http.ResponseWriter, r *http.Request, hostSlug string) {
-	preview, err := s.PublicBookingPreview(systemtext.WithLocale(r.Context(), publicPreviewLocale(r)), hostSlug)
+	preview, err := s.PublicBookingPreview(systemtext.WithLocale(r.Context(), readerlocale.Anonymous(r)), hostSlug)
 	if err != nil {
 		s.writeBookingPreviewUnavailable(w, r, hostSlug, err)
 		return
 	}
-	s.writePreviewCard(w, r, bookingCard(bookingAppHref(hostSlug, r.URL.Query()), preview, publicPreviewLocale(r)), "booking", nil)
+	s.writePreviewCard(w, r, bookingCard(bookingAppHref(hostSlug, r.URL.Query()), preview, readerlocale.Anonymous(r)), "booking", nil)
 }
 
 // writeBookingPreviewUnavailable answers a missing, revoked, throttled or
 // failed read with a card that names no host. Its status says which.
 func (s Server) writeBookingPreviewUnavailable(w http.ResponseWriter, r *http.Request, hostSlug string, cause error) {
-	s.writePreviewCard(w, r, previewCard{Title: systemtext.Copy("preview.page_unavailable", publicPreviewLocale(r)), Href: bookingAppHref(hostSlug, r.URL.Query()), LinkText: systemtext.Copy("preview.open_booking", publicPreviewLocale(r))}, "booking", cause)
+	s.writePreviewCard(w, r, previewCard{Title: systemtext.Copy("preview.page_unavailable", readerlocale.Anonymous(r)), Href: bookingAppHref(hostSlug, r.URL.Query()), LinkText: systemtext.Copy("preview.open_booking", readerlocale.Anonymous(r))}, "booking", cause)
 }
 
 // bookingAppHref is where the card sends a browser: the fragment address, with

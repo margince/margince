@@ -1,23 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+//gate:kind prohibition H2
 
-// Where a runner.Job may be BUILT, held against the tree rather than against a
-// list beside it.
-//
-// TestEveryRunnerJobBuiltHereCarriesAnAllowlist (agentspectools_test.go) proves
-// each Job compose builds takes its Tools from a runner.AgentSpec, but it reads
-// compose alone. This gate bounds WHERE a Job may be built at all, so that
-// census has a bounded set: a construction anywhere else in backend/ fails here
-// instead of going unread there.
+//go:build !integration
+
+package gates
+
+// Where a runner.Job may be built. Compose's allowlist census reads compose
+// alone, so a construction anywhere else in backend/ fails here.
 
 import (
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -26,38 +24,19 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// buildsAJobLegitimately are the files that may construct a runner.Job.
-// Adding one is a decision about the catalog boundary, so it is made here in
-// review rather than discovered later in a sweep.
-//
-// gatekit.Waive rather than a bare map: it holds each reason to a floor, and
-// AssertAllMatched reports an entry that no longer matches anything — so a file
-// that stops building a Job cannot leave its permission behind for whatever is
-// written there next.
+// buildsAJobLegitimately are the files that may construct a runner.Job. An
+// entry that no longer matches fails, so no permission outlives its file.
 var buildsAJobLegitimately = gatekit.Waive(map[string]string{
 	"internal/compose/runnerservice.go":      "the scheduled path, carrying the spec's own allowlist",
-	"internal/compose/runnerresume.go":       "the resumed path, carrying the CURRENT catalog entry's allowlist rather than the one staged with the call — a run parked across a catalog change resumes under what the entry says now",
+	"internal/compose/runnerresume.go":       "the resumed path, carrying the current catalog entry's allowlist rather than the one staged with the call, so a run parked across a catalog change resumes under what the entry says now",
 	"internal/compose/certcase_agentloop.go": "the certification lane, which builds its Job from ScheduledAgentSpecByName's own allowlist",
 })
 
-// jobConstructionForms are the ways a runner.Job comes into existence. A gate
-// that knew only the composite literal would be evaded by three of these while
-// reporting the tree clean, which is worse than not having it.
-//
-// The struct-field form is here because the certification lane already uses it
-// (`certcase_agentloop.go` holds a `job runner.Job`), and a Job reached through
-// a zero-valued field carries empty Tools exactly like one built with a literal.
-//
-// It matches on the `runner.Job` spelling, so an import alias (`import r
-// ".../runner"` then `r.Job{}`) walks past it. Closing that means resolving
-// imports across all of backend/; inside compose the allowlist census resolves
-// by type and is not evaded that way.
+// jobConstructionForms are the ways a runner.Job comes into existence: a
+// literal, new, a typed var, a helper's result and a struct field's zero value.
+// It reads the `runner.Job` spelling, so an import alias walks past it.
 func jobConstructionForms(file *ast.File) []token.Pos {
-	// A struct type written INSIDE a signature — `func f(arg struct{ job
-	// runner.Job })` — is a shape the function receives, not one it builds, so
-	// those are collected first and skipped below. Rare, but a gate that
-	// reports a file for a Job it was handed sends someone to read the wrong
-	// line.
+	// A struct type in a signature is received, not built, so it is skipped.
 	received := map[ast.Node]bool{}
 	ast.Inspect(file, func(n ast.Node) bool {
 		fn, ok := n.(*ast.FuncType)
@@ -94,12 +73,8 @@ func jobConstructionForms(file *ast.File) []token.Pos {
 			if node.Type != nil && isRunnerJob(node.Type) {
 				at = append(at, node.Pos())
 			}
-		case *ast.StructType: // a struct FIELD holding a runner.Job, consumed as its zero value
-			// Walked from the StructType rather than matching *ast.Field,
-			// because a FieldList is also how the AST spells parameters,
-			// results, receivers and interface methods — so a bare Field case
-			// would report `func f(job runner.Job)` as building one, and would
-			// double-count every function that returns one.
+		case *ast.StructType: // a struct field holding a runner.Job, read as its zero value
+			// Not *ast.Field: parameters and results are fields too, and pass a Job on.
 			if node.Fields == nil || received[node] {
 				return true
 			}
@@ -133,29 +108,21 @@ func isRunnerJob(expr ast.Expr) bool {
 	return ok && pkg.Name == "runner" && sel.Sel.Name == "Job"
 }
 
-// The walk covers backend/ AND THAT IS THE WHOLE REACH, which is worth saying
-// because "the tree" would be an overclaim. runner lives under
-// backend/internal/, so Go's internal rule puts it out of reach of anything
-// outside backend/ — extensions/ and fixtures/ are separate modules that may
-// import only the marker-allowlisted backend/pkg/** surface, and neither can
-// name runner.Job at all. A file that could build one is a file inside this
-// walk, by the language rather than by this gate's diligence.
+// The walk reads backend/ only. runner sits under backend/internal/, so Go's
+// internal rule keeps every module outside backend/ from naming runner.Job.
 func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
-	root := filepath.Join("..", "..")
+	root := "."
 	var offenders []string
 	seen := map[string]bool{}
 
-	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
 			rel := filepath.ToSlash(strings.TrimPrefix(path, root+string(filepath.Separator)))
-			// The runner's own package builds Jobs constantly and is the one
-			// place that legitimately does: it OWNS the type, and its tests
-			// exercise the empty case on purpose. Pinned to the full path
-			// rather than the base name — a future modules/<x>/runner/ must not
-			// inherit the exemption by being called the same thing.
+			// The runner package owns the type. Its full path is pinned, so a
+			// second package named runner does not inherit the exemption.
 			switch {
 			case d.Name() == ".git" || d.Name() == "node_modules",
 				rel == "internal/modules/agents/runner":
@@ -166,12 +133,9 @@ func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
 		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
 		}
-		parsed, perr := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		parsed, perr := gatekit.ParseFile(path, 0)
 		if perr != nil {
-			// A file this scan cannot read is a file it cannot clear, and
-			// "unreadable" must not resolve to "clean". The build would also
-			// fail on it, but not before this gate had already reported the
-			// tree green.
+			// A file the scan cannot read is one it cannot clear.
 			return fmt.Errorf("parsing %s, so this gate cannot say whether it builds a runner.Job: %w", path, perr)
 		}
 		if len(jobConstructionForms(parsed)) == 0 {
@@ -194,19 +158,15 @@ func TestOnlySanctionedFilesBuildARunnerJob(t *testing.T) {
 			"checks that its Tools come from a catalog entry. Route it through compose's "+
 			"scheduledAgents(), or add the file to buildsAJobLegitimately with the reason", file)
 	}
-	// A gate that finds nothing because it is looking in the wrong place reads
-	// exactly like a clean tree, so a sanction that matched nothing is reported
-	// rather than assumed dormant.
+	// A scan of the wrong root reads like a clean tree, so finding nothing fails.
 	buildsAJobLegitimately.AssertAllMatched(t)
 	if len(seen) == 0 {
-		t.Error("no file in the tree builds a runner.Job — this gate is reading the wrong root, " +
+		t.Error("no file in the tree builds a runner.Job, so this gate is reading the wrong root, " +
 			"which is indistinguishable from a tree with nothing to find")
 	}
 }
 
-// Each form is one a composite-literal-only gate would miss. Without these the
-// gate above would report a clean tree while three of the four ways to make a
-// Job walked past it.
+// Each form is one a scan of composite literals alone would miss.
 func TestTheJobConstructionScanSeesEveryFormOfIt(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -224,8 +184,7 @@ func f() { var j runner.Job; _ = j }`},
 		{"a helper returning one", `package p
 import "x/runner"
 func f() runner.Job { panic("") }`},
-		// No function here returns or takes a runner.Job, so ONLY the struct
-		// field can trigger detection: remove that case and this fails.
+		// No function here returns or takes a runner.Job, so only the field is seen.
 		{"a struct field consumed as its zero value", `package p
 import "x/runner"
 type holder struct{ job runner.Job }
@@ -241,9 +200,7 @@ func f() { _ = holder{}.job }`},
 			}
 		})
 	}
-	// A parameter and a result are Field nodes too, and neither BUILDS a Job —
-	// the caller supplies one. A scan that counted them would report files
-	// that merely pass a Job through as construction sites.
+	// A parameter, a result and an interface method pass a Job on and build none.
 	passesOneThrough := `package p
 import "x/runner"
 type iface interface{ take(j runner.Job) }
@@ -254,7 +211,7 @@ func g(arg struct{ job runner.Job }) { _ = arg }`
 		t.Fatalf("parsing the fixture: %v", err)
 	}
 	if got := len(jobConstructionForms(parsed)); got != 0 {
-		t.Errorf("the scan reported %d constructions in a file that only PASSES a Job — a parameter, "+
+		t.Errorf("the scan reported %d constructions in a file that only passes a Job on: a parameter, "+
 			"a result and an interface method are all Field nodes, and none of them builds one", got)
 	}
 

@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package filepage gives a file link opened in a browser tab a sentence when
+// the file is gone or out of reach. Other callers keep the problem.
+package filepage
 
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/readerlocale"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
@@ -34,24 +37,26 @@ var fileRoutes = map[string]bool{
 	"/v1/users/{id}/avatar":                                true,
 }
 
-// fileRefusalPage gives a file link opened in a tab a sentence when the file is
-// gone or out of reach. A signed-in reader's language wins over the browser's.
-func fileRefusalPage(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || !fileRoutes[chiRoutePattern(r)] {
-			next.ServeHTTP(w, r)
-			return
-		}
-		w.Header().Add("Vary", "Accept")
-		language := systemtext.Locale(r.Context())
-		if !systemtext.HasLocale(r.Context()) {
-			language = publicPreviewLocale(r)
-		}
-		page := httperr.RefusalPage{
-			Lang:     string(language),
-			Title:    systemtext.Copy("file.unavailable_title", language),
-			Sentence: systemtext.Copy("file.unavailable_sentence", language),
-		}
-		next.ServeHTTP(w, r.WithContext(httperr.WithRefusalPage(r.Context(), page)))
-	})
+// Refusals attaches the page to a request for one of fileRoutes, read through
+// routePattern. A signed-in reader's language wins over the browser's.
+func Refusals(routePattern func(*http.Request) string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet || !fileRoutes[routePattern(r)] {
+				next.ServeHTTP(w, r)
+				return
+			}
+			w.Header().Add("Vary", "Accept")
+			language := systemtext.Locale(r.Context())
+			if !systemtext.HasLocale(r.Context()) {
+				language = readerlocale.Anonymous(r)
+			}
+			page := httperr.RefusalPage{
+				Lang:     string(language),
+				Title:    systemtext.Copy("file.unavailable_title", language),
+				Sentence: systemtext.Copy("file.unavailable_sentence", language),
+			}
+			next.ServeHTTP(w, r.WithContext(httperr.WithRefusalPage(r.Context(), page)))
+		})
+	}
 }

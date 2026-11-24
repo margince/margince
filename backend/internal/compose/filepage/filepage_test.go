@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package filepage
 
 import (
 	"net/http"
@@ -9,11 +9,22 @@ import (
 	"strings"
 	"testing"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/go-chi/chi/v5"
+
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
+
+func loadContract(t *testing.T) *openapi3.T {
+	t.Helper()
+	doc, err := openapi3.NewLoader().LoadFromFile("../../../api/crm.yaml")
+	if err != nil {
+		t.Fatalf("loading the contract: %v", err)
+	}
+	return doc
+}
 
 // servesAFile reads a 200 that answers neither JSON nor a page of its own.
 func servesAFile(contentTypes map[string]bool) bool {
@@ -87,10 +98,15 @@ func TestEveryFileRouteDeclaresThePageItsRefusalsCanBe(t *testing.T) {
 	}
 }
 
-type goneAttachment struct{ crmcontracts.Unimplemented }
-
-func (goneAttachment) DownloadAttachment(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
-	httperr.Write(w, r, apperrors.ErrNotFound)
+// goneFileRouter routes the attachment download as the contract router does,
+// to a handler that answers the file is gone.
+func goneFileRouter() http.Handler {
+	router := chi.NewRouter()
+	pattern := func(r *http.Request) string { return chi.RouteContext(r.Context()).RoutePattern() }
+	router.With(Refusals(pattern)).Get(httpserver.BaseURL+"/attachments/{id}", func(w http.ResponseWriter, r *http.Request) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+	})
+	return router
 }
 
 func openGoneAttachment(accept, language string) *httptest.ResponseRecorder {
@@ -98,7 +114,7 @@ func openGoneAttachment(accept, language string) *httptest.ResponseRecorder {
 	req.Header.Set("Accept", accept)
 	req.Header.Set("Accept-Language", language)
 	rec := httptest.NewRecorder()
-	contractRouter(goneAttachment{}).ServeHTTP(rec, req)
+	goneFileRouter().ServeHTTP(rec, req)
 	return rec
 }
 
@@ -120,8 +136,8 @@ func TestAGoneFileOpenedInATabReadsASentenceInTheReadersLanguage(t *testing.T) {
 
 func TestAGoneFileAskedForByAClientStaysAProblem(t *testing.T) {
 	rec := openGoneAttachment("application/json", "de")
-	if rec.Code != http.StatusNotFound || problemCode(t, rec) != "not_found" {
-		t.Fatalf("answered %d %s, want the 404 problem", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusNotFound || rec.Header().Get("Content-Type") != "application/problem+json" {
+		t.Fatalf("answered %d %q, want the 404 problem", rec.Code, rec.Header().Get("Content-Type"))
 	}
 	if !strings.Contains(strings.Join(rec.Header().Values("Vary"), ","), "Accept") {
 		t.Errorf("Vary = %v, want Accept named, since the answer depends on it", rec.Header().Values("Vary"))

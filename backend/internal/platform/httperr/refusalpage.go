@@ -59,7 +59,7 @@ func writeRefusalPage(w http.ResponseWriter, r *http.Request, status int) bool {
 // least as high as any JSON type. A script's bare */* names neither.
 func prefersHTML(accept string) bool {
 	html, json := 0.0, 0.0
-	for _, mediaRange := range strings.Split(accept, ",") {
+	for mediaRange := range strings.SplitSeq(accept, ",") {
 		mediaType, params, err := mime.ParseMediaType(strings.TrimSpace(mediaRange))
 		if err != nil {
 			continue
