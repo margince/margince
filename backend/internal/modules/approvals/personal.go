@@ -11,7 +11,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // requestedDecider is the member stored at staging. A row decided before the
@@ -80,16 +79,4 @@ func (s *Service) PendingInScope(ctx context.Context, scope ListInput, named []i
 // request. A request handed to someone else since then is theirs to be told of.
 func (a row) StagedInItsDecidersSession() bool {
 	return a.StagedInConversationOf != nil && requestedDecider(a) == *a.StagedInConversationOf
-}
-
-// conversationOf is the colleague whose live conversation is staging, or zero.
-// That is an AI client connected on their own passport, outside a scheduled run.
-// A passport minted without a connection, as the overnight run's, is unattended.
-func conversationOf(ctx context.Context, p principal.Principal) ids.UUID {
-	unattended := principal.Unattended(ctx)
-	connected := p.Type == principal.PrincipalAgent && !p.PassportID.IsZero() && !p.ConnectionID.IsZero()
-	if unattended || !connected || p.OnBehalfOf.IsZero() {
-		return ids.Nil
-	}
-	return p.OnBehalfOf
 }
