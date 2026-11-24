@@ -3,8 +3,9 @@
   margin-top: var(--space-3);
 }
 
-/* Outside the shell no scroller pads the page's top, so the box takes that air
-   itself. Inside the shell the scroller already gives it. */
-.wrap.errorboundary-page {
+/* Outside the shell, and on a rail-less route, no scroller pads the page's top,
+   so the box takes that air itself. A workspace route's scroller already gives it. */
+.wrap.errorboundary-page,
+.app.railless .wrap.errorboundary-screen {
   padding-top: var(--pageGapTop);
 }

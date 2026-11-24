@@ -26,7 +26,7 @@ function RenderFailure({
   const t = useT();
   return (
     <div
-      className={inShell ? "wrap narrow" : "wrap narrow errorboundary-page"}
+      className={`wrap narrow ${inShell ? "errorboundary-screen" : "errorboundary-page"}`}
       role="alert"
     >
       <EmptyState>
