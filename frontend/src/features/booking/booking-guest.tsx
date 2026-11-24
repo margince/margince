@@ -6,21 +6,19 @@ import { GoneNotice } from "../../components/gonenotice";
 import { Calendar, type ISODay } from "../../design-system/calendar";
 import { CompanyLogo } from "../../design-system/companylogo";
 import { Heading } from "../../design-system/heading";
-import { MeetingSlots } from "../../design-system/meetingslots";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate, type QueryLike } from "../../design-system/querystates";
-import {
-  formatDateTime,
-  formatDayLong,
-  formatTimeOfDay,
-} from "../../format/format";
 import { browserZone, dayInZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import { useBookingIntent, useBookingTitle } from "./booking-common";
-import { throwBookingProblem } from "./booking-errors";
+import {
+  useBookingIntent,
+  useBookingTitle,
+  useGuestLength,
+} from "./booking-common";
+import { lengthNotOffered, throwBookingProblem } from "./booking-errors";
 import {
   dayRefusal,
   dayWindow,
@@ -36,6 +34,7 @@ import {
   type GuestDetails,
   GuestDetailsForm,
   GuestHost,
+  GuestTimes,
   GuestUnavailable,
   guestTitle,
   PreviewNotice,
@@ -57,6 +56,22 @@ const NO_DETAILS: GuestDetails = {
   consent: false,
 };
 
+// A proposal and the host's preview offer no length to pick.
+const NO_LENGTHS: readonly number[] = [];
+
+// The length the page books at: the guest's pick while the page offers it,
+// else the length the server opened the page at.
+function bookedLength(
+  page:
+    | Readonly<{ lengths: readonly number[]; duration_minutes: number }>
+    | undefined,
+  requested: number | undefined,
+): number | undefined {
+  if (requested !== undefined && page?.lengths.includes(requested))
+    return requested;
+  return page?.duration_minutes;
+}
+
 export function BookingGuestScreen({
   hostSlug,
   proposalToken,
@@ -70,15 +85,9 @@ export function BookingGuestScreen({
   const [zone, setZone] = useState(() =>
     preview ? readerZone : browserZone(),
   );
-  const [requestedLength] = useState(() => {
-    const raw =
-      new URLSearchParams(globalThis.location.search).get("l") ??
-      new URLSearchParams(globalThis.location.hash.split("?")[1]).get("l");
-    const length = Number(raw);
-    return !preview && !proposalToken && Number.isInteger(length) && length > 0
-      ? length
-      : undefined;
-  });
+  const [requestedLength, pickLength] = useGuestLength(
+    preview || Boolean(proposalToken),
+  );
   const intent = useBookingIntent();
   const client = useQueryClient();
   const [now] = useState(() => Date.now());
@@ -93,6 +102,13 @@ export function BookingGuestScreen({
     queryKey: preview
       ? ["scheduling-profile"]
       : ["public-booking-profile", hostSlug, proposalToken, requestedLength],
+    // A new length reads the page again, and the page stays in view meanwhile.
+    // Another host's or proposal's page never stands in for this one.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === hostSlug &&
+      previousQuery.queryKey[2] === proposalToken
+        ? previous
+        : undefined,
     select: (value) => ({
       ...value,
       host_name: value.host_name ?? "",
@@ -105,7 +121,10 @@ export function BookingGuestScreen({
     }),
     queryFn: async () => {
       if (preview) {
-        return unwrap(await api.GET("/scheduling/profile"));
+        return {
+          ...unwrap(await api.GET("/scheduling/profile")),
+          lengths: NO_LENGTHS,
+        };
       }
       if (proposalToken) {
         const data = unwrap(
@@ -113,7 +132,7 @@ export function BookingGuestScreen({
             params: { path: { token: proposalToken } },
           }),
         );
-        return { ...data.profile, proposal: data };
+        return { ...data.profile, proposal: data, lengths: NO_LENGTHS };
       }
       const data = unwrap(
         await api.GET("/public/booking/{host_slug}/profile", {
@@ -123,13 +142,14 @@ export function BookingGuestScreen({
           },
         }),
       );
-      return { ...data, proposal: null };
+      return { ...data, proposal: null, lengths: data.offered_lengths ?? [] };
     },
   });
   const needsCalendar =
     preview &&
     profile.isSuccess &&
     !("provider" in profile.data && profile.data.provider);
+  const length = bookedLength(profile.data, requestedLength);
   const visible = monthWindow(month, zone, now);
   const read = async (from: string, to: string) => {
     if (preview) {
@@ -152,18 +172,21 @@ export function BookingGuestScreen({
       {
         params: {
           path: { host_slug: hostSlug },
-          query: { from, to, l: requestedLength },
+          query: { from, to, l: length },
         },
       },
     );
-    if (error) throwBookingProblem(error, t);
+    if (error) {
+      if (lengthNotOffered(error)) void profile.refetch();
+      throwBookingProblem(error, t);
+    }
     return data;
   };
   const readKey = [
     preview ? "reliable-availability" : "public-booking-slots",
     preview ? "booking-preview" : hostSlug,
     proposalToken,
-    requestedLength,
+    length,
     preview ? profile.data : undefined,
   ];
   const readable =
@@ -296,6 +319,13 @@ export function BookingGuestScreen({
                       <GuestHost
                         host={host}
                         videoApp={host.video_app}
+                        lengths={host.lengths}
+                        length={length}
+                        onLength={(length) => {
+                          pickLength(length);
+                          setPickedDay("");
+                          setSelected(null);
+                        }}
                         selected={selected}
                         zone={zone}
                         onZone={setZone}
@@ -353,7 +383,7 @@ export function BookingGuestScreen({
                               if (!preview && details.consent)
                                 book.mutate({
                                   slug: hostSlug,
-                                  length: requestedLength,
+                                  length,
                                   name: details.name,
                                   email: details.email,
                                   topic: details.topic,
@@ -418,72 +448,4 @@ function useDayTimes({
   });
   if (!lateDay) return { dayRead: slots, dayTimes: days?.byDay.get(day) ?? [] };
   return { dayRead: lateSlots, dayTimes: lateSlots.data?.slots ?? [] };
-}
-
-/**
- * The right-hand column before a time is picked: the times a personal
- * proposal offers first, then the chosen day's free times.
- */
-function GuestTimes({
-  offered,
-  day,
-  days,
-  times,
-  monthKey,
-  zone,
-  needsCalendar,
-  slots,
-  onSelect,
-}: Readonly<{
-  offered: readonly GuestSlot[];
-  day: ISODay | "";
-  days: ReturnType<typeof monthDays> | undefined;
-  times: readonly GuestSlot[];
-  monthKey: string;
-  zone: string;
-  needsCalendar: boolean;
-  slots: QueryLike<unknown>;
-  onSelect: (slot: GuestSlot) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const monthHasTimes = days?.free.some((free) => free.startsWith(monthKey));
-  return (
-    <>
-      {offered.length > 0 && (
-        <div className="bookguest-suggested">
-          <Heading as="h2" size="medium">
-            {t("scheduling.suggestedTimes")}
-          </Heading>
-          <MeetingSlots
-            slots={offered.map((slot) => ({
-              ...slot,
-              label: formatDateTime(slot.start, locale, zone),
-            }))}
-            onSelect={onSelect}
-            empty={t("book.noTimes")}
-          />
-        </div>
-      )}
-      <Heading as="h2" size="medium">
-        {day ? formatDayLong(day, locale, zone) : t("scheduling.chooseTime")}
-      </Heading>
-      {needsCalendar ? (
-        <p className="t-caption">{t("scheduling.previewCalendarSetup")}</p>
-      ) : (
-        <QueryGate pendingLabel={t("common.loading")} query={slots}>
-          {() => (
-            <MeetingSlots
-              slots={times.map((slot) => ({
-                ...slot,
-                label: formatTimeOfDay(slot.start, locale, zone),
-              }))}
-              onSelect={onSelect}
-              empty={t(monthHasTimes ? "book.noTimesDay" : "book.noTimesMonth")}
-            />
-          )}
-        </QueryGate>
-      )}
-    </>
-  );
 }

@@ -49,9 +49,10 @@ const (
 	// production and 21 test lines for the approvals adapter and server option that
 	// confirm a call in the conversation. Raised by 191 test lines for the
 	// team-request mail cases, which drive this package's unexported mail worker
-	// and send basis.
-	composeRootProductionLines = 230_548
-	composeRootTestLines       = 359_760
+	// and send basis. Raised by 2 production and 52 test lines for the booking length
+	// card cases, which drive the unexported bookingCard and the booking page fixtures.
+	composeRootProductionLines = 230_550
+	composeRootTestLines       = 359_812
 )
 
 // A read under these floors stopped early or read the wrong place, and would

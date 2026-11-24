@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Field } from "../../design-system/atoms";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
+import { identifierNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 
@@ -115,4 +116,47 @@ export function BookingBack() {
       </Button>
     </div>
   );
+}
+
+type Address = Readonly<{ pathname: string; search: string; hash: string }>;
+
+// A shared /book/<slug>?l=N link carries the length on the path's query; the
+// app's own #/book/<slug>?l=N carries it on the fragment's.
+function addressLength(address: Address): number | undefined {
+  const raw =
+    new URLSearchParams(address.search).get("l") ??
+    new URLSearchParams(address.hash.split("?")[1]).get("l");
+  const length = Number(raw);
+  return Number.isInteger(length) && length > 0 ? length : undefined;
+}
+
+// The address with its meeting length set, in both queries it may sit in.
+function withLength(address: Address, length: number): string {
+  const search = new URLSearchParams(address.search);
+  search.set("l", identifierNumber(length));
+  const [route, query] = address.hash.split("?");
+  const fragment = new URLSearchParams(query);
+  if (fragment.has("l")) fragment.set("l", identifierNumber(length));
+  const hash = fragment.size > 0 ? `${route}?${fragment}` : route;
+  return `${address.pathname}?${search}${hash}`;
+}
+
+/**
+ * The meeting length a guest asked for: the address's `l` at first, then the
+ * one they pick. The address keeps the pick, so a reload or a shared copy
+ * opens at it. A proposal and the host's preview have no length to pick.
+ */
+export function useGuestLength(personal: boolean) {
+  const [length, setLength] = useState(() =>
+    personal ? undefined : addressLength(globalThis.location),
+  );
+  const pick = (next: number) => {
+    setLength(next);
+    globalThis.history.replaceState(
+      globalThis.history.state,
+      "",
+      withLength(globalThis.location, next),
+    );
+  };
+  return [length, pick] as const;
 }
