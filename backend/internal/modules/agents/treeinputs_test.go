@@ -10,7 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// Go's test cache never rechecks a file outside this module, so without this a
+// Go's test cache never rechecks a file outside this module. Without this, a
 // replayed pass would outlive a change to the lane checker these tests read.
 func TestTheTestCacheKeysOnTheTreeOutsideThisModule(t *testing.T) {
 	if err := gatekit.DeclareInputs(os.Getenv, "../../../../e2e"); err != nil {
