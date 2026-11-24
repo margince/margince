@@ -242,49 +242,48 @@ const activityLive = "a.archived_at IS NULL"
 // and raw are returned only when it holds, so withheld payload stays in the
 // database. Callers pass a decision computed once per row (ActivityContentFrom).
 func activityColumns(ctx context.Context, contentArm string, arg func(any) int) (string, error) {
-	return renderActivityColumns(ctx, contentArm, arg, true)
-}
-
-// activityCountColumns serves CountActivities, which wraps the list only to
-// bind its arguments and never reads a value. Body and raw stay ungated there,
-// so the count statement carries the audience test once.
-func activityCountColumns(ctx context.Context, contentArm string, arg func(any) int) (string, error) {
-	return renderActivityColumns(ctx, contentArm, arg, false)
-}
-
-func renderActivityColumns(ctx context.Context, contentArm string, arg func(any) int, gatePayload bool) (string, error) {
 	share, err := auth.ActivityInternalMailShareClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}
 	replyChannel := storekit.ReplyChannelSQL("a", "")
-	// A count reads no column, so gate the source kind only in a payload read.
-	sourceAudience := ""
-	if gatePayload {
-		if sourceAudience, err = auth.ActivityAudienceArm(ctx, "s", arg); err != nil {
-			return "", err
-		}
+	sourceArm := auth.ActivitySourceAudienceArm
+	if rowsContentReadable(contentArm) {
+		sourceArm = auth.ActivityReadSourceAudienceArm
+	}
+	sourceAudience, err := sourceArm(ctx, "s", arg)
+	if err != nil {
+		return "", err
 	}
 	out := make([]string, len(activityProjection))
 	for i, c := range activityProjection {
-		out[i] = c.sql
-		if c.sql == replyChannel {
-			out[i] = storekit.ReplyChannelSQL("a", sourceAudience)
-			continue
-		}
-		if !gatePayload {
-			continue
-		}
 		switch c.sql {
+		case replyChannel:
+			out[i] = storekit.ReplyChannelSQL("a", sourceAudience)
 		case "a.body":
 			out[i] = "CASE WHEN (" + contentArm + ") THEN a.body END AS body"
 		case "a.raw":
 			out[i] = "CASE WHEN (" + contentArm + ") THEN a.raw END AS raw"
+		default:
+			out[i] = c.sql
 		}
 	}
 	out[len(out)-1] = "(" + contentArm + ") AS content_available"
 	out[len(out)-2] = "CASE WHEN a.internal_mail_authorization IS NOT NULL THEN (" + share + ") ELSE NULL END AS can_share_internal"
 	return strings.Join(out, ", "), nil
+}
+
+// activityCountColumns serves CountActivities, which reads no column. It keeps
+// only the content decision, which binds the arguments the filter rendered for
+// it. Postgres keeps every column's tree in the cached statement, read or not.
+func activityCountColumns(contentArm string) string {
+	return "(" + contentArm + ") AS content_available"
+}
+
+// rowsContentReadable is whether contentArm says every row already passed the
+// content gate, as a literal true does: body and raw are then served ungated.
+func rowsContentReadable(contentArm string) bool {
+	return contentArm == sqlTrue || contentArm == scopeUnbounded
 }
 
 // activityScanTargets answers the destinations, in the projection's order.
