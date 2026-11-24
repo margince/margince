@@ -111,7 +111,7 @@ func harnessDigest(root string) (string, error) {
 			return "", err
 		}
 		for _, path := range found {
-			if strings.HasSuffix(path, "_test.go") && strings.HasPrefix(pattern, filepath.Join(runnerDir)) {
+			if strings.HasSuffix(path, "_test.go") && strings.HasPrefix(pattern, runnerDir) {
 				continue
 			}
 			rel, err := filepath.Rel(root, path)
