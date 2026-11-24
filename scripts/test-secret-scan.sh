@@ -51,8 +51,11 @@ gitleaks="$(gitleaks_bin)"
 work="$(mktemp -d)"
 single="$(mktemp -d)"
 probe="$(mktemp -d)"
-trap 'rm -rf "$work" "$single" "$probe"' EXIT
-git archive HEAD | tar -x -C "$work"
+trap 'rm -rf "$work" "$single" "$probe" "$work.tar"' EXIT
+# Through a file, not a pipe: bsdtar stops at the end marker, and git's write
+# of the padding after it dies of SIGPIPE under pipefail.
+git archive --output="$work.tar" HEAD
+tar -x -f "$work.tar" -C "$work"
 
 failures=0
 fail() {
