@@ -140,12 +140,21 @@ func TestAFloorOrADatabaseChangeMovesTheFullPathChecksAsItShould(t *testing.T) {
 		edits    map[string]func(string) string
 		moves    bool
 	}{
-		{"the classify floor", classify, "captureClassifyCase",
-			map[string]func(string) string{"compose/captureclassify.go": replaceOnce("classifyConfidenceFloor = 0.7", "classifyConfidenceFloor = 0.9")}, true},
-		{"the verdict floor", counterparty, "counterpartyVerdictCase",
-			map[string]func(string) string{"compose/captureverdict.go": replaceOnce("verdictConfidenceFloor = 0.7", "verdictConfidenceFloor = 0.9")}, true},
-		{"the database apply", counterparty, "counterpartyVerdictCase",
-			map[string]func(string) string{"compose/captureverdictapply.go": replaceOnce("is not a sender kind", "is no sender kind")}, false},
+		{
+			"the classify floor", classify, "captureClassifyCase",
+			map[string]func(string) string{"compose/captureclassify.go": replaceOnce("classifyConfidenceFloor = 0.7", "classifyConfidenceFloor = 0.9")},
+			true,
+		},
+		{
+			"the verdict floor", counterparty, "counterpartyVerdictCase",
+			map[string]func(string) string{"compose/captureverdict.go": replaceOnce("verdictConfidenceFloor = 0.7", "verdictConfidenceFloor = 0.9")},
+			true,
+		},
+		{
+			"the database apply", counterparty, "counterpartyVerdictCase",
+			map[string]func(string) string{"compose/captureverdictapply.go": replaceOnce("is not a sender kind", "is no sender kind")},
+			false,
+		},
 	} {
 		base := walkDigest(t, siteWalk(t, tc.site, tc.typeName, nil))
 		moved := walkDigest(t, siteWalk(t, tc.site, tc.typeName, tc.edits)) != base
