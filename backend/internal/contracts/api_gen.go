@@ -66128,7 +66128,7 @@ type RoleDirectory struct {
 // RoleDirectoryVerbs defines model for RoleDirectory.Verbs.
 type RoleDirectoryVerbs string
 
-// RouterActions The actions of one MCP router whose actions run REST routes.
+// RouterActions The actions of one MCP router, with the arguments each takes.
 type RouterActions struct {
 	Actions []struct {
 		// Action The value the router's action argument takes.
@@ -66140,7 +66140,7 @@ type RouterActions struct {
 		// Body The JSON schema of its body argument.
 		Body *map[string]interface{} `json:"body,omitempty"`
 
-		// Does The route's summary.
+		// Does What the action does.
 		Does string `json:"does"`
 
 		// Ids The path ids the action takes as arguments.
@@ -66149,8 +66149,14 @@ type RouterActions struct {
 		// IfVersion Whether it takes if_version: the version you last read.
 		IfVersion *bool `json:"if_version,omitempty"`
 
-		// Query The query parameters it takes as arguments.
-		Query *[]string `json:"query,omitempty"`
+		// Query The query parameters it takes as arguments, each with its type and any closed values.
+		Query *[]struct {
+			Enum     *[]string `json:"enum,omitempty"`
+			Format   *string   `json:"format,omitempty"`
+			Name     string    `json:"name"`
+			Required *bool     `json:"required,omitempty"`
+			Type     string    `json:"type"`
+		} `json:"query,omitempty"`
 
 		// Route The method and route, for example POST /v1/record-grants.
 		Route string `json:"route"`

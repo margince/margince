@@ -51702,7 +51702,7 @@ components:
         data: {type: array, items: {$ref: '#/components/schemas/AgentTool'}}
     RouterActions:
       type: object
-      description: The actions of one MCP router whose actions run REST routes.
+      description: The actions of one MCP router, with the arguments each takes.
       required: [router, actions]
       properties:
         router: {type: string}
@@ -51714,10 +51714,21 @@ components:
             required: [action, does, route]
             properties:
               action: {type: string, description: 'The value the router''s action argument takes.'}
-              does: {type: string, description: 'The route''s summary.'}
+              does: {type: string, description: 'What the action does.'}
               route: {type: string, description: 'The method and route, for example POST /v1/record-grants.'}
               ids: {type: array, items: {type: string}, description: The path ids the action takes as arguments.}
-              query: {type: array, items: {type: string}, description: The query parameters it takes as arguments.}
+              query:
+                type: array
+                description: The query parameters it takes as arguments, each with its type and any closed values.
+                items:
+                  type: object
+                  required: [name, type]
+                  properties:
+                    name: {type: string}
+                    type: {type: string}
+                    required: {type: boolean}
+                    enum: {type: array, items: {type: string}}
+                    format: {type: string}
               if_version: {type: boolean, description: 'Whether it takes if_version: the version you last read.'}
               ask_user_first: {type: boolean, description: Whether the app asks its user to confirm it first.}
               uploads_a_file: {type: boolean, description: 'Whether it takes filename, content_type and content_base64.'}

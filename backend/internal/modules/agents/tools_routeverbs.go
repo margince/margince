@@ -114,7 +114,7 @@ func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
 	if len(verbs) == 0 {
 		return
 	}
-	r.Register(describeRouterActions{verbs: verbs, runs: r.routerRunSpec})
+	r.Register(describeRouterActions{verbs: verbs, runs: r.routerRunSpec, choices: r.routerChoices})
 	r.mu.Lock()
 	r.routeActions[readWorkspaceName] = map[string]string{routeActionsTopic: describeRouterActionsName}
 	r.mu.Unlock()
@@ -407,6 +407,8 @@ type describeRouterActions struct {
 	verbs []RouteVerb
 	// runs finds an action the router runs in process, which has no route.
 	runs func(router, action string) (mcp.ToolSpec, bool)
+	// choices names every action of a router, routed or run in process.
+	choices func(router string) []string
 }
 
 func (d describeRouterActions) routers() []string {
@@ -430,7 +432,9 @@ func (d describeRouterActions) Spec() mcp.ToolSpec {
 			`"router":{"type":"string"},"ask_user_first_means":{"type":"string"},"actions":{"type":"array","items":{"type":"object",` +
 			`"required":["action","does","route"],"properties":{"action":{"type":"string"},` +
 			`"does":{"type":"string"},"route":{"type":"string"},"ids":{"type":"array","items":{"type":"string"}},` +
-			`"query":{"type":"array","items":{"type":"string"}},"if_version":{"type":"boolean"},` +
+			`"query":{"type":"array","items":{"type":"object","required":["name","type"],"properties":{"name":{"type":"string"},` +
+			`"type":{"type":"string"},"required":{"type":"boolean"},"enum":{"type":"array","items":{"type":"string"}},` +
+			`"format":{"type":"string"}}}},"if_version":{"type":"boolean"},` +
 			`"ask_user_first":{"type":"boolean"},"uploads_a_file":{"type":"boolean"},"body":{"type":"object"}}}}}}`),
 		InputSchema: schema(`{"type":"object","required":["router"],"properties":{"router":{"type":"string","enum":` +
 			mustJSON(d.routers()) + `},"action":{"type":"string","description":"One action to describe; leave it out for all of them"}},"additionalProperties":false}`),
@@ -446,7 +450,7 @@ type routeActionShape struct {
 	Does         string          `json:"does"`
 	Route        string          `json:"route"`
 	IDs          []string        `json:"ids,omitempty"`
-	Query        []string        `json:"query,omitempty"`
+	Query        []ViewQuery     `json:"query,omitempty"`
 	IfVersion    bool            `json:"if_version,omitempty"`
 	AskUserFirst bool            `json:"ask_user_first,omitempty"`
 	Body         json.RawMessage `json:"body,omitempty"`

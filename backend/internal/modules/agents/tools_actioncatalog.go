@@ -53,10 +53,7 @@ func (d describeRouterActions) catalog(router, action string) (json.RawMessage, 
 		}
 		shape := routeActionShape{
 			Action: v.Action, Does: v.Summary, Route: v.Method + " " + v.Pattern, IDs: v.PathParams,
-			IfVersion: v.IfMatch, AskUserFirst: v.AskUserFirst,
-		}
-		for _, q := range v.Query {
-			shape.Query = append(shape.Query, q.Name)
+			IfVersion: v.IfMatch, AskUserFirst: v.AskUserFirst, Query: v.Query,
 		}
 		if v.Body && len(v.BodySchema) > 0 {
 			shape.Body = v.BodySchema
@@ -67,25 +64,13 @@ func (d describeRouterActions) catalog(router, action string) (json.RawMessage, 
 		}
 		actions = append(actions, shape)
 	}
-	if args.Action != "" && len(actions) == 0 {
-		// A client that reads tool schemas from a file has no inputSchema at hand.
-		// An action the router runs itself is described from its own spec.
-		spec, runs := d.runs(args.Router, args.Action)
-		if !runs {
-			return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
-				"router %s has no action %s; read_workspace with topic=actions and this router lists the ones it has",
-				args.Router, args.Action)}
-		}
-		// An action a human approves anyway is not one the model asks about first.
-		asks := spec.AskUserFirst && spec.Tier != mcp.TierConfirmationRequired
-		if asks {
-			asked |= askedKindOf(spec.ReadOnly())
-		}
-		actions = append(actions, routeActionShape{
-			Action: args.Action, Does: spec.Description, Route: routerRunRoute,
-			AskUserFirst: asks, Body: spec.InputSchema,
-		})
+	// An action the router runs itself has no route, so it is described from its
+	// own spec. Its arguments are named here even where tools/list leaves them out.
+	ranInProcess, err := d.inProcess(args.Router, args.Action, actions, &asked)
+	if err != nil {
+		return nil, err
 	}
+	actions = append(actions, ranInProcess...)
 	slices.SortFunc(actions, func(a, b routeActionShape) int { return strings.Compare(a.Action, b.Action) })
 	answer := map[string]any{"router": args.Router, "actions": actions}
 	if asked != 0 {
@@ -93,6 +78,43 @@ func (d describeRouterActions) catalog(router, action string) (json.RawMessage, 
 			asked.consequence() + " and " + askFirstGetYes
 	}
 	return json.Marshal(answer)
+}
+
+// inProcess describes the actions router runs itself, or the one named. It
+// refuses a named action the router has under neither kind.
+func (d describeRouterActions) inProcess(router, action string, routed []routeActionShape, asked *askedKinds) ([]routeActionShape, error) {
+	choices := []string{action}
+	if action == "" {
+		choices = nil
+		if d.choices != nil {
+			choices = d.choices(router)
+		}
+	}
+	var out []routeActionShape
+	for _, choice := range choices {
+		if slices.ContainsFunc(routed, func(a routeActionShape) bool { return a.Action == choice }) {
+			continue
+		}
+		spec, runs := d.runs(router, choice)
+		if !runs && action != "" {
+			return nil, &BadArgsError{Field: "action", Cause: fmt.Errorf(
+				"router %s has no action %s; read_workspace with topic=actions and this router lists the ones it has",
+				router, action)}
+		}
+		if !runs {
+			continue
+		}
+		// An action a human approves anyway is not one the model asks about first.
+		asks := spec.AskUserFirst && spec.Tier != mcp.TierConfirmationRequired
+		if asks {
+			*asked |= askedKindOf(spec.ReadOnly())
+		}
+		out = append(out, routeActionShape{
+			Action: choice, Does: spec.Description, Route: routerRunRoute,
+			AskUserFirst: asks, Body: spec.InputSchema,
+		})
+	}
+	return out, nil
 }
 
 // askedKinds is which ask-first actions a router has: ones that write, ones

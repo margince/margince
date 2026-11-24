@@ -13,6 +13,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -29,6 +30,7 @@ type scenario struct {
 	judged bool
 	tools  []string
 	body   []byte
+	lists  map[string][]string
 }
 
 // toolKeys are the checks whose entries name a tool. Each says how check.py
@@ -62,8 +64,41 @@ func readScenario(path string) (scenario, error) {
 	}
 	return scenario{
 		name: reader.name, body: body, judged: len(reader.lists["judge"]) > 0,
-		tools: scenarioTools(reader.lists),
+		tools: scenarioTools(reader.lists), lists: reader.lists,
 	}, nil
+}
+
+// RequiredCalls names, per scenario file in dir, every call a check requires a
+// run to make. Each alternative counts, since a run may make any of them. A
+// must_call_with alternative keeps its tool.argument=value; a must_call_matching
+// one keeps only its tool.
+func RequiredCalls(dir string) (map[string][]string, error) {
+	paths, err := filepath.Glob(filepath.Join(dir, "*.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	out := map[string][]string{}
+	for _, path := range paths {
+		sc, err := readScenario(path)
+		if err != nil {
+			return nil, err
+		}
+		for _, key := range []string{"must_call", "must_call_with", "must_call_matching"} {
+			shape := toolKeys[key]
+			for _, entry := range sc.lists[key] {
+				for alternative := range strings.SplitSeq(entry, shape.anyOf) {
+					call := strings.TrimSpace(alternative)
+					if shape.nameEnd == "~" {
+						call, _, _ = strings.Cut(call, shape.nameEnd)
+					}
+					if call != "" {
+						out[filepath.Base(path)] = append(out[filepath.Base(path)], call)
+					}
+				}
+			}
+		}
+	}
+	return out, nil
 }
 
 // scenarioReader is the state of one pass over a scenario file: the key a

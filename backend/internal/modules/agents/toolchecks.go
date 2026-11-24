@@ -164,7 +164,8 @@ func (r *Registry) routerSchemaFor(rt router, field string, choices []string) (r
 	if err != nil {
 		return routedObject{}, err
 	}
-	raw, err := routedSchema(rt.Spec().Name, field, choices, r.actionSentences(rt.Spec().Name, field, choices, targets), own, targets)
+	raw, err := routedSchema(rt.Spec().Name, field, choices, r.actionSentences(rt.Spec().Name, field, choices, targets), own, targets,
+		r.rareActions(rt.Spec().Name, field))
 	if err != nil {
 		return routedObject{}, err
 	}
