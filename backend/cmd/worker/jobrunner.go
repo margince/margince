@@ -335,7 +335,8 @@ func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 		// the company's logo out of the site it just crawled and stores the
 		// normalized bytes here. Nil (no blobstore configured) leaves every
 		// company on its monogram — the read itself is unaffected.
-		Blobstore: lanes.blob,
+		Blobstore:        lanes.blob,
+		JournalBlobstore: lanes.journal,
 		// An import commit reads its upload from the same store, under the
 		// upload's own cap.
 		ImportUploadCap: cfg.csvImportCap,

@@ -307,6 +307,9 @@ type JobRunnerConfig struct {
 	// It also holds the uploads an import commits from. Nil registers the
 	// import jobs anyway, and a commit then fails with that cause.
 	Blobstore blobstore.Store
+	// JournalBlobstore is the separate store the erasure journal is exported
+	// to (ResolveJournalStore). Nil keeps the journal in Blobstore.
+	JournalBlobstore blobstore.Store
 	// ImportUploadCap is the deployment's ceiling for an import upload, so a
 	// commit reads a stored ZIP under the limits its upload was accepted with.
 	ImportUploadCap int64

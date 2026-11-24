@@ -69,7 +69,11 @@ func suppressionJournalExporterFor(
 // addSuppressionJournalJobs registers the export worker when there is somewhere
 // to write to.
 func addSuppressionJournalJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) {
-	exporter := suppressionJournalExporterFor(pool, cfg.Blobstore, log)
+	journal := cfg.JournalBlobstore
+	if journal == nil {
+		journal = cfg.Blobstore
+	}
+	exporter := suppressionJournalExporterFor(pool, journal, log)
 	if exporter == nil {
 		return
 	}
@@ -91,7 +95,7 @@ func (w *suppressionJournalWorker) exportWorkspace(ctx context.Context, workspac
 	// The system principal, bound here rather than inherited: a queue carries
 	// no actor, and ExportSuppressions is gated on the contact delete grant.
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), suppressionJournalActor)
-	eraser := privacy.NewEraser(InstallationDB(w.pool)).WithCountry(identity.CountryForDecision).WithBlobstore(w.blob).WithExtensions(ExtensionData())
+	eraser := privacy.NewEraser(InstallationDB(w.pool)).WithCountry(identity.CountryForDecision).WithJournalStore(w.blob).WithExtensions(ExtensionData())
 	written, err := eraser.ExportSuppressions(ctx)
 	if err != nil {
 		return err

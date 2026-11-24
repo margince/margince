@@ -42,7 +42,12 @@ back:
   address) to `erasure-suppression/` in the object store every hour.
 - After a restore, `worker replay-erasures` erases those contacts again.
 
-So never restore `erasure-suppression/` from a backup: keep the newest copy from the live store. Keep your own
+To keep a restore of the object store from ever touching the journal, set a separate journal store with
+`MARGINCE_ERASURE_JOURNAL_ENDPOINT` (and its bucket, region and keys) or `MARGINCE_ERASURE_JOURNAL_PATH`. The job
+then writes there instead, and the replay reads from there. Both the worker that exports and the one that replays need
+the same settings. The object store (`MARGINCE_BLOBSTORE_*`) must still be set for the hourly job to run.
+
+Without a separate journal store, never restore `erasure-suppression/` from a backup: keep the newest copy from the live store. Keep your own
 record of completed erasure requests too, because the replay cannot cover an erasure the last export missed. The
 steps are in [run-a-restore-drill.md](run-a-restore-drill.md).
 

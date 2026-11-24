@@ -248,6 +248,34 @@ func TestAJournalledSuppressionSurvivesTheListRollingBack(t *testing.T) {
 	}
 }
 
+// With a separate journal store the export writes there and not to the main
+// store, and a rollback of the main store leaves the replay's input intact.
+func TestAJournalOnItsOwnStoreSurvivesTheMainStoreRollingBack(t *testing.T) {
+	e := integration.Setup(t)
+	main, journal := blobstore.NewMemory(), blobstore.NewMemory()
+	writer := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(main).WithJournalStore(journal)
+
+	seedSuppressedEmail(t, resurrectedAddress)
+	if _, err := writer.ExportSuppressions(e.Admin()); err != nil {
+		t.Fatalf("ExportSuppressions: %v", err)
+	}
+	if n, err := main.DeletePrefix(e.Admin(), "erasure-suppression/"); err != nil || n != 0 {
+		t.Fatalf("the main store held %d journal object(s), err %v; want none", n, err)
+	}
+
+	clearSuppressionList(t)
+	resurrected := seedContactWithEmail(t, e, "Die Betroffene", resurrectedAddress)
+	rolledBackMain := blobstore.NewMemory()
+	reader := eraserWithGraph(InstallationDB(e.Pool)).WithBlobstore(rolledBackMain).WithJournalStore(journal)
+	took, err := reader.ReapplySuppressions(e.Admin())
+	if err != nil || took != 1 {
+		t.Fatalf("re-erased %d, err %v; want the separate journal to have answered", took, err)
+	}
+	if live := liveEmails(t, e, resurrected); live != 0 {
+		t.Fatalf("%d address(es) survived", live)
+	}
+}
+
 // The export carries the fingerprint and nothing else. An export that wrote
 // the address would reconstitute exactly what the erasure destroyed, and put
 // it somewhere the erasure does not reach.

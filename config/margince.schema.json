@@ -1208,6 +1208,66 @@
         }
       }
     },
+    "erasure_journal_access_key": {
+      "description": "Access key for the erasure journal's object store.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+      "examples": [
+        "${env:VARIABLE_NAME}",
+        "${file:/run/secrets/name}"
+      ]
+    },
+    "erasure_journal_bucket": {
+      "description": "Bucket the erasure journal is written to.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "erasure_journal_endpoint": {
+      "description": "Endpoint of a separate object store for the erasure journal, so a restore of the main store never rolls it back; it wins over `MARGINCE_ERASURE_JOURNAL_PATH`, and with both unset the journal stays in the main store.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "erasure_journal_path": {
+      "description": "Directory the erasure journal is written to when there is no object storage service for it; ignored when `MARGINCE_ERASURE_JOURNAL_ENDPOINT` is set.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "erasure_journal_region": {
+      "description": "Region the erasure journal's bucket lives in.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "erasure_journal_secret_key": {
+      "description": "Secret key for the erasure journal's object store.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
+      "examples": [
+        "${env:VARIABLE_NAME}",
+        "${file:/run/secrets/name}"
+      ]
+    },
+    "erasure_journal_use_ssl": {
+      "description": "Reach the erasure journal's object store over TLS.",
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "default": false
+    },
     "features": {
       "type": [
         "object",

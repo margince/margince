@@ -32,6 +32,9 @@ type Eraser struct {
 	// erasure queues their keys for the stored-object reap and deletes no
 	// object itself. nil in a deployment with no object store.
 	blob blobstore.Store
+	// journal is a separate store for the suppression journal, so a restore of
+	// blob never rolls it back. nil keeps the journal in blob.
+	journal blobstore.Store
 	// purgeRawCaptures destroys the provider original behind an activity whose
 	// text this eraser destroys.
 	//
@@ -84,6 +87,23 @@ func (e *Eraser) WithBlobstore(blob blobstore.Store) *Eraser {
 	clone := *e
 	clone.blob = blob
 	return &clone
+}
+
+// WithJournalStore returns an eraser that keeps the suppression journal in
+// journal instead of the attachment store. A nil journal changes nothing.
+func (e *Eraser) WithJournalStore(journal blobstore.Store) *Eraser {
+	clone := *e
+	clone.journal = journal
+	return &clone
+}
+
+// journalStore is where the export writes and the replay reads the journal.
+// Every journal access goes through it, so the two never disagree.
+func (e *Eraser) journalStore() blobstore.Store {
+	if e.journal != nil {
+		return e.journal
+	}
+	return e.blob
 }
 
 func requireErasableContact(ctx context.Context, tx pgx.Tx, subject ids.ContactID) error {
