@@ -19,6 +19,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -132,5 +134,23 @@ func TestAReleaseWithOneChangedClaimReleasesNone(t *testing.T) {
 	}
 	if held != 0 {
 		t.Fatalf("%d claims are still held after a release of unchanged claims", held)
+	}
+}
+
+// A notice its producer took back is not mailed, even when its job runs later.
+func TestARetractedNoticeIsNotMailed(t *testing.T) {
+	e := setupNotices(t)
+	id, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: KindMeetingTeamRequest, Subject: "Ada added you to the booking link", DedupeKey: "team:retracted"})
+	if err != nil {
+		t.Fatalf("recording the notice: %v", err)
+	}
+	if err := e.store.db.Tx(e.engineCtx(), func(tx pgx.Tx) error {
+		_, err := e.store.Retract(e.engineCtx(), tx, "team:retracted")
+		return err
+	}); err != nil {
+		t.Fatalf("taking the notice back: %v", err)
+	}
+	if _, claimed, err := e.store.ClaimEmailAttempt(e.engineCtx(), id); err != nil || claimed {
+		t.Fatalf("claiming a retracted notice's mail → claimed=%v, err=%v; want nothing claimed", claimed, err)
 	}
 }

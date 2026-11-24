@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_team.go backend/internal/modules/activities/scheduling_teamtime.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go backend/internal/modules/activities/activityintent.go -->
+<!-- describes: backend/internal/shared/ports/connector/calendarinterval.go backend/internal/modules/activities/scheduling_policy.go backend/internal/modules/capture/gcal/scheduling_lookup.go backend/internal/modules/activities/workinghours.go backend/internal/modules/activities/scheduling_occupancy.go backend/internal/modules/activities/scheduling_invitation.go backend/internal/modules/activities/scheduling_roster.go backend/internal/modules/activities/scheduling_team.go backend/internal/compose/teamrequestnotice.go backend/internal/modules/activities/scheduling_teamtime.go backend/internal/modules/activities/scheduling_park.go backend/internal/modules/activities/handlers_proposal.go backend/internal/modules/activities/booking_invitee.go backend/internal/compose/schedulingattendees.go backend/internal/modules/activities/scheduling_secrets.go backend/internal/modules/activities/scheduling_erasure.go backend/internal/modules/activities/scheduling_reminder.go backend/internal/modules/activities/meetingoutcomestart.go backend/internal/modules/activities/meetingmove.go backend/internal/modules/capture/gcal/scheduling.go backend/internal/modules/capture/graphcal/scheduling.go backend/internal/modules/activities/activityintent.go -->
 # Scheduling
 
 What a meeting host sees is in the handbook page
@@ -39,6 +39,12 @@ refused.
 A booking page may name up to five colleagues in `team_members`, stored in the page's
 `scheduling_policy`. Each member's answer is their own. The owner's save keeps it, and starts a new
 member as `pending`. Only the member writes `confirmed` or `left`.
+
+The save that names a new member also gives them a notice of kind `meeting_team_request`, in the same
+transaction, through `compose/teamrequestnotice.go`. The notice sits in the approval notification class,
+so it is mailed as an approval is unless the member chose otherwise. A member kept on the list gets no
+second notice. Answering, or being taken off the list, takes the notice back, and a notice taken back is
+never mailed.
 
 Confirming is a consent to share free time with a public page, so an agent cannot give it. Until every member has confirmed
 and has a calendar Margince can read, the page's `blocker` is `team_not_ready` and the page is

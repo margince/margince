@@ -48,8 +48,35 @@ func (c *teamCalendarFake) Blocker(ctx context.Context, user ids.UserID, provide
 	return c.invitationCalendar.Blocker(ctx, user, provider)
 }
 
+// teamRequestLog records who a save asks to confirm, and whose request settles.
+type teamRequestLog struct {
+	asked   []TeamRequest
+	settled []ids.UserID
+}
+
+func (l *teamRequestLog) TeamRequestTx(_ context.Context, _ pgx.Tx, request TeamRequest) error {
+	l.asked = append(l.asked, request)
+	return nil
+}
+
+func (l *teamRequestLog) TeamRequestSettledTx(_ context.Context, _ pgx.Tx, _, member ids.UserID) error {
+	l.settled = append(l.settled, member)
+	return nil
+}
+
+func (l *teamRequestLog) askedOf(member ids.UserID) []TeamRequest {
+	var out []TeamRequest
+	for _, request := range l.asked {
+		if request.Member == member {
+			out = append(out, request)
+		}
+	}
+	return out
+}
+
 type teamFixture struct {
 	*invitationFixture
+	requests *teamRequestLog
 	calendar *teamCalendarFake
 	hours    map[ids.UserID]WorkingHours
 	host     ids.UserID
@@ -57,10 +84,10 @@ type teamFixture struct {
 
 func newTeamFixture(t *testing.T) *teamFixture {
 	t.Helper()
-	f := &teamFixture{invitationFixture: newInvitationFixture(t), hours: map[ids.UserID]WorkingHours{}}
+	f := &teamFixture{invitationFixture: newInvitationFixture(t), hours: map[ids.UserID]WorkingHours{}, requests: &teamRequestLog{}}
 	f.host = ids.From[ids.UserKind](f.env.rep)
 	f.calendar = &teamCalendarFake{invitationCalendar: f.invitationFixture.calendar, busyOf: map[ids.UserID][]connector.CalendarInterval{}, unreadable: map[ids.UserID]bool{}}
-	f.store = f.store.WithSchedulingCalendar(f.calendar).WithWorkingHours(func(_ context.Context, user ids.UserID) (WorkingHours, error) {
+	f.store = f.store.WithSchedulingCalendar(f.calendar).WithTeamRequestNotice(f.requests).WithWorkingHours(func(_ context.Context, user ids.UserID) (WorkingHours, error) {
 		if hours, ok := f.hours[user]; ok {
 			return hours, nil
 		}
@@ -262,8 +289,19 @@ func TestATeamLinkWaitsForEveryMemberToConfirm(t *testing.T) {
 	if _, open := f.store.openForBooking(f.door(), BookingPage{HostUserID: f.host}); open.err != nil || !open.paused {
 		t.Fatalf("an unconfirmed team link is open: %+v", open)
 	}
+	asked := f.requests.askedOf(second)
+	if len(asked) != 1 || asked[0].Host != f.host || asked[0].HostName == "" || asked[0].Title == "" {
+		t.Fatalf("the save asked the second member %+v, want one request naming the host and the link", asked)
+	}
 	if err := f.store.AnswerSchedulingTeamRequest(f.as(first), f.host, crmcontracts.SchedulingTeamAnswerStateConfirmed); err != nil {
 		t.Fatal(err)
+	}
+	if !slices.Contains(f.requests.settled, first) {
+		t.Fatalf("a confirmed request is not settled: %v", f.requests.settled)
+	}
+	f.name(t, false, first, second)
+	if len(f.requests.askedOf(first)) != 1 || len(f.requests.askedOf(second)) != 1 {
+		t.Fatalf("a save that kept both members asked again: %+v", f.requests.asked)
 	}
 	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerTeamNotReady {
 		t.Fatalf("a link one of two members confirmed reads %q", got)
@@ -282,6 +320,9 @@ func TestATeamLinkWaitsForEveryMemberToConfirm(t *testing.T) {
 	if err := f.store.AnswerSchedulingTeamRequest(f.as(second), f.host, crmcontracts.SchedulingTeamAnswerStateLeft); err != nil {
 		t.Fatal(err)
 	}
+	if !slices.Contains(f.requests.settled, second) {
+		t.Fatalf("a request the member left is not settled: %v", f.requests.settled)
+	}
 	if got := f.blocker(t); got != crmcontracts.SchedulingProfileBlockerTeamNotReady {
 		t.Fatalf("a link a member left reads %q", got)
 	}
@@ -294,6 +335,22 @@ func TestATeamLinkWaitsForEveryMemberToConfirm(t *testing.T) {
 	}
 	if requests, err := f.store.SchedulingTeamRequests(f.as(second)); err != nil || len(requests) != 0 {
 		t.Fatalf("a member who left is still asked: %+v %v", requests, err)
+	}
+}
+
+// A member taken off the link has their request settled, and is asked again
+// when named again. The member kept on the list hears nothing new.
+func TestAMemberTakenOffTheLinkHasTheRequestSettled(t *testing.T) {
+	f := newTeamFixture(t)
+	kept, removed := f.colleague(t, "Kept"), f.colleague(t, "Removed")
+	f.name(t, false, kept, removed)
+	f.name(t, false, kept)
+	if !slices.Equal(f.requests.settled, []ids.UserID{removed}) {
+		t.Fatalf("settled %v, want only the member taken off", f.requests.settled)
+	}
+	f.name(t, false, kept, removed)
+	if len(f.requests.askedOf(removed)) != 2 || len(f.requests.askedOf(kept)) != 1 {
+		t.Fatalf("asked %+v, want the member named again asked twice and the kept one once", f.requests.asked)
 	}
 }
 
