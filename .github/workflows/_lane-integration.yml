@@ -230,6 +230,23 @@ jobs:
         env:
           PG_FSYNC: "off"
         run: make db-up
+      # A statement that runs past 10 s logs its plan, so a statement timeout
+      # in a test shows why it was slow. The runner is thrown away, so the
+      # setting never reaches a dev container. The longer query text keeps the
+      # slow-statement reports from cutting the SQL short.
+      - name: Log the plan of every slow statement
+        working-directory: .
+        run: |
+          container="$(bash scripts/dev-postgres-container.sh 15432)"
+          psql() { docker exec -i "$container" psql -U margince_owner -d postgres -v ON_ERROR_STOP=1 "$@"; }
+          psql -c "ALTER SYSTEM SET shared_preload_libraries = 'auto_explain'" \
+            -c "ALTER SYSTEM SET track_activity_query_size = 32768"
+          docker restart "$container"
+          docker compose -f docker-compose.dev.yml up -d --wait postgres
+          # Postgres knows the auto_explain settings only once the library is loaded.
+          psql -c "ALTER SYSTEM SET auto_explain.log_min_duration = '10s'" \
+            -c "ALTER SYSTEM SET auto_explain.log_nested_statements = on" -c "SELECT pg_reload_conf()"
+          test "$(psql -tAc 'SHOW auto_explain.log_min_duration')" = "10s"
       # Needs the checkout and not the binaries, so it runs while they build.
       # The shard step checks it again (INTEGRATION_TEMPLATE_READY).
       - name: Build the migrated template
@@ -347,6 +364,13 @@ jobs:
       #
       # A shard that stopped before its tests, as when the build failed, has no
       # directory, and an upload would add a second error to the one it gave.
+      # Postgres logs each slow plan; the shard log alone cannot show it.
+      - name: Print the plans of slow statements
+        if: ${{ failure() && steps.shard.outcome == 'failure' }}
+        working-directory: .
+        run: |
+          container="$(bash scripts/dev-postgres-container.sh 15432)"
+          docker logs "$container" 2>&1 | grep -A200 "LOG:  duration:" | head -2000 || echo "no statement ran past 10 s"
       - name: Upload the shard manifest + coverage pods
         if: ${{ !cancelled() && steps.shard.outcome != 'skipped' }}
         uses: ./.github/actions/upload-artifact-retried

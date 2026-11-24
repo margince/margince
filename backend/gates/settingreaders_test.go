@@ -85,6 +85,7 @@ var settingReadLiteral = gatekit.TableReadPattern(settingTable)
 // direction for this table: a raw read whose text changed is a read whose cost
 // somebody should look at again.
 var rawSettingReads = gatekit.Waive(map[string]string{
+	"internal/modules/consent/footergaps.go:footerHoldsTx:SELECT le.id, le.is_default, held.by_user, held.background, held.kinds …": "reads only updated_at of the controller particulars, as the moment the footer details last changed, inside the statement that counts held sends since then. FooterGapsTx takes the installation_settings update gate before it runs, so the object gate is asked",
 	"internal/compose/integration/baselanguage.go:SetBaseLanguage:DELETE FROM setting WHERE key = $1": "test support behind the integration build tag, so it " +
 		"reaches no shipped binary. It clears the stored base language so the seeder can " +
 		"store a known one, which is the setup every test asserting stored copy needs. " +

@@ -23587,7 +23587,6 @@ export const en = {
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",
   "aiTask.name.enrich": "Signature enrichment",
-  "aiTask.name.extension_task": "Extension AI task",
   "aiTask.name.growth_fit": "Company fit assessment",
   "aiTask.name.nl_search": "Natural-language search",
   "aiTask.name.offer_draft": "Offer drafting",
@@ -24176,6 +24175,32 @@ export const en = {
   "health.openModels": "Open Models",
   "health.openConnections": "Open Connections",
   "health.openRegional": "Open Regional and calendar",
+  "health.source.footer": "Company details in mail footers",
+  "health.code.footer_complete":
+    "Every mail footer has the company details it must show",
+  "health.code.footer_incomplete": "Mail footers lack company details",
+  "health.footerIncompleteFor": "{entity}: mail footers lack company details",
+  "health.footerDefaultEntity": "The default legal entity",
+  "health.effect.footer":
+    "Mail that must show these details is held for review. Whoever wrote it can still send it with a reason. A background send, such as a meeting reminder, is dropped.",
+  "health.footerNext":
+    "Fill in the missing details. The warning goes once they are complete.",
+  "health.recovery.footer":
+    "Every company detail the jurisdiction packs require is stated.",
+  "health.footerMissing": "Missing details",
+  "health.footerHeldByUser": "Sends by users held since the last change",
+  "health.footerHeldInBackground":
+    "Background sends held or dropped since the last change",
+  "health.footerDetail.controller_identity": "Legal name and postal address",
+  "health.footerDetail.privacy_contact": "Privacy contact",
+  "health.footerDetail.objection_route": "How to object",
+  "health.footerDetail.advertiser_contact": "Advertiser contact",
+  "health.footerDetail.entity_name": "Company name",
+  "health.measure.messages_one": "{count} message",
+  "health.measure.messages_other": "{count} messages",
+  "health.openLegalEntities": "Open Legal entities",
+  "health.openCompanyProfile": "Open Company profile",
+  "health.openDisclosures": "Open Jurisdiction",
   "health.unit.runs": "runs",
   "health.history": "Retained failure history",
   "health.historyWindow":
