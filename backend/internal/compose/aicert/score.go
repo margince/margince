@@ -5,7 +5,6 @@ package aicert
 
 import (
 	"slices"
-	"strconv"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
@@ -127,25 +126,6 @@ func judgeMedianAndMin(rs []RunResult) (median, minimum int, graded bool) {
 	}
 	slices.Sort(scores)
 	return medianOf(scores), scores[0], true
-}
-
-// pooledJudgeScores is the median and minimum of what a judge graded, as the
-// record holds them: nil for both when no run was graded, so a task no judge
-// scored is not reported as one a judge failed.
-func pooledJudgeScores(rs []RunResult) (median, minimum *int) {
-	m, lowest, graded := judgeMedianAndMin(rs)
-	if !graded {
-		return nil, nil
-	}
-	return &m, &lowest
-}
-
-// JudgeScoreCell is a pooled judge score as a page or a log prints it.
-func JudgeScoreCell(score *int) string {
-	if score == nil {
-		return "not judged"
-	}
-	return strconv.Itoa(*score)
 }
 
 // medianOf answers the median of a sorted, non-empty score set, averaging the
