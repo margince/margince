@@ -117,7 +117,7 @@ var shippedOutcomes = map[string]packOutcome{
 	"tw": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
 	"us": {
 		reply: 365 * 24 * time.Hour, dealFollow: 182 * 24 * time.Hour,
-		unconsentedReason: commsauthz.ReasonNoMarketingConsent, optOut: true, prefix: "ADV:",
+		unconsentedReason: commsauthz.ReasonNoMarketingConsent, optOut: true,
 	},
 }
 
@@ -222,17 +222,23 @@ func TestTheShippedPacksFlagTheDraftsTheyFlaggedBeforeTheyWereCompiled(t *testin
 			},
 		},
 		{"vn", "vn", "Hóa đơn", vietnameseOffer, false, ControllerParticulars{}, []string{"controller_identity", "privacy_contact"}},
-		{"us", "us", "ADV: Offer", "Here is the price list.", true, full, nil},
-		// A plain offer is not identified as an advertisement (7704(a)(5)(A)(i)).
-		{"us", "us", "Our price list", "Here is the price list.", true, full, []string{"subject_prefix"}},
+		// No subject label: the footer line identifies the advertisement
+		// (7704(a)(5)(A)(i)).
+		{"us", "us", "Our price list", "Here is the price list.", true, full, nil},
 		{
-			"us", "us", "ADV: Offer", "Here is the price list.", true,
+			"us", "us", "Our price list", "Here is the price list.", true,
 			ControllerParticulars{LegalName: "Acme Inc.", ObjectionRoute: "https://acme.example/stop"},
 			[]string{"controller_identity"},
 		},
+		// A footer that cannot name the sender cannot carry the line either.
+		{
+			"us", "us", "Our price list", "Here is the price list.", true,
+			ControllerParticulars{ObjectionRoute: "https://acme.example/stop"},
+			[]string{"advertisement", "controller_identity"},
+		},
 		// A sender whose own country has no pack still owes the postal address.
 		{
-			"us", "kr", "ADV: Offer", "Here is the price list.", true,
+			"us", "kr", "Our price list", "Here is the price list.", true,
 			ControllerParticulars{LegalName: "Acme Inc.", ObjectionRoute: "https://acme.example/stop"},
 			[]string{"controller_identity"},
 		},

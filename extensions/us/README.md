@@ -10,7 +10,7 @@ and the sections after it) and `16 CFR Part 316`, the rule under it.
 | Rule | What the pack states |
 |---|---|
 | Advertising | `marketing-mode: opt_out`: allowed until the recipient refuses, with no exception to name |
-| Label | `subject-prefix: "ADV:"` (`15 U.S.C. 7704(a)(5)(A)(i)`) |
+| Label | `advertisement`: a footer line naming the sender as the advertiser, on advertising (`15 U.S.C. 7704(a)(5)(A)(i)`) |
 | A way to refuse | `objection_route`, on advertising |
 | The postal address | `controller_identity` (legal name and address), on advertising |
 | Privacy law | No key: no law of the whole country works like the GDPR |
